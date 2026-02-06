@@ -1,0 +1,48 @@
+# backend/models/__init__.py
+"""Make imports explicit so Alembic can discover models reliably."""
+from backend.models.action import Action
+from backend.models.action_finding import ActionFinding
+from backend.models.audit_log import AuditLog
+from backend.models.aws_account import AwsAccount
+from backend.models.base import Base
+from backend.models.control_mapping import ControlMapping
+from backend.models.baseline_report import BaselineReport
+from backend.models.enums import (
+    ActionStatus,
+    BaselineReportStatus,
+    EntityType,
+    EvidenceExportStatus,
+    RemediationRunMode,
+    RemediationRunStatus,
+    UserRole,
+)
+from backend.models.evidence_export import EvidenceExport
+from backend.models.exception import Exception
+from backend.models.finding import Finding
+from backend.models.remediation_run import RemediationRun
+from backend.models.tenant import Tenant
+from backend.models.user import User
+from backend.models.user_invite import UserInvite
+
+__all__ = [
+    "Action",
+    "ActionFinding",
+    "AuditLog",
+    "AwsAccount",
+    "BaselineReport",
+    "BaselineReportStatus",
+    "ControlMapping",
+    "Base",
+    "EntityType",
+    "EvidenceExport",
+    "EvidenceExportStatus",
+    "Exception",
+    "Finding",
+    "RemediationRun",
+    "RemediationRunMode",
+    "RemediationRunStatus",
+    "Tenant",
+    "User",
+    "UserInvite",
+    "UserRole",
+]

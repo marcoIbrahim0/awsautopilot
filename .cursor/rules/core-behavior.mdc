@@ -1,0 +1,23 @@
+---
+description: Global behavior rules for all agents
+globs: **/*
+alwaysApply: true
+---
+# Core AI Agent Rules
+
+## 1. Interaction Protocol
+- ALWAYS read `.cursor/notes/project_status.md` before starting a task.
+- ALWAYS ask for clarification if a task is ambiguous. 
+- NEVER assume AWS service names; check the `aws_constants.py` file first.
+- Before writing code, provide a **Step-by-Step Plan** and wait for user approval.
+
+## 2. Complexity Control
+- Keep functions under 25 lines. 
+- Prefer "flat" logic over nested `if/else`.
+- If a logic path (e.g., IAM Trust Policy parsing) becomes complex, suggest a separate helper module instead of adding to the main engine.
+
+## 3. Handover Requirement
+- After every successful task, you MUST update `.cursor/notes/task_log.md` with:
+  - Task name
+  - Files modified
+  - Any "technical debt" or "gotchas" discovered for the next agent.

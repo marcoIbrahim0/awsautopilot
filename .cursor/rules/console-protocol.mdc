@@ -1,0 +1,17 @@
+---
+description: Rules for when the user needs to perform manual steps in the AWS Console
+globs: **/*
+alwaysApply: true
+---
+# AWS Console Intervention Protocol
+
+When a task requires manual intervention in the AWS Console, the Agent MUST:
+
+1. **Pause & Instruct**: Stop coding and provide a numbered list of exactly what the user needs to do in the Console.
+2. **State Verification**: Ask the user to provide the "Output" (e.g., a Role ARN or an Access Key) once the manual step is done.
+3. **Log the Gap**: Once the user returns, the Agent MUST document the manual change in `@task_log.md` under a "Manual Console Changes" header.
+4. **Assume No Access**: Never assume the Agent has "Write" access to the Console. If a task requires creating a resource, always offer to write a script for it first before asking the user to do it manually.
+
+**Prompting Style:**
+- Use bold text for Console navigation paths: **IAM > Users > Create User**.
+- Use code blocks for any values the user needs to paste into the Console.

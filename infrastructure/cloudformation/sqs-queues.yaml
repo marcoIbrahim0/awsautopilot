@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  SQS queues and IAM policies for Security Autopilot ingestion pipeline.
+  - security-autopilot-ingest-dlq: dead-letter queue for failed ingest jobs
+  - security-autopilot-ingest-queue: main queue for ingestion jobs (API sends, Worker consumes)
+  - Two managed policies: API send-only, Worker consume-only (no DLQ access in normal operation).
+
+# --- Queue configuration (fixed; no parameters) ---
+# Standard queue (not FIFO). Visibility 30s, retention 14 days, long poll 20s, maxReceiveCount 3.
+
+Resources:
+  # Create DLQ first (main queue references it via redrive policy).
+  IngestDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: security-autopilot-ingest-dlq
+      MessageRetentionPeriod: 1209600   # 14 days
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: ingest-dlq
+
+  IngestQueue:
+    Type: AWS::SQS::Queue
+    DependsOn: IngestDLQ
+    Properties:
+      QueueName: security-autopilot-ingest-queue
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 1209600   # 14 days
+      ReceiveMessageWaitTimeSeconds: 20 # long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt IngestDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: ingest
+
+  # --- IAM: API send-only (no DLQ access) ---
+  ApiSendPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: SecurityAutopilotApiSqsSendPolicy
+      Description: "Least-privilege SQS send for API; ingest queue only. Attach to API service role."
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: SendToIngestQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt IngestQueue.Arn
+
+  # --- IAM: Worker consume-only (no DLQ access) ---
+  WorkerConsumePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: SecurityAutopilotWorkerSqsConsumePolicy
+      Description: "Least-privilege SQS consume for Worker; ingest queue only. Attach to Worker service role."
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ConsumeFromIngestQueue
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource: !GetAtt IngestQueue.Arn
+
+Outputs:
+  IngestQueueURL:
+    Description: "URL of the ingest queue (use for SQS_INGEST_QUEUE_URL)."
+    Value: !Ref IngestQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-IngestQueueURL"
+  IngestQueueArn:
+    Description: "ARN of the ingest queue."
+    Value: !GetAtt IngestQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-IngestQueueArn"
+  IngestDLQURL:
+    Description: "URL of the dead-letter queue (use for SQS_INGEST_DLQ_URL)."
+    Value: !Ref IngestDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-IngestDLQURL"
+  IngestDLQArn:
+    Description: "ARN of the dead-letter queue."
+    Value: !GetAtt IngestDLQ.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-IngestDLQArn"
+  ApiSendPolicyArn:
+    Description: "ARN of the API send-only managed policy. Attach to API service (e.g. ECS task) role."
+    Value: !Ref ApiSendPolicy
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiSendPolicyArn"
+  WorkerConsumePolicyArn:
+    Description: "ARN of the Worker consume-only managed policy. Attach to Worker service (e.g. ECS task) role."
+    Value: !Ref WorkerConsumePolicy
+    Export:
+      Name: !Sub "${AWS::StackName}-WorkerConsumePolicyArn"

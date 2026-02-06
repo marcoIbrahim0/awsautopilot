@@ -1,0 +1,626 @@
+"""
+Pytest tests for Step 7 components.
+
+Covers: PR bundle scaffold, remediation_audit guards, SQS remediation_run payload,
+worker handler registration. Does not require DB or SQS.
+"""
+from __future__ import annotations
+
+import uuid
+
+import pytest
+
+from backend.models.enums import RemediationRunStatus
+from backend.services.pr_bundle import (
+    ACTION_TYPE_CLOUDTRAIL_ENABLED,
+    ACTION_TYPE_ENABLE_GUARDDUTY,
+    ACTION_TYPE_ENABLE_SECURITY_HUB,
+    ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+    ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+    ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+    ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+    CLOUDFORMATION_FORMAT,
+    SUPPORTED_ACTION_TYPES,
+    TERRAFORM_FORMAT,
+    generate_pr_bundle,
+    _s3_bucket_name_from_target_id,
+)
+from backend.services.remediation_audit import (
+    allow_update_outcome,
+    is_run_completed,
+)
+from backend.utils.sqs import (
+    REMEDIATION_RUN_JOB_TYPE,
+    build_remediation_run_job_payload,
+)
+
+
+# ---------------------------------------------------------------------------
+# PR bundle (Step 9.1: load action, dispatch by action_type)
+# ---------------------------------------------------------------------------
+
+
+def _make_action(
+    action_type: str = "pr_only",
+    action_id: uuid.UUID | None = None,
+    account_id: str = "123456789012",
+    region: str | None = "us-east-1",
+    target_id: str = "target-1",
+    title: str = "Remediation",
+    control_id: str | None = "control-1",
+) -> object:
+    """Minimal action-like object for tests (ActionLike protocol)."""
+    return type("ActionLike", (), {
+        "id": action_id or uuid.uuid4(),
+        "action_type": action_type,
+        "account_id": account_id,
+        "region": region,
+        "target_id": target_id,
+        "title": title,
+        "control_id": control_id,
+    })()
+
+
+def test_pr_bundle_returns_dict_with_format_files_steps() -> None:
+    """generate_pr_bundle returns format, files, steps."""
+    action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
+    r = generate_pr_bundle(action, "terraform")
+    assert isinstance(r, dict)
+    assert "format" in r
+    assert "files" in r
+    assert "steps" in r
+    assert r["format"] == "terraform"
+    assert len(r["files"]) >= 1
+    assert len(r["steps"]) >= 2
+
+
+def test_pr_bundle_terraform_file_shape() -> None:
+    """Terraform bundle for s3_block_public_access has providers.tf + resource .tf (Step 9.2)."""
+    action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
+    r = generate_pr_bundle(action, "terraform")
+    paths = [f["path"] for f in r["files"]]
+    assert "providers.tf" in paths
+    assert "s3_block_public_access.tf" in paths
+    assert "README.txt" in paths
+    assert len(r["files"]) == 3
+    resource_file = next(f for f in r["files"] if f["path"] == "s3_block_public_access.tf")
+    assert "aws_s3_account_public_access_block" in resource_file["content"]
+
+
+def test_pr_bundle_cloudformation_file_shape() -> None:
+    """CloudFormation bundle for s3 has .yaml file."""
+    action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"].endswith(".yaml")
+
+
+def test_pr_bundle_cloudformation_s3_step_9_5_valid_template() -> None:
+    """Step 9.5: S3 CloudFormation is valid YAML with placeholder + CLI instructions."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+        account_id="111122223333",
+        control_id="S3.1",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    content = r["files"][0]["content"]
+    assert "AWSTemplateFormatVersion" in content
+    assert "Resources:" in content
+    assert "PlaceholderNoOp" in content or "WaitConditionHandle" in content
+    assert "put-public-access-block" in content or "s3control" in content
+    assert "CloudFormation does not support" in content or "no native resource" in content
+    assert "111122223333" in content
+
+
+def test_pr_bundle_cloudformation_security_hub_step_9_5() -> None:
+    """Step 9.5: Security Hub CloudFormation is valid, applyable YAML."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_SECURITY_HUB,
+        region="eu-west-1",
+        account_id="222233334444",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    content = r["files"][0]["content"]
+    assert "AWSTemplateFormatVersion" in content
+    assert "AWS::SecurityHub::Hub" in content
+    assert "SecurityAutopilotHub" in content
+    assert "eu-west-1" in content
+
+
+def test_pr_bundle_cloudformation_guardduty_step_9_5() -> None:
+    """Step 9.5: GuardDuty CloudFormation is valid, applyable YAML with Enable: true."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_GUARDDUTY,
+        region="ap-southeast-1",
+        account_id="333344445555",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    content = r["files"][0]["content"]
+    assert "AWSTemplateFormatVersion" in content
+    assert "AWS::GuardDuty::Detector" in content
+    assert "Enable: true" in content
+    assert "SecurityAutopilotDetector" in content
+    assert "ap-southeast-1" in content
+
+
+def test_pr_bundle_invalid_format_defaults_terraform() -> None:
+    """Invalid format falls back to terraform."""
+    action = _make_action()
+    r = generate_pr_bundle(action, "invalid")
+    assert r["format"] == "terraform"
+
+
+def test_pr_bundle_unsupported_action_type_returns_guidance() -> None:
+    """Unsupported or pr_only action type returns guidance placeholder."""
+    action = _make_action(action_type="pr_only")
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    # Terraform unsupported: README.tf + README.txt (credentials instructions)
+    assert len(r["files"]) == 2
+    paths = [f["path"] for f in r["files"]]
+    assert "README.txt" in paths
+    assert any("README" in p or "action type" in (f.get("content") or "") for p, f in [(f["path"], f) for f in r["files"]])
+    assert "does not yet have IaC" in r["files"][0]["content"] or "manually" in r["files"][0]["content"].lower()
+
+
+def test_pr_bundle_none_action_returns_guidance() -> None:
+    """None action returns unsupported-guidance bundle."""
+    r = generate_pr_bundle(None, "terraform")
+    assert r["format"] == "terraform"
+    assert len(r["files"]) >= 1
+    assert len(r["steps"]) >= 2
+
+
+def test_pr_bundle_dispatch_s3_terraform() -> None:
+    """s3_block_public_access produces S3 Terraform content (Step 9.2)."""
+    action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
+    r = generate_pr_bundle(action, "terraform")
+    resource_file = next(f for f in r["files"] if "s3_block_public_access" in f["path"])
+    assert "aws_s3_account_public_access_block" in resource_file["content"]
+    assert "block_public_acls" in resource_file["content"]
+    assert "restrict_public_buckets" in resource_file["content"]
+    providers_file = next(f for f in r["files"] if f["path"] == "providers.tf")
+    assert "hashicorp/aws" in providers_file["content"]
+    assert "required_providers" in providers_file["content"]
+
+
+def test_pr_bundle_s3_terraform_step_9_2_exact_structure() -> None:
+    """Step 9.2: Terraform S3 bundle has exact HCL structure and four steps."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+        account_id="111122223333",
+        title="Enable S3 Block Public Access",
+        control_id="S3.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    assert len(r["steps"]) == 4
+    assert "Ensure AWS provider is configured for account 111122223333" in r["steps"][0]
+    assert "terraform init" in r["steps"][1]
+    assert "terraform apply" in r["steps"][2]
+    assert "Recompute actions" in r["steps"][3]
+    resource_file = next(f for f in r["files"] if f["path"] == "s3_block_public_access.tf")
+    content = resource_file["content"]
+    assert 'resource "aws_s3_account_public_access_block" "security_autopilot"' in content
+    assert "block_public_acls       = true" in content
+    assert "block_public_policy     = true" in content
+    assert "ignore_public_acls      = true" in content
+    assert "restrict_public_buckets = true" in content
+    assert "Action:" in content and "111122223333" in content
+
+
+def test_pr_bundle_security_hub_terraform_step_9_3_exact_structure() -> None:
+    """Step 9.3: Terraform Security Hub bundle has region-scoped provider and four steps."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_SECURITY_HUB,
+        account_id="111122223333",
+        region="eu-west-1",
+        title="Enable Security Hub",
+        control_id="SH.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    paths = [f["path"] for f in r["files"]]
+    assert "README.txt" in paths
+    assert len(r["files"]) == 3
+    assert len(r["steps"]) == 4
+    assert "Configure AWS provider for account 111122223333 and region eu-west-1" in r["steps"][0]
+    assert "terraform init" in r["steps"][1]
+    assert "terraform apply" in r["steps"][2]
+    assert "Recompute actions" in r["steps"][3]
+    providers_file = next(f for f in r["files"] if f["path"] == "providers.tf")
+    assert 'region = "eu-west-1"' in providers_file["content"]
+    assert "hashicorp/aws" in providers_file["content"]
+    resource_file = next(f for f in r["files"] if f["path"] == "enable_security_hub.tf")
+    content = resource_file["content"]
+    assert 'resource "aws_securityhub_account" "security_autopilot"' in content
+    assert "Account:" in content and "111122223333" in content
+    assert "Region: eu-west-1" in content
+
+
+def test_pr_bundle_guardduty_terraform_step_9_4_exact_structure() -> None:
+    """Step 9.4: Terraform GuardDuty bundle has region-scoped provider and four steps."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_GUARDDUTY,
+        account_id="444455556666",
+        region="ap-southeast-1",
+        title="Enable GuardDuty",
+        control_id="GD.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    paths = [f["path"] for f in r["files"]]
+    assert "README.txt" in paths
+    assert len(r["files"]) == 3
+    assert len(r["steps"]) == 4
+    assert "Configure AWS provider for account 444455556666 and region ap-southeast-1" in r["steps"][0]
+    assert "terraform init" in r["steps"][1]
+    assert "terraform apply" in r["steps"][2]
+    assert "Recompute actions" in r["steps"][3]
+    providers_file = next(f for f in r["files"] if f["path"] == "providers.tf")
+    assert 'region = "ap-southeast-1"' in providers_file["content"]
+    assert "hashicorp/aws" in providers_file["content"]
+    resource_file = next(f for f in r["files"] if f["path"] == "enable_guardduty.tf")
+    content = resource_file["content"]
+    assert 'resource "aws_guardduty_detector" "security_autopilot"' in content
+    assert "enable = true" in content
+    assert "Account:" in content and "444455556666" in content
+    assert "Region: ap-southeast-1" in content
+
+
+def test_pr_bundle_supported_action_types_all_seven() -> None:
+    """Step 9.1: SUPPORTED_ACTION_TYPES contains all 7 in-scope action types (9.2–9.5, 9.9–9.12)."""
+    assert len(SUPPORTED_ACTION_TYPES) == 7
+    assert ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_ENABLE_SECURITY_HUB in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_ENABLE_GUARDDUTY in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_ENCRYPTION in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_CLOUDTRAIL_ENABLED in SUPPORTED_ACTION_TYPES
+
+
+def test_pr_bundle_dispatch_s3_bucket_block_terraform_step_9_9() -> None:
+    """Step 9.9: s3_bucket_block_public_access returns Terraform with aws_s3_bucket_public_access_block."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket-name",
+        region="us-east-1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    paths = [f["path"] for f in r["files"]]
+    assert "providers.tf" in paths
+    assert "s3_bucket_block_public_access.tf" in paths
+    assert "README.txt" in paths
+    assert len(r["files"]) == 3
+    resource_file = next(f for f in r["files"] if f["path"] == "s3_bucket_block_public_access.tf")
+    assert "aws_s3_bucket_public_access_block" in resource_file["content"]
+    assert "my-bucket-name" in resource_file["content"]
+    assert "block_public_acls" in resource_file["content"]
+
+
+def test_pr_bundle_s3_bucket_block_terraform_step_9_9_exact_structure() -> None:
+    """Step 9.9: Terraform for S3.2 (s3_bucket_block_public_access) has exact structure: aws_s3_bucket_public_access_block, block_public_*."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_block_public_access.tf")["content"]
+    assert 'resource "aws_s3_bucket_public_access_block" "security_autopilot"' in content
+    assert 'bucket = "my-bucket"' in content
+    assert "block_public_acls       = true" in content or "block_public_acls" in content
+    assert "block_public_policy" in content
+    assert "ignore_public_acls" in content
+    assert "restrict_public_buckets" in content
+    assert "S3.2" in content or "Control:" in content
+
+
+def test_s3_bucket_name_from_target_id() -> None:
+    """_s3_bucket_name_from_target_id extracts bucket name from composite or plain target_id."""
+    assert _s3_bucket_name_from_target_id("") == "REPLACE_BUCKET_NAME"
+    assert _s3_bucket_name_from_target_id("my-bucket") == "my-bucket"
+    assert _s3_bucket_name_from_target_id("arn:aws:s3:::demomarcoss") == "demomarcoss"
+    composite = "029037611564|eu-north-1|arn:aws:s3:::demomarcoss|S3.2"
+    assert _s3_bucket_name_from_target_id(composite) == "demomarcoss"
+    assert _s3_bucket_name_from_target_id("029037611564|eu-north-1|no-arn-here|S3.2") == "REPLACE_BUCKET_NAME"
+
+
+def test_pr_bundle_s3_bucket_block_cloudformation_step_9_9() -> None:
+    """Step 9.9: CloudFormation for S3.2 (s3_bucket_block_public_access) has PublicAccessBlockConfiguration."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="blocked-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"] == "s3_bucket_block_public_access.yaml"
+    content = r["files"][0]["content"]
+    assert "AWS::S3::Bucket" in content
+    assert "PublicAccessBlockConfiguration:" in content
+    assert "BlockPublicAcls: true" in content or "BlockPublicAcls:" in content
+    assert "BlockPublicPolicy" in content
+    assert "IgnorePublicAcls" in content
+    assert "RestrictPublicBuckets" in content
+    assert "BucketName:" in content
+    assert "S3.2" in content or "Control:" in content
+
+
+def test_pr_bundle_dispatch_s3_bucket_encryption_terraform_step_9_10() -> None:
+    """Step 9.10: s3_bucket_encryption returns Terraform with aws_s3_bucket_server_side_encryption_configuration."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+        target_id="encrypt-this-bucket",
+        region="eu-west-1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    resource_file = next(f for f in r["files"] if f["path"] == "s3_bucket_encryption.tf")
+    assert "aws_s3_bucket_server_side_encryption_configuration" in resource_file["content"]
+    assert "encrypt-this-bucket" in resource_file["content"]
+    assert "AES256" in resource_file["content"]
+
+
+def test_pr_bundle_s3_bucket_encryption_terraform_step_9_10_exact_structure() -> None:
+    """Step 9.10: Terraform for S3.4 (s3_bucket_encryption) has exact structure: rule, AES256, bucket_key_enabled."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.4",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_encryption.tf")["content"]
+    assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot"' in content
+    assert 'bucket = "my-bucket"' in content
+    assert "rule {" in content
+    assert "apply_server_side_encryption_by_default" in content
+    assert 'sse_algorithm = "AES256"' in content
+    assert "bucket_key_enabled = true" in content
+    assert "S3.4" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_encryption_cloudformation_step_9_10() -> None:
+    """Step 9.10: CloudFormation for S3.4 (s3_bucket_encryption) has BucketEncryption, AES256, BucketKeyEnabled."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+        target_id="encrypted-bucket",
+        region="us-east-1",
+        control_id="S3.4",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"] == "s3_bucket_encryption.yaml"
+    content = r["files"][0]["content"]
+    assert "AWS::S3::Bucket" in content
+    assert "BucketEncryption:" in content
+    assert "ServerSideEncryptionConfiguration:" in content
+    assert "ServerSideEncryptionByDefault:" in content
+    assert "SSEAlgorithm: AES256" in content
+    assert "BucketKeyEnabled: true" in content
+    assert "BucketName:" in content
+    assert "S3.4" in content or "Control:" in content
+
+
+def test_pr_bundle_dispatch_sg_restrict_terraform_step_9_11() -> None:
+    """Step 9.11: sg_restrict_public_ports returns Terraform with aws_vpc_security_group_ingress_rule."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0123456789abcdef0",
+        region="us-east-1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    resource_file = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")
+    assert "aws_vpc_security_group_ingress_rule" in resource_file["content"]
+    assert "sg-0123456789abcdef0" in resource_file["content"]
+    assert "22" in resource_file["content"] and "3389" in resource_file["content"]
+
+
+def test_pr_bundle_sg_restrict_terraform_step_9_11_exact_structure() -> None:
+    """Step 9.11: Terraform for EC2.18 (sg_restrict_public_ports) has exact structure: variables, SSH (22), RDP (3389)."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-abc123",
+        region="us-east-1",
+        control_id="EC2.18",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
+    assert 'variable "security_group_id"' in content
+    assert 'variable "allowed_cidr"' in content
+    assert '"sg-abc123"' in content
+    assert '"10.0.0.0/8"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "ssh_restricted"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "rdp_restricted"' in content
+    assert 'from_port         = 22' in content
+    assert 'to_port           = 22' in content
+    assert 'from_port         = 3389' in content
+    assert 'to_port           = 3389' in content
+    assert 'ip_protocol       = "tcp"' in content
+    assert "EC2.18" in content or "Control:" in content
+
+
+def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
+    """Step 9.11: CloudFormation for EC2.18 (sg_restrict_public_ports) has SecurityGroupIngress, SSH (22), RDP (3389)."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-xyz789",
+        region="us-east-1",
+        control_id="EC2.18",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"] == "sg_restrict_public_ports.yaml"
+    content = r["files"][0]["content"]
+    assert "AWS::EC2::SecurityGroupIngress" in content
+    assert "SecurityGroupId:" in content
+    assert "AllowedCidr:" in content
+    assert "FromPort: 22" in content
+    assert "ToPort: 22" in content
+    assert "FromPort: 3389" in content
+    assert "ToPort: 3389" in content
+    assert "IpProtocol: tcp" in content
+    assert "10.0.0.0/8" in content
+    assert "EC2.18" in content or "Control:" in content
+
+
+def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:
+    """Step 9.12: cloudtrail_enabled returns Terraform with aws_cloudtrail."""
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    resource_file = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")
+    assert "aws_cloudtrail" in resource_file["content"]
+    assert "is_multi_region_trail" in resource_file["content"]
+
+
+def test_pr_bundle_cloudtrail_terraform_step_9_12_exact_structure() -> None:
+    """Step 9.12: Terraform for CloudTrail.1 (cloudtrail_enabled) has exact structure: variable, aws_cloudtrail, multi-region."""
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+        control_id="CloudTrail.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
+    assert 'variable "trail_bucket_name"' in content
+    assert 'resource "aws_cloudtrail" "security_autopilot"' in content
+    assert "s3_bucket_name" in content
+    assert "is_multi_region_trail" in content
+    assert "include_global_service_events" in content
+    assert "enable_logging" in content
+    assert "CloudTrail.1" in content or "Control:" in content
+
+
+def test_pr_bundle_cloudtrail_cloudformation_step_9_12() -> None:
+    """Step 9.12: CloudFormation for CloudTrail.1 (cloudtrail_enabled) has AWS::CloudTrail::Trail, IsMultiRegionTrail, S3BucketName."""
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+        control_id="CloudTrail.1",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"] == "cloudtrail_enabled.yaml"
+    content = r["files"][0]["content"]
+    assert "AWS::CloudTrail::Trail" in content
+    assert "TrailBucketName:" in content or "TrailBucketName" in content
+    assert "IsMultiRegionTrail: true" in content or "IsMultiRegionTrail:" in content
+    assert "IncludeGlobalServiceEvents" in content or "S3BucketName:" in content
+    assert "CloudTrail.1" in content or "Control:" in content
+
+
+def test_pr_bundle_dispatch_all_seven_cloudformation() -> None:
+    """Step 9.5 / 9.9–9.12: All 7 types produce CloudFormation YAML (valid structure)."""
+    types_and_paths = [
+        (ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS, "s3_block_public_access.yaml"),
+        (ACTION_TYPE_ENABLE_SECURITY_HUB, "enable_security_hub.yaml"),
+        (ACTION_TYPE_ENABLE_GUARDDUTY, "enable_guardduty.yaml"),
+        (ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS, "s3_bucket_block_public_access.yaml"),
+        (ACTION_TYPE_S3_BUCKET_ENCRYPTION, "s3_bucket_encryption.yaml"),
+        (ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS, "sg_restrict_public_ports.yaml"),
+        (ACTION_TYPE_CLOUDTRAIL_ENABLED, "cloudtrail_enabled.yaml"),
+    ]
+    for action_type, expected_path in types_and_paths:
+        action = _make_action(action_type=action_type, target_id="test-target", region="us-east-1")
+        r = generate_pr_bundle(action, "cloudformation")
+        assert r["format"] == "cloudformation"
+        assert len(r["files"]) == 1
+        assert r["files"][0]["path"] == expected_path
+        content = r["files"][0]["content"]
+        assert "AWSTemplateFormatVersion" in content or "Resources:" in content or "Description" in content
+
+
+# ---------------------------------------------------------------------------
+# Remediation audit (7.5)
+# ---------------------------------------------------------------------------
+
+def test_is_run_completed_success() -> None:
+    """status success is completed."""
+    assert is_run_completed(RemediationRunStatus.success) is True
+    assert is_run_completed("success") is True
+
+
+def test_is_run_completed_failed() -> None:
+    """status failed is completed."""
+    assert is_run_completed(RemediationRunStatus.failed) is True
+    assert is_run_completed("failed") is True
+
+
+def test_is_run_completed_pending_not_completed() -> None:
+    """status pending is not completed."""
+    assert is_run_completed(RemediationRunStatus.pending) is False
+    assert is_run_completed("pending") is False
+
+
+def test_allow_update_outcome_pending() -> None:
+    """Pending run allows update."""
+    class Run:
+        status = RemediationRunStatus.pending
+    assert allow_update_outcome(Run()) is True
+
+
+def test_allow_update_outcome_success() -> None:
+    """Completed run (success) does not allow update."""
+    class Run:
+        status = RemediationRunStatus.success
+    assert allow_update_outcome(Run()) is False
+
+
+def test_allow_update_outcome_failed() -> None:
+    """Completed run (failed) does not allow update."""
+    class Run:
+        status = RemediationRunStatus.failed
+    assert allow_update_outcome(Run()) is False
+
+
+# ---------------------------------------------------------------------------
+# SQS remediation_run payload (7.2 / 7.3)
+# ---------------------------------------------------------------------------
+
+def test_build_remediation_run_job_payload_shape() -> None:
+    """Payload has job_type, run_id, tenant_id, action_id, mode, created_at."""
+    run_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    action_id = uuid.uuid4()
+    created_at = "2026-02-02T12:00:00Z"
+    payload = build_remediation_run_job_payload(run_id, tenant_id, action_id, "pr_only", created_at)
+    assert payload["job_type"] == REMEDIATION_RUN_JOB_TYPE
+    assert payload["run_id"] == str(run_id)
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["action_id"] == str(action_id)
+    assert payload["mode"] == "pr_only"
+    assert payload["created_at"] == created_at
+
+
+def test_build_remediation_run_job_payload_direct_fix() -> None:
+    """Payload supports mode direct_fix."""
+    run_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    action_id = uuid.uuid4()
+    payload = build_remediation_run_job_payload(run_id, tenant_id, action_id, "direct_fix", "2026-02-02T12:00:00Z")
+    assert payload["mode"] == "direct_fix"
+
+
+# ---------------------------------------------------------------------------
+# Worker handler registration (7.3)
+# ---------------------------------------------------------------------------
+
+def test_remediation_run_handler_registered() -> None:
+    """Worker has a handler for remediation_run job type."""
+    from worker.jobs import get_job_handler
+    handler = get_job_handler(REMEDIATION_RUN_JOB_TYPE)
+    assert handler is not None
+    assert callable(handler)
