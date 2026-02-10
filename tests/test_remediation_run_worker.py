@@ -16,8 +16,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
-from backend.models.enums import RemediationRunStatus
+from backend.models.enums import (
+    RemediationRunExecutionPhase,
+    RemediationRunExecutionStatus,
+    RemediationRunMode,
+    RemediationRunStatus,
+)
 from worker.jobs.remediation_run import execute_remediation_run_job
+from worker.jobs.remediation_run_execution import execute_pr_bundle_execution_job
 from worker.services.direct_fix import DirectFixResult
 
 
@@ -49,6 +55,10 @@ def _mock_run_with_action(action_type: str = "s3_block_public_access") -> MagicM
     action.action_type = action_type
     action.account_id = "123456789012"
     action.region = None if action_type == "s3_block_public_access" else "us-east-1"
+    action.title = "Test action"
+    action.control_id = "TEST.1"
+    action.target_id = "test-target"
+    action.resource_id = None
 
     run.action = action
     return run
@@ -161,8 +171,10 @@ def test_direct_fix_assume_role_fails() -> None:
             )
 
             with patch("worker.jobs.remediation_run.run_direct_fix") as mock_fix:
-                execute_remediation_run_job(job)
-                mock_fix.assert_not_called()
+                with patch("worker.jobs.remediation_run.emit_worker_dispatch_error") as mock_emit:
+                    execute_remediation_run_job(job)
+                    mock_fix.assert_not_called()
+                    assert mock_emit.call_count >= 1
 
     assert run.status == RemediationRunStatus.failed
     assert "Failed to assume WriteRole" in (run.outcome or "")
@@ -266,3 +278,543 @@ def test_direct_fix_account_not_found() -> None:
 
     assert run.status == RemediationRunStatus.failed
     assert "AWS account not found" in (run.outcome or "")
+
+
+def test_pr_only_variant_generates_cloudfront_oac_bundle() -> None:
+    """pr_only with variant forwards variant to generate_pr_bundle and stores it on artifacts."""
+    job = _make_job(mode="pr_only")
+    job["pr_bundle_variant"] = "cloudfront_oac_private_s3"
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    bundle = {
+        "format": "terraform",
+        "files": [{"path": "s3_cloudfront_oac_private_s3.tf", "content": "# test"}],
+        "steps": ["step"],
+    }
+
+    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("worker.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+            execute_remediation_run_job(job)
+            mock_generate.assert_called_once()
+            args, kwargs = mock_generate.call_args
+            assert kwargs.get("variant") == "cloudfront_oac_private_s3"
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "PR bundle generated"
+    assert isinstance(run.artifacts, dict)
+    assert run.artifacts.get("pr_bundle_variant") == "cloudfront_oac_private_s3"
+    assert "pr_bundle" in run.artifacts
+
+
+def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
+    """pr_only with group_action_ids generates one combined bundle artifact for the group."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    run.action.control_id = "S3.2"
+    run.action.title = "Bucket one hardening"
+
+    second_action = MagicMock()
+    second_action.id = uuid.uuid4()
+    second_action.action_type = "s3_bucket_block_public_access"
+    second_action.account_id = "123456789012"
+    second_action.region = "us-east-1"
+    second_action.title = "Bucket two hardening"
+    second_action.control_id = "S3.2"
+    second_action.target_id = "arn:aws:s3:::bucket-two"
+    second_action.resource_id = "arn:aws:s3:::bucket-two"
+
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+
+    result_actions = MagicMock()
+    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run, result_actions]
+    mock_session.flush = MagicMock()
+
+    bundle_one = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider one"},
+            {"path": "s3_bucket_block_public_access.tf", "content": "# bucket one"},
+        ],
+        "steps": ["step one"],
+    }
+    bundle_two = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider two"},
+            {"path": "s3_bucket_block_public_access.tf", "content": "# bucket two"},
+        ],
+        "steps": ["step two"],
+    }
+
+    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+            execute_remediation_run_job(job)
+            assert mock_generate.call_count == 2
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "Group PR bundle generated (2 actions)"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle = run.artifacts.get("pr_bundle")
+    assert isinstance(pr_bundle, dict)
+    files = pr_bundle.get("files")
+    assert isinstance(files, list)
+    paths = [f.get("path") for f in files if isinstance(f, dict)]
+    assert "README_GROUP.txt" in paths
+    assert "run_all.sh" in paths
+    assert "run_all.command" not in paths
+    assert "UNBLOCK_MAC.command" not in paths
+    assert any(isinstance(path, str) and path.startswith("actions/") for path in paths)
+    run_all = next(
+        f for f in files if isinstance(f, dict) and f.get("path") == "run_all.sh"
+    )
+    content = str(run_all.get("content") or "")
+    assert "set -euo pipefail" in content
+    assert "render_progress()" in content
+    assert "if [ -t 1 ] && [ -z \"${CI:-}\" ]" in content
+    assert "apply_with_duplicate_tolerance" in content
+    assert "run_terraform_init_with_retry" in content
+    assert "${!ACTION_DIRS[@]}" not in content
+    assert "PARALLEL_BUNDLE_EXECUTIONS" in content
+    assert "wait_for_one_bundle" in content
+    assert "InvalidPermission" in content
+    assert "EntityAlreadyExists" in content
+    assert "WARNING: duplicate/already-existing resource detected; continuing without failure." in content
+    assert "Bundle run completed." in content
+    assert "Failed folders summary:" in content
+    metadata = pr_bundle.get("metadata")
+    assert isinstance(metadata, dict)
+    assert metadata.get("runner_template_source") == "embedded"
+    assert metadata.get("runner_template_version") == "v1"
+    group_bundle = run.artifacts.get("group_bundle")
+    assert isinstance(group_bundle, dict)
+    assert group_bundle.get("runner_template_source") == "embedded"
+    assert group_bundle.get("runner_template_version") == "v1"
+    readme_group = next(
+        f for f in files if isinstance(f, dict) and f.get("path") == "README_GROUP.txt"
+    )
+    readme_content = str(readme_group.get("content") or "")
+    assert "chmod +x ./run_all.sh" in readme_content
+    assert "./run_all.sh" in readme_content
+
+
+def test_group_bundle_runner_template_uses_s3_when_configured() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    second_action = MagicMock()
+    second_action.id = uuid.uuid4()
+    second_action.action_type = "s3_bucket_block_public_access"
+    second_action.account_id = "123456789012"
+    second_action.region = "us-east-1"
+    second_action.title = "Bucket two hardening"
+    second_action.control_id = "S3.2"
+    second_action.target_id = "arn:aws:s3:::bucket-two"
+    second_action.resource_id = "arn:aws:s3:::bucket-two"
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+    result_actions = MagicMock()
+    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run, result_actions]
+    mock_session.flush = MagicMock()
+
+    bundle_one = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# one"}], "steps": ["step one"]}
+    bundle_two = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# two"}], "steps": ["step two"]}
+
+    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]):
+            with patch("worker.jobs.remediation_run.settings") as mock_settings:
+                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI = "s3://central-templates/run-all/latest.sh"
+                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION = "v9.9.9"
+                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS = 300
+                with patch("worker.jobs.remediation_run.boto3.client") as mock_boto_client:
+                    mock_s3 = MagicMock()
+                    body = MagicMock()
+                    body.read.return_value = b"#!/usr/bin/env bash\necho central-template\n"
+                    mock_s3.get_object.return_value = {"Body": body, "ETag": '"abc123"'}
+                    mock_boto_client.return_value = mock_s3
+                    execute_remediation_run_job(job)
+
+    pr_bundle = run.artifacts.get("pr_bundle")
+    assert isinstance(pr_bundle, dict)
+    metadata = pr_bundle.get("metadata")
+    assert isinstance(metadata, dict)
+    assert metadata.get("runner_template_source") == "s3://central-templates/run-all/latest.sh"
+    assert metadata.get("runner_template_version") == "v9.9.9"
+    files = pr_bundle.get("files")
+    assert isinstance(files, list)
+    run_all = next(f for f in files if isinstance(f, dict) and f.get("path") == "run_all.sh")
+    assert "central-template" in str(run_all.get("content") or "")
+
+
+def test_pr_only_strategy_fields_forwarded_to_generator_and_artifacts() -> None:
+    """Single-action PR runs forward strategy fields and persist risk snapshot evidence."""
+    job = _make_job(mode="pr_only")
+    job["strategy_id"] = "config_enable_centralized_delivery"
+    job["strategy_inputs"] = {"delivery_bucket": "central-config-bucket"}
+    job["risk_acknowledged"] = True
+
+    run = _mock_run_with_action("aws_config_enabled")
+    run.artifacts = {
+        "risk_snapshot": {
+            "checks": [{"code": "config_cost_impact", "status": "warn", "message": "cost impact"}],
+            "warnings": ["cost impact"],
+            "recommendation": "ack_required",
+        }
+    }
+
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run]
+    mock_session.flush = MagicMock()
+
+    bundle = {
+        "format": "terraform",
+        "files": [{"path": "aws_config_enabled.tf", "content": "# config"}],
+        "steps": ["step one"],
+    }
+
+    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("worker.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+            execute_remediation_run_job(job)
+            _, kwargs = mock_generate.call_args
+            assert kwargs.get("strategy_id") == "config_enable_centralized_delivery"
+            assert kwargs.get("strategy_inputs") == {"delivery_bucket": "central-config-bucket"}
+            assert isinstance(kwargs.get("risk_snapshot"), dict)
+
+    assert run.status == RemediationRunStatus.success
+    assert isinstance(run.artifacts, dict)
+    assert run.artifacts.get("selected_strategy") == "config_enable_centralized_delivery"
+    assert run.artifacts.get("strategy_inputs") == {"delivery_bucket": "central-config-bucket"}
+    assert run.artifacts.get("risk_acknowledged") is True
+    assert isinstance(run.artifacts.get("risk_snapshot"), dict)
+
+
+def test_group_pr_bundle_strategy_fields_forwarded_to_each_action_generation() -> None:
+    """Group PR bundle generation forwards strategy_id/strategy_inputs per action and preserves artifacts."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+
+    second_action = MagicMock()
+    second_action.id = uuid.uuid4()
+    second_action.action_type = "s3_bucket_block_public_access"
+    second_action.account_id = "123456789012"
+    second_action.region = "us-east-1"
+    second_action.title = "Bucket two hardening"
+    second_action.control_id = "S3.2"
+    second_action.target_id = "arn:aws:s3:::bucket-two"
+    second_action.resource_id = "arn:aws:s3:::bucket-two"
+
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["strategy_id"] = "s3_migrate_cloudfront_oac_private"
+    job["strategy_inputs"] = {"exempt_principals": ["arn:aws:iam::123456789012:role/legacy"]}
+    job["risk_acknowledged"] = True
+
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+    result_actions = MagicMock()
+    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run, result_actions]
+    mock_session.flush = MagicMock()
+
+    bundle_one = {
+        "format": "terraform",
+        "files": [{"path": "providers.tf", "content": "# provider one"}],
+        "steps": ["step one"],
+    }
+    bundle_two = {
+        "format": "terraform",
+        "files": [{"path": "providers.tf", "content": "# provider two"}],
+        "steps": ["step two"],
+    }
+
+    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+            execute_remediation_run_job(job)
+            assert mock_generate.call_count == 2
+            for call in mock_generate.call_args_list:
+                _, kwargs = call
+                assert kwargs.get("strategy_id") == "s3_migrate_cloudfront_oac_private"
+                assert kwargs.get("strategy_inputs") == {
+                    "exempt_principals": ["arn:aws:iam::123456789012:role/legacy"]
+                }
+
+    assert run.status == RemediationRunStatus.success
+    assert isinstance(run.artifacts, dict)
+    assert run.artifacts.get("selected_strategy") == "s3_migrate_cloudfront_oac_private"
+    assert run.artifacts.get("strategy_inputs") == {
+        "exempt_principals": ["arn:aws:iam::123456789012:role/legacy"]
+    }
+    assert run.artifacts.get("risk_acknowledged") is True
+
+
+def test_pr_bundle_execution_plan_success() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.side_effect = [
+                    {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform show", "returncode": 0, "stdout": "plan", "stderr": ""},
+                ]
+                execute_pr_bundle_execution_job(job)
+
+    assert execution.status == RemediationRunExecutionStatus.awaiting_approval
+    assert run.status == RemediationRunStatus.awaiting_approval
+    assert isinstance(execution.workspace_manifest, dict)
+    assert isinstance(execution.results, dict)
+
+
+def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.apply
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = {"bundle_hash": "different"}
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_apply",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "apply",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.side_effect = [
+                    {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                ]
+                execute_pr_bundle_execution_job(job)
+
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert run.status == RemediationRunStatus.failed
+
+
+def test_pr_bundle_execution_plan_non_fail_fast_continues_folders() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {
+        "pr_bundle": {
+            "files": [
+                {"path": "actions/a/main.tf", "content": 'terraform {}'},
+                {"path": "actions/b/main.tf", "content": 'terraform {}'},
+            ]
+        }
+    }
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = {"fail_fast": False}
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.side_effect = [
+                    {"command": "terraform init", "returncode": 1, "stdout": "", "stderr": "init fail"},
+                    {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform show", "returncode": 0, "stdout": "plan", "stderr": ""},
+                ]
+                execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 4
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert run.status == RemediationRunStatus.failed
+    assert isinstance(execution.results, dict)
+    assert execution.results.get("folder_count") == 2
+    assert execution.results.get("failed_folder_count") == 1
+
+
+def test_pr_bundle_execution_claim_lost_skips_duplicate_delivery() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    claim_result = MagicMock()
+    claim_result.rowcount = 0
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [exec_result, claim_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+            execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 0
+    assert execution.status == RemediationRunExecutionStatus.queued

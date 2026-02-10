@@ -1,11 +1,11 @@
 # Connect WriteRole — Enable Direct Fixes
 
-This document describes how to connect the optional **WriteRole** to enable safe direct remediations (S3 Block Public Access, Security Hub, GuardDuty enablement). WriteRole is **optional**; many customers start with read-only access. Deploy it only when you are ready for direct fixes.
+This document describes how to connect the optional **WriteRole** to enable safe direct remediations (S3 Block Public Access, Security Hub, GuardDuty, and EBS default encryption enablement). WriteRole is **optional**; many customers start with read-only access. Deploy it only when you are ready for direct fixes.
 
 ## Overview
 
 - **ReadRole** (required): Used for Security Hub findings ingestion. No write access.
-- **WriteRole** (optional): Used for direct fixes. Scoped to three safe operations only.
+- **WriteRole** (optional): Used for direct fixes. Scoped to low-risk enablement operations only.
 
 When WriteRole is **not** configured:
 - Ingestion, actions, findings, exceptions, and PR-only remediation work as usual.
@@ -109,7 +109,8 @@ The template creates an IAM role with **only** these scoped permissions:
 |------------------------|-----------------------------------------------------------------------------|
 | S3 Block Public Access | `s3:GetAccountPublicAccessBlock`, `s3:PutAccountPublicAccessBlock`          |
 | Security Hub           | `securityhub:EnableSecurityHub`, `securityhub:GetEnabledStandards`, `securityhub:DescribeHub` |
-| GuardDuty              | `guardduty:CreateDetector`, `guardduty:GetDetector`, `guardduty:ListDetectors` |
+| GuardDuty              | `guardduty:CreateDetector`, `guardduty:GetDetector`, `guardduty:ListDetectors`, `guardduty:UpdateDetector` |
+| EBS default encryption | `ec2:GetEbsEncryptionByDefault`, `ec2:EnableEbsEncryptionByDefault`, `ec2:GetEbsDefaultKmsKeyId`, `ec2:ModifyEbsDefaultKmsKeyId` |
 | Validation             | `sts:GetCallerIdentity`                                                     |
 
 All actions use `Resource: "*"` as required by these account-level and service APIs.
@@ -143,4 +144,4 @@ The UI can then show a **Deploy Write Role** button next to **Deploy Read Role**
 - [ ] Deploy WriteRole stack in customer AWS account (same ExternalId as ReadRole).
 - [ ] Copy WriteRoleArn from stack Outputs.
 - [ ] PATCH `/api/aws/accounts/{account_id}` with `role_write_arn`, or include it in initial registration.
-- [ ] Direct fix actions (e.g. "Run fix" on S3 Block Public Access) will now use WriteRole when approved.
+- [ ] Direct fix actions (including EBS default encryption) will now use WriteRole when approved.

@@ -47,11 +47,12 @@ def test_unsupported_action_type() -> None:
 
 
 def test_supported_action_types_constant() -> None:
-    """SUPPORTED_ACTION_TYPES contains the three fix types."""
+    """SUPPORTED_ACTION_TYPES contains the four low-risk direct-fix action types."""
     assert "s3_block_public_access" in SUPPORTED_ACTION_TYPES
     assert "enable_security_hub" in SUPPORTED_ACTION_TYPES
     assert "enable_guardduty" in SUPPORTED_ACTION_TYPES
-    assert len(SUPPORTED_ACTION_TYPES) == 3
+    assert "ebs_default_encryption" in SUPPORTED_ACTION_TYPES
+    assert len(SUPPORTED_ACTION_TYPES) == 4
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +257,76 @@ def test_guardduty_detector_exists_but_disabled() -> None:
     assert result.success is True
     assert "GuardDuty enabled" in result.outcome
     gd.update_detector.assert_called_once_with(DetectorId="det-123", Enable=True)
+
+
+# ---------------------------------------------------------------------------
+# EBS default encryption
+# ---------------------------------------------------------------------------
+def test_ebs_default_encryption_region_required() -> None:
+    """ebs_default_encryption with no region returns failure."""
+    session = _mock_session({})
+    result = run_direct_fix(session, "ebs_default_encryption", "123456789012", None)
+    assert result.success is False
+    assert "Region required" in result.outcome
+
+
+def test_ebs_default_encryption_already_enabled_aws_managed() -> None:
+    """When default encryption is already enabled, direct-fix is idempotent."""
+    ec2 = MagicMock()
+    ec2.get_ebs_encryption_by_default.return_value = {"EbsEncryptionByDefault": True}
+    session = _mock_session({"ec2": ec2})
+
+    result = run_direct_fix(session, "ebs_default_encryption", "123456789012", "eu-north-1")
+
+    assert result.success is True
+    assert "Already compliant" in result.outcome
+    ec2.enable_ebs_encryption_by_default.assert_not_called()
+
+
+def test_ebs_default_encryption_enable_with_customer_kms_success() -> None:
+    """Customer KMS strategy enables encryption and sets default KMS key."""
+    ec2 = MagicMock()
+    ec2.get_ebs_encryption_by_default.side_effect = [
+        {"EbsEncryptionByDefault": False},
+        {"EbsEncryptionByDefault": True},
+    ]
+    ec2.get_ebs_default_kms_key_id.return_value = {"KmsKeyId": "arn:aws:kms:eu-north-1:123:key/abc"}
+    session = _mock_session({"ec2": ec2})
+
+    result = run_direct_fix(
+        session,
+        "ebs_default_encryption",
+        "123456789012",
+        "eu-north-1",
+        strategy_id="ebs_enable_default_encryption_customer_kms",
+        strategy_inputs={"kms_key_arn": "arn:aws:kms:eu-north-1:123:key/abc"},
+    )
+
+    assert result.success is True
+    assert "EBS default encryption enabled" in result.outcome
+    ec2.enable_ebs_encryption_by_default.assert_called_once()
+    ec2.modify_ebs_default_kms_key_id.assert_called_once_with(
+        KmsKeyId="arn:aws:kms:eu-north-1:123:key/abc"
+    )
+
+
+def test_ebs_default_encryption_customer_kms_missing_input() -> None:
+    """Customer KMS strategy requires kms_key_arn input."""
+    ec2 = MagicMock()
+    ec2.get_ebs_encryption_by_default.return_value = {"EbsEncryptionByDefault": False}
+    session = _mock_session({"ec2": ec2})
+
+    result = run_direct_fix(
+        session,
+        "ebs_default_encryption",
+        "123456789012",
+        "eu-north-1",
+        strategy_id="ebs_enable_default_encryption_customer_kms",
+        strategy_inputs={},
+    )
+
+    assert result.success is False
+    assert "kms_key_arn is required" in result.outcome
 
 
 # ---------------------------------------------------------------------------

@@ -55,6 +55,23 @@ class RemediationRunStatus(str, Enum):
     """Current state of a remediation run."""
     pending = "pending"
     running = "running"
+    awaiting_approval = "awaiting_approval"
+    success = "success"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class RemediationRunExecutionPhase(str, Enum):
+    """Execution phase for SaaS-managed PR bundle execution."""
+    plan = "plan"
+    apply = "apply"
+
+
+class RemediationRunExecutionStatus(str, Enum):
+    """Current state of a SaaS-managed PR bundle execution."""
+    queued = "queued"
+    running = "running"
+    awaiting_approval = "awaiting_approval"
     success = "success"
     failed = "failed"
     cancelled = "cancelled"

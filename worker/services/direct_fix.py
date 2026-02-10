@@ -9,10 +9,11 @@ Runs a three-phase flow for each fix:
   3. Post-check: Verify the fix took effect. If post-check fails, run is failed;
      do not mark finding as resolved.
 
-Supports three action types (MVP direct fix):
+Supports action types for low-risk direct fixes:
   - s3_block_public_access: Account-level S3 Block Public Access (all four settings)
   - enable_security_hub: Enable Security Hub in region
   - enable_guardduty: Enable GuardDuty in region
+  - ebs_default_encryption: Enable default EBS encryption (AWS-managed or customer KMS)
 
 All fixes are idempotent and safe to re-run. Receives an already-assumed boto3
 session (WriteRole) from the worker; logs each phase for remediation_runs.logs
@@ -38,7 +39,9 @@ __all__ = [
 ]
 
 # Action types supported by this executor (Step 8.2; only these get direct fix)
-SUPPORTED_ACTION_TYPES = frozenset({"s3_block_public_access", "enable_security_hub", "enable_guardduty"})
+SUPPORTED_ACTION_TYPES = frozenset(
+    {"s3_block_public_access", "enable_security_hub", "enable_guardduty", "ebs_default_encryption"}
+)
 
 # Log phase prefixes for audit trail (remediation_runs.logs)
 _LOG_PRE_CHECK = "Pre-check:"
@@ -73,6 +76,8 @@ def run_direct_fix(
     action_type: str,
     account_id: str,
     region: str | None,
+    strategy_id: str | None = None,
+    strategy_inputs: dict | None = None,
     *,
     run_id: uuid.UUID | None = None,
     action_id: uuid.UUID | None = None,
@@ -109,6 +114,16 @@ def run_direct_fix(
         return _fix_enable_security_hub(session, account_id, region, run_id=run_id, action_id=action_id)
     if action_type == "enable_guardduty":
         return _fix_enable_guardduty(session, account_id, region, run_id=run_id, action_id=action_id)
+    if action_type == "ebs_default_encryption":
+        return _fix_ebs_default_encryption(
+            session,
+            account_id,
+            region,
+            strategy_id=strategy_id,
+            strategy_inputs=strategy_inputs,
+            run_id=run_id,
+            action_id=action_id,
+        )
 
     # Unreachable
     return DirectFixResult(success=False, outcome=f"Unknown action_type: {action_type}", logs=[])
@@ -119,6 +134,8 @@ def run_remediation_preview(
     action_type: str,
     account_id: str,
     region: str | None,
+    strategy_id: str | None = None,
+    strategy_inputs: dict | None = None,
 ) -> RemediationPreviewResult:
     """
     Run pre-check only (dry-run) for remediation preview (Step 8.4).
@@ -139,6 +156,14 @@ def run_remediation_preview(
         compliant, message = _precheck_enable_security_hub(session, account_id, region)
     elif action_type == "enable_guardduty":
         compliant, message = _precheck_enable_guardduty(session, account_id, region)
+    elif action_type == "ebs_default_encryption":
+        compliant, message = _precheck_ebs_default_encryption(
+            session,
+            account_id,
+            region,
+            strategy_id=strategy_id,
+            strategy_inputs=strategy_inputs,
+        )
     else:
         compliant, message = False, f"Unknown action_type: {action_type}"
 
@@ -210,6 +235,41 @@ def _precheck_enable_guardduty(
         if detector_ids:
             return False, "GuardDuty detector exists but disabled; will enable."
         return False, "GuardDuty not enabled; will create detector."
+    except Exception as e:
+        return False, f"Pre-check error: {e}"
+
+
+def _precheck_ebs_default_encryption(
+    session: boto3.Session,
+    account_id: str,
+    region: str | None,
+    strategy_id: str | None = None,
+    strategy_inputs: dict | None = None,
+) -> tuple[bool, str]:
+    """Pre-check EBS default encryption and optional default KMS key."""
+    if not region:
+        return False, "Region required for EBS default encryption."
+
+    strategy = (strategy_id or "ebs_enable_default_encryption_aws_managed_kms").strip().lower()
+    requires_customer_kms = "customer_kms" in strategy
+    desired_kms = ""
+    if requires_customer_kms:
+        desired_kms = str((strategy_inputs or {}).get("kms_key_arn", "")).strip()
+        if not desired_kms:
+            return False, "strategy_inputs.kms_key_arn is required for customer KMS strategy."
+
+    ec2 = session.client("ec2", region_name=region)
+    try:
+        enc = ec2.get_ebs_encryption_by_default()
+        enabled = bool(enc.get("EbsEncryptionByDefault"))
+        if not enabled:
+            return False, "EBS default encryption is disabled; fix will enable it."
+        if requires_customer_kms:
+            current_kms = ec2.get_ebs_default_kms_key_id().get("KmsKeyId", "")
+            if current_kms == desired_kms:
+                return True, "EBS default encryption is enabled with the selected customer KMS key."
+            return False, "EBS default encryption enabled, but default KMS key differs from selected key."
+        return True, "EBS default encryption is already enabled."
     except Exception as e:
         return False, f"Pre-check error: {e}"
 
@@ -500,3 +560,103 @@ def _fix_enable_guardduty(
             return DirectFixResult(success=False, outcome=f"Post-check failed: {e}", logs=logs)
 
     return DirectFixResult(success=True, outcome="GuardDuty enabled", logs=logs)
+
+
+def _fix_ebs_default_encryption(
+    session: boto3.Session,
+    account_id: str,
+    region: str | None,
+    strategy_id: str | None = None,
+    strategy_inputs: dict | None = None,
+    *,
+    run_id: uuid.UUID | None = None,
+    action_id: uuid.UUID | None = None,
+) -> DirectFixResult:
+    """
+    Fix 4 — EBS default encryption (action_type: ebs_default_encryption).
+
+    Strategies:
+      - ebs_enable_default_encryption_aws_managed_kms
+      - ebs_enable_default_encryption_customer_kms (requires kms_key_arn)
+    """
+    if not region:
+        return DirectFixResult(
+            success=False,
+            outcome="Region required for EBS default encryption",
+            logs=["Region is required for ebs_default_encryption."],
+        )
+
+    logs: list[str] = []
+    strategy = (strategy_id or "ebs_enable_default_encryption_aws_managed_kms").strip().lower()
+    requires_customer_kms = "customer_kms" in strategy
+    desired_kms = ""
+    if requires_customer_kms:
+        desired_kms = str((strategy_inputs or {}).get("kms_key_arn", "")).strip()
+        if not desired_kms:
+            return DirectFixResult(
+                success=False,
+                outcome="strategy_inputs.kms_key_arn is required for customer KMS strategy",
+                logs=["Missing strategy_inputs.kms_key_arn."],
+            )
+
+    ec2 = session.client("ec2", region_name=region)
+
+    # Pre-check
+    logs.append(f"{_LOG_PRE_CHECK} get_ebs_encryption_by_default")
+    try:
+        pre_resp = ec2.get_ebs_encryption_by_default()
+        enabled = bool(pre_resp.get("EbsEncryptionByDefault"))
+        if enabled and not requires_customer_kms:
+            logs.append(f"{_LOG_PRE_CHECK} Already compliant (default encryption enabled).")
+            return DirectFixResult(success=True, outcome="Already compliant; no change needed", logs=logs)
+        if enabled and requires_customer_kms:
+            current_kms = ec2.get_ebs_default_kms_key_id().get("KmsKeyId", "")
+            if current_kms == desired_kms:
+                logs.append(f"{_LOG_PRE_CHECK} Already compliant (default encryption + selected KMS key).")
+                return DirectFixResult(success=True, outcome="Already compliant; no change needed", logs=logs)
+            logs.append(f"{_LOG_PRE_CHECK} Encryption enabled; updating default KMS key.")
+        elif not enabled:
+            logs.append(f"{_LOG_PRE_CHECK} Default encryption disabled; will enable.")
+    except Exception as e:
+        logs.append(f"{_LOG_PRE_CHECK} error: {e}")
+        return DirectFixResult(success=False, outcome=f"Pre-check error: {e}", logs=logs)
+
+    # Apply
+    logs.append(f"{_LOG_APPLY} enable_ebs_encryption_by_default")
+    try:
+        ec2.enable_ebs_encryption_by_default()
+        if requires_customer_kms:
+            logs.append(f"{_LOG_APPLY} modify_ebs_default_kms_key_id")
+            ec2.modify_ebs_default_kms_key_id(KmsKeyId=desired_kms)
+        logs.append(f"{_LOG_APPLY} Success.")
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        logs.append(f"{_LOG_APPLY} failed: {code} - {msg}")
+        return DirectFixResult(success=False, outcome=f"Apply failed: {code}", logs=logs)
+    except Exception as e:
+        logs.append(f"{_LOG_APPLY} error: {e}")
+        return DirectFixResult(success=False, outcome=f"Apply error: {e}", logs=logs)
+
+    # Post-check
+    logs.append(f"{_LOG_POST_CHECK} verify EBS default encryption")
+    try:
+        post_resp = ec2.get_ebs_encryption_by_default()
+        enabled = bool(post_resp.get("EbsEncryptionByDefault"))
+        if not enabled:
+            logs.append(f"{_LOG_POST_CHECK} Encryption still disabled.")
+            return DirectFixResult(success=False, outcome="Post-check failed: encryption still disabled", logs=logs)
+        if requires_customer_kms:
+            current_kms = ec2.get_ebs_default_kms_key_id().get("KmsKeyId", "")
+            if current_kms != desired_kms:
+                logs.append(f"{_LOG_POST_CHECK} Default KMS key mismatch: {current_kms}")
+                return DirectFixResult(
+                    success=False,
+                    outcome="Post-check failed: default KMS key mismatch",
+                    logs=logs,
+                )
+        logs.append(f"{_LOG_POST_CHECK} Verified default encryption configuration.")
+        return DirectFixResult(success=True, outcome="EBS default encryption enabled", logs=logs)
+    except Exception as e:
+        logs.append(f"{_LOG_POST_CHECK} error: {e}")
+        return DirectFixResult(success=False, outcome=f"Post-check failed: {e}", logs=logs)

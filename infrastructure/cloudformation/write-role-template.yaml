@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Creates the required Write IAM role in the customer's AWS account for safe direct remediations.
-  Supports: S3 Block Public Access (account-level), Security Hub enablement, GuardDuty enablement.
+  Supports: S3 Block Public Access (account-level), Security Hub enablement,
+  GuardDuty enablement, and EBS default encryption enablement.
   Your SaaS assumes this role using STS AssumeRole + ExternalId (no long-lived keys).
   This role is required for account connection and for direct fixes. Uses a custom resource
   so deployment does not fail if the role or policy already exist (idempotent).
@@ -22,7 +23,6 @@ Resources:
   WriteRoleCustomResourceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: SecurityAutopilotWriteRole-CustomResourceRole
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -34,7 +34,6 @@ Resources:
   WriteRoleCustomResourceRolePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: SecurityAutopilotWriteRole-CustomResourcePolicy
       Roles:
         - !Ref WriteRoleCustomResourceRole
       PolicyDocument:
@@ -64,13 +63,12 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SecurityAutopilotWriteRole-*"
+            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
 
   WriteRoleHelperFunction:
     Type: AWS::Lambda::Function
     DependsOn: WriteRoleCustomResourceRolePolicy
     Properties:
-      FunctionName: SecurityAutopilotWriteRole-Helper
       Handler: index.handler
       Runtime: python3.12
       Timeout: 120
@@ -131,9 +129,38 @@ Resources:
                           "Resource": "*"
                       },
                       {
+                          "Sid": "EBSDefaultEncryption",
+                          "Effect": "Allow",
+                          "Action": [
+                              "ec2:GetEbsEncryptionByDefault",
+                              "ec2:EnableEbsEncryptionByDefault",
+                              "ec2:GetEbsDefaultKmsKeyId",
+                              "ec2:ModifyEbsDefaultKmsKeyId"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
                           "Sid": "STSIdentityValidation",
                           "Effect": "Allow",
                           "Action": ["sts:GetCallerIdentity"],
+                          "Resource": "*"
+                      },
+                      {
+                          "Sid": "AutopilotCleanupIAMResources",
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:GetRole",
+                              "iam:ListAttachedRolePolicies",
+                              "iam:DetachRolePolicy",
+                              "iam:ListRolePolicies",
+                              "iam:DeleteRolePolicy",
+                              "iam:DeleteRole",
+                              "iam:ListPolicies",
+                              "iam:GetPolicy",
+                              "iam:ListPolicyVersions",
+                              "iam:DeletePolicyVersion",
+                              "iam:DeletePolicy"
+                          ],
                           "Resource": "*"
                       }
                   ]
@@ -165,7 +192,7 @@ Resources:
                   try:
                       r = iam.create_role(
                           RoleName=ROLE_NAME,
-                          Description="Write role for safe direct remediations: S3 Block Public Access, Security Hub, GuardDuty.",
+                          Description="Write role for safe direct remediations: S3 Block Public Access, Security Hub, GuardDuty, EBS default encryption.",
                           AssumeRolePolicyDocument=json.dumps(trust)
                       )
                       role_arn = r["Role"]["Arn"]
@@ -180,7 +207,7 @@ Resources:
                       try:
                           p = iam.create_policy(
                               PolicyName=POLICY_NAME,
-                              Description="Least-privilege permissions for S3 Block Public Access, Security Hub, and GuardDuty enablement.",
+                              Description="Least-privilege permissions for direct fixes (S3 Block Public Access, Security Hub, GuardDuty, EBS default encryption).",
                               PolicyDocument=json.dumps(policy_doc)
                           )
                           policy_arn = p["Policy"]["Arn"]

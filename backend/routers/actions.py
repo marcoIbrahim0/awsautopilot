@@ -7,8 +7,9 @@ import asyncio
 import json
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -28,6 +29,12 @@ from backend.models.user import User
 from backend.routers.aws_accounts import get_account_for_tenant, get_tenant, resolve_tenant_id
 from backend.services.aws import assume_role
 from backend.services.exception_service import get_exception_state_for_response
+from backend.services.remediation_risk import evaluate_strategy_impact
+from backend.services.remediation_strategy import (
+    list_mode_options_for_action_type,
+    list_strategies_for_action_type,
+    validate_strategy,
+)
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 
 logger = logging.getLogger(__name__)
@@ -79,6 +86,10 @@ class ActionListItem(BaseModel):
     exception_id: str | None = None
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
+    # Optional execution-group fields (group_by=batch)
+    is_batch: bool = False
+    batch_action_count: int | None = None
+    batch_finding_count: int | None = None
 
 
 class ActionsListResponse(BaseModel):
@@ -140,6 +151,38 @@ class RemediationPreviewResponse(BaseModel):
     will_apply: bool = Field(..., description="True if not compliant and fix would be applied")
 
 
+class DependencyCheckResponse(BaseModel):
+    """One dependency check entry for remediation strategy safety."""
+
+    code: str
+    status: Literal["pass", "warn", "unknown", "fail"]
+    message: str
+
+
+class RemediationOptionResponse(BaseModel):
+    """One remediation strategy option for an action."""
+
+    strategy_id: str
+    label: str
+    mode: Literal["pr_only", "direct_fix"]
+    risk_level: Literal["low", "medium", "high"]
+    recommended: bool
+    requires_inputs: bool
+    input_schema: dict[str, Any]
+    dependency_checks: list[DependencyCheckResponse]
+    warnings: list[str]
+    supports_exception_flow: bool
+
+
+class RemediationOptionsResponse(BaseModel):
+    """Available remediation options for an action, including risk signals."""
+
+    action_id: str
+    action_type: str
+    mode_options: list[Literal["pr_only", "direct_fix"]]
+    strategies: list[RemediationOptionResponse]
+
+
 def _action_to_list_item(
     action: Action,
     exception_state: dict | None = None,
@@ -163,6 +206,103 @@ def _action_to_list_item(
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
     )
+
+
+_BATCH_TITLE_BY_ACTION_TYPE = {
+    "s3_block_public_access": "S3 account public access hardening",
+    "enable_security_hub": "Enable Security Hub",
+    "enable_guardduty": "Enable GuardDuty",
+    "s3_bucket_block_public_access": "Enforce S3 bucket public access hardening",
+    "s3_bucket_encryption": "Enforce S3 bucket encryption",
+    "s3_bucket_access_logging": "Enable S3 bucket access logging",
+    "s3_bucket_lifecycle_configuration": "Configure S3 bucket lifecycle",
+    "s3_bucket_encryption_kms": "Enforce S3 bucket SSE-KMS encryption",
+    "sg_restrict_public_ports": "Restrict security-group public ports",
+    "cloudtrail_enabled": "Enable CloudTrail",
+    "aws_config_enabled": "Enable AWS Config recording",
+    "ssm_block_public_sharing": "Block public SSM document sharing",
+    "ebs_snapshot_block_public_access": "Restrict EBS snapshot public sharing",
+    "ebs_default_encryption": "Enable EBS default encryption",
+    "s3_bucket_require_ssl": "Enforce SSL-only S3 access",
+    "iam_root_access_key_absent": "Remove IAM root access keys",
+}
+
+
+_MIN_UPDATED_AT = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _batch_title(action_type: str, action_count: int) -> str:
+    base = _BATCH_TITLE_BY_ACTION_TYPE.get(action_type, f"{action_type}")
+    return f"{base} ({action_count} action{'s' if action_count != 1 else ''})"
+
+
+def _build_batch_target_id(action: Action) -> str:
+    region = action.region or "global"
+    return f"batch|{action.action_type}|{action.account_id}|{region}|{action.status}"
+
+
+def _batch_sort_key(item: ActionListItem) -> tuple[int, str]:
+    return (
+        item.priority,
+        item.updated_at or "",
+    )
+
+
+def _normalize_updated_at(value: datetime | None) -> datetime:
+    if value is None:
+        return _MIN_UPDATED_AT
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
+    """
+    Build execution-group list items from individual actions.
+
+    Grouping key: (action_type, account_id, region, status).
+    """
+    grouped: defaultdict[tuple[str, str, str | None, str], list[Action]] = defaultdict(list)
+    for action in actions:
+        grouped[(action.action_type, action.account_id, action.region, action.status)].append(action)
+
+    items: list[ActionListItem] = []
+    for key, group in grouped.items():
+        action_type, account_id, region, status = key
+        representative = max(group, key=lambda a: (a.priority, _normalize_updated_at(a.updated_at)))
+        max_priority = max(a.priority for a in group)
+        max_updated_at = max((_normalize_updated_at(a.updated_at) for a in group), default=None)
+        total_findings = sum(len(a.action_finding_links or []) for a in group)
+        action_count = len(group)
+
+        # Skip orphan groups (no linked findings). These typically occur when a
+        # recompute remaps findings away from older actions; they should not
+        # appear as execution groups in the UI.
+        if total_findings == 0:
+            continue
+
+        items.append(
+            ActionListItem(
+                id=str(representative.id),
+                action_type=action_type,
+                target_id=_build_batch_target_id(representative),
+                account_id=account_id,
+                region=region,
+                priority=max_priority,
+                status=status,
+                title=_batch_title(action_type, action_count),
+                control_id=representative.control_id,
+                resource_id=None,
+                updated_at=max_updated_at.isoformat() if max_updated_at else None,
+                finding_count=total_findings,
+                is_batch=True,
+                batch_action_count=action_count,
+                batch_finding_count=total_findings,
+            )
+        )
+
+    items.sort(key=_batch_sort_key, reverse=True)
+    return items
 
 
 def _action_to_detail_response(
@@ -221,10 +361,21 @@ async def list_actions(
     ] = None,
     account_id: Annotated[str | None, Query(description="Filter by AWS account ID")] = None,
     region: Annotated[str | None, Query(description="Filter by AWS region")] = None,
+    control_id: Annotated[str | None, Query(description="Filter by control ID (e.g., S3.1)")] = None,
+    resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
+    action_type: Annotated[str | None, Query(description="Filter by remediation action type")] = None,
     status_filter: Annotated[
         str | None,
         Query(alias="status", description="Filter by status (open, in_progress, resolved, suppressed)"),
     ] = None,
+    group_by: Annotated[
+        Literal["resource", "batch"],
+        Query(description="List mode: 'resource' for individual actions, 'batch' for execution groups."),
+    ] = "resource",
+    include_orphans: Annotated[
+        bool,
+        Query(description="Include actions with zero linked findings. Defaults to false."),
+    ] = False,
     limit: Annotated[int, Query(ge=1, le=200, description="Max items per page")] = 50,
     offset: Annotated[int, Query(ge=0, description="Items to skip")] = 0,
 ) -> ActionsListResponse:
@@ -244,8 +395,34 @@ async def list_actions(
         query = query.where(Action.account_id == account_id)
     if region is not None:
         query = query.where(Action.region == region)
+    if control_id is not None:
+        query = query.where(Action.control_id == control_id.strip())
+    if resource_id is not None:
+        query = query.where(Action.resource_id == resource_id.strip())
+    if action_type is not None:
+        query = query.where(Action.action_type == action_type.strip())
     if status_filter is not None:
         query = query.where(Action.status == status_filter.strip().lower())
+    if not include_orphans:
+        query = query.where(
+            select(ActionFinding.action_id)
+            .where(ActionFinding.action_id == Action.id)
+            .exists()
+        )
+
+    if group_by == "batch":
+        result = await db.execute(query)
+        actions = result.scalars().unique().all()
+        batch_items = _group_actions_into_batches(actions)
+        total = len(batch_items)
+        paged_items = batch_items[offset: offset + limit]
+        logger.info(
+            "Listed %d batch action groups for tenant %s (total=%d)",
+            len(paged_items),
+            tenant_uuid,
+            total,
+        )
+        return ActionsListResponse(items=paged_items, total=total)
 
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
@@ -311,6 +488,111 @@ async def get_action(
 
 
 # ---------------------------------------------------------------------------
+# GET /actions/{id}/remediation-options
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{action_id}/remediation-options",
+    response_model=RemediationOptionsResponse,
+    summary="List remediation options",
+    description=(
+        "Return available remediation strategies for an action, including dependency checks, "
+        "warnings, and whether risk acknowledgement is expected."
+    ),
+)
+async def get_remediation_options(
+    action_id: Annotated[str, Path(description="Action UUID")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> RemediationOptionsResponse:
+    """List strategy options and risk checks for one action."""
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+
+    try:
+        action_uuid = uuid.UUID(action_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Invalid action_id", "detail": "action_id must be a valid UUID"},
+        )
+
+    action_result = await db.execute(
+        select(Action).where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
+    )
+    action = action_result.scalar_one_or_none()
+    if not action:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
+        )
+
+    account: AwsAccount | None = None
+    account_result = await db.execute(
+        select(AwsAccount).where(
+            AwsAccount.tenant_id == tenant_uuid,
+            AwsAccount.account_id == action.account_id,
+        )
+    )
+    account = account_result.scalar_one_or_none()
+
+    strategies = list_strategies_for_action_type(action.action_type)
+    if not strategies:
+        # Backward-compatible behavior for action types not yet migrated to strategy catalog.
+        mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
+        from worker.services.direct_fix import SUPPORTED_ACTION_TYPES
+
+        if action.action_type in SUPPORTED_ACTION_TYPES:
+            mode_options.append("direct_fix")
+        return RemediationOptionsResponse(
+            action_id=str(action.id),
+            action_type=action.action_type,
+            mode_options=mode_options,
+            strategies=[],
+        )
+
+    option_items: list[RemediationOptionResponse] = []
+    for strategy in strategies:
+        # Defensive validation: ensures registry entries stay internally consistent.
+        validate_strategy(action.action_type, strategy["strategy_id"], strategy["mode"])
+        risk_snapshot = evaluate_strategy_impact(action, strategy, {}, account=account)
+        checks: list[DependencyCheckResponse] = [
+            DependencyCheckResponse(
+                code=check["code"],
+                status=check["status"],
+                message=check["message"],
+            )
+            for check in risk_snapshot["checks"]
+        ]
+        option_items.append(
+            RemediationOptionResponse(
+                strategy_id=strategy["strategy_id"],
+                label=strategy["label"],
+                mode=strategy["mode"],
+                risk_level=strategy["risk_level"],
+                recommended=strategy["recommended"],
+                requires_inputs=strategy["requires_inputs"],
+                input_schema=strategy["input_schema"],
+                dependency_checks=checks,
+                warnings=risk_snapshot["warnings"],
+                supports_exception_flow=strategy["supports_exception_flow"],
+            )
+        )
+
+    mode_options = list_mode_options_for_action_type(action.action_type)
+    return RemediationOptionsResponse(
+        action_id=str(action.id),
+        action_type=action.action_type,
+        mode_options=mode_options,
+        strategies=option_items,
+    )
+
+
+# ---------------------------------------------------------------------------
 # GET /actions/{id}/remediation-preview (Step 8.4 dry-run)
 # ---------------------------------------------------------------------------
 
@@ -330,6 +612,14 @@ async def get_remediation_preview(
         Literal["direct_fix"],
         Query(description="Remediation mode; only direct_fix supported for preview"),
     ] = "direct_fix",
+    strategy_id: Annotated[
+        str | None,
+        Query(description="Optional remediation strategy ID for direct-fix preview."),
+    ] = None,
+    strategy_inputs_json: Annotated[
+        str | None,
+        Query(alias="strategy_inputs", description="Optional JSON object string for strategy inputs."),
+    ] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = ...,
     current_user: Annotated[Optional[User], Depends(get_optional_user)] = ...,
     tenant_id: Annotated[Optional[str], Query(description="Tenant ID. Optional when authenticated.")] = None,
@@ -388,6 +678,21 @@ async def get_remediation_preview(
             will_apply=False,
         )
 
+    parsed_strategy_inputs: dict[str, Any] | None = None
+    if strategy_inputs_json:
+        try:
+            raw = json.loads(strategy_inputs_json)
+            if isinstance(raw, dict):
+                parsed_strategy_inputs = raw
+            else:
+                raise ValueError("strategy_inputs must be a JSON object")
+        except Exception as exc:
+            return RemediationPreviewResponse(
+                compliant=False,
+                message=f"Invalid strategy_inputs: {exc}",
+                will_apply=False,
+            )
+
     try:
         wr_session = await asyncio.to_thread(
             assume_role,
@@ -400,6 +705,8 @@ async def get_remediation_preview(
             action.action_type,
             action.account_id,
             action.region,
+            strategy_id,
+            parsed_strategy_inputs,
         )
         return RemediationPreviewResponse(
             compliant=preview.compliant,

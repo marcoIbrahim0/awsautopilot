@@ -28,11 +28,12 @@ class Finding(Base):
 
     __table_args__ = (
         UniqueConstraint(
+            "tenant_id",
             "finding_id",
             "account_id",
             "region",
             "source",
-            name="uq_findings_finding_id_account_region_source",
+            name="uq_findings_tenant_finding_id_account_region_source",
         ),
         Index("ix_findings_tenant_account_region", "tenant_id", "account_id", "region"),
         Index("ix_findings_tenant_severity_status", "tenant_id", "severity_label", "status"),

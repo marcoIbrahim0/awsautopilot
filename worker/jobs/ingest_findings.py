@@ -22,12 +22,26 @@ from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_reg
 from worker.config import settings
 from worker.database import session_scope
 from worker.services.aws import assume_role
+from worker.services.json_safe import make_json_safe
 from worker.services.security_hub import fetch_all_findings
 
 logger = logging.getLogger("worker.jobs.ingest_findings")
 
 # Step 2B.1: source discriminator for Security Hub findings
 FINDINGS_SOURCE = "security_hub"
+
+
+def _is_security_hub_not_enabled_error(exc: ClientError) -> bool:
+    """True when Security Hub isn't enabled/subscribed in the target account/region."""
+    code = exc.response.get("Error", {}).get("Code", "")
+    message = str(exc.response.get("Error", {}).get("Message", "")).lower()
+    if code != "InvalidAccessException":
+        return False
+    return (
+        "not subscribed to aws security hub" in message
+        or "security hub is not enabled" in message
+        or "enable security hub" in message
+    )
 
 
 def _parse_ts(s: str | None) -> datetime | None:
@@ -45,6 +59,25 @@ def _trunc(s: str | None, n: int) -> str | None:
     return s[:n] if len(s) > n else s
 
 
+def _normalized_finding_status(raw: dict) -> str:
+    """
+    Map Security Hub finding state to SaaS finding.status.
+
+    Only Compliance.Status=PASSED is treated as RESOLVED. All other states
+    remain open (NEW/NOTIFIED) to avoid false "resolved" matches.
+    """
+    compliance = raw.get("Compliance") or {}
+    compliance_status = str(compliance.get("Status") or "").upper()
+    if compliance_status == "PASSED":
+        return "RESOLVED"
+
+    workflow = raw.get("Workflow") or {}
+    workflow_status = str(workflow.get("Status") or "").upper()
+    if workflow_status == "NOTIFIED":
+        return "NOTIFIED"
+    return "NEW"
+
+
 def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: uuid.UUID) -> dict[str, Any]:
     sid = raw.get("Id") or ""
     sev = (raw.get("Severity") or {}).get("Label")
@@ -58,8 +91,6 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
     ctrl = comp.get("SecurityControlId")
     standards = comp.get("AssociatedStandards") or []
     std_name = standards[0].get("StandardsId") if standards else None
-    wf = raw.get("Workflow") or {}
-    status = wf.get("Status") or "NEW"
     created = _parse_ts(raw.get("CreatedAt"))
     updated = _parse_ts(raw.get("UpdatedAt"))
     last_obs = _parse_ts(raw.get("LastObservedAt"))
@@ -78,11 +109,11 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         "resource_type": _trunc(rtype, 256),
         "control_id": _trunc(ctrl, 64),
         "standard_name": _trunc(std_name, 256),
-        "status": status[:32],
+        "status": _normalized_finding_status(raw)[:32],
         "first_observed_at": created,
         "last_observed_at": last_obs or updated,
         "sh_updated_at": updated,
-        "raw_json": raw,
+        "raw_json": make_json_safe(raw),
     }
 
 
@@ -162,7 +193,18 @@ def execute_ingest_job(job: dict) -> None:
         # 2. Assume role and fetch findings (outside DB transaction logic, but within session scope)
         logger.info("Assuming role for account_id=%s region=%s", account_id, region)
         session_boto = assume_role(role_arn=role_arn, external_id=external_id)
-        findings_raw = fetch_all_findings(session_boto, region=region, account_id=account_id)
+        try:
+            findings_raw = fetch_all_findings(session_boto, region=region, account_id=account_id)
+        except ClientError as e:
+            if _is_security_hub_not_enabled_error(e):
+                logger.warning(
+                    "Skipping ingest: Security Hub is not enabled/subscribed for account_id=%s region=%s tenant_id=%s",
+                    account_id,
+                    region,
+                    tenant_id,
+                )
+                return
+            raise
 
         # 3. Upsert all findings
         n_total = len(findings_raw)

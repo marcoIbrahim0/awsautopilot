@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import get_optional_user
+from backend.config import settings
 from backend.database import get_db
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
@@ -134,6 +135,12 @@ def resolve_tenant_id(
     if current_user is not None:
         return current_user.tenant_id
     
+    if not settings.is_local:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     if not request_tenant_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -163,6 +170,8 @@ async def list_findings(
     ] = None,
     account_id: Annotated[str | None, Query(description="Filter by AWS account ID")] = None,
     region: Annotated[str | None, Query(description="Filter by AWS region")] = None,
+    control_id: Annotated[str | None, Query(description="Filter by control ID (e.g., S3.1)")] = None,
+    resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
     severity: Annotated[str | None, Query(description="Filter by severity (CRITICAL, HIGH, MEDIUM, LOW, INFORMATIONAL)")] = None,
     status_filter: Annotated[str | None, Query(alias="status", description="Filter by status (NEW, NOTIFIED, RESOLVED, SUPPRESSED)")] = None,
     source: Annotated[str | None, Query(description="Filter by source (security_hub, access_analyzer, inspector; comma-separated)")] = None,
@@ -210,6 +219,10 @@ async def list_findings(
         query = query.where(Finding.account_id == account_id)
     if region:
         query = query.where(Finding.region == region)
+    if control_id:
+        query = query.where(Finding.control_id == control_id.strip())
+    if resource_id:
+        query = query.where(Finding.resource_id == resource_id.strip())
     if severity:
         # Support comma-separated severities (e.g., "CRITICAL,HIGH")
         severities = [s.strip().upper() for s in severity.split(",")]

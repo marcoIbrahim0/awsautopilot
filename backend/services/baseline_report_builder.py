@@ -7,6 +7,7 @@ Used by generate_baseline_report service before rendering and upload.
 """
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timezone
 from typing import Literal
 

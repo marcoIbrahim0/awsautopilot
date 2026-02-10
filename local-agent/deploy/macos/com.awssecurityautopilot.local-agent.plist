@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.awssecurityautopilot.local-agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/local/bin/node</string>
+      <string>/opt/aws-security-autopilot/local-agent/src/index.mjs</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>AGENT_ALLOW_BROWSER</key>
+      <string>0</string>
+      <key>AGENT_PORT</key>
+      <string>0</string>
+      <key>AGENT_ALLOWED_WORKDIRS</key>
+      <string>/Users/%USER%/projects,/Users/%USER%</string>
+      <key>AGENT_AUDIT_LOG</key>
+      <string>1</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/aws-security-autopilot-local-agent.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/aws-security-autopilot-local-agent.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>

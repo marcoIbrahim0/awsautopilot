@@ -104,16 +104,28 @@ async def signup(
         
         logger.info(f"New signup: tenant={tenant.id}, user={user.id}, email={user.email}")
         
-        saas_id, launch_url, template_url, region, default_stack = get_saas_and_launch_url(tenant.external_id)
+        (
+            saas_id,
+            read_launch_url,
+            read_template_url,
+            write_launch_url,
+            write_template_url,
+            region,
+            read_default_stack,
+            write_default_stack,
+        ) = get_saas_and_launch_url(tenant.external_id)
         return AuthResponse(
             access_token=access_token,
             user=user_to_response(user),
             tenant=tenant_to_response(tenant),
             saas_account_id=saas_id,
-            read_role_launch_stack_url=launch_url,
-            read_role_template_url=template_url,
+            read_role_launch_stack_url=read_launch_url,
+            read_role_template_url=read_template_url,
             read_role_region=region,
-            read_role_default_stack_name=default_stack,
+            read_role_default_stack_name=read_default_stack,
+            write_role_launch_stack_url=write_launch_url,
+            write_role_template_url=write_template_url,
+            write_role_default_stack_name=write_default_stack,
         )
     except HTTPException:
         raise
@@ -159,16 +171,28 @@ async def login(
     
     logger.info(f"Login: user={user.id}, email={user.email}")
     
-    saas_id, launch_url, template_url, region, default_stack = get_saas_and_launch_url(user.tenant.external_id)
+    (
+        saas_id,
+        read_launch_url,
+        read_template_url,
+        write_launch_url,
+        write_template_url,
+        region,
+        read_default_stack,
+        write_default_stack,
+    ) = get_saas_and_launch_url(user.tenant.external_id)
     return AuthResponse(
         access_token=access_token,
         user=user_to_response(user),
         tenant=tenant_to_response(user.tenant),
         saas_account_id=saas_id,
-        read_role_launch_stack_url=launch_url,
-        read_role_template_url=template_url,
+        read_role_launch_stack_url=read_launch_url,
+        read_role_template_url=read_template_url,
         read_role_region=region,
-        read_role_default_stack_name=default_stack,
+        read_role_default_stack_name=read_default_stack,
+        write_role_launch_stack_url=write_launch_url,
+        write_role_template_url=write_template_url,
+        write_role_default_stack_name=write_default_stack,
     )
 
 
@@ -186,13 +210,25 @@ async def get_me(
     - read_role_launch_stack_url: one-click deploy link when template URL is configured
     """
     tenant = current_user.tenant
-    saas_id, launch_url, template_url, region, default_stack = get_saas_and_launch_url(tenant.external_id)
+    (
+        saas_id,
+        read_launch_url,
+        read_template_url,
+        write_launch_url,
+        write_template_url,
+        region,
+        read_default_stack,
+        write_default_stack,
+    ) = get_saas_and_launch_url(tenant.external_id)
     return MeResponse(
         user=user_to_response(current_user),
         tenant=tenant_to_response(tenant),
         saas_account_id=saas_id,
-        read_role_launch_stack_url=launch_url,
-        read_role_template_url=template_url,
+        read_role_launch_stack_url=read_launch_url,
+        read_role_template_url=read_template_url,
         read_role_region=region,
-        read_role_default_stack_name=default_stack,
+        read_role_default_stack_name=read_default_stack,
+        write_role_launch_stack_url=write_launch_url,
+        write_role_template_url=write_template_url,
+        write_role_default_stack_name=write_default_stack,
     )

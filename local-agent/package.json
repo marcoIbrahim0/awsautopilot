@@ -1,0 +1,16 @@
+{
+  "name": "aws-security-autopilot-local-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local PTY execution agent for in-product terminal",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "dev": "NODE_ENV=development node src/index.mjs"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

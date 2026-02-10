@@ -1,0 +1,1065 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Any
+
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
+from pydantic import BaseModel, Field
+from sqlalchemy import String, cast, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from backend.auth import require_saas_admin
+from backend.config import settings
+from backend.database import get_db
+from backend.models.action import Action
+from backend.models.audit_log import AuditLog
+from backend.models.aws_account import AwsAccount
+from backend.models.baseline_report import BaselineReport
+from backend.models.control_plane_event import ControlPlaneEvent
+from backend.models.enums import BaselineReportStatus, EvidenceExportStatus, RemediationRunStatus
+from backend.models.evidence_export import EvidenceExport
+from backend.models.finding import Finding
+from backend.models.finding_shadow_state import FindingShadowState
+from backend.models.remediation_run import RemediationRun
+from backend.models.support_file import SupportFile
+from backend.models.support_note import SupportNote
+from backend.models.tenant import Tenant
+from backend.models.user import User
+
+router = APIRouter(prefix="/saas", tags=["saas-admin"])
+
+
+SAFE_ARTIFACT_KEYS = {"pr_bundle", "summary", "plan", "diff_summary", "files"}
+
+
+class TenantListItem(BaseModel):
+    tenant_id: str
+    tenant_name: str
+    created_at: str
+    users_count: int
+    aws_accounts_count: int
+    open_findings_count: int
+    open_actions_count: int
+    last_activity_at: str | None
+    has_connected_accounts: bool
+    ingestion_stale: bool
+    digest_enabled: bool
+    slack_configured: bool
+
+
+class TenantListResponse(BaseModel):
+    items: list[TenantListItem]
+    total: int
+
+
+class TenantOverviewResponse(BaseModel):
+    tenant_id: str
+    tenant_name: str
+    created_at: str
+    users_count: int
+    accounts_by_status: dict[str, int]
+    actions_by_status: dict[str, int]
+    findings_by_severity: dict[str, int]
+    findings_trend: dict[str, int]
+    digest_enabled: bool
+    slack_configured: bool
+
+
+class UserItemResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    created_at: str
+    onboarding_completed_at: str | None
+
+
+class AccountItemResponse(BaseModel):
+    id: str
+    account_id: str
+    regions: list[str]
+    status: str
+    last_validated_at: str | None
+    created_at: str
+
+
+class FindingItemResponse(BaseModel):
+    id: str
+    finding_id: str
+    account_id: str
+    region: str
+    source: str
+    severity_label: str
+    status: str
+    title: str
+    description: str | None
+    resource_id: str | None
+    resource_type: str | None
+    control_id: str | None
+    standard_name: str | None
+    first_observed_at: str | None
+    last_observed_at: str | None
+    updated_at: str | None
+    created_at: str
+
+
+class FindingsListResponse(BaseModel):
+    items: list[FindingItemResponse]
+    total: int
+
+
+class ActionItemResponse(BaseModel):
+    id: str
+    action_type: str
+    target_id: str
+    account_id: str
+    region: str | None
+    priority: int
+    status: str
+    title: str
+    description: str | None
+    control_id: str | None
+    resource_id: str | None
+    updated_at: str | None
+    created_at: str | None
+
+
+class ActionsListResponse(BaseModel):
+    items: list[ActionItemResponse]
+    total: int
+
+
+class RemediationRunItemResponse(BaseModel):
+    id: str
+    action_id: str
+    mode: str
+    status: str
+    outcome: str | None
+    artifacts: dict[str, Any] | None
+    approved_by_email: str | None
+    started_at: str | None
+    completed_at: str | None
+    created_at: str
+
+
+class RemediationRunsListResponse(BaseModel):
+    items: list[RemediationRunItemResponse]
+    total: int
+
+
+class ExportItemResponse(BaseModel):
+    id: str
+    status: str
+    pack_type: str
+    created_at: str
+    started_at: str | None
+    completed_at: str | None
+    error_message: str | None
+    file_size_bytes: int | None
+
+
+class BaselineReportItemResponse(BaseModel):
+    id: str
+    status: str
+    requested_at: str
+    completed_at: str | None
+    outcome: str | None
+    file_size_bytes: int | None
+
+
+class SupportNoteCreateRequest(BaseModel):
+    body: str = Field(..., min_length=1, max_length=10000)
+
+
+class SupportNoteResponse(BaseModel):
+    id: str
+    tenant_id: str
+    created_by_user_id: str | None
+    created_by_email: str | None
+    body: str
+    created_at: str
+
+
+class SupportFileItemResponse(BaseModel):
+    id: str
+    tenant_id: str
+    filename: str
+    content_type: str | None
+    size_bytes: int | None
+    status: str
+    visible_to_tenant: bool
+    message: str | None
+    created_at: str
+    uploaded_at: str | None
+
+
+class InitiateSupportFileRequest(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255)
+    content_type: str | None = Field(default=None, max_length=255)
+    message: str | None = Field(default=None, max_length=5000)
+    visible_to_tenant: bool = True
+
+
+class InitiateSupportFileResponse(BaseModel):
+    id: str
+    upload_url: str
+    method: str = "PUT"
+    required_headers: dict[str, str]
+
+
+class FinalizeSupportFileRequest(BaseModel):
+    size_bytes: int | None = Field(default=None, ge=0)
+
+
+class SystemHealthResponse(BaseModel):
+    queue_configured: bool
+    export_bucket_configured: bool
+    support_bucket_configured: bool
+    failing_remediation_runs_24h: int
+    failing_baseline_reports_24h: int
+    failing_exports_24h: int
+
+
+class ControlPlaneSLOResponse(BaseModel):
+    window_hours: int
+    tenant_id: str | None
+    total_events: int
+    success_events: int
+    dropped_events: int
+    duplicate_hits: int
+    p95_end_to_end_lag_ms: float | None
+    p99_end_to_end_lag_ms: float | None
+    p95_resolution_freshness_ms: float | None
+    p95_cloudtrail_delivery_lag_ms: float | None
+    p95_queue_lag_ms: float | None
+    p95_handler_latency_ms: float | None
+    drop_rate: float
+    duplicate_rate: float
+
+
+class ControlPlaneShadowSummaryResponse(BaseModel):
+    tenant_id: str
+    total_rows: int
+    open_count: int
+    resolved_count: int
+    soft_resolved_count: int
+    controls: dict[str, int]
+
+
+def _parse_tenant_id(tenant_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="tenant_id must be a valid UUID") from exc
+
+
+async def _get_tenant_or_404(db: AsyncSession, tenant_uuid: uuid.UUID) -> Tenant:
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_uuid))
+    tenant = result.scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return tenant
+
+
+def _sanitize_artifacts(artifacts: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(artifacts, dict):
+        return None
+    return {k: artifacts[k] for k in SAFE_ARTIFACT_KEYS if k in artifacts}
+
+
+def _support_s3_client():
+    region = (settings.S3_SUPPORT_BUCKET_REGION or "").strip() or settings.AWS_REGION
+    return boto3.client("s3", region_name=region, config=Config(signature_version="s3v4", s3={"addressing_style": "path"}))
+
+
+@router.get("/system-health", response_model=SystemHealthResponse)
+async def get_system_health(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SystemHealthResponse:
+    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    remediation_failed = await db.execute(
+        select(func.count()).select_from(RemediationRun).where(
+            RemediationRun.status == RemediationRunStatus.failed,
+            RemediationRun.created_at >= since,
+        )
+    )
+    baseline_failed = await db.execute(
+        select(func.count()).select_from(BaselineReport).where(
+            BaselineReport.status == BaselineReportStatus.failed,
+            BaselineReport.created_at >= since,
+        )
+    )
+    exports_failed = await db.execute(
+        select(func.count()).select_from(EvidenceExport).where(
+            EvidenceExport.status == EvidenceExportStatus.failed,
+            EvidenceExport.created_at >= since,
+        )
+    )
+    return SystemHealthResponse(
+        queue_configured=bool(settings.SQS_INGEST_QUEUE_URL.strip()),
+        export_bucket_configured=bool(settings.S3_EXPORT_BUCKET.strip()),
+        support_bucket_configured=bool(settings.S3_SUPPORT_BUCKET.strip()),
+        failing_remediation_runs_24h=int(remediation_failed.scalar() or 0),
+        failing_baseline_reports_24h=int(baseline_failed.scalar() or 0),
+        failing_exports_24h=int(exports_failed.scalar() or 0),
+    )
+
+
+@router.get("/control-plane/slo", response_model=ControlPlaneSLOResponse)
+async def get_control_plane_slo(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str | None, Query()] = None,
+    hours: Annotated[int, Query(ge=1, le=168)] = 24,
+) -> ControlPlaneSLOResponse:
+    tenant_uuid: uuid.UUID | None = None
+    if tenant_id:
+        tenant_uuid = _parse_tenant_id(tenant_id)
+        await _get_tenant_or_404(db, tenant_uuid)
+
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    filters = [ControlPlaneEvent.event_time >= since]
+    if tenant_uuid is not None:
+        filters.append(ControlPlaneEvent.tenant_id == tenant_uuid)
+
+    total = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(ControlPlaneEvent).where(*filters)
+            )
+        ).scalar()
+        or 0
+    )
+    success_events = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(ControlPlaneEvent)
+                .where(*filters, ControlPlaneEvent.processing_status == "success")
+            )
+        ).scalar()
+        or 0
+    )
+    dropped_events = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(ControlPlaneEvent)
+                .where(*filters, ControlPlaneEvent.processing_status == "dropped")
+            )
+        ).scalar()
+        or 0
+    )
+    duplicate_hits = int(
+        (
+            await db.execute(
+                select(func.coalesce(func.sum(ControlPlaneEvent.duplicate_count), 0)).where(*filters)
+            )
+        ).scalar()
+        or 0
+    )
+
+    async def _percentile(metric_col, percentile: float) -> float | None:
+        value = (
+            await db.execute(
+                select(func.percentile_cont(percentile).within_group(metric_col))
+                .where(*filters, metric_col.isnot(None))
+            )
+        ).scalar()
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):  # pragma: no cover - defensive conversion
+            return None
+
+    p95_end_to_end_lag_ms = await _percentile(ControlPlaneEvent.end_to_end_lag_ms, 0.95)
+    p99_end_to_end_lag_ms = await _percentile(ControlPlaneEvent.end_to_end_lag_ms, 0.99)
+    p95_resolution_freshness_ms = await _percentile(ControlPlaneEvent.resolution_freshness_ms, 0.95)
+    p95_cloudtrail_delivery_lag_ms = await _percentile(ControlPlaneEvent.cloudtrail_delivery_lag_ms, 0.95)
+    p95_queue_lag_ms = await _percentile(ControlPlaneEvent.queue_lag_ms, 0.95)
+    p95_handler_latency_ms = await _percentile(ControlPlaneEvent.handler_latency_ms, 0.95)
+
+    total_attempts = total + duplicate_hits
+    drop_rate = float(dropped_events / total) if total > 0 else 0.0
+    duplicate_rate = float(duplicate_hits / total_attempts) if total_attempts > 0 else 0.0
+
+    return ControlPlaneSLOResponse(
+        window_hours=hours,
+        tenant_id=str(tenant_uuid) if tenant_uuid is not None else None,
+        total_events=total,
+        success_events=success_events,
+        dropped_events=dropped_events,
+        duplicate_hits=duplicate_hits,
+        p95_end_to_end_lag_ms=p95_end_to_end_lag_ms,
+        p99_end_to_end_lag_ms=p99_end_to_end_lag_ms,
+        p95_resolution_freshness_ms=p95_resolution_freshness_ms,
+        p95_cloudtrail_delivery_lag_ms=p95_cloudtrail_delivery_lag_ms,
+        p95_queue_lag_ms=p95_queue_lag_ms,
+        p95_handler_latency_ms=p95_handler_latency_ms,
+        drop_rate=drop_rate,
+        duplicate_rate=duplicate_rate,
+    )
+
+
+@router.get("/control-plane/shadow-summary", response_model=ControlPlaneShadowSummaryResponse)
+async def get_control_plane_shadow_summary(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str, Query()],
+) -> ControlPlaneShadowSummaryResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+
+    total_rows = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(FindingShadowState).where(FindingShadowState.tenant_id == tenant_uuid)
+            )
+        ).scalar()
+        or 0
+    )
+    open_count = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(FindingShadowState)
+                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "OPEN")
+            )
+        ).scalar()
+        or 0
+    )
+    resolved_count = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(FindingShadowState)
+                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "RESOLVED")
+            )
+        ).scalar()
+        or 0
+    )
+    soft_resolved_count = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(FindingShadowState)
+                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "SOFT_RESOLVED")
+            )
+        ).scalar()
+        or 0
+    )
+    controls_rows = await db.execute(
+        select(FindingShadowState.control_id, func.count())
+        .where(FindingShadowState.tenant_id == tenant_uuid)
+        .group_by(FindingShadowState.control_id)
+    )
+    controls = {str(control): int(count) for control, count in controls_rows.all()}
+
+    return ControlPlaneShadowSummaryResponse(
+        tenant_id=str(tenant_uuid),
+        total_rows=total_rows,
+        open_count=open_count,
+        resolved_count=resolved_count,
+        soft_resolved_count=soft_resolved_count,
+        controls=controls,
+    )
+
+
+@router.get("/tenants", response_model=TenantListResponse)
+async def list_tenants(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    query: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> TenantListResponse:
+    base = select(Tenant)
+    if query:
+        base = base.where(
+            Tenant.name.ilike(f"%{query.strip()}%")
+            | cast(Tenant.id, String).ilike(f"%{query.strip()}%")
+        )
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = int(total_result.scalar() or 0)
+    result = await db.execute(base.order_by(Tenant.created_at.desc()).limit(limit).offset(offset))
+    tenants = list(result.scalars().all())
+    items: list[TenantListItem] = []
+    stale_threshold = datetime.now(timezone.utc) - timedelta(hours=24)
+    for tenant in tenants:
+        tenant_id = tenant.id
+        users_count = int((await db.execute(select(func.count()).select_from(User).where(User.tenant_id == tenant_id))).scalar() or 0)
+        aws_accounts_count = int((await db.execute(select(func.count()).select_from(AwsAccount).where(AwsAccount.tenant_id == tenant_id))).scalar() or 0)
+        open_findings_count = int((await db.execute(select(func.count()).select_from(Finding).where(Finding.tenant_id == tenant_id, Finding.status.in_(["NEW", "NOTIFIED"])))).scalar() or 0)
+        open_actions_count = int((await db.execute(select(func.count()).select_from(Action).where(Action.tenant_id == tenant_id, Action.status.in_(["open", "in_progress"])))).scalar() or 0)
+        latest_finding = (await db.execute(select(func.max(Finding.sh_updated_at)).where(Finding.tenant_id == tenant_id))).scalar()
+        latest_remediation = (await db.execute(select(func.max(RemediationRun.created_at)).where(RemediationRun.tenant_id == tenant_id))).scalar()
+        latest_export = (await db.execute(select(func.max(EvidenceExport.created_at)).where(EvidenceExport.tenant_id == tenant_id))).scalar()
+        latest_baseline = (await db.execute(select(func.max(BaselineReport.created_at)).where(BaselineReport.tenant_id == tenant_id))).scalar()
+        activity_candidates = [latest_finding, latest_remediation, latest_export, latest_baseline]
+        last_activity = max((d for d in activity_candidates if d is not None), default=None)
+        items.append(
+            TenantListItem(
+                tenant_id=str(tenant.id),
+                tenant_name=tenant.name,
+                created_at=tenant.created_at.isoformat() if tenant.created_at else "",
+                users_count=users_count,
+                aws_accounts_count=aws_accounts_count,
+                open_findings_count=open_findings_count,
+                open_actions_count=open_actions_count,
+                last_activity_at=last_activity.isoformat() if last_activity else None,
+                has_connected_accounts=aws_accounts_count > 0,
+                ingestion_stale=bool(latest_finding is None or latest_finding < stale_threshold),
+                digest_enabled=bool(tenant.digest_enabled),
+                slack_configured=bool((tenant.slack_webhook_url or "").strip()),
+            )
+        )
+    return TenantListResponse(items=items, total=total)
+
+
+@router.get("/tenants/{tenant_id}", response_model=TenantOverviewResponse)
+async def get_tenant_overview(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TenantOverviewResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    tenant = await _get_tenant_or_404(db, tenant_uuid)
+    users_count = int((await db.execute(select(func.count()).select_from(User).where(User.tenant_id == tenant_uuid))).scalar() or 0)
+    account_rows = await db.execute(select(AwsAccount.status, func.count()).where(AwsAccount.tenant_id == tenant_uuid).group_by(AwsAccount.status))
+    action_rows = await db.execute(select(Action.status, func.count()).where(Action.tenant_id == tenant_uuid).group_by(Action.status))
+    severity_rows = await db.execute(select(Finding.severity_label, func.count()).where(Finding.tenant_id == tenant_uuid).group_by(Finding.severity_label))
+    now = datetime.now(timezone.utc)
+    trend_24h = int((await db.execute(select(func.count()).select_from(Finding).where(Finding.tenant_id == tenant_uuid, Finding.sh_updated_at >= now - timedelta(hours=24)))).scalar() or 0)
+    trend_7d = int((await db.execute(select(func.count()).select_from(Finding).where(Finding.tenant_id == tenant_uuid, Finding.sh_updated_at >= now - timedelta(days=7)))).scalar() or 0)
+    trend_30d = int((await db.execute(select(func.count()).select_from(Finding).where(Finding.tenant_id == tenant_uuid, Finding.sh_updated_at >= now - timedelta(days=30)))).scalar() or 0)
+    return TenantOverviewResponse(
+        tenant_id=str(tenant.id),
+        tenant_name=tenant.name,
+        created_at=tenant.created_at.isoformat() if tenant.created_at else "",
+        users_count=users_count,
+        accounts_by_status={str(status): int(count) for status, count in account_rows.all()},
+        actions_by_status={str(status): int(count) for status, count in action_rows.all()},
+        findings_by_severity={str(sev): int(count) for sev, count in severity_rows.all()},
+        findings_trend={"24h": trend_24h, "7d": trend_7d, "30d": trend_30d},
+        digest_enabled=bool(tenant.digest_enabled),
+        slack_configured=bool((tenant.slack_webhook_url or "").strip()),
+    )
+
+
+@router.get("/tenants/{tenant_id}/users", response_model=list[UserItemResponse])
+async def list_tenant_users(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[UserItemResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(select(User).where(User.tenant_id == tenant_uuid).order_by(User.created_at.desc()))
+    users = list(result.scalars().all())
+    return [
+        UserItemResponse(
+            id=str(user.id),
+            name=user.name,
+            email=user.email,
+            role=getattr(user.role, "value", user.role),
+            created_at=user.created_at.isoformat() if user.created_at else "",
+            onboarding_completed_at=user.onboarding_completed_at.isoformat() if user.onboarding_completed_at else None,
+        )
+        for user in users
+    ]
+
+
+@router.get("/tenants/{tenant_id}/aws-accounts", response_model=list[AccountItemResponse])
+async def list_tenant_accounts(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[AccountItemResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(select(AwsAccount).where(AwsAccount.tenant_id == tenant_uuid).order_by(AwsAccount.created_at.desc()))
+    accounts = list(result.scalars().all())
+    return [
+        AccountItemResponse(
+            id=str(account.id),
+            account_id=account.account_id,
+            regions=account.regions or [],
+            status=getattr(account.status, "value", account.status),
+            last_validated_at=account.last_validated_at.isoformat() if account.last_validated_at else None,
+            created_at=account.created_at.isoformat() if account.created_at else "",
+        )
+        for account in accounts
+    ]
+
+
+@router.get("/tenants/{tenant_id}/findings", response_model=FindingsListResponse)
+async def list_tenant_findings(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    account_id: Annotated[str | None, Query()] = None,
+    region: Annotated[str | None, Query()] = None,
+    severity: Annotated[str | None, Query()] = None,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    source: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> FindingsListResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    query = select(Finding).where(Finding.tenant_id == tenant_uuid)
+    if account_id:
+        query = query.where(Finding.account_id == account_id)
+    if region:
+        query = query.where(Finding.region == region)
+    if severity:
+        query = query.where(Finding.severity_label.in_([s.strip().upper() for s in severity.split(",")]))
+    if status_filter:
+        query = query.where(Finding.status.in_([s.strip().upper() for s in status_filter.split(",")]))
+    if source:
+        query = query.where(Finding.source.in_([s.strip().lower() for s in source.split(",")]))
+    total = int((await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0)
+    result = await db.execute(query.order_by(Finding.severity_normalized.desc(), Finding.updated_at.desc()).limit(limit).offset(offset))
+    findings = list(result.scalars().all())
+    return FindingsListResponse(
+        items=[
+            FindingItemResponse(
+                id=str(f.id),
+                finding_id=f.finding_id,
+                account_id=f.account_id,
+                region=f.region,
+                source=f.source,
+                severity_label=f.severity_label,
+                status=f.status,
+                title=f.title,
+                description=f.description,
+                resource_id=f.resource_id,
+                resource_type=f.resource_type,
+                control_id=f.control_id,
+                standard_name=f.standard_name,
+                first_observed_at=f.first_observed_at.isoformat() if f.first_observed_at else None,
+                last_observed_at=f.last_observed_at.isoformat() if f.last_observed_at else None,
+                updated_at=f.sh_updated_at.isoformat() if f.sh_updated_at else None,
+                created_at=f.created_at.isoformat() if f.created_at else "",
+            )
+            for f in findings
+        ],
+        total=total,
+    )
+
+
+@router.get("/tenants/{tenant_id}/actions", response_model=ActionsListResponse)
+async def list_tenant_actions(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    account_id: Annotated[str | None, Query()] = None,
+    region: Annotated[str | None, Query()] = None,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ActionsListResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    query = select(Action).where(Action.tenant_id == tenant_uuid)
+    if account_id:
+        query = query.where(Action.account_id == account_id)
+    if region:
+        query = query.where(Action.region == region)
+    if status_filter:
+        query = query.where(Action.status == status_filter.strip().lower())
+    total = int((await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0)
+    result = await db.execute(query.order_by(Action.priority.desc(), Action.updated_at.desc()).limit(limit).offset(offset))
+    actions = list(result.scalars().all())
+    return ActionsListResponse(
+        items=[
+            ActionItemResponse(
+                id=str(a.id),
+                action_type=a.action_type,
+                target_id=a.target_id,
+                account_id=a.account_id,
+                region=a.region,
+                priority=a.priority,
+                status=a.status,
+                title=a.title,
+                description=a.description,
+                control_id=a.control_id,
+                resource_id=a.resource_id,
+                updated_at=a.updated_at.isoformat() if a.updated_at else None,
+                created_at=a.created_at.isoformat() if a.created_at else None,
+            )
+            for a in actions
+        ],
+        total=total,
+    )
+
+
+@router.get("/tenants/{tenant_id}/remediation-runs", response_model=RemediationRunsListResponse)
+async def list_tenant_remediation_runs(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> RemediationRunsListResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    query = select(RemediationRun).options(selectinload(RemediationRun.approved_by)).where(RemediationRun.tenant_id == tenant_uuid)
+    total = int((await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0)
+    result = await db.execute(query.order_by(RemediationRun.created_at.desc()).limit(limit).offset(offset))
+    runs = list(result.scalars().all())
+    return RemediationRunsListResponse(
+        items=[
+            RemediationRunItemResponse(
+                id=str(run.id),
+                action_id=str(run.action_id),
+                mode=getattr(run.mode, "value", run.mode),
+                status=getattr(run.status, "value", run.status),
+                outcome=run.outcome,
+                artifacts=_sanitize_artifacts(run.artifacts),
+                approved_by_email=run.approved_by.email if run.approved_by else None,
+                started_at=run.started_at.isoformat() if run.started_at else None,
+                completed_at=run.completed_at.isoformat() if run.completed_at else None,
+                created_at=run.created_at.isoformat() if run.created_at else "",
+            )
+            for run in runs
+        ],
+        total=total,
+    )
+
+
+@router.get("/tenants/{tenant_id}/exports", response_model=list[ExportItemResponse])
+async def list_tenant_exports(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ExportItemResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(select(EvidenceExport).where(EvidenceExport.tenant_id == tenant_uuid).order_by(EvidenceExport.created_at.desc()).limit(100))
+    exports = list(result.scalars().all())
+    return [
+        ExportItemResponse(
+            id=str(export.id),
+            status=getattr(export.status, "value", export.status),
+            pack_type=getattr(export, "pack_type", "evidence") or "evidence",
+            created_at=export.created_at.isoformat() if export.created_at else "",
+            started_at=export.started_at.isoformat() if export.started_at else None,
+            completed_at=export.completed_at.isoformat() if export.completed_at else None,
+            error_message=export.error_message,
+            file_size_bytes=export.file_size_bytes,
+        )
+        for export in exports
+    ]
+
+
+@router.get("/tenants/{tenant_id}/baseline-reports", response_model=list[BaselineReportItemResponse])
+async def list_tenant_baseline_reports(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[BaselineReportItemResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(select(BaselineReport).where(BaselineReport.tenant_id == tenant_uuid).order_by(BaselineReport.created_at.desc()).limit(100))
+    reports = list(result.scalars().all())
+    return [
+        BaselineReportItemResponse(
+            id=str(report.id),
+            status=getattr(report.status, "value", report.status),
+            requested_at=report.requested_at.isoformat() if report.requested_at else "",
+            completed_at=report.completed_at.isoformat() if report.completed_at else None,
+            outcome=report.outcome,
+            file_size_bytes=report.file_size_bytes,
+        )
+        for report in reports
+    ]
+
+
+@router.get("/tenants/{tenant_id}/notes", response_model=list[SupportNoteResponse])
+async def list_support_notes(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[SupportNoteResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(
+        select(SupportNote)
+        .options(selectinload(SupportNote.created_by))
+        .where(SupportNote.tenant_id == tenant_uuid)
+        .order_by(SupportNote.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    notes = list(result.scalars().all())
+    return [
+        SupportNoteResponse(
+            id=str(note.id),
+            tenant_id=str(note.tenant_id),
+            created_by_user_id=str(note.created_by_user_id) if note.created_by_user_id else None,
+            created_by_email=note.created_by.email if note.created_by else None,
+            body=note.body,
+            created_at=note.created_at.isoformat() if note.created_at else "",
+        )
+        for note in notes
+    ]
+
+
+@router.post("/tenants/{tenant_id}/notes", response_model=SupportNoteResponse, status_code=status.HTTP_201_CREATED)
+async def create_support_note(
+    tenant_id: Annotated[str, Path()],
+    body: SupportNoteCreateRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SupportNoteResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    note_id = uuid.uuid4()
+    note = SupportNote(
+        id=note_id,
+        tenant_id=tenant_uuid,
+        created_by_user_id=admin.id,
+        body=body.body.strip(),
+    )
+    db.add(note)
+    db.add(
+        AuditLog(
+            tenant_id=tenant_uuid,
+            event_type="support_note_created",
+            entity_type="support_note",
+            entity_id=note_id,
+            user_id=admin.id,
+            timestamp=datetime.now(timezone.utc),
+            summary="Support note created by SaaS admin",
+        )
+    )
+    await db.commit()
+    await db.refresh(note)
+    return SupportNoteResponse(
+        id=str(note.id),
+        tenant_id=str(note.tenant_id),
+        created_by_user_id=str(note.created_by_user_id) if note.created_by_user_id else None,
+        created_by_email=admin.email,
+        body=note.body,
+        created_at=note.created_at.isoformat() if note.created_at else "",
+    )
+
+
+@router.get("/tenants/{tenant_id}/files", response_model=list[SupportFileItemResponse])
+async def list_support_files(
+    tenant_id: Annotated[str, Path()],
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[SupportFileItemResponse]:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(
+        select(SupportFile)
+        .where(SupportFile.tenant_id == tenant_uuid)
+        .order_by(SupportFile.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    files = list(result.scalars().all())
+    return [
+        SupportFileItemResponse(
+            id=str(item.id),
+            tenant_id=str(item.tenant_id),
+            filename=item.filename,
+            content_type=item.content_type,
+            size_bytes=item.size_bytes,
+            status=item.status,
+            visible_to_tenant=item.visible_to_tenant,
+            message=item.message,
+            created_at=item.created_at.isoformat() if item.created_at else "",
+            uploaded_at=item.uploaded_at.isoformat() if item.uploaded_at else None,
+        )
+        for item in files
+    ]
+
+
+@router.post("/tenants/{tenant_id}/files/initiate", response_model=InitiateSupportFileResponse, status_code=status.HTTP_201_CREATED)
+async def initiate_support_file_upload(
+    tenant_id: Annotated[str, Path()],
+    body: InitiateSupportFileRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InitiateSupportFileResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    bucket = (settings.S3_SUPPORT_BUCKET or "").strip()
+    if not bucket:
+        raise HTTPException(status_code=503, detail="S3_SUPPORT_BUCKET is not configured")
+    key = f"support/{tenant_uuid}/{uuid.uuid4()}/{body.filename}"
+    support_file = SupportFile(
+        tenant_id=tenant_uuid,
+        uploaded_by_user_id=admin.id,
+        filename=body.filename,
+        content_type=body.content_type,
+        s3_bucket=bucket,
+        s3_key=key,
+        status="pending_upload",
+        visible_to_tenant=body.visible_to_tenant,
+        message=body.message,
+    )
+    db.add(support_file)
+    await db.commit()
+    await db.refresh(support_file)
+
+    client = _support_s3_client()
+    params: dict[str, Any] = {"Bucket": bucket, "Key": key}
+    required_headers: dict[str, str] = {}
+    if body.content_type:
+        params["ContentType"] = body.content_type
+        required_headers["Content-Type"] = body.content_type
+    upload_url = client.generate_presigned_url("put_object", Params=params, ExpiresIn=3600)
+
+    return InitiateSupportFileResponse(
+        id=str(support_file.id),
+        upload_url=upload_url,
+        required_headers=required_headers,
+    )
+
+
+@router.post("/tenants/{tenant_id}/files/{file_id}/finalize", response_model=SupportFileItemResponse)
+async def finalize_support_file_upload(
+    tenant_id: Annotated[str, Path()],
+    file_id: Annotated[str, Path()],
+    body: FinalizeSupportFileRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SupportFileItemResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    try:
+        file_uuid = uuid.UUID(file_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="file_id must be a valid UUID") from exc
+    result = await db.execute(select(SupportFile).where(SupportFile.id == file_uuid, SupportFile.tenant_id == tenant_uuid))
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Support file not found")
+    client = _support_s3_client()
+    size = body.size_bytes
+    try:
+        head = client.head_object(Bucket=item.s3_bucket, Key=item.s3_key)
+        size = size if size is not None else int(head.get("ContentLength") or 0)
+    except ClientError as exc:
+        raise HTTPException(status_code=409, detail="File is not uploaded yet") from exc
+    item.status = "available"
+    item.size_bytes = size
+    item.uploaded_at = datetime.now(timezone.utc)
+    db.add(
+        AuditLog(
+            tenant_id=tenant_uuid,
+            event_type="support_file_shared",
+            entity_type="support_file",
+            entity_id=item.id,
+            user_id=admin.id,
+            timestamp=datetime.now(timezone.utc),
+            summary=f"Support file shared: {item.filename}",
+        )
+    )
+    await db.commit()
+    await db.refresh(item)
+    return SupportFileItemResponse(
+        id=str(item.id),
+        tenant_id=str(item.tenant_id),
+        filename=item.filename,
+        content_type=item.content_type,
+        size_bytes=item.size_bytes,
+        status=item.status,
+        visible_to_tenant=item.visible_to_tenant,
+        message=item.message,
+        created_at=item.created_at.isoformat() if item.created_at else "",
+        uploaded_at=item.uploaded_at.isoformat() if item.uploaded_at else None,
+    )
+
+
+@router.post("/tenants/{tenant_id}/files/upload", response_model=SupportFileItemResponse, status_code=status.HTTP_201_CREATED)
+async def upload_support_file_direct(
+    tenant_id: Annotated[str, Path()],
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: UploadFile = File(...),
+    message: str | None = Form(default=None),
+    visible_to_tenant: bool = Form(default=True),
+) -> SupportFileItemResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    bucket = (settings.S3_SUPPORT_BUCKET or "").strip()
+    if not bucket:
+        raise HTTPException(status_code=503, detail="S3_SUPPORT_BUCKET is not configured")
+
+    key = f"support/{tenant_uuid}/{uuid.uuid4()}/{file.filename}"
+    client = _support_s3_client()
+
+    # Determine size if possible
+    size_bytes = None
+    try:
+        file.file.seek(0, 2)
+        size_bytes = file.file.tell()
+        file.file.seek(0)
+    except Exception:
+        size_bytes = None
+
+    try:
+        extra = {"ContentType": file.content_type} if file.content_type else {}
+        client.upload_fileobj(file.file, bucket, key, ExtraArgs=extra)
+    except ClientError as exc:
+        raise HTTPException(status_code=502, detail="S3 upload failed") from exc
+
+    support_file_id = uuid.uuid4()
+    support_file = SupportFile(
+        id=support_file_id,
+        tenant_id=tenant_uuid,
+        uploaded_by_user_id=admin.id,
+        filename=file.filename,
+        content_type=file.content_type,
+        s3_bucket=bucket,
+        s3_key=key,
+        status="available",
+        visible_to_tenant=visible_to_tenant,
+        message=message,
+        size_bytes=size_bytes,
+        uploaded_at=datetime.now(timezone.utc),
+    )
+    db.add(support_file)
+    db.add(
+        AuditLog(
+            tenant_id=tenant_uuid,
+            event_type="support_file_shared",
+            entity_type="support_file",
+            entity_id=support_file_id,
+            user_id=admin.id,
+            timestamp=datetime.now(timezone.utc),
+            summary=f"Support file shared: {file.filename}",
+        )
+    )
+    await db.commit()
+    await db.refresh(support_file)
+
+    return SupportFileItemResponse(
+        id=str(support_file.id),
+        tenant_id=str(support_file.tenant_id),
+        filename=support_file.filename,
+        content_type=support_file.content_type,
+        size_bytes=support_file.size_bytes,
+        status=support_file.status,
+        visible_to_tenant=support_file.visible_to_tenant,
+        message=support_file.message,
+        created_at=support_file.created_at.isoformat() if support_file.created_at else "",
+        uploaded_at=support_file.uploaded_at.isoformat() if support_file.uploaded_at else None,
+    )

@@ -11,13 +11,22 @@ import uuid
 from unittest.mock import patch
 
 from backend.utils.sqs import (
+    EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
+    EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE,
+    INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE,
     INGEST_ACCESS_ANALYZER_JOB_TYPE,
     INGEST_INSPECTOR_JOB_TYPE,
     INGEST_JOB_TYPE,
+    RECONCILE_INVENTORY_SHARD_JOB_TYPE,
+    RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
     WEEKLY_DIGEST_JOB_TYPE,
+    build_ingest_control_plane_events_job_payload,
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
     build_ingest_job_payload,
+    build_pr_bundle_execution_job_payload,
+    build_reconcile_inventory_shard_job_payload,
+    build_reconcile_recently_touched_resources_job_payload,
     build_weekly_digest_job_payload,
     parse_queue_region,
 )
@@ -221,3 +230,84 @@ def test_build_weekly_digest_job_payload() -> None:
     assert payload["created_at"] == created_at
     required = {"job_type", "tenant_id", "created_at"}
     assert required.issubset(payload.keys())
+
+
+def test_build_pr_bundle_execution_job_payload_plan() -> None:
+    execution_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    payload = build_pr_bundle_execution_job_payload(
+        execution_id=execution_id,
+        run_id=run_id,
+        tenant_id=tenant_id,
+        phase="plan",
+        created_at="2026-02-09T10:00:00Z",
+        requested_by_user_id=user_id,
+    )
+    assert payload["job_type"] == EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE
+    assert payload["execution_id"] == str(execution_id)
+    assert payload["run_id"] == str(run_id)
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["phase"] == "plan"
+    assert payload["requested_by_user_id"] == str(user_id)
+
+
+def test_build_pr_bundle_execution_job_payload_apply() -> None:
+    payload = build_pr_bundle_execution_job_payload(
+        execution_id=uuid.uuid4(),
+        run_id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        phase="apply",
+        created_at="2026-02-09T10:00:00Z",
+    )
+    assert payload["job_type"] == EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE
+    assert payload["phase"] == "apply"
+
+
+def test_build_ingest_control_plane_events_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_ingest_control_plane_events_job_payload(
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        region="us-east-1",
+        event={"id": "evt-1", "time": "2026-02-10T10:00:00Z"},
+        event_id="evt-1",
+        event_time="2026-02-10T10:00:00Z",
+        intake_time="2026-02-10T10:00:05Z",
+        created_at="2026-02-10T10:00:06Z",
+    )
+    assert payload["job_type"] == INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["event_id"] == "evt-1"
+    assert payload["event"]["id"] == "evt-1"
+
+
+def test_build_reconcile_inventory_shard_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_reconcile_inventory_shard_job_payload(
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        region="eu-west-1",
+        service="ec2",
+        resource_ids=["sg-123"],
+        created_at="2026-02-10T10:00:00Z",
+    )
+    assert payload["job_type"] == RECONCILE_INVENTORY_SHARD_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["service"] == "ec2"
+    assert payload["resource_ids"] == ["sg-123"]
+
+
+def test_build_reconcile_recently_touched_resources_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_reconcile_recently_touched_resources_job_payload(
+        tenant_id=tenant_id,
+        created_at="2026-02-10T10:00:00Z",
+        lookback_minutes=30,
+    )
+    assert payload["job_type"] == RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["lookback_minutes"] == 30
+    build_pr_bundle_execution_job_payload,
+    build_pr_bundle_execution_job_payload,

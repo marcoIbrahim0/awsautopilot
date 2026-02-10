@@ -22,6 +22,8 @@ from tenacity import (
     before_sleep_log,
 )
 
+from worker.services.json_safe import make_json_safe
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["fetch_all_access_analyzer_findings", "normalize_aa_finding"]
@@ -65,7 +67,7 @@ def _parse_ts(value: Any) -> datetime | None:
 )
 def list_analyzers(session: boto3.Session, region: str) -> list[dict]:
     """
-    List analyzers in the region. Returns analyzers of type ACCOUNT (external access).
+    List active analyzers in the region across ACCOUNT and ORGANIZATION scopes.
 
     Args:
         session: boto3 session with assumed-role credentials.
@@ -75,21 +77,29 @@ def list_analyzers(session: boto3.Session, region: str) -> list[dict]:
         List of analyzer dicts with at least 'arn' and 'name'.
     """
     client = session.client("accessanalyzer", region_name=region)
-    out: list[dict] = []
-    next_token = None
-    while True:
-        kwargs: dict = {"type": "ACCOUNT"}
-        if next_token:
-            kwargs["nextToken"] = next_token
-        response = client.list_analyzers(**kwargs)
-        for a in response.get("analyzers", []):
-            if a.get("status") == "ACTIVE":
-                out.append({"arn": a["arn"], "name": a.get("name", "")})
-        next_token = response.get("nextToken")
-        if not next_token:
-            break
-        time.sleep(PAGE_SLEEP_SECONDS)
-    return out
+    out_by_arn: dict[str, dict] = {}
+    for analyzer_scope in ("ACCOUNT", "ORGANIZATION"):
+        next_token = None
+        while True:
+            kwargs: dict = {"type": analyzer_scope}
+            if next_token:
+                kwargs["nextToken"] = next_token
+            response = client.list_analyzers(**kwargs)
+            for analyzer in response.get("analyzers", []):
+                if analyzer.get("status") != "ACTIVE":
+                    continue
+                arn = analyzer.get("arn")
+                if not arn:
+                    continue
+                out_by_arn[arn] = {
+                    "arn": arn,
+                    "name": analyzer.get("name", ""),
+                }
+            next_token = response.get("nextToken")
+            if not next_token:
+                break
+            time.sleep(PAGE_SLEEP_SECONDS)
+    return list(out_by_arn.values())
 
 
 @retry(
@@ -141,7 +151,7 @@ def fetch_all_access_analyzer_findings(
     analyzers = list_analyzers(session, region)
     if not analyzers:
         logger.info(
-            "No active ACCOUNT analyzers in region=%s account_id=%s",
+            "No active Access Analyzer analyzers in region=%s account_id=%s",
             region,
             account_id,
         )
@@ -240,5 +250,5 @@ def normalize_aa_finding(
         "first_observed_at": created,
         "last_observed_at": updated or analyzed or created,
         "sh_updated_at": updated,
-        "raw_json": raw,
+        "raw_json": make_json_safe(raw),
     }

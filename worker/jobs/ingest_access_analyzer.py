@@ -33,6 +33,15 @@ logger = logging.getLogger("worker.jobs.ingest_access_analyzer")
 SOURCE = "access_analyzer"
 
 
+def _is_access_analyzer_permission_error(exc: ClientError) -> bool:
+    """True when ReadRole lacks Access Analyzer permissions in this region."""
+    code = exc.response.get("Error", {}).get("Code", "")
+    message = str(exc.response.get("Error", {}).get("Message", "")).lower()
+    if code not in {"AccessDenied", "AccessDeniedException"}:
+        return False
+    return "access-analyzer:" in message or "accessanalyzer" in message
+
+
 def _upsert_one(
     session: Session,
     data: dict[str, Any],
@@ -109,9 +118,20 @@ def execute_ingest_access_analyzer_job(job: dict) -> None:
             region,
         )
         session_boto = assume_role(role_arn=role_arn, external_id=external_id)
-        findings_raw = fetch_all_access_analyzer_findings(
-            session_boto, region=region, account_id=account_id
-        )
+        try:
+            findings_raw = fetch_all_access_analyzer_findings(
+                session_boto, region=region, account_id=account_id
+            )
+        except ClientError as e:
+            if _is_access_analyzer_permission_error(e):
+                logger.warning(
+                    "Skipping Access Analyzer ingest: missing permissions for account_id=%s region=%s tenant_id=%s",
+                    account_id,
+                    region,
+                    tenant_id,
+                )
+                return
+            raise
 
         n_total = len(findings_raw)
         logger.info(

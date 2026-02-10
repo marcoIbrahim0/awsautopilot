@@ -369,13 +369,28 @@ async def accept_invite(
     
     logger.info(f"User {user.id} accepted invite for tenant {user.tenant_id}")
     
-    saas_id, launch_url = get_saas_and_launch_url(tenant.external_id)
+    (
+        saas_id,
+        read_launch_url,
+        read_template_url,
+        write_launch_url,
+        write_template_url,
+        region,
+        read_default_stack,
+        write_default_stack,
+    ) = get_saas_and_launch_url(tenant.external_id)
     return AuthResponse(
         access_token=access_token,
         user=user_to_response(user),
         tenant=tenant_to_response(tenant),
         saas_account_id=saas_id,
-        read_role_launch_stack_url=launch_url,
+        read_role_launch_stack_url=read_launch_url,
+        read_role_template_url=read_template_url,
+        read_role_region=region,
+        read_role_default_stack_name=read_default_stack,
+        write_role_launch_stack_url=write_launch_url,
+        write_role_template_url=write_template_url,
+        write_role_default_stack_name=write_default_stack,
     )
 
 

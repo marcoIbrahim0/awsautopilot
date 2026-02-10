@@ -12,14 +12,24 @@ import pytest
 
 from backend.models.enums import RemediationRunStatus
 from backend.services.pr_bundle import (
+    ACTION_TYPE_AWS_CONFIG_ENABLED,
     ACTION_TYPE_CLOUDTRAIL_ENABLED,
+    ACTION_TYPE_EBS_DEFAULT_ENCRYPTION,
+    ACTION_TYPE_EBS_SNAPSHOT_BLOCK_PUBLIC_ACCESS,
     ACTION_TYPE_ENABLE_GUARDDUTY,
     ACTION_TYPE_ENABLE_SECURITY_HUB,
+    ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT,
     ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+    ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
     ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
     ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+    ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+    ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+    ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
     ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+    ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING,
     CLOUDFORMATION_FORMAT,
+    PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
     SUPPORTED_ACTION_TYPES,
     TERRAFORM_FORMAT,
     generate_pr_bundle,
@@ -271,16 +281,25 @@ def test_pr_bundle_guardduty_terraform_step_9_4_exact_structure() -> None:
     assert "Region: ap-southeast-1" in content
 
 
-def test_pr_bundle_supported_action_types_all_seven() -> None:
-    """Step 9.1: SUPPORTED_ACTION_TYPES contains all 7 in-scope action types (9.2–9.5, 9.9–9.12)."""
-    assert len(SUPPORTED_ACTION_TYPES) == 7
+def test_pr_bundle_supported_action_types_all_sixteen() -> None:
+    """Phase 1: SUPPORTED_ACTION_TYPES contains all mapped action types."""
+    assert len(SUPPORTED_ACTION_TYPES) == 16
     assert ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_ENABLE_SECURITY_HUB in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_ENABLE_GUARDDUTY in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_S3_BUCKET_ENCRYPTION in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_CLOUDTRAIL_ENABLED in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_AWS_CONFIG_ENABLED in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_EBS_SNAPSHOT_BLOCK_PUBLIC_ACCESS in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_EBS_DEFAULT_ENCRYPTION in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_S3_BUCKET_REQUIRE_SSL in SUPPORTED_ACTION_TYPES
+    assert ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT in SUPPORTED_ACTION_TYPES
 
 
 def test_pr_bundle_dispatch_s3_bucket_block_terraform_step_9_9() -> None:
@@ -320,6 +339,81 @@ def test_pr_bundle_s3_bucket_block_terraform_step_9_9_exact_structure() -> None:
     assert "ignore_public_acls" in content
     assert "restrict_public_buckets" in content
     assert "S3.2" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_block_terraform_readme_has_guardrails() -> None:
+    """S3.2 Terraform bundle README includes explicit non-migration guardrails."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    assert "S3.2 guardrail (read before apply)" in readme
+    assert "NOT a full CloudFront + OAC + private S3 migration" in readme
+    assert "Pre-apply checks (required)" in readme
+    assert "Apply sequence (recommended)" in readme
+    assert "Rollback plan" in readme
+
+
+def test_pr_bundle_non_s3_terraform_readme_excludes_s3_guardrails() -> None:
+    """Guardrail block is only appended for S3.2 Terraform bundles."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_SECURITY_HUB,
+        target_id="target-1",
+        region="us-east-1",
+        control_id="SecurityHub.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    assert "S3.2 guardrail (read before apply)" not in readme
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> None:
+    """S3.2 variant cloudfront_oac_private_s3 returns runnable CloudFront+OAC+private S3 Terraform."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+    )
+    assert r["format"] == "terraform"
+    paths = [f["path"] for f in r["files"]]
+    assert "providers.tf" in paths
+    assert "s3_cloudfront_oac_private_s3.tf" in paths
+    assert "README.txt" in paths
+
+    content = next(f for f in r["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
+    assert "aws_cloudfront_origin_access_control" in content
+    assert "aws_cloudfront_distribution" in content
+    assert "aws_s3_bucket_policy" in content
+    assert "aws_s3_bucket_public_access_block" in content
+    assert 'bucket_name = "my-bucket"' in content
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_variant_has_specific_readme_section() -> None:
+    """Variant README includes migration-specific section."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+    )
+    readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    assert "S3.2 migration variant (CloudFront + OAC + private S3)" in readme
+    assert "additional_read_principal_arns" in readme
 
 
 def test_s3_bucket_name_from_target_id() -> None:
@@ -410,6 +504,87 @@ def test_pr_bundle_s3_bucket_encryption_cloudformation_step_9_10() -> None:
     assert "S3.4" in content or "Control:" in content
 
 
+def test_pr_bundle_s3_bucket_access_logging_terraform() -> None:
+    """S3.9: access logging bundle uses aws_s3_bucket_logging and configurable log destination."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="log-source-bucket",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_access_logging.tf")["content"]
+    assert 'resource "aws_s3_bucket_logging" "security_autopilot"' in content
+    assert 'bucket        = "log-source-bucket"' in content
+    assert 'variable "log_bucket_name"' in content
+    assert "target_bucket = var.log_bucket_name" in content
+    assert "S3.9" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform() -> None:
+    """S3.11: lifecycle bundle configures abort-incomplete-multipart lifecycle policy."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    content = next(
+        f for f in r["files"] if f["path"] == "s3_bucket_lifecycle_configuration.tf"
+    )["content"]
+    assert 'resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot"' in content
+    assert 'bucket = "lifecycle-bucket"' in content
+    assert "abort_incomplete_multipart_upload" in content
+    assert 'variable "abort_incomplete_multipart_days"' in content
+    assert "S3.11" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
+    """S3.15: encryption bundle configures default SSE-KMS with caller-provided key ARN."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    assert r["format"] == "terraform"
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_encryption_kms.tf")["content"]
+    assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot"' in content
+    assert 'bucket = "kms-bucket"' in content
+    assert 'sse_algorithm     = "aws:kms"' in content
+    assert 'variable "kms_key_arn"' in content
+    assert "S3.15" in content or "Control:" in content
+
+
+@pytest.mark.parametrize(
+    ("action_type", "expected_path", "expected_snippet"),
+    [
+        (ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING, "s3_bucket_access_logging.yaml", "LoggingConfiguration"),
+        (ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION, "s3_bucket_lifecycle_configuration.yaml", "LifecycleConfiguration"),
+        (ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS, "s3_bucket_encryption_kms.yaml", "SSEAlgorithm: aws:kms"),
+    ],
+)
+def test_pr_bundle_new_s3_controls_cloudformation(
+    action_type: str,
+    expected_path: str,
+    expected_snippet: str,
+) -> None:
+    """New S3 controls render CloudFormation templates with expected resources/settings."""
+    action = _make_action(
+        action_type=action_type,
+        target_id="example-bucket",
+        region="us-east-1",
+    )
+    r = generate_pr_bundle(action, "cloudformation")
+    assert r["format"] == "cloudformation"
+    assert r["files"][0]["path"] == expected_path
+    assert expected_snippet in r["files"][0]["content"]
+
+
 def test_pr_bundle_dispatch_sg_restrict_terraform_step_9_11() -> None:
     """Step 9.11: sg_restrict_public_ports returns Terraform with aws_vpc_security_group_ingress_rule."""
     action = _make_action(
@@ -426,36 +601,40 @@ def test_pr_bundle_dispatch_sg_restrict_terraform_step_9_11() -> None:
 
 
 def test_pr_bundle_sg_restrict_terraform_step_9_11_exact_structure() -> None:
-    """Step 9.11: Terraform for EC2.18 (sg_restrict_public_ports) has exact structure: variables, SSH (22), RDP (3389)."""
+    """Step 9.11: Terraform for EC2.53 (sg_restrict_public_ports) has exact structure: variables, SSH (22), RDP (3389), optional IPv6."""
     action = _make_action(
         action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
         target_id="sg-abc123",
         region="us-east-1",
-        control_id="EC2.18",
+        control_id="EC2.53",
     )
     r = generate_pr_bundle(action, "terraform")
     content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
     assert 'variable "security_group_id"' in content
     assert 'variable "allowed_cidr"' in content
+    assert 'variable "allowed_cidr_ipv6"' in content
     assert '"sg-abc123"' in content
     assert '"10.0.0.0/8"' in content
     assert 'resource "aws_vpc_security_group_ingress_rule" "ssh_restricted"' in content
     assert 'resource "aws_vpc_security_group_ingress_rule" "rdp_restricted"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "ssh_restricted_ipv6"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6"' in content
     assert 'from_port         = 22' in content
     assert 'to_port           = 22' in content
     assert 'from_port         = 3389' in content
     assert 'to_port           = 3389' in content
     assert 'ip_protocol       = "tcp"' in content
-    assert "EC2.18" in content or "Control:" in content
+    assert "cidr_ipv6" in content
+    assert "EC2.53" in content or "Control:" in content
 
 
 def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
-    """Step 9.11: CloudFormation for EC2.18 (sg_restrict_public_ports) has SecurityGroupIngress, SSH (22), RDP (3389)."""
+    """Step 9.11: CloudFormation for EC2.53 (sg_restrict_public_ports) has SecurityGroupIngress, SSH (22), RDP (3389), optional IPv6."""
     action = _make_action(
         action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
         target_id="sg-xyz789",
         region="us-east-1",
-        control_id="EC2.18",
+        control_id="EC2.53",
     )
     r = generate_pr_bundle(action, "cloudformation")
     assert r["format"] == "cloudformation"
@@ -464,13 +643,40 @@ def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
     assert "AWS::EC2::SecurityGroupIngress" in content
     assert "SecurityGroupId:" in content
     assert "AllowedCidr:" in content
+    assert "AllowedCidrIpv6:" in content
+    assert "HasAllowedIpv6" in content
+    assert "CidrIpv6:" in content
     assert "FromPort: 22" in content
     assert "ToPort: 22" in content
     assert "FromPort: 3389" in content
     assert "ToPort: 3389" in content
     assert "IpProtocol: tcp" in content
     assert "10.0.0.0/8" in content
-    assert "EC2.18" in content or "Control:" in content
+    assert "EC2.53" in content or "Control:" in content
+
+
+def test_pr_bundle_sg_restrict_target_id_composite_extracts_sg_id() -> None:
+    """Composite target_id strings should normalize SecurityGroupId/security_group_id to plain sg-*."""
+    composite_target_id = (
+        "029037611564|eu-north-1|"
+        "arn:aws:ec2:eu-north-1:029037611564:security-group/sg-0de002382892023f5|EC2.53"
+    )
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id=composite_target_id,
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+
+    tf_bundle = generate_pr_bundle(action, "terraform")
+    tf_content = next(f for f in tf_bundle["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
+    assert 'default     = "sg-0de002382892023f5"' in tf_content
+    assert composite_target_id not in tf_content
+
+    cfn_bundle = generate_pr_bundle(action, "cloudformation")
+    cfn_content = next(f for f in cfn_bundle["files"] if f["path"] == "sg_restrict_public_ports.yaml")["content"]
+    assert 'Default: "sg-0de002382892023f5"' in cfn_content
+    assert composite_target_id not in cfn_content
 
 
 def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:
@@ -612,6 +818,23 @@ def test_build_remediation_run_job_payload_direct_fix() -> None:
     action_id = uuid.uuid4()
     payload = build_remediation_run_job_payload(run_id, tenant_id, action_id, "direct_fix", "2026-02-02T12:00:00Z")
     assert payload["mode"] == "direct_fix"
+
+
+def test_build_remediation_run_job_payload_with_variant() -> None:
+    """Payload includes optional pr_bundle_variant when provided."""
+    run_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    action_id = uuid.uuid4()
+    payload = build_remediation_run_job_payload(
+        run_id,
+        tenant_id,
+        action_id,
+        "pr_only",
+        "2026-02-02T12:00:00Z",
+        pr_bundle_variant="cloudfront_oac_private_s3",
+    )
+    assert payload["mode"] == "pr_only"
+    assert payload["pr_bundle_variant"] == "cloudfront_oac_private_s3"
 
 
 # ---------------------------------------------------------------------------

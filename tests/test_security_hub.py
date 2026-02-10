@@ -28,30 +28,23 @@ def test_default_filters_structure() -> None:
     """DEFAULT_FILTERS has expected keys."""
     assert "RecordState" in DEFAULT_FILTERS
     assert "WorkflowStatus" in DEFAULT_FILTERS
-    assert "SeverityLabel" in DEFAULT_FILTERS
+    assert "SeverityLabel" not in DEFAULT_FILTERS
 
 
 def test_default_filters_record_state() -> None:
-    """DEFAULT_FILTERS only includes ACTIVE findings."""
-    assert DEFAULT_FILTERS["RecordState"] == [{"Comparison": "EQUALS", "Value": "ACTIVE"}]
+    """DEFAULT_FILTERS includes ACTIVE and ARCHIVED findings."""
+    record_state_values = [f["Value"] for f in DEFAULT_FILTERS["RecordState"]]
+    assert "ACTIVE" in record_state_values
+    assert "ARCHIVED" in record_state_values
 
 
 def test_default_filters_workflow_status() -> None:
-    """DEFAULT_FILTERS includes NEW and NOTIFIED workflow statuses."""
+    """DEFAULT_FILTERS includes all workflow states needed for PASSED reconciliation."""
     workflow_values = [f["Value"] for f in DEFAULT_FILTERS["WorkflowStatus"]]
     assert "NEW" in workflow_values
     assert "NOTIFIED" in workflow_values
-
-
-def test_default_filters_severity_labels() -> None:
-    """DEFAULT_FILTERS includes CRITICAL, HIGH, MEDIUM severity."""
-    severity_values = [f["Value"] for f in DEFAULT_FILTERS["SeverityLabel"]]
-    assert "CRITICAL" in severity_values
-    assert "HIGH" in severity_values
-    assert "MEDIUM" in severity_values
-    # LOW and INFORMATIONAL should NOT be included
-    assert "LOW" not in severity_values
-    assert "INFORMATIONAL" not in severity_values
+    assert "RESOLVED" in workflow_values
+    assert "SUPPRESSED" in workflow_values
 
 
 # ---------------------------------------------------------------------------

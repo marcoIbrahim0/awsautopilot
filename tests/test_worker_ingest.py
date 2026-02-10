@@ -18,6 +18,7 @@ import pytest
 
 from worker.jobs.ingest_findings import (
     _extract_finding_fields,
+    _normalized_finding_status,
     _parse_ts,
     _trunc,
     execute_ingest_job,
@@ -142,6 +143,24 @@ def test_extract_finding_fields_severity_normalized() -> None:
     
     # CRITICAL maps to 100 (per Finding.severity_to_int)
     assert fields["severity_normalized"] == 100
+
+
+def test_normalized_finding_status_passed_maps_to_resolved() -> None:
+    """Only Compliance PASSED is treated as resolved."""
+    raw = {
+        "Workflow": {"Status": "NEW"},
+        "Compliance": {"Status": "PASSED"},
+    }
+    assert _normalized_finding_status(raw) == "RESOLVED"
+
+
+def test_normalized_finding_status_resolved_workflow_without_passed_stays_open() -> None:
+    """Workflow RESOLVED alone must not mark finding as resolved in SaaS."""
+    raw = {
+        "Workflow": {"Status": "RESOLVED"},
+        "Compliance": {"Status": "FAILED"},
+    }
+    assert _normalized_finding_status(raw) == "NEW"
 
 
 # ---------------------------------------------------------------------------

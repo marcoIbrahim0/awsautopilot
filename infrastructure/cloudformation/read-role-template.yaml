@@ -2,7 +2,8 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Creates a read-only IAM role in the customer's AWS account for Security Hub findings ingestion.
   Your SaaS assumes this role using STS AssumeRole + ExternalId (no long-lived keys).
-  Uses a custom resource so deployment does not fail if the role or policy already exist (idempotent).
+  Optional: can also create the Write Role in the same stack when IncludeWriteRole=true.
+  Uses a custom resource so deployment does not fail if roles or policies already exist (idempotent).
 
 Parameters:
   SaaSAccountId:
@@ -16,12 +17,22 @@ Parameters:
     NoEcho: true
     Description: "Unique per tenant/customer. Must match what your SaaS stores for this tenant."
 
+  IncludeWriteRole:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: "Set to true to create SecurityAutopilotWriteRole in the same stack."
+
+Conditions:
+  CreateWriteRole: !Equals [!Ref IncludeWriteRole, "true"]
+
 Resources:
   # Lambda execution role for the custom resource
   ReadRoleCustomResourceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: SecurityAutopilotReadRole-CustomResourceRole
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -33,7 +44,6 @@ Resources:
   ReadRoleCustomResourceRolePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: SecurityAutopilotReadRole-CustomResourcePolicy
       Roles:
         - !Ref ReadRoleCustomResourceRole
       PolicyDocument:
@@ -63,13 +73,12 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/SecurityAutopilotReadRole-*"
+            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
 
   ReadRoleHelperFunction:
     Type: AWS::Lambda::Function
     DependsOn: ReadRoleCustomResourceRolePolicy
     Properties:
-      FunctionName: SecurityAutopilotReadRole-Helper
       Handler: index.handler
       Runtime: python3.12
       Timeout: 120
@@ -80,8 +89,10 @@ Resources:
           import boto3
           import cfnresponse
 
-          ROLE_NAME = "SecurityAutopilotReadRole"
-          POLICY_NAME = "SecurityAutopilotReadRolePolicy"
+          READ_ROLE_NAME = "SecurityAutopilotReadRole"
+          READ_POLICY_NAME = "SecurityAutopilotReadRolePolicy"
+          WRITE_ROLE_NAME = "SecurityAutopilotWriteRole"
+          WRITE_POLICY_NAME = "SecurityAutopilotWriteRolePolicy"
 
           def trust_policy(saas_account_id, external_id, partition="aws"):
               return {
@@ -95,65 +106,103 @@ Resources:
                   }]
               }
 
-          def policy_document():
+          def read_policy_document():
               return {
                   "Version": "2012-10-17",
                   "Statement": [
-                      {"Sid": "SecurityHubReadFindings", "Effect": "Allow", "Action": ["securityhub:GetFindings"], "Resource": "*"},
+                      {"Sid": "SecurityHubReadFindings", "Effect": "Allow", "Action": ["securityhub:GetFindings", "securityhub:DescribeHub"], "Resource": "*"},
+                      {"Sid": "ConfigReadinessChecks", "Effect": "Allow", "Action": ["config:DescribeConfigurationRecorders", "config:DescribeConfigurationRecorderStatus"], "Resource": "*"},
+                      {"Sid": "Ec2SecurityGroupReadChecks", "Effect": "Allow", "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeSecurityGroupRules"], "Resource": "*"},
+                      {"Sid": "S3AccessPathReadChecks", "Effect": "Allow", "Action": ["s3:GetBucketPolicyStatus", "s3:GetBucketPolicy", "s3:GetBucketAcl", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation"], "Resource": "arn:aws:s3:::*"},
                       {"Sid": "STSIdentityValidation", "Effect": "Allow", "Action": ["sts:GetCallerIdentity"], "Resource": "*"},
-                      {"Sid": "AccessAnalyzerReadFindings", "Effect": "Allow", "Action": ["accessanalyzer:ListAnalyzers", "accessanalyzer:ListFindings", "accessanalyzer:GetFinding"], "Resource": "*"},
-                      {"Sid": "Inspector2ListFindings", "Effect": "Allow", "Action": ["inspector2:ListFindings"], "Resource": "*"}
+                      {"Sid": "AccessAnalyzerReadFindings", "Effect": "Allow", "Action": ["access-analyzer:ListAnalyzers", "access-analyzer:ListFindings", "access-analyzer:GetFinding"], "Resource": "*"},
+                      {"Sid": "AutopilotCleanupIAMResources", "Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:DeleteRolePolicy", "iam:DeleteRole", "iam:ListPolicies", "iam:GetPolicy", "iam:ListPolicyVersions", "iam:DeletePolicyVersion", "iam:DeletePolicy"], "Resource": "*"},
+                      {"Sid": "Inspector2ReadFindings", "Effect": "Allow", "Action": ["inspector2:ListFindings", "inspector2:BatchGetAccountStatus"], "Resource": "*"}
+                  ]
+              }
+
+          def write_policy_document():
+              return {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                          "Sid": "S3BlockPublicAccess",
+                          "Effect": "Allow",
+                          "Action": [
+                              "s3:GetAccountPublicAccessBlock",
+                              "s3:PutAccountPublicAccessBlock"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Sid": "SecurityHubEnablement",
+                          "Effect": "Allow",
+                          "Action": [
+                              "securityhub:EnableSecurityHub",
+                              "securityhub:GetEnabledStandards",
+                              "securityhub:DescribeHub"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Sid": "GuardDutyEnablement",
+                          "Effect": "Allow",
+                          "Action": [
+                              "guardduty:CreateDetector",
+                              "guardduty:GetDetector",
+                              "guardduty:ListDetectors",
+                              "guardduty:UpdateDetector"
+                          ],
+                          "Resource": "*"
+                      },
+                      {"Sid": "STSIdentityValidation", "Effect": "Allow", "Action": ["sts:GetCallerIdentity"], "Resource": "*"},
+                      {"Sid": "AutopilotCleanupIAMResources", "Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:DeleteRolePolicy", "iam:DeleteRole", "iam:ListPolicies", "iam:GetPolicy", "iam:ListPolicyVersions", "iam:DeletePolicyVersion", "iam:DeletePolicy"], "Resource": "*"}
                   ]
               }
 
           def get_partition():
               return boto3.client("sts").get_caller_identity()["Arn"].split(":")[1]
 
-          def find_policy_arn(iam):
+          def find_policy_arn(iam, policy_name):
               paginator = iam.get_paginator("list_policies")
               for pl in paginator.paginate(Scope="Local"):
                   for p in pl.get("Policies", []):
-                      if p["PolicyName"] == POLICY_NAME:
+                      if p["PolicyName"] == policy_name:
                           return p["Arn"]
               return None
 
-          def ensure_role_and_policy(saas_account_id, external_id):
-              iam = boto3.client("iam")
-              partition = get_partition()
-              trust = trust_policy(saas_account_id, external_id, partition)
-              policy_doc = policy_document()
+          def ensure_role_and_policy(iam, role_name, policy_name, role_description, policy_description, trust, policy_doc):
               role_arn = None
 
-              # Role: get existing or create; if create says already exists, get and update
               try:
-                  r = iam.get_role(RoleName=ROLE_NAME)
+                  r = iam.get_role(RoleName=role_name)
                   role_arn = r["Role"]["Arn"]
-                  iam.update_assume_role_policy(RoleName=ROLE_NAME, PolicyDocument=json.dumps(trust))
+                  iam.update_assume_role_policy(RoleName=role_name, PolicyDocument=json.dumps(trust))
               except iam.exceptions.NoSuchEntityException:
                   try:
                       r = iam.create_role(
-                          RoleName=ROLE_NAME,
-                          Description="Read-only role for Security Hub findings ingestion by SaaS.",
+                          RoleName=role_name,
+                          Description=role_description,
                           AssumeRolePolicyDocument=json.dumps(trust)
                       )
                       role_arn = r["Role"]["Arn"]
                   except iam.exceptions.EntityAlreadyExistsException:
-                      r = iam.get_role(RoleName=ROLE_NAME)
+                      r = iam.get_role(RoleName=role_name)
                       role_arn = r["Role"]["Arn"]
-                      iam.update_assume_role_policy(RoleName=ROLE_NAME, PolicyDocument=json.dumps(trust))
+                      iam.update_assume_role_policy(RoleName=role_name, PolicyDocument=json.dumps(trust))
 
-              policy_arn = find_policy_arn(iam)
+              policy_arn = find_policy_arn(iam, policy_name)
               try:
                   if not policy_arn:
                       try:
                           p = iam.create_policy(
-                              PolicyName=POLICY_NAME,
-                              Description="Minimal permissions for Security Hub findings ingestion + optional identity validation.",
+                              PolicyName=policy_name,
+                              Description=policy_description,
                               PolicyDocument=json.dumps(policy_doc)
                           )
                           policy_arn = p["Policy"]["Arn"]
                       except iam.exceptions.EntityAlreadyExistsException:
-                          policy_arn = find_policy_arn(iam)
+                          policy_arn = find_policy_arn(iam, policy_name)
                   if policy_arn:
                       vers = iam.list_policy_versions(PolicyArn=policy_arn).get("Versions", [])
                       while len(vers) >= 5:
@@ -164,26 +213,25 @@ Resources:
                           vers = iam.list_policy_versions(PolicyArn=policy_arn).get("Versions", [])
                       iam.create_policy_version(PolicyArn=policy_arn, PolicyDocument=json.dumps(policy_doc), SetAsDefault=True)
               except Exception:
-                  policy_arn = find_policy_arn(iam)
+                  policy_arn = find_policy_arn(iam, policy_name)
 
               if role_arn and policy_arn:
                   try:
-                      attached = [a["PolicyArn"] for a in iam.list_attached_role_policies(RoleName=ROLE_NAME).get("AttachedPolicies", [])]
+                      attached = [a["PolicyArn"] for a in iam.list_attached_role_policies(RoleName=role_name).get("AttachedPolicies", [])]
                       if policy_arn not in attached:
-                          iam.attach_role_policy(RoleName=ROLE_NAME, PolicyArn=policy_arn)
+                          iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
                   except Exception:
                       pass
 
               return role_arn
 
-          def delete_role_and_policy():
-              iam = boto3.client("iam")
+          def delete_role_and_policy(iam, role_name):
               try:
-                  attached = iam.list_attached_role_policies(RoleName=ROLE_NAME).get("AttachedPolicies", [])
+                  attached = iam.list_attached_role_policies(RoleName=role_name).get("AttachedPolicies", [])
               except iam.exceptions.NoSuchEntityException:
                   return
               for a in attached:
-                  iam.detach_role_policy(RoleName=ROLE_NAME, PolicyArn=a["PolicyArn"])
+                  iam.detach_role_policy(RoleName=role_name, PolicyArn=a["PolicyArn"])
                   try:
                       for v in iam.list_policy_versions(PolicyArn=a["PolicyArn"]).get("Versions", []):
                           if not v["IsDefaultVersion"]:
@@ -192,9 +240,12 @@ Resources:
                   except Exception:
                       pass
               try:
-                  iam.delete_role(RoleName=ROLE_NAME)
+                  iam.delete_role(RoleName=role_name)
               except Exception:
                   pass
+
+          def as_bool(value):
+              return str(value).strip().lower() in ("1", "true", "yes", "y", "on")
 
           def handler(event, context):
               try:
@@ -202,9 +253,12 @@ Resources:
                   props = event.get("ResourceProperties", {})
                   saas = props.get("SaaSAccountId", "")
                   external = props.get("ExternalId", "")
+                  include_write_role = as_bool(props.get("IncludeWriteRole", "false"))
+                  iam = boto3.client("iam")
 
                   if request_type == "Delete":
-                      delete_role_and_policy()
+                      delete_role_and_policy(iam, WRITE_ROLE_NAME)
+                      delete_role_and_policy(iam, READ_ROLE_NAME)
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, event.get("PhysicalResourceId", "none"))
                       return
 
@@ -212,11 +266,38 @@ Resources:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="SaaSAccountId and ExternalId required")
                       return
 
-                  role_arn = ensure_role_and_policy(saas, external)
-                  if not role_arn:
+                  partition = get_partition()
+                  trust = trust_policy(saas, external, partition)
+                  read_role_arn = ensure_role_and_policy(
+                      iam=iam,
+                      role_name=READ_ROLE_NAME,
+                      policy_name=READ_POLICY_NAME,
+                      role_description="Read-only role for Security Hub findings ingestion by SaaS.",
+                      policy_description="Minimal permissions for Security Hub findings ingestion + optional identity validation.",
+                      trust=trust,
+                      policy_doc=read_policy_document(),
+                  )
+                  if not read_role_arn:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Could not get or create role")
                       return
-                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Arn": role_arn}, role_arn)
+
+                  data = {"Arn": read_role_arn}
+                  if include_write_role:
+                      write_role_arn = ensure_role_and_policy(
+                          iam=iam,
+                          role_name=WRITE_ROLE_NAME,
+                          policy_name=WRITE_POLICY_NAME,
+                          role_description="Write role for safe direct remediations: S3 Block Public Access, Security Hub, GuardDuty.",
+                          policy_description="Least-privilege permissions for S3 Block Public Access, Security Hub, and GuardDuty enablement.",
+                          trust=trust,
+                          policy_doc=write_policy_document(),
+                      )
+                      if not write_role_arn:
+                          cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Could not get or create write role")
+                          return
+                      data["WriteArn"] = write_role_arn
+
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, data, read_role_arn)
               except Exception as e:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=str(e))
 
@@ -227,8 +308,14 @@ Resources:
       ServiceToken: !GetAtt ReadRoleHelperFunction.Arn
       SaaSAccountId: !Ref SaaSAccountId
       ExternalId: !Ref ExternalId
+      IncludeWriteRole: !Ref IncludeWriteRole
 
 Outputs:
   ReadRoleArn:
     Description: "ARN of the created or existing ReadRole (copy this into your SaaS Connect AWS screen)."
     Value: !Ref ReadRoleCustomResource
+
+  WriteRoleArn:
+    Condition: CreateWriteRole
+    Description: "ARN of the created or existing WriteRole (only when IncludeWriteRole=true)."
+    Value: !GetAtt ReadRoleCustomResource.WriteArn

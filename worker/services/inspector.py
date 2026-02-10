@@ -22,6 +22,8 @@ from tenacity import (
     before_sleep_log,
 )
 
+from worker.services.json_safe import make_json_safe
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["fetch_all_inspector_findings", "normalize_inspector_finding"]
@@ -229,5 +231,5 @@ def normalize_inspector_finding(
         "first_observed_at": first_obs,
         "last_observed_at": last_obs,
         "sh_updated_at": updated_at,
-        "raw_json": raw,
+        "raw_json": make_json_safe(raw),
     }

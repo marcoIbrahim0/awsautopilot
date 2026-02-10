@@ -1,10 +1,10 @@
 """
-Action engine: groups findings by resource + control, dedupes, computes priority,
-upserts actions and action_findings. Idempotent per run.
+Action engine: groups findings into actionable remediation units, dedupes,
+computes priority, upserts actions and action_findings. Idempotent per run.
 
-Control_id → action_type mapping and PR bundle coverage: Step 9.8. The
-canonical in-scope control list and mapping live in backend.services.control_scope;
-action_engine uses CONTROL_TO_ACTION_TYPE from there so all 7 types get real IaC.
+Control_id -> action_type mapping and canonical control normalization live in
+backend.services.control_scope so equivalent controls can safely merge into one
+action when remediation is the same.
 """
 from __future__ import annotations
 
@@ -18,27 +18,40 @@ from sqlalchemy.orm import Session
 from backend.models import Action, ActionFinding, Finding
 from backend.models.enums import ActionStatus, FindingStatus
 from backend.services.control_scope import (
-    ACTION_TYPE_DEFAULT,
-    CONTROL_TO_ACTION_TYPE,
     action_type_from_control as _action_type_from_control_impl,
+    canonical_control_id_for_action_type,
 )
 
 logger = logging.getLogger(__name__)
 
-# Open finding statuses that contribute to an action; resolved/suppressed do not.
-_OPEN_STATUSES = (FindingStatus.NEW.value, FindingStatus.NOTIFIED.value)
+# Closed finding statuses; every other status is treated as open for action computation.
+# Resolved matching is intentionally strict: only RESOLVED (driven by Security Hub PASSED).
+_CLOSED_STATUSES = (FindingStatus.RESOLVED.value,)
+
+
+def _is_open_finding_status(status: str | None) -> bool:
+    """True for any non-closed finding status."""
+    if status is None:
+        return True
+    return status not in _CLOSED_STATUSES
 
 
 def _grouping_key(finding: Finding) -> tuple[Any, ...]:
     """
-    Hashable key for grouping findings. MVP: same account, region, resource, control = one action.
+    Hashable key for grouping findings.
+
+    Equivalent controls are merged when they map to the same action_type and
+    canonical control_id (for example S3.2/S3.8 -> s3_bucket_block_public_access).
     """
+    action_type = _action_type_from_control(finding.control_id)
+    canonical_control_id = canonical_control_id_for_action_type(action_type, finding.control_id) or ""
     return (
         finding.tenant_id,
         finding.account_id,
         finding.region or "",
         (finding.resource_id or "")[:512],
-        (finding.control_id or "")[:64],
+        action_type,
+        canonical_control_id[:64],
     )
 
 
@@ -79,7 +92,7 @@ def _action_status_from_findings(findings: list[Finding]) -> str:
     if not findings:
         return ActionStatus.resolved.value
     for f in findings:
-        if f.status not in (FindingStatus.RESOLVED.value, FindingStatus.SUPPRESSED.value):
+        if _is_open_finding_status(f.status):
             return ActionStatus.open.value
     return ActionStatus.resolved.value
 
@@ -111,9 +124,9 @@ def _upsert_action_and_sync_links(
     account_id = first.account_id
     region = first.region
     resource_id = first.resource_id
-    control_id = first.control_id
+    action_type = _action_type_from_control(first.control_id)
+    control_id = canonical_control_id_for_action_type(action_type, first.control_id)
     target_id = _build_target_id(account_id, region, resource_id, control_id)
-    action_type = _action_type_from_control(control_id)
     priority = _priority_for_group(findings)
     status = _action_status_from_findings(findings)
     title, description = _title_and_description_for_group(findings)
@@ -164,6 +177,35 @@ def _upsert_action_and_sync_links(
     return action, True
 
 
+def _remove_conflicting_links_for_findings(
+    session: Session,
+    tenant_id: uuid.UUID,
+    action_id: uuid.UUID,
+    finding_ids: list[uuid.UUID],
+) -> int:
+    """
+    Ensure each finding maps to a single action by removing links to other actions.
+
+    This prevents duplicate open actions from persisting after merge-key changes.
+    """
+    if not finding_ids:
+        return 0
+
+    stale_links = (
+        session.query(ActionFinding)
+        .join(Action, Action.id == ActionFinding.action_id)
+        .filter(
+            Action.tenant_id == tenant_id,
+            ActionFinding.finding_id.in_(finding_ids),
+            ActionFinding.action_id != action_id,
+        )
+        .all()
+    )
+    for link in stale_links:
+        session.delete(link)
+    return len(stale_links)
+
+
 def _mark_resolved_actions_with_no_open_findings(
     session: Session,
     tenant_id: uuid.UUID,
@@ -171,7 +213,7 @@ def _mark_resolved_actions_with_no_open_findings(
     region: str | None,
 ) -> int:
     """
-    Mark actions as resolved when all their linked findings are RESOLVED or SUPPRESSED.
+    Mark actions as resolved when all their linked findings are RESOLVED.
     Returns number of actions updated.
     """
     q = session.query(Action).filter(Action.tenant_id == tenant_id, Action.status == ActionStatus.open.value)
@@ -184,14 +226,50 @@ def _mark_resolved_actions_with_no_open_findings(
     for action in open_actions:
         links = action.action_finding_links or []
         if not links:
+            # Orphan actions (no linked findings) should not be auto-resolved.
+            # This can happen after control/action remapping or finding relinks.
+            # Keep them open so they don't appear falsely resolved.
+            action.status = ActionStatus.open.value
             continue
         if all(
-            link.finding.status in (FindingStatus.RESOLVED.value, FindingStatus.SUPPRESSED.value)
+            link.finding.status == FindingStatus.RESOLVED.value
             for link in links
         ):
             action.status = ActionStatus.resolved.value
             resolved_count += 1
     return resolved_count
+
+
+def _reopen_resolved_orphan_actions(
+    session: Session,
+    tenant_id: uuid.UUID,
+    account_id: str | None,
+    region: str | None,
+) -> int:
+    """
+    Reopen actions that are marked resolved but have no linked findings.
+
+    Orphans can appear after remapping or finding cleanup; they should not be
+    marked resolved because no compliance signal remains.
+    """
+    q = session.query(Action).filter(
+        Action.tenant_id == tenant_id,
+        Action.status == ActionStatus.resolved.value,
+    )
+    if account_id is not None:
+        q = q.filter(Action.account_id == account_id)
+    if region is not None:
+        q = q.filter(Action.region == region)
+    q = q.filter(
+        ~session.query(ActionFinding.action_id)
+        .filter(ActionFinding.action_id == Action.id)
+        .exists()
+    )
+
+    orphan_actions = q.all()
+    for action in orphan_actions:
+        action.status = ActionStatus.open.value
+    return len(orphan_actions)
 
 
 def compute_actions_for_tenant(
@@ -202,8 +280,8 @@ def compute_actions_for_tenant(
 ) -> dict[str, int]:
     """
     Compute actions from findings for a tenant (optionally scoped to account/region).
-    Groups by (tenant, account, region, resource_id, control_id), dedupes, scores,
-    upserts actions and syncs action_findings. Idempotent.
+    Groups by (tenant, account, region, resource_id, action_type, canonical_control_id),
+    dedupes, scores, upserts actions and syncs action_findings. Idempotent.
 
     Caller must provide a session (e.g. from worker session_scope()).
 
@@ -212,7 +290,7 @@ def compute_actions_for_tenant(
     """
     q = (
         session.query(Finding)
-        .filter(Finding.tenant_id == tenant_id, Finding.status.in_(_OPEN_STATUSES))
+        .filter(Finding.tenant_id == tenant_id, ~Finding.status.in_(_CLOSED_STATUSES))
     )
     if account_id is not None:
         q = q.filter(Finding.account_id == account_id)
@@ -227,8 +305,20 @@ def compute_actions_for_tenant(
     created = 0
     updated = 0
     links_count = 0
+    removed_conflicting_links = 0
     for _key, group in groups.items():
         action, is_new = _upsert_action_and_sync_links(session, tenant_id, group)
+        if action.id is None:
+            session.flush()
+
+        finding_ids = [f.id for f in group]
+        removed_conflicting_links += _remove_conflicting_links_for_findings(
+            session=session,
+            tenant_id=tenant_id,
+            action_id=action.id,
+            finding_ids=finding_ids,
+        )
+
         if is_new:
             created += 1
         else:
@@ -236,9 +326,10 @@ def compute_actions_for_tenant(
         links_count += len(group)
 
     resolved = _mark_resolved_actions_with_no_open_findings(session, tenant_id, account_id, region)
+    reopened_orphans = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)
 
     logger.info(
-        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d links=%d",
+        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_orphans=%d links=%d removed_links=%d",
         tenant_id,
         account_id,
         region,
@@ -246,11 +337,14 @@ def compute_actions_for_tenant(
         created,
         updated,
         resolved,
+        reopened_orphans,
         links_count,
+        removed_conflicting_links,
     )
     return {
         "actions_created": created,
         "actions_updated": updated,
         "actions_resolved": resolved,
+        "actions_reopened_orphaned": reopened_orphans,
         "action_findings_linked": links_count,
     }

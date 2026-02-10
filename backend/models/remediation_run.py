@@ -71,3 +71,10 @@ class RemediationRun(Base):
     approved_by: Mapped[Optional["User"]] = relationship(
         "User", foreign_keys=[approved_by_user_id], lazy="selectin"
     )
+    executions: Mapped[list["RemediationRunExecution"]] = relationship(
+        "RemediationRunExecution",
+        foreign_keys="RemediationRunExecution.run_id",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        back_populates="run",
+    )

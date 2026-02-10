@@ -8,6 +8,7 @@ import json
 import logging
 import signal
 import sys
+import threading
 import time
 from typing import Any
 
@@ -23,8 +24,13 @@ from tenacity import (
 
 from backend.utils.sqs import (
     COMPUTE_ACTIONS_JOB_TYPE,
+    EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
+    EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE,
     GENERATE_BASELINE_REPORT_JOB_TYPE,
     GENERATE_EXPORT_JOB_TYPE,
+    INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE,
+    RECONCILE_INVENTORY_SHARD_JOB_TYPE,
+    RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
     REMEDIATION_RUN_JOB_TYPE,
     WEEKLY_DIGEST_JOB_TYPE,
     parse_queue_region,
@@ -120,6 +126,31 @@ REMEDIATION_RUN_REQUIRED_FIELDS = {"job_type", "run_id", "tenant_id", "action_id
 GENERATE_EXPORT_REQUIRED_FIELDS = {"job_type", "export_id", "tenant_id", "created_at"}
 GENERATE_BASELINE_REPORT_REQUIRED_FIELDS = {"job_type", "report_id", "tenant_id", "created_at"}
 WEEKLY_DIGEST_REQUIRED_FIELDS = {"job_type", "tenant_id", "created_at"}
+PR_BUNDLE_EXEC_REQUIRED_FIELDS = {"job_type", "execution_id", "run_id", "tenant_id", "phase", "created_at"}
+INGEST_CONTROL_PLANE_EVENT_REQUIRED_FIELDS = {
+    "job_type",
+    "tenant_id",
+    "account_id",
+    "region",
+    "event",
+    "event_id",
+    "event_time",
+    "intake_time",
+    "created_at",
+}
+RECONCILE_INVENTORY_SHARD_REQUIRED_FIELDS = {
+    "job_type",
+    "tenant_id",
+    "account_id",
+    "region",
+    "service",
+    "created_at",
+}
+RECONCILE_RECENTLY_TOUCHED_RESOURCES_REQUIRED_FIELDS = {
+    "job_type",
+    "tenant_id",
+    "created_at",
+}
 
 
 def _validate_job(job: dict) -> list[str]:
@@ -138,6 +169,14 @@ def _validate_job(job: dict) -> list[str]:
         required = GENERATE_BASELINE_REPORT_REQUIRED_FIELDS
     elif job_type == WEEKLY_DIGEST_JOB_TYPE:
         required = WEEKLY_DIGEST_REQUIRED_FIELDS
+    elif job_type in {EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE, EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE}:
+        required = PR_BUNDLE_EXEC_REQUIRED_FIELDS
+    elif job_type == INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE:
+        required = INGEST_CONTROL_PLANE_EVENT_REQUIRED_FIELDS
+    elif job_type == RECONCILE_INVENTORY_SHARD_JOB_TYPE:
+        required = RECONCILE_INVENTORY_SHARD_REQUIRED_FIELDS
+    elif job_type == RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE:
+        required = RECONCILE_RECENTLY_TOUCHED_RESOURCES_REQUIRED_FIELDS
     else:
         required = REQUIRED_JOB_FIELDS
     return [f for f in required if f not in job or job[f] is None]
@@ -156,7 +195,7 @@ def _receive_messages(sqs: Any, queue_url: str) -> list[dict]:
         QueueUrl=queue_url,
         MaxNumberOfMessages=10,
         WaitTimeSeconds=20,  # long polling
-        VisibilityTimeout=30,
+        VisibilityTimeout=300,
     )
     return response.get("Messages", [])
 
@@ -176,53 +215,108 @@ def _delete_message(sqs: Any, queue_url: str, receipt_handle: str) -> None:
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
+def _resolve_queue_configs() -> list[tuple[str, str]]:
+    """
+    Resolve queue list from WORKER_POOL and configured queue URLs.
+
+    WORKER_POOL values:
+    - legacy
+    - events
+    - inventory
+    - all
+    """
+    pool = (settings.WORKER_POOL or "legacy").strip().lower()
+    all_configs: dict[str, str] = {}
+    if settings.SQS_INGEST_QUEUE_URL and settings.SQS_INGEST_QUEUE_URL.strip():
+        all_configs["legacy"] = settings.SQS_INGEST_QUEUE_URL.strip()
+    if settings.SQS_EVENTS_FAST_LANE_QUEUE_URL and settings.SQS_EVENTS_FAST_LANE_QUEUE_URL.strip():
+        all_configs["events"] = settings.SQS_EVENTS_FAST_LANE_QUEUE_URL.strip()
+    if settings.SQS_INVENTORY_RECONCILE_QUEUE_URL and settings.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip():
+        all_configs["inventory"] = settings.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
+
+    if pool == "all":
+        selected = [("events", all_configs.get("events", "")), ("inventory", all_configs.get("inventory", "")), ("legacy", all_configs.get("legacy", ""))]
+        return [(name, url) for name, url in selected if url]
+
+    if pool in {"legacy", "events", "inventory"}:
+        url = all_configs.get(pool, "")
+        return [(pool, url)] if url else []
+
+    logger.warning("Unknown WORKER_POOL=%s. Falling back to legacy queue.", pool)
+    url = all_configs.get("legacy", "")
+    return [("legacy", url)] if url else []
+
+
 def run_worker() -> None:
-    """Long-poll SQS, route by job_type, delete on success, retry on failure."""
-    queue_url = settings.SQS_INGEST_QUEUE_URL
-    if not queue_url:
-        logger.error("SQS_INGEST_QUEUE_URL not set. Exiting.")
+    """Long-poll configured SQS queue(s), route by job_type, delete on success."""
+    queue_configs = _resolve_queue_configs()
+    if not queue_configs:
+        logger.error(
+            "No worker queue configured for WORKER_POOL=%s. "
+            "Set one of SQS_INGEST_QUEUE_URL / SQS_EVENTS_FAST_LANE_QUEUE_URL / "
+            "SQS_INVENTORY_RECONCILE_QUEUE_URL.",
+            settings.WORKER_POOL,
+        )
         sys.exit(1)
 
-    region = parse_queue_region(queue_url)
-    logger.info(f"Starting worker. Queue: {queue_url} | Region: {region}")
+    queue_clients: dict[str, tuple[Any, str]] = {}
+    for queue_name, queue_url in queue_configs:
+        region = parse_queue_region(queue_url)
+        logger.info(
+            "Starting worker pool=%s queue=%s url=%s region=%s",
+            settings.WORKER_POOL,
+            queue_name,
+            queue_url,
+            region,
+        )
+        queue_clients[queue_name] = (
+            boto3.client("sqs", region_name=region),
+            queue_url,
+        )
 
-    sqs = boto3.client("sqs", region_name=region)
-
-    consecutive_errors = 0
+    consecutive_errors: dict[str, int] = {queue_name: 0 for queue_name, _ in queue_configs}
     max_consecutive_errors = 5
 
     while not _shutdown_requested:
-        # --- Receive messages with retry ---
-        try:
-            messages = _receive_messages(sqs, queue_url)
-            consecutive_errors = 0  # Reset on success
-        except ClientError as e:
-            consecutive_errors += 1
-            error_code = _get_error_code(e)
-            logger.error(f"SQS receive_message failed after retries: {error_code} - {e}")
-            
-            if consecutive_errors >= max_consecutive_errors:
-                logger.critical(f"Too many consecutive SQS errors ({consecutive_errors}). Backing off...")
-                time.sleep(30)  # Long backoff before retrying
-                consecutive_errors = 0
-            else:
-                time.sleep(2)  # Short backoff
-            continue
+        for queue_name, (sqs, queue_url) in queue_clients.items():
+            try:
+                messages = _receive_messages(sqs, queue_url)
+                consecutive_errors[queue_name] = 0
+            except ClientError as e:
+                consecutive_errors[queue_name] += 1
+                error_code = _get_error_code(e)
+                logger.error(
+                    "SQS receive_message failed queue=%s after retries: %s - %s",
+                    queue_name,
+                    error_code,
+                    e,
+                )
 
-        if not messages:
-            continue
+                if consecutive_errors[queue_name] >= max_consecutive_errors:
+                    logger.critical(
+                        "Too many consecutive SQS errors queue=%s (%s). Backing off...",
+                        queue_name,
+                        consecutive_errors[queue_name],
+                    )
+                    time.sleep(30)
+                    consecutive_errors[queue_name] = 0
+                else:
+                    time.sleep(2)
+                continue
 
-        for msg in messages:
-            if _shutdown_requested:
-                logger.info("Shutdown requested; stopping after current batch.")
-                break
+            if not messages:
+                continue
 
-            _process_message(sqs, queue_url, msg)
+            for msg in messages:
+                if _shutdown_requested:
+                    logger.info("Shutdown requested; stopping after current batch.")
+                    break
+                _process_message(sqs, queue_url, msg, queue_name=queue_name)
 
     logger.info("Worker shut down gracefully.")
 
 
-def _process_message(sqs: Any, queue_url: str, msg: dict) -> None:
+def _process_message(sqs: Any, queue_url: str, msg: dict, queue_name: str = "unknown") -> None:
     """Process a single SQS message."""
     receipt_handle = msg["ReceiptHandle"]
     body_raw = msg.get("Body", "")
@@ -259,10 +353,38 @@ def _process_message(sqs: Any, queue_url: str, msg: dict) -> None:
         return
 
     # --- Execute handler ---
+    stop_heartbeat = threading.Event()
+
+    def _visibility_heartbeat() -> None:
+        interval_seconds = 120
+        while not stop_heartbeat.wait(interval_seconds):
+            try:
+                sqs.change_message_visibility(
+                    QueueUrl=queue_url,
+                    ReceiptHandle=receipt_handle,
+                    VisibilityTimeout=300,
+                )
+            except ClientError as exc:
+                logger.warning(
+                    "[%s] Visibility heartbeat failed; execution may be retried by SQS: %s",
+                    message_id,
+                    exc,
+                )
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.warning("[%s] Unexpected heartbeat error: %s", message_id, exc)
+
+    heartbeat_thread = threading.Thread(
+        target=_visibility_heartbeat,
+        name=f"sqs-heartbeat-{message_id}",
+        daemon=True,
+    )
+    heartbeat_thread.start()
+
     try:
         logger.info(
-            "[%s] Processing job_type=%s tenant=%s account=%s region=%s",
+            "[%s] Processing queue=%s job_type=%s tenant=%s account=%s region=%s",
             message_id,
+            queue_name,
             job_type,
             tenant_id,
             account_id,
@@ -294,6 +416,9 @@ def _process_message(sqs: Any, queue_url: str, msg: dict) -> None:
                 f"Message will retry via SQS (eventually DLQ)."
             )
         # Don't delete; visibility timeout expires and message retries
+    finally:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=1.0)
 
 
 def _safe_delete_message(sqs: Any, queue_url: str, receipt_handle: str) -> None:

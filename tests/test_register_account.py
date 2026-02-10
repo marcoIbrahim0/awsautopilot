@@ -102,13 +102,45 @@ def test_register_422_invalid_tenant_id(client: TestClient) -> None:
     assert "tenant_id" in r.text.lower()
 
 
-def test_register_422_missing_role_write_arn(client: TestClient) -> None:
-    """WriteRole ARN is required for account registration."""
+def test_register_201_missing_role_write_arn(client: TestClient) -> None:
+    """WriteRole ARN is optional; registration should succeed with ReadRole only."""
     req = _valid_request()
     del req["role_write_arn"]
-    r = client.post(_register_url(), json=req)
-    assert r.status_code == 422
-    assert "role_write_arn" in r.text.lower()
+
+    tenant = MagicMock()
+    tenant.external_id = "ext-123"
+
+    new_account_id = uuid.uuid4()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        result = MagicMock()
+        result.scalar_one_or_none.side_effect = [tenant, None]  # Tenant found, no existing account
+        session = MagicMock()
+        session.execute = AsyncMock(return_value=result)
+
+        def mock_add(obj):
+            obj.id = new_account_id
+            obj.status = AwsAccountStatus.validated
+
+        session.add = mock_add
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        yield session
+
+    mock_boto_session = MagicMock()
+    mock_sts = MagicMock()
+    mock_sts.get_caller_identity.return_value = {"Account": req["account_id"]}
+    mock_boto_session.client.return_value = mock_sts
+
+    with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session) as mock_assume:
+        app.dependency_overrides[get_db] = mock_get_db
+        try:
+            r = client.post(_register_url(), json=req)
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+
+    assert r.status_code == 201
+    assert mock_assume.call_count == 1  # ReadRole only
 
 
 # ---------------------------------------------------------------------------

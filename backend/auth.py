@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     onboarding_completed_at: str | None
+    is_saas_admin: bool = False
 
 
 class TenantResponse(BaseModel):
@@ -70,6 +71,7 @@ class TenantResponse(BaseModel):
 
 # Default CloudFormation stack name for Read Role; user can override if name is taken
 DEFAULT_READ_ROLE_STACK_NAME = "SecurityAutopilotReadRole"
+DEFAULT_WRITE_ROLE_STACK_NAME = "SecurityAutopilotWriteRole"
 
 
 class AuthResponse(BaseModel):
@@ -84,6 +86,9 @@ class AuthResponse(BaseModel):
     read_role_template_url: str | None = None
     read_role_region: str | None = None
     read_role_default_stack_name: str = DEFAULT_READ_ROLE_STACK_NAME
+    write_role_launch_stack_url: str | None = None
+    write_role_template_url: str | None = None
+    write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
 
 
 class MeResponse(BaseModel):
@@ -96,6 +101,9 @@ class MeResponse(BaseModel):
     read_role_template_url: str | None = None
     read_role_region: str | None = None
     read_role_default_stack_name: str = DEFAULT_READ_ROLE_STACK_NAME
+    write_role_launch_stack_url: str | None = None
+    write_role_template_url: str | None = None
+    write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
 
 
 # ============================================
@@ -271,6 +279,7 @@ def user_to_response(user: User) -> UserResponse:
         name=user.name,
         role=role,
         onboarding_completed_at=user.onboarding_completed_at.isoformat() if user.onboarding_completed_at else None,
+        is_saas_admin=is_saas_admin_email(user.email),
     )
 
 
@@ -283,18 +292,19 @@ def tenant_to_response(tenant) -> TenantResponse:
     )
 
 
-def _sanitize_stack_name(name: str) -> str:
+def _sanitize_stack_name(name: str, default_stack_name: str) -> str:
     """CloudFormation stack names: alphanumeric and hyphens only; max 128 chars."""
     sanitized = "".join(c if c.isalnum() or c == "-" else "-" for c in (name or "").strip())
-    return sanitized[:128] if sanitized else DEFAULT_READ_ROLE_STACK_NAME
+    return sanitized[:128] if sanitized else default_stack_name
 
 
-def build_read_role_launch_stack_url(
+def build_launch_stack_url(
     template_url: str,
     region: str,
     external_id: str,
     saas_account_id: str,
     stack_name: str | None = None,
+    default_stack_name: str = DEFAULT_READ_ROLE_STACK_NAME,
 ) -> str:
     """
     Build CloudFormation console 'Launch Stack' URL with prefilled template and parameters.
@@ -305,7 +315,7 @@ def build_read_role_launch_stack_url(
     stack_name: optional; if the default name is already in use, use e.g. SecurityAutopilotReadRole-2.
     """
     base = f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}"
-    name = _sanitize_stack_name(stack_name or "") or DEFAULT_READ_ROLE_STACK_NAME
+    name = _sanitize_stack_name(stack_name or "", default_stack_name)
     params = {
         "templateURL": template_url.strip(),
         "stackName": name,
@@ -315,31 +325,145 @@ def build_read_role_launch_stack_url(
     return f"{base}#/stacks/create/template?{urlencode(params)}"
 
 
-def get_saas_and_launch_url(external_id: str) -> tuple[str | None, str | None, str | None, str | None, str]:
-    """
-    Return (saas_account_id, read_role_launch_stack_url, template_url, region, default_stack_name).
-    URL and template_url are None if not configured; default_stack_name is always set.
-    Automatically detects the latest template version from S3 if the base URL is configured.
-    """
-    saas_account_id = (settings.SAAS_AWS_ACCOUNT_ID or "").strip() or None
-    template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
-    region = (settings.CLOUDFORMATION_DEFAULT_REGION or "").strip() or "eu-north-1"
-    if not template_url or not saas_account_id or not external_id:
-        return (saas_account_id, None, None, None, DEFAULT_READ_ROLE_STACK_NAME)
-    
-    # Automatically detect latest version from S3
-    latest_template_url = get_latest_template_version(template_url)
-    if latest_template_url:
-        template_url = latest_template_url
-        logger.debug(f"Using latest template version: {template_url}")
-    else:
-        logger.warning(f"Failed to detect latest template version, using configured URL: {template_url}")
-    
-    url = build_read_role_launch_stack_url(
+def build_read_role_launch_stack_url(
+    template_url: str,
+    region: str,
+    external_id: str,
+    saas_account_id: str,
+    stack_name: str | None = None,
+) -> str:
+    return build_launch_stack_url(
         template_url=template_url,
         region=region,
         external_id=external_id,
         saas_account_id=saas_account_id,
-        stack_name=DEFAULT_READ_ROLE_STACK_NAME,
+        stack_name=stack_name,
+        default_stack_name=DEFAULT_READ_ROLE_STACK_NAME,
     )
-    return (saas_account_id, url, template_url, region, DEFAULT_READ_ROLE_STACK_NAME)
+
+
+def build_write_role_launch_stack_url(
+    template_url: str,
+    region: str,
+    external_id: str,
+    saas_account_id: str,
+    stack_name: str | None = None,
+) -> str:
+    return build_launch_stack_url(
+        template_url=template_url,
+        region=region,
+        external_id=external_id,
+        saas_account_id=saas_account_id,
+        stack_name=stack_name,
+        default_stack_name=DEFAULT_WRITE_ROLE_STACK_NAME,
+    )
+
+
+def get_saas_and_launch_url(
+    external_id: str,
+) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None, str, str]:
+    """
+    Return:
+    (
+      saas_account_id,
+      read_role_launch_stack_url,
+      read_role_template_url,
+      write_role_launch_stack_url,
+      write_role_template_url,
+      region,
+      read_role_default_stack_name,
+      write_role_default_stack_name,
+    )
+
+    Launch URLs and template URLs are None when corresponding template URL is not configured.
+    Automatically detects the latest template version from S3 if the base URL is configured.
+    """
+    saas_account_id = (settings.SAAS_AWS_ACCOUNT_ID or "").strip() or None
+    read_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
+    write_template_url = (settings.CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL or "").strip()
+    region = (settings.CLOUDFORMATION_DEFAULT_REGION or "").strip() or "eu-north-1"
+    if not saas_account_id or not external_id:
+        return (
+            saas_account_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            DEFAULT_READ_ROLE_STACK_NAME,
+            DEFAULT_WRITE_ROLE_STACK_NAME,
+        )
+
+    read_launch_url: str | None = None
+    write_launch_url: str | None = None
+
+    if read_template_url:
+        latest_template_url = get_latest_template_version(read_template_url)
+        if latest_template_url:
+            read_template_url = latest_template_url
+            logger.debug(f"Using latest read-role template version: {read_template_url}")
+        else:
+            logger.warning(
+                f"Failed to detect latest read-role template version, using configured URL: {read_template_url}"
+            )
+
+        read_launch_url = build_read_role_launch_stack_url(
+            template_url=read_template_url,
+            region=region,
+            external_id=external_id,
+            saas_account_id=saas_account_id,
+            stack_name=DEFAULT_READ_ROLE_STACK_NAME,
+        )
+
+    if write_template_url:
+        latest_template_url = get_latest_template_version(write_template_url)
+        if latest_template_url:
+            write_template_url = latest_template_url
+            logger.debug(f"Using latest write-role template version: {write_template_url}")
+        else:
+            logger.warning(
+                f"Failed to detect latest write-role template version, using configured URL: {write_template_url}"
+            )
+
+        write_launch_url = build_write_role_launch_stack_url(
+            template_url=write_template_url,
+            region=region,
+            external_id=external_id,
+            saas_account_id=saas_account_id,
+            stack_name=DEFAULT_WRITE_ROLE_STACK_NAME,
+        )
+
+    if not read_template_url:
+        read_template_url = None
+    if not write_template_url:
+        write_template_url = None
+
+    return (
+        saas_account_id,
+        read_launch_url,
+        read_template_url,
+        write_launch_url,
+        write_template_url,
+        region if (read_launch_url or write_launch_url) else None,
+        DEFAULT_READ_ROLE_STACK_NAME,
+        DEFAULT_WRITE_ROLE_STACK_NAME,
+    )
+
+
+def is_saas_admin_email(email: str | None) -> bool:
+    """Check if user email is allowlisted for SaaS admin access."""
+    if not email:
+        return False
+    return email.strip().lower() in settings.saas_admin_emails_list
+
+
+async def require_saas_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Require an authenticated user whose email is allowlisted as SaaS admin."""
+    if not is_saas_admin_email(current_user.email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="SaaS admin access required",
+        )
+    return current_user

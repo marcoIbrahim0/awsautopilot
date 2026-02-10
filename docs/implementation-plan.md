@@ -2593,7 +2593,7 @@ All templates are valid YAML and applyable (or documented placeholder where CF h
 | enable_guardduty | GuardDuty.1 | Y | Y | 9.4, 9.5 |
 | s3_bucket_block_public_access | S3.2 | N | Y | 9.9, 9.5 |
 | s3_bucket_encryption | S3.4 | N | Y | 9.10, 9.5 |
-| sg_restrict_public_ports | EC2.18 (or FSBP equivalent) | N | Y | 9.11, 9.5 |
+| sg_restrict_public_ports | EC2.53 (remote admin ports) | N | Y | 9.11, 9.5 |
 | cloudtrail_enabled | CloudTrail.1 | N | Y | 9.12, 9.5 |
 | pr_only | (unmapped / out-of-scope) | N | guidance only | 9.1 fallback |
 
@@ -2645,20 +2645,20 @@ All templates are valid YAML and applyable (or documented placeholder where CF h
 
 ---
 
-#### 9.11 Terraform + CloudFormation: SG restrict public ports (action_type: sg_restrict_public_ports, control_id: EC2.18)
+#### 9.11 Terraform + CloudFormation: SG restrict public ports (action_type: sg_restrict_public_ports, control_id: EC2.53)
 
 **Purpose:** Generate Terraform/CloudFormation to restrict security group rules that allow 0.0.0.0/0 on ports 22 (SSH) and 3389 (RDP). One SG per action; use `target_id` / `resource_id`. Optional allowlist for permitted CIDRs (document in steps).
 
 **What it does:**
-- **Scope:** Per security group; `region` and `resource_id` (SG ID/ARN) from action. Security Hub control **EC2.18** (FSBP: "EC2 security groups should not allow unrestricted SSH/RDP") maps to `sg_restrict_public_ports` in control_scope (9.8); action_engine uses that mapping.
-- **Terraform:** `aws_vpc_security_group_ingress_rule` for ports 22 (SSH) and 3389 (RDP) with parameterized CIDR (variables `security_group_id`, `allowed_cidr` default "10.0.0.0/8"). User must remove existing 0.0.0.0/0 rules first. File: `sg_restrict_public_ports.tf` + `providers.tf`.
-- **CloudFormation:** `AWS::EC2::SecurityGroupIngress` for SSH (22) and RDP (3389) with parameterized CIDR. Parameters: SecurityGroupId, AllowedCidr (default "10.0.0.0/8"). User must remove existing 0.0.0.0/0 rules first. File: `sg_restrict_public_ports.yaml`.
-- **Steps:** Configure provider for account and region; remove existing 0.0.0.0/0 rules for 22/3389 (Console or CLI); set security_group_id and allowed_cidr; init/plan/apply (Terraform) or validate/deploy (CloudFormation); Recompute actions to verify.
+- **Scope:** Per security group; `region` and `resource_id` (SG ID/ARN) from action. Canonical Security Hub control **EC2.53** maps to `sg_restrict_public_ports` in control_scope (9.8); action_engine uses that mapping. Aliases **EC2.13 / EC2.19 / EC2.18** map to the same action_type and canonicalize to EC2.53 for dedupe.
+- **Terraform:** `aws_vpc_security_group_ingress_rule` for ports 22 (SSH) and 3389 (RDP) with parameterized CIDR (variables `security_group_id`, `allowed_cidr` default "10.0.0.0/8"). Optional IPv6 allowlist (`allowed_cidr_ipv6`, default empty) adds IPv6-restricted ingress. User must remove existing public rules (`0.0.0.0/0` and/or `::/0`) first. File: `sg_restrict_public_ports.tf` + `providers.tf`.
+- **CloudFormation:** `AWS::EC2::SecurityGroupIngress` for SSH (22) and RDP (3389) with parameterized CIDR. Parameters: SecurityGroupId, AllowedCidr (default "10.0.0.0/8"), optional AllowedCidrIpv6 (default empty). User must remove existing public rules (`0.0.0.0/0` and/or `::/0`) first. File: `sg_restrict_public_ports.yaml`.
+- **Steps:** Configure provider for account and region; remove existing `0.0.0.0/0` and/or `::/0` rules for 22/3389 (Console or CLI); set security_group_id and allowed_cidr (and optionally allowed_cidr_ipv6); init/plan/apply (Terraform) or validate/deploy (CloudFormation); Recompute actions to verify.
 
-**Deliverable:** `sg_restrict_public_ports` in control_scope (9.8) with control_id EC2.18; `_generate_for_sg_restrict_public_ports` in pr_bundle (Terraform + CloudFormation); Terraform uses `aws_vpc_security_group_ingress_rule` with variables; CloudFormation valid YAML and applyable.
+**Deliverable:** `sg_restrict_public_ports` in control_scope (9.8) with canonical control_id EC2.53 (aliases EC2.13/EC2.19/EC2.18); `_generate_for_sg_restrict_public_ports` in pr_bundle (Terraform + CloudFormation); Terraform uses `aws_vpc_security_group_ingress_rule` with variables (including optional IPv6 allowlist); CloudFormation valid YAML and applyable.
 
 **Step 9.11 Implementation (verified):**
-- **control_scope (9.8):** EC2.18 → sg_restrict_public_ports; pr_bundle True; direct_fix False (optional later with strict allowlist, Step 8 extension).
+- **control_scope (9.8):** EC2.53 → sg_restrict_public_ports; aliases EC2.13/EC2.19/EC2.18; pr_bundle True; direct_fix False (optional later with strict allowlist, Step 8 extension).
 - **pr_bundle:** `_generate_for_sg_restrict_public_ports`; Terraform `aws_vpc_security_group_ingress_rule` for SSH (22) and RDP (3389) with variables; CloudFormation `AWS::EC2::SecurityGroupIngress` with parameters.
 - **Tests:** test_pr_bundle_dispatch_sg_restrict_terraform_step_9_11; test_pr_bundle_sg_restrict_terraform_exact_structure (Step 9.11); test_pr_bundle_sg_restrict_cloudformation_step_9_11.
 

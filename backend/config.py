@@ -61,6 +61,22 @@ class Settings(BaseSettings):
         default="",
         description="SQS URL for security-autopilot-ingest-dlq (dead-letter queue). Set from stack output IngestDLQURL.",
     )
+    SQS_EVENTS_FAST_LANE_QUEUE_URL: str = Field(
+        default="",
+        description="SQS URL for near-real-time control-plane event jobs (events-fast-lane).",
+    )
+    SQS_EVENTS_FAST_LANE_DLQ_URL: str = Field(
+        default="",
+        description="SQS URL for dead-letter queue backing events-fast-lane.",
+    )
+    SQS_INVENTORY_RECONCILE_QUEUE_URL: str = Field(
+        default="",
+        description="SQS URL for inventory reconciliation jobs.",
+    )
+    SQS_INVENTORY_RECONCILE_DLQ_URL: str = Field(
+        default="",
+        description="SQS URL for dead-letter queue backing inventory reconciliation.",
+    )
     S3_EXPORT_BUCKET: str = Field(
         default="",
         description="S3 bucket name for evidence pack exports (Step 10.5). If unset, POST /api/exports returns 503. Key pattern: exports/{tenant_id}/{export_id}/evidence-pack.zip for tenant isolation.",
@@ -72,8 +88,12 @@ class Settings(BaseSettings):
 
     # CloudFormation templates (S3; versioned paths)
     CLOUDFORMATION_READ_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.1.0.yaml",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.4.1.yaml",
         description="Full HTTPS URL to the Read Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
+    )
+    CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL: str = Field(
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.0.yaml",
+        description="Full HTTPS URL to the Write Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
     )
     CLOUDFORMATION_DEFAULT_REGION: str = Field(
         default="eu-north-1",
@@ -86,8 +106,32 @@ class Settings(BaseSettings):
         description="Secret for signing JWT; must be overridden in dev/prod via env or Secrets Manager",
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=60 * 24 * 7,  # 7 days
+        default=(60 * 24 * 7) + 60,  # 7 days + 1 hour
         description="JWT access token expiry in minutes",
+    )
+    SAAS_BUNDLE_EXECUTOR_ENABLED: bool = Field(
+        default=False,
+        description="Enable SaaS-managed Terraform runner for PR bundles.",
+    )
+    SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT: int = Field(
+        default=6,
+        description="Maximum concurrent queued/running SaaS PR bundle executions per tenant. <=0 disables cap.",
+    )
+    SAAS_BUNDLE_EXECUTOR_FAIL_FAST: bool = Field(
+        default=True,
+        description="Default fail-fast behavior for SaaS bundle execution. If false, continue all folders and aggregate failures.",
+    )
+    SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: str = Field(
+        default="",
+        description="Optional s3://bucket/key URI for centralized run_all.sh template used in generated group PR bundles.",
+    )
+    SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: str = Field(
+        default="v1",
+        description="Version label for centralized run_all.sh template (stored in bundle metadata).",
+    )
+    SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: int = Field(
+        default=300,
+        description="In-process cache TTL for centralized run_all.sh template fetches from S3.",
     )
     FRONTEND_URL: str = Field(
         default="http://localhost:3000",
@@ -101,9 +145,41 @@ class Settings(BaseSettings):
         default="",
         description="Shared secret for POST /api/internal/weekly-digest (EventBridge/cron). If unset, endpoint returns 403.",
     )
+    CONTROL_PLANE_EVENTS_SECRET: str = Field(
+        default="",
+        description="Shared secret for POST /api/internal/control-plane-events. If unset, endpoint returns 503.",
+    )
+    CONTROL_PLANE_SHADOW_MODE: bool = Field(
+        default=True,
+        description="When true, control-plane pipeline writes only to shadow state tables.",
+    )
+    CONTROL_PLANE_SOURCE: str = Field(
+        default="event_monitor_shadow",
+        description="Source label for control-plane shadow pipeline outputs.",
+    )
+    WORKER_POOL: str = Field(
+        default="legacy",
+        description="Worker queue pool selector: legacy | events | inventory | all.",
+    )
+    CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: int = Field(
+        default=60,
+        description="Default lookback window for reconcile_recently_touched_resources.",
+    )
     DIGEST_ENABLED: bool = Field(
         default=True,
         description="If False, weekly digest email is not sent (e.g. turn off in dev).",
+    )
+    SAAS_ADMIN_EMAILS: str = Field(
+        default="",
+        description="Comma-separated SaaS admin emails allowed to access /api/saas endpoints.",
+    )
+    S3_SUPPORT_BUCKET: str = Field(
+        default="",
+        description="S3 bucket for admin->tenant support files.",
+    )
+    S3_SUPPORT_BUCKET_REGION: str = Field(
+        default="",
+        description="AWS region for S3_SUPPORT_BUCKET. Defaults to AWS_REGION when unset.",
     )
 
     # API
@@ -131,6 +207,33 @@ class Settings(BaseSettings):
     def has_ingest_queue(self) -> bool:
         """True if ingest queue URL is set. Ingest trigger endpoint returns 503 when False."""
         return bool(self.SQS_INGEST_QUEUE_URL and self.SQS_INGEST_QUEUE_URL.strip())
+
+    @property
+    def has_events_fast_lane_queue(self) -> bool:
+        """True if fast-lane events queue URL is configured."""
+        return bool(
+            self.SQS_EVENTS_FAST_LANE_QUEUE_URL
+            and self.SQS_EVENTS_FAST_LANE_QUEUE_URL.strip()
+        )
+
+    @property
+    def has_inventory_reconcile_queue(self) -> bool:
+        """True if inventory reconciliation queue URL is configured."""
+        return bool(
+            self.SQS_INVENTORY_RECONCILE_QUEUE_URL
+            and self.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
+        )
+
+    @property
+    def saas_admin_emails_list(self) -> set[str]:
+        """Normalized allowlist for SaaS admin users."""
+        if not self.SAAS_ADMIN_EMAILS.strip():
+            return set()
+        return {
+            email.strip().lower()
+            for email in self.SAAS_ADMIN_EMAILS.split(",")
+            if email.strip()
+        }
 
 
 # Single instance; import and use as: from config import settings

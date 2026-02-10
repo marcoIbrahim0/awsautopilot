@@ -1,8 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  SQS queues and IAM policies for Security Autopilot ingestion pipeline.
+  SQS queues and IAM policies for Security Autopilot pipelines.
   - security-autopilot-ingest-dlq: dead-letter queue for failed ingest jobs
   - security-autopilot-ingest-queue: main queue for ingestion jobs (API sends, Worker consumes)
+  - security-autopilot-events-fastlane-dlq / queue: near-real-time control-plane events
+  - security-autopilot-inventory-reconcile-dlq / queue: inventory reconciliation jobs
   - Two managed policies: API send-only, Worker consume-only (no DLQ access in normal operation).
 
 # --- Queue configuration (fixed; no parameters) ---
@@ -38,6 +40,62 @@ Resources:
         - Key: Purpose
           Value: ingest
 
+  EventsFastLaneDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: security-autopilot-events-fastlane-dlq
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: events-fastlane-dlq
+
+  EventsFastLaneQueue:
+    Type: AWS::SQS::Queue
+    DependsOn: EventsFastLaneDLQ
+    Properties:
+      QueueName: security-autopilot-events-fastlane-queue
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EventsFastLaneDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: events-fastlane
+
+  InventoryReconcileDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: security-autopilot-inventory-reconcile-dlq
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: inventory-reconcile-dlq
+
+  InventoryReconcileQueue:
+    Type: AWS::SQS::Queue
+    DependsOn: InventoryReconcileDLQ
+    Properties:
+      QueueName: security-autopilot-inventory-reconcile-queue
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt InventoryReconcileDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: inventory-reconcile
+
   # --- IAM: API send-only (no DLQ access) ---
   ApiSendPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -47,11 +105,14 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: SendToIngestQueue
+          - Sid: SendToWorkerQueues
             Effect: Allow
             Action:
               - sqs:SendMessage
-            Resource: !GetAtt IngestQueue.Arn
+            Resource:
+              - !GetAtt IngestQueue.Arn
+              - !GetAtt EventsFastLaneQueue.Arn
+              - !GetAtt InventoryReconcileQueue.Arn
 
   # --- IAM: Worker consume-only (no DLQ access) ---
   WorkerConsumePolicy:
@@ -62,14 +123,17 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: ConsumeFromIngestQueue
+          - Sid: ConsumeFromWorkerQueues
             Effect: Allow
             Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
               - sqs:ChangeMessageVisibility
-            Resource: !GetAtt IngestQueue.Arn
+            Resource:
+              - !GetAtt IngestQueue.Arn
+              - !GetAtt EventsFastLaneQueue.Arn
+              - !GetAtt InventoryReconcileQueue.Arn
 
 Outputs:
   IngestQueueURL:
@@ -92,6 +156,46 @@ Outputs:
     Value: !GetAtt IngestDLQ.Arn
     Export:
       Name: !Sub "${AWS::StackName}-IngestDLQArn"
+  EventsFastLaneQueueURL:
+    Description: "URL of the events fast-lane queue (use for SQS_EVENTS_FAST_LANE_QUEUE_URL)."
+    Value: !Ref EventsFastLaneQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-EventsFastLaneQueueURL"
+  EventsFastLaneQueueArn:
+    Description: "ARN of the events fast-lane queue."
+    Value: !GetAtt EventsFastLaneQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EventsFastLaneQueueArn"
+  EventsFastLaneDLQURL:
+    Description: "URL of events fast-lane DLQ (use for SQS_EVENTS_FAST_LANE_DLQ_URL)."
+    Value: !Ref EventsFastLaneDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-EventsFastLaneDLQURL"
+  EventsFastLaneDLQArn:
+    Description: "ARN of events fast-lane DLQ."
+    Value: !GetAtt EventsFastLaneDLQ.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-EventsFastLaneDLQArn"
+  InventoryReconcileQueueURL:
+    Description: "URL of inventory reconcile queue (use for SQS_INVENTORY_RECONCILE_QUEUE_URL)."
+    Value: !Ref InventoryReconcileQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-InventoryReconcileQueueURL"
+  InventoryReconcileQueueArn:
+    Description: "ARN of inventory reconcile queue."
+    Value: !GetAtt InventoryReconcileQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-InventoryReconcileQueueArn"
+  InventoryReconcileDLQURL:
+    Description: "URL of inventory reconcile DLQ (use for SQS_INVENTORY_RECONCILE_DLQ_URL)."
+    Value: !Ref InventoryReconcileDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-InventoryReconcileDLQURL"
+  InventoryReconcileDLQArn:
+    Description: "ARN of inventory reconcile DLQ."
+    Value: !GetAtt InventoryReconcileDLQ.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-InventoryReconcileDLQArn"
   ApiSendPolicyArn:
     Description: "ARN of the API send-only managed policy. Attach to API service (e.g. ECS task) role."
     Value: !Ref ApiSendPolicy

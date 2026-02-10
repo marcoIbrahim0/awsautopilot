@@ -20,18 +20,19 @@ logger = logging.getLogger(__name__)
 __all__ = ["fetch_security_hub_findings", "fetch_all_findings", "DEFAULT_FILTERS"]
 
 # ---------------------------------------------------------------------------
-# Filters: active findings, NEW/NOTIFIED workflow, optional severity
+# Filters: include active + archived and all workflow states so Compliance PASSED
+# findings are retrievable and can drive resolved matching downstream.
 # ---------------------------------------------------------------------------
 DEFAULT_FILTERS = {
-    "RecordState": [{"Comparison": "EQUALS", "Value": "ACTIVE"}],
+    "RecordState": [
+        {"Comparison": "EQUALS", "Value": "ACTIVE"},
+        {"Comparison": "EQUALS", "Value": "ARCHIVED"},
+    ],
     "WorkflowStatus": [
         {"Comparison": "EQUALS", "Value": "NEW"},
         {"Comparison": "EQUALS", "Value": "NOTIFIED"},
-    ],
-    "SeverityLabel": [
-        {"Comparison": "EQUALS", "Value": "CRITICAL"},
-        {"Comparison": "EQUALS", "Value": "HIGH"},
-        {"Comparison": "EQUALS", "Value": "MEDIUM"},
+        {"Comparison": "EQUALS", "Value": "RESOLVED"},
+        {"Comparison": "EQUALS", "Value": "SUPPRESSED"},
     ],
 }
 

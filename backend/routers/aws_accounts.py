@@ -23,9 +23,12 @@ from backend.config import settings
 from backend.database import get_db
 from backend.models.aws_account import AwsAccount
 from backend.models.enums import AwsAccountStatus
+from backend.models.finding import Finding
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.aws_account_cleanup import AwsCleanupError, cleanup_account_resources
 from backend.services.aws import assume_role
+from backend.services.cloudformation_templates import get_latest_template_version
 from backend.utils.sqs import (
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
@@ -52,9 +55,9 @@ class AccountRegistrationRequest(BaseModel):
 
     account_id: str = Field(..., description="AWS account ID (12 digits)")
     role_read_arn: str = Field(..., description="IAM role ARN for read access (ingestion)")
-    role_write_arn: str = Field(
-        ...,
-        description="IAM role ARN for write access (required). Deploy the WriteRole CloudFormation template first, then paste WriteRoleArn here.",
+    role_write_arn: str | None = Field(
+        default=None,
+        description="IAM role ARN for write access (optional). Provide to enable direct fixes.",
     )
     regions: list[str] = Field(default_factory=list, description="List of AWS regions to monitor")
     tenant_id: str = Field(
@@ -78,8 +81,10 @@ class AccountRegistrationRequest(BaseModel):
 
     @field_validator("role_write_arn")
     @classmethod
-    def validate_role_write_arn(cls, v: str) -> str:
-        """Validate WriteRole ARN format (required)."""
+    def validate_role_write_arn(cls, v: str | None) -> str | None:
+        """Validate WriteRole ARN format when provided."""
+        if v is None:
+            return v
         return _validate_role_arn_format(v, "role_write_arn")
 
     @field_validator("regions")
@@ -109,7 +114,9 @@ class AccountRegistrationRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_role_write_arn_matches_account(self):
-        """role_write_arn account ID must match account_id."""
+        """role_write_arn account ID must match account_id when provided."""
+        if not self.role_write_arn:
+            return self
         arn_parts = self.role_write_arn.split(":")
         if len(arn_parts) >= 5 and arn_parts[4] != self.account_id:
             raise ValueError(
@@ -173,12 +180,81 @@ class ValidationResponse(BaseModel):
     last_validated_at: datetime | None = Field(None, description="When validation last ran")
     permissions_ok: bool = Field(
         ...,
-        description="True if STS and Security Hub check succeeded (ReadRole); WriteRole is required at registration.",
+        description="True if STS and Security Hub check succeeded for ReadRole.",
     )
+
+
+class RegionServiceReadiness(BaseModel):
+    """Per-region service readiness for onboarding checks."""
+
+    region: str = Field(..., description="AWS region")
+    security_hub_enabled: bool = Field(..., description="Whether Security Hub is enabled in this region")
+    aws_config_enabled: bool = Field(..., description="Whether AWS Config recording is enabled in this region")
+    access_analyzer_enabled: bool = Field(..., description="Whether IAM Access Analyzer appears enabled in this region")
+    inspector_enabled: bool = Field(..., description="Whether Amazon Inspector appears enabled in this region")
+    security_hub_error: str | None = Field(None, description="Security Hub error detail when unavailable")
+    aws_config_error: str | None = Field(None, description="AWS Config error detail when unavailable")
+    access_analyzer_error: str | None = Field(None, description="Access Analyzer error detail when unavailable")
+    inspector_error: str | None = Field(None, description="Inspector error detail when unavailable")
+
+
+class AccountServiceReadinessResponse(BaseModel):
+    """Aggregated service readiness across the account's configured regions."""
+
+    account_id: str = Field(..., description="AWS account ID (12 digits)")
+    overall_ready: bool = Field(..., description="True only when Security Hub and AWS Config are enabled in every region")
+    all_security_hub_enabled: bool = Field(..., description="True when Security Hub is enabled in all configured regions")
+    all_aws_config_enabled: bool = Field(..., description="True when AWS Config is enabled in all configured regions")
+    all_access_analyzer_enabled: bool = Field(..., description="True when Access Analyzer appears enabled in all configured regions")
+    all_inspector_enabled: bool = Field(..., description="True when Inspector appears enabled in all configured regions")
+    missing_security_hub_regions: list[str] = Field(default_factory=list)
+    missing_aws_config_regions: list[str] = Field(default_factory=list)
+    missing_access_analyzer_regions: list[str] = Field(default_factory=list)
+    missing_inspector_regions: list[str] = Field(default_factory=list)
+    regions: list[RegionServiceReadiness] = Field(default_factory=list)
+
+
+class ReadRoleUpdateRequest(BaseModel):
+    """Request body for triggering an in-place CloudFormation update of the ReadRole stack."""
+
+    stack_name: str = Field(
+        default="SecurityAutopilotReadRole",
+        description="Existing CloudFormation stack name for the ReadRole deployment.",
+    )
+    include_write_role: bool = Field(
+        default=False,
+        description="Whether IncludeWriteRole parameter should be true during update.",
+    )
+
+
+class ReadRoleUpdateResponse(BaseModel):
+    """Response for ReadRole update operation."""
+
+    account_id: str
+    stack_name: str
+    template_url: str
+    template_version: str | None = None
+    status: Literal["update_started", "already_up_to_date"]
+    stack_id: str | None = None
+    message: str
+
+
+class ReadRoleUpdateStatusResponse(BaseModel):
+    """Response for ReadRole update availability check."""
+
+    account_id: str
+    stack_name: str
+    current_template_url: str | None = None
+    current_template_version: str | None = None
+    latest_template_url: str
+    latest_template_version: str | None = None
+    update_available: bool
+    message: str
 
 
 # Ingest trigger (POST /api/aws/accounts/{account_id}/ingest)
 _REGION_PATTERN = re.compile(r"^[a-z]{2}-[a-z]+-\d+$")
+_TEMPLATE_VERSION_PATTERN = re.compile(r"/(v?\d+\.\d+\.\d+)\.ya?ml$")
 
 
 class IngestTriggerRequest(BaseModel):
@@ -229,6 +305,14 @@ class IngestTriggerErrorResponse(BaseModel):
     detail: str = Field(..., description="Detailed message for client")
 
 
+def _extract_template_version(template_url: str) -> str | None:
+    """Best-effort semantic version extraction from template URL."""
+    match = _TEMPLATE_VERSION_PATTERN.search((template_url or "").strip())
+    if not match:
+        return None
+    return match.group(1)
+
+
 # Helper: get tenant by ID
 async def get_tenant(tenant_id: uuid.UUID, db: AsyncSession) -> Tenant:
     """
@@ -261,7 +345,14 @@ def resolve_tenant_id(
         # Authenticated: use user's tenant
         return current_user.tenant_id
     
-    # Not authenticated: require tenant_id from request
+    # Not authenticated: tenant_id fallback allowed only in local/dev.
+    if not settings.is_local:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
+    # Local mode compatibility: allow tenant_id from request
     if not request_tenant_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -521,21 +612,290 @@ async def delete_account(
         Optional[str],
         Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
     ] = None,
+    cleanup_resources: Annotated[
+        bool,
+        Query(
+            description=(
+                "When true (default), delete Security Autopilot roles/policies in the customer AWS account "
+                "before removing this account record."
+            )
+        ),
+    ] = True,
 ) -> None:
     """
     Remove an AWS account from the tenant. The account record and its association
     are deleted; existing findings for this account_id remain in the database.
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
-    await get_tenant(tenant_uuid, db)
+    tenant = await get_tenant(tenant_uuid, db)
     acc = await get_account_for_tenant(tenant_uuid, account_id, db)
     if not acc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"AWS account {account_id} not found for tenant",
         )
+    if cleanup_resources:
+        try:
+            cleanup_account_resources(account=acc, external_id=tenant.external_id)
+        except AwsCleanupError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Failed to clean up AWS resources for this account. "
+                    f"{e} "
+                    "If you need to remove the SaaS link without teardown, retry with cleanup_resources=false."
+                ),
+            ) from e
+        except ClientError as e:
+            error_message = e.response.get("Error", {}).get("Message", str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Failed to clean up AWS resources for this account. "
+                    f"{error_message} "
+                    "If you need to remove the SaaS link without teardown, retry with cleanup_resources=false."
+                ),
+            ) from e
     await db.delete(acc)
     await db.commit()
+
+
+@router.post(
+    "/{account_id}/read-role/update",
+    response_model=ReadRoleUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update ReadRole CloudFormation stack",
+)
+async def update_read_role_stack(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    request: ReadRoleUpdateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> ReadRoleUpdateResponse:
+    """
+    Trigger an in-place CloudFormation update for the customer's existing ReadRole stack.
+
+    Uses the connected account ReadRole to call CloudFormation update-stack with the latest
+    configured ReadRole template URL and the tenant's ExternalId/SaaSAccountId parameters.
+    """
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    tenant = await get_tenant(tenant_uuid, db)
+
+    if current_user is not None and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can trigger ReadRole updates.",
+        )
+
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AWS account {account_id} not found for tenant",
+        )
+
+    saas_account_id = (settings.SAAS_AWS_ACCOUNT_ID or "").strip()
+    if not saas_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="SAAS_AWS_ACCOUNT_ID is not configured.",
+        )
+
+    configured_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
+    if not configured_template_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="CLOUDFORMATION_READ_ROLE_TEMPLATE_URL is not configured.",
+        )
+
+    latest_template_url = get_latest_template_version(configured_template_url) or configured_template_url
+    template_version = _extract_template_version(latest_template_url)
+    stack_name = (request.stack_name or "").strip() or "SecurityAutopilotReadRole"
+    include_write_role_value = "true" if request.include_write_role else "false"
+
+    try:
+        session = assume_role(role_arn=acc.role_read_arn, external_id=tenant.external_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to assume ReadRole for account {account_id}: {exc}",
+        ) from exc
+
+    cf_region = (
+        (settings.CLOUDFORMATION_DEFAULT_REGION or "").strip()
+        or (acc.regions[0] if acc.regions else "")
+        or settings.AWS_REGION
+    )
+    cf = session.client("cloudformation", region_name=cf_region)
+
+    try:
+        response = cf.update_stack(
+            StackName=stack_name,
+            TemplateURL=latest_template_url,
+            Parameters=[
+                {"ParameterKey": "SaaSAccountId", "ParameterValue": saas_account_id},
+                {"ParameterKey": "ExternalId", "ParameterValue": tenant.external_id},
+                {"ParameterKey": "IncludeWriteRole", "ParameterValue": include_write_role_value},
+            ],
+            Capabilities=["CAPABILITY_NAMED_IAM"],
+        )
+        stack_id = response.get("StackId")
+        return ReadRoleUpdateResponse(
+            account_id=account_id,
+            stack_name=stack_name,
+            template_url=latest_template_url,
+            template_version=template_version,
+            status="update_started",
+            stack_id=stack_id,
+            message="ReadRole stack update started successfully.",
+        )
+    except ClientError as exc:
+        error = exc.response.get("Error", {})
+        code = str(error.get("Code", "")).strip()
+        message = str(error.get("Message", "")).strip() or str(exc)
+        if code == "ValidationError" and "No updates are to be performed" in message:
+            return ReadRoleUpdateResponse(
+                account_id=account_id,
+                stack_name=stack_name,
+                template_url=latest_template_url,
+                template_version=template_version,
+                status="already_up_to_date",
+                stack_id=None,
+                message="ReadRole stack is already up to date.",
+            )
+        if code in {"AccessDenied", "AccessDeniedException"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "ReadRole does not have CloudFormation update permissions. "
+                    "Use the Launch Stack link to apply the template update in AWS Console."
+                ),
+            ) from exc
+        if code == "ValidationError" and "does not exist" in message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"CloudFormation stack '{stack_name}' was not found in region '{cf_region}'. "
+                    "Use the correct stack name or deploy the ReadRole stack first."
+                ),
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to update ReadRole stack: {message}",
+        ) from exc
+
+
+@router.get(
+    "/{account_id}/read-role/update-status",
+    response_model=ReadRoleUpdateStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check ReadRole template update status",
+)
+async def get_read_role_update_status(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    stack_name: Annotated[str, Query(description="ReadRole stack name")] = "SecurityAutopilotReadRole",
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> ReadRoleUpdateStatusResponse:
+    """Compare currently deployed ReadRole template version against latest available template."""
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    tenant = await get_tenant(tenant_uuid, db)
+
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AWS account {account_id} not found for tenant",
+        )
+
+    configured_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
+    if not configured_template_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="CLOUDFORMATION_READ_ROLE_TEMPLATE_URL is not configured.",
+        )
+    latest_template_url = get_latest_template_version(configured_template_url) or configured_template_url
+    latest_template_version = _extract_template_version(latest_template_url)
+    resolved_stack_name = (stack_name or "").strip() or "SecurityAutopilotReadRole"
+
+    try:
+        session = assume_role(role_arn=acc.role_read_arn, external_id=tenant.external_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to assume ReadRole for account {account_id}: {exc}",
+        ) from exc
+
+    cf_region = (
+        (settings.CLOUDFORMATION_DEFAULT_REGION or "").strip()
+        or (acc.regions[0] if acc.regions else "")
+        or settings.AWS_REGION
+    )
+    cf = session.client("cloudformation", region_name=cf_region)
+
+    try:
+        stacks = cf.describe_stacks(StackName=resolved_stack_name).get("Stacks", [])
+    except ClientError as exc:
+        error = exc.response.get("Error", {})
+        code = str(error.get("Code", "")).strip()
+        message = str(error.get("Message", "")).strip() or str(exc)
+        if code in {"AccessDenied", "AccessDeniedException"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "ReadRole does not have CloudFormation read permissions to check template version. "
+                    "Grant cloudformation:DescribeStacks or update manually in AWS Console."
+                ),
+            ) from exc
+        if code == "ValidationError" and "does not exist" in message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"CloudFormation stack '{resolved_stack_name}' was not found in region '{cf_region}'.",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to check ReadRole stack status: {message}",
+        ) from exc
+
+    if not stacks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"CloudFormation stack '{resolved_stack_name}' was not found in region '{cf_region}'.",
+        )
+
+    current_template_url = stacks[0].get("TemplateURL")
+    current_template_version = _extract_template_version(current_template_url or "")
+    update_available = (current_template_url or "").strip() != latest_template_url.strip()
+    message = (
+        "ReadRole update is available."
+        if update_available
+        else "ReadRole stack is already on the latest template version."
+    )
+
+    return ReadRoleUpdateStatusResponse(
+        account_id=account_id,
+        stack_name=resolved_stack_name,
+        current_template_url=current_template_url,
+        current_template_version=current_template_version,
+        latest_template_url=latest_template_url,
+        latest_template_version=latest_template_version,
+        update_available=update_available,
+        message=message,
+    )
 
 
 @router.post("", response_model=AccountRegistrationResponse, status_code=status.HTTP_201_CREATED)
@@ -565,9 +925,12 @@ async def register_account(
     # Get tenant and verify it exists
     tenant = await get_tenant(tenant_uuid, db)
 
-    # Verify account_id in ARNs matches the provided account_id
+    # Verify account_id in provided ARNs matches the request account_id.
     # ARN format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
-    for arn_name, arn_value in [("role_read_arn", request.role_read_arn), ("role_write_arn", request.role_write_arn)]:
+    arns_to_validate = [("role_read_arn", request.role_read_arn)]
+    if request.role_write_arn:
+        arns_to_validate.append(("role_write_arn", request.role_write_arn))
+    for arn_name, arn_value in arns_to_validate:
         arn_parts = arn_value.split(":")
         if len(arn_parts) < 5:
             raise HTTPException(
@@ -594,7 +957,7 @@ async def register_account(
         "tenant_id": tenant_uuid,
         "account_id": request.account_id,
         "role_read_arn": request.role_read_arn,
-        "role_write_arn": request.role_write_arn,  # Required for account connection and direct fixes
+        "role_write_arn": request.role_write_arn,
         "external_id": tenant.external_id,  # Must match tenant.external_id
         "regions": request.regions,
         "status": AwsAccountStatus.pending,
@@ -616,25 +979,32 @@ async def register_account(
                 detail=f"Account ID mismatch (ReadRole): expected {request.account_id}, got {caller_account_id}",
             )
 
-        # Validate WriteRole: assume and verify account_id (required for direct fixes)
-        logger.info(f"Validating WriteRole for account {request.account_id}")
-        write_session = assume_role(
-            role_arn=request.role_write_arn,
-            external_id=tenant.external_id,
-        )
-        write_sts = write_session.client("sts")
-        write_identity = write_sts.get_caller_identity()
-        write_caller_account_id = write_identity.get("Account")
-        if write_caller_account_id != request.account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Account ID mismatch (WriteRole): expected {request.account_id}, got {write_caller_account_id}",
+        # Validate WriteRole only when provided (optional at onboarding).
+        if request.role_write_arn:
+            logger.info(f"Validating WriteRole for account {request.account_id}")
+            write_session = assume_role(
+                role_arn=request.role_write_arn,
+                external_id=tenant.external_id,
             )
+            write_sts = write_session.client("sts")
+            write_identity = write_sts.get_caller_identity()
+            write_caller_account_id = write_identity.get("Account")
+            if write_caller_account_id != request.account_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Account ID mismatch (WriteRole): expected {request.account_id}, got {write_caller_account_id}",
+                )
 
-        # Both roles validated
         account_data["status"] = AwsAccountStatus.validated
         account_data["last_validated_at"] = datetime.now(timezone.utc)
-        logger.info(f"Successfully validated account {request.account_id} (ReadRole + WriteRole) for tenant {tenant_uuid}")
+        if request.role_write_arn:
+            logger.info(
+                f"Successfully validated account {request.account_id} (ReadRole + WriteRole) for tenant {tenant_uuid}"
+            )
+        else:
+            logger.info(
+                f"Successfully validated account {request.account_id} (ReadRole only, no WriteRole) for tenant {tenant_uuid}"
+            )
 
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -814,6 +1184,218 @@ async def validate_account(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during validation",
+        )
+
+
+@router.post(
+    "/{account_id}/service-readiness",
+    response_model=AccountServiceReadinessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check Security Hub + AWS Config readiness",
+    description="Checks whether Security Hub and AWS Config are enabled in each configured account region.",
+)
+async def check_account_service_readiness(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> AccountServiceReadinessResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    tenant = await get_tenant(tenant_uuid, db)
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AWS account {account_id} not found for tenant",
+        )
+
+    try:
+        async def _has_findings_for_source(region_name: str, source_name: str) -> bool:
+            stmt = (
+                select(Finding.id)
+                .where(
+                    Finding.tenant_id == tenant_uuid,
+                    Finding.account_id == account_id,
+                    Finding.region == region_name,
+                    Finding.source == source_name,
+                )
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            return result.scalar_one_or_none() is not None
+
+        async def _has_security_hub_control_findings(region_name: str) -> bool:
+            stmt = (
+                select(Finding.id)
+                .where(
+                    Finding.tenant_id == tenant_uuid,
+                    Finding.account_id == account_id,
+                    Finding.region == region_name,
+                    Finding.source == "security_hub",
+                    Finding.control_id.isnot(None),
+                )
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            return result.scalar_one_or_none() is not None
+
+        session = assume_role(
+            role_arn=acc.role_read_arn,
+            external_id=tenant.external_id,
+        )
+        sts_client = session.client("sts")
+        identity = sts_client.get_caller_identity()
+        caller_account_id = identity.get("Account")
+        if caller_account_id != account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Account ID mismatch: expected {account_id}, got {caller_account_id}",
+            )
+
+        regions = acc.regions or ["us-east-1"]
+        region_results: list[RegionServiceReadiness] = []
+        missing_security_hub_regions: list[str] = []
+        missing_aws_config_regions: list[str] = []
+        missing_access_analyzer_regions: list[str] = []
+        missing_inspector_regions: list[str] = []
+
+        for region in regions:
+            security_hub_enabled = False
+            aws_config_enabled = False
+            access_analyzer_enabled = False
+            inspector_enabled = False
+            security_hub_error: str | None = None
+            aws_config_error: str | None = None
+            access_analyzer_error: str | None = None
+            inspector_error: str | None = None
+
+            try:
+                security_hub = session.client("securityhub", region_name=region)
+                security_hub.describe_hub()
+                security_hub_enabled = True
+            except ClientError as e:
+                security_hub_error = e.response.get("Error", {}).get("Message", str(e))
+                if await _has_findings_for_source(region, "security_hub"):
+                    security_hub_enabled = True
+                    security_hub_error = "Inferred enabled from ingested Security Hub findings."
+
+            try:
+                config = session.client("config", region_name=region)
+                recorders_resp = config.describe_configuration_recorders()
+                recorder_status_resp = config.describe_configuration_recorder_status()
+                has_recorders = bool(recorders_resp.get("ConfigurationRecorders"))
+                statuses = recorder_status_resp.get("ConfigurationRecordersStatus", [])
+                has_active_recorder = any(bool(s.get("recording")) for s in statuses)
+                aws_config_enabled = has_recorders and has_active_recorder
+                if has_recorders and not has_active_recorder:
+                    aws_config_error = "AWS Config recorder exists but is not recording."
+                elif not has_recorders:
+                    aws_config_error = "No AWS Config recorder found."
+            except ClientError as e:
+                aws_config_error = e.response.get("Error", {}).get("Message", str(e))
+                if await _has_security_hub_control_findings(region):
+                    aws_config_enabled = True
+                    aws_config_error = "Inferred enabled from ingested Security Hub control findings."
+
+            try:
+                access_analyzer = session.client("accessanalyzer", region_name=region)
+                active_analyzers = []
+                for analyzer_scope in ("ACCOUNT", "ORGANIZATION"):
+                    next_token = None
+                    while True:
+                        kwargs = {"type": analyzer_scope}
+                        if next_token:
+                            kwargs["nextToken"] = next_token
+                        analyzers_resp = access_analyzer.list_analyzers(**kwargs)
+                        analyzers = analyzers_resp.get("analyzers", [])
+                        active_analyzers.extend(
+                            analyzer for analyzer in analyzers if analyzer.get("status") == "ACTIVE"
+                        )
+                        next_token = analyzers_resp.get("nextToken")
+                        if not next_token:
+                            break
+                access_analyzer_enabled = len(active_analyzers) > 0
+                if not access_analyzer_enabled:
+                    access_analyzer_error = "No active Access Analyzer analyzer found."
+            except ClientError as e:
+                access_analyzer_error = e.response.get("Error", {}).get("Message", str(e))
+                if await _has_findings_for_source(region, "access_analyzer"):
+                    access_analyzer_enabled = True
+                    access_analyzer_error = "Inferred enabled from ingested Access Analyzer findings."
+
+            try:
+                inspector = session.client("inspector2", region_name=region)
+                status_resp = inspector.batch_get_account_status(accountIds=[account_id])
+                accounts = status_resp.get("accounts", [])
+                account_status = accounts[0].get("state", {}).get("status") if accounts else None
+                inspector_enabled = account_status == "ENABLED"
+                if not inspector_enabled:
+                    inspector_error = f"Inspector account status is {account_status or 'UNKNOWN'}."
+            except ClientError as e:
+                inspector_error = e.response.get("Error", {}).get("Message", str(e))
+                if await _has_findings_for_source(region, "inspector"):
+                    inspector_enabled = True
+                    inspector_error = "Inferred enabled from ingested Inspector findings."
+
+            if not security_hub_enabled:
+                missing_security_hub_regions.append(region)
+            if not aws_config_enabled:
+                missing_aws_config_regions.append(region)
+            if not access_analyzer_enabled:
+                missing_access_analyzer_regions.append(region)
+            if not inspector_enabled:
+                missing_inspector_regions.append(region)
+
+            region_results.append(
+                RegionServiceReadiness(
+                    region=region,
+                    security_hub_enabled=security_hub_enabled,
+                    aws_config_enabled=aws_config_enabled,
+                    access_analyzer_enabled=access_analyzer_enabled,
+                    inspector_enabled=inspector_enabled,
+                    security_hub_error=security_hub_error,
+                    aws_config_error=aws_config_error,
+                    access_analyzer_error=access_analyzer_error,
+                    inspector_error=inspector_error,
+                )
+            )
+
+        all_security_hub_enabled = len(missing_security_hub_regions) == 0
+        all_aws_config_enabled = len(missing_aws_config_regions) == 0
+        all_access_analyzer_enabled = len(missing_access_analyzer_regions) == 0
+        all_inspector_enabled = len(missing_inspector_regions) == 0
+        return AccountServiceReadinessResponse(
+            account_id=account_id,
+            overall_ready=all_security_hub_enabled and all_aws_config_enabled,
+            all_security_hub_enabled=all_security_hub_enabled,
+            all_aws_config_enabled=all_aws_config_enabled,
+            all_access_analyzer_enabled=all_access_analyzer_enabled,
+            all_inspector_enabled=all_inspector_enabled,
+            missing_security_hub_regions=missing_security_hub_regions,
+            missing_aws_config_regions=missing_aws_config_regions,
+            missing_access_analyzer_regions=missing_access_analyzer_regions,
+            missing_inspector_regions=missing_inspector_regions,
+            regions=region_results,
+        )
+    except HTTPException:
+        raise
+    except ClientError as e:
+        error_message = e.response.get("Error", {}).get("Message", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to check service readiness: {error_message}",
+        )
+    except Exception as e:
+        logger.exception("Unexpected readiness check error for account %s: %s", account_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while checking Security Hub and AWS Config readiness",
         )
 
 

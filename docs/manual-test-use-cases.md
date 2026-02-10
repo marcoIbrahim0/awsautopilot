@@ -76,9 +76,9 @@ These actions generate a **PR bundle** (Terraform or CloudFormation). You apply 
 
 ---
 
-### Use case 3 — EC2.18: Security group with 0.0.0.0/0 on port 22 or 3389
+### Use case 3 — EC2.53: Security group with 0.0.0.0/0 (and/or ::/0) on port 22 or 3389
 
-**Control:** EC2.18 (FSBP)  
+**Control:** EC2.53 (canonical; aliases: EC2.13 / EC2.19 / EC2.18)  
 **Action type:** `sg_restrict_public_ports`
 
 #### 1. Create the resource that triggers the finding
@@ -86,21 +86,24 @@ These actions generate a **PR bundle** (Terraform or CloudFormation). You apply 
 1. In **AWS Console** → **EC2** → **Security Groups** (in a chosen region, e.g. `us-east-1`).
 2. **Create security group:** name e.g. `test-sg-public-22`, VPC default or chosen.
 3. **Add inbound rule:** Type **SSH** (port 22) or **RDP** (port 3389), Source **0.0.0.0/0** (Anywhere-IPv4).
-4. Save. Security Hub FSBP will flag **EC2.18** for this SG.
+4. (Optional) Add an IPv6 inbound rule with Source **::/0** (Anywhere-IPv6).
+5. Save. Security Hub will flag **EC2.53** (or an equivalent alias control) for this SG.
 
 #### 2. Get the finding and action in the app
 
 1. **Refresh findings** for that account/region.
-2. **Recompute actions**. Find the action for **EC2.18** / “Restrict public ports” for the security group (target is the **security group ID**, e.g. `sg-0123456789abcdef0`).
+2. **Recompute actions**. Find the action for **EC2.53** / “Restrict public ports” for the security group (target is the **security group ID**, e.g. `sg-0123456789abcdef0`).
 
 #### 3. Steps to fix (PR bundle)
 
 1. On that action, **Generate PR bundle** (PR only).
 2. Wait for run; open **artifacts** → **pr_bundle** → **files**.
-3. **Verify:** Terraform has `aws_vpc_security_group_ingress_rule` (or similar) with correct `security_group_id` and ports 22/3389; CloudFormation has `SecurityGroupId` and `AllowedCidr`. Steps in the bundle should say to **remove** existing 0.0.0.0/0 rules first.
+3. **Verify:** Terraform has `aws_vpc_security_group_ingress_rule` (or similar) with correct `security_group_id` and ports 22/3389; CloudFormation has `SecurityGroupId` and `AllowedCidr`.
 4. **Apply:**
-   - In AWS Console (or CLI): **remove** the inbound rule that allows 0.0.0.0/0 on 22 (and 3389 if present).
-   - Optionally apply the bundle to add a **restricted** rule (e.g. your IP or VPN CIDR) using the generated IaC.
+   - Identify SG attachments first (EC2/ENI/ALB/NLB/RDS/ECS/EKS), and treat production workloads with extra caution.
+   - Confirm alternative admin path first (SSM Session Manager, bastion, or VPN). Optionally validate current sources via VPC Flow Logs.
+   - Replace broad sources (**0.0.0.0/0** and/or **::/0**) incrementally with restricted source(s) (VPN CIDR, office IP, or source SG).
+   - Apply one change at a time and test app/dependency connectivity after each step.
 5. **Recompute actions** and confirm the action/finding is resolved.
 
 ---
@@ -306,7 +309,7 @@ These actions can be fixed **directly** by the app using the account’s **Write
 | S3.1         | s3_block_public_access           | Direct     | Turn off account-level S3 Block Public Access   |
 | S3.2         | s3_bucket_block_public_access    | PR bundle  | Create S3 bucket without block public access     |
 | S3.4         | s3_bucket_encryption             | PR bundle  | Create S3 bucket without default encryption     |
-| EC2.18       | sg_restrict_public_ports          | PR bundle  | Create SG with 0.0.0.0/0 on 22 or 3389          |
+| EC2.53       | sg_restrict_public_ports          | PR bundle  | Create SG with 0.0.0.0/0 (and/or ::/0) on 22 or 3389 |
 | CloudTrail.1 | cloudtrail_enabled               | PR bundle  | No CloudTrail (or delete trail)                 |
 | SecurityHub.1| enable_security_hub              | Direct     | Disable Security Hub in a region                |
 | GuardDuty.1  | enable_guardduty                 | Direct     | Disable GuardDuty in a region                   |

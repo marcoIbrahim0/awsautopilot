@@ -5,7 +5,7 @@ Upload the read-role CloudFormation template to S3 with versioned naming.
 Usage (from project root):
   python scripts/upload_read_role_template.py [--version VERSION] [--bucket BUCKET] [--region REGION]
 
-Defaults: version=v1.1.0, bucket=security-autopilot-templates, region=eu-north-1.
+Defaults: version=v1.4.1, bucket=security-autopilot-templates, region=eu-north-1.
 Requires AWS credentials with s3:PutObject on the bucket.
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ S3_KEY_PREFIX = "cloudformation/read-role"
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Upload read-role template to S3 with version naming")
-    parser.add_argument("--version", default="v1.1.0", help="Version segment for key (e.g. v1.1.0)")
+    parser.add_argument("--version", default="v1.4.1", help="Version segment for key (e.g. v1.4.1)")
     parser.add_argument("--bucket", default="security-autopilot-templates", help="S3 bucket name")
     parser.add_argument("--region", default="eu-north-1", help="AWS region for the bucket")
     args = parser.parse_args()

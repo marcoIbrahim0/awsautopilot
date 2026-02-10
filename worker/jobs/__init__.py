@@ -7,21 +7,32 @@ from typing import Callable
 
 from backend.utils.sqs import (
     COMPUTE_ACTIONS_JOB_TYPE,
+    EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
+    EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE,
     GENERATE_BASELINE_REPORT_JOB_TYPE,
     GENERATE_EXPORT_JOB_TYPE,
+    INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE,
     INGEST_ACCESS_ANALYZER_JOB_TYPE,
     INGEST_INSPECTOR_JOB_TYPE,
     INGEST_JOB_TYPE,
+    RECONCILE_INVENTORY_SHARD_JOB_TYPE,
+    RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
     REMEDIATION_RUN_JOB_TYPE,
     WEEKLY_DIGEST_JOB_TYPE,
 )
 from worker.jobs.compute_actions import execute_compute_actions_job
 from worker.jobs.evidence_export import execute_evidence_export_job
 from worker.jobs.generate_baseline_report import execute_generate_baseline_report_job
+from worker.jobs.ingest_control_plane_events import execute_ingest_control_plane_events_job
 from worker.jobs.ingest_access_analyzer import execute_ingest_access_analyzer_job
 from worker.jobs.ingest_findings import execute_ingest_job
 from worker.jobs.ingest_inspector import execute_ingest_inspector_job
+from worker.jobs.reconcile_inventory_shard import execute_reconcile_inventory_shard_job
+from worker.jobs.reconcile_recently_touched_resources import (
+    execute_reconcile_recently_touched_resources_job,
+)
 from worker.jobs.remediation_run import execute_remediation_run_job
+from worker.jobs.remediation_run_execution import execute_pr_bundle_execution_job
 from worker.jobs.weekly_digest import execute_weekly_digest_job
 
 # Registry: job_type → handler(job: dict) -> None
@@ -29,8 +40,13 @@ _HANDLERS: dict[str, Callable[[dict], None]] = {
     INGEST_JOB_TYPE: execute_ingest_job,
     INGEST_ACCESS_ANALYZER_JOB_TYPE: execute_ingest_access_analyzer_job,
     INGEST_INSPECTOR_JOB_TYPE: execute_ingest_inspector_job,
+    INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE: execute_ingest_control_plane_events_job,
     COMPUTE_ACTIONS_JOB_TYPE: execute_compute_actions_job,
+    RECONCILE_INVENTORY_SHARD_JOB_TYPE: execute_reconcile_inventory_shard_job,
+    RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE: execute_reconcile_recently_touched_resources_job,
     REMEDIATION_RUN_JOB_TYPE: execute_remediation_run_job,
+    EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE: execute_pr_bundle_execution_job,
+    EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE: execute_pr_bundle_execution_job,
     GENERATE_EXPORT_JOB_TYPE: execute_evidence_export_job,
     GENERATE_BASELINE_REPORT_JOB_TYPE: execute_generate_baseline_report_job,
     WEEKLY_DIGEST_JOB_TYPE: execute_weekly_digest_job,

@@ -1,0 +1,21 @@
+[Unit]
+Description=AWS Security Autopilot Local Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/aws-security-autopilot/local-agent/src/index.mjs
+Restart=always
+RestartSec=2
+Environment=AGENT_ALLOW_BROWSER=0
+Environment=AGENT_PORT=0
+Environment=AGENT_ALLOWED_WORKDIRS=%h/projects,%h
+Environment=AGENT_AUDIT_LOG=1
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.aws %h/.config/aws-security-autopilot-local-agent %h/projects
+
+[Install]
+WantedBy=default.target
