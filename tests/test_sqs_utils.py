@@ -299,15 +299,32 @@ def test_build_reconcile_inventory_shard_job_payload() -> None:
     assert payload["resource_ids"] == ["sg-123"]
 
 
+def test_build_reconcile_inventory_shard_job_payload_with_sweep_options() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_reconcile_inventory_shard_job_payload(
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        region="eu-west-1",
+        service="s3",
+        created_at="2026-02-10T10:00:00Z",
+        sweep_mode="GLOBAL",
+        max_resources=250,
+    )
+    assert payload["sweep_mode"] == "global"
+    assert payload["max_resources"] == 250
+
+
 def test_build_reconcile_recently_touched_resources_job_payload() -> None:
     tenant_id = uuid.uuid4()
     payload = build_reconcile_recently_touched_resources_job_payload(
         tenant_id=tenant_id,
         created_at="2026-02-10T10:00:00Z",
         lookback_minutes=30,
+        services=["ec2", "S3"],
+        max_resources=200,
     )
     assert payload["job_type"] == RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE
     assert payload["tenant_id"] == str(tenant_id)
     assert payload["lookback_minutes"] == 30
-    build_pr_bundle_execution_job_payload,
-    build_pr_bundle_execution_job_payload,
+    assert payload["services"] == ["ec2", "s3"]
+    assert payload["max_resources"] == 200

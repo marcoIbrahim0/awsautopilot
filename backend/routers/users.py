@@ -378,6 +378,9 @@ async def accept_invite(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_template_url,
+        control_plane_ingest_url,
+        control_plane_default_stack,
     ) = get_saas_and_launch_url(tenant.external_id)
     return AuthResponse(
         access_token=access_token,
@@ -391,6 +394,10 @@ async def accept_invite(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_token=tenant.control_plane_token if getattr(user.role, "value", user.role) == "admin" else None,
+        control_plane_forwarder_template_url=control_plane_template_url,
+        control_plane_ingest_url=control_plane_ingest_url,
+        control_plane_forwarder_default_stack_name=control_plane_default_stack,
     )
 
 

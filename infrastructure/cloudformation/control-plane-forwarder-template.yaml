@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Deploys near-real-time control-plane event forwarding for AWS Security Autopilot (Phase 1).
+  Creates an EventBridge rule for allowlisted "AWS API Call via CloudTrail" management actions and
+  forwards matching events to the SaaS via EventBridge API Destination.
+
+  IMPORTANT: Deploy this stack in each AWS region you want to monitor (EventBridge rules are regional).
+
+Parameters:
+  SaaSIngestUrl:
+    Type: String
+    Description: "HTTPS endpoint for the SaaS control-plane intake (e.g. https://api.example.com/api/control-plane/events)."
+
+  ControlPlaneToken:
+    Type: String
+    NoEcho: true
+    Description: "Per-tenant control-plane token from the SaaS (sent as X-Control-Plane-Token header)."
+
+  InvocationRateLimitPerSecond:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    MaxValue: 300
+    Description: "API Destination invocation rate limit (RPS). Keep bounded to control cost and protect SaaS."
+
+Resources:
+  ControlPlaneConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      Name: !Sub "SecurityAutopilotControlPlaneConnection-${AWS::Region}"
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: X-Control-Plane-Token
+          ApiKeyValue: !Ref ControlPlaneToken
+
+  ControlPlaneApiDestination:
+    Type: AWS::Events::ApiDestination
+    Properties:
+      Name: !Sub "SecurityAutopilotControlPlaneApiDestination-${AWS::Region}"
+      ConnectionArn: !GetAtt ControlPlaneConnection.Arn
+      InvocationEndpoint: !Ref SaaSIngestUrl
+      HttpMethod: POST
+      InvocationRateLimitPerSecond: !Ref InvocationRateLimitPerSecond
+
+  EventBridgeInvokeApiDestinationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeApiDestination
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:InvokeApiDestination
+                Resource: !GetAtt ControlPlaneApiDestination.Arn
+
+  ControlPlaneApiCallsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "SecurityAutopilotControlPlaneApiCallsRule-${AWS::Region}"
+      Description: "Forward allowlisted CloudTrail management API calls to AWS Security Autopilot."
+      EventPattern:
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventName:
+            - "AuthorizeSecurityGroupIngress"
+            - "RevokeSecurityGroupIngress"
+            - "ModifySecurityGroupRules"
+            - "UpdateSecurityGroupRuleDescriptionsIngress"
+            - "PutBucketPolicy"
+            - "DeleteBucketPolicy"
+            - "PutBucketAcl"
+            - "PutPublicAccessBlock"
+            - "DeletePublicAccessBlock"
+      State: ENABLED
+      Targets:
+        - Id: SecurityAutopilotControlPlaneApiDestinationTarget
+          Arn: !GetAtt ControlPlaneApiDestination.Arn
+          RoleArn: !GetAtt EventBridgeInvokeApiDestinationRole.Arn
+
+Outputs:
+  RuleArn:
+    Description: "ARN of the EventBridge rule."
+    Value: !GetAtt ControlPlaneApiCallsRule.Arn
+  ApiDestinationArn:
+    Description: "ARN of the API Destination."
+    Value: !GetAtt ControlPlaneApiDestination.Arn
+  ConnectionArn:
+    Description: "ARN of the EventBridge Connection."
+    Value: !GetAtt ControlPlaneConnection.Arn

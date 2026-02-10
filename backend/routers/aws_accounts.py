@@ -22,6 +22,7 @@ from backend.auth import get_optional_user
 from backend.config import settings
 from backend.database import get_db
 from backend.models.aws_account import AwsAccount
+from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
 from backend.models.enums import AwsAccountStatus
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
@@ -212,6 +213,26 @@ class AccountServiceReadinessResponse(BaseModel):
     missing_access_analyzer_regions: list[str] = Field(default_factory=list)
     missing_inspector_regions: list[str] = Field(default_factory=list)
     regions: list[RegionServiceReadiness] = Field(default_factory=list)
+
+
+class RegionControlPlaneReadiness(BaseModel):
+    """Per-region control-plane forwarding status (Phase 1 validation)."""
+
+    region: str = Field(..., description="AWS region")
+    last_event_time: datetime | None = Field(None, description="Event time (from CloudTrail) last seen for this region")
+    last_intake_time: datetime | None = Field(None, description="When the SaaS intake last received an event for this region")
+    is_recent: bool = Field(..., description="True if last_intake_time is within stale_after_minutes")
+    age_minutes: float | None = Field(None, description="Minutes since last_intake_time; null if never seen")
+
+
+class AccountControlPlaneReadinessResponse(BaseModel):
+    """Control-plane forwarding readiness across the account's configured regions."""
+
+    account_id: str = Field(..., description="AWS account ID (12 digits)")
+    stale_after_minutes: int = Field(..., description="Window used for is_recent checks")
+    overall_ready: bool = Field(..., description="True only when every configured region has recent events")
+    missing_regions: list[str] = Field(default_factory=list, description="Regions with no recent events (never seen or stale)")
+    regions: list[RegionControlPlaneReadiness] = Field(default_factory=list)
 
 
 class ReadRoleUpdateRequest(BaseModel):
@@ -1397,6 +1418,96 @@ async def check_account_service_readiness(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while checking Security Hub and AWS Config readiness",
         )
+
+
+@router.get(
+    "/{account_id}/control-plane-readiness",
+    response_model=AccountControlPlaneReadinessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check control-plane event forwarding readiness",
+    description=(
+        "Checks whether the SaaS has recently received allowlisted control-plane events for each "
+        "configured region of the account. Intended for Phase 1 validation."
+    ),
+)
+async def check_account_control_plane_readiness(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    stale_after_minutes: Annotated[
+        int,
+        Query(description="Region is considered ready if last_intake_time is within this many minutes.", ge=1, le=1440),
+    ] = 30,
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> AccountControlPlaneReadinessResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AWS account {account_id} not found for tenant",
+        )
+
+    expected_regions = acc.regions or [settings.AWS_REGION]
+    stmt = (
+        select(ControlPlaneEventIngestStatus)
+        .where(
+            ControlPlaneEventIngestStatus.tenant_id == tenant_uuid,
+            ControlPlaneEventIngestStatus.account_id == account_id,
+            ControlPlaneEventIngestStatus.region.in_(expected_regions),
+        )
+    )
+    result = await db.execute(stmt)
+    rows = {row.region: row for row in result.scalars().all()}
+
+    now = datetime.now(timezone.utc)
+    missing: list[str] = []
+    region_items: list[RegionControlPlaneReadiness] = []
+
+    for region in expected_regions:
+        row = rows.get(region)
+        last_event = getattr(row, "last_event_time", None) if row else None
+        last_intake = getattr(row, "last_intake_time", None) if row else None
+        if not last_intake:
+            missing.append(region)
+            region_items.append(
+                RegionControlPlaneReadiness(
+                    region=region,
+                    last_event_time=last_event,
+                    last_intake_time=last_intake,
+                    is_recent=False,
+                    age_minutes=None,
+                )
+            )
+            continue
+
+        age = (now - last_intake).total_seconds() / 60.0
+        is_recent = age <= float(stale_after_minutes)
+        if not is_recent:
+            missing.append(region)
+        region_items.append(
+            RegionControlPlaneReadiness(
+                region=region,
+                last_event_time=last_event,
+                last_intake_time=last_intake,
+                is_recent=is_recent,
+                age_minutes=round(age, 2),
+            )
+        )
+
+    return AccountControlPlaneReadinessResponse(
+        account_id=account_id,
+        stale_after_minutes=stale_after_minutes,
+        overall_ready=len(missing) == 0,
+        missing_regions=missing,
+        regions=region_items,
+    )
 
 
 @router.post(

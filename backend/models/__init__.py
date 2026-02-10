@@ -7,6 +7,9 @@ from backend.models.aws_account import AwsAccount
 from backend.models.base import Base
 from backend.models.control_mapping import ControlMapping
 from backend.models.control_plane_event import ControlPlaneEvent
+from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
+from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
+from backend.models.inventory_asset import InventoryAsset
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import (
     ActionStatus,
@@ -40,6 +43,9 @@ __all__ = [
     "BaselineReportStatus",
     "ControlMapping",
     "ControlPlaneEvent",
+    "ControlPlaneEventIngestStatus",
+    "ControlPlaneReconcileJob",
+    "InventoryAsset",
     "Base",
     "EntityType",
     "EvidenceExport",

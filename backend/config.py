@@ -95,6 +95,13 @@ class Settings(BaseSettings):
         default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.0.yaml",
         description="Full HTTPS URL to the Write Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
     )
+    CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: str = Field(
+        default="",
+        description=(
+            "Full HTTPS URL to the Control Plane Event Forwarder CloudFormation template. "
+            "When set, tenant admins can one-click deploy the EventBridge rule + API Destination."
+        ),
+    )
     CLOUDFORMATION_DEFAULT_REGION: str = Field(
         default="eu-north-1",
         description="Default region for Launch Stack console link (matches template bucket region).",
@@ -137,6 +144,13 @@ class Settings(BaseSettings):
         default="http://localhost:3000",
         description="Frontend URL for invite links and redirects",
     )
+    API_PUBLIC_URL: str = Field(
+        default="http://localhost:8000",
+        description=(
+            "Public base URL for the backend API (scheme + host + optional port). "
+            "Used to prefill CloudFormation EventBridge API Destination endpoints."
+        ),
+    )
     EMAIL_FROM: str = Field(
         default="noreply@example.com",
         description="From address for outgoing emails (invites, etc.)",
@@ -164,6 +178,14 @@ class Settings(BaseSettings):
     CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: int = Field(
         default=60,
         description="Default lookback window for reconcile_recently_touched_resources.",
+    )
+    CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD: int = Field(
+        default=500,
+        description="Default maximum resources collected per inventory reconciliation shard job.",
+    )
+    CONTROL_PLANE_INVENTORY_SERVICES: str = Field(
+        default="ec2,s3,cloudtrail,config,iam,ebs,rds,eks,ssm",
+        description="Comma-separated inventory services covered by reconciliation sweeps.",
     )
     DIGEST_ENABLED: bool = Field(
         default=True,
@@ -223,6 +245,23 @@ class Settings(BaseSettings):
             self.SQS_INVENTORY_RECONCILE_QUEUE_URL
             and self.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
         )
+
+    @property
+    def control_plane_inventory_services_list(self) -> list[str]:
+        """Normalized inventory service allowlist for reconciliation sweeps."""
+        default_services = ["ec2", "s3", "cloudtrail", "config", "iam", "ebs", "rds", "eks", "ssm"]
+        raw = (self.CONTROL_PLANE_INVENTORY_SERVICES or "").strip()
+        if not raw:
+            return default_services
+        services: list[str] = []
+        seen: set[str] = set()
+        for token in raw.split(","):
+            service = token.strip().lower()
+            if not service or service in seen:
+                continue
+            seen.add(service)
+            services.append(service)
+        return services or default_services
 
     @property
     def saas_admin_emails_list(self) -> set[str]:

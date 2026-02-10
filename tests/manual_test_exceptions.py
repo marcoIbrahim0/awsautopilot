@@ -22,7 +22,11 @@ async def test_exception_crud():
     """Test CRUD operations on exceptions directly via database."""
     async with AsyncSessionLocal() as session:
         # Find or create a test tenant
-        tenant = Tenant(name="Test Tenant for Exceptions")
+        tenant = Tenant(
+            name="Test Tenant for Exceptions",
+            external_id=f"ext-{uuid.uuid4().hex[:16]}",
+            control_plane_token=f"cptok-{uuid.uuid4().hex}",
+        )
         session.add(tenant)
         await session.commit()
         print(f"✓ Created test tenant: {tenant.id}")

@@ -20,7 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.database import get_db
+from backend.models import AwsAccount
 from backend.models.tenant import Tenant
+from backend.services.control_plane_intake import is_supported_control_plane_event
 from backend.utils.sqs import (
     build_ingest_control_plane_events_job_payload,
     build_reconcile_inventory_shard_job_payload,
@@ -32,19 +34,6 @@ from backend.utils.sqs import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/internal", tags=["internal"])
-
-SUPPORTED_CONTROL_PLANE_DETAIL_TYPE = "AWS API Call via CloudTrail"
-SUPPORTED_CONTROL_PLANE_EVENT_NAMES = {
-    "AuthorizeSecurityGroupIngress",
-    "RevokeSecurityGroupIngress",
-    "ModifySecurityGroupRules",
-    "UpdateSecurityGroupRuleDescriptionsIngress",
-    "PutBucketPolicy",
-    "DeleteBucketPolicy",
-    "PutBucketAcl",
-    "PutPublicAccessBlock",
-    "DeletePublicAccessBlock",
-}
 
 
 class ControlPlaneEventEnvelope(BaseModel):
@@ -66,6 +55,8 @@ class InventoryShardRequest(BaseModel):
     region: str = Field(..., min_length=1, max_length=32)
     service: str = Field(..., min_length=1, max_length=32)
     resource_ids: list[str] | None = None
+    sweep_mode: str | None = Field(default=None, pattern=r"^(targeted|global)$")
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
 
 
 class ReconcileInventoryRequest(BaseModel):
@@ -75,6 +66,16 @@ class ReconcileInventoryRequest(BaseModel):
 class ReconcileRecentRequest(BaseModel):
     tenant_id: uuid.UUID
     lookback_minutes: int | None = Field(default=None, ge=1, le=1440)
+    services: list[str] | None = None
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
+
+
+class ReconcileGlobalRequest(BaseModel):
+    tenant_id: uuid.UUID
+    account_ids: list[str] | None = None
+    regions: list[str] | None = None
+    services: list[str] | None = None
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
 
 
 def _verify_digest_cron_secret(x_digest_cron_secret: str | None) -> None:
@@ -107,17 +108,47 @@ def _verify_control_plane_secret(x_control_plane_secret: str | None) -> None:
 
 
 def _is_supported_control_plane_event(event: dict) -> tuple[bool, str | None]:
-    detail_type = str(event.get("detail-type") or "")
-    if detail_type != SUPPORTED_CONTROL_PLANE_DETAIL_TYPE:
-        return False, "unsupported_detail_type"
-    detail = event.get("detail") or {}
-    event_name = str(detail.get("eventName") or "")
-    if event_name not in SUPPORTED_CONTROL_PLANE_EVENT_NAMES:
-        return False, "unsupported_event_name"
-    event_category = str(detail.get("eventCategory") or "").upper()
-    if event_category and event_category != "MANAGEMENT":
-        return False, "unsupported_event_category"
-    return True, None
+    # Back-compat wrapper for older tests/imports.
+    return is_supported_control_plane_event(event)
+
+
+def _normalized_services(value: list[str] | None) -> list[str]:
+    allowed_services = settings.control_plane_inventory_services_list
+    allowed_set = set(allowed_services)
+    if not value:
+        return allowed_services
+    services: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        svc = str(item).strip().lower()
+        if not svc or svc in seen or svc not in allowed_set:
+            continue
+        seen.add(svc)
+        services.append(svc)
+    return services or allowed_services
+
+
+def _normalized_regions(value: list[str] | None, fallback_region: str) -> list[str]:
+    if not value or not isinstance(value, list):
+        return [fallback_region]
+    regions: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        region = str(item).strip()
+        if not region or region in seen:
+            continue
+        seen.add(region)
+        regions.append(region)
+    return regions or [fallback_region]
+
+
+def _status_value(raw: object) -> str:
+    if raw is None:
+        return ""
+    value = getattr(raw, "value", None)
+    if isinstance(value, str):
+        return value
+    return str(raw)
 
 
 @router.post(
@@ -268,6 +299,8 @@ async def enqueue_inventory_reconcile(
             region=shard.region,
             service=shard.service,
             resource_ids=shard.resource_ids,
+            sweep_mode=shard.sweep_mode,
+            max_resources=shard.max_resources,
             created_at=now_iso,
         )
         sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
@@ -298,6 +331,75 @@ async def enqueue_recent_reconcile(
         tenant_id=body.tenant_id,
         created_at=now_iso,
         lookback_minutes=body.lookback_minutes,
+        services=body.services,
+        max_resources=body.max_resources,
     )
     sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
     return {"enqueued": 1}
+
+
+@router.post(
+    "/reconcile-inventory-global",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue global inventory reconciliation sweeps",
+    description="Builds and enqueues (account, region, service) global reconciliation shards for a tenant.",
+)
+async def enqueue_global_inventory_reconcile(
+    body: ReconcileGlobalRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_control_plane_secret: Annotated[str | None, Header(alias="X-Control-Plane-Secret")] = None,
+) -> dict:
+    _verify_control_plane_secret(x_control_plane_secret)
+    queue_url = (settings.SQS_INVENTORY_RECONCILE_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inventory reconcile queue URL not configured. Set SQS_INVENTORY_RECONCILE_QUEUE_URL.",
+        )
+
+    services = _normalized_services(body.services)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+
+    account_ids_filter = {aid.strip() for aid in (body.account_ids or []) if aid and aid.strip()}
+    stmt = select(AwsAccount).where(AwsAccount.tenant_id == body.tenant_id)
+    if account_ids_filter:
+        stmt = stmt.where(AwsAccount.account_id.in_(sorted(account_ids_filter)))
+    result = await db.execute(stmt)
+    accounts = list(result.scalars().all())
+
+    enqueued = 0
+    accounts_considered = 0
+    accounts_skipped_disabled = 0
+    for account in accounts:
+        status_value = _status_value(account.status).lower()
+        if status_value == "disabled":
+            accounts_skipped_disabled += 1
+            continue
+        accounts_considered += 1
+
+        account_regions = _normalized_regions(
+            body.regions if body.regions is not None else account.regions,
+            settings.AWS_REGION,
+        )
+        for region in account_regions:
+            for service in services:
+                payload = build_reconcile_inventory_shard_job_payload(
+                    tenant_id=body.tenant_id,
+                    account_id=account.account_id,
+                    region=region,
+                    service=service,
+                    created_at=now_iso,
+                    sweep_mode="global",
+                    max_resources=body.max_resources,
+                )
+                sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+                enqueued += 1
+
+    return {
+        "enqueued": enqueued,
+        "accounts_considered": accounts_considered,
+        "accounts_skipped_disabled": accounts_skipped_disabled,
+        "services": services,
+    }

@@ -10,6 +10,7 @@ import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import and_
 
@@ -34,9 +35,31 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _normalize_services(value: Any) -> set[str]:
+    if isinstance(value, list):
+        services = {str(item).strip().lower() for item in value if str(item).strip()}
+        if services:
+            return services
+    if isinstance(value, str) and value.strip():
+        services = {item.strip().lower() for item in value.split(",") if item.strip()}
+        if services:
+            return services
+    return set(settings.control_plane_inventory_services_list)
+
+
+def _normalize_max_resources(value: Any) -> int:
+    try:
+        parsed = int(value)
+    except Exception:
+        parsed = int(settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD or MAX_RESOURCES_PER_KEY)
+    return parsed if parsed > 0 else int(settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD or MAX_RESOURCES_PER_KEY)
+
+
 def execute_reconcile_recently_touched_resources_job(job: dict) -> None:
     tenant_id_raw = job.get("tenant_id")
     lookback_raw = job.get("lookback_minutes")
+    services = _normalize_services(job.get("services"))
+    max_resources = _normalize_max_resources(job.get("max_resources"))
     if not tenant_id_raw:
         raise ValueError("job missing tenant_id")
 
@@ -82,10 +105,14 @@ def execute_reconcile_recently_touched_resources_job(job: dict) -> None:
                     targets[key].add(bucket)
 
     jobs_dispatched = 0
+    total_resources = 0
     for (account_id, region, service), resource_set in targets.items():
+        if service not in services:
+            continue
         if not resource_set:
             continue
-        resource_ids = sorted(resource_set)[:MAX_RESOURCES_PER_KEY]
+        resource_ids = sorted(resource_set)[:max_resources]
+        total_resources += len(resource_ids)
         execute_reconcile_inventory_shard_job(
             {
                 "tenant_id": str(tenant_id),
@@ -93,6 +120,8 @@ def execute_reconcile_recently_touched_resources_job(job: dict) -> None:
                 "region": region,
                 "service": service,
                 "resource_ids": resource_ids,
+                "sweep_mode": "targeted",
+                "max_resources": max_resources,
                 "job_type": RECONCILE_INVENTORY_SHARD_JOB_TYPE,
                 "created_at": _utcnow().isoformat(),
             }
@@ -100,8 +129,9 @@ def execute_reconcile_recently_touched_resources_job(job: dict) -> None:
         jobs_dispatched += 1
 
     logger.info(
-        "reconcile_recently_touched_resources complete tenant_id=%s lookback_minutes=%s target_groups=%d",
+        "reconcile_recently_touched_resources complete tenant_id=%s lookback_minutes=%s target_groups=%d resources=%d",
         tenant_id,
         lookback_minutes,
         jobs_dispatched,
+        total_resources,
     )

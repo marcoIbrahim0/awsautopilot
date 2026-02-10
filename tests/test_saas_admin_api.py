@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import patch
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -212,3 +213,143 @@ def test_support_file_download_is_tenant_scoped(client: TestClient) -> None:
         app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 404
+
+
+def test_control_plane_reconcile_recently_touched_enqueues_and_logs(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=_result(scalar_one_or_none=SimpleNamespace(id=tenant_id)))
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    admin_user = SimpleNamespace(id=uuid.uuid4(), email="admin@example.com")
+
+    async def mock_require_saas_admin():
+        return admin_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[require_saas_admin] = mock_require_saas_admin
+    with patch("backend.routers.saas_admin.settings") as mock_settings:
+        mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.eu-north-1.amazonaws.com/123/inventory"
+        mock_settings.CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES = 60
+        mock_settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD = 500
+        mock_settings.control_plane_inventory_services_list = ["ec2", "s3"]
+        with patch("backend.routers.saas_admin.boto3") as mock_boto3:
+            mock_sqs = MagicMock()
+            mock_sqs.send_message.return_value = {"MessageId": "msg-1"}
+            mock_boto3.client.return_value = mock_sqs
+            try:
+                response = client.post(
+                    "/api/saas/control-plane/reconcile/recently-touched",
+                    json={
+                        "tenant_id": str(tenant_id),
+                        "lookback_minutes": 30,
+                        "services": ["ec2"],
+                        "max_resources": 200,
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(require_saas_admin, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["enqueued"] == 1
+    assert body["status"] == "ok"
+    assert len(body["job_ids"]) == 1
+
+
+def test_control_plane_reconcile_jobs_lists_recent_entries(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    row = SimpleNamespace(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        job_type="reconcile_inventory_global",
+        status="enqueued",
+        payload_summary={"enqueued": 4},
+        submitted_at=datetime.now(timezone.utc),
+        submitted_by_email="admin@example.com",
+        error_message=None,
+    )
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _result(scalar_one_or_none=SimpleNamespace(id=tenant_id)),
+            _result(scalar=1),
+            _result(scalars_all=[row]),
+        ]
+    )
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_require_saas_admin():
+        return SimpleNamespace(id=uuid.uuid4(), email="admin@example.com")
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[require_saas_admin] = mock_require_saas_admin
+    try:
+        response = client.get(f"/api/saas/control-plane/reconcile-jobs?tenant_id={tenant_id}&limit=10")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(require_saas_admin, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert len(body["items"]) == 1
+    assert body["items"][0]["job_type"] == "reconcile_inventory_global"
+    assert body["items"][0]["status"] == "enqueued"
+
+
+def test_control_plane_reconcile_global_enqueues_shards(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    account = SimpleNamespace(
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        regions=["eu-north-1", "us-east-1"],
+        status="validated",
+    )
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _result(scalar_one_or_none=SimpleNamespace(id=tenant_id)),
+            _result(scalars_all=[account]),
+        ]
+    )
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_require_saas_admin():
+        return SimpleNamespace(id=uuid.uuid4(), email="admin@example.com")
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[require_saas_admin] = mock_require_saas_admin
+    with patch("backend.routers.saas_admin.settings") as mock_settings:
+        mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.eu-north-1.amazonaws.com/123/inventory"
+        mock_settings.AWS_REGION = "eu-north-1"
+        mock_settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD = 500
+        mock_settings.control_plane_inventory_services_list = ["ec2", "s3"]
+        with patch("backend.routers.saas_admin.boto3") as mock_boto3:
+            mock_sqs = MagicMock()
+            mock_boto3.client.return_value = mock_sqs
+            try:
+                response = client.post(
+                    "/api/saas/control-plane/reconcile/global",
+                    json={"tenant_id": str(tenant_id), "services": ["ec2", "s3"]},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(require_saas_admin, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["enqueued"] == 4
+    assert mock_sqs.send_message.call_count == 4

@@ -17,6 +17,10 @@ class Tenant(Base):
     # Used as sts:ExternalId in AssumeRole. Must be unique per tenant.
     external_id: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
 
+    # Per-tenant secret for control-plane event intake (EventBridge API Destination).
+    # Treat as sensitive; rotate if leaked.
+    control_plane_token: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+
     created_at: Mapped[object] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[object] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

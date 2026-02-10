@@ -72,6 +72,7 @@ class TenantResponse(BaseModel):
 # Default CloudFormation stack name for Read Role; user can override if name is taken
 DEFAULT_READ_ROLE_STACK_NAME = "SecurityAutopilotReadRole"
 DEFAULT_WRITE_ROLE_STACK_NAME = "SecurityAutopilotWriteRole"
+DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME = "SecurityAutopilotControlPlaneForwarder"
 
 
 class AuthResponse(BaseModel):
@@ -89,6 +90,11 @@ class AuthResponse(BaseModel):
     write_role_launch_stack_url: str | None = None
     write_role_template_url: str | None = None
     write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
+    # Control-plane event forwarder (Phase 1)
+    control_plane_token: str | None = None
+    control_plane_forwarder_template_url: str | None = None
+    control_plane_ingest_url: str | None = None
+    control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
 
 
 class MeResponse(BaseModel):
@@ -104,6 +110,11 @@ class MeResponse(BaseModel):
     write_role_launch_stack_url: str | None = None
     write_role_template_url: str | None = None
     write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
+    # Control-plane event forwarder (Phase 1)
+    control_plane_token: str | None = None
+    control_plane_forwarder_template_url: str | None = None
+    control_plane_ingest_url: str | None = None
+    control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
 
 
 # ============================================
@@ -361,7 +372,19 @@ def build_write_role_launch_stack_url(
 
 def get_saas_and_launch_url(
     external_id: str,
-) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None, str, str]:
+) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str,
+    str,
+    str | None,
+    str | None,
+    str,
+]:
     """
     Return:
     (
@@ -373,6 +396,9 @@ def get_saas_and_launch_url(
       region,
       read_role_default_stack_name,
       write_role_default_stack_name,
+      control_plane_forwarder_template_url,
+      control_plane_ingest_url,
+      control_plane_forwarder_default_stack_name,
     )
 
     Launch URLs and template URLs are None when corresponding template URL is not configured.
@@ -381,23 +407,34 @@ def get_saas_and_launch_url(
     saas_account_id = (settings.SAAS_AWS_ACCOUNT_ID or "").strip() or None
     read_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
     write_template_url = (settings.CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL or "").strip()
+    control_plane_template_url = (settings.CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL or "").strip()
     region = (settings.CLOUDFORMATION_DEFAULT_REGION or "").strip() or "eu-north-1"
-    if not saas_account_id or not external_id:
-        return (
-            saas_account_id,
-            None,
-            None,
-            None,
-            None,
-            None,
-            DEFAULT_READ_ROLE_STACK_NAME,
-            DEFAULT_WRITE_ROLE_STACK_NAME,
-        )
+
+    control_plane_ingest_url: str | None = None
+    api_public_url = (settings.API_PUBLIC_URL or "").strip()
+    if api_public_url:
+        control_plane_ingest_url = api_public_url.rstrip("/") + "/api/control-plane/events"
+
+    if control_plane_template_url:
+        latest_template_url = get_latest_template_version(control_plane_template_url)
+        if latest_template_url:
+            control_plane_template_url = latest_template_url
+            logger.debug(
+                "Using latest control-plane forwarder template version: %s",
+                control_plane_template_url,
+            )
+        else:
+            logger.warning(
+                "Failed to detect latest control-plane forwarder template version, using configured URL: %s",
+                control_plane_template_url,
+            )
+    if not control_plane_template_url:
+        control_plane_template_url = None
 
     read_launch_url: str | None = None
     write_launch_url: str | None = None
 
-    if read_template_url:
+    if saas_account_id and external_id and read_template_url:
         latest_template_url = get_latest_template_version(read_template_url)
         if latest_template_url:
             read_template_url = latest_template_url
@@ -415,7 +452,7 @@ def get_saas_and_launch_url(
             stack_name=DEFAULT_READ_ROLE_STACK_NAME,
         )
 
-    if write_template_url:
+    if saas_account_id and external_id and write_template_url:
         latest_template_url = get_latest_template_version(write_template_url)
         if latest_template_url:
             write_template_url = latest_template_url
@@ -447,6 +484,9 @@ def get_saas_and_launch_url(
         region if (read_launch_url or write_launch_url) else None,
         DEFAULT_READ_ROLE_STACK_NAME,
         DEFAULT_WRITE_ROLE_STACK_NAME,
+        control_plane_template_url,
+        control_plane_ingest_url,
+        DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME,
     )
 
 

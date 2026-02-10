@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
@@ -21,6 +22,7 @@ from backend.models.audit_log import AuditLog
 from backend.models.aws_account import AwsAccount
 from backend.models.baseline_report import BaselineReport
 from backend.models.control_plane_event import ControlPlaneEvent
+from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
 from backend.models.enums import BaselineReportStatus, EvidenceExportStatus, RemediationRunStatus
 from backend.models.evidence_export import EvidenceExport
 from backend.models.finding import Finding
@@ -30,6 +32,11 @@ from backend.models.support_file import SupportFile
 from backend.models.support_note import SupportNote
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.utils.sqs import (
+    build_reconcile_inventory_shard_job_payload,
+    build_reconcile_recently_touched_resources_job_payload,
+    parse_queue_region,
+)
 
 router = APIRouter(prefix="/saas", tags=["saas-admin"])
 
@@ -251,11 +258,94 @@ class ControlPlaneShadowSummaryResponse(BaseModel):
     controls: dict[str, int]
 
 
+class ReconcileJobsListItemResponse(BaseModel):
+    id: str
+    tenant_id: str
+    job_type: str
+    status: str
+    payload_summary: dict[str, Any] | None
+    submitted_at: str
+    submitted_by: str | None
+    error_message: str | None
+
+
+class ReconcileJobsListResponse(BaseModel):
+    items: list[ReconcileJobsListItemResponse]
+    total: int
+
+
+class ReconcileRecentlyTouchedRequest(BaseModel):
+    tenant_id: str
+    lookback_minutes: int | None = Field(default=None, ge=1, le=1440)
+    services: list[str] | None = None
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
+
+
+class ReconcileGlobalRequest(BaseModel):
+    tenant_id: str
+    account_ids: list[str] | None = None
+    regions: list[str] | None = None
+    services: list[str] | None = None
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
+
+
+class ReconcileShardItem(BaseModel):
+    tenant_id: str
+    account_id: str = Field(..., pattern=r"^\d{12}$")
+    region: str = Field(..., min_length=1, max_length=32)
+    service: str = Field(..., min_length=1, max_length=32)
+    resource_ids: list[str] | None = None
+    sweep_mode: str | None = Field(default=None, pattern=r"^(targeted|global)$")
+    max_resources: int | None = Field(default=None, ge=1, le=5000)
+
+
+class ReconcileShardRequest(BaseModel):
+    shards: list[ReconcileShardItem] = Field(default_factory=list, min_length=1)
+
+
+class ReconcileEnqueueResponse(BaseModel):
+    enqueued: int
+    job_ids: list[str]
+    status: str
+
+
 def _parse_tenant_id(tenant_id: str) -> uuid.UUID:
     try:
         return uuid.UUID(tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="tenant_id must be a valid UUID") from exc
+
+
+def _inventory_queue_or_503() -> str:
+    queue_url = (settings.SQS_INVENTORY_RECONCILE_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inventory reconcile queue URL not configured. Set SQS_INVENTORY_RECONCILE_QUEUE_URL.",
+        )
+    return queue_url
+
+
+def _inventory_queue_client() -> tuple[Any, str]:
+    queue_url = _inventory_queue_or_503()
+    queue_region = parse_queue_region(queue_url)
+    return boto3.client("sqs", region_name=queue_region), queue_url
+
+
+def _normalize_services(services: list[str] | None) -> list[str]:
+    allowed = settings.control_plane_inventory_services_list
+    allowed_set = set(allowed)
+    if not services:
+        return allowed
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in services:
+        token = str(item).strip().lower()
+        if not token or token in seen or token not in allowed_set:
+            continue
+        seen.add(token)
+        out.append(token)
+    return out or allowed
 
 
 async def _get_tenant_or_404(db: AsyncSession, tenant_uuid: uuid.UUID) -> Tenant:
@@ -470,6 +560,241 @@ async def get_control_plane_shadow_summary(
         soft_resolved_count=soft_resolved_count,
         controls=controls,
     )
+
+
+@router.get("/control-plane/reconcile-jobs", response_model=ReconcileJobsListResponse)
+async def list_control_plane_reconcile_jobs(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str, Query()],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> ReconcileJobsListResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+
+    total = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(ControlPlaneReconcileJob)
+                .where(ControlPlaneReconcileJob.tenant_id == tenant_uuid)
+            )
+        ).scalar()
+        or 0
+    )
+    rows = (
+        await db.execute(
+            select(ControlPlaneReconcileJob)
+            .where(ControlPlaneReconcileJob.tenant_id == tenant_uuid)
+            .order_by(ControlPlaneReconcileJob.submitted_at.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+    items = [
+        ReconcileJobsListItemResponse(
+            id=str(row.id),
+            tenant_id=str(row.tenant_id),
+            job_type=row.job_type,
+            status=row.status,
+            payload_summary=row.payload_summary if isinstance(row.payload_summary, dict) else None,
+            submitted_at=row.submitted_at.isoformat() if row.submitted_at else "",
+            submitted_by=row.submitted_by_email,
+            error_message=row.error_message,
+        )
+        for row in rows
+    ]
+    return ReconcileJobsListResponse(items=items, total=total)
+
+
+@router.post("/control-plane/reconcile/recently-touched", response_model=ReconcileEnqueueResponse)
+async def enqueue_control_plane_reconcile_recently_touched(
+    body: ReconcileRecentlyTouchedRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ReconcileEnqueueResponse:
+    tenant_uuid = _parse_tenant_id(body.tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    sqs, queue_url = _inventory_queue_client()
+    now = datetime.now(timezone.utc)
+    services = _normalize_services(body.services)
+    payload = build_reconcile_recently_touched_resources_job_payload(
+        tenant_id=tenant_uuid,
+        created_at=now.isoformat(),
+        lookback_minutes=body.lookback_minutes,
+        services=services,
+        max_resources=body.max_resources,
+    )
+
+    record = ControlPlaneReconcileJob(
+        tenant_id=tenant_uuid,
+        submitted_by_user_id=admin.id,
+        submitted_by_email=admin.email,
+        job_type="reconcile_recently_touched_resources",
+        status="queued",
+        payload_summary={
+            "lookback_minutes": body.lookback_minutes or settings.CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES,
+            "services": services,
+            "max_resources": body.max_resources or settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD,
+        },
+        submitted_at=now,
+    )
+    db.add(record)
+    try:
+        response = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+        record.queue_message_id = str(response.get("MessageId") or "")
+        record.status = "enqueued"
+        await db.commit()
+        await db.refresh(record)
+    except Exception as exc:
+        record.status = "error"
+        record.error_message = str(exc)[:4000]
+        await db.commit()
+        raise HTTPException(status_code=502, detail=f"Failed to enqueue reconcile job: {exc}") from exc
+
+    return ReconcileEnqueueResponse(enqueued=1, job_ids=[str(record.id)], status="ok")
+
+
+@router.post("/control-plane/reconcile/global", response_model=ReconcileEnqueueResponse)
+async def enqueue_control_plane_reconcile_global(
+    body: ReconcileGlobalRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ReconcileEnqueueResponse:
+    tenant_uuid = _parse_tenant_id(body.tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    sqs, queue_url = _inventory_queue_client()
+    now = datetime.now(timezone.utc)
+    services = _normalize_services(body.services)
+
+    account_ids_filter = {str(v).strip() for v in (body.account_ids or []) if str(v).strip()}
+    stmt = select(AwsAccount).where(AwsAccount.tenant_id == tenant_uuid)
+    if account_ids_filter:
+        stmt = stmt.where(AwsAccount.account_id.in_(sorted(account_ids_filter)))
+    accounts = list((await db.execute(stmt)).scalars().all())
+
+    record = ControlPlaneReconcileJob(
+        tenant_id=tenant_uuid,
+        submitted_by_user_id=admin.id,
+        submitted_by_email=admin.email,
+        job_type="reconcile_inventory_global",
+        status="queued",
+        payload_summary={
+            "account_ids": sorted(account_ids_filter) if account_ids_filter else None,
+            "regions": body.regions,
+            "services": services,
+            "max_resources": body.max_resources or settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD,
+        },
+        submitted_at=now,
+    )
+    db.add(record)
+    enqueued = 0
+    try:
+        for account in accounts:
+            status_value = getattr(account.status, "value", str(account.status)).lower()
+            if status_value == "disabled":
+                continue
+            account_regions = body.regions if body.regions else (account.regions or [settings.AWS_REGION])
+            regions: list[str] = []
+            seen_regions: set[str] = set()
+            for raw_region in account_regions:
+                region = str(raw_region).strip()
+                if not region or region in seen_regions:
+                    continue
+                seen_regions.add(region)
+                regions.append(region)
+            for region in regions:
+                for service in services:
+                    payload = build_reconcile_inventory_shard_job_payload(
+                        tenant_id=tenant_uuid,
+                        account_id=account.account_id,
+                        region=region,
+                        service=service,
+                        resource_ids=None,
+                        created_at=now.isoformat(),
+                        sweep_mode="global",
+                        max_resources=body.max_resources,
+                    )
+                    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+                    enqueued += 1
+        record.status = "enqueued"
+        record.payload_summary = {
+            **(record.payload_summary if isinstance(record.payload_summary, dict) else {}),
+            "enqueued": enqueued,
+        }
+        await db.commit()
+        await db.refresh(record)
+    except Exception as exc:
+        record.status = "error"
+        record.error_message = str(exc)[:4000]
+        await db.commit()
+        raise HTTPException(status_code=502, detail=f"Failed to enqueue global reconcile jobs: {exc}") from exc
+    return ReconcileEnqueueResponse(enqueued=enqueued, job_ids=[str(record.id)], status="ok")
+
+
+@router.post("/control-plane/reconcile/shard", response_model=ReconcileEnqueueResponse)
+async def enqueue_control_plane_reconcile_shard(
+    body: ReconcileShardRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ReconcileEnqueueResponse:
+    sqs, queue_url = _inventory_queue_client()
+    now = datetime.now(timezone.utc)
+    enqueued = 0
+    tenant_uuid_for_record: uuid.UUID | None = None
+    services_used: set[str] = set()
+    for shard in body.shards:
+        tenant_uuid = _parse_tenant_id(shard.tenant_id)
+        await _get_tenant_or_404(db, tenant_uuid)
+        if tenant_uuid_for_record is None:
+            tenant_uuid_for_record = tenant_uuid
+        elif tenant_uuid_for_record != tenant_uuid:
+            raise HTTPException(status_code=400, detail="All shards must belong to the same tenant_id")
+
+    if tenant_uuid_for_record is None:
+        raise HTTPException(status_code=400, detail="At least one shard is required")
+
+    record = ControlPlaneReconcileJob(
+        tenant_id=tenant_uuid_for_record,
+        submitted_by_user_id=admin.id,
+        submitted_by_email=admin.email,
+        job_type="reconcile_inventory_shard",
+        status="queued",
+        payload_summary={
+            "shards": len(body.shards),
+            "services": sorted(services_used),
+        },
+        submitted_at=now,
+    )
+    db.add(record)
+    try:
+        for shard in body.shards:
+            payload = build_reconcile_inventory_shard_job_payload(
+                tenant_id=_parse_tenant_id(shard.tenant_id),
+                account_id=shard.account_id,
+                region=shard.region,
+                service=shard.service,
+                resource_ids=shard.resource_ids,
+                created_at=now.isoformat(),
+                sweep_mode=shard.sweep_mode,
+                max_resources=shard.max_resources,
+            )
+            sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+            services_used.add(str(shard.service).strip().lower())
+            enqueued += 1
+        record.status = "enqueued"
+        record.payload_summary = {
+            **(record.payload_summary if isinstance(record.payload_summary, dict) else {}),
+            "services": sorted(services_used),
+            "enqueued": enqueued,
+        }
+        await db.commit()
+        await db.refresh(record)
+    except Exception as exc:
+        record.status = "error"
+        record.error_message = str(exc)[:4000]
+        await db.commit()
+        raise HTTPException(status_code=502, detail=f"Failed to enqueue shard reconcile jobs: {exc}") from exc
+    return ReconcileEnqueueResponse(enqueued=enqueued, job_ids=[str(record.id)], status="ok")
 
 
 @router.get("/tenants", response_model=TenantListResponse)

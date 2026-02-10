@@ -10,6 +10,7 @@ from backend.routers.auth import router as auth_router
 from backend.routers.aws_accounts import router as aws_accounts_router
 from backend.routers.baseline_report import router as baseline_report_router
 from backend.routers.control_mappings import router as control_mappings_router
+from backend.routers.control_plane import router as control_plane_router
 from backend.routers.exceptions import router as exceptions_router
 from backend.routers.exports import router as exports_router
 from backend.routers.findings import router as findings_router
@@ -51,6 +52,7 @@ app.include_router(control_mappings_router, prefix="/api")
 app.include_router(exceptions_router, prefix="/api")
 app.include_router(exports_router, prefix="/api")
 app.include_router(findings_router, prefix="/api")
+app.include_router(control_plane_router, prefix="/api")
 app.include_router(internal_router, prefix="/api")
 app.include_router(remediation_runs_router, prefix="/api")
 app.include_router(saas_admin_router, prefix="/api")

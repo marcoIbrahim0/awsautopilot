@@ -112,6 +112,8 @@ def build_reconcile_inventory_shard_job_payload(
     service: str,
     created_at: str,
     resource_ids: list[str] | None = None,
+    sweep_mode: str | None = None,
+    max_resources: int | None = None,
 ) -> dict:
     """Build reconcile_inventory_shard payload."""
     payload: dict = {
@@ -124,6 +126,10 @@ def build_reconcile_inventory_shard_job_payload(
     }
     if resource_ids is not None:
         payload["resource_ids"] = resource_ids
+    if sweep_mode is not None:
+        payload["sweep_mode"] = (sweep_mode or "").strip().lower() or "targeted"
+    if max_resources is not None:
+        payload["max_resources"] = int(max_resources)
     return payload
 
 
@@ -131,6 +137,8 @@ def build_reconcile_recently_touched_resources_job_payload(
     tenant_id: uuid.UUID,
     created_at: str,
     lookback_minutes: int | None = None,
+    services: list[str] | None = None,
+    max_resources: int | None = None,
 ) -> dict:
     """Build reconcile_recently_touched_resources payload."""
     payload: dict = {
@@ -140,6 +148,10 @@ def build_reconcile_recently_touched_resources_job_payload(
     }
     if lookback_minutes is not None:
         payload["lookback_minutes"] = int(lookback_minutes)
+    if services is not None:
+        payload["services"] = [str(service).strip().lower() for service in services if str(service).strip()]
+    if max_resources is not None:
+        payload["max_resources"] = int(max_resources)
     return payload
 
 

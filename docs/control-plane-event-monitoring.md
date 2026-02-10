@@ -5,6 +5,18 @@
 - Event class: management events only (no S3 data events in phase 1).
 - Mode: shadow by default (`event_monitor_shadow`) so customer-visible findings are unchanged during comparison.
 
+## Tenant Setup (Recommended Wiring)
+Phase 1 is designed to be enabled per tenant via a customer-deployed EventBridge forwarder:
+
+- CloudFormation template: `infrastructure/cloudformation/control-plane-forwarder-template.yaml`
+- Delivery mechanism: **EventBridge API Destination** -> SaaS HTTPS endpoint
+- Auth: per-tenant header `X-Control-Plane-Token` (stored on the tenant; rotate if leaked)
+- SaaS intake endpoint: `POST /api/control-plane/events`
+
+Validation endpoint (tenant-facing):
+- `GET /api/aws/accounts/{account_id}/control-plane-readiness`
+  - Returns last seen event time / intake time per configured region.
+
 ## Event + Targeted Enrichment
 Phase 1 is intentionally not event-only:
 1. Event arrives (for example `AuthorizeSecurityGroupIngress`).
@@ -46,6 +58,23 @@ Per-event telemetry is persisted in `control_plane_events`:
 Admin endpoint:
 - `GET /api/saas/control-plane/slo`
 - `GET /api/saas/control-plane/shadow-summary` (shadow-state comparison helper)
+
+## Phase 2 Reconciliation Orchestration
+Inventory reconciliation is split into shard jobs plus orchestration endpoints:
+
+- `POST /api/internal/reconcile-inventory-shard`
+  - Enqueue one or more explicit `(tenant, account, region, service)` shard jobs.
+  - Supports `sweep_mode` (`targeted` or `global`) and `max_resources`.
+- `POST /api/internal/reconcile-recently-touched`
+  - Enqueue targeted reconciliation based on recent control-plane events.
+  - Supports `lookback_minutes`, service filter, and per-shard resource cap.
+- `POST /api/internal/reconcile-inventory-global`
+  - Enqueue global reconciliation across all active accounts/regions for a tenant.
+  - Builds `(account, region, service)` shards and marks each as `sweep_mode=global`.
+
+Phase-2 defaults are configurable via:
+- `CONTROL_PLANE_INVENTORY_SERVICES`
+- `CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD`
 
 ## Rollout
 1. Keep `CONTROL_PLANE_SHADOW_MODE=true` and ingest to shadow tables only.

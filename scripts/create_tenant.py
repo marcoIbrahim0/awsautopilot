@@ -52,6 +52,7 @@ async def create_tenant(name: str, external_id: str | None = None):
         # Generate external_id if not provided
         if not external_id:
             external_id = f"tenant-{uuid.uuid4().hex[:16]}"
+        control_plane_token = f"cptok-{uuid.uuid4().hex}"
 
         # Check if external_id already exists
         from sqlalchemy import select
@@ -69,6 +70,7 @@ async def create_tenant(name: str, external_id: str | None = None):
             id=uuid.uuid4(),
             name=name,
             external_id=external_id,
+            control_plane_token=control_plane_token,
         )
         db.add(tenant)
         await db.commit()
@@ -78,6 +80,7 @@ async def create_tenant(name: str, external_id: str | None = None):
         print(f"   Tenant ID: {tenant.id}")
         print(f"   Tenant Name: {tenant.name}")
         print(f"   External ID: {tenant.external_id}")
+        print(f"   Control Plane Token: {tenant.control_plane_token}")
         print(f"\n💡 Use this External ID in your CloudFormation stack's ExternalId parameter")
 
 

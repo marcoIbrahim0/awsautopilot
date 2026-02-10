@@ -1,0 +1,872 @@
+"""
+Inventory collectors and control evaluators for reconciliation sweeps.
+
+Phase-2 goals:
+- coverage for non-eventable controls
+- reconciliation for missed/late/noisy event streams
+"""
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from botocore.exceptions import ClientError
+
+from worker.services.control_plane_events import (
+    SHADOW_STATUS_OPEN,
+    SHADOW_STATUS_RESOLVED,
+    SHADOW_STATUS_SOFT_RESOLVED,
+    WORLD_IPV4,
+    ControlEvaluation,
+    evaluate_s3_bucket_public_posture,
+    evaluate_security_group_public_admin_ports,
+)
+from worker.services.inventory_assets import InventorySnapshot
+
+INVENTORY_SERVICES_DEFAULT: tuple[str, ...] = (
+    "ec2",
+    "s3",
+    "cloudtrail",
+    "config",
+    "iam",
+    "ebs",
+    "rds",
+    "eks",
+    "ssm",
+)
+
+
+def _extract_error_code(exc: Exception) -> str:
+    if isinstance(exc, ClientError):
+        return str(exc.response.get("Error", {}).get("Code") or "ClientError")
+    return type(exc).__name__
+
+
+def _bucket_name_from_any(value: str) -> str:
+    v = (value or "").strip()
+    if v.startswith("arn:aws:s3:::"):
+        return v.replace("arn:aws:s3:::", "", 1)
+    return v
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _control_eval(
+    control_id: str,
+    resource_id: str,
+    resource_type: str,
+    status: str,
+    title: str,
+    description: str,
+    status_reason: str,
+    evidence_ref: dict[str, Any],
+    severity_label: str = "HIGH",
+    state_confidence: int = 95,
+) -> ControlEvaluation:
+    return ControlEvaluation(
+        control_id=control_id,
+        resource_id=resource_id,
+        resource_type=resource_type,
+        severity_label=severity_label,
+        title=title,
+        description=description,
+        status=status,
+        status_reason=status_reason,
+        state_confidence=state_confidence,
+        evidence_ref=evidence_ref,
+    )
+
+
+def _s3_bucket_region(s3_client: Any, bucket: str) -> str | None:
+    try:
+        resp = s3_client.get_bucket_location(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) == "NoSuchBucket":
+            return None
+        raise
+    loc = resp.get("LocationConstraint")
+    # AWS returns None for us-east-1.
+    if not loc:
+        return "us-east-1"
+    return str(loc)
+
+
+def _s3_bucket_public_access_block(s3_client: Any, bucket: str) -> dict[str, Any]:
+    try:
+        resp = s3_client.get_public_access_block(Bucket=bucket)
+        return resp.get("PublicAccessBlockConfiguration") or {}
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"}:
+            return {}
+        raise
+
+
+def _s3_bucket_policy_is_public(s3_client: Any, bucket: str) -> bool:
+    try:
+        resp = s3_client.get_bucket_policy_status(Bucket=bucket)
+        return bool((resp.get("PolicyStatus") or {}).get("IsPublic"))
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"NoSuchBucketPolicy", "NoSuchBucket"}:
+            return False
+        raise
+
+
+def _s3_bucket_default_encryption_algorithm(s3_client: Any, bucket: str) -> str | None:
+    try:
+        resp = s3_client.get_bucket_encryption(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"ServerSideEncryptionConfigurationNotFoundError", "NoSuchBucket"}:
+            return None
+        raise
+    rules = _as_list((resp.get("ServerSideEncryptionConfiguration") or {}).get("Rules"))
+    if not rules:
+        return None
+    first = rules[0] if isinstance(rules[0], dict) else {}
+    by_default = first.get("ApplyServerSideEncryptionByDefault") if isinstance(first, dict) else {}
+    if not isinstance(by_default, dict):
+        return None
+    algo = by_default.get("SSEAlgorithm")
+    return str(algo).lower() if algo else None
+
+
+def _s3_bucket_logging_enabled(s3_client: Any, bucket: str) -> bool:
+    try:
+        resp = s3_client.get_bucket_logging(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) == "NoSuchBucket":
+            return False
+        raise
+    return bool(resp.get("LoggingEnabled"))
+
+
+def _s3_bucket_lifecycle_rule_count(s3_client: Any, bucket: str) -> int:
+    try:
+        resp = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"NoSuchLifecycleConfiguration", "NoSuchBucket"}:
+            return 0
+        raise
+    return len(_as_list(resp.get("Rules")))
+
+
+def _s3_bucket_policy_json(s3_client: Any, bucket: str) -> dict[str, Any] | None:
+    try:
+        resp = s3_client.get_bucket_policy(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"NoSuchBucketPolicy", "NoSuchBucket"}:
+            return None
+        raise
+    policy_str = resp.get("Policy")
+    if not isinstance(policy_str, str) or not policy_str.strip():
+        return None
+    try:
+        parsed = json.loads(policy_str)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+def _policy_has_ssl_deny(policy: dict[str, Any] | None) -> bool:
+    if not isinstance(policy, dict):
+        return False
+    statements = policy.get("Statement")
+    items = statements if isinstance(statements, list) else [statements]
+    for statement in items:
+        if not isinstance(statement, dict):
+            continue
+        if str(statement.get("Effect") or "").upper() != "DENY":
+            continue
+        condition = statement.get("Condition")
+        if not isinstance(condition, dict):
+            continue
+        bool_block = condition.get("Bool")
+        if not isinstance(bool_block, dict):
+            continue
+        secure_transport = bool_block.get("aws:SecureTransport")
+        value = str(secure_transport).strip().lower()
+        if value == "false":
+            return True
+    return False
+
+
+def _collect_ec2_security_groups(
+    session_boto: Any,
+    region: str,
+    resource_ids: list[str] | None,
+    max_resources: int,
+) -> list[InventorySnapshot]:
+    ec2 = session_boto.client("ec2", region_name=region)
+    groups: list[dict[str, Any]] = []
+
+    if resource_ids:
+        ids = [str(v) for v in resource_ids if str(v).startswith("sg-")]
+        if not ids:
+            return []
+        for group_id in ids[:max_resources]:
+            try:
+                response = ec2.describe_security_groups(GroupIds=[group_id])
+                groups.extend(_as_list(response.get("SecurityGroups")))
+            except ClientError as exc:
+                if _extract_error_code(exc) == "InvalidGroup.NotFound":
+                    continue
+                raise
+    else:
+        paginator = ec2.get_paginator("describe_security_groups")
+        for page in paginator.paginate(PaginationConfig={"PageSize": 200}):
+            for g in _as_list(page.get("SecurityGroups")):
+                if not isinstance(g, dict):
+                    continue
+                groups.append(g)
+                if len(groups) >= max_resources:
+                    break
+            if len(groups) >= max_resources:
+                break
+
+    snapshots: list[InventorySnapshot] = []
+    for group in groups:
+        group_id = str(group.get("GroupId") or "").strip()
+        if not group_id:
+            continue
+        non_compliant, violations = evaluate_security_group_public_admin_ports(group)
+        status = SHADOW_STATUS_OPEN if non_compliant else SHADOW_STATUS_RESOLVED
+        reason = "inventory_confirmed_non_compliant" if non_compliant else "inventory_confirmed_compliant"
+        evals = [
+            _control_eval(
+                control_id="EC2.53",
+                resource_id=group_id,
+                resource_type="AwsEc2SecurityGroup",
+                status=status,
+                title="Security group allows public SSH/RDP access",
+                description="Inventory reconciliation check for public admin ports.",
+                status_reason=reason,
+                evidence_ref={"source": "inventory", "violations": violations},
+            )
+        ]
+        state_for_hash = {
+            "group_id": group_id,
+            "vpc_id": group.get("VpcId"),
+            "ip_permissions": group.get("IpPermissions") or [],
+        }
+        key_fields = {
+            "group_id": group_id,
+            "vpc_id": group.get("VpcId"),
+            "ingress_rule_count": len(_as_list(group.get("IpPermissions"))),
+        }
+        snapshots.append(
+            InventorySnapshot(
+                service="ec2",
+                resource_id=group_id,
+                resource_type="AwsEc2SecurityGroup",
+                key_fields=key_fields,
+                state_for_hash=state_for_hash,
+                metadata_json={"group_name": group.get("GroupName")},
+                evaluations=evals,
+            )
+        )
+    return snapshots
+
+
+def _collect_s3_buckets(
+    session_boto: Any,
+    region: str,
+    resource_ids: list[str] | None,
+    max_resources: int,
+) -> list[InventorySnapshot]:
+    # S3 control-plane APIs are global; region filtering is done per bucket location.
+    s3 = session_boto.client("s3", region_name=region)
+    if resource_ids:
+        bucket_names = [_bucket_name_from_any(str(v)) for v in resource_ids if str(v).strip()]
+    else:
+        resp = s3.list_buckets()
+        bucket_names = [str((b or {}).get("Name") or "") for b in _as_list(resp.get("Buckets"))]
+
+    snapshots: list[InventorySnapshot] = []
+    for bucket in bucket_names:
+        bucket = bucket.strip()
+        if not bucket:
+            continue
+        bucket_region = _s3_bucket_region(s3, bucket)
+        if bucket_region is None or bucket_region != region:
+            continue
+        pab = _s3_bucket_public_access_block(s3, bucket)
+        policy_public = _s3_bucket_policy_is_public(s3, bucket)
+        non_compliant_public, public_evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
+
+        algo = _s3_bucket_default_encryption_algorithm(s3, bucket)
+        encryption_enabled = algo is not None
+        kms_enabled = algo == "aws:kms"
+        logging_enabled = _s3_bucket_logging_enabled(s3, bucket)
+        lifecycle_rule_count = _s3_bucket_lifecycle_rule_count(s3, bucket)
+        policy_json = _s3_bucket_policy_json(s3, bucket)
+        ssl_deny = _policy_has_ssl_deny(policy_json)
+
+        resource_id = f"arn:aws:s3:::{bucket}"
+        evals = [
+            _control_eval(
+                control_id="S3.2",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_OPEN if non_compliant_public else SHADOW_STATUS_RESOLVED,
+                title="S3 bucket public access posture",
+                description="Inventory reconciliation for public access posture.",
+                status_reason=(
+                    "inventory_confirmed_non_compliant"
+                    if non_compliant_public
+                    else "inventory_confirmed_compliant"
+                ),
+                evidence_ref={"source": "inventory", **public_evidence},
+            ),
+            _control_eval(
+                control_id="S3.4",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_RESOLVED if encryption_enabled else SHADOW_STATUS_OPEN,
+                title="S3 bucket default encryption enabled",
+                description="Inventory reconciliation for bucket default encryption.",
+                status_reason=(
+                    "inventory_confirmed_compliant" if encryption_enabled else "inventory_confirmed_non_compliant"
+                ),
+                evidence_ref={"source": "inventory", "default_encryption_algorithm": algo},
+            ),
+            _control_eval(
+                control_id="S3.15",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_RESOLVED if kms_enabled else SHADOW_STATUS_OPEN,
+                title="S3 bucket uses SSE-KMS by default",
+                description="Inventory reconciliation for KMS default encryption.",
+                status_reason=("inventory_confirmed_compliant" if kms_enabled else "inventory_confirmed_non_compliant"),
+                evidence_ref={"source": "inventory", "default_encryption_algorithm": algo},
+            ),
+            _control_eval(
+                control_id="S3.9",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_RESOLVED if logging_enabled else SHADOW_STATUS_OPEN,
+                title="S3 bucket access logging enabled",
+                description="Inventory reconciliation for server access logging.",
+                status_reason=(
+                    "inventory_confirmed_compliant" if logging_enabled else "inventory_confirmed_non_compliant"
+                ),
+                evidence_ref={"source": "inventory", "logging_enabled": logging_enabled},
+            ),
+            _control_eval(
+                control_id="S3.11",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_RESOLVED if lifecycle_rule_count > 0 else SHADOW_STATUS_OPEN,
+                title="S3 bucket lifecycle rules configured",
+                description="Inventory reconciliation for lifecycle policy coverage.",
+                status_reason=(
+                    "inventory_confirmed_compliant"
+                    if lifecycle_rule_count > 0
+                    else "inventory_confirmed_non_compliant"
+                ),
+                evidence_ref={"source": "inventory", "lifecycle_rule_count": lifecycle_rule_count},
+                severity_label="MEDIUM",
+            ),
+            _control_eval(
+                control_id="S3.5",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                status=SHADOW_STATUS_RESOLVED if ssl_deny else SHADOW_STATUS_OPEN,
+                title="S3 bucket enforces SSL requests",
+                description="Inventory reconciliation for deny-insecure-transport policy.",
+                status_reason=("inventory_confirmed_compliant" if ssl_deny else "inventory_confirmed_non_compliant"),
+                evidence_ref={"source": "inventory", "ssl_deny_policy": ssl_deny},
+                severity_label="MEDIUM",
+            ),
+        ]
+        state_for_hash = {
+            "public_access_block": public_evidence.get("public_access_block"),
+            "policy_is_public": public_evidence.get("policy_is_public"),
+            "default_encryption_algorithm": algo,
+            "logging_enabled": logging_enabled,
+            "lifecycle_rule_count": lifecycle_rule_count,
+            "ssl_deny_policy": ssl_deny,
+        }
+        key_fields = {
+            "bucket": bucket,
+            "region": bucket_region,
+            "policy_is_public": bool(public_evidence.get("policy_is_public")),
+            "default_encryption_algorithm": algo,
+            "logging_enabled": logging_enabled,
+            "lifecycle_rule_count": lifecycle_rule_count,
+            "ssl_deny_policy": ssl_deny,
+        }
+        snapshots.append(
+            InventorySnapshot(
+                service="s3",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                key_fields=key_fields,
+                state_for_hash=state_for_hash,
+                metadata_json=None,
+                evaluations=evals,
+            )
+        )
+        if len(snapshots) >= max_resources:
+            break
+
+    return snapshots
+
+
+def _collect_cloudtrail_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    cloudtrail = session_boto.client("cloudtrail", region_name=region)
+    trails_resp = cloudtrail.describe_trails(includeShadowTrails=False)
+    trails = _as_list(trails_resp.get("trailList"))
+
+    logging_multi_region = 0
+    for trail in trails:
+        if not isinstance(trail, dict):
+            continue
+        if not bool(trail.get("IsMultiRegionTrail")):
+            continue
+        name = trail.get("TrailARN") or trail.get("Name")
+        try:
+            status = cloudtrail.get_trail_status(Name=name)
+            if bool(status.get("IsLogging")):
+                logging_multi_region += 1
+        except Exception:
+            continue
+
+    compliant = logging_multi_region > 0
+    evals = [
+        _control_eval(
+            control_id="CloudTrail.1",
+            resource_id=account_id,
+            resource_type="AwsAccount",
+            status=SHADOW_STATUS_RESOLVED if compliant else SHADOW_STATUS_OPEN,
+            title="CloudTrail multi-region trail enabled",
+            description="Inventory reconciliation for CloudTrail.1.",
+            status_reason=("inventory_confirmed_compliant" if compliant else "inventory_confirmed_non_compliant"),
+            evidence_ref={
+                "source": "inventory",
+                "trail_count": len(trails),
+                "logging_multi_region_trails": logging_multi_region,
+            },
+        )
+    ]
+    state_for_hash = {
+        "trail_count": len(trails),
+        "logging_multi_region_trails": logging_multi_region,
+    }
+    key_fields = state_for_hash.copy()
+    return [
+        InventorySnapshot(
+            service="cloudtrail",
+            resource_id=account_id,
+            resource_type="AwsAccount",
+            key_fields=key_fields,
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=evals,
+        )
+    ]
+
+
+def _collect_config_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    config_client = session_boto.client("config", region_name=region)
+    recorders = _as_list(config_client.describe_configuration_recorders().get("ConfigurationRecorders"))
+    statuses = _as_list(config_client.describe_configuration_recorder_status().get("ConfigurationRecordersStatus"))
+    recording = any(bool((s or {}).get("recording")) for s in statuses if isinstance(s, dict))
+    compliant = len(recorders) > 0 and recording
+    evals = [
+        _control_eval(
+            control_id="Config.1",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            status=SHADOW_STATUS_RESOLVED if compliant else SHADOW_STATUS_OPEN,
+            title="AWS Config recorder enabled",
+            description="Inventory reconciliation for Config.1.",
+            status_reason=("inventory_confirmed_compliant" if compliant else "inventory_confirmed_non_compliant"),
+            evidence_ref={
+                "source": "inventory",
+                "recorder_count": len(recorders),
+                "recording": recording,
+            },
+        )
+    ]
+    state_for_hash = {"recorder_count": len(recorders), "recording": recording}
+    return [
+        InventorySnapshot(
+            service="config",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            key_fields=state_for_hash.copy(),
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=evals,
+        )
+    ]
+
+
+def _collect_iam_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    iam = session_boto.client("iam", region_name=region)
+    summary = (iam.get_account_summary() or {}).get("SummaryMap") or {}
+    root_keys_present = int(summary.get("AccountAccessKeysPresent") or 0)
+    compliant = root_keys_present == 0
+    evals = [
+        _control_eval(
+            control_id="IAM.4",
+            resource_id=account_id,
+            resource_type="AwsAccount",
+            status=SHADOW_STATUS_RESOLVED if compliant else SHADOW_STATUS_OPEN,
+            title="IAM root access key absent",
+            description="Inventory reconciliation for IAM.4.",
+            status_reason=("inventory_confirmed_compliant" if compliant else "inventory_confirmed_non_compliant"),
+            evidence_ref={"source": "inventory", "root_access_keys_present": root_keys_present},
+        )
+    ]
+    state_for_hash = {"root_access_keys_present": root_keys_present}
+    return [
+        InventorySnapshot(
+            service="iam",
+            resource_id=account_id,
+            resource_type="AwsAccount",
+            key_fields=state_for_hash.copy(),
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=evals,
+        )
+    ]
+
+
+def _collect_ebs_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    ec2 = session_boto.client("ec2", region_name=region)
+    default_encryption = bool((ec2.get_ebs_encryption_by_default() or {}).get("EbsEncryptionByDefault"))
+    snapshot_state: str | None = None
+    snapshot_supported = True
+    try:
+        snapshot_state = str((ec2.get_snapshot_block_public_access_state() or {}).get("State") or "")
+    except Exception:
+        snapshot_supported = False
+
+    ebs7_compliant = default_encryption
+    ec2182_compliant = snapshot_supported and snapshot_state == "block-all-sharing"
+    ec2182_status = (
+        SHADOW_STATUS_RESOLVED
+        if ec2182_compliant
+        else (SHADOW_STATUS_SOFT_RESOLVED if not snapshot_supported else SHADOW_STATUS_OPEN)
+    )
+    ec2182_reason = (
+        "inventory_confirmed_compliant"
+        if ec2182_compliant
+        else ("inventory_api_unavailable" if not snapshot_supported else "inventory_confirmed_non_compliant")
+    )
+
+    evals = [
+        _control_eval(
+            control_id="EC2.7",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            status=SHADOW_STATUS_RESOLVED if ebs7_compliant else SHADOW_STATUS_OPEN,
+            title="EBS default encryption enabled",
+            description="Inventory reconciliation for EC2.7.",
+            status_reason=("inventory_confirmed_compliant" if ebs7_compliant else "inventory_confirmed_non_compliant"),
+            evidence_ref={"source": "inventory", "ebs_encryption_by_default": default_encryption},
+        ),
+        _control_eval(
+            control_id="EC2.182",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            status=ec2182_status,
+            title="EBS snapshot public sharing block enabled",
+            description="Inventory reconciliation for EC2.182.",
+            status_reason=ec2182_reason,
+            evidence_ref={
+                "source": "inventory",
+                "snapshot_block_public_access_state": snapshot_state,
+                "api_supported": snapshot_supported,
+            },
+        ),
+    ]
+    state_for_hash = {
+        "ebs_encryption_by_default": default_encryption,
+        "snapshot_block_public_access_state": snapshot_state,
+        "snapshot_api_supported": snapshot_supported,
+    }
+    return [
+        InventorySnapshot(
+            service="ebs",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            key_fields=state_for_hash.copy(),
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=evals,
+        )
+    ]
+
+
+def _collect_rds_instances(
+    session_boto: Any,
+    region: str,
+    resource_ids: list[str] | None,
+    max_resources: int,
+) -> list[InventorySnapshot]:
+    rds = session_boto.client("rds", region_name=region)
+    instances: list[dict[str, Any]] = []
+    if resource_ids:
+        for rid in resource_ids:
+            try:
+                resp = rds.describe_db_instances(DBInstanceIdentifier=str(rid))
+                instances.extend(_as_list(resp.get("DBInstances")))
+            except ClientError as exc:
+                if _extract_error_code(exc) == "DBInstanceNotFound":
+                    continue
+                raise
+    else:
+        paginator = rds.get_paginator("describe_db_instances")
+        for page in paginator.paginate(PaginationConfig={"PageSize": 100}):
+            for inst in _as_list(page.get("DBInstances")):
+                if not isinstance(inst, dict):
+                    continue
+                instances.append(inst)
+                if len(instances) >= max_resources:
+                    break
+            if len(instances) >= max_resources:
+                break
+
+    snapshots: list[InventorySnapshot] = []
+    for inst in instances:
+        identifier = str(inst.get("DBInstanceIdentifier") or "").strip()
+        if not identifier:
+            continue
+        public = bool(inst.get("PubliclyAccessible"))
+        encrypted = bool(inst.get("StorageEncrypted"))
+        evals = [
+            _control_eval(
+                control_id="RDS.PUBLIC_ACCESS",
+                resource_id=identifier,
+                resource_type="AwsRdsDbInstance",
+                status=SHADOW_STATUS_OPEN if public else SHADOW_STATUS_RESOLVED,
+                title="RDS instance is publicly accessible",
+                description="Inventory-only signal for RDS network exposure.",
+                status_reason=("inventory_confirmed_non_compliant" if public else "inventory_confirmed_compliant"),
+                evidence_ref={"source": "inventory", "publicly_accessible": public},
+            ),
+            _control_eval(
+                control_id="RDS.ENCRYPTION",
+                resource_id=identifier,
+                resource_type="AwsRdsDbInstance",
+                status=SHADOW_STATUS_RESOLVED if encrypted else SHADOW_STATUS_OPEN,
+                title="RDS storage encryption enabled",
+                description="Inventory-only signal for RDS at-rest encryption.",
+                status_reason=("inventory_confirmed_compliant" if encrypted else "inventory_confirmed_non_compliant"),
+                evidence_ref={"source": "inventory", "storage_encrypted": encrypted},
+                severity_label="MEDIUM",
+            ),
+        ]
+        state_for_hash = {
+            "publicly_accessible": public,
+            "storage_encrypted": encrypted,
+            "engine": inst.get("Engine"),
+            "db_instance_status": inst.get("DBInstanceStatus"),
+        }
+        key_fields = {
+            "db_instance_identifier": identifier,
+            "publicly_accessible": public,
+            "storage_encrypted": encrypted,
+            "engine": inst.get("Engine"),
+        }
+        snapshots.append(
+            InventorySnapshot(
+                service="rds",
+                resource_id=identifier,
+                resource_type="AwsRdsDbInstance",
+                key_fields=key_fields,
+                state_for_hash=state_for_hash,
+                metadata_json=None,
+                evaluations=evals,
+            )
+        )
+    return snapshots
+
+
+def _collect_eks_clusters(
+    session_boto: Any,
+    region: str,
+    resource_ids: list[str] | None,
+    max_resources: int,
+) -> list[InventorySnapshot]:
+    eks = session_boto.client("eks", region_name=region)
+    if resource_ids:
+        cluster_names = [str(v).strip() for v in resource_ids if str(v).strip()]
+    else:
+        cluster_names = []
+        paginator = eks.get_paginator("list_clusters")
+        for page in paginator.paginate():
+            for name in _as_list(page.get("clusters")):
+                cluster_names.append(str(name))
+                if len(cluster_names) >= max_resources:
+                    break
+            if len(cluster_names) >= max_resources:
+                break
+
+    snapshots: list[InventorySnapshot] = []
+    for cluster_name in cluster_names:
+        try:
+            cluster = (eks.describe_cluster(name=cluster_name) or {}).get("cluster") or {}
+        except ClientError as exc:
+            if _extract_error_code(exc) == "ResourceNotFoundException":
+                continue
+            raise
+        vpc_cfg = cluster.get("resourcesVpcConfig") if isinstance(cluster, dict) else {}
+        if not isinstance(vpc_cfg, dict):
+            vpc_cfg = {}
+        endpoint_public = bool(vpc_cfg.get("endpointPublicAccess"))
+        public_cidrs = [str(v) for v in _as_list(vpc_cfg.get("publicAccessCidrs"))]
+        world_exposed = endpoint_public and (not public_cidrs or WORLD_IPV4 in public_cidrs)
+        evals = [
+            _control_eval(
+                control_id="EKS.PUBLIC_ENDPOINT",
+                resource_id=cluster_name,
+                resource_type="AwsEksCluster",
+                status=SHADOW_STATUS_OPEN if world_exposed else SHADOW_STATUS_RESOLVED,
+                title="EKS API endpoint publicly reachable",
+                description="Inventory-only signal for EKS control-plane exposure.",
+                status_reason=(
+                    "inventory_confirmed_non_compliant" if world_exposed else "inventory_confirmed_compliant"
+                ),
+                evidence_ref={
+                    "source": "inventory",
+                    "endpoint_public_access": endpoint_public,
+                    "public_access_cidrs": public_cidrs,
+                },
+            )
+        ]
+        state_for_hash = {
+            "endpoint_public_access": endpoint_public,
+            "public_access_cidrs": public_cidrs,
+            "endpoint_private_access": bool(vpc_cfg.get("endpointPrivateAccess")),
+        }
+        key_fields = {
+            "cluster_name": cluster_name,
+            "endpoint_public_access": endpoint_public,
+            "public_access_cidrs": public_cidrs,
+        }
+        snapshots.append(
+            InventorySnapshot(
+                service="eks",
+                resource_id=cluster_name,
+                resource_type="AwsEksCluster",
+                key_fields=key_fields,
+                state_for_hash=state_for_hash,
+                metadata_json=None,
+                evaluations=evals,
+            )
+        )
+    return snapshots
+
+
+def _collect_ssm_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    ssm = session_boto.client("ssm", region_name=region)
+    setting_id = "/ssm/documents/console/public-sharing-permission"
+    setting_value: str | None = None
+    supported = True
+    try:
+        resp = ssm.get_service_setting(SettingId=setting_id)
+        service_setting = resp.get("ServiceSetting") if isinstance(resp, dict) else {}
+        if isinstance(service_setting, dict):
+            raw = service_setting.get("SettingValue")
+            setting_value = str(raw).strip().lower() if raw is not None else None
+    except Exception:
+        supported = False
+
+    enabled_tokens = {"enabled", "true", "1", "on"}
+    public_sharing_enabled = bool(setting_value in enabled_tokens)
+    if supported:
+        status = SHADOW_STATUS_OPEN if public_sharing_enabled else SHADOW_STATUS_RESOLVED
+        reason = "inventory_confirmed_non_compliant" if public_sharing_enabled else "inventory_confirmed_compliant"
+        confidence = 90
+    else:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_unavailable"
+        confidence = 40
+    evals = [
+        _control_eval(
+            control_id="SSM.7",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            status=status,
+            title="SSM document public sharing blocked",
+            description="Inventory reconciliation for SSM.7.",
+            status_reason=reason,
+            evidence_ref={
+                "source": "inventory",
+                "setting_id": setting_id,
+                "setting_value": setting_value,
+                "api_supported": supported,
+            },
+            state_confidence=confidence,
+        )
+    ]
+    state_for_hash = {
+        "setting_id": setting_id,
+        "setting_value": setting_value,
+        "api_supported": supported,
+    }
+    return [
+        InventorySnapshot(
+            service="ssm",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            key_fields=state_for_hash.copy(),
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=evals,
+        )
+    ]
+
+
+def collect_inventory_snapshots(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+    service: str,
+    resource_ids: list[str] | None = None,
+    max_resources: int = 500,
+) -> list[InventorySnapshot]:
+    svc = (service or "").strip().lower()
+    if svc == "ec2":
+        return _collect_ec2_security_groups(session_boto, region, resource_ids, max_resources)
+    if svc == "s3":
+        return _collect_s3_buckets(session_boto, region, resource_ids, max_resources)
+    if svc == "cloudtrail":
+        return _collect_cloudtrail_account(session_boto, account_id, region)
+    if svc == "config":
+        return _collect_config_account(session_boto, account_id, region)
+    if svc == "iam":
+        return _collect_iam_account(session_boto, account_id, region)
+    if svc == "ebs":
+        return _collect_ebs_account(session_boto, account_id, region)
+    if svc == "rds":
+        return _collect_rds_instances(session_boto, region, resource_ids, max_resources)
+    if svc == "eks":
+        return _collect_eks_clusters(session_boto, region, resource_ids, max_resources)
+    if svc == "ssm":
+        return _collect_ssm_account(session_boto, account_id, region)
+    return []

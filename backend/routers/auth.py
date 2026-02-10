@@ -77,11 +77,13 @@ async def signup(
                 detail="Email already registered",
             )
         
-        # Create tenant with unique external_id
+        # Create tenant with unique external_id + per-tenant control-plane intake token
         external_id = f"ext-{uuid.uuid4().hex[:16]}"
+        control_plane_token = f"cptok-{uuid.uuid4().hex}"
         tenant = Tenant(
             name=request.company_name,
             external_id=external_id,
+            control_plane_token=control_plane_token,
         )
         db.add(tenant)
         await db.flush()  # Get tenant.id
@@ -113,6 +115,9 @@ async def signup(
             region,
             read_default_stack,
             write_default_stack,
+            control_plane_template_url,
+            control_plane_ingest_url,
+            control_plane_default_stack,
         ) = get_saas_and_launch_url(tenant.external_id)
         return AuthResponse(
             access_token=access_token,
@@ -126,6 +131,10 @@ async def signup(
             write_role_launch_stack_url=write_launch_url,
             write_role_template_url=write_template_url,
             write_role_default_stack_name=write_default_stack,
+            control_plane_token=tenant.control_plane_token,
+            control_plane_forwarder_template_url=control_plane_template_url,
+            control_plane_ingest_url=control_plane_ingest_url,
+            control_plane_forwarder_default_stack_name=control_plane_default_stack,
         )
     except HTTPException:
         raise
@@ -180,6 +189,9 @@ async def login(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_template_url,
+        control_plane_ingest_url,
+        control_plane_default_stack,
     ) = get_saas_and_launch_url(user.tenant.external_id)
     return AuthResponse(
         access_token=access_token,
@@ -193,6 +205,10 @@ async def login(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_token=user.tenant.control_plane_token if getattr(user.role, "value", user.role) == "admin" else None,
+        control_plane_forwarder_template_url=control_plane_template_url,
+        control_plane_ingest_url=control_plane_ingest_url,
+        control_plane_forwarder_default_stack_name=control_plane_default_stack,
     )
 
 
@@ -219,6 +235,9 @@ async def get_me(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_template_url,
+        control_plane_ingest_url,
+        control_plane_default_stack,
     ) = get_saas_and_launch_url(tenant.external_id)
     return MeResponse(
         user=user_to_response(current_user),
@@ -231,4 +250,8 @@ async def get_me(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_token=tenant.control_plane_token if getattr(current_user.role, "value", current_user.role) == "admin" else None,
+        control_plane_forwarder_template_url=control_plane_template_url,
+        control_plane_ingest_url=control_plane_ingest_url,
+        control_plane_forwarder_default_stack_name=control_plane_default_stack,
     )
