@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from backend.models import Action, ActionFinding, Finding
 from backend.models.enums import ActionStatus, FindingStatus
+from backend.config import settings
 from backend.services.control_scope import (
     action_type_from_control as _action_type_from_control_impl,
     canonical_control_id_for_action_type,
@@ -296,6 +297,9 @@ def compute_actions_for_tenant(
         q = q.filter(Finding.account_id == account_id)
     if region is not None:
         q = q.filter(Finding.region == region)
+
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        q = q.filter(Finding.in_scope.is_(True))
     findings = q.all()
 
     groups: defaultdict[tuple[Any, ...], list[Finding]] = defaultdict(list)

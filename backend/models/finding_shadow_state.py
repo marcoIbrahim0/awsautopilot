@@ -59,6 +59,8 @@ class FindingShadowState(Base):
     resource_id: Mapped[str] = mapped_column(String(2048), nullable=False)
     resource_type: Mapped[str | None] = mapped_column(String(256), nullable=True)
     control_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_control_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resource_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

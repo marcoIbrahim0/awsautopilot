@@ -70,7 +70,10 @@ def _upsert_one(
         existing.description = data["description"]
         existing.resource_id = data["resource_id"]
         existing.resource_type = data["resource_type"]
+        existing.canonical_control_id = data.get("canonical_control_id")
+        existing.resource_key = data.get("resource_key")
         existing.status = data["status"]
+        existing.in_scope = bool(data.get("in_scope", False))
         existing.last_observed_at = data["last_observed_at"]
         existing.sh_updated_at = data["sh_updated_at"]
         existing.raw_json = data["raw_json"]
@@ -97,6 +100,15 @@ def execute_ingest_access_analyzer_job(job: dict) -> None:
         tenant_id = uuid.UUID(tenant_id_str)
     except (TypeError, ValueError):
         raise ValueError(f"invalid tenant_id: {tenant_id_str}")
+
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        logger.info(
+            "Skipping Access Analyzer ingest (ONLY_IN_SCOPE_CONTROLS=true) tenant_id=%s account_id=%s region=%s",
+            tenant_id,
+            account_id,
+            region,
+        )
+        return
 
     with session_scope() as session:
         acc = (

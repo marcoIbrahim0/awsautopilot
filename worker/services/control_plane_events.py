@@ -238,6 +238,15 @@ def _extract_error_code(exc: Exception) -> str:
         return str(exc.response.get("Error", {}).get("Code") or "ClientError")
     return type(exc).__name__
 
+def _is_access_denied_error(exc: Exception) -> bool:
+    code = _extract_error_code(exc)
+    return code in {
+        "AccessDenied",
+        "AccessDeniedException",
+        "UnauthorizedOperation",
+        "UnauthorizedAccess",
+    }
+
 
 def _is_not_found_error(exc: Exception) -> bool:
     code = _extract_error_code(exc)
@@ -259,6 +268,25 @@ def evaluate_security_group_control(
     try:
         response = ec2.describe_security_groups(GroupIds=[group_id])
     except Exception as exc:
+        if _is_access_denied_error(exc):
+            return ControlEvaluation(
+                control_id="EC2.53",
+                resource_id=group_id,
+                resource_type="AwsEc2SecurityGroup",
+                severity_label="HIGH",
+                title="Security group allows public SSH/RDP access",
+                description="Could not read security group state due to missing ReadRole permissions; mark as soft-resolved until permissions are fixed and reconciliation runs.",
+                status=SHADOW_STATUS_SOFT_RESOLVED,
+                status_reason="access_denied_enrichment_ec2_describe_security_groups",
+                state_confidence=30,
+                evidence_ref={
+                    "error_code": _extract_error_code(exc),
+                    "missing_permission": "ec2:DescribeSecurityGroups",
+                    "resource_id": group_id,
+                    "region": region,
+                    "control_id": "EC2.53",
+                },
+            )
         if _is_not_found_error(exc):
             return ControlEvaluation(
                 control_id="EC2.53",
@@ -324,6 +352,8 @@ def _get_bucket_policy_is_public(s3_client: Any, bucket_name: str) -> bool:
         return bool((resp.get("PolicyStatus") or {}).get("IsPublic"))
     except ClientError as exc:
         code = _extract_error_code(exc)
+        if _is_access_denied_error(exc):
+            raise
         if code in {"NoSuchBucketPolicy", "NoSuchBucket"}:
             return False
         raise
@@ -335,6 +365,8 @@ def _get_bucket_public_access_block(s3_client: Any, bucket_name: str) -> dict[st
         return resp.get("PublicAccessBlockConfiguration") or {}
     except ClientError as exc:
         code = _extract_error_code(exc)
+        if _is_access_denied_error(exc):
+            raise
         if code in {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"}:
             return {}
         raise
@@ -347,8 +379,35 @@ def evaluate_s3_control(
     event_name: str,
 ) -> ControlEvaluation:
     s3 = session_boto.client("s3", region_name=region)
-    policy_public = _get_bucket_policy_is_public(s3, bucket_name)
-    pab = _get_bucket_public_access_block(s3, bucket_name)
+    try:
+        policy_public = _get_bucket_policy_is_public(s3, bucket_name)
+        pab = _get_bucket_public_access_block(s3, bucket_name)
+    except ClientError as exc:
+        if _is_access_denied_error(exc):
+            resource_id = f"arn:aws:s3:::{bucket_name}"
+            return ControlEvaluation(
+                control_id="S3.2",
+                resource_id=resource_id,
+                resource_type="AwsS3Bucket",
+                severity_label="HIGH",
+                title="S3 bucket public access block is incomplete or bucket policy is public",
+                description="Could not read bucket posture due to missing ReadRole permissions; mark as soft-resolved until permissions are fixed and reconciliation runs.",
+                status=SHADOW_STATUS_SOFT_RESOLVED,
+                status_reason="access_denied_enrichment_s3_get_bucket_state",
+                state_confidence=30,
+                evidence_ref={
+                    "error_code": _extract_error_code(exc),
+                    "missing_permissions": [
+                        "s3:GetBucketPublicAccessBlock",
+                        "s3:GetBucketPolicyStatus",
+                    ],
+                    "bucket": bucket_name,
+                    "region": region,
+                    "control_id": "S3.2",
+                    "event_name": event_name,
+                },
+            )
+        raise
     non_compliant, evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
     resource_id = f"arn:aws:s3:::{bucket_name}"
 

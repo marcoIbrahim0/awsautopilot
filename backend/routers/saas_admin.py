@@ -10,6 +10,7 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
 from pydantic import BaseModel, Field
+import sqlalchemy as sa
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,6 +33,7 @@ from backend.models.support_file import SupportFile
 from backend.models.support_note import SupportNote
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.control_scope import IN_SCOPE_CONTROL_TOKENS
 from backend.utils.sqs import (
     build_reconcile_inventory_shard_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
@@ -247,6 +249,17 @@ class ControlPlaneSLOResponse(BaseModel):
     p95_handler_latency_ms: float | None
     drop_rate: float
     duplicate_rate: float
+    in_scope_total: int
+    missing_canonical: int
+    missing_resource_key: int
+    in_scope_matched: int
+    in_scope_unmatched: int
+    match_coverage_rate: float
+    in_scope_new_total: int
+    in_scope_new_matched: int
+    in_scope_new_match_rate: float
+    shadow_freshness_lag_minutes: float | None
+    sweep_failures: int
 
 
 class ControlPlaneShadowSummaryResponse(BaseModel):
@@ -256,6 +269,80 @@ class ControlPlaneShadowSummaryResponse(BaseModel):
     resolved_count: int
     soft_resolved_count: int
     controls: dict[str, int]
+
+
+class ControlPlaneCanonicalFindingRef(BaseModel):
+    id: str
+    source: str
+    status_raw: str
+    status_normalized: str
+    severity_label: str | None = None
+    title: str | None = None
+    updated_at: str | None = None
+
+
+class ControlPlaneShadowCompareItem(BaseModel):
+    fingerprint: str
+    account_id: str
+    region: str
+    resource_id: str | None = None
+    resource_type: str | None = None
+    control_id: str | None = None
+    shadow_status: str
+    shadow_status_normalized: str
+    status_reason: str | None = None
+    evidence_ref: dict | None = None
+    last_observed_event_time: str | None = None
+    last_evaluated_at: str | None = None
+    canonical: ControlPlaneCanonicalFindingRef | None = None
+    is_mismatch: bool
+
+
+class ControlPlaneShadowCompareResponse(BaseModel):
+    tenant_id: str
+    total: int
+    items: list[ControlPlaneShadowCompareItem]
+
+
+class ControlPlaneShadowRef(BaseModel):
+    fingerprint: str
+    status_raw: str
+    status_normalized: str
+    status_reason: str | None = None
+    evidence_ref: dict | None = None
+    last_observed_event_time: str | None = None
+    last_evaluated_at: str | None = None
+
+
+class ControlPlaneCompareItem(BaseModel):
+    comparison_key: str
+    account_id: str
+    region: str
+    resource_id: str | None = None
+    resource_type: str | None = None
+    control_id: str | None = None
+    shadow: ControlPlaneShadowRef | None = None
+    live: ControlPlaneCanonicalFindingRef | None = None
+    is_mismatch: bool
+
+
+class ControlPlaneCompareResponse(BaseModel):
+    tenant_id: str
+    basis: str
+    total: int
+    items: list[ControlPlaneCompareItem]
+
+
+class ControlPlaneUnmatchedReasonItem(BaseModel):
+    control_id: str
+    reason: str
+    count: int
+
+
+class ControlPlaneUnmatchedReportResponse(BaseModel):
+    tenant_id: str
+    generated_at: str
+    items: list[ControlPlaneUnmatchedReasonItem]
 
 
 class ReconcileJobsListItemResponse(BaseModel):
@@ -314,6 +401,26 @@ def _parse_tenant_id(tenant_id: str) -> uuid.UUID:
         return uuid.UUID(tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="tenant_id must be a valid UUID") from exc
+
+
+def _normalize_canonical_finding_status(status_raw: str | None) -> str:
+    s = (status_raw or "").strip().upper()
+    if not s:
+        return "UNKNOWN"
+    if s in {"ACTIVE", "NEW", "OPEN"}:
+        return "OPEN"
+    if s in {"RESOLVED", "CLOSED", "SUPPRESSED"}:
+        return "RESOLVED"
+    return "UNKNOWN"
+
+
+def _normalize_shadow_status(status_raw: str | None) -> str:
+    s = (status_raw or "").strip().upper()
+    if s == "OPEN":
+        return "OPEN"
+    if s in {"RESOLVED", "SOFT_RESOLVED"}:
+        return "RESOLVED"
+    return "UNKNOWN"
 
 
 def _inventory_queue_or_503() -> str:
@@ -413,7 +520,8 @@ async def get_control_plane_slo(
         tenant_uuid = _parse_tenant_id(tenant_id)
         await _get_tenant_or_404(db, tenant_uuid)
 
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    now_utc = datetime.now(timezone.utc)
+    since = now_utc - timedelta(hours=hours)
     filters = [ControlPlaneEvent.event_time >= since]
     if tenant_uuid is not None:
         filters.append(ControlPlaneEvent.tenant_id == tenant_uuid)
@@ -479,6 +587,113 @@ async def get_control_plane_slo(
     total_attempts = total + duplicate_hits
     drop_rate = float(dropped_events / total) if total > 0 else 0.0
     duplicate_rate = float(duplicate_hits / total_attempts) if total_attempts > 0 else 0.0
+    finding_filters: list[Any] = [
+        Finding.source == "security_hub",
+        Finding.in_scope.is_(True),
+    ]
+    shadow_filters: list[Any] = []
+    reconcile_job_filters: list[Any] = [ControlPlaneReconcileJob.submitted_at >= since]
+    if tenant_uuid is not None:
+        finding_filters.append(Finding.tenant_id == tenant_uuid)
+        shadow_filters.append(FindingShadowState.tenant_id == tenant_uuid)
+        reconcile_job_filters.append(ControlPlaneReconcileJob.tenant_id == tenant_uuid)
+
+    in_scope_total = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(Finding).where(*finding_filters)
+            )
+        ).scalar()
+        or 0
+    )
+    missing_canonical = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Finding)
+                .where(*finding_filters, Finding.canonical_control_id.is_(None))
+            )
+        ).scalar()
+        or 0
+    )
+    missing_resource_key = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Finding)
+                .where(*finding_filters, Finding.resource_key.is_(None))
+            )
+        ).scalar()
+        or 0
+    )
+    in_scope_matched = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Finding)
+                .where(
+                    *finding_filters,
+                    Finding.shadow_fingerprint.isnot(None),
+                    Finding.shadow_fingerprint != "",
+                )
+            )
+        ).scalar()
+        or 0
+    )
+    in_scope_unmatched = max(0, in_scope_total - in_scope_matched)
+    match_coverage_rate = float(in_scope_matched / in_scope_total) if in_scope_total > 0 else 0.0
+
+    in_scope_new_total = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Finding)
+                .where(*finding_filters, Finding.status.in_(("NEW", "NOTIFIED")))
+            )
+        ).scalar()
+        or 0
+    )
+    in_scope_new_matched = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Finding)
+                .where(
+                    *finding_filters,
+                    Finding.status.in_(("NEW", "NOTIFIED")),
+                    Finding.shadow_fingerprint.isnot(None),
+                    Finding.shadow_fingerprint != "",
+                )
+            )
+        ).scalar()
+        or 0
+    )
+    in_scope_new_match_rate = (
+        float(in_scope_new_matched / in_scope_new_total) if in_scope_new_total > 0 else 0.0
+    )
+
+    latest_shadow = (
+        await db.execute(
+            select(func.max(FindingShadowState.updated_at)).where(*shadow_filters)
+        )
+    ).scalar()
+    if latest_shadow is not None:
+        shadow_freshness_lag_minutes = max(
+            0.0, float((now_utc - latest_shadow).total_seconds() / 60.0)
+        )
+    else:
+        shadow_freshness_lag_minutes = None
+
+    sweep_failures = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(ControlPlaneReconcileJob)
+                .where(*reconcile_job_filters, ControlPlaneReconcileJob.status == "error")
+            )
+        ).scalar()
+        or 0
+    )
 
     return ControlPlaneSLOResponse(
         window_hours=hours,
@@ -495,6 +710,17 @@ async def get_control_plane_slo(
         p95_handler_latency_ms=p95_handler_latency_ms,
         drop_rate=drop_rate,
         duplicate_rate=duplicate_rate,
+        in_scope_total=in_scope_total,
+        missing_canonical=missing_canonical,
+        missing_resource_key=missing_resource_key,
+        in_scope_matched=in_scope_matched,
+        in_scope_unmatched=in_scope_unmatched,
+        match_coverage_rate=match_coverage_rate,
+        in_scope_new_total=in_scope_new_total,
+        in_scope_new_matched=in_scope_new_matched,
+        in_scope_new_match_rate=in_scope_new_match_rate,
+        shadow_freshness_lag_minutes=shadow_freshness_lag_minutes,
+        sweep_failures=sweep_failures,
     )
 
 
@@ -507,10 +733,16 @@ async def get_control_plane_shadow_summary(
     tenant_uuid = _parse_tenant_id(tenant_id)
     await _get_tenant_or_404(db, tenant_uuid)
 
+    shadow_filters: list[Any] = [FindingShadowState.tenant_id == tenant_uuid]
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        control_token = func.upper(func.substring(FindingShadowState.control_id, r"([A-Za-z][A-Za-z0-9]*\.\d+)$"))
+        in_scope_token = func.coalesce(FindingShadowState.canonical_control_id, control_token)
+        shadow_filters.append(in_scope_token.in_(sorted(IN_SCOPE_CONTROL_TOKENS)))
+
     total_rows = int(
         (
             await db.execute(
-                select(func.count()).select_from(FindingShadowState).where(FindingShadowState.tenant_id == tenant_uuid)
+                select(func.count()).select_from(FindingShadowState).where(*shadow_filters)
             )
         ).scalar()
         or 0
@@ -520,7 +752,7 @@ async def get_control_plane_shadow_summary(
             await db.execute(
                 select(func.count())
                 .select_from(FindingShadowState)
-                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "OPEN")
+                .where(*shadow_filters, FindingShadowState.status == "OPEN")
             )
         ).scalar()
         or 0
@@ -530,7 +762,7 @@ async def get_control_plane_shadow_summary(
             await db.execute(
                 select(func.count())
                 .select_from(FindingShadowState)
-                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "RESOLVED")
+                .where(*shadow_filters, FindingShadowState.status == "RESOLVED")
             )
         ).scalar()
         or 0
@@ -540,15 +772,16 @@ async def get_control_plane_shadow_summary(
             await db.execute(
                 select(func.count())
                 .select_from(FindingShadowState)
-                .where(FindingShadowState.tenant_id == tenant_uuid, FindingShadowState.status == "SOFT_RESOLVED")
+                .where(*shadow_filters, FindingShadowState.status == "SOFT_RESOLVED")
             )
         ).scalar()
         or 0
     )
+    controls_group_key = func.coalesce(FindingShadowState.canonical_control_id, FindingShadowState.control_id)
     controls_rows = await db.execute(
-        select(FindingShadowState.control_id, func.count())
-        .where(FindingShadowState.tenant_id == tenant_uuid)
-        .group_by(FindingShadowState.control_id)
+        select(controls_group_key, func.count())
+        .where(*shadow_filters)
+        .group_by(controls_group_key)
     )
     controls = {str(control): int(count) for control, count in controls_rows.all()}
 
@@ -559,6 +792,522 @@ async def get_control_plane_shadow_summary(
         resolved_count=resolved_count,
         soft_resolved_count=soft_resolved_count,
         controls=controls,
+    )
+
+
+@router.get("/control-plane/shadow-compare", response_model=ControlPlaneShadowCompareResponse)
+async def get_control_plane_shadow_compare(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str, Query()],
+    control_id: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0, le=10000)] = 0,
+) -> ControlPlaneShadowCompareResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+
+    shadow_filters: list[Any] = [FindingShadowState.tenant_id == tenant_uuid]
+    control_filter = (control_id or "").strip().upper()
+    if control_filter:
+        shadow_filters.append(
+            func.upper(func.coalesce(FindingShadowState.canonical_control_id, FindingShadowState.control_id))
+            == control_filter
+        )
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        control_token = func.upper(func.substring(FindingShadowState.control_id, r"([A-Za-z][A-Za-z0-9]*\.\d+)$"))
+        in_scope_token = func.coalesce(FindingShadowState.canonical_control_id, control_token)
+        shadow_filters.append(in_scope_token.in_(sorted(IN_SCOPE_CONTROL_TOKENS)))
+
+    total = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(FindingShadowState).where(*shadow_filters)
+            )
+        ).scalar()
+        or 0
+    )
+
+    shadow_alias = sa.orm.aliased(FindingShadowState)
+    shadow_alias_filters: list[Any] = [shadow_alias.tenant_id == tenant_uuid]
+    if control_filter:
+        shadow_alias_filters.append(
+            func.upper(func.coalesce(shadow_alias.canonical_control_id, shadow_alias.control_id)) == control_filter
+        )
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        control_token_alias = func.upper(func.substring(shadow_alias.control_id, r"([A-Za-z][A-Za-z0-9]*\.\d+)$"))
+        in_scope_token_alias = func.coalesce(shadow_alias.canonical_control_id, control_token_alias)
+        shadow_alias_filters.append(in_scope_token_alias.in_(sorted(IN_SCOPE_CONTROL_TOKENS)))
+
+    # LATERAL subquery: pick the latest canonical finding that matches this shadow row.
+    # We map it back to a Finding ORM entity via aliased(Finding, subquery).
+    canonical_subq = (
+        select(Finding)
+        .where(
+            Finding.tenant_id == shadow_alias.tenant_id,
+            Finding.account_id == shadow_alias.account_id,
+            Finding.region == shadow_alias.region,
+            sa.or_(
+                # Preferred: canonical join key (stable across control aliases and resource ARN formats).
+                sa.and_(
+                    shadow_alias.canonical_control_id.isnot(None),
+                    shadow_alias.resource_key.isnot(None),
+                    Finding.canonical_control_id == shadow_alias.canonical_control_id,
+                    Finding.resource_key == shadow_alias.resource_key,
+                ),
+                # Back-compat fallback: match on raw control/resource identifiers.
+                sa.and_(
+                    Finding.control_id == shadow_alias.control_id,
+                    sa.or_(
+                        Finding.resource_id == shadow_alias.resource_id,
+                        Finding.resource_id.contains(shadow_alias.resource_id),
+                    ),
+                ),
+            ),
+        )
+        .order_by(Finding.updated_at.desc())
+        .limit(1)
+        .lateral()
+        .alias("canonical_finding")
+    )
+    canonical_alias = sa.orm.aliased(Finding, canonical_subq)
+
+    stmt = (
+        select(shadow_alias, canonical_alias)
+        .select_from(shadow_alias)
+        .outerjoin(canonical_subq, sa.true())
+        .where(*shadow_alias_filters)
+        .order_by(sa.desc(shadow_alias.last_observed_event_time).nullslast(), sa.desc(shadow_alias.updated_at))
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    items: list[ControlPlaneShadowCompareItem] = []
+    for shadow_row, canonical_row in rows:
+        shadow_norm = _normalize_shadow_status(getattr(shadow_row, "status", None))
+        canonical_ref: ControlPlaneCanonicalFindingRef | None = None
+        canonical_norm = "UNKNOWN"
+        if canonical_row is not None:
+            canonical_norm = _normalize_canonical_finding_status(getattr(canonical_row, "status", None))
+            canonical_ref = ControlPlaneCanonicalFindingRef(
+                id=str(canonical_row.id),
+                source=str(canonical_row.source or ""),
+                status_raw=str(canonical_row.status or ""),
+                status_normalized=canonical_norm,
+                severity_label=str(canonical_row.severity_label) if canonical_row.severity_label else None,
+                title=str(canonical_row.title) if canonical_row.title else None,
+                updated_at=canonical_row.updated_at.isoformat() if canonical_row.updated_at else None,
+            )
+
+        is_mismatch = bool(shadow_norm != "UNKNOWN" and canonical_norm != "UNKNOWN" and shadow_norm != canonical_norm)
+        items.append(
+            ControlPlaneShadowCompareItem(
+                fingerprint=str(shadow_row.fingerprint),
+                account_id=str(shadow_row.account_id),
+                region=str(shadow_row.region),
+                resource_id=str(shadow_row.resource_id) if shadow_row.resource_id else None,
+                resource_type=str(shadow_row.resource_type) if shadow_row.resource_type else None,
+                control_id=str(shadow_row.control_id) if shadow_row.control_id else None,
+                shadow_status=str(shadow_row.status),
+                shadow_status_normalized=shadow_norm,
+                status_reason=str(shadow_row.status_reason) if shadow_row.status_reason else None,
+                evidence_ref=shadow_row.evidence_ref if isinstance(shadow_row.evidence_ref, dict) else None,
+                last_observed_event_time=shadow_row.last_observed_event_time.isoformat()
+                if shadow_row.last_observed_event_time
+                else None,
+                last_evaluated_at=shadow_row.last_evaluated_at.isoformat() if shadow_row.last_evaluated_at else None,
+                canonical=canonical_ref,
+                is_mismatch=is_mismatch,
+            )
+        )
+
+    return ControlPlaneShadowCompareResponse(tenant_id=str(tenant_uuid), total=total, items=items)
+
+
+@router.get("/control-plane/compare", response_model=ControlPlaneCompareResponse)
+async def get_control_plane_compare(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str, Query()],
+    basis: Annotated[str, Query(pattern=r"^(live|shadow)$")] = "live",
+    only_with_shadow: Annotated[bool, Query()] = False,
+    only_mismatches: Annotated[bool, Query()] = False,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0, le=10000)] = 0,
+) -> ControlPlaneCompareResponse:
+    """
+    Returns a side-by-side comparison between:
+    - "live": canonical findings (Security Hub / legacy ingest outputs)
+    - "shadow": near-real-time overlay state (event + enrichment, plus inventory reconciliation)
+
+    Rationale: a shadow-first view is great to debug the control-plane pipeline, but it hides the
+    majority of "live" findings for controls not yet covered by shadow. This endpoint provides
+    a live-first basis so admins can see coverage gaps and mismatches at a glance.
+    """
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+
+    if basis == "shadow":
+        # Keep a thin compatibility layer: return the existing shadow-first list
+        # as compare items (live may be None).
+        shadow_resp = await get_control_plane_shadow_compare(
+            _admin=_admin,
+            db=db,
+            tenant_id=tenant_id,
+            limit=limit,
+            offset=offset,
+        )
+        items = [
+            ControlPlaneCompareItem(
+                comparison_key=f"f:{row.fingerprint}",
+                account_id=row.account_id,
+                region=row.region,
+                resource_id=row.resource_id,
+                resource_type=row.resource_type,
+                control_id=row.control_id,
+                shadow=ControlPlaneShadowRef(
+                    fingerprint=row.fingerprint,
+                    status_raw=row.shadow_status,
+                    status_normalized=row.shadow_status_normalized,
+                    status_reason=row.status_reason,
+                    evidence_ref=row.evidence_ref,
+                    last_observed_event_time=row.last_observed_event_time,
+                    last_evaluated_at=row.last_evaluated_at,
+                ),
+                live=row.canonical,
+                is_mismatch=row.is_mismatch,
+            )
+            for row in shadow_resp.items
+        ]
+        return ControlPlaneCompareResponse(
+            tenant_id=str(tenant_uuid),
+            basis="shadow",
+            total=shadow_resp.total,
+            items=items,
+        )
+
+    finding_alias = sa.orm.aliased(Finding)
+
+    # Best-effort derived join keys for legacy rows that have not been backfilled yet.
+    # These mirror backend.services.canonicalization behavior, but are intentionally
+    # limited to a few high-signal resource types that we care about in Phase 1/2.
+    derived_control_token = sa.func.upper(
+        sa.func.substring(
+            finding_alias.control_id,
+            r"([A-Za-z][A-Za-z0-9]*\.\d+)$",
+        )
+    )
+    join_control_id = sa.func.coalesce(
+        finding_alias.canonical_control_id,
+        derived_control_token,
+        sa.func.upper(finding_alias.control_id),
+    )
+
+    derived_sg_id = sa.func.coalesce(
+        sa.case(
+            (finding_alias.resource_id.ilike("sg-%"), finding_alias.resource_id),
+            else_=None,
+        ),
+        sa.func.substring(finding_alias.resource_id, r"(sg-[0-9a-f]{8,17})"),
+    )
+    derived_sg_key = sa.case(
+        (derived_sg_id.isnot(None), sa.literal("sg:") + derived_sg_id),
+        else_=None,
+    )
+
+    derived_s3_bucket = sa.case(
+        (finding_alias.resource_id.ilike("arn:aws:s3:::%"), sa.func.replace(finding_alias.resource_id, "arn:aws:s3:::", "")),
+        else_=finding_alias.resource_id,
+    )
+    derived_s3_key = sa.case(
+        (derived_s3_bucket.isnot(None), sa.literal("s3:") + derived_s3_bucket),
+        else_=None,
+    )
+
+    derived_account_key = sa.literal("account:") + finding_alias.account_id
+    derived_account_region_key = (
+        sa.literal("account:") + finding_alias.account_id + sa.literal(":region:") + finding_alias.region
+    )
+
+    derived_resource_key = sa.case(
+        (finding_alias.resource_type == "AwsEc2SecurityGroup", derived_sg_key),
+        (finding_alias.resource_type == "AwsS3Bucket", derived_s3_key),
+        (finding_alias.resource_type == "AwsAccount", derived_account_key),
+        (finding_alias.resource_type == "AwsAccountRegion", derived_account_region_key),
+        else_=None,
+    )
+    join_resource_key = sa.func.coalesce(finding_alias.resource_key, derived_resource_key)
+
+    scope_filter = sa.true()
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        scope_filter = join_control_id.in_(sorted(IN_SCOPE_CONTROL_TOKENS))
+
+    # LATERAL subquery: pick the latest shadow state that matches this canonical finding.
+    shadow_subq = (
+        select(FindingShadowState)
+        .where(
+            FindingShadowState.tenant_id == finding_alias.tenant_id,
+            FindingShadowState.account_id == finding_alias.account_id,
+            FindingShadowState.region == finding_alias.region,
+            sa.or_(
+                # Preferred: canonical join key (stable across control aliases and resource ARN formats).
+                sa.and_(
+                    join_control_id.isnot(None),
+                    join_resource_key.isnot(None),
+                    FindingShadowState.canonical_control_id == join_control_id,
+                    FindingShadowState.resource_key == join_resource_key,
+                ),
+                # Back-compat fallback: match on raw control/resource identifiers.
+                sa.and_(
+                    FindingShadowState.control_id == finding_alias.control_id,
+                    finding_alias.resource_id.isnot(None),
+                    FindingShadowState.resource_id.isnot(None),
+                    sa.or_(
+                        FindingShadowState.resource_id == finding_alias.resource_id,
+                        finding_alias.resource_id.contains(FindingShadowState.resource_id),
+                        FindingShadowState.resource_id.contains(finding_alias.resource_id),
+                    ),
+                ),
+            ),
+        )
+        .order_by(
+            sa.desc(FindingShadowState.last_observed_event_time).nullslast(),
+            sa.desc(FindingShadowState.updated_at),
+        )
+        .limit(1)
+        .lateral()
+        .alias("shadow_state")
+    )
+    shadow_alias = sa.orm.aliased(FindingShadowState, shadow_subq)
+
+    # Filter flags: apply on the server so pagination/total stays consistent.
+    require_shadow_filter = sa.true()
+    if only_with_shadow or only_mismatches:
+        require_shadow_filter = shadow_alias.id.isnot(None)
+
+    mismatch_filter = sa.true()
+    if only_mismatches:
+        live_upper = func.upper(func.coalesce(cast(finding_alias.status, String), ""))
+        live_norm = sa.case(
+            (live_upper.in_(("ACTIVE", "NEW", "OPEN")), "OPEN"),
+            (live_upper.in_(("RESOLVED", "CLOSED", "SUPPRESSED")), "RESOLVED"),
+            else_="UNKNOWN",
+        )
+        shadow_upper = func.upper(func.coalesce(cast(shadow_alias.status, String), ""))
+        shadow_norm = sa.case(
+            (shadow_upper == "OPEN", "OPEN"),
+            (shadow_upper.in_(("RESOLVED", "SOFT_RESOLVED")), "RESOLVED"),
+            else_="UNKNOWN",
+        )
+        mismatch_filter = sa.and_(shadow_norm != "UNKNOWN", live_norm != "UNKNOWN", shadow_norm != live_norm)
+
+    count_stmt = (
+        select(func.count())
+        .select_from(finding_alias)
+        .outerjoin(shadow_subq, sa.true())
+        .where(
+            finding_alias.tenant_id == tenant_uuid,
+            scope_filter,
+            require_shadow_filter,
+            mismatch_filter,
+        )
+    )
+    total = int((await db.execute(count_stmt)).scalar() or 0)
+
+    stmt = (
+        select(finding_alias, shadow_alias)
+        .select_from(finding_alias)
+        .outerjoin(shadow_subq, sa.true())
+        .where(
+            finding_alias.tenant_id == tenant_uuid,
+            scope_filter,
+            require_shadow_filter,
+            mismatch_filter,
+        )
+        .order_by(sa.desc(finding_alias.updated_at))
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    items: list[ControlPlaneCompareItem] = []
+    for finding_row, shadow_row in rows:
+        live_norm = _normalize_canonical_finding_status(getattr(finding_row, "status", None))
+        live_ref = ControlPlaneCanonicalFindingRef(
+            id=str(finding_row.id),
+            source=str(finding_row.source or ""),
+            status_raw=str(finding_row.status or ""),
+            status_normalized=live_norm,
+            severity_label=str(finding_row.severity_label) if finding_row.severity_label else None,
+            title=str(finding_row.title) if finding_row.title else None,
+            updated_at=finding_row.updated_at.isoformat() if finding_row.updated_at else None,
+        )
+
+        shadow_ref: ControlPlaneShadowRef | None = None
+        shadow_norm = "UNKNOWN"
+        if shadow_row is not None:
+            shadow_norm = _normalize_shadow_status(getattr(shadow_row, "status", None))
+            shadow_ref = ControlPlaneShadowRef(
+                fingerprint=str(shadow_row.fingerprint),
+                status_raw=str(shadow_row.status or ""),
+                status_normalized=shadow_norm,
+                status_reason=str(shadow_row.status_reason) if shadow_row.status_reason else None,
+                evidence_ref=shadow_row.evidence_ref if isinstance(shadow_row.evidence_ref, dict) else None,
+                last_observed_event_time=shadow_row.last_observed_event_time.isoformat()
+                if shadow_row.last_observed_event_time
+                else None,
+                last_evaluated_at=shadow_row.last_evaluated_at.isoformat() if shadow_row.last_evaluated_at else None,
+            )
+
+        is_mismatch = bool(
+            shadow_norm != "UNKNOWN"
+            and live_norm != "UNKNOWN"
+            and shadow_norm != live_norm
+        )
+
+        comparison_key = f"c:{finding_row.id}"
+        if shadow_ref is not None:
+            comparison_key = f"c:{finding_row.id}:f:{shadow_ref.fingerprint}"
+
+        items.append(
+            ControlPlaneCompareItem(
+                comparison_key=comparison_key,
+                account_id=str(finding_row.account_id),
+                region=str(finding_row.region),
+                resource_id=str(finding_row.resource_id) if finding_row.resource_id else None,
+                resource_type=str(finding_row.resource_type) if finding_row.resource_type else None,
+                control_id=str(finding_row.control_id) if finding_row.control_id else None,
+                shadow=shadow_ref,
+                live=live_ref,
+                is_mismatch=is_mismatch,
+            )
+        )
+
+    return ControlPlaneCompareResponse(
+        tenant_id=str(tenant_uuid),
+        basis="live",
+        total=total,
+        items=items,
+    )
+
+
+@router.get("/control-plane/unmatched-report", response_model=ControlPlaneUnmatchedReportResponse)
+async def get_control_plane_unmatched_report(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str, Query()],
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+) -> ControlPlaneUnmatchedReportResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    finding_alias = sa.orm.aliased(Finding)
+    derived_control_token = sa.func.upper(
+        sa.func.substring(
+            finding_alias.control_id,
+            r"([A-Za-z][A-Za-z0-9]*\.\d+)$",
+        )
+    )
+    control_group = sa.func.coalesce(
+        finding_alias.canonical_control_id,
+        derived_control_token,
+        sa.func.upper(finding_alias.control_id),
+        sa.literal("UNKNOWN"),
+    )
+
+    derived_sg_id = sa.func.coalesce(
+        sa.case(
+            (finding_alias.resource_id.ilike("sg-%"), finding_alias.resource_id),
+            else_=None,
+        ),
+        sa.func.substring(finding_alias.resource_id, r"(sg-[0-9a-f]{8,17})"),
+    )
+    derived_sg_key = sa.case(
+        (derived_sg_id.isnot(None), sa.literal("sg:") + derived_sg_id),
+        else_=None,
+    )
+    derived_s3_bucket = sa.case(
+        (
+            finding_alias.resource_id.ilike("arn:aws:s3:::%"),
+            sa.func.replace(finding_alias.resource_id, "arn:aws:s3:::", ""),
+        ),
+        else_=finding_alias.resource_id,
+    )
+    derived_s3_key = sa.case(
+        (derived_s3_bucket.isnot(None), sa.literal("s3:") + derived_s3_bucket),
+        else_=None,
+    )
+    derived_account_key = sa.literal("account:") + finding_alias.account_id
+    derived_account_region_key = (
+        sa.literal("account:")
+        + finding_alias.account_id
+        + sa.literal(":region:")
+        + finding_alias.region
+    )
+    derived_resource_key = sa.case(
+        (finding_alias.resource_type == "AwsEc2SecurityGroup", derived_sg_key),
+        (finding_alias.resource_type == "AwsS3Bucket", derived_s3_key),
+        (finding_alias.resource_type == "AwsAccount", derived_account_key),
+        (finding_alias.resource_type == "AwsAccountRegion", derived_account_region_key),
+        else_=None,
+    )
+    join_resource_key = sa.func.coalesce(finding_alias.resource_key, derived_resource_key)
+
+    shadow_exists = sa.exists(
+        select(FindingShadowState.id).where(
+            FindingShadowState.tenant_id == finding_alias.tenant_id,
+            FindingShadowState.account_id == finding_alias.account_id,
+            FindingShadowState.region == finding_alias.region,
+            FindingShadowState.canonical_control_id == control_group,
+            FindingShadowState.resource_key == join_resource_key,
+        )
+    )
+    reason_expr = sa.case(
+        (finding_alias.status == "RESOLVED", sa.literal("expected_historical_resolved")),
+        (
+            shadow_exists,
+            sa.literal("shadow_exists_but_not_attached"),
+        ),
+        else_=sa.literal("no_shadow_row"),
+    )
+
+    rows = (
+        await db.execute(
+            select(
+                control_group.label("control_id"),
+                reason_expr.label("reason"),
+                func.count().label("count"),
+            )
+            .select_from(finding_alias)
+            .where(
+                finding_alias.tenant_id == tenant_uuid,
+                finding_alias.source == "security_hub",
+                finding_alias.in_scope.is_(True),
+                finding_alias.updated_at >= since,
+                sa.or_(
+                    finding_alias.shadow_fingerprint.is_(None),
+                    finding_alias.shadow_fingerprint == "",
+                ),
+            )
+            .group_by(control_group, reason_expr)
+            .order_by(sa.desc(func.count()))
+        )
+    ).all()
+
+    items = [
+        ControlPlaneUnmatchedReasonItem(
+            control_id=str(control_id or "UNKNOWN"),
+            reason=str(reason or "unknown"),
+            count=int(count or 0),
+        )
+        for control_id, reason, count in rows
+    ]
+    return ControlPlaneUnmatchedReportResponse(
+        tenant_id=str(tenant_uuid),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        items=items,
     )
 
 

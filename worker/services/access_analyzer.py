@@ -23,6 +23,7 @@ from tenacity import (
 )
 
 from worker.services.json_safe import make_json_safe
+from backend.services.canonicalization import build_resource_key
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,13 @@ def normalize_aa_finding(
     updated = _parse_ts(raw.get("updatedAt"))
     analyzed = _parse_ts(raw.get("analyzedAt"))
 
+    resource_key = build_resource_key(
+        account_id=account_id,
+        region=region,
+        resource_id=resource or None,
+        resource_type=resource_type or None,
+    )
+
     return {
         "tenant_id": tenant_id,
         "account_id": account_id,
@@ -245,8 +253,11 @@ def normalize_aa_finding(
         "resource_id": resource or None,
         "resource_type": resource_type or None,
         "control_id": None,
+        "canonical_control_id": None,
+        "resource_key": resource_key,
         "standard_name": None,
         "status": status[:32],
+        "in_scope": False,
         "first_observed_at": created,
         "last_observed_at": updated or analyzed or created,
         "sh_updated_at": updated,

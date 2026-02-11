@@ -32,6 +32,12 @@ class Settings(BaseSettings):
         default=None,
         description="Sync Postgres URL for Alembic (postgresql+psycopg2). If unset, derived from DATABASE_URL.",
     )
+    DB_REVISION_GUARD_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "When true, API and worker fail fast at startup if the database revision is not at Alembic head."
+        ),
+    )
 
     @property
     def database_url_sync(self) -> str:
@@ -88,7 +94,7 @@ class Settings(BaseSettings):
 
     # CloudFormation templates (S3; versioned paths)
     CLOUDFORMATION_READ_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.4.1.yaml",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.1.yaml",
         description="Full HTTPS URL to the Read Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
     )
     CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL: str = Field(
@@ -171,6 +177,14 @@ class Settings(BaseSettings):
         default="event_monitor_shadow",
         description="Source label for control-plane shadow pipeline outputs.",
     )
+    CONTROL_PLANE_AUTHORITATIVE_CONTROLS: str = Field(
+        default="",
+        description=(
+            "Comma-separated canonical control IDs (e.g. EC2.53,S3.1) that are promoted to "
+            "authoritative control-plane state when CONTROL_PLANE_SHADOW_MODE=false. "
+            "Promoted controls will auto-resolve/reopen live findings based on shadow status."
+        ),
+    )
     WORKER_POOL: str = Field(
         default="legacy",
         description="Worker queue pool selector: legacy | events | inventory | all.",
@@ -184,8 +198,27 @@ class Settings(BaseSettings):
         description="Default maximum resources collected per inventory reconciliation shard job.",
     )
     CONTROL_PLANE_INVENTORY_SERVICES: str = Field(
-        default="ec2,s3,cloudtrail,config,iam,ebs,rds,eks,ssm",
+        default="ec2,s3,cloudtrail,config,iam,ebs,rds,eks,ssm,guardduty",
         description="Comma-separated inventory services covered by reconciliation sweeps.",
+    )
+    CONTROL_PLANE_AUTO_DISABLE_ASSUME_ROLE_FAILURES: bool = Field(
+        default=True,
+        description=(
+            "When true, repeated AssumeRole failures on worker retries can auto-disable the affected AWS account."
+        ),
+    )
+    CONTROL_PLANE_ASSUME_ROLE_QUARANTINE_RECEIVE_COUNT: int = Field(
+        default=3,
+        description=(
+            "SQS ApproximateReceiveCount threshold before auto-disabling accounts with repeated AssumeRole failures."
+        ),
+    )
+    ONLY_IN_SCOPE_CONTROLS: bool = Field(
+        default=True,
+        description=(
+            "If true, filter findings/actions to the controls defined in backend.services.control_scope "
+            "(exclude pr_only/out-of-scope). This reduces noise during the MVP phase."
+        ),
     )
     DIGEST_ENABLED: bool = Field(
         default=True,
@@ -249,7 +282,7 @@ class Settings(BaseSettings):
     @property
     def control_plane_inventory_services_list(self) -> list[str]:
         """Normalized inventory service allowlist for reconciliation sweeps."""
-        default_services = ["ec2", "s3", "cloudtrail", "config", "iam", "ebs", "rds", "eks", "ssm"]
+        default_services = ["ec2", "s3", "cloudtrail", "config", "iam", "ebs", "rds", "eks", "ssm", "guardduty"]
         raw = (self.CONTROL_PLANE_INVENTORY_SERVICES or "").strip()
         if not raw:
             return default_services
@@ -262,6 +295,20 @@ class Settings(BaseSettings):
             seen.add(service)
             services.append(service)
         return services or default_services
+
+    @property
+    def control_plane_authoritative_controls_set(self) -> set[str]:
+        """Uppercased set of canonical control IDs promoted to authoritative mode."""
+        raw = (self.CONTROL_PLANE_AUTHORITATIVE_CONTROLS or "").strip()
+        if not raw:
+            return set()
+        values: set[str] = set()
+        for token in raw.split(","):
+            control_id = token.strip()
+            if not control_id:
+                continue
+            values.add(control_id.upper())
+        return values
 
     @property
     def saas_admin_emails_list(self) -> set[str]:

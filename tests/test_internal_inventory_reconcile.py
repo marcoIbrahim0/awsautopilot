@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.utils.sqs import BACKFILL_FINDING_KEYS_JOB_TYPE
 
 
 def test_reconcile_inventory_shard_enqueues_with_sweep_options() -> None:
@@ -139,3 +140,44 @@ def test_reconcile_inventory_global_enqueues_per_account_region_service() -> Non
     payload = json.loads(mock_sqs.send_message.call_args_list[0][1]["MessageBody"])
     assert payload["sweep_mode"] == "global"
     assert payload["max_resources"] == 300
+
+
+def test_backfill_finding_keys_enqueues_chunked_job() -> None:
+    async def override_get_db():
+        yield AsyncMock()
+
+    with patch("backend.routers.internal.settings") as mock_settings:
+        mock_settings.CONTROL_PLANE_EVENTS_SECRET = "secret123"
+        mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/inventory"
+        mock_settings.AWS_REGION = "us-east-1"
+        with patch("backend.routers.internal.boto3") as mock_boto3:
+            mock_sqs = MagicMock()
+            mock_boto3.client.return_value = mock_sqs
+
+            from backend.database import get_db
+
+            app.dependency_overrides[get_db] = override_get_db
+            try:
+                client = TestClient(app)
+                resp = client.post(
+                    "/api/internal/backfill-finding-keys",
+                    headers={"X-Control-Plane-Secret": "secret123"},
+                    json={
+                        "enqueue_per_tenant": False,
+                        "chunk_size": 250,
+                        "max_chunks": 4,
+                        "include_stale": True,
+                        "auto_continue": True,
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["enqueued"] == 1
+    body = json.loads(mock_sqs.send_message.call_args[1]["MessageBody"])
+    assert body["job_type"] == BACKFILL_FINDING_KEYS_JOB_TYPE
+    assert body["chunk_size"] == 250
+    assert body["max_chunks"] == 4
+    assert body["include_stale"] is True

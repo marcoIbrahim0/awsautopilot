@@ -23,6 +23,7 @@ from tenacity import (
 )
 
 from worker.services.json_safe import make_json_safe
+from backend.services.canonicalization import build_resource_key
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,13 @@ def normalize_inspector_finding(
     last_obs = _parse_ts(raw.get("lastObservedAt"))
     updated_at = last_obs or first_obs
 
+    resource_key = build_resource_key(
+        account_id=account_id,
+        region=region,
+        resource_id=resource_id,
+        resource_type=resource_type,
+    )
+
     return {
         "tenant_id": tenant_id,
         "account_id": account_id,
@@ -226,8 +234,11 @@ def normalize_inspector_finding(
         "resource_id": resource_id,
         "resource_type": resource_type,
         "control_id": None,
+        "canonical_control_id": None,
+        "resource_key": resource_key,
         "standard_name": None,
         "status": status[:32],
+        "in_scope": False,
         "first_observed_at": first_obs,
         "last_observed_at": last_obs,
         "sh_updated_at": updated_at,

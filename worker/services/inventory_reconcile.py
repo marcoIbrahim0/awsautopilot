@@ -33,6 +33,7 @@ INVENTORY_SERVICES_DEFAULT: tuple[str, ...] = (
     "rds",
     "eks",
     "ssm",
+    "guardduty",
 )
 
 
@@ -100,6 +101,19 @@ def _s3_bucket_public_access_block(s3_client: Any, bucket: str) -> dict[str, Any
     except ClientError as exc:
         if _extract_error_code(exc) in {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"}:
             return {}
+        raise
+
+
+def _s3_account_public_access_block(s3control_client: Any, account_id: str) -> tuple[dict[str, Any], bool]:
+    try:
+        resp = s3control_client.get_public_access_block(AccountId=account_id)
+        return (resp.get("PublicAccessBlockConfiguration") or {}, True)
+    except ClientError as exc:
+        code = _extract_error_code(exc)
+        if code == "NoSuchPublicAccessBlockConfiguration":
+            return ({}, True)
+        if code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+            return ({}, False)
         raise
 
 
@@ -270,19 +284,76 @@ def _collect_ec2_security_groups(
 
 def _collect_s3_buckets(
     session_boto: Any,
+    account_id: str,
     region: str,
     resource_ids: list[str] | None,
     max_resources: int,
 ) -> list[InventorySnapshot]:
     # S3 control-plane APIs are global; region filtering is done per bucket location.
     s3 = session_boto.client("s3", region_name=region)
+    s3control = session_boto.client("s3control", region_name=region)
+
+    account_pab, account_probe_ok = _s3_account_public_access_block(s3control, account_id)
+    required_account_flags = (
+        "BlockPublicAcls",
+        "IgnorePublicAcls",
+        "BlockPublicPolicy",
+        "RestrictPublicBuckets",
+    )
+    account_pab_all_on = all(bool(account_pab.get(flag)) for flag in required_account_flags)
+    s31_status = (
+        SHADOW_STATUS_SOFT_RESOLVED
+        if not account_probe_ok
+        else (SHADOW_STATUS_RESOLVED if account_pab_all_on else SHADOW_STATUS_OPEN)
+    )
+    s31_reason = (
+        "inventory_access_denied_s3control_get_public_access_block"
+        if not account_probe_ok
+        else ("inventory_confirmed_compliant" if account_pab_all_on else "inventory_confirmed_non_compliant")
+    )
+    s31_confidence = 40 if not account_probe_ok else 95
+
+    snapshots: list[InventorySnapshot] = [
+        InventorySnapshot(
+            service="s3",
+            resource_id=account_id,
+            resource_type="AwsAccount",
+            key_fields={
+                "account_id": account_id,
+                "public_access_block": {flag: bool(account_pab.get(flag)) for flag in required_account_flags},
+                "probe_ok": account_probe_ok,
+            },
+            state_for_hash={
+                "public_access_block": {flag: bool(account_pab.get(flag)) for flag in required_account_flags},
+                "probe_ok": account_probe_ok,
+            },
+            metadata_json=None,
+            evaluations=[
+                _control_eval(
+                    control_id="S3.1",
+                    resource_id=account_id,
+                    resource_type="AwsAccount",
+                    status=s31_status,
+                    title="S3 account-level block public access is enabled",
+                    description="Inventory reconciliation for S3.1 account-level public access block.",
+                    status_reason=s31_reason,
+                    evidence_ref={
+                        "source": "inventory",
+                        "public_access_block": {flag: bool(account_pab.get(flag)) for flag in required_account_flags},
+                        "probe_ok": account_probe_ok,
+                    },
+                    state_confidence=s31_confidence,
+                )
+            ],
+        )
+    ]
+
     if resource_ids:
         bucket_names = [_bucket_name_from_any(str(v)) for v in resource_ids if str(v).strip()]
     else:
         resp = s3.list_buckets()
         bucket_names = [str((b or {}).get("Name") or "") for b in _as_list(resp.get("Buckets"))]
 
-    snapshots: list[InventorySnapshot] = []
     for bucket in bucket_names:
         bucket = bucket.strip()
         if not bucket:
@@ -407,7 +478,7 @@ def _collect_s3_buckets(
                 evaluations=evals,
             )
         )
-        if len(snapshots) >= max_resources:
+        if len(snapshots) >= (max_resources + 1):
             break
 
     return snapshots
@@ -842,6 +913,83 @@ def _collect_ssm_account(
     ]
 
 
+def _collect_guardduty_account(
+    session_boto: Any,
+    account_id: str,
+    region: str,
+) -> list[InventorySnapshot]:
+    guardduty = session_boto.client("guardduty", region_name=region)
+    detector_ids: list[str] = []
+    access_ok = True
+    try:
+        detector_ids = [str(v) for v in _as_list(guardduty.list_detectors().get("DetectorIds")) if str(v).strip()]
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+            access_ok = False
+        else:
+            raise
+
+    detector_statuses: list[str] = []
+    has_enabled_detector = False
+    if access_ok:
+        for detector_id in detector_ids:
+            try:
+                status = str((guardduty.get_detector(DetectorId=detector_id) or {}).get("Status") or "").upper()
+            except ClientError:
+                continue
+            if status:
+                detector_statuses.append(status)
+            if status == "ENABLED":
+                has_enabled_detector = True
+
+    if not access_ok:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_access_denied_guardduty_list_detectors"
+        confidence = 40
+    elif has_enabled_detector:
+        status = SHADOW_STATUS_RESOLVED
+        reason = "inventory_confirmed_compliant"
+        confidence = 95
+    else:
+        status = SHADOW_STATUS_OPEN
+        reason = "inventory_confirmed_non_compliant"
+        confidence = 95
+
+    state_for_hash = {
+        "detector_count": len(detector_ids),
+        "detector_statuses": detector_statuses,
+        "access_ok": access_ok,
+    }
+    return [
+        InventorySnapshot(
+            service="guardduty",
+            resource_id=f"{account_id}:{region}",
+            resource_type="AwsAccountRegion",
+            key_fields=state_for_hash.copy(),
+            state_for_hash=state_for_hash,
+            metadata_json=None,
+            evaluations=[
+                _control_eval(
+                    control_id="GuardDuty.1",
+                    resource_id=f"{account_id}:{region}",
+                    resource_type="AwsAccountRegion",
+                    status=status,
+                    title="GuardDuty detector enabled",
+                    description="Inventory reconciliation for GuardDuty.1.",
+                    status_reason=reason,
+                    evidence_ref={
+                        "source": "inventory",
+                        "detector_ids": detector_ids,
+                        "detector_statuses": detector_statuses,
+                        "access_ok": access_ok,
+                    },
+                    state_confidence=confidence,
+                )
+            ],
+        )
+    ]
+
+
 def collect_inventory_snapshots(
     session_boto: Any,
     account_id: str,
@@ -854,7 +1002,7 @@ def collect_inventory_snapshots(
     if svc == "ec2":
         return _collect_ec2_security_groups(session_boto, region, resource_ids, max_resources)
     if svc == "s3":
-        return _collect_s3_buckets(session_boto, region, resource_ids, max_resources)
+        return _collect_s3_buckets(session_boto, account_id, region, resource_ids, max_resources)
     if svc == "cloudtrail":
         return _collect_cloudtrail_account(session_boto, account_id, region)
     if svc == "config":
@@ -869,4 +1017,6 @@ def collect_inventory_snapshots(
         return _collect_eks_clusters(session_boto, region, resource_ids, max_resources)
     if svc == "ssm":
         return _collect_ssm_account(session_boto, account_id, region)
+    if svc == "guardduty":
+        return _collect_guardduty_account(session_boto, account_id, region)
     return []

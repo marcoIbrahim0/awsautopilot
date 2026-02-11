@@ -71,6 +71,10 @@ Inventory reconciliation is split into shard jobs plus orchestration endpoints:
 - `POST /api/internal/reconcile-inventory-global`
   - Enqueue global reconciliation across all active accounts/regions for a tenant.
   - Builds `(account, region, service)` shards and marks each as `sweep_mode=global`.
+- `POST /api/internal/reconcile-inventory-global-all-tenants`
+  - Enqueue the same global reconciliation sweeps for every active tenant (cron-friendly).
+  - Recommended schedule: every 6 hours (or daily for small footprints).
+  - Requires header `X-Control-Plane-Secret`.
 
 Phase-2 defaults are configurable via:
 - `CONTROL_PLANE_INVENTORY_SERVICES`
@@ -80,3 +84,113 @@ Phase-2 defaults are configurable via:
 1. Keep `CONTROL_PLANE_SHADOW_MODE=true` and ingest to shadow tables only.
 2. Compare shadow metrics/state against legacy findings for pilot controls.
 3. Flip selected controls to authoritative mode only after precision/freshness targets are met.
+   - Set `CONTROL_PLANE_SHADOW_MODE=false`
+   - Set `CONTROL_PLANE_AUTHORITATIVE_CONTROLS=EC2.53,S3.1,...` (comma-separated canonical control IDs)
+   - When enabled, shadow state will auto-resolve and reopen canonical `security_hub` findings for promoted controls.
+
+## Deployment Safety (No Schema Drift)
+- API and worker now run a hard startup guard: DB revision must equal Alembic head or process exits.
+- CI gate runs:
+  - `alembic heads`
+  - `alembic current`
+  - and fails if current != head.
+- Deployment order is mandatory:
+  1. `alembic upgrade head`
+  2. restart API
+  3. restart workers
+
+## Automatic Canonical Key Backfill
+- New internal endpoint:
+  - `POST /api/internal/backfill-finding-keys`
+  - Supports optional filters: `tenant_id`, `account_id`, `region`
+  - Supports chunking controls: `chunk_size`, `max_chunks`, `auto_continue`, `include_stale`
+- New worker job type:
+  - `backfill_finding_keys`
+  - idempotent; updates only null or stale `canonical_control_id` / `resource_key` values.
+- Schedule recommendation:
+  - Run every 6 hours until missing-key metrics stay at zero for multiple periods.
+  - Keep a daily run after stabilization as regression guard.
+
+## Queue Reliability and Operational Policy
+- Keep `POST /api/internal/reconcile-inventory-global-all-tenants` on a 6-hour schedule.
+- Inventory queue now has explicit CloudWatch alarm recommendations/resources for:
+  - main queue depth
+  - oldest message age
+  - DLQ non-empty
+- Worker logs now emit retry visibility with `receive_count`, `tenant`, `account`, and `region`.
+- Policy for repeated AssumeRole failures:
+  - after repeated retries (default receive count >= 3), auto-disable account (configurable) until fixed.
+
+## IAM/Trust Hardening
+- ReadRole template rollout target: `v1.5.1`.
+- Account validation output now includes:
+  - `required_permissions`
+  - `authoritative_mode_allowed`
+  - `authoritative_mode_block_reasons`
+- Global sweeps now enforce:
+  - tenant/account external-id consistency checks
+  - optional AssumeRole precheck
+  - authoritative-mode block when required permissions are missing.
+
+## Expected Unmatched Classes Policy
+- Expected unmatched class:
+  - historical resolved findings where no current shadow row is expected.
+- Current policy:
+  - keep historical rows (`expected_historical_resolved`) for audit history
+  - exclude these from "new in-scope match-rate" KPI calculations
+  - report separately in unmatched breakdown.
+
+## Observability and SLO Targets
+- Dashboard/alert primitives:
+  - missing canonical/resource key counts
+  - in-scope match coverage
+  - in-scope NEW match rate
+  - shadow freshness lag
+  - reconcile sweep failures
+- Suggested targets:
+  - `missing_canonical` = 0
+  - `missing_resource_key` = 0
+  - in-scope `NEW` match rate >= 95%
+  - shadow freshness lag < 6h
+- SaaS admin endpoints:
+  - `GET /api/saas/control-plane/slo`
+  - `GET /api/saas/control-plane/unmatched-report`
+
+## Standard Verification SQL
+```sql
+SELECT COUNT(*) AS in_scope,
+COUNT(*) FILTER (WHERE canonical_control_id IS NULL) AS missing_canonical,
+COUNT(*) FILTER (WHERE resource_key IS NULL) AS missing_resource_key
+FROM findings
+WHERE tenant_id = '<tenant_uuid>' AND source='security_hub' AND in_scope IS TRUE;
+```
+
+```sql
+SELECT COUNT(*) AS in_scope_total,
+COUNT(*) FILTER (WHERE shadow_fingerprint IS NOT NULL AND shadow_fingerprint <> '') AS matched,
+COUNT(*) FILTER (WHERE shadow_fingerprint IS NULL OR shadow_fingerprint = '') AS unmatched
+FROM findings
+WHERE tenant_id = '<tenant_uuid>' AND source='security_hub' AND in_scope IS TRUE;
+```
+
+```sql
+SELECT MAX(updated_at) AS last_shadow_update, COUNT(*) AS shadow_rows
+FROM finding_shadow_states
+WHERE tenant_id = '<tenant_uuid>';
+```
+
+```sql
+WITH u AS (
+  SELECT tenant_id, account_id, region, canonical_control_id, resource_key
+  FROM findings
+  WHERE tenant_id = '<tenant_uuid>' AND source='security_hub' AND in_scope IS TRUE
+    AND (shadow_fingerprint IS NULL OR shadow_fingerprint = '')
+)
+SELECT CASE WHEN s.id IS NULL THEN 'no_shadow_row' ELSE 'shadow_exists_but_not_attached' END AS reason,
+COUNT(*) AS cnt
+FROM u
+LEFT JOIN finding_shadow_states s
+  ON s.tenant_id=u.tenant_id AND s.account_id=u.account_id AND s.region=u.region
+ AND s.canonical_control_id=u.canonical_control_id AND s.resource_key=u.resource_key
+GROUP BY 1;
+```

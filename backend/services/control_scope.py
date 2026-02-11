@@ -200,6 +200,11 @@ PRIMARY_CONTROL_FOR_ACTION_TYPE: dict[str, str] = {
 # Canonical control IDs that receive real IaC (PR bundle or direct fix).
 IN_SCOPE_CONTROL_IDS: frozenset[str] = frozenset(CONTROL_TO_ACTION_TYPE.keys())
 
+# Controls considered "in scope" for ingestion and UI filtering. Includes aliases.
+IN_SCOPE_CONTROL_TOKENS: frozenset[str] = frozenset(
+    set(CONTROL_TO_ACTION_TYPE.keys()) | set(CONTROL_ALIAS_TO_ACTION_TYPE.keys())
+)
+
 # Default action type when control is not in scope.
 ACTION_TYPE_DEFAULT = "pr_only"
 

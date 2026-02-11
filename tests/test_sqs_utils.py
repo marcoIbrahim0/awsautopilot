@@ -11,6 +11,7 @@ import uuid
 from unittest.mock import patch
 
 from backend.utils.sqs import (
+    BACKFILL_FINDING_KEYS_JOB_TYPE,
     EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
     EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE,
     INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE,
@@ -24,6 +25,7 @@ from backend.utils.sqs import (
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
     build_ingest_job_payload,
+    build_backfill_finding_keys_job_payload,
     build_pr_bundle_execution_job_payload,
     build_reconcile_inventory_shard_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
@@ -328,3 +330,27 @@ def test_build_reconcile_recently_touched_resources_job_payload() -> None:
     assert payload["lookback_minutes"] == 30
     assert payload["services"] == ["ec2", "s3"]
     assert payload["max_resources"] == 200
+
+
+def test_build_backfill_finding_keys_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_backfill_finding_keys_job_payload(
+        created_at="2026-02-11T10:00:00Z",
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        region="us-east-1",
+        chunk_size=500,
+        max_chunks=8,
+        include_stale=True,
+        auto_continue=True,
+        start_after_id="00000000-0000-0000-0000-000000000001",
+    )
+    assert payload["job_type"] == BACKFILL_FINDING_KEYS_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["account_id"] == "123456789012"
+    assert payload["region"] == "us-east-1"
+    assert payload["chunk_size"] == 500
+    assert payload["max_chunks"] == 8
+    assert payload["include_stale"] is True
+    assert payload["auto_continue"] is True
+    assert payload["start_after_id"] == "00000000-0000-0000-0000-000000000001"

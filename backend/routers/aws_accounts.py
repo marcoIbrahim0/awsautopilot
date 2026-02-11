@@ -181,7 +181,30 @@ class ValidationResponse(BaseModel):
     last_validated_at: datetime | None = Field(None, description="When validation last ran")
     permissions_ok: bool = Field(
         ...,
-        description="True if STS and Security Hub check succeeded for ReadRole.",
+        description=(
+            "True if ReadRole passed baseline permission probes for Phase 1/2 (and Security Hub). "
+            "If false, see missing_permissions/warnings."
+        ),
+    )
+    missing_permissions: list[str] = Field(
+        default_factory=list,
+        description="List of IAM actions that appear to be missing from the ReadRole policy (best-effort).",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal probe warnings (e.g., service disabled, no buckets found).",
+    )
+    required_permissions: list[str] = Field(
+        default_factory=list,
+        description="Required IAM actions for real-time authoritative mode safety checks.",
+    )
+    authoritative_mode_allowed: bool = Field(
+        ...,
+        description="True only when required permissions are present for authoritative control-plane mode.",
+    )
+    authoritative_mode_block_reasons: list[str] = Field(
+        default_factory=list,
+        description="Reasons authoritative mode should remain blocked for this account.",
     )
 
 
@@ -276,6 +299,18 @@ class ReadRoleUpdateStatusResponse(BaseModel):
 # Ingest trigger (POST /api/aws/accounts/{account_id}/ingest)
 _REGION_PATTERN = re.compile(r"^[a-z]{2}-[a-z]+-\d+$")
 _TEMPLATE_VERSION_PATTERN = re.compile(r"/(v?\d+\.\d+\.\d+)\.ya?ml$")
+_AUTHORITATIVE_MODE_REQUIRED_PERMISSIONS: tuple[str, ...] = (
+    "securityhub:GetFindings",
+    "ec2:DescribeSecurityGroups",
+    "s3:ListAllMyBuckets",
+    "s3:GetBucketPublicAccessBlock",
+    "s3:GetBucketPolicyStatus",
+    "s3:GetBucketPolicy",
+    "s3:GetBucketLocation",
+    "s3:GetEncryptionConfiguration",
+    "s3:GetBucketLogging",
+    "s3:GetLifecycleConfiguration",
+)
 
 
 class IngestTriggerRequest(BaseModel):
@@ -1144,6 +1179,8 @@ async def validate_account(
 
     now = datetime.now(timezone.utc)
     permissions_ok = False
+    missing_permissions: list[str] = []
+    warnings: list[str] = []
 
     try:
         logger.info(f"Validating account {account_id} for tenant {tenant_uuid}")
@@ -1160,16 +1197,117 @@ async def validate_account(
                 detail=f"Account ID mismatch: expected {account_id}, got {caller_account_id}",
             )
 
-        permissions_ok = True
+        region = (acc.regions or [settings.AWS_REGION or "us-east-1"])[0] if acc.regions else (settings.AWS_REGION or "us-east-1")
 
-        # Optionally test Security Hub access (limit 1)
-        region = (acc.regions or ["us-east-1"])[0] if acc.regions else "us-east-1"
+        # Baseline probes to catch missing permissions early (Phase 1/2 enrichment + reconciliation).
+        # These are best-effort checks; we only mark missing_permissions on clear access-denied signals.
+        def _code(e: ClientError) -> str:
+            return str(e.response.get("Error", {}).get("Code") or "ClientError")
+
+        def _is_access_denied(code: str) -> bool:
+            return code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}
+
+        # Security Hub (legacy ingest)
         try:
             sh = session.client("securityhub", region_name=region)
             sh.get_findings(MaxResults=1)
         except ClientError as e:
-            logger.warning(f"Security Hub check failed for account {account_id}: {e}")
-            permissions_ok = False
+            code = _code(e)
+            logger.warning("Security Hub probe failed for account %s: %s", account_id, e)
+            if _is_access_denied(code):
+                missing_permissions.append("securityhub:GetFindings")
+            else:
+                warnings.append(f"Security Hub probe failed: {code}")
+
+        # EC2 (Phase 1 SG enrichment)
+        try:
+            ec2 = session.client("ec2", region_name=region)
+            ec2.describe_security_groups(MaxResults=5)
+        except ClientError as e:
+            code = _code(e)
+            logger.warning("EC2 probe failed for account %s: %s", account_id, e)
+            if _is_access_denied(code):
+                missing_permissions.append("ec2:DescribeSecurityGroups")
+            else:
+                warnings.append(f"EC2 probe failed: {code}")
+
+        # S3 (Phase 1 bucket enrichment) - probe using first bucket if available
+        try:
+            s3 = session.client("s3", region_name=region)
+            buckets = (s3.list_buckets().get("Buckets") or [])
+        except ClientError as e:
+            code = _code(e)
+            logger.warning("S3 list_buckets probe failed for account %s: %s", account_id, e)
+            if _is_access_denied(code):
+                missing_permissions.append("s3:ListAllMyBuckets")
+            else:
+                warnings.append(f"S3 list_buckets probe failed: {code}")
+            buckets = []
+
+        if buckets:
+            bucket_name = str(buckets[0].get("Name") or "").strip()
+            if bucket_name:
+                def _probe_bucket_permission(
+                    call_name: str,
+                    required_action: str,
+                    ignored_codes: set[str],
+                ) -> None:
+                    try:
+                        getattr(s3, call_name)(Bucket=bucket_name)
+                    except ClientError as e:
+                        code = _code(e)
+                        if _is_access_denied(code):
+                            missing_permissions.append(required_action)
+                        elif code not in ignored_codes:
+                            warnings.append(f"S3 {call_name} probe failed: {code}")
+
+                _probe_bucket_permission(
+                    call_name="get_public_access_block",
+                    required_action="s3:GetBucketPublicAccessBlock",
+                    ignored_codes={"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_policy_status",
+                    required_action="s3:GetBucketPolicyStatus",
+                    ignored_codes={"NoSuchBucketPolicy", "NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_policy",
+                    required_action="s3:GetBucketPolicy",
+                    ignored_codes={"NoSuchBucketPolicy", "NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_location",
+                    required_action="s3:GetBucketLocation",
+                    ignored_codes={"NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_encryption",
+                    required_action="s3:GetEncryptionConfiguration",
+                    ignored_codes={"ServerSideEncryptionConfigurationNotFoundError", "NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_logging",
+                    required_action="s3:GetBucketLogging",
+                    ignored_codes={"NoSuchBucket"},
+                )
+                _probe_bucket_permission(
+                    call_name="get_bucket_lifecycle_configuration",
+                    required_action="s3:GetLifecycleConfiguration",
+                    ignored_codes={"NoSuchLifecycleConfiguration", "NoSuchBucket"},
+                )
+        else:
+            warnings.append("No S3 buckets found to probe bucket-level read permissions.")
+
+        # De-dup while keeping stable order for UI rendering.
+        missing_permissions = list(dict.fromkeys(missing_permissions))
+        warnings = list(dict.fromkeys(warnings))
+        permissions_ok = len(missing_permissions) == 0
+        authoritative_mode_block_reasons: list[str] = []
+        if missing_permissions:
+            authoritative_mode_block_reasons.append(
+                "Missing required ReadRole permissions for authoritative control-plane mode."
+            )
 
         acc.status = AwsAccountStatus.validated
         acc.last_validated_at = now
@@ -1180,6 +1318,11 @@ async def validate_account(
             account_id=acc.account_id,
             last_validated_at=acc.last_validated_at,
             permissions_ok=permissions_ok,
+            missing_permissions=missing_permissions,
+            warnings=warnings,
+            required_permissions=list(_AUTHORITATIVE_MODE_REQUIRED_PERMISSIONS),
+            authoritative_mode_allowed=len(authoritative_mode_block_reasons) == 0,
+            authoritative_mode_block_reasons=authoritative_mode_block_reasons,
         )
 
     except HTTPException:
@@ -1196,6 +1339,11 @@ async def validate_account(
             account_id=acc.account_id,
             last_validated_at=acc.last_validated_at,
             permissions_ok=False,
+            missing_permissions=[],
+            warnings=[],
+            required_permissions=list(_AUTHORITATIVE_MODE_REQUIRED_PERMISSIONS),
+            authoritative_mode_allowed=False,
+            authoritative_mode_block_reasons=["ReadRole validation failed; authoritative mode is blocked."],
         )
     except Exception as e:
         logger.exception(f"Unexpected error validating account {account_id}: {e}")

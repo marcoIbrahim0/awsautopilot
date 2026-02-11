@@ -13,6 +13,7 @@ INGEST_INSPECTOR_JOB_TYPE = "ingest_inspector"
 INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE = "ingest_control_plane_events"
 RECONCILE_INVENTORY_SHARD_JOB_TYPE = "reconcile_inventory_shard"
 RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE = "reconcile_recently_touched_resources"
+BACKFILL_FINDING_KEYS_JOB_TYPE = "backfill_finding_keys"
 COMPUTE_ACTIONS_JOB_TYPE = "compute_actions"
 REMEDIATION_RUN_JOB_TYPE = "remediation_run"
 GENERATE_EXPORT_JOB_TYPE = "generate_export"
@@ -152,6 +153,41 @@ def build_reconcile_recently_touched_resources_job_payload(
         payload["services"] = [str(service).strip().lower() for service in services if str(service).strip()]
     if max_resources is not None:
         payload["max_resources"] = int(max_resources)
+    return payload
+
+
+def build_backfill_finding_keys_job_payload(
+    created_at: str,
+    tenant_id: uuid.UUID | None = None,
+    account_id: str | None = None,
+    region: str | None = None,
+    chunk_size: int | None = None,
+    max_chunks: int | None = None,
+    include_stale: bool | None = None,
+    auto_continue: bool | None = None,
+    start_after_id: str | None = None,
+) -> dict:
+    """Build backfill_finding_keys payload for canonical key backfill sweeps."""
+    payload: dict = {
+        "job_type": BACKFILL_FINDING_KEYS_JOB_TYPE,
+        "created_at": created_at,
+    }
+    if tenant_id is not None:
+        payload["tenant_id"] = str(tenant_id)
+    if account_id is not None:
+        payload["account_id"] = account_id
+    if region is not None:
+        payload["region"] = region
+    if chunk_size is not None:
+        payload["chunk_size"] = int(chunk_size)
+    if max_chunks is not None:
+        payload["max_chunks"] = int(max_chunks)
+    if include_stale is not None:
+        payload["include_stale"] = bool(include_stale)
+    if auto_continue is not None:
+        payload["auto_continue"] = bool(auto_continue)
+    if start_after_id is not None:
+        payload["start_after_id"] = str(start_after_id)
     return payload
 
 

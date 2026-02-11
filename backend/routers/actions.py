@@ -391,6 +391,8 @@ async def list_actions(
         .where(Action.tenant_id == tenant_uuid)
         .options(selectinload(Action.action_finding_links))
     )
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        query = query.where(Action.action_type != "pr_only")
     if account_id is not None:
         query = query.where(Action.account_id == account_id)
     if region is not None:

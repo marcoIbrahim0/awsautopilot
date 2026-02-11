@@ -25,10 +25,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/findings", tags=["findings"])
 
+def _normalize_shadow_status(status_raw: str | None) -> str:
+    s = (status_raw or "").strip().upper()
+    if s == "OPEN":
+        return "OPEN"
+    if s in {"RESOLVED", "SOFT_RESOLVED"}:
+        return "RESOLVED"
+    if s in {"UNKNOWN", ""}:
+        return "UNKNOWN"
+    return "UNKNOWN"
+
 
 # ============================================
 # Response Models
 # ============================================
+
+class FindingShadowOverlayResponse(BaseModel):
+    """Shadow overlay state for a finding (control-plane wiring)."""
+
+    fingerprint: str | None = None
+    source: str | None = None
+    status_raw: str
+    status_normalized: str
+    status_reason: str | None = None
+    last_observed_event_time: str | None = None
+    last_evaluated_at: str | None = None
+
 
 class FindingResponse(BaseModel):
     """Response model for a single finding."""
@@ -44,6 +66,7 @@ class FindingResponse(BaseModel):
     severity_label: str
     severity_normalized: int
     status: str
+    in_scope: bool = True
     title: str
     description: str | None
     resource_id: str | None
@@ -56,6 +79,7 @@ class FindingResponse(BaseModel):
     created_at: str
     updated_at_db: str
     raw_json: dict | None = None
+    shadow: FindingShadowOverlayResponse | None = None
     # Step 6.3: exception state (on-read expiry)
     exception_id: str | None = None
     exception_expires_at: str | None = None
@@ -80,6 +104,28 @@ def finding_to_response(
 ) -> FindingResponse:
     """Convert a Finding model to a FindingResponse."""
     state = exception_state or {}
+
+    shadow: FindingShadowOverlayResponse | None = None
+    if getattr(finding, "shadow_status_raw", None):
+        shadow_status_raw = str(getattr(finding, "shadow_status_raw") or "")
+        shadow_status_normalized = str(getattr(finding, "shadow_status_normalized") or "").strip().upper()
+        shadow = FindingShadowOverlayResponse(
+            fingerprint=str(getattr(finding, "shadow_fingerprint") or "") or None,
+            source=str(getattr(finding, "shadow_source") or "") or None,
+            status_raw=shadow_status_raw,
+            status_normalized=shadow_status_normalized or _normalize_shadow_status(shadow_status_raw),
+            status_reason=str(getattr(finding, "shadow_status_reason") or "") or None,
+            last_observed_event_time=(
+                finding.shadow_last_observed_event_time.isoformat()
+                if getattr(finding, "shadow_last_observed_event_time", None)
+                else None
+            ),
+            last_evaluated_at=(
+                finding.shadow_last_evaluated_at.isoformat()
+                if getattr(finding, "shadow_last_evaluated_at", None)
+                else None
+            ),
+        )
     return FindingResponse(
         id=str(finding.id),
         finding_id=finding.finding_id,
@@ -90,6 +136,7 @@ def finding_to_response(
         severity_label=finding.severity_label,
         severity_normalized=finding.severity_normalized,
         status=finding.status,
+        in_scope=bool(getattr(finding, "in_scope", True)),
         title=finding.title,
         description=finding.description,
         resource_id=finding.resource_id,
@@ -102,6 +149,7 @@ def finding_to_response(
         created_at=finding.created_at.isoformat() if finding.created_at else "",
         updated_at_db=finding.updated_at.isoformat() if finding.updated_at else "",
         raw_json=finding.raw_json if include_raw else None,
+        shadow=shadow,
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
@@ -213,6 +261,9 @@ async def list_findings(
 
     # Build query with tenant isolation
     query = select(Finding).where(Finding.tenant_id == tenant.id)
+
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        query = query.where(Finding.in_scope.is_(True))
 
     # Apply optional filters
     if account_id:

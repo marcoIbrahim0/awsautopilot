@@ -18,6 +18,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import AwsAccount, Finding
+from backend.services.canonicalization import build_resource_key, canonicalize_control_id
+from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from worker.config import settings
 from worker.database import session_scope
@@ -95,6 +97,19 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
     updated = _parse_ts(raw.get("UpdatedAt"))
     last_obs = _parse_ts(raw.get("LastObservedAt"))
 
+    canonical_control_id = canonicalize_control_id(str(ctrl) if ctrl is not None else None)
+    in_scope = (
+        action_type_from_control(str(ctrl) if ctrl is not None else None) != ACTION_TYPE_DEFAULT
+        if ctrl is not None
+        else False
+    )
+    resource_key = build_resource_key(
+        account_id=account_id,
+        region=region,
+        resource_id=str(rid) if rid is not None else None,
+        resource_type=str(rtype) if rtype is not None else None,
+    )
+
     return {
         "tenant_id": tenant_id,
         "account_id": account_id,
@@ -108,8 +123,11 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         "resource_id": _trunc(rid, 2048),
         "resource_type": _trunc(rtype, 256),
         "control_id": _trunc(ctrl, 64),
+        "canonical_control_id": _trunc(canonical_control_id, 64),
+        "resource_key": _trunc(resource_key, 512),
         "standard_name": _trunc(std_name, 256),
         "status": _normalized_finding_status(raw)[:32],
+        "in_scope": bool(in_scope),
         "first_observed_at": created,
         "last_observed_at": last_obs or updated,
         "sh_updated_at": updated,
@@ -147,8 +165,11 @@ def _upsert_one(
         existing.resource_id = data["resource_id"]
         existing.resource_type = data["resource_type"]
         existing.control_id = data["control_id"]
+        existing.canonical_control_id = data.get("canonical_control_id")
+        existing.resource_key = data.get("resource_key")
         existing.standard_name = data["standard_name"]
         existing.status = data["status"]
+        existing.in_scope = bool(data.get("in_scope", False))
         existing.last_observed_at = data["last_observed_at"]
         existing.sh_updated_at = data["sh_updated_at"]
         existing.raw_json = data["raw_json"]
@@ -212,11 +233,18 @@ def execute_ingest_job(job: dict) -> None:
         new_count = 0
         updated_count = 0
         error_count = 0
+        out_of_scope_count = 0
 
         for i, raw in enumerate(findings_raw):
             try:
                 with session.begin_nested():
                     kind = _upsert_one(session, raw, account_id, region, tenant_id)
+                # Track out-of-scope volume for visibility; filtering is now driven by Finding.in_scope.
+                if settings.ONLY_IN_SCOPE_CONTROLS:
+                    comp = raw.get("Compliance") or {}
+                    ctrl = comp.get("SecurityControlId")
+                    if action_type_from_control(str(ctrl) if ctrl is not None else None) == ACTION_TYPE_DEFAULT:
+                        out_of_scope_count += 1
                 if kind == "new":
                     new_count += 1
                 else:
@@ -228,7 +256,15 @@ def execute_ingest_job(job: dict) -> None:
                 error_count += 1
                 logger.exception("Failed to upsert finding Id=%s: %s", raw.get("Id"), e)
             if (i + 1) % 50 == 0:
-                logger.info("Upsert progress: %d/%d (new=%d updated=%d errors=%d)", i + 1, n_total, new_count, updated_count, error_count)
+                logger.info(
+                    "Upsert progress: %d/%d (new=%d updated=%d out_of_scope=%d errors=%d)",
+                    i + 1,
+                    n_total,
+                    new_count,
+                    updated_count,
+                    out_of_scope_count,
+                    error_count,
+                )
 
     logger.info(
         "ingest_findings complete tenant_id=%s account_id=%s region=%s processed=%d new=%d updated=%d errors=%d",
@@ -240,6 +276,14 @@ def execute_ingest_job(job: dict) -> None:
         updated_count,
         error_count,
     )
+    if settings.ONLY_IN_SCOPE_CONTROLS and out_of_scope_count:
+        logger.info(
+            "ingest_findings included out-of-scope controls tenant_id=%s account_id=%s region=%s out_of_scope=%d",
+            tenant_id,
+            account_id,
+            region,
+            out_of_scope_count,
+        )
 
     # Optional: enqueue compute_actions for same tenant/account/region so actions stay in sync
     if settings.has_ingest_queue:

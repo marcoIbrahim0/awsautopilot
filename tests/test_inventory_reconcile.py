@@ -45,6 +45,31 @@ class _FakeEc2:
         }
 
 
+class _FakeS3:
+    def list_buckets(self):
+        return {"Buckets": []}
+
+
+class _FakeS3Control:
+    def get_public_access_block(self, AccountId):  # noqa: N803
+        return {
+            "PublicAccessBlockConfiguration": {
+                "BlockPublicAcls": True,
+                "IgnorePublicAcls": True,
+                "BlockPublicPolicy": True,
+                "RestrictPublicBuckets": True,
+            }
+        }
+
+
+class _FakeGuardDuty:
+    def list_detectors(self):
+        return {"DetectorIds": ["det-1"]}
+
+    def get_detector(self, DetectorId):  # noqa: N803
+        return {"Status": "ENABLED"}
+
+
 def test_collect_inventory_snapshots_unknown_service_returns_empty() -> None:
     session = _FakeSession(clients={})
     snapshots = collect_inventory_snapshots(
@@ -74,3 +99,31 @@ def test_collect_inventory_snapshots_ec2_skips_missing_ids_and_evaluates_found()
     evaluation = snapshot.evaluations[0]
     assert evaluation.control_id == "EC2.53"
     assert evaluation.status == "OPEN"
+
+
+def test_collect_inventory_snapshots_s3_includes_s31_account_evaluation() -> None:
+    session = _FakeSession(clients={"s3": _FakeS3(), "s3control": _FakeS3Control()})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="s3",
+    )
+    assert len(snapshots) == 1
+    evaluation = snapshots[0].evaluations[0]
+    assert evaluation.control_id == "S3.1"
+    assert evaluation.status == "RESOLVED"
+
+
+def test_collect_inventory_snapshots_guardduty_enabled_resolved() -> None:
+    session = _FakeSession(clients={"guardduty": _FakeGuardDuty()})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="us-east-1",
+        service="guardduty",
+    )
+    assert len(snapshots) == 1
+    evaluation = snapshots[0].evaluations[0]
+    assert evaluation.control_id == "GuardDuty.1"
+    assert evaluation.status == "RESOLVED"

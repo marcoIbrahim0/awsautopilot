@@ -15,16 +15,18 @@ from backend.routers.exceptions import router as exceptions_router
 from backend.routers.exports import router as exports_router
 from backend.routers.findings import router as findings_router
 from backend.routers.internal import router as internal_router
+from backend.routers.meta import router as meta_router
 from backend.routers.remediation_runs import router as remediation_runs_router
 from backend.routers.saas_admin import router as saas_admin_router
 from backend.routers.support_files import router as support_files_router
 from backend.routers.users import router as users_router
+from backend.services.migration_guard import assert_database_revision_at_head
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan: startup and shutdown. Replaces deprecated on_event."""
-    # Startup: placeholder for DB warm-up or caches if needed
+    assert_database_revision_at_head(component="api")
     yield
     # Shutdown: cleanup if needed
 
@@ -54,6 +56,7 @@ app.include_router(exports_router, prefix="/api")
 app.include_router(findings_router, prefix="/api")
 app.include_router(control_plane_router, prefix="/api")
 app.include_router(internal_router, prefix="/api")
+app.include_router(meta_router, prefix="/api")
 app.include_router(remediation_runs_router, prefix="/api")
 app.include_router(saas_admin_router, prefix="/api")
 app.include_router(support_files_router, prefix="/api")

@@ -8,10 +8,15 @@ Phase-2 semantics:
 from __future__ import annotations
 
 import logging
+import json
 import uuid
 from datetime import datetime, timezone
 
+import boto3
+from botocore.exceptions import ClientError
+
 from backend.models import AwsAccount
+from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from worker.config import settings
 from worker.database import session_scope
 from worker.services.aws import assume_role
@@ -159,3 +164,41 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
             applied,
             changed_status,
         )
+
+    # When control-plane is authoritative, reconciliation can flip canonical finding.status.
+    # Enqueue compute_actions so Actions reflect the latest finding state without manual recompute.
+    if not settings.CONTROL_PLANE_SHADOW_MODE and changed_status and settings.has_ingest_queue:
+        try:
+            queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
+            queue_region = parse_queue_region(queue_url)
+            sqs = boto3.client("sqs", region_name=queue_region)
+            payload = build_compute_actions_job_payload(
+                tenant_id=tenant_id,
+                created_at=_utcnow().isoformat(),
+                account_id=account_id,
+                region=region,
+            )
+            sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+            logger.info(
+                "Enqueued compute_actions after reconcile_inventory_shard tenant_id=%s account_id=%s region=%s changed_status=%d",
+                tenant_id,
+                account_id,
+                region,
+                changed_status,
+            )
+        except ClientError as exc:  # pragma: no cover - best effort
+            logger.warning(
+                "Failed to enqueue compute_actions after reconcile_inventory_shard tenant_id=%s account_id=%s region=%s: %s",
+                tenant_id,
+                account_id,
+                region,
+                exc,
+            )
+        except Exception as exc:  # pragma: no cover - best effort
+            logger.warning(
+                "Failed to enqueue compute_actions after reconcile_inventory_shard tenant_id=%s account_id=%s region=%s: %s",
+                tenant_id,
+                account_id,
+                region,
+                exc,
+            )
