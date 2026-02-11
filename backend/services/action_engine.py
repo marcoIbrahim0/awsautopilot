@@ -22,6 +22,7 @@ from backend.services.control_scope import (
     action_type_from_control as _action_type_from_control_impl,
     canonical_control_id_for_action_type,
 )
+from backend.services.action_groups import ensure_membership_for_actions
 
 logger = logging.getLogger(__name__)
 
@@ -310,10 +311,12 @@ def compute_actions_for_tenant(
     updated = 0
     links_count = 0
     removed_conflicting_links = 0
+    actions_touched: list[Action] = []
     for _key, group in groups.items():
         action, is_new = _upsert_action_and_sync_links(session, tenant_id, group)
         if action.id is None:
             session.flush()
+        actions_touched.append(action)
 
         finding_ids = [f.id for f in group]
         removed_conflicting_links += _remove_conflicting_links_for_findings(
@@ -328,6 +331,10 @@ def compute_actions_for_tenant(
         else:
             updated += 1
         links_count += len(group)
+
+    # Immutable append-only membership assignment for newly created actions.
+    if actions_touched:
+        ensure_membership_for_actions(session, actions_touched, source="recompute")
 
     resolved = _mark_resolved_actions_with_no_open_findings(session, tenant_id, account_id, region)
     reopened_orphans = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)

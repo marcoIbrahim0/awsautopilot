@@ -11,6 +11,7 @@ import uuid
 from unittest.mock import patch
 
 from backend.utils.sqs import (
+    BACKFILL_ACTION_GROUPS_JOB_TYPE,
     BACKFILL_FINDING_KEYS_JOB_TYPE,
     EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
     EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE,
@@ -26,6 +27,7 @@ from backend.utils.sqs import (
     build_ingest_inspector_job_payload,
     build_ingest_job_payload,
     build_backfill_finding_keys_job_payload,
+    build_backfill_action_groups_job_payload,
     build_pr_bundle_execution_job_payload,
     build_reconcile_inventory_shard_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
@@ -354,3 +356,25 @@ def test_build_backfill_finding_keys_job_payload() -> None:
     assert payload["include_stale"] is True
     assert payload["auto_continue"] is True
     assert payload["start_after_id"] == "00000000-0000-0000-0000-000000000001"
+
+
+def test_build_backfill_action_groups_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    payload = build_backfill_action_groups_job_payload(
+        created_at="2026-02-11T10:00:00Z",
+        tenant_id=tenant_id,
+        account_id="123456789012",
+        region="us-east-1",
+        chunk_size=400,
+        max_chunks=7,
+        auto_continue=True,
+        start_after_action_id="00000000-0000-0000-0000-000000000002",
+    )
+    assert payload["job_type"] == BACKFILL_ACTION_GROUPS_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["account_id"] == "123456789012"
+    assert payload["region"] == "us-east-1"
+    assert payload["chunk_size"] == 400
+    assert payload["max_chunks"] == 7
+    assert payload["auto_continue"] is True
+    assert payload["start_after_action_id"] == "00000000-0000-0000-0000-000000000002"

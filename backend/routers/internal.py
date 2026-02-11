@@ -10,25 +10,49 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.database import get_db
 from backend.models import AwsAccount
+from backend.models.action import Action
+from backend.models.action_group_membership import ActionGroupMembership
+from backend.models.action_group_run import ActionGroupRun
+from backend.models.action_group_run_result import ActionGroupRunResult
+from backend.models.aws_account_reconcile_settings import AwsAccountReconcileSettings
 from backend.models.enums import AwsAccountStatus
+from backend.models.enums import ActionGroupExecutionStatus, ActionGroupRunStatus
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
+from backend.services.action_run_confirmation import (
+    evaluate_confirmation_for_action_async,
+    record_execution_result_async,
+)
+from backend.services.bundle_reporting_tokens import verify_group_run_reporting_token
 from backend.services.aws import assume_role
 from backend.services.control_plane_intake import is_supported_control_plane_event
+from backend.services.reconciliation_prereqs import (
+    collect_reconciliation_queue_snapshot,
+    evaluate_reconciliation_prereqs_async,
+)
+from backend.services.tenant_reconciliation import (
+    create_reconciliation_run,
+    ensure_tenant_reconciliation_enabled,
+    normalize_max_resources,
+    normalize_regions,
+    normalize_services,
+    normalize_sweep_mode,
+)
 from backend.utils.sqs import (
+    build_backfill_action_groups_job_payload,
     build_backfill_finding_keys_job_payload,
     build_ingest_control_plane_events_job_payload,
     build_reconcile_inventory_shard_job_payload,
@@ -107,6 +131,42 @@ class BackfillFindingKeysRequest(BaseModel):
     auto_continue: bool = True
 
 
+class BackfillActionGroupsRequest(BaseModel):
+    tenant_id: uuid.UUID | None = None
+    account_id: str | None = Field(default=None, pattern=r"^\d{12}$")
+    region: str | None = Field(default=None, min_length=1, max_length=32)
+    enqueue_per_tenant: bool = True
+    chunk_size: int = Field(default=500, ge=50, le=2000)
+    max_chunks: int = Field(default=10, ge=1, le=200)
+    auto_continue: bool = True
+
+
+class ReconciliationScheduleTickRequest(BaseModel):
+    tenant_ids: list[uuid.UUID] | None = None
+    account_ids: list[str] | None = None
+    limit: int = Field(default=200, ge=1, le=1000)
+    dry_run: bool = False
+
+
+class GroupRunActionResult(BaseModel):
+    action_id: uuid.UUID
+    execution_status: str = Field(default="unknown")
+    execution_error_code: str | None = Field(default=None, max_length=128)
+    execution_error_message: str | None = None
+    execution_started_at: str | None = None
+    execution_finished_at: str | None = None
+    raw_result: dict | None = None
+
+
+class GroupRunReportRequest(BaseModel):
+    token: str
+    event: str = Field(pattern=r"^(started|finished)$")
+    reporting_source: str | None = Field(default="bundle_callback", max_length=64)
+    started_at: str | None = None
+    finished_at: str | None = None
+    action_results: list[GroupRunActionResult] = Field(default_factory=list)
+
+
 def _verify_digest_cron_secret(x_digest_cron_secret: str | None) -> None:
     """Raise 403 if secret is not configured or does not match."""
     secret = (settings.DIGEST_CRON_SECRET or "").strip()
@@ -133,6 +193,23 @@ def _verify_control_plane_secret(x_control_plane_secret: str | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing X-Control-Plane-Secret.",
+        )
+
+
+def _verify_reconciliation_scheduler_secret(x_reconciliation_scheduler_secret: str | None) -> None:
+    secret = (settings.RECONCILIATION_SCHEDULER_SECRET or "").strip() or (settings.CONTROL_PLANE_EVENTS_SECRET or "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Reconciliation scheduler is not configured "
+                "(RECONCILIATION_SCHEDULER_SECRET and CONTROL_PLANE_EVENTS_SECRET unset)."
+            ),
+        )
+    if not x_reconciliation_scheduler_secret or x_reconciliation_scheduler_secret.strip() != secret:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Reconciliation-Scheduler-Secret.",
         )
 
 
@@ -184,6 +261,27 @@ def _extract_error_code(exc: Exception) -> str:
     if isinstance(exc, ClientError):
         return str(exc.response.get("Error", {}).get("Code") or "ClientError")
     return type(exc).__name__
+
+
+def _parse_iso_utc(value: str | None) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _coerce_execution_status(raw: str) -> ActionGroupExecutionStatus:
+    text = (raw or "").strip().lower() or ActionGroupExecutionStatus.unknown.value
+    try:
+        return ActionGroupExecutionStatus(text)
+    except ValueError:
+        return ActionGroupExecutionStatus.unknown
 
 
 async def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
@@ -465,6 +563,169 @@ async def enqueue_recent_reconcile(
 
 
 @router.post(
+    "/group-runs/report",
+    status_code=status.HTTP_200_OK,
+    summary="Bundle callback endpoint for group run lifecycle reporting",
+    description=(
+        "Accepts signed token-based lifecycle callbacks from downloaded remediation bundles. "
+        "Supported events: started, finished."
+    ),
+)
+async def report_group_run_event(
+    body: GroupRunReportRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    try:
+        claims = verify_group_run_reporting_token(body.token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid reporting token: {exc}",
+        ) from exc
+
+    try:
+        tenant_id = uuid.UUID(str(claims["tenant_id"]))
+        group_id = uuid.UUID(str(claims["group_id"]))
+        group_run_id = uuid.UUID(str(claims["group_run_id"]))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed token UUID claims") from exc
+    token_jti = str(claims.get("jti") or "").strip()
+    allowed_action_ids: set[uuid.UUID] = set()
+    for raw_action_id in claims.get("allowed_action_ids") or []:
+        try:
+            allowed_action_ids.add(uuid.UUID(str(raw_action_id)))
+        except ValueError:
+            continue
+    if not allowed_action_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token has no allowed_action_ids")
+
+    run = (
+        await db.execute(
+            select(ActionGroupRun).where(
+                ActionGroupRun.id == group_run_id,
+                ActionGroupRun.tenant_id == tenant_id,
+                ActionGroupRun.group_id == group_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="action_group_run not found")
+    if (run.report_token_jti or "") != token_jti:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token jti does not match run")
+
+    membership_rows = (
+        await db.execute(
+            select(ActionGroupMembership.action_id).where(
+                ActionGroupMembership.tenant_id == tenant_id,
+                ActionGroupMembership.group_id == group_id,
+                ActionGroupMembership.action_id.in_(list(allowed_action_ids)),
+            )
+        )
+    ).all()
+    membership_action_ids = {row[0] for row in membership_rows if row and row[0] is not None}
+    if membership_action_ids != allowed_action_ids:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token action set does not match group membership")
+
+    reporting_source = (body.reporting_source or "bundle_callback").strip()[:64] or "bundle_callback"
+    started_at = _parse_iso_utc(body.started_at) or datetime.now(timezone.utc)
+
+    if body.event == "started":
+        if run.status == ActionGroupRunStatus.queued:
+            run.status = ActionGroupRunStatus.started
+        if run.started_at is None:
+            run.started_at = started_at
+        run.reporting_source = reporting_source
+        for action_id in list(allowed_action_ids):
+            await record_execution_result_async(
+                db,
+                action_id=action_id,
+                latest_run_id=run.id,
+                execution_status=ActionGroupExecutionStatus.unknown,
+                attempted_at=run.started_at,
+            )
+        await db.commit()
+        return {"status": "accepted", "event": "started", "group_run_id": str(run.id)}
+
+    # finished event
+    finished_at = _parse_iso_utc(body.finished_at) or datetime.now(timezone.utc)
+    if run.started_at is None:
+        run.started_at = started_at
+    run.finished_at = finished_at
+    run.reporting_source = reporting_source
+
+    provided_results = body.action_results or []
+    if provided_results:
+        invalid_ids = [str(item.action_id) for item in provided_results if item.action_id not in allowed_action_ids]
+        if invalid_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"action_id not allowed by token: {', '.join(invalid_ids)}",
+            )
+    else:
+        provided_results = [
+            GroupRunActionResult(action_id=action_id, execution_status=ActionGroupExecutionStatus.unknown.value)
+            for action_id in list(allowed_action_ids)
+        ]
+
+    has_failed = False
+    has_cancelled = False
+    for item in provided_results:
+        exec_status = _coerce_execution_status(item.execution_status)
+        if exec_status == ActionGroupExecutionStatus.failed:
+            has_failed = True
+        if exec_status == ActionGroupExecutionStatus.cancelled:
+            has_cancelled = True
+
+        result_row = (
+            await db.execute(
+                select(ActionGroupRunResult).where(
+                    ActionGroupRunResult.tenant_id == tenant_id,
+                    ActionGroupRunResult.group_run_id == run.id,
+                    ActionGroupRunResult.action_id == item.action_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if result_row is None:
+            result_row = ActionGroupRunResult(
+                tenant_id=tenant_id,
+                group_run_id=run.id,
+                action_id=item.action_id,
+            )
+            db.add(result_row)
+
+        result_row.execution_status = exec_status
+        result_row.execution_error_code = item.execution_error_code
+        result_row.execution_error_message = item.execution_error_message
+        result_row.execution_started_at = _parse_iso_utc(item.execution_started_at) or run.started_at
+        result_row.execution_finished_at = _parse_iso_utc(item.execution_finished_at) or finished_at
+        result_row.raw_result = item.raw_result
+
+        await record_execution_result_async(
+            db,
+            action_id=item.action_id,
+            latest_run_id=run.id,
+            execution_status=exec_status,
+            attempted_at=result_row.execution_started_at or run.started_at,
+            finished_at=result_row.execution_finished_at or finished_at,
+        )
+        await evaluate_confirmation_for_action_async(
+            db,
+            action_id=item.action_id,
+            since_run_started=result_row.execution_started_at or run.started_at,
+        )
+
+    if has_failed:
+        run.status = ActionGroupRunStatus.failed
+    elif has_cancelled:
+        run.status = ActionGroupRunStatus.cancelled
+    else:
+        run.status = ActionGroupRunStatus.finished
+
+    await db.commit()
+    return {"status": "accepted", "event": "finished", "group_run_id": str(run.id)}
+
+
+@router.post(
     "/reconcile-inventory-global",
     status_code=status.HTTP_200_OK,
     summary="Enqueue global inventory reconciliation sweeps",
@@ -509,6 +770,10 @@ async def enqueue_global_inventory_reconcile(
     accounts_quarantined = 0
     authoritative_mode_blocked = 0
     assume_role_errors: list[str] = []
+    skipped_prereq = 0
+    prereq_reasons: list[str] = []
+    prereq_failures: list[dict] = []
+    queue_snapshot = collect_reconciliation_queue_snapshot()
     do_quarantine = bool(body.quarantine_on_assume_role_failure)
     for account in accounts:
         status_value = _status_value(account.status).lower()
@@ -559,6 +824,27 @@ async def enqueue_global_inventory_reconcile(
         accounts_considered += 1
 
         for region in account_regions:
+            prereq_result = await evaluate_reconciliation_prereqs_async(
+                db,
+                tenant_id=body.tenant_id,
+                account_id=account.account_id,
+                region=region,
+                queue_snapshot=queue_snapshot,
+            )
+            if not bool(prereq_result.get("ok")):
+                skipped_prereq += 1
+                reasons = [str(code) for code in (prereq_result.get("reasons") or [])]
+                prereq_reasons.extend(reasons)
+                prereq_failures.append(
+                    {
+                        "tenant_id": str(body.tenant_id),
+                        "account_id": account.account_id,
+                        "region": region,
+                        "reasons": reasons,
+                        "snapshot": prereq_result.get("snapshot") or {},
+                    }
+                )
+                continue
             for service in services:
                 payload = build_reconcile_inventory_shard_job_payload(
                     tenant_id=body.tenant_id,
@@ -575,7 +861,7 @@ async def enqueue_global_inventory_reconcile(
     if accounts_quarantined:
         await db.commit()
 
-    return {
+    response = {
         "enqueued": enqueued,
         "accounts_considered": accounts_considered,
         "accounts_skipped_disabled": accounts_skipped_disabled,
@@ -584,8 +870,13 @@ async def enqueue_global_inventory_reconcile(
         "accounts_quarantined": accounts_quarantined,
         "authoritative_mode_blocked": authoritative_mode_blocked,
         "assume_role_error_codes": _dedup(assume_role_errors),
+        "skipped_prereq": skipped_prereq,
+        "prereq_reasons": _dedup(prereq_reasons),
         "services": services,
     }
+    if prereq_failures:
+        response["prereq_failures"] = prereq_failures
+    return response
 
 
 @router.post(
@@ -633,6 +924,10 @@ async def enqueue_global_inventory_reconcile_all_tenants(
     accounts_quarantined = 0
     authoritative_mode_blocked = 0
     assume_role_errors: list[str] = []
+    skipped_prereq = 0
+    prereq_reasons: list[str] = []
+    prereq_failures: list[dict] = []
+    queue_snapshot = collect_reconciliation_queue_snapshot()
     do_quarantine = bool(body.quarantine_on_assume_role_failure)
 
     for tenant in tenants:
@@ -693,6 +988,27 @@ async def enqueue_global_inventory_reconcile_all_tenants(
             accounts_considered += 1
 
             for region in account_regions:
+                prereq_result = await evaluate_reconciliation_prereqs_async(
+                    db,
+                    tenant_id=tenant.id,
+                    account_id=account.account_id,
+                    region=region,
+                    queue_snapshot=queue_snapshot,
+                )
+                if not bool(prereq_result.get("ok")):
+                    skipped_prereq += 1
+                    reasons = [str(code) for code in (prereq_result.get("reasons") or [])]
+                    prereq_reasons.extend(reasons)
+                    prereq_failures.append(
+                        {
+                            "tenant_id": str(tenant.id),
+                            "account_id": account.account_id,
+                            "region": region,
+                            "reasons": reasons,
+                            "snapshot": prereq_result.get("snapshot") or {},
+                        }
+                    )
+                    continue
                 for service in services:
                     payload = build_reconcile_inventory_shard_job_payload(
                         tenant_id=tenant.id,
@@ -709,7 +1025,7 @@ async def enqueue_global_inventory_reconcile_all_tenants(
     if accounts_quarantined:
         await db.commit()
 
-    return {
+    response = {
         "enqueued": enqueued,
         "tenants_considered": tenants_considered,
         "accounts_considered": accounts_considered,
@@ -719,7 +1035,150 @@ async def enqueue_global_inventory_reconcile_all_tenants(
         "accounts_quarantined": accounts_quarantined,
         "authoritative_mode_blocked": authoritative_mode_blocked,
         "assume_role_error_codes": _dedup(assume_role_errors),
+        "skipped_prereq": skipped_prereq,
+        "prereq_reasons": _dedup(prereq_reasons),
         "services": services,
+    }
+    if prereq_failures:
+        response["prereq_failures"] = prereq_failures
+    return response
+
+
+@router.post(
+    "/reconciliation/schedule-tick",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue due tenant reconciliation schedules",
+    description=(
+        "Evaluates enabled aws_account_reconcile_settings rows and enqueues due runs. "
+        "Designed for EventBridge/cron invocation."
+    ),
+)
+async def run_reconciliation_schedule_tick(
+    body: ReconciliationScheduleTickRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_reconciliation_scheduler_secret: Annotated[str | None, Header(alias="X-Reconciliation-Scheduler-Secret")] = None,
+) -> dict:
+    _verify_reconciliation_scheduler_secret(x_reconciliation_scheduler_secret)
+
+    query = (
+        select(AwsAccountReconcileSettings, AwsAccount, Tenant)
+        .join(
+            AwsAccount,
+            and_(
+                AwsAccount.tenant_id == AwsAccountReconcileSettings.tenant_id,
+                AwsAccount.account_id == AwsAccountReconcileSettings.account_id,
+            ),
+        )
+        .join(Tenant, Tenant.id == AwsAccountReconcileSettings.tenant_id)
+        .where(AwsAccountReconcileSettings.enabled.is_(True))
+        .order_by(AwsAccountReconcileSettings.updated_at.asc())
+        .limit(body.limit)
+    )
+
+    tenant_filter = set(body.tenant_ids or [])
+    account_filter = {str(account_id).strip() for account_id in (body.account_ids or []) if str(account_id).strip()}
+    if tenant_filter:
+        query = query.where(AwsAccountReconcileSettings.tenant_id.in_(sorted(tenant_filter)))
+    if account_filter:
+        query = query.where(AwsAccountReconcileSettings.account_id.in_(sorted(account_filter)))
+
+    rows = (await db.execute(query)).all()
+    now = datetime.now(timezone.utc)
+
+    evaluated = 0
+    enqueued = 0
+    would_enqueue = 0
+    skipped_not_due = 0
+    skipped_status = 0
+    skipped_feature_disabled = 0
+    skipped_cooldown = 0
+    failed = 0
+    failures: list[str] = []
+
+    for settings_row, account, tenant in rows:
+        evaluated += 1
+        try:
+            ensure_tenant_reconciliation_enabled(tenant.id)
+        except HTTPException:
+            skipped_feature_disabled += 1
+            continue
+
+        account_status = _status_value(account.status).lower()
+        if account_status != "validated":
+            skipped_status += 1
+            continue
+
+        minimum_interval = max(1, int(settings.TENANT_RECONCILIATION_SCHEDULE_MIN_INTERVAL_MINUTES or 60))
+        interval_minutes = max(minimum_interval, int(settings_row.interval_minutes or minimum_interval))
+        due_at = (
+            (settings_row.last_enqueued_at + timedelta(minutes=interval_minutes))
+            if settings_row.last_enqueued_at is not None
+            else None
+        )
+        if due_at is not None and due_at > now:
+            skipped_not_due += 1
+            continue
+
+        try:
+            services = normalize_services([str(value) for value in (settings_row.services or [])])
+            regions = normalize_regions(
+                [str(value) for value in (settings_row.regions or [])] if settings_row.regions else None,
+                account.regions,
+            )
+            max_resources = normalize_max_resources(settings_row.max_resources)
+            sweep_mode = normalize_sweep_mode(settings_row.sweep_mode)
+        except HTTPException as exc:
+            failed += 1
+            failures.append(
+                f"{tenant.id}:{account.account_id}:settings_invalid:{exc.detail}"
+            )
+            continue
+
+        if body.dry_run:
+            would_enqueue += 1
+            continue
+
+        cooldown_seconds = max(0, int(settings_row.cooldown_minutes or 0) * 60)
+        try:
+            run = await create_reconciliation_run(
+                db=db,
+                tenant=tenant,
+                account=account,
+                requested_by=None,
+                trigger_type="scheduled",
+                services=services,
+                regions=regions,
+                sweep_mode=sweep_mode,
+                max_resources=max_resources,
+                cooldown_seconds=cooldown_seconds,
+            )
+            settings_row.last_enqueued_at = now
+            settings_row.last_run_id = run.id
+            await db.commit()
+            enqueued += 1
+        except HTTPException as exc:
+            await db.rollback()
+            if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+                skipped_cooldown += 1
+                continue
+            failed += 1
+            failures.append(f"{tenant.id}:{account.account_id}:http_{exc.status_code}:{exc.detail}")
+        except Exception as exc:  # pragma: no cover - defensive guard
+            await db.rollback()
+            failed += 1
+            failures.append(f"{tenant.id}:{account.account_id}:{type(exc).__name__}")
+
+    return {
+        "evaluated": evaluated,
+        "enqueued": enqueued,
+        "would_enqueue": would_enqueue,
+        "skipped_not_due": skipped_not_due,
+        "skipped_status": skipped_status,
+        "skipped_feature_disabled": skipped_feature_disabled,
+        "skipped_cooldown": skipped_cooldown,
+        "failed": failed,
+        "dry_run": bool(body.dry_run),
+        "failures": failures[:20],
     }
 
 
@@ -793,5 +1252,76 @@ async def enqueue_backfill_finding_keys(
         "chunk_size": body.chunk_size,
         "max_chunks": body.max_chunks,
         "include_stale": body.include_stale,
+        "auto_continue": body.auto_continue,
+    }
+
+
+@router.post(
+    "/backfill-action-groups",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue immutable action-group backfill jobs",
+    description=(
+        "Queues chunked backfill_action_groups jobs. Optional filters: tenant/account/region. "
+        "Safe to rerun; membership assignment is append-only and idempotent."
+    ),
+)
+async def enqueue_backfill_action_groups(
+    body: BackfillActionGroupsRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_control_plane_secret: Annotated[str | None, Header(alias="X-Control-Plane-Secret")] = None,
+) -> dict:
+    _verify_control_plane_secret(x_control_plane_secret)
+    queue_url = (settings.SQS_INGEST_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
+        )
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    tenant_targets: list[uuid.UUID | None]
+    if body.tenant_id is not None:
+        tenant_targets = [body.tenant_id]
+    elif body.enqueue_per_tenant:
+        stmt = select(Action.tenant_id)
+        if body.account_id:
+            stmt = stmt.where(Action.account_id == body.account_id)
+        if body.region:
+            stmt = stmt.where(Action.region == body.region)
+        rows = (await db.execute(stmt.distinct())).all()
+        tenant_targets = [row[0] for row in rows if row and row[0] is not None]
+    else:
+        tenant_targets = [None]
+
+    if not tenant_targets:
+        return {
+            "enqueued": 0,
+            "tenant_jobs": 0,
+            "chunk_size": body.chunk_size,
+            "max_chunks": body.max_chunks,
+            "auto_continue": body.auto_continue,
+        }
+
+    enqueued = 0
+    for tenant_id in tenant_targets:
+        payload = build_backfill_action_groups_job_payload(
+            created_at=now_iso,
+            tenant_id=tenant_id,
+            account_id=body.account_id,
+            region=body.region,
+            chunk_size=body.chunk_size,
+            max_chunks=body.max_chunks,
+            auto_continue=body.auto_continue,
+        )
+        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+        enqueued += 1
+
+    return {
+        "enqueued": enqueued,
+        "tenant_jobs": len(tenant_targets),
+        "chunk_size": body.chunk_size,
+        "max_chunks": body.max_chunks,
         "auto_continue": body.auto_continue,
     }

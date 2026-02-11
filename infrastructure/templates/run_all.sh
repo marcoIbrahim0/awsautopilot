@@ -10,6 +10,8 @@ fi
 CACHE_ROOT="${HOME}/.aws-security-autopilot/terraform"
 mkdir -p "${CACHE_ROOT}/plugin-cache"
 export TF_PLUGIN_CACHE_DIR="${CACHE_ROOT}/plugin-cache"
+export TF_REGISTRY_CLIENT_TIMEOUT="${TF_REGISTRY_CLIENT_TIMEOUT:-30}"
+export TF_REGISTRY_DISCOVERY_RETRY="${TF_REGISTRY_DISCOVERY_RETRY:-3}"
 
 # Use a dedicated CLI config so cache settings are applied consistently.
 TFRC_PATH="${CACHE_ROOT}/terraformrc"
@@ -124,9 +126,9 @@ format_eta() {
 
 run_terraform_init_with_retry() {
   local dir="$1"
-  local attempts=3
+  local attempts=5
   local attempt=1
-  local sleep_seconds=2
+  local sleep_seconds=3
   local rc=0
 
   while [ "$attempt" -le "$attempts" ]; do
@@ -143,11 +145,27 @@ run_terraform_init_with_retry() {
     if [ "$attempt" -lt "$attempts" ]; then
       echo "WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s..."
       sleep "$sleep_seconds"
+      sleep_seconds=$((sleep_seconds * 2))
+      if [ "$sleep_seconds" -gt 30 ]; then
+        sleep_seconds=30
+      fi
     fi
     attempt=$((attempt + 1))
   done
 
   return "$rc"
+}
+
+has_unresolved_placeholders() {
+  local dir="$1"
+  local placeholders
+  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' "$dir" 2>/dev/null || true)
+  if [ -n "$placeholders" ]; then
+    echo "ERROR: unresolved placeholder token(s) found in Terraform files for $dir:"
+    echo "$placeholders"
+    return 0
+  fi
+  return 1
 }
 
 render_progress() {
@@ -199,6 +217,12 @@ run_one_bundle() {
 
   echo ""
   echo "=== Running terraform in $dir ==="
+
+  if has_unresolved_placeholders "$dir"; then
+    echo "ERROR: unresolved placeholders detected for $dir. Skipping this action folder."
+    printf "failed|%s (precheck)\n" "$dir" > "$status_file"
+    return 0
+  fi
 
   if ! run_terraform_init_with_retry "$dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."

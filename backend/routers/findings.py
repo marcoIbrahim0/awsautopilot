@@ -12,14 +12,19 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from backend.auth import get_optional_user
 from backend.config import settings
 from backend.database import get_db
+from backend.models.action import Action
+from backend.models.action_finding import ActionFinding
 from backend.models.finding import Finding
+from backend.models.enums import RemediationRunMode
+from backend.models.remediation_run import RemediationRun
 from backend.models.tenant import Tenant
 from backend.models.user import User
-from backend.services.exception_service import get_exception_state_for_response
+from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +89,13 @@ class FindingResponse(BaseModel):
     exception_id: str | None = None
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
+    # Finding actionability hints (for "Fix this finding" + "View PR bundle group")
+    remediation_action_id: str | None = None
+    remediation_action_type: str | None = None
+    remediation_action_status: str | None = None
+    remediation_action_account_id: str | None = None
+    remediation_action_region: str | None = None
+    latest_pr_bundle_run_id: str | None = None
 
 
 class FindingsListResponse(BaseModel):
@@ -101,9 +113,11 @@ def finding_to_response(
     finding: Finding,
     include_raw: bool = False,
     exception_state: dict | None = None,
+    remediation_hints: dict | None = None,
 ) -> FindingResponse:
     """Convert a Finding model to a FindingResponse."""
     state = exception_state or {}
+    hints = remediation_hints or {}
 
     shadow: FindingShadowOverlayResponse | None = None
     if getattr(finding, "shadow_status_raw", None):
@@ -153,7 +167,96 @@ def finding_to_response(
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
+        remediation_action_id=hints.get("remediation_action_id"),
+        remediation_action_type=hints.get("remediation_action_type"),
+        remediation_action_status=hints.get("remediation_action_status"),
+        remediation_action_account_id=hints.get("remediation_action_account_id"),
+        remediation_action_region=hints.get("remediation_action_region"),
+        latest_pr_bundle_run_id=hints.get("latest_pr_bundle_run_id"),
     )
+
+
+async def get_remediation_hints_for_findings(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    finding_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, dict]:
+    """
+    Resolve action + latest PR-bundle run metadata for each finding.
+
+    Each finding should map to one action via action_findings. If duplicates exist, the
+    most recently updated action row encountered first is used.
+    """
+    if not finding_ids:
+        return {}
+
+    action_rows_result = await db.execute(
+        select(
+            ActionFinding.finding_id,
+            Action.id,
+            Action.action_type,
+            Action.status,
+            Action.account_id,
+            Action.region,
+        )
+        .join(Action, Action.id == ActionFinding.action_id)
+        .where(
+            ActionFinding.finding_id.in_(finding_ids),
+            Action.tenant_id == tenant_id,
+        )
+        .order_by(Action.updated_at.desc().nullslast(), Action.created_at.desc().nullslast())
+    )
+    action_rows = action_rows_result.all()
+
+    hints_by_finding: dict[uuid.UUID, dict] = {}
+    action_ids: set[uuid.UUID] = set()
+
+    for row in action_rows:
+        finding_uuid = row[0]
+        action_uuid = row[1]
+        if finding_uuid in hints_by_finding:
+            continue
+        hints_by_finding[finding_uuid] = {
+            "remediation_action_id": str(action_uuid),
+            "remediation_action_type": row[2],
+            "remediation_action_status": row[3],
+            "remediation_action_account_id": row[4],
+            "remediation_action_region": row[5],
+            "latest_pr_bundle_run_id": None,
+        }
+        action_ids.add(action_uuid)
+
+    if not action_ids:
+        return hints_by_finding
+
+    run_rows_result = await db.execute(
+        select(
+            RemediationRun.action_id,
+            RemediationRun.id,
+        )
+        .where(
+            RemediationRun.tenant_id == tenant_id,
+            RemediationRun.action_id.in_(list(action_ids)),
+            RemediationRun.mode == RemediationRunMode.pr_only,
+        )
+        .order_by(RemediationRun.action_id, RemediationRun.created_at.desc())
+    )
+    latest_run_by_action: dict[uuid.UUID, str] = {}
+    for action_id, run_id in run_rows_result.all():
+        if action_id not in latest_run_by_action:
+            latest_run_by_action[action_id] = str(run_id)
+
+    for finding_uuid, hints in hints_by_finding.items():
+        action_id = hints.get("remediation_action_id")
+        if not action_id:
+            continue
+        try:
+            action_uuid = uuid.UUID(action_id)
+        except ValueError:
+            continue
+        hints["latest_pr_bundle_run_id"] = latest_run_by_action.get(action_uuid)
+
+    return hints_by_finding
 
 
 async def get_tenant_by_uuid(db: AsyncSession, tenant_uuid: uuid.UUID) -> Tenant:
@@ -260,7 +363,11 @@ async def list_findings(
     tenant = await get_tenant_by_uuid(db, tenant_uuid)
 
     # Build query with tenant isolation
-    query = select(Finding).where(Finding.tenant_id == tenant.id)
+    query = (
+        select(Finding)
+        .where(Finding.tenant_id == tenant.id)
+        .options(defer(Finding.raw_json))
+    )
 
     if settings.ONLY_IN_SCOPE_CONTROLS:
         query = query.where(Finding.in_scope.is_(True))
@@ -312,12 +419,24 @@ async def list_findings(
     findings = result.scalars().all()
 
     # Convert to response with exception state (Step 6.3)
-    items = []
-    for f in findings:
-        exception_state = await get_exception_state_for_response(
-            db, tenant_uuid, "finding", f.id
+    finding_ids = [f.id for f in findings]
+    remediation_hints = await get_remediation_hints_for_findings(db, tenant_uuid, finding_ids)
+
+    exception_states = await get_exception_states_for_entities(
+        db,
+        tenant_id=tenant_uuid,
+        entity_type="finding",
+        entity_ids=finding_ids,
+    )
+    items = [
+        finding_to_response(
+            finding,
+            include_raw=False,
+            exception_state=exception_states.get(finding.id),
+            remediation_hints=remediation_hints.get(finding.id),
         )
-        items.append(finding_to_response(f, include_raw=False, exception_state=exception_state))
+        for finding in findings
+    ]
 
     logger.info(
         "Listed %d findings for tenant %s (total: %d, limit: %d, offset: %d)",
@@ -396,6 +515,12 @@ async def get_finding(
     exception_state = await get_exception_state_for_response(
         db, tenant_uuid, "finding", finding.id
     )
+    remediation_hints = await get_remediation_hints_for_findings(db, tenant_uuid, [finding.id])
     logger.info(f"Retrieved finding {finding_id} for tenant {tenant_id}")
 
-    return finding_to_response(finding, include_raw=include_raw, exception_state=exception_state)
+    return finding_to_response(
+        finding,
+        include_raw=include_raw,
+        exception_state=exception_state,
+        remediation_hints=remediation_hints.get(finding.id),
+    )

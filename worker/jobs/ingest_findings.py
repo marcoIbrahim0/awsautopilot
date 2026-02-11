@@ -18,7 +18,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import AwsAccount, Finding
+from backend.models.action_finding import ActionFinding
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
+from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
 from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from worker.config import settings
@@ -31,6 +33,16 @@ logger = logging.getLogger("worker.jobs.ingest_findings")
 
 # Step 2B.1: source discriminator for Security Hub findings
 FINDINGS_SOURCE = "security_hub"
+
+_SG_SCOPED_ACTION_TYPES = {"sg_restrict_public_ports"}
+_S3_BUCKET_SCOPED_ACTION_TYPES = {
+    "s3_bucket_block_public_access",
+    "s3_bucket_encryption",
+    "s3_bucket_access_logging",
+    "s3_bucket_lifecycle_configuration",
+    "s3_bucket_encryption_kms",
+    "s3_bucket_require_ssl",
+}
 
 
 def _is_security_hub_not_enabled_error(exc: ClientError) -> bool:
@@ -80,6 +92,57 @@ def _normalized_finding_status(raw: dict) -> str:
     return "NEW"
 
 
+def _resource_id_and_type(resource: dict[str, Any]) -> tuple[str | None, str | None]:
+    rid = resource.get("Id")
+    rtype = resource.get("Type")
+    return (
+        str(rid) if rid is not None else None,
+        str(rtype) if rtype is not None else None,
+    )
+
+
+def _select_primary_resource(resources_raw: object, control_id: str | None) -> tuple[str | None, str | None]:
+    """
+    Pick the most useful resource for action grouping/bundling.
+
+    Security Hub findings can include multiple resources (for example AwsAccount +
+    AwsEc2SecurityGroup). For resource-scoped controls, prefer the concrete target
+    resource type instead of always taking Resources[0].
+    """
+    if not isinstance(resources_raw, list):
+        return None, None
+    resources = [r for r in resources_raw if isinstance(r, dict)]
+    if not resources:
+        return None, None
+
+    action_type = action_type_from_control(str(control_id) if control_id is not None else None)
+
+    preferred_types: tuple[str, ...] = ()
+    if action_type in _SG_SCOPED_ACTION_TYPES:
+        preferred_types = ("AwsEc2SecurityGroup",)
+    elif action_type in _S3_BUCKET_SCOPED_ACTION_TYPES:
+        preferred_types = ("AwsS3Bucket",)
+
+    for preferred_type in preferred_types:
+        for resource in resources:
+            if str(resource.get("Type") or "").strip() == preferred_type:
+                return _resource_id_and_type(resource)
+
+    # Fallback heuristics when Type is absent or inconsistent.
+    if action_type in _SG_SCOPED_ACTION_TYPES:
+        for resource in resources:
+            rid = str(resource.get("Id") or "")
+            if "security-group/" in rid or "sg-" in rid:
+                return _resource_id_and_type(resource)
+    if action_type in _S3_BUCKET_SCOPED_ACTION_TYPES:
+        for resource in resources:
+            rid = str(resource.get("Id") or "")
+            if rid.startswith("arn:aws:s3:::"):
+                return _resource_id_and_type(resource)
+
+    return _resource_id_and_type(resources[0])
+
+
 def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: uuid.UUID) -> dict[str, Any]:
     sid = raw.get("Id") or ""
     sev = (raw.get("Severity") or {}).get("Label")
@@ -87,10 +150,9 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
     title = (raw.get("Title") or "")[:512]
     desc = raw.get("Description")
     resources = raw.get("Resources") or []
-    rid = resources[0].get("Id") if resources else None
-    rtype = resources[0].get("Type") if resources else None
     comp = raw.get("Compliance") or {}
     ctrl = comp.get("SecurityControlId")
+    rid, rtype = _select_primary_resource(resources, str(ctrl) if ctrl is not None else None)
     standards = comp.get("AssociatedStandards") or []
     std_name = standards[0].get("StandardsId") if standards else None
     created = _parse_ts(raw.get("CreatedAt"))
@@ -198,6 +260,7 @@ def execute_ingest_job(job: dict) -> None:
         raise ValueError(f"invalid tenant_id: {tenant_id_str}")
 
     # Single session_scope for the entire job: account lookup + upserts in one transaction
+    resolved_finding_ids: set[str] = set()
     with session_scope() as session:
         # 1. Load AWS account credentials
         acc = (
@@ -239,6 +302,10 @@ def execute_ingest_job(job: dict) -> None:
             try:
                 with session.begin_nested():
                     kind = _upsert_one(session, raw, account_id, region, tenant_id)
+                if _normalized_finding_status(raw) == "RESOLVED":
+                    finding_identifier = str(raw.get("Id") or "").strip()
+                    if finding_identifier:
+                        resolved_finding_ids.add(finding_identifier)
                 # Track out-of-scope volume for visibility; filtering is now driven by Finding.in_scope.
                 if settings.ONLY_IN_SCOPE_CONTROLS:
                     comp = raw.get("Compliance") or {}
@@ -264,6 +331,31 @@ def execute_ingest_job(job: dict) -> None:
                     updated_count,
                     out_of_scope_count,
                     error_count,
+                )
+
+    if resolved_finding_ids:
+        with session_scope() as session:
+            action_rows = (
+                session.query(ActionFinding.action_id)
+                .join(Finding, Finding.id == ActionFinding.finding_id)
+                .filter(
+                    Finding.tenant_id == tenant_id,
+                    Finding.account_id == account_id,
+                    Finding.region == region,
+                    Finding.source == FINDINGS_SOURCE,
+                    Finding.finding_id.in_(sorted(resolved_finding_ids)),
+                )
+                .all()
+            )
+            action_ids = [row[0] for row in action_rows if row and row[0] is not None]
+            if action_ids:
+                reevaluate_confirmation_for_actions(session, action_ids=action_ids)
+                logger.info(
+                    "Re-evaluated action confirmations from Security Hub resolved findings tenant_id=%s account_id=%s region=%s actions=%d",
+                    tenant_id,
+                    account_id,
+                    region,
+                    len(set(action_ids)),
                 )
 
     logger.info(

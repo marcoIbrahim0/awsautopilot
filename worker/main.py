@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from backend.utils.sqs import (
+    BACKFILL_ACTION_GROUPS_JOB_TYPE,
     BACKFILL_FINDING_KEYS_JOB_TYPE,
     COMPUTE_ACTIONS_JOB_TYPE,
     EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE,
@@ -214,6 +215,10 @@ BACKFILL_FINDING_KEYS_REQUIRED_FIELDS = {
     "job_type",
     "created_at",
 }
+BACKFILL_ACTION_GROUPS_REQUIRED_FIELDS = {
+    "job_type",
+    "created_at",
+}
 
 
 def _validate_job(job: dict) -> list[str]:
@@ -242,6 +247,8 @@ def _validate_job(job: dict) -> list[str]:
         required = RECONCILE_RECENTLY_TOUCHED_RESOURCES_REQUIRED_FIELDS
     elif job_type == BACKFILL_FINDING_KEYS_JOB_TYPE:
         required = BACKFILL_FINDING_KEYS_REQUIRED_FIELDS
+    elif job_type == BACKFILL_ACTION_GROUPS_JOB_TYPE:
+        required = BACKFILL_ACTION_GROUPS_REQUIRED_FIELDS
     else:
         required = REQUIRED_JOB_FIELDS
     return [f for f in required if f not in job or job[f] is None]

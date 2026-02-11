@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Deploys a 6-hour EventBridge scheduler that triggers global inventory reconciliation
+  across all tenants in AWS Security Autopilot via API Destination.
+
+Parameters:
+  SaaSBaseUrl:
+    Type: String
+    Description: "Base HTTPS URL for the SaaS API (e.g. https://api.example.com)."
+
+  ControlPlaneSecret:
+    Type: String
+    NoEcho: true
+    Description: "Shared secret sent as X-Control-Plane-Secret for internal reconciliation endpoint auth."
+
+  ScheduleExpression:
+    Type: String
+    Default: "rate(6 hours)"
+    Description: "EventBridge schedule expression (default: rate(6 hours))."
+
+  ServicesJson:
+    Type: String
+    Default: "[]"
+    Description: "Optional JSON array for services filter (e.g. [\"ec2\",\"s3\"]). Use [] for all default services."
+
+  RegionsJson:
+    Type: String
+    Default: "[]"
+    Description: "Optional JSON array for regions filter (e.g. [\"us-east-1\",\"eu-north-1\"]). Use [] for account defaults."
+
+  PrecheckAssumeRole:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: "Set true to run AssumeRole precheck before enqueueing account sweeps."
+
+  QuarantineOnAssumeRoleFailure:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: "Set true to disable accounts when AssumeRole precheck fails."
+
+  InvocationRateLimitPerSecond:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 300
+    Description: "API Destination invocation rate limit (requests per second)."
+
+Resources:
+  ReconcileSchedulerConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      Name: !Sub "SecurityAutopilotReconcileConnection-${AWS::Region}"
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: X-Control-Plane-Secret
+          ApiKeyValue: !Ref ControlPlaneSecret
+
+  ReconcileSchedulerApiDestination:
+    Type: AWS::Events::ApiDestination
+    Properties:
+      Name: !Sub "SecurityAutopilotReconcileDestination-${AWS::Region}"
+      ConnectionArn: !GetAtt ReconcileSchedulerConnection.Arn
+      InvocationEndpoint: !Sub "${SaaSBaseUrl}/api/internal/reconcile-inventory-global-all-tenants"
+      HttpMethod: POST
+      InvocationRateLimitPerSecond: !Ref InvocationRateLimitPerSecond
+
+  EventBridgeInvokeReconcileRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeReconcileApiDestination
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:InvokeApiDestination
+                Resource: !GetAtt ReconcileSchedulerApiDestination.Arn
+
+  ReconcileGlobalAllTenantsScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "SecurityAutopilotReconcileGlobalAllTenants-${AWS::Region}"
+      Description: "Trigger global inventory reconciliation for all tenants on a fixed schedule."
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: ReconcileInventoryGlobalAllTenants
+          Arn: !GetAtt ReconcileSchedulerApiDestination.Arn
+          RoleArn: !GetAtt EventBridgeInvokeReconcileRole.Arn
+          Input: !Sub |
+            {
+              "services": ${ServicesJson},
+              "regions": ${RegionsJson},
+              "precheck_assume_role": ${PrecheckAssumeRole},
+              "quarantine_on_assume_role_failure": ${QuarantineOnAssumeRoleFailure}
+            }
+
+Outputs:
+  RuleArn:
+    Description: "ARN of the EventBridge schedule rule."
+    Value: !GetAtt ReconcileGlobalAllTenantsScheduleRule.Arn
+  ApiDestinationArn:
+    Description: "ARN of the EventBridge API Destination."
+    Value: !GetAtt ReconcileSchedulerApiDestination.Arn
+  ConnectionArn:
+    Description: "ARN of the EventBridge Connection."
+    Value: !GetAtt ReconcileSchedulerConnection.Arn

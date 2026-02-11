@@ -1357,6 +1357,10 @@ async def list_remediation_runs(
         Optional[str],
         Query(description="Filter by action resource ID"),
     ] = None,
+    approved_by_user_id: Annotated[
+        Optional[str],
+        Query(description="Filter by approver user UUID"),
+    ] = None,
     status_filter: Annotated[
         Optional[str],
         Query(alias="status", description="Filter by status (pending, running, awaiting_approval, success, failed, cancelled)"),
@@ -1386,6 +1390,18 @@ async def list_remediation_runs(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Invalid action_id", "detail": "action_id must be a valid UUID"},
+            )
+    if approved_by_user_id is not None:
+        try:
+            approved_by_uuid = uuid.UUID(approved_by_user_id)
+            query = query.where(RemediationRun.approved_by_user_id == approved_by_uuid)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "Invalid approved_by_user_id",
+                    "detail": "approved_by_user_id must be a valid UUID",
+                },
             )
     if status_filter is not None:
         allowed = ("pending", "running", "awaiting_approval", "success", "failed", "cancelled")

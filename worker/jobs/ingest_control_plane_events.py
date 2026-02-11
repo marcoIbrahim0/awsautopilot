@@ -16,7 +16,11 @@ from datetime import datetime, timezone
 
 import boto3
 from backend.models import AwsAccount
+from backend.models.action_finding import ActionFinding
 from backend.models.control_plane_event import ControlPlaneEvent
+from backend.models.finding import Finding
+from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
+from backend.services.canonicalization import build_resource_key, canonicalize_control_id
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from worker.config import settings
 from worker.database import session_scope
@@ -200,6 +204,7 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
 
         applied_any = False
         resolved_any = False
+        impacted_action_ids: set[uuid.UUID] = set()
         for evaluation in evaluations:
             applied, changed = upsert_shadow_state(
                 session=session,
@@ -213,6 +218,42 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
             applied_any = applied_any or applied
             if applied and changed and evaluation.status == SHADOW_STATUS_RESOLVED:
                 resolved_any = True
+            if not applied:
+                continue
+            canonical_control_id = canonicalize_control_id(getattr(evaluation, "control_id", None))
+            resource_key = build_resource_key(
+                account_id=account_id,
+                region=region,
+                resource_id=getattr(evaluation, "resource_id", None),
+                resource_type=getattr(evaluation, "resource_type", None),
+            )
+            if not canonical_control_id or not resource_key:
+                continue
+            action_rows = (
+                session.query(ActionFinding.action_id)
+                .join(Finding, Finding.id == ActionFinding.finding_id)
+                .filter(
+                    Finding.tenant_id == tenant_id,
+                    Finding.account_id == account_id,
+                    Finding.region == region,
+                    Finding.canonical_control_id == canonical_control_id,
+                    Finding.resource_key == resource_key,
+                )
+                .all()
+            )
+            for row in action_rows:
+                if row and row[0] is not None:
+                    impacted_action_ids.add(row[0])
+
+        if impacted_action_ids:
+            reevaluate_confirmation_for_actions(session, action_ids=list(impacted_action_ids))
+            logger.info(
+                "control-plane confirmation re-evaluation tenant_id=%s account_id=%s region=%s impacted_actions=%d",
+                tenant_id,
+                account_id,
+                region,
+                len(impacted_action_ids),
+            )
 
         completed = _utcnow()
         control_plane_event.processing_status = "success" if applied_any else "dropped"

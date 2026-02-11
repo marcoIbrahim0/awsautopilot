@@ -2,7 +2,13 @@
 """Make imports explicit so Alembic can discover models reliably."""
 from backend.models.action import Action
 from backend.models.action_finding import ActionFinding
+from backend.models.action_group import ActionGroup
+from backend.models.action_group_action_state import ActionGroupActionState
+from backend.models.action_group_membership import ActionGroupMembership
+from backend.models.action_group_run import ActionGroupRun
+from backend.models.action_group_run_result import ActionGroupRunResult
 from backend.models.audit_log import AuditLog
+from backend.models.aws_account_reconcile_settings import AwsAccountReconcileSettings
 from backend.models.aws_account import AwsAccount
 from backend.models.base import Base
 from backend.models.control_mapping import ControlMapping
@@ -12,6 +18,10 @@ from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
 from backend.models.inventory_asset import InventoryAsset
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import (
+    ActionGroupConfirmationSource,
+    ActionGroupExecutionStatus,
+    ActionGroupRunStatus,
+    ActionGroupStatusBucket,
     ActionStatus,
     BaselineReportStatus,
     EntityType,
@@ -31,13 +41,25 @@ from backend.models.remediation_run_execution import RemediationRunExecution
 from backend.models.support_file import SupportFile
 from backend.models.support_note import SupportNote
 from backend.models.tenant import Tenant
+from backend.models.tenant_reconcile_run import TenantReconcileRun
+from backend.models.tenant_reconcile_run_shard import TenantReconcileRunShard
 from backend.models.user import User
 from backend.models.user_invite import UserInvite
 
 __all__ = [
     "Action",
     "ActionFinding",
+    "ActionGroup",
+    "ActionGroupActionState",
+    "ActionGroupConfirmationSource",
+    "ActionGroupExecutionStatus",
+    "ActionGroupMembership",
+    "ActionGroupRun",
+    "ActionGroupRunResult",
+    "ActionGroupRunStatus",
+    "ActionGroupStatusBucket",
     "AuditLog",
+    "AwsAccountReconcileSettings",
     "AwsAccount",
     "BaselineReport",
     "BaselineReportStatus",
@@ -62,6 +84,8 @@ __all__ = [
     "SupportFile",
     "SupportNote",
     "Tenant",
+    "TenantReconcileRun",
+    "TenantReconcileRunShard",
     "User",
     "UserInvite",
     "UserRole",

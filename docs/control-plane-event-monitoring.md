@@ -71,10 +71,14 @@ Inventory reconciliation is split into shard jobs plus orchestration endpoints:
 - `POST /api/internal/reconcile-inventory-global`
   - Enqueue global reconciliation across all active accounts/regions for a tenant.
   - Builds `(account, region, service)` shards and marks each as `sweep_mode=global`.
+  - Applies shared prerequisite health gates before each `(account, region)` scope enqueue.
+  - Response adds `skipped_prereq`, `prereq_reasons`, and optional scoped `prereq_failures`.
 - `POST /api/internal/reconcile-inventory-global-all-tenants`
   - Enqueue the same global reconciliation sweeps for every active tenant (cron-friendly).
   - Recommended schedule: every 6 hours (or daily for small footprints).
   - Requires header `X-Control-Plane-Secret`.
+  - Applies the same prerequisite gates before each `(tenant, account, region)` scope enqueue.
+  - Response adds `skipped_prereq`, `prereq_reasons`, and optional scoped `prereq_failures`.
 
 Phase-2 defaults are configurable via:
 - `CONTROL_PLANE_INVENTORY_SERVICES`
@@ -120,6 +124,81 @@ Phase-2 defaults are configurable via:
 - Worker logs now emit retry visibility with `receive_count`, `tenant`, `account`, and `region`.
 - Policy for repeated AssumeRole failures:
   - after repeated retries (default receive count >= 3), auto-disable account (configurable) until fixed.
+
+## 6-Hour Scheduler Deployment (CloudFormation)
+- Template: `infrastructure/cloudformation/reconcile-scheduler-template.yaml`
+- Deploy example:
+
+```bash
+aws cloudformation deploy \
+  --template-file infrastructure/cloudformation/reconcile-scheduler-template.yaml \
+  --stack-name security-autopilot-reconcile-scheduler \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides \
+    SaaSBaseUrl=https://api.example.com \
+    ControlPlaneSecret=<same_as_CONTROL_PLANE_EVENTS_SECRET_or_internal_secret> \
+    ScheduleExpression='rate(6 hours)' \
+    ServicesJson='[]' \
+    RegionsJson='[]' \
+    PrecheckAssumeRole=false \
+    QuarantineOnAssumeRoleFailure=false
+```
+
+- Template resources created:
+  - EventBridge Connection (API key auth header: `X-Control-Plane-Secret`)
+  - EventBridge API Destination (`POST ${SaaSBaseUrl}/api/internal/reconcile-inventory-global-all-tenants`)
+  - EventBridge Rule (`rate(6 hours)` by default)
+- Outputs:
+  - `RuleArn`
+  - `ApiDestinationArn`
+  - `ConnectionArn`
+
+## Shared Prerequisite Gate Semantics
+Before enqueueing reconciliation shard jobs, the control plane evaluates:
+- control-plane freshness/readiness for `(tenant, account, region)` using recent intake (`last_intake_time`)
+- in-scope Security Hub findings with missing `canonical_control_id` must be `0`
+- in-scope Security Hub findings with missing `resource_key` must be `0`
+- inventory queue depth must be `<= CONTROL_PLANE_PREREQ_MAX_QUEUE_DEPTH`
+- inventory DLQ depth must be `<= CONTROL_PLANE_PREREQ_MAX_DLQ_DEPTH`
+
+Config knobs:
+- `CONTROL_PLANE_PREREQ_MAX_STALENESS_MINUTES` (default `30`)
+- `CONTROL_PLANE_PREREQ_MAX_QUEUE_DEPTH` (default `100`)
+- `CONTROL_PLANE_PREREQ_MAX_DLQ_DEPTH` (default `0`)
+
+Stable reason codes:
+- `control_plane_stale`
+- `missing_canonical_keys`
+- `missing_resource_keys`
+- `inventory_queue_backlog`
+- `inventory_dlq_backlog`
+- `prerequisite_check_error`
+
+## Post-Apply Reconcile Behavior
+After a successful PR-bundle `apply` execution:
+- if `CONTROL_PLANE_POST_APPLY_RECONCILE_ENABLED=true`, worker attempts immediate enqueue
+- scope is constrained to the run’s `tenant/account/region`
+- targeted shards are derived from affected actions when possible:
+  - service families: `s3_`, `ec2_`, `iam_`, `rds_`, `ebs_`, `eks_`, `ssm_`, `guardduty_`, `cloudtrail_`, `config_`
+  - resource IDs from `action.resource_id` or fallback `action.target_id`
+- mode behavior:
+  - `CONTROL_PLANE_POST_APPLY_RECONCILE_MODE=targeted_then_global`: targeted first; if derivation is incomplete, fallback to global service sweeps
+  - `CONTROL_PLANE_POST_APPLY_RECONCILE_MODE=global_only`: enqueue global service sweeps directly
+- prerequisite gate is enforced before enqueue; prereq failures are logged and do not fail remediation apply
+
+## Operator Verification Steps
+1. Verify scheduler deployment:
+   - `aws cloudformation describe-stacks --stack-name security-autopilot-reconcile-scheduler`
+   - Confirm `RuleArn`, `ApiDestinationArn`, `ConnectionArn` outputs are present.
+2. Verify 6-hour rule target:
+   - `aws events list-targets-by-rule --rule SecurityAutopilotReconcileGlobalAllTenants-<region>`
+   - Confirm API Destination ARN and JSON input values.
+3. Trigger one manual run to validate endpoint behavior:
+   - `POST /api/internal/reconcile-inventory-global-all-tenants` with `X-Control-Plane-Secret`
+   - Confirm response includes `skipped_prereq` and `prereq_reasons`.
+4. Verify post-apply enqueue logs:
+   - success log: `post_apply_reconcile_enqueue_success ... service=... sweep_mode=... count=...`
+   - prereq skip log: `post_apply_reconcile_prereq_skip ... reason_codes=[...]`
 
 ## IAM/Trust Hardening
 - ReadRole template rollout target: `v1.5.1`.

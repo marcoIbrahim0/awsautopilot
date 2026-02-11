@@ -8,6 +8,7 @@ if run already success or failed.
 from __future__ import annotations
 
 import logging
+import json
 import time
 import uuid
 from datetime import datetime, timezone
@@ -153,11 +154,128 @@ def _safe_group_folder_name(action: Action, index: int) -> str:
     return f"actions/{index + 1:02d}-{normalized[:48]}-{str(action.id)[:8]}"
 
 
+def _build_reporting_wrapper_script(
+    *,
+    callback_url: str,
+    report_token: str,
+    action_ids: list[uuid.UUID],
+) -> str:
+    success_results = [
+        {
+            "action_id": str(action_id),
+            "execution_status": "success",
+        }
+        for action_id in action_ids
+    ]
+    failed_results = [
+        {
+            "action_id": str(action_id),
+            "execution_status": "failed",
+            "execution_error_code": "bundle_runner_failed",
+            "execution_error_message": "run_actions.sh exited non-zero",
+        }
+        for action_id in action_ids
+    ]
+    started_template = {
+        "token": report_token,
+        "event": "started",
+        "reporting_source": "bundle_callback",
+    }
+    finished_success_template = {
+        "token": report_token,
+        "event": "finished",
+        "reporting_source": "bundle_callback",
+        "action_results": success_results,
+    }
+    finished_failed_template = {
+        "token": report_token,
+        "event": "finished",
+        "reporting_source": "bundle_callback",
+        "action_results": failed_results,
+    }
+
+    return f"""#!/usr/bin/env bash
+set +e
+
+REPORT_URL={json.dumps(callback_url)}
+REPORT_TOKEN={json.dumps(report_token)}
+STARTED_TEMPLATE={json.dumps(started_template)}
+FINISHED_SUCCESS_TEMPLATE={json.dumps(finished_success_template)}
+FINISHED_FAILED_TEMPLATE={json.dumps(finished_failed_template)}
+REPLAY_DIR="./.bundle-callback-replay"
+RUNNER="./run_actions.sh"
+
+mkdir -p "$REPLAY_DIR"
+
+iso_now() {{
+  date -u +"%Y-%m-%dT%H:%M:%SZ"
+}}
+
+inject_timestamp() {{
+  local template_json="$1"
+  local field_name="$2"
+  local field_value="$3"
+  python3 - "$template_json" "$field_name" "$field_value" <<'PY'
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+payload[str(sys.argv[2])] = str(sys.argv[3])
+print(json.dumps(payload, separators=(",", ":")))
+PY
+}}
+
+post_payload() {{
+  local payload="$1"
+  if [ -z "$REPORT_URL" ] || [ -z "$REPORT_TOKEN" ]; then
+    return 1
+  fi
+  if command -v curl >/dev/null 2>&1; then
+    curl -sS -X POST "$REPORT_URL" -H "Content-Type: application/json" -d "$payload" >/dev/null 2>&1
+    return $?
+  fi
+  return 1
+}}
+
+persist_replay() {{
+  local suffix="$1"
+  local payload="$2"
+  local file="$REPLAY_DIR/${{suffix}}-$(date +%s).json"
+  printf '%s\\n' "$payload" > "$file"
+}}
+
+STARTED_AT="$(iso_now)"
+START_PAYLOAD="$(inject_timestamp "$STARTED_TEMPLATE" "started_at" "$STARTED_AT")"
+if ! post_payload "$START_PAYLOAD"; then
+  persist_replay "started" "$START_PAYLOAD"
+fi
+
+chmod +x "$RUNNER"
+"$RUNNER"
+RUN_RC=$?
+
+FINISHED_AT="$(iso_now)"
+if [ "$RUN_RC" -eq 0 ]; then
+  FINISH_PAYLOAD="$(inject_timestamp "$FINISHED_SUCCESS_TEMPLATE" "finished_at" "$FINISHED_AT")"
+else
+  FINISH_PAYLOAD="$(inject_timestamp "$FINISHED_FAILED_TEMPLATE" "finished_at" "$FINISHED_AT")"
+fi
+
+if ! post_payload "$FINISH_PAYLOAD"; then
+  persist_replay "finished" "$FINISH_PAYLOAD"
+fi
+
+exit "$RUN_RC"
+"""
+
+
 def _generate_group_pr_bundle(
     actions: list[Action],
     variant: str | None = None,
     strategy_id: str | None = None,
     strategy_inputs: dict | None = None,
+    callback_url: str | None = None,
+    report_token: str | None = None,
 ) -> dict:
     """
     Generate one combined PR bundle for an execution group.
@@ -177,6 +295,8 @@ fi
 CACHE_ROOT="${HOME}/.aws-security-autopilot/terraform"
 mkdir -p "${CACHE_ROOT}/plugin-cache"
 export TF_PLUGIN_CACHE_DIR="${CACHE_ROOT}/plugin-cache"
+export TF_REGISTRY_CLIENT_TIMEOUT="${TF_REGISTRY_CLIENT_TIMEOUT:-30}"
+export TF_REGISTRY_DISCOVERY_RETRY="${TF_REGISTRY_DISCOVERY_RETRY:-3}"
 
 # Use a dedicated CLI config so cache settings are applied consistently.
 TFRC_PATH="${CACHE_ROOT}/terraformrc"
@@ -307,9 +427,9 @@ format_eta() {
 
 run_terraform_init_with_retry() {
   local dir="$1"
-  local attempts=3
+  local attempts=5
   local attempt=1
-  local sleep_seconds=2
+  local sleep_seconds=3
   local rc=0
 
   while [ "$attempt" -le "$attempts" ]; do
@@ -326,11 +446,27 @@ run_terraform_init_with_retry() {
     if [ "$attempt" -lt "$attempts" ]; then
       echo "WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s..."
       sleep "$sleep_seconds"
+      sleep_seconds=$((sleep_seconds * 2))
+      if [ "$sleep_seconds" -gt 30 ]; then
+        sleep_seconds=30
+      fi
     fi
     attempt=$((attempt + 1))
   done
 
   return "$rc"
+}
+
+has_unresolved_placeholders() {
+  local dir="$1"
+  local placeholders
+  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' "$dir" 2>/dev/null || true)
+  if [ -n "$placeholders" ]; then
+    echo "ERROR: unresolved placeholder token(s) found in Terraform files for $dir:"
+    echo "$placeholders"
+    return 0
+  fi
+  return 1
 }
 
 render_progress() {
@@ -379,6 +515,14 @@ while IFS= read -r dir; do
   render_progress "$((i - 1))" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
   echo ""
   echo "=== Running terraform in $dir ==="
+
+  if has_unresolved_placeholders "$dir"; then
+    echo "ERROR: unresolved placeholders detected for $dir. Skipping this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (precheck)")
+    render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
+    continue
+  fi
 
   if ! run_terraform_init_with_retry "$dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
@@ -476,13 +620,33 @@ echo "All action folders completed successfully."
                 }
             )
 
-    files.insert(
-        0,
-        {
-            "path": "run_all.sh",
-            "content": run_all_script,
-        },
-    )
+    if callback_url and report_token:
+        files.insert(
+            0,
+            {
+                "path": "run_actions.sh",
+                "content": run_all_script,
+            },
+        )
+        files.insert(
+            0,
+            {
+                "path": "run_all.sh",
+                "content": _build_reporting_wrapper_script(
+                    callback_url=callback_url,
+                    report_token=report_token,
+                    action_ids=[action.id for action in actions],
+                ),
+            },
+        )
+    else:
+        files.insert(
+            0,
+            {
+                "path": "run_all.sh",
+                "content": run_all_script,
+            },
+        )
     files.insert(
         0,
         {
@@ -791,10 +955,20 @@ def execute_remediation_run_job(job: dict) -> None:
                         if isinstance(stored_risk, dict):
                             selected_risk_snapshot = stored_risk
                     raw_group_action_ids = job.get("group_action_ids")
+                    group_reporting_callback_url: str | None = None
+                    group_reporting_token: str | None = None
                     if raw_group_action_ids is None and isinstance(run.artifacts, dict):
                         raw_group = run.artifacts.get("group_bundle")
                         if isinstance(raw_group, dict):
                             raw_group_action_ids = raw_group.get("action_ids")
+                            reporting_config = raw_group.get("reporting")
+                            if isinstance(reporting_config, dict):
+                                callback_value = reporting_config.get("callback_url")
+                                token_value = reporting_config.get("token")
+                                if isinstance(callback_value, str) and callback_value.strip():
+                                    group_reporting_callback_url = callback_value.strip()
+                                if isinstance(token_value, str) and token_value.strip():
+                                    group_reporting_token = token_value.strip()
                     group_action_ids = _parse_group_action_ids(raw_group_action_ids)
 
                     if group_action_ids:
@@ -818,6 +992,8 @@ def execute_remediation_run_job(job: dict) -> None:
                                 variant=effective_variant,
                                 strategy_id=selected_strategy_id,
                                 strategy_inputs=selected_strategy_inputs,
+                                callback_url=group_reporting_callback_url,
+                                report_token=group_reporting_token,
                             )
                             artifacts: dict = {}
                             if isinstance(run.artifacts, dict):

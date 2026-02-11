@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
 from backend.routers.actions import router as actions_router
+from backend.routers.action_groups import router as action_groups_router
 from backend.routers.auth import router as auth_router
 from backend.routers.aws_accounts import router as aws_accounts_router
 from backend.routers.baseline_report import router as baseline_report_router
@@ -16,6 +17,7 @@ from backend.routers.exports import router as exports_router
 from backend.routers.findings import router as findings_router
 from backend.routers.internal import router as internal_router
 from backend.routers.meta import router as meta_router
+from backend.routers.reconciliation import router as reconciliation_router
 from backend.routers.remediation_runs import router as remediation_runs_router
 from backend.routers.saas_admin import router as saas_admin_router
 from backend.routers.support_files import router as support_files_router
@@ -48,6 +50,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(actions_router, prefix="/api")
+app.include_router(action_groups_router, prefix="/api")
 app.include_router(aws_accounts_router, prefix="/api")
 app.include_router(baseline_report_router, prefix="/api")
 app.include_router(control_mappings_router, prefix="/api")
@@ -57,6 +60,7 @@ app.include_router(findings_router, prefix="/api")
 app.include_router(control_plane_router, prefix="/api")
 app.include_router(internal_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
+app.include_router(reconciliation_router, prefix="/api")
 app.include_router(remediation_runs_router, prefix="/api")
 app.include_router(saas_admin_router, prefix="/api")
 app.include_router(support_files_router, prefix="/api")

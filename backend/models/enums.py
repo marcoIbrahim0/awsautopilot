@@ -77,6 +77,40 @@ class RemediationRunExecutionStatus(str, Enum):
     cancelled = "cancelled"
 
 
+class ActionGroupRunStatus(str, Enum):
+    """Lifecycle status for an action-group execution run."""
+
+    queued = "queued"
+    started = "started"
+    finished = "finished"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class ActionGroupExecutionStatus(str, Enum):
+    """Per-action execution result status reported for a group run."""
+
+    success = "success"
+    failed = "failed"
+    cancelled = "cancelled"
+    unknown = "unknown"
+
+
+class ActionGroupStatusBucket(str, Enum):
+    """UI/status bucket for immutable group member outcomes."""
+
+    not_run_yet = "not_run_yet"
+    run_not_successful = "run_not_successful"
+    run_successful_confirmed = "run_successful_confirmed"
+
+
+class ActionGroupConfirmationSource(str, Enum):
+    """Trusted confirmation sources for compliance-confirmed success."""
+
+    security_hub = "security_hub"
+    control_plane_reconcile = "control_plane_reconcile"
+
+
 class EvidenceExportStatus(str, Enum):
     """Current state of an evidence pack export job."""
     pending = "pending"

@@ -14,6 +14,7 @@ INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE = "ingest_control_plane_events"
 RECONCILE_INVENTORY_SHARD_JOB_TYPE = "reconcile_inventory_shard"
 RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE = "reconcile_recently_touched_resources"
 BACKFILL_FINDING_KEYS_JOB_TYPE = "backfill_finding_keys"
+BACKFILL_ACTION_GROUPS_JOB_TYPE = "backfill_action_groups"
 COMPUTE_ACTIONS_JOB_TYPE = "compute_actions"
 REMEDIATION_RUN_JOB_TYPE = "remediation_run"
 GENERATE_EXPORT_JOB_TYPE = "generate_export"
@@ -115,6 +116,8 @@ def build_reconcile_inventory_shard_job_payload(
     resource_ids: list[str] | None = None,
     sweep_mode: str | None = None,
     max_resources: int | None = None,
+    run_id: uuid.UUID | str | None = None,
+    run_shard_id: uuid.UUID | str | None = None,
 ) -> dict:
     """Build reconcile_inventory_shard payload."""
     payload: dict = {
@@ -131,6 +134,10 @@ def build_reconcile_inventory_shard_job_payload(
         payload["sweep_mode"] = (sweep_mode or "").strip().lower() or "targeted"
     if max_resources is not None:
         payload["max_resources"] = int(max_resources)
+    if run_id is not None:
+        payload["run_id"] = str(run_id)
+    if run_shard_id is not None:
+        payload["run_shard_id"] = str(run_shard_id)
     return payload
 
 
@@ -188,6 +195,38 @@ def build_backfill_finding_keys_job_payload(
         payload["auto_continue"] = bool(auto_continue)
     if start_after_id is not None:
         payload["start_after_id"] = str(start_after_id)
+    return payload
+
+
+def build_backfill_action_groups_job_payload(
+    created_at: str,
+    tenant_id: uuid.UUID | None = None,
+    account_id: str | None = None,
+    region: str | None = None,
+    chunk_size: int | None = None,
+    max_chunks: int | None = None,
+    auto_continue: bool | None = None,
+    start_after_action_id: str | None = None,
+) -> dict:
+    """Build backfill_action_groups payload for immutable group membership backfills."""
+    payload: dict = {
+        "job_type": BACKFILL_ACTION_GROUPS_JOB_TYPE,
+        "created_at": created_at,
+    }
+    if tenant_id is not None:
+        payload["tenant_id"] = str(tenant_id)
+    if account_id is not None:
+        payload["account_id"] = account_id
+    if region is not None:
+        payload["region"] = region
+    if chunk_size is not None:
+        payload["chunk_size"] = int(chunk_size)
+    if max_chunks is not None:
+        payload["max_chunks"] = int(max_chunks)
+    if auto_continue is not None:
+        payload["auto_continue"] = bool(auto_continue)
+    if start_after_action_id is not None:
+        payload["start_after_action_id"] = str(start_after_action_id)
     return payload
 
 

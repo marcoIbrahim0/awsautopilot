@@ -679,6 +679,40 @@ def test_pr_bundle_sg_restrict_target_id_composite_extracts_sg_id() -> None:
     assert composite_target_id not in cfn_content
 
 
+def test_pr_bundle_sg_restrict_uses_resource_id_when_target_id_not_parseable() -> None:
+    """SG bundle falls back to action.resource_id when target_id is account-scoped/stale."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="029037611564|eu-north-1|aws-account:029037611564|EC2.53",
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+    action.resource_id = "arn:aws:ec2:eu-north-1:029037611564:security-group/sg-0de002382892023f5"
+
+    tf_bundle = generate_pr_bundle(action, "terraform")
+    tf_content = next(f for f in tf_bundle["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
+    assert 'default     = "sg-0de002382892023f5"' in tf_content
+
+    cfn_bundle = generate_pr_bundle(action, "cloudformation")
+    cfn_content = next(f for f in cfn_bundle["files"] if f["path"] == "sg_restrict_public_ports.yaml")["content"]
+    assert 'Default: "sg-0de002382892023f5"' in cfn_content
+
+
+def test_pr_bundle_sg_restrict_unparseable_target_returns_guidance() -> None:
+    """When SG ID cannot be resolved, return guidance instead of invalid Terraform placeholders."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="029037611564|eu-north-1|aws-account:029037611564|EC2.53",
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    paths = [f["path"] for f in r["files"]]
+    assert "README.tf" in paths
+    assert "sg_restrict_public_ports.tf" not in paths
+    assert any("security-group id" in step.lower() for step in r["steps"])
+
+
 def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:
     """Step 9.12: cloudtrail_enabled returns Terraform with aws_cloudtrail."""
     action = _make_action(
@@ -740,7 +774,10 @@ def test_pr_bundle_dispatch_all_seven_cloudformation() -> None:
         (ACTION_TYPE_CLOUDTRAIL_ENABLED, "cloudtrail_enabled.yaml"),
     ]
     for action_type, expected_path in types_and_paths:
-        action = _make_action(action_type=action_type, target_id="test-target", region="us-east-1")
+        target_id = "test-target"
+        if action_type == ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS:
+            target_id = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0"
+        action = _make_action(action_type=action_type, target_id=target_id, region="us-east-1")
         r = generate_pr_bundle(action, "cloudformation")
         assert r["format"] == "cloudformation"
         assert len(r["files"]) == 1

@@ -146,6 +146,17 @@ class Settings(BaseSettings):
         default=300,
         description="In-process cache TTL for centralized run_all.sh template fetches from S3.",
     )
+    BUNDLE_REPORTING_TOKEN_SECRET: str = Field(
+        default="",
+        description=(
+            "Secret for signing downloaded-bundle run reporting tokens. "
+            "Falls back to JWT_SECRET when unset."
+        ),
+    )
+    BUNDLE_REPORTING_TOKEN_TTL_SECONDS: int = Field(
+        default=86400,
+        description="Expiration for bundle run reporting tokens in seconds.",
+    )
     FRONTEND_URL: str = Field(
         default="http://localhost:3000",
         description="Frontend URL for invite links and redirects",
@@ -201,6 +212,36 @@ class Settings(BaseSettings):
         default="ec2,s3,cloudtrail,config,iam,ebs,rds,eks,ssm,guardduty",
         description="Comma-separated inventory services covered by reconciliation sweeps.",
     )
+    CONTROL_PLANE_PREREQ_MAX_STALENESS_MINUTES: int = Field(
+        default=30,
+        description=(
+            "Maximum allowed age (in minutes) of control-plane intake freshness for reconciliation enqueue."
+        ),
+    )
+    CONTROL_PLANE_PREREQ_MAX_QUEUE_DEPTH: int = Field(
+        default=100,
+        description=(
+            "Maximum allowed inventory reconciliation queue depth before new reconciliation enqueues are gated."
+        ),
+    )
+    CONTROL_PLANE_PREREQ_MAX_DLQ_DEPTH: int = Field(
+        default=0,
+        description=(
+            "Maximum allowed inventory reconciliation DLQ depth before new reconciliation enqueues are gated."
+        ),
+    )
+    CONTROL_PLANE_POST_APPLY_RECONCILE_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "When true, successful PR bundle apply executions attempt immediate inventory reconciliation enqueue."
+        ),
+    )
+    CONTROL_PLANE_POST_APPLY_RECONCILE_MODE: str = Field(
+        default="targeted_then_global",
+        description=(
+            "Post-apply reconcile strategy: targeted_then_global (default) or global_only."
+        ),
+    )
     CONTROL_PLANE_AUTO_DISABLE_ASSUME_ROLE_FAILURES: bool = Field(
         default=True,
         description=(
@@ -211,6 +252,44 @@ class Settings(BaseSettings):
         default=3,
         description=(
             "SQS ApproximateReceiveCount threshold before auto-disabling accounts with repeated AssumeRole failures."
+        ),
+    )
+    TENANT_RECONCILIATION_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Enable tenant-facing reconciliation endpoints. "
+            "When false, only tenants listed in TENANT_RECONCILIATION_PILOT_TENANTS can access."
+        ),
+    )
+    TENANT_RECONCILIATION_PILOT_TENANTS: str = Field(
+        default="",
+        description="Comma-separated tenant UUIDs allowed to use tenant reconciliation while feature is disabled globally.",
+    )
+    TENANT_RECONCILIATION_MAX_SERVICES: int = Field(
+        default=6,
+        description="Maximum number of services allowed in one tenant reconciliation run.",
+    )
+    TENANT_RECONCILIATION_MAX_RESOURCES_CAP: int = Field(
+        default=2000,
+        description="Hard cap for max_resources in tenant reconciliation requests.",
+    )
+    TENANT_RECONCILIATION_COOLDOWN_SECONDS: int = Field(
+        default=120,
+        description="Minimum cooldown between tenant-triggered reconciliation runs for the same account.",
+    )
+    TENANT_RECONCILIATION_SCHEDULE_MIN_INTERVAL_MINUTES: int = Field(
+        default=60,
+        description="Minimum allowed schedule interval for tenant-managed reconciliation.",
+    )
+    TENANT_RECONCILIATION_ALERT_FAILURE_THRESHOLD: int = Field(
+        default=3,
+        description="Failure count threshold used when emitting repeated reconciliation failure alerts.",
+    )
+    RECONCILIATION_SCHEDULER_SECRET: str = Field(
+        default="",
+        description=(
+            "Shared secret for POST /api/internal/reconciliation/schedule-tick. "
+            "If unset, CONTROL_PLANE_EVENTS_SECRET is used as fallback."
         ),
     )
     ONLY_IN_SCOPE_CONTROLS: bool = Field(
@@ -297,6 +376,14 @@ class Settings(BaseSettings):
         return services or default_services
 
     @property
+    def control_plane_post_apply_reconcile_mode(self) -> str:
+        """Normalized post-apply reconcile mode."""
+        mode = str(self.CONTROL_PLANE_POST_APPLY_RECONCILE_MODE or "").strip().lower()
+        if mode in {"targeted_then_global", "global_only"}:
+            return mode
+        return "targeted_then_global"
+
+    @property
     def control_plane_authoritative_controls_set(self) -> set[str]:
         """Uppercased set of canonical control IDs promoted to authoritative mode."""
         raw = (self.CONTROL_PLANE_AUTHORITATIVE_CONTROLS or "").strip()
@@ -319,6 +406,18 @@ class Settings(BaseSettings):
             email.strip().lower()
             for email in self.SAAS_ADMIN_EMAILS.split(",")
             if email.strip()
+        }
+
+    @property
+    def tenant_reconciliation_pilot_tenants_list(self) -> set[str]:
+        """Normalized set of tenant UUID strings allowed for pilot rollout."""
+        raw = (self.TENANT_RECONCILIATION_PILOT_TENANTS or "").strip()
+        if not raw:
+            return set()
+        return {
+            tenant_id.strip()
+            for tenant_id in raw.split(",")
+            if tenant_id.strip()
         }
 
 

@@ -110,6 +110,46 @@ def test_extract_finding_fields_basic() -> None:
     assert fields["status"] == "NEW"
 
 
+def test_extract_finding_fields_prefers_security_group_resource_for_ec2_control() -> None:
+    """For SG controls, pick AwsEc2SecurityGroup even when AwsAccount is first."""
+    tenant_id = uuid.uuid4()
+    raw = {
+        "Id": "arn:aws:securityhub:us-east-1:123456789012:finding/sg-1",
+        "Title": "Security group should restrict SSH access",
+        "Severity": {"Label": "HIGH"},
+        "Resources": [
+            {"Id": "AWS::::Account:123456789012", "Type": "AwsAccount"},
+            {"Id": "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0", "Type": "AwsEc2SecurityGroup"},
+        ],
+        "Workflow": {"Status": "NEW"},
+        "Compliance": {"SecurityControlId": "EC2.53"},
+    }
+
+    fields = _extract_finding_fields(raw, "123456789012", "us-east-1", tenant_id)
+    assert fields["resource_type"] == "AwsEc2SecurityGroup"
+    assert fields["resource_id"] == "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0"
+
+
+def test_extract_finding_fields_prefers_s3_bucket_resource_for_s3_bucket_controls() -> None:
+    """For S3 bucket controls, pick AwsS3Bucket even when AwsAccount is first."""
+    tenant_id = uuid.uuid4()
+    raw = {
+        "Id": "arn:aws:securityhub:us-east-1:123456789012:finding/s3-1",
+        "Title": "S3 bucket should have encryption enabled",
+        "Severity": {"Label": "MEDIUM"},
+        "Resources": [
+            {"Id": "AWS::::Account:123456789012", "Type": "AwsAccount"},
+            {"Id": "arn:aws:s3:::my-bucket", "Type": "AwsS3Bucket"},
+        ],
+        "Workflow": {"Status": "NEW"},
+        "Compliance": {"SecurityControlId": "S3.4"},
+    }
+
+    fields = _extract_finding_fields(raw, "123456789012", "us-east-1", tenant_id)
+    assert fields["resource_type"] == "AwsS3Bucket"
+    assert fields["resource_id"] == "arn:aws:s3:::my-bucket"
+
+
 def test_extract_finding_fields_missing_optional() -> None:
     """Handles missing optional fields gracefully."""
     tenant_id = uuid.uuid4()

@@ -81,14 +81,48 @@ async def get_exception_state_for_response(
     Use in actions and findings APIs so the UI can show "Suppressed until <date>"
     or "Exception expired" without a background job.
     """
-    exc = await get_exception_for_entity(db, tenant_id, entity_type, entity_id)
-    if exc is None:
-        return {}
+    states = await get_exception_states_for_entities(
+        db,
+        tenant_id=tenant_id,
+        entity_type=entity_type,
+        entity_ids=[entity_id],
+    )
+    return states.get(entity_id, {})
 
-    now = datetime.now(timezone.utc)
+
+def _exception_to_state(exc: Exception, now: datetime) -> dict[str, Any]:
     if exc.expires_at > now:
         return {
             "exception_id": str(exc.id),
             "exception_expires_at": exc.expires_at.isoformat(),
         }
     return {"exception_expired": True}
+
+
+async def get_exception_states_for_entities(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    entity_type: str,
+    entity_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, dict[str, Any]]:
+    """
+    Batch version of get_exception_state_for_response.
+
+    Returns a map keyed by entity_id for entities that have an exception row.
+    Entities with no exception are omitted from the result map.
+    """
+    if not entity_ids:
+        return {}
+
+    entity_type_enum = EntityType(entity_type) if isinstance(entity_type, str) else entity_type
+    result = await db.execute(
+        select(Exception).where(
+            Exception.tenant_id == tenant_id,
+            Exception.entity_type == entity_type_enum,
+            Exception.entity_id.in_(entity_ids),
+        )
+    )
+    exceptions = result.scalars().all()
+
+    now = datetime.now(timezone.utc)
+    return {exc.entity_id: _exception_to_state(exc, now) for exc in exceptions}

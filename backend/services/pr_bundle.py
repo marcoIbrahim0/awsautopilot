@@ -419,7 +419,48 @@ def _security_group_id_from_target_id(target_id: str) -> str:
     if match:
         return match.group(1)
 
+    # Parse SG ARN/resource forms that may omit the sg- prefix in some payloads.
+    match = re.search(r"security-group/([A-Za-z0-9-]+)", tid)
+    if match:
+        token = (match.group(1) or "").strip()
+        if re.fullmatch(r"[0-9a-fA-F]{8,}", token):
+            return f"sg-{token.lower()}"
+
+    # Parse key/value forms such as SecurityGroupId=sg-...
+    match = re.search(
+        r"(?:security[_ -]?group[_ -]?id|group[_ -]?id)\s*[:=]\s*['\"]?([A-Za-z0-9-]+)",
+        tid,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        token = (match.group(1) or "").strip()
+        if token.startswith("sg-"):
+            return token
+        if re.fullmatch(r"[0-9a-fA-F]{8,}", token):
+            return f"sg-{token.lower()}"
+
     return "REPLACE_SECURITY_GROUP_ID"
+
+
+def _security_group_id_from_action_context(action: ActionLike, target_id: str) -> str | None:
+    """
+    Resolve SG ID from action context, trying target_id first then richer fields.
+
+    Older/stale actions may have account-scoped target_id while resource_id still
+    contains the SG ARN. Returning None lets callers produce guidance instead of
+    invalid IaC with a placeholder SG ID.
+    """
+    candidates = [
+        target_id,
+        getattr(action, "resource_id", None),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        resolved = _security_group_id_from_target_id(str(candidate))
+        if resolved != "REPLACE_SECURITY_GROUP_ID":
+            return resolved
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1463,12 +1504,23 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
     """Generate IaC for sg_restrict_public_ports (per security group, EC2.53). Step 9.11."""
     meta = _action_meta(action)
     region = meta["region"]
-    sg_id = _security_group_id_from_target_id(meta["target_id"])
+    sg_id = _security_group_id_from_action_context(action, meta["target_id"])
+    if not sg_id:
+        return _generate_for_guidance_bundle(
+            action,
+            format,
+            "Security group ID required for EC2.53 remediation",
+            [
+                "Could not infer a valid `sg-...` identifier from this action target/resource metadata.",
+                "Refresh finding ingest and recompute actions so EC2.53 maps to an `AwsEc2SecurityGroup` resource.",
+                "Regenerate the PR bundle after the action includes a concrete security-group ID.",
+            ],
+        )
     if format == CLOUDFORMATION_FORMAT:
         files = [
             PRBundleFile(
                 path="sg_restrict_public_ports.yaml",
-                content=_cloudformation_sg_restrict_content(meta),
+                content=_cloudformation_sg_restrict_content(meta, sg_id),
             )
         ]
         steps = [
@@ -1488,7 +1540,7 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
                 path="sg_restrict_public_ports.tf",
-                content=_terraform_sg_restrict_content(meta),
+                content=_terraform_sg_restrict_content(meta, sg_id),
             ),
         ]
         steps = [
@@ -1508,9 +1560,8 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _terraform_sg_restrict_content(meta: dict[str, str]) -> str:
+def _terraform_sg_restrict_content(meta: dict[str, str], sg_id: str) -> str:
     """Terraform for SG restrict public ports 22/3389 (EC2.53). Step 9.11: aws_vpc_security_group_ingress_rule with variables."""
-    sg_id = _security_group_id_from_target_id(meta["target_id"])
     return f"""# SG restrict public ports (22/3389) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
@@ -1576,9 +1627,8 @@ resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6" {{
 """
 
 
-def _cloudformation_sg_restrict_content(meta: dict[str, str]) -> str:
+def _cloudformation_sg_restrict_content(meta: dict[str, str], sg_id: str) -> str:
     """CloudFormation for SG restrict public ports (EC2.53). Step 9.5 (all seven), 9.11."""
-    sg_id = _security_group_id_from_target_id(meta["target_id"])
     return f"""# SG restrict public ports (22/3389) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}

@@ -16,8 +16,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.config import settings
 from backend.models.action import Action
+from backend.models.action_group_membership import ActionGroupMembership
+from backend.models.action_group_run import ActionGroupRun
+from backend.models.action_group_run_result import ActionGroupRunResult
 from backend.models.aws_account import AwsAccount
 from backend.models.enums import (
+    ActionGroupExecutionStatus,
+    ActionGroupRunStatus,
     RemediationRunExecutionPhase,
     RemediationRunExecutionStatus,
     RemediationRunMode,
@@ -25,8 +30,10 @@ from backend.models.enums import (
 )
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
+from backend.services.action_run_confirmation import evaluate_confirmation_for_action, record_execution_result
 from worker.database import session_scope
 from worker.services.aws import assume_role
+from worker.services.post_apply_reconcile import enqueue_post_apply_reconcile
 
 logger = logging.getLogger("worker.jobs.remediation_run_execution")
 
@@ -193,6 +200,220 @@ def _append_run_log(run: RemediationRun, message: str) -> None:
         run.logs = message
 
 
+def _group_bundle_payload(run: RemediationRun) -> dict | None:
+    if not isinstance(run.artifacts, dict):
+        return None
+    raw_group = run.artifacts.get("group_bundle")
+    if not isinstance(raw_group, dict):
+        return None
+    return raw_group
+
+
+def _group_action_ids_from_payload(payload: dict | None) -> list[uuid.UUID]:
+    if not isinstance(payload, dict):
+        return []
+    raw_ids = payload.get("resolved_action_ids")
+    if not isinstance(raw_ids, list):
+        raw_ids = payload.get("action_ids")
+    if not isinstance(raw_ids, list):
+        return []
+    parsed: list[uuid.UUID] = []
+    seen: set[uuid.UUID] = set()
+    for raw_id in raw_ids:
+        if not isinstance(raw_id, str):
+            continue
+        try:
+            action_id = uuid.UUID(raw_id)
+        except ValueError:
+            continue
+        if action_id in seen:
+            continue
+        seen.add(action_id)
+        parsed.append(action_id)
+    return parsed
+
+
+def _resolve_group_run_for_execution(
+    session: Session,
+    run: RemediationRun,
+    phase: RemediationRunExecutionPhase,
+    started_at: datetime | None,
+) -> tuple[ActionGroupRun | None, list[uuid.UUID]]:
+    payload = _group_bundle_payload(run)
+    action_ids = _group_action_ids_from_payload(payload)
+    if not action_ids:
+        return None, []
+
+    declared_group_run_id: uuid.UUID | None = None
+    if isinstance(payload, dict):
+        raw_group_run_id = payload.get("group_run_id")
+        if isinstance(raw_group_run_id, str):
+            try:
+                declared_group_run_id = uuid.UUID(raw_group_run_id)
+            except ValueError:
+                declared_group_run_id = None
+
+    memberships = (
+        session.query(ActionGroupMembership)
+        .filter(
+            ActionGroupMembership.tenant_id == run.tenant_id,
+            ActionGroupMembership.action_id.in_(action_ids),
+        )
+        .all()
+    )
+    if not memberships:
+        return None, action_ids
+
+    group_ids = {membership.group_id for membership in memberships}
+    if len(group_ids) != 1:
+        return None, action_ids
+    group_id = next(iter(group_ids))
+
+    group_run: ActionGroupRun | None = None
+    if declared_group_run_id is not None:
+        group_run = (
+            session.query(ActionGroupRun)
+            .filter(
+                ActionGroupRun.id == declared_group_run_id,
+                ActionGroupRun.tenant_id == run.tenant_id,
+            )
+            .one_or_none()
+        )
+    if group_run is None:
+        group_run = (
+            session.query(ActionGroupRun)
+            .filter(
+                ActionGroupRun.tenant_id == run.tenant_id,
+                ActionGroupRun.group_id == group_id,
+                ActionGroupRun.remediation_run_id == run.id,
+            )
+            .one_or_none()
+        )
+
+    if group_run is None:
+        mode_value = "saas_plan" if phase == RemediationRunExecutionPhase.plan else "saas_plan_apply"
+        group_run = ActionGroupRun(
+            id=declared_group_run_id or uuid.uuid4(),
+            tenant_id=run.tenant_id,
+            group_id=group_id,
+            remediation_run_id=run.id,
+            initiated_by_user_id=run.approved_by_user_id,
+            mode=mode_value,
+            status=ActionGroupRunStatus.started,
+            started_at=started_at,
+            reporting_source="saas_executor",
+        )
+        session.add(group_run)
+        session.flush()
+
+    if group_run.started_at is None and started_at is not None:
+        group_run.started_at = started_at
+    group_run.reporting_source = "saas_executor"
+    return group_run, action_ids
+
+
+def _to_group_execution_status(status: str | None) -> ActionGroupExecutionStatus:
+    value = (status or "").strip().lower()
+    if value == "success":
+        return ActionGroupExecutionStatus.success
+    if value == "failed":
+        return ActionGroupExecutionStatus.failed
+    if value == "cancelled":
+        return ActionGroupExecutionStatus.cancelled
+    return ActionGroupExecutionStatus.unknown
+
+
+def _sync_group_run_results(
+    session: Session,
+    *,
+    run: RemediationRun,
+    execution: RemediationRunExecution,
+    folder_results: list[dict[str, object]] | None,
+) -> None:
+    group_run, action_ids = _resolve_group_run_for_execution(
+        session,
+        run,
+        phase=execution.phase,
+        started_at=execution.started_at,
+    )
+    if group_run is None or not action_ids:
+        return
+
+    ordered_results = folder_results or []
+    has_failed = False
+    has_cancelled = False
+    for index, action_id in enumerate(action_ids):
+        folder_result = ordered_results[index] if index < len(ordered_results) else None
+        if folder_result is None:
+            exec_status = ActionGroupExecutionStatus.unknown
+            raw_result = {"error": "missing_folder_result"}
+        else:
+            exec_status = _to_group_execution_status(str(folder_result.get("status") or "unknown"))
+            raw_result = folder_result
+
+        if exec_status == ActionGroupExecutionStatus.failed:
+            has_failed = True
+        if exec_status == ActionGroupExecutionStatus.cancelled:
+            has_cancelled = True
+
+        row = (
+            session.query(ActionGroupRunResult)
+            .filter(
+                ActionGroupRunResult.tenant_id == run.tenant_id,
+                ActionGroupRunResult.group_run_id == group_run.id,
+                ActionGroupRunResult.action_id == action_id,
+            )
+            .one_or_none()
+        )
+        if row is None:
+            row = ActionGroupRunResult(
+                tenant_id=run.tenant_id,
+                group_run_id=group_run.id,
+                action_id=action_id,
+            )
+            session.add(row)
+
+        row.execution_status = exec_status
+        row.execution_started_at = execution.started_at
+        row.execution_finished_at = execution.completed_at
+        row.raw_result = raw_result if isinstance(raw_result, dict) else None
+        if exec_status == ActionGroupExecutionStatus.failed:
+            row.execution_error_code = "saas_executor_failed"
+            row.execution_error_message = str(folder_result.get("error") if folder_result else "execution_failed")[:1000]
+        else:
+            row.execution_error_code = None
+            row.execution_error_message = None
+
+        record_execution_result(
+            session,
+            action_id=action_id,
+            latest_run_id=group_run.id,
+            execution_status=exec_status,
+            attempted_at=execution.started_at,
+            finished_at=execution.completed_at,
+        )
+        evaluate_confirmation_for_action(
+            session,
+            action_id=action_id,
+            since_run_started=execution.started_at,
+        )
+
+    if execution.phase == RemediationRunExecutionPhase.plan:
+        if execution.status == RemediationRunExecutionStatus.failed:
+            group_run.status = ActionGroupRunStatus.failed
+            group_run.finished_at = execution.completed_at
+        else:
+            group_run.status = ActionGroupRunStatus.started
+    else:
+        if has_failed:
+            group_run.status = ActionGroupRunStatus.failed
+        elif has_cancelled:
+            group_run.status = ActionGroupRunStatus.cancelled
+        else:
+            group_run.status = ActionGroupRunStatus.finished
+        group_run.finished_at = execution.completed_at
+
+
 def execute_pr_bundle_execution_job(job: dict) -> None:
     """Process execute_pr_bundle_plan/apply jobs."""
     run_id_raw = job.get("run_id")
@@ -280,6 +501,7 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
             return
 
         digest = _bundle_hash(files)
+        folder_results: list[dict[str, object]] = []
         try:
             account_id, _ = _ensure_group_invariants(session, run)
             env = _assume_write_role(session, run, account_id)
@@ -290,7 +512,6 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                     _safe_write(workspace, item["path"], item["content"])
 
                 folders = _execution_folders(workspace)
-                folder_results: list[dict[str, object]] = []
                 manifest = execution.workspace_manifest if isinstance(execution.workspace_manifest, dict) else {}
                 expected_hash = manifest.get("bundle_hash")
                 if (
@@ -386,6 +607,21 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                         run.status = RemediationRunStatus.success
                         run.outcome = "SaaS apply completed successfully."
                         _append_run_log(run, "SaaS apply completed successfully.")
+                        try:
+                            enqueue_post_apply_reconcile(session, run)
+                        except Exception as exc:  # pragma: no cover - defensive, helper is best-effort
+                            logger.exception(
+                                "post-apply reconcile enqueue failed run_id=%s execution_id=%s: %s",
+                                run.id,
+                                execution.id,
+                                exc,
+                            )
+                _sync_group_run_results(
+                    session,
+                    run=run,
+                    execution=execution,
+                    folder_results=folder_results,
+                )
         except FileNotFoundError as exc:
             execution.status = RemediationRunExecutionStatus.failed
             execution.error_summary = "runtime_missing_dependency"
@@ -393,6 +629,7 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
             run.status = RemediationRunStatus.failed
             run.outcome = f"SaaS execution failed: {exc}"
             _append_run_log(run, f"SaaS execution failed: {exc}")
+            _sync_group_run_results(session, run=run, execution=execution, folder_results=folder_results)
         except Exception as exc:
             logger.exception("bundle execution failed execution_id=%s: %s", execution.id, exc)
             execution.status = RemediationRunExecutionStatus.failed
@@ -401,5 +638,6 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
             run.status = RemediationRunStatus.failed
             run.outcome = f"SaaS execution failed: {exc}"
             _append_run_log(run, f"SaaS execution failed: {exc}")
+            _sync_group_run_results(session, run=run, execution=execution, folder_results=folder_results)
 
         session.flush()

@@ -15,20 +15,23 @@ import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import String, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import load_only, selectinload
 
 from backend.auth import get_optional_user
 from backend.config import settings
 from backend.database import get_db
 from backend.models.action import Action
 from backend.models.action_finding import ActionFinding
+from backend.models.action_group import ActionGroup
+from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.aws_account import AwsAccount
+from backend.models.finding import Finding
 from backend.models.user import User
 from backend.routers.aws_accounts import get_account_for_tenant, get_tenant, resolve_tenant_id
 from backend.services.aws import assume_role
-from backend.services.exception_service import get_exception_state_for_response
+from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_strategy import (
     list_mode_options_for_action_type,
@@ -186,9 +189,13 @@ class RemediationOptionsResponse(BaseModel):
 def _action_to_list_item(
     action: Action,
     exception_state: dict | None = None,
+    finding_count: int | None = None,
 ) -> ActionListItem:
-    """Build list item from Action; action_finding_links must be loaded."""
+    """Build list item from Action; finding_count may be supplied from SQL aggregation."""
     state = exception_state or {}
+    resolved_finding_count = finding_count
+    if resolved_finding_count is None:
+        resolved_finding_count = len(action.action_finding_links or [])
     return ActionListItem(
         id=str(action.id),
         action_type=action.action_type,
@@ -201,7 +208,7 @@ def _action_to_list_item(
         control_id=action.control_id,
         resource_id=action.resource_id,
         updated_at=action.updated_at.isoformat() if action.updated_at else None,
-        finding_count=len(action.action_finding_links or []),
+        finding_count=resolved_finding_count,
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
@@ -239,6 +246,16 @@ def _batch_title(action_type: str, action_count: int) -> str:
 def _build_batch_target_id(action: Action) -> str:
     region = action.region or "global"
     return f"batch|{action.action_type}|{action.account_id}|{region}|{action.status}"
+
+
+def _build_batch_target_id_from_fields(
+    action_type: str,
+    account_id: str,
+    region: str | None,
+    status: str,
+) -> str:
+    resolved_region = region or "global"
+    return f"batch|{action_type}|{account_id}|{resolved_region}|{status}"
 
 
 def _batch_sort_key(item: ActionListItem) -> tuple[int, str]:
@@ -386,38 +403,158 @@ async def list_actions(
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     await get_tenant(tenant_uuid, db)
 
-    query = (
-        select(Action)
-        .where(Action.tenant_id == tenant_uuid)
-        .options(selectinload(Action.action_finding_links))
-    )
-    if settings.ONLY_IN_SCOPE_CONTROLS:
-        query = query.where(Action.action_type != "pr_only")
-    if account_id is not None:
-        query = query.where(Action.account_id == account_id)
-    if region is not None:
-        query = query.where(Action.region == region)
-    if control_id is not None:
-        query = query.where(Action.control_id == control_id.strip())
-    if resource_id is not None:
-        query = query.where(Action.resource_id == resource_id.strip())
-    if action_type is not None:
-        query = query.where(Action.action_type == action_type.strip())
-    if status_filter is not None:
-        query = query.where(Action.status == status_filter.strip().lower())
-    if not include_orphans:
-        query = query.where(
-            select(ActionFinding.action_id)
-            .where(ActionFinding.action_id == Action.id)
-            .exists()
+    finding_counts = (
+        select(
+            ActionFinding.action_id.label("action_id"),
+            func.count(ActionFinding.finding_id).label("finding_count"),
         )
+        .group_by(ActionFinding.action_id)
+        .subquery()
+    )
+    finding_count_expr = func.coalesce(finding_counts.c.finding_count, 0)
+
+    filters = [Action.tenant_id == tenant_uuid]
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        filters.append(Action.action_type != "pr_only")
+    if account_id is not None:
+        filters.append(Action.account_id == account_id)
+    if region is not None:
+        filters.append(Action.region == region)
+    if control_id is not None:
+        filters.append(Action.control_id == control_id.strip())
+    if resource_id is not None:
+        filters.append(Action.resource_id == resource_id.strip())
+    if action_type is not None:
+        filters.append(Action.action_type == action_type.strip())
+    if status_filter is not None:
+        filters.append(Action.status == status_filter.strip().lower())
+    if not include_orphans:
+        filters.append(finding_count_expr > 0)
 
     if group_by == "batch":
-        result = await db.execute(query)
-        actions = result.scalars().unique().all()
-        batch_items = _group_actions_into_batches(actions)
-        total = len(batch_items)
-        paged_items = batch_items[offset: offset + limit]
+        group_filters = [ActionGroup.tenant_id == tenant_uuid]
+        if settings.ONLY_IN_SCOPE_CONTROLS:
+            group_filters.append(ActionGroup.action_type != "pr_only")
+        if account_id is not None:
+            group_filters.append(ActionGroup.account_id == account_id)
+        if region is not None:
+            group_filters.append(ActionGroup.region == region)
+        if action_type is not None:
+            group_filters.append(ActionGroup.action_type == action_type.strip())
+
+        open_count_expr = func.sum(case((Action.status == "open", 1), else_=0))
+        in_progress_count_expr = func.sum(case((Action.status == "in_progress", 1), else_=0))
+        resolved_count_expr = func.sum(case((Action.status == "resolved", 1), else_=0))
+        suppressed_count_expr = func.sum(case((Action.status == "suppressed", 1), else_=0))
+
+        grouped_query = (
+            select(
+                cast(ActionGroup.id, String).label("id"),
+                ActionGroup.action_type.label("action_type"),
+                ActionGroup.account_id.label("account_id"),
+                ActionGroup.region.label("region"),
+                func.max(Action.priority).label("priority"),
+                func.max(Action.updated_at).label("updated_at"),
+                func.max(Action.control_id).label("control_id"),
+                func.count(Action.id).label("action_count"),
+                func.coalesce(func.sum(finding_count_expr), 0).label("finding_count"),
+                func.coalesce(open_count_expr, 0).label("open_count"),
+                func.coalesce(in_progress_count_expr, 0).label("in_progress_count"),
+                func.coalesce(resolved_count_expr, 0).label("resolved_count"),
+                func.coalesce(suppressed_count_expr, 0).label("suppressed_count"),
+            )
+            .select_from(ActionGroup)
+            .join(
+                ActionGroupMembership,
+                (ActionGroupMembership.group_id == ActionGroup.id)
+                & (ActionGroupMembership.tenant_id == ActionGroup.tenant_id),
+            )
+            .join(
+                Action,
+                (Action.id == ActionGroupMembership.action_id)
+                & (Action.tenant_id == ActionGroupMembership.tenant_id),
+            )
+            .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
+            .where(*group_filters)
+            .group_by(ActionGroup.id, ActionGroup.action_type, ActionGroup.account_id, ActionGroup.region)
+        )
+
+        if status_filter is not None:
+            status_value = status_filter.strip().lower()
+            if status_value == "open":
+                grouped_query = grouped_query.having(func.coalesce(open_count_expr, 0) > 0)
+            elif status_value == "in_progress":
+                grouped_query = grouped_query.having(func.coalesce(in_progress_count_expr, 0) > 0)
+            elif status_value == "resolved":
+                grouped_query = grouped_query.having(
+                    func.coalesce(open_count_expr, 0) == 0,
+                    func.coalesce(in_progress_count_expr, 0) == 0,
+                    func.coalesce(resolved_count_expr, 0) > 0,
+                )
+            elif status_value == "suppressed":
+                grouped_query = grouped_query.having(
+                    func.coalesce(open_count_expr, 0) == 0,
+                    func.coalesce(in_progress_count_expr, 0) == 0,
+                    func.coalesce(resolved_count_expr, 0) == 0,
+                    func.coalesce(suppressed_count_expr, 0) > 0,
+                )
+
+        if not include_orphans:
+            grouped_query = grouped_query.having(func.coalesce(func.sum(finding_count_expr), 0) > 0)
+
+        count_query = select(func.count()).select_from(grouped_query.order_by(None).subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        grouped_query = grouped_query.order_by(
+            func.max(Action.priority).desc(),
+            func.max(Action.updated_at).desc().nullslast(),
+        ).limit(limit).offset(offset)
+        rows = (await db.execute(grouped_query)).all()
+
+        paged_items = []
+        for row in rows:
+            open_count = int(row.open_count or 0)
+            in_progress_count = int(row.in_progress_count or 0)
+            resolved_count = int(row.resolved_count or 0)
+            suppressed_count = int(row.suppressed_count or 0)
+            total_actions = int(row.action_count or 0)
+            derived_status = "open"
+            if status_filter is not None:
+                derived_status = status_filter.strip().lower()
+            elif open_count > 0:
+                derived_status = "open"
+            elif in_progress_count > 0:
+                derived_status = "in_progress"
+            elif resolved_count > 0 and (resolved_count + suppressed_count) == total_actions:
+                derived_status = "resolved"
+            elif suppressed_count > 0 and suppressed_count == total_actions:
+                derived_status = "suppressed"
+
+            paged_items.append(
+                ActionListItem(
+                    id=str(row.id),
+                    action_type=row.action_type,
+                    target_id=_build_batch_target_id_from_fields(
+                        row.action_type,
+                        row.account_id,
+                        row.region,
+                        derived_status,
+                    ),
+                    account_id=row.account_id,
+                    region=row.region,
+                    priority=int(row.priority or 0),
+                    status=derived_status,
+                    title=_batch_title(row.action_type, total_actions),
+                    control_id=row.control_id,
+                    resource_id=None,
+                    updated_at=row.updated_at.isoformat() if row.updated_at else None,
+                    finding_count=int(row.finding_count or 0),
+                    is_batch=True,
+                    batch_action_count=total_actions,
+                    batch_finding_count=int(row.finding_count or 0),
+                )
+            )
         logger.info(
             "Listed %d batch action groups for tenant %s (total=%d)",
             len(paged_items),
@@ -426,20 +563,38 @@ async def list_actions(
         )
         return ActionsListResponse(items=paged_items, total=total)
 
-    count_query = select(func.count()).select_from(query.subquery())
+    query = (
+        select(
+            Action,
+            finding_count_expr.label("finding_count"),
+        )
+        .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
+        .where(*filters)
+    )
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    query = query.order_by(Action.priority.desc(), Action.updated_at.desc()).limit(limit).offset(offset)
+    query = query.order_by(Action.priority.desc(), Action.updated_at.desc().nullslast()).limit(limit).offset(offset)
     result = await db.execute(query)
-    actions = result.scalars().unique().all()
+    rows = result.all()
+    actions = [row[0] for row in rows]
+    finding_counts_by_action = {action.id: int(finding_count or 0) for action, finding_count in rows}
+    exception_state_by_action = await get_exception_states_for_entities(
+        db,
+        tenant_id=tenant_uuid,
+        entity_type="action",
+        entity_ids=[action.id for action in actions],
+    )
 
-    items = []
-    for a in actions:
-        exception_state = await get_exception_state_for_response(
-            db, tenant_uuid, "action", a.id
+    items = [
+        _action_to_list_item(
+            action,
+            exception_state=exception_state_by_action.get(action.id),
+            finding_count=finding_counts_by_action.get(action.id, 0),
         )
-        items.append(_action_to_list_item(a, exception_state))
+        for action in actions
+    ]
     logger.info("Listed %d actions for tenant %s (total=%d)", len(items), tenant_uuid, total)
     return ActionsListResponse(items=items, total=total)
 
@@ -473,7 +628,18 @@ async def get_action(
         select(Action)
         .where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
         .options(
-            selectinload(Action.action_finding_links).selectinload(ActionFinding.finding),
+            selectinload(Action.action_finding_links)
+            .selectinload(ActionFinding.finding)
+            .load_only(
+                Finding.id,
+                Finding.finding_id,
+                Finding.severity_label,
+                Finding.title,
+                Finding.resource_id,
+                Finding.account_id,
+                Finding.region,
+                Finding.updated_at,
+            ),
         )
     )
     action = result.scalar_one_or_none()
@@ -761,7 +927,18 @@ async def patch_action(
         select(Action)
         .where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
         .options(
-            selectinload(Action.action_finding_links).selectinload(ActionFinding.finding),
+            selectinload(Action.action_finding_links)
+            .selectinload(ActionFinding.finding)
+            .load_only(
+                Finding.id,
+                Finding.finding_id,
+                Finding.severity_label,
+                Finding.title,
+                Finding.resource_id,
+                Finding.account_id,
+                Finding.region,
+                Finding.updated_at,
+            ),
         )
     )
     action = result.scalar_one_or_none()
@@ -779,7 +956,18 @@ async def patch_action(
         select(Action)
         .where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
         .options(
-            selectinload(Action.action_finding_links).selectinload(ActionFinding.finding),
+            selectinload(Action.action_finding_links)
+            .selectinload(ActionFinding.finding)
+            .load_only(
+                Finding.id,
+                Finding.finding_id,
+                Finding.severity_label,
+                Finding.title,
+                Finding.resource_id,
+                Finding.account_id,
+                Finding.region,
+                Finding.updated_at,
+            ),
         )
     )
     action = result2.scalar_one_or_none()
