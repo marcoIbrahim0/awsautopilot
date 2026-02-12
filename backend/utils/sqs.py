@@ -13,6 +13,7 @@ INGEST_INSPECTOR_JOB_TYPE = "ingest_inspector"
 INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE = "ingest_control_plane_events"
 RECONCILE_INVENTORY_SHARD_JOB_TYPE = "reconcile_inventory_shard"
 RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE = "reconcile_recently_touched_resources"
+RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE = "reconcile_inventory_global_orchestration"
 BACKFILL_FINDING_KEYS_JOB_TYPE = "backfill_finding_keys"
 BACKFILL_ACTION_GROUPS_JOB_TYPE = "backfill_action_groups"
 COMPUTE_ACTIONS_JOB_TYPE = "compute_actions"
@@ -22,6 +23,13 @@ WEEKLY_DIGEST_JOB_TYPE = "weekly_digest"
 GENERATE_BASELINE_REPORT_JOB_TYPE = "generate_baseline_report"
 EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE = "execute_pr_bundle_plan"
 EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE = "execute_pr_bundle_apply"
+QUEUE_PAYLOAD_SCHEMA_VERSION = 1
+
+
+def _with_schema_version(payload: dict) -> dict:
+    """Attach the current queue payload schema version to outbound jobs."""
+    payload["schema_version"] = QUEUE_PAYLOAD_SCHEMA_VERSION
+    return payload
 
 
 def parse_queue_region(queue_url: str) -> str:
@@ -42,13 +50,13 @@ def build_ingest_job_payload(
     created_at: str,
 ) -> dict:
     """Build ingest job dict for SQS. Matches worker contract (REQUIRED_JOB_FIELDS + created_at)."""
-    return {
+    return _with_schema_version({
         "tenant_id": str(tenant_id),
         "account_id": account_id,
         "region": region,
         "job_type": INGEST_JOB_TYPE,
         "created_at": created_at,
-    }
+    })
 
 
 def build_ingest_access_analyzer_job_payload(
@@ -58,13 +66,13 @@ def build_ingest_access_analyzer_job_payload(
     created_at: str,
 ) -> dict:
     """Build ingest_access_analyzer job dict for SQS (Step 2B.1). Same shape as ingest_findings."""
-    return {
+    return _with_schema_version({
         "tenant_id": str(tenant_id),
         "account_id": account_id,
         "region": region,
         "job_type": INGEST_ACCESS_ANALYZER_JOB_TYPE,
         "created_at": created_at,
-    }
+    })
 
 
 def build_ingest_inspector_job_payload(
@@ -74,13 +82,13 @@ def build_ingest_inspector_job_payload(
     created_at: str,
 ) -> dict:
     """Build ingest_inspector job dict for SQS (Step 2B.2). Same shape as ingest_findings."""
-    return {
+    return _with_schema_version({
         "tenant_id": str(tenant_id),
         "account_id": account_id,
         "region": region,
         "job_type": INGEST_INSPECTOR_JOB_TYPE,
         "created_at": created_at,
-    }
+    })
 
 
 def build_ingest_control_plane_events_job_payload(
@@ -94,7 +102,7 @@ def build_ingest_control_plane_events_job_payload(
     created_at: str,
 ) -> dict:
     """Build ingest_control_plane_events payload for fast-lane event jobs."""
-    return {
+    return _with_schema_version({
         "tenant_id": str(tenant_id),
         "account_id": account_id,
         "region": region,
@@ -104,7 +112,7 @@ def build_ingest_control_plane_events_job_payload(
         "event_time": event_time,
         "intake_time": intake_time,
         "created_at": created_at,
-    }
+    })
 
 
 def build_reconcile_inventory_shard_job_payload(
@@ -138,7 +146,40 @@ def build_reconcile_inventory_shard_job_payload(
         payload["run_id"] = str(run_id)
     if run_shard_id is not None:
         payload["run_shard_id"] = str(run_shard_id)
-    return payload
+    return _with_schema_version(payload)
+
+
+def build_reconcile_inventory_global_orchestration_job_payload(
+    tenant_id: uuid.UUID,
+    orchestration_job_id: uuid.UUID | str,
+    created_at: str,
+    account_ids: list[str] | None = None,
+    regions: list[str] | None = None,
+    services: list[str] | None = None,
+    max_resources: int | None = None,
+    precheck_assume_role: bool = False,
+    quarantine_on_assume_role_failure: bool = False,
+) -> dict:
+    """Build reconcile_inventory_global_orchestration payload."""
+    payload: dict = {
+        "tenant_id": str(tenant_id),
+        "orchestration_job_id": str(orchestration_job_id),
+        "job_type": RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
+        "created_at": created_at,
+    }
+    if account_ids is not None:
+        payload["account_ids"] = [str(account_id).strip() for account_id in account_ids if str(account_id).strip()]
+    if regions is not None:
+        payload["regions"] = [str(region).strip() for region in regions if str(region).strip()]
+    if services is not None:
+        payload["services"] = [str(service).strip().lower() for service in services if str(service).strip()]
+    if max_resources is not None:
+        payload["max_resources"] = int(max_resources)
+    if precheck_assume_role:
+        payload["precheck_assume_role"] = True
+    if quarantine_on_assume_role_failure:
+        payload["quarantine_on_assume_role_failure"] = True
+    return _with_schema_version(payload)
 
 
 def build_reconcile_recently_touched_resources_job_payload(
@@ -160,7 +201,7 @@ def build_reconcile_recently_touched_resources_job_payload(
         payload["services"] = [str(service).strip().lower() for service in services if str(service).strip()]
     if max_resources is not None:
         payload["max_resources"] = int(max_resources)
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_backfill_finding_keys_job_payload(
@@ -195,7 +236,7 @@ def build_backfill_finding_keys_job_payload(
         payload["auto_continue"] = bool(auto_continue)
     if start_after_id is not None:
         payload["start_after_id"] = str(start_after_id)
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_backfill_action_groups_job_payload(
@@ -227,7 +268,7 @@ def build_backfill_action_groups_job_payload(
         payload["auto_continue"] = bool(auto_continue)
     if start_after_action_id is not None:
         payload["start_after_action_id"] = str(start_after_action_id)
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_compute_actions_job_payload(
@@ -249,7 +290,7 @@ def build_compute_actions_job_payload(
         payload["account_id"] = account_id
     if region is not None:
         payload["region"] = region
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_remediation_run_job_payload(
@@ -287,7 +328,7 @@ def build_remediation_run_job_payload(
         payload["risk_acknowledged"] = True
     if group_action_ids:
         payload["group_action_ids"] = [str(action_id) for action_id in group_action_ids]
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_generate_export_job_payload(
@@ -301,13 +342,13 @@ def build_generate_export_job_payload(
     Worker consumes this to generate evidence or compliance pack, zip, upload to S3.
     pack_type: "evidence" (Step 10 only) or "compliance" (Step 10 + attestations + control_mapping + auditor_summary).
     """
-    return {
+    return _with_schema_version({
         "job_type": GENERATE_EXPORT_JOB_TYPE,
         "export_id": str(export_id),
         "tenant_id": str(tenant_id),
         "created_at": created_at,
         "pack_type": (pack_type or "evidence").strip().lower() or "evidence",
-    }
+    })
 
 
 def build_weekly_digest_job_payload(tenant_id: uuid.UUID, created_at: str) -> dict:
@@ -315,11 +356,11 @@ def build_weekly_digest_job_payload(tenant_id: uuid.UUID, created_at: str) -> di
     Build weekly_digest job dict for SQS (Step 11.1).
     One job per tenant; worker builds digest payload and updates last_digest_sent_at.
     """
-    return {
+    return _with_schema_version({
         "job_type": WEEKLY_DIGEST_JOB_TYPE,
         "tenant_id": str(tenant_id),
         "created_at": created_at,
-    }
+    })
 
 
 def build_generate_baseline_report_job_payload(
@@ -341,7 +382,7 @@ def build_generate_baseline_report_job_payload(
     }
     if account_ids is not None:
         payload["account_ids"] = account_ids
-    return payload
+    return _with_schema_version(payload)
 
 
 def build_pr_bundle_execution_job_payload(
@@ -364,4 +405,4 @@ def build_pr_bundle_execution_job_payload(
     }
     if requested_by_user_id:
         payload["requested_by_user_id"] = str(requested_by_user_id)
-    return payload
+    return _with_schema_version(payload)

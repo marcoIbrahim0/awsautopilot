@@ -28,6 +28,7 @@ from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.action_group_run_result import ActionGroupRunResult
 from backend.models.aws_account_reconcile_settings import AwsAccountReconcileSettings
+from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
 from backend.models.enums import AwsAccountStatus
 from backend.models.enums import ActionGroupExecutionStatus, ActionGroupRunStatus
 from backend.models.finding import Finding
@@ -55,10 +56,12 @@ from backend.utils.sqs import (
     build_backfill_action_groups_job_payload,
     build_backfill_finding_keys_job_payload,
     build_ingest_control_plane_events_job_payload,
+    build_reconcile_inventory_global_orchestration_job_payload,
     build_reconcile_inventory_shard_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
     build_weekly_digest_job_payload,
     parse_queue_region,
+    RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
 )
 
 logger = logging.getLogger(__name__)
@@ -902,7 +905,7 @@ async def enqueue_global_inventory_reconcile_all_tenants(
         )
 
     services = _normalized_services(body.services)
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     queue_region = parse_queue_region(queue_url)
     sqs = boto3.client("sqs", region_name=queue_region)
 
@@ -913,134 +916,96 @@ async def enqueue_global_inventory_reconcile_all_tenants(
     result = await db.execute(tenant_stmt)
     tenants = list(result.scalars().all())
 
-    account_ids_filter = {aid.strip() for aid in (body.account_ids or []) if aid and aid.strip()}
+    account_ids_filter = sorted(
+        {aid.strip() for aid in (body.account_ids or []) if aid and aid.strip()}
+    )
 
     enqueued = 0
-    tenants_considered = 0
-    accounts_considered = 0
-    accounts_skipped_disabled = 0
-    accounts_skipped_external_id_mismatch = 0
-    accounts_skipped_assume_role = 0
-    accounts_quarantined = 0
-    authoritative_mode_blocked = 0
-    assume_role_errors: list[str] = []
-    skipped_prereq = 0
-    prereq_reasons: list[str] = []
-    prereq_failures: list[dict] = []
-    queue_snapshot = collect_reconciliation_queue_snapshot()
-    do_quarantine = bool(body.quarantine_on_assume_role_failure)
-
+    enqueue_failed = 0
+    job_ids: list[str] = []
+    failed_tenant_ids: list[str] = []
     for tenant in tenants:
-        tenants_considered += 1
+        payload_summary: dict = {
+            "account_ids_filter": account_ids_filter,
+            "regions_filter": [str(region).strip() for region in (body.regions or []) if str(region).strip()],
+            "services": services,
+            "max_resources": body.max_resources,
+            "precheck_assume_role": bool(body.precheck_assume_role),
+            "quarantine_on_assume_role_failure": bool(body.quarantine_on_assume_role_failure),
+            "checkpoint": {
+                "account_index": 0,
+                "region_index": 0,
+                "service_index": 0,
+            },
+            "stats": {
+                "enqueued": 0,
+                "accounts_considered": 0,
+                "accounts_skipped_disabled": 0,
+                "accounts_skipped_external_id_mismatch": 0,
+                "accounts_skipped_assume_role": 0,
+                "accounts_quarantined": 0,
+                "authoritative_mode_blocked": 0,
+                "assume_role_error_codes": [],
+                "skipped_prereq": 0,
+                "prereq_reasons": [],
+                "prereq_failures": [],
+            },
+        }
+        orchestration_record = ControlPlaneReconcileJob(
+            tenant_id=tenant.id,
+            job_type=RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
+            status="queued",
+            payload_summary=payload_summary,
+            submitted_at=now,
+        )
+        db.add(orchestration_record)
+        await db.flush()
 
-        stmt = select(AwsAccount).where(AwsAccount.tenant_id == tenant.id)
-        if account_ids_filter:
-            stmt = stmt.where(AwsAccount.account_id.in_(sorted(account_ids_filter)))
-        accounts_result = await db.execute(stmt)
-        accounts = list(accounts_result.scalars().all())
+        payload = build_reconcile_inventory_global_orchestration_job_payload(
+            tenant_id=tenant.id,
+            orchestration_job_id=orchestration_record.id,
+            created_at=now.isoformat(),
+            account_ids=account_ids_filter or None,
+            regions=body.regions,
+            services=services,
+            max_resources=body.max_resources,
+            precheck_assume_role=bool(body.precheck_assume_role),
+            quarantine_on_assume_role_failure=bool(body.quarantine_on_assume_role_failure),
+        )
+        try:
+            sqs_response = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+            orchestration_record.queue_message_id = str(sqs_response.get("MessageId") or "")
+            orchestration_record.status = "enqueued"
+            job_ids.append(str(orchestration_record.id))
+            enqueued += 1
+        except Exception as exc:
+            orchestration_record.status = "error"
+            orchestration_record.error_message = str(exc)[:4000]
+            enqueue_failed += 1
+            failed_tenant_ids.append(str(tenant.id))
 
-        for account in accounts:
-            status_value = _status_value(account.status).lower()
-            if status_value == "disabled":
-                accounts_skipped_disabled += 1
-                continue
+    await db.commit()
 
-            tenant_external_id = str(getattr(tenant, "external_id", "") or "").strip()
-            account_external_id = str(getattr(account, "external_id", "") or "").strip()
-            if tenant_external_id and account_external_id and tenant_external_id != account_external_id:
-                accounts_skipped_external_id_mismatch += 1
-                if do_quarantine:
-                    account.status = AwsAccountStatus.disabled
-                    accounts_quarantined += 1
-                continue
-
-            if body.precheck_assume_role:
-                ok, reason = await _assume_role_precheck(account, tenant_external_id)
-                if not ok:
-                    accounts_skipped_assume_role += 1
-                    if reason:
-                        assume_role_errors.append(reason)
-                    if do_quarantine:
-                        account.status = AwsAccountStatus.disabled
-                        accounts_quarantined += 1
-                    continue
-
-            account_regions = _normalized_regions(
-                body.regions if body.regions is not None else account.regions,
-                settings.AWS_REGION,
-            )
-
-            if not settings.CONTROL_PLANE_SHADOW_MODE and status_value != "validated":
-                authoritative_mode_blocked += 1
-                continue
-            if not settings.CONTROL_PLANE_SHADOW_MODE:
-                probe_region = account_regions[0]
-                allowed, missing_permissions = await _authoritative_permissions_precheck(
-                    account,
-                    tenant_external_id,
-                    probe_region,
-                )
-                if not allowed:
-                    authoritative_mode_blocked += 1
-                    assume_role_errors.extend([f"missing_permission:{perm}" for perm in missing_permissions])
-                    continue
-
-            accounts_considered += 1
-
-            for region in account_regions:
-                prereq_result = await evaluate_reconciliation_prereqs_async(
-                    db,
-                    tenant_id=tenant.id,
-                    account_id=account.account_id,
-                    region=region,
-                    queue_snapshot=queue_snapshot,
-                )
-                if not bool(prereq_result.get("ok")):
-                    skipped_prereq += 1
-                    reasons = [str(code) for code in (prereq_result.get("reasons") or [])]
-                    prereq_reasons.extend(reasons)
-                    prereq_failures.append(
-                        {
-                            "tenant_id": str(tenant.id),
-                            "account_id": account.account_id,
-                            "region": region,
-                            "reasons": reasons,
-                            "snapshot": prereq_result.get("snapshot") or {},
-                        }
-                    )
-                    continue
-                for service in services:
-                    payload = build_reconcile_inventory_shard_job_payload(
-                        tenant_id=tenant.id,
-                        account_id=account.account_id,
-                        region=region,
-                        service=service,
-                        created_at=now_iso,
-                        sweep_mode="global",
-                        max_resources=body.max_resources,
-                    )
-                    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-                    enqueued += 1
-
-    if accounts_quarantined:
-        await db.commit()
-
-    response = {
+    response: dict[str, object] = {
         "enqueued": enqueued,
-        "tenants_considered": tenants_considered,
-        "accounts_considered": accounts_considered,
-        "accounts_skipped_disabled": accounts_skipped_disabled,
-        "accounts_skipped_external_id_mismatch": accounts_skipped_external_id_mismatch,
-        "accounts_skipped_assume_role": accounts_skipped_assume_role,
-        "accounts_quarantined": accounts_quarantined,
-        "authoritative_mode_blocked": authoritative_mode_blocked,
-        "assume_role_error_codes": _dedup(assume_role_errors),
-        "skipped_prereq": skipped_prereq,
-        "prereq_reasons": _dedup(prereq_reasons),
+        "tenants_considered": len(tenants),
         "services": services,
+        "orchestration_jobs_enqueued": enqueued,
+        "orchestration_jobs_failed": enqueue_failed,
+        "job_ids": job_ids,
+        # Backward-compatible counters previously reported by synchronous fan-out path.
+        "accounts_considered": 0,
+        "accounts_skipped_disabled": 0,
+        "accounts_skipped_external_id_mismatch": 0,
+        "accounts_skipped_assume_role": 0,
+        "accounts_quarantined": 0,
+        "authoritative_mode_blocked": 0,
+        "assume_role_error_codes": [],
+        "skipped_prereq": 0,
+        "prereq_reasons": [],
     }
-    if prereq_failures:
-        response["prereq_failures"] = prereq_failures
+    if failed_tenant_ids:
+        response["failed_tenant_ids"] = failed_tenant_ids
     return response
 
 

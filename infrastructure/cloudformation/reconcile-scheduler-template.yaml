@@ -51,6 +51,38 @@ Parameters:
     MaxValue: 300
     Description: "API Destination invocation rate limit (requests per second)."
 
+  RetryMaximumEventAgeSeconds:
+    Type: Number
+    Default: 3600
+    MinValue: 60
+    MaxValue: 86400
+    Description: "Max age of an event for target retries (seconds)."
+
+  RetryMaximumRetryAttempts:
+    Type: Number
+    Default: 8
+    MinValue: 0
+    MaxValue: 185
+    Description: "Max retry attempts for API Destination target before DLQ."
+
+  AlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: "Optional SNS topic ARN for EventBridge/SQS alarms."
+
+  FailedInvocationsThreshold:
+    Type: Number
+    Default: 1
+    Description: "FailedInvocations threshold for EventBridge schedule rule alarm."
+
+  TargetDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: "ApproximateNumberOfMessagesVisible threshold for target DLQ depth alarm."
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
+
 Resources:
   ReconcileSchedulerConnection:
     Type: AWS::Events::Connection
@@ -70,6 +102,30 @@ Resources:
       InvocationEndpoint: !Sub "${SaaSBaseUrl}/api/internal/reconcile-inventory-global-all-tenants"
       HttpMethod: POST
       InvocationRateLimitPerSecond: !Ref InvocationRateLimitPerSecond
+
+  ReconcileSchedulerTargetDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "security-autopilot-reconcile-scheduler-target-dlq-${AWS::Region}"
+      MessageRetentionPeriod: 1209600
+
+  ReconcileSchedulerTargetDLQPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ReconcileSchedulerTargetDLQ
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeSend
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ReconcileSchedulerTargetDLQ.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt ReconcileGlobalAllTenantsScheduleRule.Arn
 
   EventBridgeInvokeReconcileRole:
     Type: AWS::IAM::Role
@@ -102,6 +158,11 @@ Resources:
         - Id: ReconcileInventoryGlobalAllTenants
           Arn: !GetAtt ReconcileSchedulerApiDestination.Arn
           RoleArn: !GetAtt EventBridgeInvokeReconcileRole.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt ReconcileSchedulerTargetDLQ.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref RetryMaximumEventAgeSeconds
+            MaximumRetryAttempts: !Ref RetryMaximumRetryAttempts
           Input: !Sub |
             {
               "services": ${ServicesJson},
@@ -109,6 +170,46 @@ Resources:
               "precheck_assume_role": ${PrecheckAssumeRole},
               "quarantine_on_assume_role_failure": ${QuarantineOnAssumeRoleFailure}
             }
+
+  ReconcileSchedulerRuleFailedInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-reconcile-scheduler-failed-invocations-${AWS::Region}"
+      AlarmDescription: Reconciliation EventBridge schedule rule has failed invocations.
+      Namespace: AWS/Events
+      MetricName: FailedInvocations
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref ReconcileGlobalAllTenantsScheduleRule
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref FailedInvocationsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ReconcileSchedulerTargetDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-reconcile-scheduler-target-dlq-depth-${AWS::Region}"
+      AlarmDescription: Reconciliation EventBridge target DLQ has messages pending replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ReconcileSchedulerTargetDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
 
 Outputs:
   RuleArn:
@@ -120,3 +221,9 @@ Outputs:
   ConnectionArn:
     Description: "ARN of the EventBridge Connection."
     Value: !GetAtt ReconcileSchedulerConnection.Arn
+  TargetDLQUrl:
+    Description: "URL of EventBridge target DLQ."
+    Value: !Ref ReconcileSchedulerTargetDLQ
+  TargetDLQArn:
+    Description: "ARN of EventBridge target DLQ."
+    Value: !GetAtt ReconcileSchedulerTargetDLQ.Arn

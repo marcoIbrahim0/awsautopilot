@@ -161,7 +161,7 @@ async def create_export(
     """
     Create an export row (status=pending) and enqueue generate_export job.
 
-    **pack_type:** "evidence" (default) or "compliance". **Config:** S3_EXPORT_BUCKET and SQS_INGEST_QUEUE_URL must be set.
+    **pack_type:** "evidence" (default) or "compliance". **Config:** S3_EXPORT_BUCKET and SQS_EXPORT_REPORT_QUEUE_URL must be set.
     """
     tenant_uuid = current_user.tenant_id
     pack_type = (request.pack_type or "evidence").strip().lower() or "evidence"
@@ -177,12 +177,12 @@ async def create_export(
             },
         )
 
-    if not (settings.SQS_INGEST_QUEUE_URL and settings.SQS_INGEST_QUEUE_URL.strip()):
+    if not (settings.SQS_EXPORT_REPORT_QUEUE_URL and settings.SQS_EXPORT_REPORT_QUEUE_URL.strip()):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "error": "Export queue unavailable",
-                "detail": "Queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
+                "detail": "Queue URL not configured. Set SQS_EXPORT_REPORT_QUEUE_URL.",
             },
         )
 
@@ -198,7 +198,7 @@ async def create_export(
 
     now = datetime.now(timezone.utc).isoformat()
     payload = build_generate_export_job_payload(export.id, tenant_uuid, now, pack_type=pack_type)
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
+    queue_url = settings.SQS_EXPORT_REPORT_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
     sqs = boto3.client("sqs", region_name=queue_region)
 

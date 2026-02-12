@@ -17,6 +17,7 @@ from backend.utils.sqs import (
     INGEST_ACCESS_ANALYZER_JOB_TYPE,
     INGEST_INSPECTOR_JOB_TYPE,
     INGEST_JOB_TYPE,
+    RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
     RECONCILE_INVENTORY_SHARD_JOB_TYPE,
     RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
     REMEDIATION_RUN_JOB_TYPE,
@@ -32,6 +33,9 @@ from worker.jobs.ingest_access_analyzer import execute_ingest_access_analyzer_jo
 from worker.jobs.ingest_findings import execute_ingest_job
 from worker.jobs.ingest_inspector import execute_ingest_inspector_job
 from worker.jobs.reconcile_inventory_shard import execute_reconcile_inventory_shard_job
+from worker.jobs.reconcile_inventory_global_orchestration import (
+    execute_reconcile_inventory_global_orchestration_job,
+)
 from worker.jobs.reconcile_recently_touched_resources import (
     execute_reconcile_recently_touched_resources_job,
 )
@@ -48,6 +52,7 @@ _HANDLERS: dict[str, Callable[[dict], None]] = {
     INGEST_INSPECTOR_JOB_TYPE: execute_ingest_inspector_job,
     INGEST_CONTROL_PLANE_EVENTS_JOB_TYPE: execute_ingest_control_plane_events_job,
     COMPUTE_ACTIONS_JOB_TYPE: execute_compute_actions_job,
+    RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE: execute_reconcile_inventory_global_orchestration_job,
     RECONCILE_INVENTORY_SHARD_JOB_TYPE: execute_reconcile_inventory_shard_job,
     RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE: execute_reconcile_recently_touched_resources_job,
     REMEDIATION_RUN_JOB_TYPE: execute_remediation_run_job,

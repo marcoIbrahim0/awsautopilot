@@ -23,6 +23,38 @@ Parameters:
     MaxValue: 300
     Description: "API Destination invocation rate limit (RPS). Keep bounded to control cost and protect SaaS."
 
+  RetryMaximumEventAgeSeconds:
+    Type: Number
+    Default: 3600
+    MinValue: 60
+    MaxValue: 86400
+    Description: "Max age of an event for target retries (seconds)."
+
+  RetryMaximumRetryAttempts:
+    Type: Number
+    Default: 8
+    MinValue: 0
+    MaxValue: 185
+    Description: "Max retry attempts for API Destination target before DLQ."
+
+  AlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: "Optional SNS topic ARN for EventBridge/SQS alarms."
+
+  FailedInvocationsThreshold:
+    Type: Number
+    Default: 1
+    Description: "FailedInvocations threshold for EventBridge rule alarm."
+
+  TargetDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: "ApproximateNumberOfMessagesVisible threshold for target DLQ depth alarm."
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
+
 Resources:
   ControlPlaneConnection:
     Type: AWS::Events::Connection
@@ -42,6 +74,30 @@ Resources:
       InvocationEndpoint: !Ref SaaSIngestUrl
       HttpMethod: POST
       InvocationRateLimitPerSecond: !Ref InvocationRateLimitPerSecond
+
+  ControlPlaneTargetDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "security-autopilot-control-plane-target-dlq-${AWS::Region}"
+      MessageRetentionPeriod: 1209600
+
+  ControlPlaneTargetDLQPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ControlPlaneTargetDLQ
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeSend
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ControlPlaneTargetDLQ.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt ControlPlaneApiCallsRule.Arn
 
   EventBridgeInvokeApiDestinationRole:
     Type: AWS::IAM::Role
@@ -87,6 +143,51 @@ Resources:
         - Id: SecurityAutopilotControlPlaneApiDestinationTarget
           Arn: !GetAtt ControlPlaneApiDestination.Arn
           RoleArn: !GetAtt EventBridgeInvokeApiDestinationRole.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt ControlPlaneTargetDLQ.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref RetryMaximumEventAgeSeconds
+            MaximumRetryAttempts: !Ref RetryMaximumRetryAttempts
+
+  ControlPlaneRuleFailedInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-control-plane-failed-invocations-${AWS::Region}"
+      AlarmDescription: EventBridge control-plane forwarding rule has failed invocations.
+      Namespace: AWS/Events
+      MetricName: FailedInvocations
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref ControlPlaneApiCallsRule
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref FailedInvocationsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ControlPlaneTargetDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-control-plane-target-dlq-depth-${AWS::Region}"
+      AlarmDescription: EventBridge control-plane target DLQ has messages pending replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ControlPlaneTargetDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
 
 Outputs:
   RuleArn:
@@ -98,3 +199,9 @@ Outputs:
   ConnectionArn:
     Description: "ARN of the EventBridge Connection."
     Value: !GetAtt ControlPlaneConnection.Arn
+  TargetDLQUrl:
+    Description: "URL of EventBridge target DLQ."
+    Value: !Ref ControlPlaneTargetDLQ
+  TargetDLQArn:
+    Description: "ARN of EventBridge target DLQ."
+    Value: !GetAtt ControlPlaneTargetDLQ.Arn

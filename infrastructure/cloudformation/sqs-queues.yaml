@@ -1,10 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   SQS queues and IAM policies for Security Autopilot pipelines.
-  - security-autopilot-ingest-dlq: dead-letter queue for failed ingest jobs
-  - security-autopilot-ingest-queue: main queue for ingestion jobs (API sends, Worker consumes)
+  - security-autopilot-ingest-dlq / queue: default ingest/remediation jobs
   - security-autopilot-events-fastlane-dlq / queue: near-real-time control-plane events
   - security-autopilot-inventory-reconcile-dlq / queue: inventory reconciliation jobs
+  - security-autopilot-export-report-dlq / queue: export + baseline report jobs
+  - security-autopilot-contract-quarantine-queue: malformed/unknown queue payload triage + replay
   - Two managed policies: API send-only, Worker consume-only (no DLQ access in normal operation).
 
 # --- Queue configuration (fixed; no parameters) ---
@@ -15,6 +16,49 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional SNS topic ARN for SQS queue/DLQ CloudWatch alarms.
+
+  IngestQueueDepthThreshold:
+    Type: Number
+    Default: 100
+    Description: ApproximateNumberOfMessagesVisible threshold for ingest queue.
+  IngestQueueAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for ingest queue.
+  IngestDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: ApproximateNumberOfMessagesVisible threshold for ingest DLQ.
+  IngestDLQAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for ingest DLQ.
+  IngestDLQIngressThreshold:
+    Type: Number
+    Default: 1
+    Description: NumberOfMessagesSent threshold per 5m for ingest DLQ ingress.
+
+  EventsQueueDepthThreshold:
+    Type: Number
+    Default: 100
+    Description: ApproximateNumberOfMessagesVisible threshold for events fast-lane queue.
+  EventsQueueAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for events fast-lane queue.
+  EventsDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: ApproximateNumberOfMessagesVisible threshold for events fast-lane DLQ.
+  EventsDLQAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for events fast-lane DLQ.
+  EventsDLQIngressThreshold:
+    Type: Number
+    Default: 1
+    Description: NumberOfMessagesSent threshold per 5m for events fast-lane DLQ ingress.
+
   InventoryQueueDepthThreshold:
     Type: Number
     Default: 100
@@ -27,17 +71,55 @@ Parameters:
     Type: Number
     Default: 1
     Description: ApproximateNumberOfMessagesVisible threshold for inventory reconcile DLQ.
+  InventoryDLQAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for inventory reconcile DLQ.
+  InventoryDLQIngressThreshold:
+    Type: Number
+    Default: 1
+    Description: NumberOfMessagesSent threshold per 5m for inventory reconcile DLQ ingress.
+
+  ExportReportQueueDepthThreshold:
+    Type: Number
+    Default: 25
+    Description: ApproximateNumberOfMessagesVisible threshold for export/report queue.
+  ExportReportQueueAgeSecondsThreshold:
+    Type: Number
+    Default: 1800
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for export/report queue.
+  ExportReportDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: ApproximateNumberOfMessagesVisible threshold for export/report DLQ.
+  ExportReportDLQAgeSecondsThreshold:
+    Type: Number
+    Default: 1800
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for export/report DLQ.
+  ExportReportDLQIngressThreshold:
+    Type: Number
+    Default: 1
+    Description: NumberOfMessagesSent threshold per 5m for export/report DLQ ingress.
+
+  ContractQuarantineQueueDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: ApproximateNumberOfMessagesVisible threshold for queue contract quarantine.
+  ContractQuarantineQueueAgeSecondsThreshold:
+    Type: Number
+    Default: 900
+    Description: ApproximateAgeOfOldestMessage threshold (seconds) for queue contract quarantine.
 
 Conditions:
   HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
 
 Resources:
-  # Create DLQ first (main queue references it via redrive policy).
+  # Create DLQs first (main queues reference them via redrive policies).
   IngestDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: security-autopilot-ingest-dlq
-      MessageRetentionPeriod: 1209600   # 14 days
+      MessageRetentionPeriod: 1209600
       Tags:
         - Key: Application
           Value: SecurityAutopilot
@@ -50,8 +132,8 @@ Resources:
     Properties:
       QueueName: security-autopilot-ingest-queue
       VisibilityTimeout: 30
-      MessageRetentionPeriod: 1209600   # 14 days
-      ReceiveMessageWaitTimeSeconds: 20 # long polling
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt IngestDLQ.Arn
         maxReceiveCount: 3
@@ -117,12 +199,53 @@ Resources:
         - Key: Purpose
           Value: inventory-reconcile
 
+  ExportReportDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: security-autopilot-export-report-dlq
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: export-report-dlq
+
+  ExportReportQueue:
+    Type: AWS::SQS::Queue
+    DependsOn: ExportReportDLQ
+    Properties:
+      QueueName: security-autopilot-export-report-queue
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ExportReportDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: export-report
+
+  ContractQuarantineQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: security-autopilot-contract-quarantine-queue
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Purpose
+          Value: contract-quarantine
+
   # --- IAM: API send-only (no DLQ access) ---
   ApiSendPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: SecurityAutopilotApiSqsSendPolicy
-      Description: "Least-privilege SQS send for API; ingest queue only. Attach to API service role."
+      Description: "Least-privilege SQS send for API services. Attach to API service role."
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -134,13 +257,14 @@ Resources:
               - !GetAtt IngestQueue.Arn
               - !GetAtt EventsFastLaneQueue.Arn
               - !GetAtt InventoryReconcileQueue.Arn
+              - !GetAtt ExportReportQueue.Arn
 
   # --- IAM: Worker consume-only (no DLQ access) ---
   WorkerConsumePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: SecurityAutopilotWorkerSqsConsumePolicy
-      Description: "Least-privilege SQS consume for Worker; ingest queue only. Attach to Worker service role."
+      Description: "Least-privilege SQS consume for Worker; worker queues plus contract-quarantine send."
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -155,7 +279,217 @@ Resources:
               - !GetAtt IngestQueue.Arn
               - !GetAtt EventsFastLaneQueue.Arn
               - !GetAtt InventoryReconcileQueue.Arn
+              - !GetAtt ExportReportQueue.Arn
+          - Sid: SendToContractQuarantineQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt ContractQuarantineQueue.Arn
 
+  # Ingest queue alarms
+  IngestQueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-ingest-queue-depth
+      AlarmDescription: Ingest queue has sustained backlog.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt IngestQueue.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref IngestQueueDepthThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  IngestQueueOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-ingest-queue-age
+      AlarmDescription: Ingest queue has stale oldest message.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt IngestQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref IngestQueueAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  IngestDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-ingest-dlq-depth
+      AlarmDescription: Ingest DLQ has messages that require triage/replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt IngestDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref IngestDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  IngestDLQOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-ingest-dlq-age
+      AlarmDescription: Ingest DLQ oldest message age exceeded threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt IngestDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref IngestDLQAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  IngestDLQIngressAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-ingest-dlq-ingress
+      AlarmDescription: Ingest DLQ is receiving new messages.
+      Namespace: AWS/SQS
+      MetricName: NumberOfMessagesSent
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt IngestDLQ.QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref IngestDLQIngressThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  # Events fast-lane queue alarms
+  EventsQueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-events-queue-depth
+      AlarmDescription: Events fast-lane queue has sustained backlog.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsFastLaneQueue.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref EventsQueueDepthThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  EventsQueueOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-events-queue-age
+      AlarmDescription: Events fast-lane queue has stale oldest message.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsFastLaneQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref EventsQueueAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  EventsDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-events-dlq-depth
+      AlarmDescription: Events fast-lane DLQ has messages that require triage/replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsFastLaneDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref EventsDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  EventsDLQOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-events-dlq-age
+      AlarmDescription: Events fast-lane DLQ oldest message age exceeded threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsFastLaneDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref EventsDLQAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  EventsDLQIngressAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-events-dlq-ingress
+      AlarmDescription: Events fast-lane DLQ is receiving new messages.
+      Namespace: AWS/SQS
+      MetricName: NumberOfMessagesSent
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventsFastLaneDLQ.QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref EventsDLQIngressThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  # Inventory reconcile queue alarms
   InventoryQueueDepthAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -216,6 +550,188 @@ Resources:
       AlarmActions:
         - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
 
+  InventoryReconcileDLQOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-inventory-dlq-age
+      AlarmDescription: Inventory reconcile DLQ oldest message age exceeded threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt InventoryReconcileDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref InventoryDLQAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  InventoryReconcileDLQIngressAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-inventory-dlq-ingress
+      AlarmDescription: Inventory reconcile DLQ is receiving new messages.
+      Namespace: AWS/SQS
+      MetricName: NumberOfMessagesSent
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt InventoryReconcileDLQ.QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref InventoryDLQIngressThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  # Export/report queue alarms
+  ExportReportQueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-export-report-queue-depth
+      AlarmDescription: Export/report queue has sustained backlog.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExportReportQueue.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ExportReportQueueDepthThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ExportReportQueueOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-export-report-queue-age
+      AlarmDescription: Export/report queue has stale oldest message.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExportReportQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ExportReportQueueAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ExportReportDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-export-report-dlq-depth
+      AlarmDescription: Export/report DLQ has messages that need replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExportReportDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ExportReportDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ExportReportDLQOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-export-report-dlq-age
+      AlarmDescription: Export/report DLQ oldest message age exceeded threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExportReportDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ExportReportDLQAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ExportReportDLQIngressAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-export-report-dlq-ingress
+      AlarmDescription: Export/report DLQ is receiving new messages.
+      Namespace: AWS/SQS
+      MetricName: NumberOfMessagesSent
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExportReportDLQ.QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ExportReportDLQIngressThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  # Contract quarantine alarms
+  ContractQuarantineQueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-contract-quarantine-depth
+      AlarmDescription: Queue contract quarantine has messages requiring triage/replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ContractQuarantineQueue.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ContractQuarantineQueueDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  ContractQuarantineQueueOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-contract-quarantine-age
+      AlarmDescription: Queue contract quarantine oldest message age exceeded threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ContractQuarantineQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref ContractQuarantineQueueAgeSecondsThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
 Outputs:
   IngestQueueURL:
     Description: "URL of the ingest queue (use for SQS_INGEST_QUEUE_URL)."
@@ -237,6 +753,7 @@ Outputs:
     Value: !GetAtt IngestDLQ.Arn
     Export:
       Name: !Sub "${AWS::StackName}-IngestDLQArn"
+
   EventsFastLaneQueueURL:
     Description: "URL of the events fast-lane queue (use for SQS_EVENTS_FAST_LANE_QUEUE_URL)."
     Value: !Ref EventsFastLaneQueue
@@ -257,6 +774,7 @@ Outputs:
     Value: !GetAtt EventsFastLaneDLQ.Arn
     Export:
       Name: !Sub "${AWS::StackName}-EventsFastLaneDLQArn"
+
   InventoryReconcileQueueURL:
     Description: "URL of inventory reconcile queue (use for SQS_INVENTORY_RECONCILE_QUEUE_URL)."
     Value: !Ref InventoryReconcileQueue
@@ -277,6 +795,39 @@ Outputs:
     Value: !GetAtt InventoryReconcileDLQ.Arn
     Export:
       Name: !Sub "${AWS::StackName}-InventoryReconcileDLQArn"
+
+  ExportReportQueueURL:
+    Description: "URL of export/report queue (use for SQS_EXPORT_REPORT_QUEUE_URL)."
+    Value: !Ref ExportReportQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-ExportReportQueueURL"
+  ExportReportQueueArn:
+    Description: "ARN of export/report queue."
+    Value: !GetAtt ExportReportQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ExportReportQueueArn"
+  ExportReportDLQURL:
+    Description: "URL of export/report DLQ (use for SQS_EXPORT_REPORT_DLQ_URL)."
+    Value: !Ref ExportReportDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-ExportReportDLQURL"
+  ExportReportDLQArn:
+    Description: "ARN of export/report DLQ."
+    Value: !GetAtt ExportReportDLQ.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ExportReportDLQArn"
+
+  ContractQuarantineQueueURL:
+    Description: "URL of queue contract quarantine queue (use for SQS_CONTRACT_QUARANTINE_QUEUE_URL)."
+    Value: !Ref ContractQuarantineQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-ContractQuarantineQueueURL"
+  ContractQuarantineQueueArn:
+    Description: "ARN of queue contract quarantine queue."
+    Value: !GetAtt ContractQuarantineQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ContractQuarantineQueueArn"
+
   ApiSendPolicyArn:
     Description: "ARN of the API send-only managed policy. Attach to API service (e.g. ECS task) role."
     Value: !Ref ApiSendPolicy

@@ -11,12 +11,28 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user, get_optional_user
 from backend.database import get_db
-from backend.main import app
 from backend.models.enums import EvidenceExportStatus
+from backend.routers.exports import router as exports_router
+
+
+app = FastAPI()
+app.include_router(exports_router, prefix="/api")
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _clear_dependency_overrides() -> None:
+    yield
+    app.dependency_overrides.clear()
 
 
 def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
@@ -96,7 +112,7 @@ def test_create_export_503_when_s3_bucket_not_configured(client: TestClient) -> 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.exports.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = ""
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         try:
             r = client.post("/api/exports", json={})
         finally:
@@ -138,7 +154,7 @@ def test_create_export_202_when_configured(client: TestClient) -> None:
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.exports.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = "my-bucket"
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         with patch("backend.routers.exports.boto3") as mock_boto3:
             mock_sqs = MagicMock()
             mock_boto3.client.return_value = mock_sqs
@@ -193,7 +209,7 @@ def test_create_export_202_with_pack_type_compliance(client: TestClient) -> None
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.exports.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = "my-bucket"
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         with patch("backend.routers.exports.build_generate_export_job_payload") as mock_build:
             mock_build.return_value = {
                 "job_type": "generate_export",

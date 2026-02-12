@@ -83,6 +83,21 @@ class Settings(BaseSettings):
         default="",
         description="SQS URL for dead-letter queue backing inventory reconciliation.",
     )
+    SQS_EXPORT_REPORT_QUEUE_URL: str = Field(
+        default="",
+        description="SQS URL for export/baseline-report jobs.",
+    )
+    SQS_EXPORT_REPORT_DLQ_URL: str = Field(
+        default="",
+        description="SQS URL for dead-letter queue backing export/baseline-report jobs.",
+    )
+    SQS_CONTRACT_QUARANTINE_QUEUE_URL: str = Field(
+        default="",
+        description=(
+            "SQS URL for queue-contract quarantine payloads. "
+            "Worker writes malformed/unknown jobs here for triage and replay."
+        ),
+    )
     S3_EXPORT_BUCKET: str = Field(
         default="",
         description="S3 bucket name for evidence pack exports (Step 10.5). If unset, POST /api/exports returns 503. Key pattern: exports/{tenant_id}/{export_id}/evidence-pack.zip for tenant isolation.",
@@ -198,7 +213,18 @@ class Settings(BaseSettings):
     )
     WORKER_POOL: str = Field(
         default="legacy",
-        description="Worker queue pool selector: legacy | events | inventory | all.",
+        description="Worker queue pool selector: legacy | events | inventory | export | all.",
+    )
+    WORKER_MAX_IN_FLIGHT_PER_QUEUE: int = Field(
+        default=10,
+        description=(
+            "Maximum number of concurrently in-flight messages per queue poller. "
+            "Used as a guardrail when WORKER_POOL=all."
+        ),
+    )
+    WORKER_QUEUE_METRICS_LOG_INTERVAL_SECONDS: int = Field(
+        default=60,
+        description="Interval for periodic worker per-queue metrics logs.",
     )
     CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: int = Field(
         default=60,
@@ -356,6 +382,22 @@ class Settings(BaseSettings):
         return bool(
             self.SQS_INVENTORY_RECONCILE_QUEUE_URL
             and self.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
+        )
+
+    @property
+    def has_export_report_queue(self) -> bool:
+        """True if export/baseline-report queue URL is configured."""
+        return bool(
+            self.SQS_EXPORT_REPORT_QUEUE_URL
+            and self.SQS_EXPORT_REPORT_QUEUE_URL.strip()
+        )
+
+    @property
+    def has_contract_quarantine_queue(self) -> bool:
+        """True if contract-quarantine queue URL is configured."""
+        return bool(
+            self.SQS_CONTRACT_QUARANTINE_QUEUE_URL
+            and self.SQS_CONTRACT_QUARANTINE_QUEUE_URL.strip()
         )
 
     @property

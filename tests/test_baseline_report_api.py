@@ -12,13 +12,29 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user
 from backend.database import get_db
-from backend.main import app
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import BaselineReportStatus
+from backend.routers.baseline_report import router as baseline_report_router
+
+
+app = FastAPI()
+app.include_router(baseline_report_router, prefix="/api")
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _clear_dependency_overrides() -> None:
+    yield
+    app.dependency_overrides.clear()
 
 
 def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
@@ -98,7 +114,7 @@ def test_create_baseline_report_503_when_not_configured(client: TestClient) -> N
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.baseline_report.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = ""
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         try:
             r = client.post("/api/baseline-report", json={})
         finally:
@@ -132,7 +148,7 @@ def test_create_baseline_report_429_rate_limit(client: TestClient) -> None:
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.baseline_report.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = "my-bucket"
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         try:
             r = client.post("/api/baseline-report", json={})
         finally:
@@ -174,7 +190,7 @@ def test_create_baseline_report_201_created(client: TestClient) -> None:
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.baseline_report.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = "my-bucket"
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         with patch("backend.routers.baseline_report.boto3") as mock_boto3:
             mock_sqs = MagicMock()
             mock_boto3.client.return_value = mock_sqs
@@ -214,7 +230,7 @@ def test_create_baseline_report_400_invalid_account_ids(client: TestClient) -> N
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.baseline_report.settings") as mock_settings:
         mock_settings.S3_EXPORT_BUCKET = "my-bucket"
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
+        mock_settings.SQS_EXPORT_REPORT_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
         try:
             r = client.post("/api/baseline-report", json={"account_ids": ["not-12-digits"]})
         finally:

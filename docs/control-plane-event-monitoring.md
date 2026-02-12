@@ -35,15 +35,17 @@ Resolution semantics:
 ## Queue Topology and Worker Pools
 - `events-fast-lane`: near-real-time control-plane event jobs.
 - `inventory-reconcile`: reconciliation and targeted inventory jobs.
+- `export-report`: evidence export and baseline-report jobs.
 - `legacy-ingest`: existing ingest/actions/remediation jobs.
 
-Worker pool selection is controlled by `WORKER_POOL` (`legacy`, `events`, `inventory`, `all`).
+Worker pool selection is controlled by `WORKER_POOL` (`legacy`, `events`, `inventory`, `export`, `all`).
 
 ## Cross-Account / Multi-Region Event Bus Strategy
 - Per customer account/region, define an EventBridge rule matching allowlisted management API actions.
 - Forward matching events to centralized intake (bus/queue/API) with resource-policy or organization delegation.
 - Central ingest path should preserve original `account`, `region`, `eventTime`, and `eventId`.
 - Failure mode: if central intake is unavailable, events should retry/buffer locally and route to DLQ for replay.
+  - Replay runbook: `docs/eventbridge-target-dlq-replay-runbook.md`
 - Region isolation: keep per-region forwarding and queue/DLQ so one region outage does not block all control-plane signals.
 
 ## SLO Telemetry

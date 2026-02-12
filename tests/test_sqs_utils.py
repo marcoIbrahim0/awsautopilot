@@ -20,8 +20,14 @@ from backend.utils.sqs import (
     INGEST_INSPECTOR_JOB_TYPE,
     INGEST_JOB_TYPE,
     RECONCILE_INVENTORY_SHARD_JOB_TYPE,
+    RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
     RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
     WEEKLY_DIGEST_JOB_TYPE,
+    QUEUE_PAYLOAD_SCHEMA_VERSION,
+    build_compute_actions_job_payload,
+    build_generate_baseline_report_job_payload,
+    build_generate_export_job_payload,
+    build_remediation_run_job_payload,
     build_ingest_control_plane_events_job_payload,
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
@@ -30,6 +36,7 @@ from backend.utils.sqs import (
     build_backfill_action_groups_job_payload,
     build_pr_bundle_execution_job_payload,
     build_reconcile_inventory_shard_job_payload,
+    build_reconcile_inventory_global_orchestration_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
     build_weekly_digest_job_payload,
     parse_queue_region,
@@ -318,6 +325,31 @@ def test_build_reconcile_inventory_shard_job_payload_with_sweep_options() -> Non
     assert payload["max_resources"] == 250
 
 
+def test_build_reconcile_inventory_global_orchestration_job_payload() -> None:
+    tenant_id = uuid.uuid4()
+    orchestration_job_id = uuid.uuid4()
+    payload = build_reconcile_inventory_global_orchestration_job_payload(
+        tenant_id=tenant_id,
+        orchestration_job_id=orchestration_job_id,
+        created_at="2026-02-12T10:00:00Z",
+        account_ids=["123456789012"],
+        regions=["us-east-1"],
+        services=["ec2", "s3"],
+        max_resources=250,
+        precheck_assume_role=True,
+        quarantine_on_assume_role_failure=True,
+    )
+    assert payload["job_type"] == RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE
+    assert payload["tenant_id"] == str(tenant_id)
+    assert payload["orchestration_job_id"] == str(orchestration_job_id)
+    assert payload["account_ids"] == ["123456789012"]
+    assert payload["regions"] == ["us-east-1"]
+    assert payload["services"] == ["ec2", "s3"]
+    assert payload["max_resources"] == 250
+    assert payload["precheck_assume_role"] is True
+    assert payload["quarantine_on_assume_role_failure"] is True
+
+
 def test_build_reconcile_recently_touched_resources_job_payload() -> None:
     tenant_id = uuid.uuid4()
     payload = build_reconcile_recently_touched_resources_job_payload(
@@ -378,3 +410,78 @@ def test_build_backfill_action_groups_job_payload() -> None:
     assert payload["max_chunks"] == 7
     assert payload["auto_continue"] is True
     assert payload["start_after_action_id"] == "00000000-0000-0000-0000-000000000002"
+
+
+def test_all_queue_payload_builders_include_schema_version() -> None:
+    tenant_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    action_id = uuid.uuid4()
+    report_id = uuid.uuid4()
+    export_id = uuid.uuid4()
+    execution_id = uuid.uuid4()
+
+    payloads = [
+        build_ingest_job_payload(tenant_id, "123456789012", "us-east-1", "2026-02-11T10:00:00Z"),
+        build_ingest_access_analyzer_job_payload(tenant_id, "123456789012", "us-east-1", "2026-02-11T10:00:00Z"),
+        build_ingest_inspector_job_payload(tenant_id, "123456789012", "us-east-1", "2026-02-11T10:00:00Z"),
+        build_ingest_control_plane_events_job_payload(
+            tenant_id=tenant_id,
+            account_id="123456789012",
+            region="us-east-1",
+            event={"id": "evt-1"},
+            event_id="evt-1",
+            event_time="2026-02-11T10:00:00Z",
+            intake_time="2026-02-11T10:00:01Z",
+            created_at="2026-02-11T10:00:02Z",
+        ),
+        build_reconcile_inventory_shard_job_payload(
+            tenant_id=tenant_id,
+            account_id="123456789012",
+            region="us-east-1",
+            service="ec2",
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_reconcile_inventory_global_orchestration_job_payload(
+            tenant_id=tenant_id,
+            orchestration_job_id=uuid.uuid4(),
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_reconcile_recently_touched_resources_job_payload(
+            tenant_id=tenant_id,
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_backfill_finding_keys_job_payload(created_at="2026-02-11T10:00:00Z"),
+        build_backfill_action_groups_job_payload(created_at="2026-02-11T10:00:00Z"),
+        build_compute_actions_job_payload(tenant_id=tenant_id, created_at="2026-02-11T10:00:00Z"),
+        build_remediation_run_job_payload(
+            run_id=run_id,
+            tenant_id=tenant_id,
+            action_id=action_id,
+            mode="pr_only",
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_generate_export_job_payload(
+            export_id=export_id,
+            tenant_id=tenant_id,
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_weekly_digest_job_payload(
+            tenant_id=tenant_id,
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_generate_baseline_report_job_payload(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            created_at="2026-02-11T10:00:00Z",
+        ),
+        build_pr_bundle_execution_job_payload(
+            execution_id=execution_id,
+            run_id=run_id,
+            tenant_id=tenant_id,
+            phase="plan",
+            created_at="2026-02-11T10:00:00Z",
+        ),
+    ]
+
+    for payload in payloads:
+        assert payload["schema_version"] == QUEUE_PAYLOAD_SCHEMA_VERSION

@@ -5,10 +5,15 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from backend.main import app
+from backend.routers.internal import router as internal_router
 from backend.utils.sqs import BACKFILL_FINDING_KEYS_JOB_TYPE
+
+
+app = FastAPI()
+app.include_router(internal_router, prefix="/api")
 
 
 def test_reconcile_inventory_shard_enqueues_with_sweep_options() -> None:
@@ -226,24 +231,17 @@ def test_reconcile_inventory_global_prereq_failure_skips_enqueue() -> None:
     assert mock_sqs.send_message.call_count == 0
 
 
-def test_reconcile_inventory_global_all_tenants_prereq_failure_skips_enqueue() -> None:
+def test_reconcile_inventory_global_all_tenants_enqueues_orchestration_jobs() -> None:
     tenant_id = uuid.uuid4()
     tenant_row = SimpleNamespace(id=tenant_id, external_id="ext-1")
-    account = SimpleNamespace(
-        tenant_id=tenant_id,
-        account_id="123456789012",
-        regions=["us-east-1"],
-        status="validated",
-        external_id="ext-1",
-    )
-
     tenants_result = MagicMock()
     tenants_result.scalars.return_value.all.return_value = [tenant_row]
-    accounts_result = MagicMock()
-    accounts_result.scalars.return_value.all.return_value = [account]
 
     mock_db = AsyncMock()
-    mock_db.execute = AsyncMock(side_effect=[tenants_result, accounts_result])
+    mock_db.execute = AsyncMock(side_effect=[tenants_result])
+    mock_db.add = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
 
     async def override_get_db():
         yield mock_db
@@ -258,46 +256,29 @@ def test_reconcile_inventory_global_all_tenants_prereq_failure_skips_enqueue() -
         with patch("backend.routers.internal.boto3") as mock_boto3:
             mock_sqs = MagicMock()
             mock_boto3.client.return_value = mock_sqs
-            with patch(
-                "backend.routers.internal.collect_reconciliation_queue_snapshot",
-                return_value={
-                    "inventory_queue_depth": 0,
-                    "inventory_queue_depth_threshold": 100,
-                    "inventory_dlq_depth": 0,
-                    "inventory_dlq_depth_threshold": 0,
-                },
-            ):
-                with patch(
-                    "backend.routers.internal.evaluate_reconciliation_prereqs_async",
-                    new=AsyncMock(
-                        return_value={
-                            "ok": False,
-                            "reasons": ["inventory_queue_backlog"],
-                            "snapshot": {"inventory_queue_depth": 250},
-                        }
-                    ),
-                ):
-                    from backend.database import get_db
+            from backend.database import get_db
 
-                    app.dependency_overrides[get_db] = override_get_db
-                    try:
-                        client = TestClient(app)
-                        resp = client.post(
-                            "/api/internal/reconcile-inventory-global-all-tenants",
-                            headers={"X-Control-Plane-Secret": "secret123"},
-                            json={"tenant_ids": [str(tenant_id)]},
-                        )
-                    finally:
-                        app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides[get_db] = override_get_db
+            try:
+                client = TestClient(app)
+                resp = client.post(
+                    "/api/internal/reconcile-inventory-global-all-tenants",
+                    headers={"X-Control-Plane-Secret": "secret123"},
+                    json={"tenant_ids": [str(tenant_id)]},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["enqueued"] == 0
-    assert data["skipped_prereq"] == 1
-    assert data["prereq_reasons"] == ["inventory_queue_backlog"]
-    assert len(data["prereq_failures"]) == 1
-    assert data["prereq_failures"][0]["tenant_id"] == str(tenant_id)
-    assert mock_sqs.send_message.call_count == 0
+    assert data["enqueued"] == 1
+    assert data["orchestration_jobs_enqueued"] == 1
+    assert data["orchestration_jobs_failed"] == 0
+    assert data["tenants_considered"] == 1
+    assert mock_sqs.send_message.call_count == 1
+    payload = json.loads(mock_sqs.send_message.call_args[1]["MessageBody"])
+    assert payload["job_type"] == "reconcile_inventory_global_orchestration"
+    assert payload["tenant_id"] == str(tenant_id)
 
 
 def test_backfill_finding_keys_enqueues_chunked_job() -> None:

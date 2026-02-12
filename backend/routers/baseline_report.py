@@ -159,12 +159,12 @@ async def create_baseline_report(
                 "detail": "S3 export bucket is not configured. Set S3_EXPORT_BUCKET.",
             },
         )
-    if not (settings.SQS_INGEST_QUEUE_URL and settings.SQS_INGEST_QUEUE_URL.strip()):
+    if not (settings.SQS_EXPORT_REPORT_QUEUE_URL and settings.SQS_EXPORT_REPORT_QUEUE_URL.strip()):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "error": "Queue unavailable",
-                "detail": "SQS_INGEST_QUEUE_URL is not configured.",
+                "detail": "SQS_EXPORT_REPORT_QUEUE_URL is not configured.",
             },
         )
 
@@ -230,7 +230,7 @@ async def create_baseline_report(
         created_at=now_iso,
         account_ids=account_ids,
     )
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
+    queue_url = settings.SQS_EXPORT_REPORT_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
     sqs = boto3.client("sqs", region_name=queue_region)
     try:
