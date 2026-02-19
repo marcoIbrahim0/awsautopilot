@@ -1,0 +1,8 @@
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-edge-protection
+Edge protection deployment completed.

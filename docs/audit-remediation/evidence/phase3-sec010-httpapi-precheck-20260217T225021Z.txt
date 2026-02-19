@@ -1,0 +1,50 @@
+Attempt 1
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg"
+ExitCode=255
+Attempt 2
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg"
+ExitCode=255
+Attempt 3
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg"
+ExitCode=255
+Attempt 4
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg"
+ExitCode=255
+Attempt 5
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg"
+ExitCode=255
+Attempt 1
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name $default --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg/stages/%24default"
+ExitCode=255
+Attempt 2
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name $default --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg/stages/%24default"
+ExitCode=255
+Attempt 3
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name $default --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg/stages/%24default"
+ExitCode=255
+Attempt 4
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name $default --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg/stages/%24default"
+ExitCode=255
+Attempt 5
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name $default --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/v2/apis/g1frb5hhfg/stages/%24default"
+ExitCode=255

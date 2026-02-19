@@ -1,0 +1,4 @@
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"

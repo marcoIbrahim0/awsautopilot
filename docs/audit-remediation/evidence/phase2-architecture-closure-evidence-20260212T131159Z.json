@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-02-12T13:11:59.857563+00:00",
+  "region": "eu-north-1",
+  "aws_account_id": "029037611564",
+  "phase": "phase2-architecture-closure",
+  "artifacts": {
+    "arc002_arc006_load": {
+      "markdown": "docs/audit-remediation/evidence/phase2-arc002-arc006-load-20260212T125856Z.md",
+      "json": "docs/audit-remediation/evidence/phase2-arc002-arc006-load-20260212T125856Z.json"
+    },
+    "arc003_failure_resume_test": "docs/audit-remediation/evidence/phase2-arc003-failure-resume-20260212T130046Z.txt",
+    "arc004_failure_injection": {
+      "markdown": "docs/audit-remediation/evidence/phase2-arc004-failure-injection-20260212T130923Z.md",
+      "event_id": "31fa71a0-370e-83fd-0af0-db3bc639c350",
+      "rule_arn": "arn:aws:events:eu-north-1:029037611564:rule/SecurityAutopilotArc004FiRule20260212130820",
+      "target_arn": "arn:aws:events:eu-north-1:029037611564:api-destination/SecurityAutopilotArc004FiDest20260212130820/3b754c29-86e2-4f89-af32-c780897df850",
+      "target_dlq_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-arc004-fi-dlq-20260212130820",
+      "dlq_visible_messages_after_injection": 1,
+      "sample_message_id": "52dd3412-7455-4da9-a2d9-1e567c97d9cb",
+      "sample_error_code": "SDK_CLIENT_ERROR",
+      "sample_error_message": "Unable to invoke ApiDestination endpoint: API destination endpoint cannot be reached.",
+      "cleanup_completed": true
+    },
+    "arc005_synthetic_alarm_drill": {
+      "markdown": "docs/audit-remediation/evidence/phase2-arc005-synthetic-alarm-drill-20260212T131050Z.md",
+      "alarm_trigger_time": "2026-02-12T13:10:20Z",
+      "alarm_recovery_time": "2026-02-12T13:10:50Z",
+      "triggered_alarms": [
+        "security-autopilot-ingest-queue-depth",
+        "security-autopilot-events-queue-depth",
+        "security-autopilot-inventory-queue-depth",
+        "security-autopilot-export-report-queue-depth",
+        "security-autopilot-ingest-dlq-ingress",
+        "security-autopilot-events-dlq-ingress",
+        "security-autopilot-inventory-dlq-ingress",
+        "security-autopilot-export-report-dlq-ingress"
+      ]
+    },
+    "arc007_ci_gate": [
+      "docs/audit-remediation/evidence/phase2-ci-gate-20260212T130032Z.txt",
+      "docs/audit-remediation/evidence/phase2-orchestration-api-gate-20260212T130038Z.txt"
+    ],
+    "forwarder_rollout_readiness_gate": {
+      "stack_name": "SecurityAutopilotControlPlaneForwarder",
+      "stack_status": "UPDATE_COMPLETE",
+      "stack_last_updated": "2026-02-12T12:20:02.483000+00:00",
+      "rule_name": "SecurityAutopilotControlPlaneApiCallsRule-eu-north-1",
+      "rule_state": "ENABLED",
+      "target_dlq_arn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-control-plane-target-dlq-eu-north-1",
+      "retry_policy": {
+        "maximum_retry_attempts": 8,
+        "maximum_event_age_seconds": 3600
+      },
+      "readiness_gate_tests": "docs/audit-remediation/evidence/phase2-forwarder-readiness-gate-tests-20260212T130053Z.txt"
+    },
+    "dlq_backlog_remediation": {
+      "before_snapshot_markdown": "docs/audit-remediation/evidence/phase2-architecture-20260212T124542Z.md",
+      "after_snapshot_markdown": "docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.md",
+      "events_dlq_before_visible": 10,
+      "inventory_dlq_before_visible": 138,
+      "events_dlq_after_visible": 0,
+      "inventory_dlq_after_visible": 0,
+      "events_dlq_alarm_after": "OK",
+      "inventory_dlq_alarm_after": "OK"
+    },
+    "deploy_outputs": {
+      "sqs_stack": {
+        "name": "security-autopilot-sqs-queues",
+        "status": "UPDATE_COMPLETE",
+        "last_updated": "2026-02-12T11:49:12.876000+00:00"
+      },
+      "forwarder_stack": {
+        "name": "SecurityAutopilotControlPlaneForwarder",
+        "status": "UPDATE_COMPLETE",
+        "last_updated": "2026-02-12T12:20:02.483000+00:00"
+      },
+      "reconcile_stack": {
+        "name": "security-autopilot-reconcile-scheduler",
+        "status": "CREATE_COMPLETE",
+        "last_updated": "2026-02-12T11:55:54.563000+00:00"
+      }
+    },
+    "latest_snapshot": {
+      "markdown": "docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.md",
+      "json": "docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.json"
+    }
+  },
+  "on_call_acknowledgement": {
+    "acknowledged_by_arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin",
+    "acknowledged_at": "2026-02-12T13:12:40Z",
+    "scope": "Phase 2 architecture closure package review and acceptance for ARC-002 through ARC-007"
+  }
+}

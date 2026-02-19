@@ -1,0 +1,17 @@
+{
+  "captured_at_utc": "2026-02-18T01:15:27Z",
+  "status": "blocked",
+  "snapshot_target": "main branch protection",
+  "repo_owner_name_resolution": {
+    "method": "git remote",
+    "status": "blocked",
+    "detail": "No git remotes configured in local repository"
+  },
+  "github_access": {
+    "status": "blocked",
+    "detail": "gh auth token is invalid for the active account"
+  },
+  "blocked_evidence_artifact": "/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase4-main-branch-protection-blocked-20260218T011527Z.txt",
+  "required_check_matrix_source": "/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase4-required-check-governance.md",
+  "result": "Live branch-protection snapshot was not retrievable"
+}

@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from backend.auth import get_current_user
 from backend.database import get_db
@@ -52,6 +53,20 @@ def _mock_async_session(*scalar_results: object, list_result: list | None = None
     session = MagicMock()
     session.execute = AsyncMock(return_value=result)
     return session
+
+
+@pytest.fixture
+def multi_tenant_setup() -> dict[str, object]:
+    """Two-tenant fixture for isolation regression tests."""
+    tenant_a_id = uuid.uuid4()
+    tenant_b_id = uuid.uuid4()
+    return {
+        "tenant_a_id": tenant_a_id,
+        "tenant_b_id": tenant_b_id,
+        "tenant_a_admin": _mock_user(tenant_a_id, role="admin"),
+        "tenant_b_member": _mock_user(tenant_b_id, role="member"),
+        "tenant_b_admin": _mock_user(tenant_b_id, role="admin"),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -171,10 +186,13 @@ def test_get_control_mapping_200(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_create_control_mapping_403_when_member(client: TestClient) -> None:
-    """POST /api/control-mappings as member returns 403."""
-    tenant_id = uuid.uuid4()
-    user = _mock_user(tenant_id, role="member")
+def test_create_control_mapping_403_when_member(
+    client: TestClient,
+    multi_tenant_setup: dict[str, object],
+) -> None:
+    """Cross-tenant spoofing cannot bypass member-only mutation denial."""
+    user = multi_tenant_setup["tenant_b_member"]
+    spoofed_tenant_id = multi_tenant_setup["tenant_a_id"]
     session = _mock_async_session()
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
@@ -187,7 +205,7 @@ def test_create_control_mapping_403_when_member(client: TestClient) -> None:
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
         r = client.post(
-            "/api/control-mappings",
+            f"/api/control-mappings?tenant_id={spoofed_tenant_id}",
             json={
                 "control_id": "NewControl.1",
                 "framework_name": "SOC 2",
@@ -202,3 +220,48 @@ def test_create_control_mapping_403_when_member(client: TestClient) -> None:
 
     assert r.status_code == 403
     assert "admin" in (r.json().get("detail") or "").lower()
+    assert not session.add.called
+
+
+def test_create_control_mapping_cross_tenant_duplicate_returns_409(
+    client: TestClient,
+    multi_tenant_setup: dict[str, object],
+) -> None:
+    """Cross-tenant overwrite attempts on shared mapping keys return 409."""
+    user = multi_tenant_setup["tenant_b_admin"]
+    spoofed_tenant_id = multi_tenant_setup["tenant_a_id"]
+
+    session = MagicMock()
+    session.add = MagicMock()
+    session.commit = AsyncMock(
+        side_effect=IntegrityError("INSERT INTO control_mappings ...", {}, Exception("duplicate key"))
+    )
+    session.refresh = AsyncMock()
+    session.rollback = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    try:
+        r = client.post(
+            f"/api/control-mappings?tenant_id={spoofed_tenant_id}",
+            json={
+                "control_id": "S3.1",
+                "framework_name": "SOC 2",
+                "framework_control_code": "CC6.1",
+                "control_title": "Attempted overwrite",
+                "description": "Cross-tenant overwrite attempt should fail",
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    assert "already exists" in (r.json().get("detail") or "").lower()
+    session.rollback.assert_awaited_once()

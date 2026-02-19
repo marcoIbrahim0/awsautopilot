@@ -1,0 +1,11 @@
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources"
+Command failed after 5 attempts: aws apigateway get-resources --region eu-north-1 --rest-api-id brplhu7801 --query items[?path=='/'].id --output text

@@ -6,7 +6,6 @@ Used by EventBridge or an external scheduler to trigger weekly digest per tenant
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import uuid
@@ -14,7 +13,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import boto3
-from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
@@ -38,8 +36,14 @@ from backend.services.action_run_confirmation import (
     record_execution_result_async,
 )
 from backend.services.bundle_reporting_tokens import verify_group_run_reporting_token
-from backend.services.aws import assume_role
 from backend.services.control_plane_intake import is_supported_control_plane_event
+from backend.services.internal_reconciliation import (
+    authoritative_permissions_precheck as authoritative_permissions_precheck_service,
+    assume_role_precheck as assume_role_precheck_service,
+    deduplicate_strings as deduplicate_strings_service,
+    extract_error_code as extract_error_code_service,
+    is_access_denied_code as is_access_denied_code_service,
+)
 from backend.services.reconciliation_prereqs import (
     collect_reconciliation_queue_snapshot,
     evaluate_reconciliation_prereqs_async,
@@ -261,9 +265,7 @@ def _status_value(raw: object) -> str:
 
 
 def _extract_error_code(exc: Exception) -> str:
-    if isinstance(exc, ClientError):
-        return str(exc.response.get("Error", {}).get("Code") or "ClientError")
-    return type(exc).__name__
+    return extract_error_code_service(exc)
 
 
 def _parse_iso_utc(value: str | None) -> datetime | None:
@@ -288,35 +290,15 @@ def _coerce_execution_status(raw: str) -> ActionGroupExecutionStatus:
 
 
 async def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
-    def _run() -> tuple[bool, str | None]:
-        try:
-            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
-            sts = session.client("sts")
-            identity = sts.get_caller_identity()
-            caller = str(identity.get("Account") or "")
-            if caller and caller != str(account.account_id):
-                return False, f"AccountMismatch:{caller}"
-            return True, None
-        except Exception as exc:
-            return False, _extract_error_code(exc)
-
-    return await asyncio.to_thread(_run)
+    return await assume_role_precheck_service(account, tenant_external_id)
 
 
 def _dedup(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    out: list[str] = []
-    for value in values:
-        token = str(value).strip()
-        if not token or token in seen:
-            continue
-        seen.add(token)
-        out.append(token)
-    return out
+    return deduplicate_strings_service(values)
 
 
 def _is_access_denied_code(code: str) -> bool:
-    return code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}
+    return is_access_denied_code_service(code)
 
 
 async def _authoritative_permissions_precheck(
@@ -324,58 +306,7 @@ async def _authoritative_permissions_precheck(
     tenant_external_id: str,
     region: str,
 ) -> tuple[bool, list[str]]:
-    def _run() -> tuple[bool, list[str]]:
-        missing: list[str] = []
-        try:
-            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
-        except Exception as exc:
-            return False, [f"assume_role:{_extract_error_code(exc)}"]
-
-        try:
-            session.client("securityhub", region_name=region).get_findings(MaxResults=1)
-        except ClientError as exc:
-            if _is_access_denied_code(_extract_error_code(exc)):
-                missing.append("securityhub:GetFindings")
-
-        try:
-            session.client("ec2", region_name=region).describe_security_groups(MaxResults=5)
-        except ClientError as exc:
-            if _is_access_denied_code(_extract_error_code(exc)):
-                missing.append("ec2:DescribeSecurityGroups")
-
-        buckets: list[dict] = []
-        try:
-            buckets = session.client("s3", region_name=region).list_buckets().get("Buckets") or []
-        except ClientError as exc:
-            if _is_access_denied_code(_extract_error_code(exc)):
-                missing.append("s3:ListAllMyBuckets")
-        if buckets:
-            s3 = session.client("s3", region_name=region)
-            bucket_name = str((buckets[0] or {}).get("Name") or "").strip()
-            if bucket_name:
-                probes = (
-                    ("get_public_access_block", "s3:GetBucketPublicAccessBlock", {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"}),
-                    ("get_bucket_policy_status", "s3:GetBucketPolicyStatus", {"NoSuchBucketPolicy", "NoSuchBucket"}),
-                    ("get_bucket_policy", "s3:GetBucketPolicy", {"NoSuchBucketPolicy", "NoSuchBucket"}),
-                    ("get_bucket_location", "s3:GetBucketLocation", {"NoSuchBucket"}),
-                    ("get_bucket_encryption", "s3:GetEncryptionConfiguration", {"ServerSideEncryptionConfigurationNotFoundError", "NoSuchBucket"}),
-                    ("get_bucket_logging", "s3:GetBucketLogging", {"NoSuchBucket"}),
-                    ("get_bucket_lifecycle_configuration", "s3:GetLifecycleConfiguration", {"NoSuchLifecycleConfiguration", "NoSuchBucket"}),
-                )
-                for call_name, required_action, ignored_codes in probes:
-                    try:
-                        getattr(s3, call_name)(Bucket=bucket_name)
-                    except ClientError as exc:
-                        code = _extract_error_code(exc)
-                        if _is_access_denied_code(code):
-                            missing.append(required_action)
-                        elif code in ignored_codes:
-                            continue
-
-        missing = _dedup(missing)
-        return (len(missing) == 0, missing)
-
-    return await asyncio.to_thread(_run)
+    return await authoritative_permissions_precheck_service(account, tenant_external_id, region)
 
 
 @router.post(

@@ -1,0 +1,2 @@
+$ rg -n -e 'localStorage\.setItem' -e 'localStorage\.getItem' -e 'localStorage\[' -e 'Bearer' frontend/src/contexts/AuthContext.tsx frontend/src/lib/api.ts
+No localStorage bearer-auth persistence tokens found in frontend auth code paths.

@@ -1,0 +1,121 @@
+ARC-008 Restore Drill Transcript
+StartTimestampUTC=2026-02-17T18:17:08Z
+$ aws ec2 create-volume --region eu-north-1 --availability-zone eu-north-1a --size 1 --volume-type gp3 --tag-specifications ResourceType=volume,Tags=[{Key=Name,Value=arc008-restore-drill-source-20260217T181033Z},{Key=Application,Value=SecurityAutopilot},{Key=Control,Value=ARC-008}] --output json
+$ aws ec2 create-volume --region eu-north-1 --availability-zone eu-north-1a --size 1 --volume-type gp3 --tag-specifications ResourceType=volume,Tags=[{Key=Name,Value=arc008-restore-drill-source-20260217T181033Z},{Key=Application,Value=SecurityAutopilot},{Key=Control,Value=ARC-008}] --output json
+{
+    "AvailabilityZoneId": "eun1-az1",
+    "Iops": 3000,
+    "Tags": [
+        {
+            "Key": "Application",
+            "Value": "SecurityAutopilot"
+        },
+        {
+            "Key": "Control",
+            "Value": "ARC-008"
+        },
+        {
+            "Key": "Name",
+            "Value": "arc008-restore-drill-source-20260217T181033Z"
+        }
+    ],
+    "VolumeType": "gp3",
+    "MultiAttachEnabled": false,
+    "Throughput": 125,
+    "VolumeId": "vol-0f6f38ab7b05762de",
+    "Size": 1,
+    "SnapshotId": "",
+    "AvailabilityZone": "eu-north-1a",
+    "State": "creating",
+    "CreateTime": "2026-02-17T18:17:58+00:00",
+    "Encrypted": false
+}
+SourceVolumeId=vol-0f6f38ab7b05762de
+$ aws ec2 wait volume-available --region eu-north-1 --volume-ids vol-0f6f38ab7b05762de
+SourceVolumeAvailableAt=2026-02-17T18:18:27Z
+BackupStartTimestampUTC=2026-02-17T18:18:51Z
+$ aws backup start-backup-job --region eu-north-1 --backup-vault-name security-autopilot-dr-vault --resource-arn arn:aws:ec2:eu-north-1:029037611564:volume/vol-0f6f38ab7b05762de --iam-role-arn arn:aws:iam::029037611564:role/SecurityAutopilotDrBackupServiceRole --idempotency-token arc008-backup-20260217T181033Z --start-window-minutes 60 --complete-window-minutes 120 --lifecycle DeleteAfterDays=35 --recovery-point-tags Application=SecurityAutopilot,Control=ARC-008,Drill=Restore --output json
+{
+    "BackupJobId": "c14b4709-a5c5-46e1-8a61-ca3dc1b43d68",
+    "CreationDate": "2026-02-17T20:18:53.074000+02:00",
+    "IsParent": false
+}
+$ aws backup describe-backup-job --region eu-north-1 --backup-job-id c14b4709-a5c5-46e1-8a61-ca3dc1b43d68 --output json (poll until terminal)
+BackupJobPollUTC=2026-02-17T18:19:10Z State=RUNNING
+BackupJobPollUTC=2026-02-17T18:19:27Z State=RUNNING
+BackupJobPollUTC=2026-02-17T18:19:46Z State=RUNNING
+BackupJobPollUTC=2026-02-17T18:20:01Z State=COMPLETED
+{
+    "AccountId": "029037611564",
+    "BackupJobId": "c14b4709-a5c5-46e1-8a61-ca3dc1b43d68",
+    "BackupVaultName": "security-autopilot-dr-vault",
+    "RecoveryPointLifecycle": {
+        "DeleteAfterDays": 35
+    },
+    "BackupVaultArn": "arn:aws:backup:eu-north-1:029037611564:backup-vault:security-autopilot-dr-vault",
+    "RecoveryPointArn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+    "IsEncrypted": false,
+    "ResourceArn": "arn:aws:ec2:eu-north-1:029037611564:volume/vol-0f6f38ab7b05762de",
+    "CreationDate": "2026-02-17T20:18:53.074000+02:00",
+    "CompletionDate": "2026-02-17T20:19:54.678000+02:00",
+    "State": "COMPLETED",
+    "PercentDone": "100.0",
+    "BackupSizeInBytes": 1073741824,
+    "IamRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrBackupServiceRole",
+    "ResourceType": "EBS",
+    "BytesTransferred": 0,
+    "StartBy": "2026-02-17T21:18:53.074000+02:00",
+    "IsParent": false,
+    "ResourceName": "arc008-restore-drill-source-20260217T181033Z",
+    "InitiationDate": "2026-02-17T20:18:53.541000+02:00",
+    "MessageCategory": "SUCCESS"
+}
+$ aws backup get-recovery-point-restore-metadata --region eu-north-1 --backup-vault-name security-autopilot-dr-vault --recovery-point-arn arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2 --output json
+{
+    "BackupVaultArn": "arn:aws:backup:eu-north-1:029037611564:backup-vault:security-autopilot-dr-vault",
+    "RecoveryPointArn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+    "RestoreMetadata": {
+        "availabilityZone": null,
+        "aws:backup:request-id": "ceddbd88-af7d-4afd-9c08-2cd39dafb39b",
+        "encrypted": "false",
+        "volumeId": "vol-0f6f38ab7b05762de",
+        "volumeSize": "1"
+    },
+    "ResourceType": "EBS"
+}
+RestoreStartTimestampUTC=2026-02-17T18:20:40Z
+$ aws backup start-restore-job --region eu-north-1 --recovery-point-arn arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2 --iam-role-arn arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole --resource-type EBS --metadata file://docs/audit-remediation/evidence/phase3-arc008-restore-metadata-20260217T181033Z.json --idempotency-token arc008-restore-20260217T181033Z --output json
+RestoreStartTimestampUTC=2026-02-17T18:21:13Z
+$ aws backup start-restore-job --region eu-north-1 --recovery-point-arn arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2 --iam-role-arn arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole --resource-type EBS --metadata file://docs/audit-remediation/evidence/phase3-arc008-restore-metadata-20260217T181033Z.json --idempotency-token arc008-restore-20260217T181033Z-r1 --output json
+RestoreStartTimestampUTC=2026-02-17T18:22:33Z
+$ aws backup start-restore-job --region eu-north-1 --recovery-point-arn arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2 --iam-role-arn arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole --resource-type EBS --metadata file://docs/audit-remediation/evidence/phase3-arc008-restore-metadata-20260217T181033Z.json --idempotency-token arc008-restore-20260217T181033Z-r2 --output json
+{
+    "RestoreJobId": "8056c07c-016f-4758-b977-765e796af0f2"
+}
+$ aws backup describe-restore-job --region eu-north-1 --restore-job-id 8056c07c-016f-4758-b977-765e796af0f2 --output json (poll until terminal)
+RestoreJobPollUTC=2026-02-17T18:22:48Z Status=PENDING
+RestoreJobPollUTC=2026-02-17T18:23:05Z Status=RUNNING
+RestoreJobPollUTC=2026-02-17T18:23:21Z Status=RUNNING
+RestoreJobPollUTC=2026-02-17T18:23:37Z Status=RUNNING
+RestoreJobPollUTC=2026-02-17T18:23:53Z Status=COMPLETED
+{
+    "AccountId": "029037611564",
+    "RestoreJobId": "8056c07c-016f-4758-b977-765e796af0f2",
+    "RecoveryPointArn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+    "CreationDate": "2026-02-17T20:22:35.494000+02:00",
+    "CompletionDate": "2026-02-17T20:23:51.441000+02:00",
+    "Status": "COMPLETED",
+    "PercentDone": "100.00%",
+    "BackupSizeInBytes": 1073741824,
+    "IamRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole",
+    "CreatedResourceArn": "arn:aws:ec2:eu-north-1:029037611564:volume/vol-0e04835133326dbc1",
+    "ResourceType": "EBS",
+    "RecoveryPointCreationDate": "2026-02-17T20:18:53.074000+02:00",
+    "CreatedBy": {},
+    "IsParent": false
+}
+RestoreDrillEndTimestampUTC=2026-02-17T18:24:00Z
+$ aws ec2 wait volume-available --region eu-north-1 --volume-ids vol-0e04835133326dbc1
+$ aws ec2 delete-volume --region eu-north-1 --volume-id vol-0e04835133326dbc1
+$ aws ec2 delete-volume --region eu-north-1 --volume-id vol-0f6f38ab7b05762de
+CleanupDeletedVolumes=vol-0e04835133326dbc1,vol-0f6f38ab7b05762de

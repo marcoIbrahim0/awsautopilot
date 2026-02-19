@@ -8,6 +8,7 @@ on:
 
 jobs:
   queue-contract-and-reliability-tests:
+    name: Queue Contract and Reliability Tests
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
@@ -41,6 +42,7 @@ jobs:
             --noconftest
 
   reconcile-orchestration-api-test:
+    name: Reconcile Orchestration API Test
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
@@ -69,3 +71,23 @@ jobs:
             tests/test_internal_inventory_reconcile.py \
             -k global_all_tenants_enqueues_orchestration_jobs \
             --noconftest
+
+  architecture-phase2-required-gate:
+    name: Architecture Phase 2 Required Gate
+    runs-on: ubuntu-latest
+    needs:
+      - queue-contract-and-reliability-tests
+      - reconcile-orchestration-api-test
+    if: ${{ always() }}
+    steps:
+      - name: Assert architecture phase 2 checks success
+        run: |
+          if [ "${{ needs.queue-contract-and-reliability-tests.result }}" != "success" ]; then
+            echo "Queue contract and reliability tests failed: ${{ needs.queue-contract-and-reliability-tests.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.reconcile-orchestration-api-test.result }}" != "success" ]; then
+            echo "Reconcile orchestration API test failed: ${{ needs.reconcile-orchestration-api-test.result }}"
+            exit 1
+          fi
+          echo "Architecture Phase 2 checks passed."

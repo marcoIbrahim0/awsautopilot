@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-02-12T22:06:39.465136+00:00",
+  "region": "eu-north-1",
+  "identity": {
+    "account": "029037611564",
+    "arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin",
+    "user_id": "AIDAQNQWGZIWGDV4TV6K2"
+  },
+  "stack": {
+    "name": "security-autopilot-edge-protection",
+    "status": "CREATE_COMPLETE",
+    "last_updated": "2026-02-12 22:03:01.052000+00:00"
+  },
+  "stack_outputs": {
+    "EdgeWebAclName": "security-autopilot-edge-web-acl",
+    "EdgeWebAclId": "security-autopilot-edge-web-acl|078ed15a-046c-419c-954a-528561d4807a|REGIONAL",
+    "EdgeWebAclArn": "arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a"
+  },
+  "stack_parameters": {
+    "ApiGatewayStageArn": "",
+    "ApplicationLoadBalancerArn": "",
+    "RateLimitRequestsPer5Min": "2000",
+    "Scope": "REGIONAL",
+    "WebAclName": "security-autopilot-edge-web-acl",
+    "BlockedRequestsThreshold": "100",
+    "EnableIpv4AllowList": "false",
+    "RateLimitedRequestsThreshold": "25",
+    "AllowedIpv4Cidrs": "203.0.113.10/32",
+    "AlarmTopicArn": "arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms"
+  },
+  "web_acl": {
+    "error": "ValidationException: An error occurred (ValidationException) when calling the GetWebACL operation: 2 validation errors detected: Value 'security-autopilot-edge-web-acl|078ed15a-046c-419c-954a-528561d4807a|REGIONAL' at 'id' failed to satisfy constraint: Member must satisfy regular expression pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$; Value 'security-autopilot-edge-web-acl|078ed15a-046c-419c-954a-528561d4807a|REGIONAL' at 'id' failed to satisfy constraint: Member must have length less than or equal to 36"
+  },
+  "associations": {
+    "api_gateway_stage_arn": "",
+    "alb_arn": ""
+  },
+  "alarms": [
+    {
+      "name": "security-autopilot-edge-web-acl-blocked-requests",
+      "state": "OK",
+      "reason": "Threshold Crossed: no datapoints were received for 1 period and 1 missing datapoint was treated as [NonBreaching].",
+      "metric": "BlockedRequests",
+      "namespace": "AWS/WAFV2"
+    },
+    {
+      "name": "security-autopilot-edge-web-acl-rate-limit-triggered",
+      "state": "OK",
+      "reason": "Threshold Crossed: no datapoints were received for 1 period and 1 missing datapoint was treated as [NonBreaching].",
+      "metric": "BlockedRequests",
+      "namespace": "AWS/WAFV2"
+    }
+  ],
+  "json_artifact_path": "docs/audit-remediation/evidence/phase3-security-20260212T220639Z.json",
+  "markdown_artifact_path": "docs/audit-remediation/evidence/phase3-security-20260212T220639Z.md"
+}

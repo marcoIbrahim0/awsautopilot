@@ -5,12 +5,12 @@
 - Event class: management events only (no S3 data events in phase 1).
 - Mode: shadow by default (`event_monitor_shadow`) so customer-visible findings are unchanged during comparison.
 
-## Tenant Setup (Recommended Wiring)
-Phase 1 is designed to be enabled per tenant via a customer-deployed EventBridge forwarder:
+## Tenant Setup (Required Wiring For Real-Time)
+Phase 1 real-time behavior requires a customer-deployed EventBridge forwarder per tenant account/region:
 
 - CloudFormation template: `infrastructure/cloudformation/control-plane-forwarder-template.yaml`
 - Delivery mechanism: **EventBridge API Destination** -> SaaS HTTPS endpoint
-- Auth: per-tenant header `X-Control-Plane-Token` (stored on the tenant; rotate if leaked)
+- Auth: per-tenant header `X-Control-Plane-Token` (validated against tenant token hash; raw token is one-time reveal at creation/rotation)
 - SaaS intake endpoint: `POST /api/control-plane/events`
 
 Validation endpoint (tenant-facing):
@@ -60,6 +60,11 @@ Per-event telemetry is persisted in `control_plane_events`:
 Admin endpoint:
 - `GET /api/saas/control-plane/slo`
 - `GET /api/saas/control-plane/shadow-summary` (shadow-state comparison helper)
+- `GET /api/saas/system-health` (queue lag + worker failure-rate rollup for operations)
+
+Service health endpoints:
+- `GET /health` (liveness only)
+- `GET /ready` and `GET /health/ready` (DB + SQS dependency-aware readiness)
 
 ## Phase 2 Reconciliation Orchestration
 Inventory reconciliation is split into shard jobs plus orchestration endpoints:

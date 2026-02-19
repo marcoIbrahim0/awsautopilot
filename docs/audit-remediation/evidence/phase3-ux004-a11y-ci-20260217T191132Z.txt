@@ -1,0 +1,28 @@
+
+> frontend@0.1.0 a11y:ci
+> node ./scripts/a11y/run-accessibility-ci.mjs
+
+
+> frontend@0.1.0 dev
+> sh -c 'set -a; [ -f ../.env ] && . ../.env; [ -f ../.env.local ] && . ../.env.local; set +a; next dev'
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3300
+- Network:       http://192.168.1.4:3300
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1279ms
+ GET / 200 in 960ms (compile: 810ms, render: 151ms)
+
+> frontend@0.1.0 a11y:scan
+> node ./scripts/a11y/run-accessibility.mjs
+
+ GET /onboarding 200 in 228ms (compile: 125ms, render: 103ms)
+Onboarding: critical=0, serious=0, moderate=0, minor=0, violations=0
+ GET /settings?tab=team 200 in 158ms (compile: 72ms, render: 86ms)
+Settings: critical=0, serious=0, moderate=0, minor=0, violations=0
+ GET /findings 200 in 237ms (compile: 91ms, render: 147ms)
+Findings: critical=0, serious=0, moderate=0, minor=0, violations=0
+Accessibility thresholds satisfied for all flows.
+[?25h

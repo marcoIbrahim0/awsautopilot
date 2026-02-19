@@ -1,0 +1,53 @@
+name: Frontend CI Matrix
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  frontend-checks:
+    name: Frontend Checks (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+  frontend-required-gate:
+    name: Frontend Required Gate
+    runs-on: ubuntu-latest
+    needs:
+      - frontend-checks
+    if: ${{ always() }}
+    steps:
+      - name: Assert frontend matrix success
+        run: |
+          if [ "${{ needs.frontend-checks.result }}" != "success" ]; then
+            echo "Frontend matrix did not pass: ${{ needs.frontend-checks.result }}"
+            exit 1
+          fi
+          echo "Frontend matrix passed."

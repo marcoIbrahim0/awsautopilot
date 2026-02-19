@@ -1,0 +1,7 @@
+{
+  "availabilityZone": "eu-north-1a",
+  "aws:backup:request-id": "ceddbd88-af7d-4afd-9c08-2cd39dafb39b",
+  "encrypted": "false",
+  "volumeId": "vol-0f6f38ab7b05762de",
+  "volumeSize": "1"
+}

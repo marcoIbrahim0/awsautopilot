@@ -1,0 +1,95 @@
+{
+  "control_id": "UX-004",
+  "generated_at": "2026-02-17T19:14:45.425Z",
+  "workflow": "/Users/marcomaher/AWS Security Autopilot/.github/workflows/frontend-accessibility.yml",
+  "scan_command": "npm run a11y:ci",
+  "thresholds": {
+    "critical": 0,
+    "serious": 0,
+    "moderate": 2,
+    "minor": 10
+  },
+  "first_run_before_fixes": {
+    "timestamp": "2026-02-17T19:08:30.641Z",
+    "flows": [
+      {
+        "id": "onboarding",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 8,
+          "moderate": 0,
+          "minor": 0
+        },
+        "top_violation": "color-contrast"
+      },
+      {
+        "id": "settings",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 1,
+          "moderate": 0,
+          "minor": 0
+        },
+        "top_violation": "color-contrast"
+      },
+      {
+        "id": "findings",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 2,
+          "moderate": 0,
+          "minor": 0
+        },
+        "top_violation": "color-contrast"
+      }
+    ]
+  },
+  "baseline_after_fixes": {
+    "timestamp": "2026-02-17T19:14:45.425Z",
+    "flows": [
+      {
+        "id": "onboarding",
+        "path": "/onboarding",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0
+        },
+        "violations": 0,
+        "failing": false
+      },
+      {
+        "id": "settings",
+        "path": "/settings?tab=team",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0
+        },
+        "violations": 0,
+        "failing": false
+      },
+      {
+        "id": "findings",
+        "path": "/findings",
+        "impact_counts": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0
+        },
+        "violations": 0,
+        "failing": false
+      }
+    ],
+    "failing_flows": []
+  },
+  "artifacts": {
+    "local_transcript": "/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux004-a11y-ci-20260217T191132Z.txt",
+    "local_summary_markdown": "/Users/marcomaher/AWS Security Autopilot/frontend/a11y-results/summary.md",
+    "local_summary_json": "/Users/marcomaher/AWS Security Autopilot/frontend/a11y-results/summary.json",
+    "ci_artifact_name": "frontend-a11y-results"
+  }
+}

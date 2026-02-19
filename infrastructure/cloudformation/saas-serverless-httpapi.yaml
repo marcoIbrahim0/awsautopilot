@@ -1,0 +1,640 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Serverless SaaS runtime:
+  - API Gateway (HTTP API) -> Lambda (FastAPI via Mangum)
+  - SQS -> Lambda (worker)
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: security-autopilot
+    Description: Resource name prefix.
+
+  SqsStackName:
+    Type: String
+    Default: security-autopilot-sqs-queues
+    Description: CloudFormation stack name that exports queue URLs/ARNs and managed policies.
+
+  ApiImageUri:
+    Type: String
+    Description: "ECR image URI for API Lambda (e.g. 123.dkr.ecr.eu-north-1.amazonaws.com/repo:tag)."
+
+  WorkerImageUri:
+    Type: String
+    Description: "ECR image URI for worker Lambda (e.g. 123.dkr.ecr.eu-north-1.amazonaws.com/repo:tag)."
+
+  AppName:
+    Type: String
+    Default: AWS Security Autopilot
+  AppEnv:
+    Type: String
+    Default: dev
+    AllowedValues: [local, dev, prod]
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [DEBUG, INFO, WARNING, ERROR]
+
+  FrontendUrl:
+    Type: String
+    Default: https://valensjewelry.com
+    Description: Frontend base URL for invites/redirects.
+
+  CorsOrigins:
+    Type: String
+    Default: https://valensjewelry.com,http://localhost:3000
+    Description: Comma-separated CORS origins for the API.
+
+  # --- Optional feature/config flags (non-secret) ---
+  CloudFormationControlPlaneForwarderTemplateUrl:
+    Type: String
+    Default: ""
+    Description: "Optional public URL to the tenant control-plane forwarder CloudFormation template."
+
+  SaasAdminEmails:
+    Type: String
+    Default: ""
+    Description: "Comma-separated allowlist for SaaS admin endpoints."
+
+  S3ExportBucket:
+    Type: String
+    Default: ""
+    Description: "Optional S3 bucket for exports (evidence packs)."
+  S3ExportBucketRegion:
+    Type: String
+    Default: ""
+    Description: "Region for S3ExportBucket (defaults to AWS_REGION when unset)."
+
+  S3SupportBucket:
+    Type: String
+    Default: ""
+    Description: "Optional S3 bucket for support files."
+  S3SupportBucketRegion:
+    Type: String
+    Default: ""
+    Description: "Region for S3SupportBucket (defaults to AWS_REGION when unset)."
+
+  SaasBundleExecutorEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Enable SaaS-managed bundle executor endpoints."
+  SaasBundleRunnerTemplateS3Uri:
+    Type: String
+    Default: ""
+    Description: "Optional s3://... URI to the centralized bundle runner template."
+  SaasBundleRunnerTemplateVersion:
+    Type: String
+    Default: ""
+    Description: "Bundle runner template version label."
+  SaasBundleRunnerTemplateCacheSeconds:
+    Type: Number
+    Default: 300
+    MinValue: 0
+    MaxValue: 86400
+    Description: "In-process cache TTL (seconds) for centralized runner template."
+
+  TenantReconciliationEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Enable tenant-facing reconciliation endpoints."
+  TenantReconciliationPilotTenants:
+    Type: String
+    Default: ""
+    Description: "Optional comma-separated tenant UUIDs allowed when TenantReconciliationEnabled=false."
+
+  ControlPlaneShadowMode:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: "When true, control-plane pipeline writes only to shadow state tables."
+  ControlPlaneSource:
+    Type: String
+    Default: event_monitor_shadow
+    Description: "Source label for control-plane outputs."
+  ControlPlaneAuthoritativeControls:
+    Type: String
+    Default: ""
+    Description: "Comma-separated canonical control IDs promoted to authoritative mode."
+  ControlPlaneRecentTouchLookbackMinutes:
+    Type: Number
+    Default: 60
+    MinValue: 1
+    MaxValue: 10080
+    Description: "Default lookback window for reconcile_recently_touched_resources."
+
+  # --- Secrets (dev-friendly) ---
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: "Postgres connection string (use Neon)."
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: "JWT signing secret."
+  ControlPlaneEventsSecret:
+    Type: String
+    NoEcho: true
+    Description: "Shared secret for control-plane internal endpoints."
+
+  # --- Worker controls ---
+  EnableWorker:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Enable SQS event source mappings (set false during first deploy until DB migrations are applied).
+
+  WorkerReservedConcurrency:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 50
+    Description: Reserved concurrency for the worker Lambda (caps parallel processing).
+
+  IngestBatchSize:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 10
+  EventsBatchSize:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 10
+  InventoryBatchSize:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 10
+  ExportBatchSize:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+
+  # --- Optional custom domain (recommended for same-site cookies) ---
+  ApiDomainName:
+    Type: String
+    Default: ""
+    Description: Optional custom API domain (e.g. api.valensjewelry.com).
+  ApiCertificateArn:
+    Type: String
+    Default: ""
+    Description: ACM certificate ARN in this region (eu-north-1) for ApiDomainName.
+
+Conditions:
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref ApiDomainName, ""]]
+    - !Not [!Equals [!Ref ApiCertificateArn, ""]]
+  WorkerEnabled: !Equals [!Ref EnableWorker, "true"]
+  WorkerDisabled: !Equals [!Ref EnableWorker, "false"]
+  WorkerHasReservedConcurrency: !Not [!Equals [!Ref WorkerReservedConcurrency, 0]]
+  WorkerEnabledWithReservation: !And
+    - !Condition WorkerEnabled
+    - !Condition WorkerHasReservedConcurrency
+  HasExportBucket: !Not [!Equals [!Ref S3ExportBucket, ""]]
+  HasSupportBucket: !Not [!Equals [!Ref S3SupportBucket, ""]]
+
+Resources:
+  # ----------------------------
+  # IAM roles
+  # ----------------------------
+  ApiLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-lambda-api"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !ImportValue
+          "Fn::Sub": "${SqsStackName}-ApiSendPolicyArn"
+      Policies:
+        - PolicyName: AssumeTenantRoles
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource:
+                  - arn:aws:iam::*:role/SecurityAutopilotReadRole
+                  - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+
+  WorkerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-lambda-worker"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !ImportValue
+          "Fn::Sub": "${SqsStackName}-WorkerConsumePolicyArn"
+        # Worker occasionally enqueues follow-up jobs (best-effort); allow send to worker queues.
+        - !ImportValue
+          "Fn::Sub": "${SqsStackName}-ApiSendPolicyArn"
+      Policies:
+        - PolicyName: AssumeTenantRoles
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource:
+                  - arn:aws:iam::*:role/SecurityAutopilotReadRole
+                  - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+
+  ApiExportBucketAccess:
+    Type: AWS::IAM::Policy
+    Condition: HasExportBucket
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-api-export-bucket-access"
+      Roles:
+        - !Ref ApiLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ExportBucketObjectAccess
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub "arn:aws:s3:::${S3ExportBucket}/*"
+          - Sid: ExportBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketMultipartUploads
+            Resource: !Sub "arn:aws:s3:::${S3ExportBucket}"
+
+  ApiSupportBucketAccess:
+    Type: AWS::IAM::Policy
+    Condition: HasSupportBucket
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-api-support-bucket-access"
+      Roles:
+        - !Ref ApiLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: SupportBucketObjectAccess
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub "arn:aws:s3:::${S3SupportBucket}/*"
+          - Sid: SupportBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketMultipartUploads
+            Resource: !Sub "arn:aws:s3:::${S3SupportBucket}"
+
+  WorkerExportBucketAccess:
+    Type: AWS::IAM::Policy
+    Condition: HasExportBucket
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-worker-export-bucket-access"
+      Roles:
+        - !Ref WorkerLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ExportBucketObjectAccess
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub "arn:aws:s3:::${S3ExportBucket}/*"
+          - Sid: ExportBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketMultipartUploads
+            Resource: !Sub "arn:aws:s3:::${S3ExportBucket}"
+
+  WorkerSupportBucketAccess:
+    Type: AWS::IAM::Policy
+    Condition: HasSupportBucket
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-worker-support-bucket-access"
+      Roles:
+        - !Ref WorkerLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: SupportBucketObjectAccess
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub "arn:aws:s3:::${S3SupportBucket}/*"
+          - Sid: SupportBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:ListBucketMultipartUploads
+            Resource: !Sub "arn:aws:s3:::${S3SupportBucket}"
+
+  # ----------------------------
+  # API Gateway (HTTP API)
+  # ----------------------------
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${NamePrefix}-httpapi"
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowCredentials: true
+        AllowHeaders:
+          - content-type
+          - x-csrf-token
+          - authorization
+          - accept
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        AllowOrigins: !Split [",", !Ref CorsOrigins]
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NamePrefix}-api"
+      RetentionInDays: 14
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NamePrefix}-worker"
+      RetentionInDays: 14
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: ApiLogGroup
+    Properties:
+      FunctionName: !Sub "${NamePrefix}-api"
+      PackageType: Image
+      Code:
+        ImageUri: !Ref ApiImageUri
+      Role: !GetAtt ApiLambdaRole.Arn
+      MemorySize: 1024
+      Timeout: 30
+      Environment:
+        Variables:
+          APP_NAME: !Ref AppName
+          ENV: !Ref AppEnv
+          LOG_LEVEL: !Ref LogLevel
+          SAAS_AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          ROLE_SESSION_NAME: security-autopilot-session
+          FRONTEND_URL: !Ref FrontendUrl
+          CORS_ORIGINS: !Ref CorsOrigins
+          API_PUBLIC_URL: !If
+            - HasCustomDomain
+            - !Sub "https://${ApiDomainName}"
+            - !GetAtt HttpApi.ApiEndpoint
+          CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: !Ref CloudFormationControlPlaneForwarderTemplateUrl
+          SAAS_ADMIN_EMAILS: !Ref SaasAdminEmails
+          S3_EXPORT_BUCKET: !Ref S3ExportBucket
+          S3_EXPORT_BUCKET_REGION: !Ref S3ExportBucketRegion
+          S3_SUPPORT_BUCKET: !Ref S3SupportBucket
+          S3_SUPPORT_BUCKET_REGION: !Ref S3SupportBucketRegion
+          SAAS_BUNDLE_EXECUTOR_ENABLED: !Ref SaasBundleExecutorEnabled
+          SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: !Ref SaasBundleRunnerTemplateS3Uri
+          SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: !Ref SaasBundleRunnerTemplateVersion
+          SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: !Ref SaasBundleRunnerTemplateCacheSeconds
+          TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
+          TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
+          CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
+          CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
+          CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
+          CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
+          DATABASE_URL: !Ref DatabaseUrl
+          JWT_SECRET: !Ref JwtSecret
+          CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
+          SQS_INGEST_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-IngestQueueURL"
+          SQS_INGEST_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-IngestDLQURL"
+          SQS_EVENTS_FAST_LANE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueURL"
+          SQS_EVENTS_FAST_LANE_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-EventsFastLaneDLQURL"
+          SQS_INVENTORY_RECONCILE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueURL"
+          SQS_INVENTORY_RECONCILE_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-InventoryReconcileDLQURL"
+          SQS_EXPORT_REPORT_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ExportReportQueueURL"
+          SQS_EXPORT_REPORT_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ExportReportDLQURL"
+          SQS_CONTRACT_QUARANTINE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ContractQuarantineQueueURL"
+
+  ApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: "2.0"
+      TimeoutInMillis: 30000
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: $default
+      Target: !Sub "integrations/${ApiIntegration}"
+
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ApiFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*"
+
+  ApiDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: HasCustomDomain
+    Properties:
+      DomainName: !Ref ApiDomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref ApiCertificateArn
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: HasCustomDomain
+    DependsOn:
+      - ApiDomain
+    Properties:
+      DomainName: !Ref ApiDomainName
+      ApiId: !Ref HttpApi
+      Stage: $default
+
+  # ----------------------------
+  # Worker Lambda + SQS triggers
+  # ----------------------------
+  WorkerFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: WorkerLogGroup
+    Properties:
+      FunctionName: !Sub "${NamePrefix}-worker"
+      PackageType: Image
+      Code:
+        ImageUri: !Ref WorkerImageUri
+      Role: !GetAtt WorkerLambdaRole.Arn
+      MemorySize: 1024
+      Timeout: 900
+      ReservedConcurrentExecutions: !If
+        - WorkerDisabled
+        - 0
+        - !If [WorkerEnabledWithReservation, !Ref WorkerReservedConcurrency, !Ref AWS::NoValue]
+      Environment:
+        Variables:
+          APP_NAME: !Ref AppName
+          ENV: !Ref AppEnv
+          LOG_LEVEL: !Ref LogLevel
+          SAAS_AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          ROLE_SESSION_NAME: security-autopilot-session
+          FRONTEND_URL: !Ref FrontendUrl
+          CORS_ORIGINS: !Ref CorsOrigins
+          API_PUBLIC_URL: !If
+            - HasCustomDomain
+            - !Sub "https://${ApiDomainName}"
+            - !GetAtt HttpApi.ApiEndpoint
+          CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: !Ref CloudFormationControlPlaneForwarderTemplateUrl
+          SAAS_ADMIN_EMAILS: !Ref SaasAdminEmails
+          S3_EXPORT_BUCKET: !Ref S3ExportBucket
+          S3_EXPORT_BUCKET_REGION: !Ref S3ExportBucketRegion
+          S3_SUPPORT_BUCKET: !Ref S3SupportBucket
+          S3_SUPPORT_BUCKET_REGION: !Ref S3SupportBucketRegion
+          SAAS_BUNDLE_EXECUTOR_ENABLED: !Ref SaasBundleExecutorEnabled
+          SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: !Ref SaasBundleRunnerTemplateS3Uri
+          SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: !Ref SaasBundleRunnerTemplateVersion
+          SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: !Ref SaasBundleRunnerTemplateCacheSeconds
+          TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
+          TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
+          CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
+          CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
+          CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
+          CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
+          DATABASE_URL: !Ref DatabaseUrl
+          JWT_SECRET: !Ref JwtSecret
+          CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
+          SQS_INGEST_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-IngestQueueURL"
+          SQS_INGEST_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-IngestDLQURL"
+          SQS_EVENTS_FAST_LANE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueURL"
+          SQS_EVENTS_FAST_LANE_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-EventsFastLaneDLQURL"
+          SQS_INVENTORY_RECONCILE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueURL"
+          SQS_INVENTORY_RECONCILE_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-InventoryReconcileDLQURL"
+          SQS_EXPORT_REPORT_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ExportReportQueueURL"
+          SQS_EXPORT_REPORT_DLQ_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ExportReportDLQURL"
+          SQS_CONTRACT_QUARANTINE_QUEUE_URL: !ImportValue
+            "Fn::Sub": "${SqsStackName}-ContractQuarantineQueueURL"
+
+  IngestQueueMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: WorkerEnabled
+    Properties:
+      EventSourceArn: !ImportValue
+        "Fn::Sub": "${SqsStackName}-IngestQueueArn"
+      FunctionName: !Ref WorkerFunction
+      BatchSize: !Ref IngestBatchSize
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+  EventsQueueMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: WorkerEnabled
+    Properties:
+      EventSourceArn: !ImportValue
+        "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueArn"
+      FunctionName: !Ref WorkerFunction
+      BatchSize: !Ref EventsBatchSize
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+  InventoryQueueMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: WorkerEnabled
+    Properties:
+      EventSourceArn: !ImportValue
+        "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueArn"
+      FunctionName: !Ref WorkerFunction
+      BatchSize: !Ref InventoryBatchSize
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+  ExportQueueMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: WorkerEnabled
+    Properties:
+      EventSourceArn: !ImportValue
+        "Fn::Sub": "${SqsStackName}-ExportReportQueueArn"
+      FunctionName: !Ref WorkerFunction
+      BatchSize: !Ref ExportBatchSize
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+Outputs:
+  ApiBaseUrl:
+    Description: "Public base URL for the API (no trailing /api)."
+    Value: !If
+      - HasCustomDomain
+      - !Sub "https://${ApiDomainName}"
+      - !GetAtt HttpApi.ApiEndpoint
+  ApiId:
+    Description: "API Gateway HTTP API ID."
+    Value: !Ref HttpApi
+  ApiGatewayStageArn:
+    Description: "Stage ARN for WAF association (HTTP API)."
+    Value: !Sub "arn:aws:apigateway:${AWS::Region}::/apis/${HttpApi}/stages/$default"
+  ApiCustomDomainTarget:
+    Condition: HasCustomDomain
+    Description: "Create a DNS CNAME from ApiDomainName to this regional domain name."
+    Value: !GetAtt ApiDomain.RegionalDomainName
+  ApiCustomDomainHostedZoneId:
+    Condition: HasCustomDomain
+    Description: "Route53 hosted zone id for alias targets (only needed if using Route53)."
+    Value: !GetAtt ApiDomain.RegionalHostedZoneId

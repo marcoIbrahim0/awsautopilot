@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """
-Fetch SQS queue URLs from the security-autopilot-sqs CloudFormation stack
+Fetch SQS queue URLs from the security-autopilot SQS CloudFormation stack
 and set key worker queue URLs in .env.
 
 Run from project root. Idempotent: updates existing vars or appends if missing.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import sys
 
 import boto3
+from botocore.exceptions import ClientError
 
-STACK_NAME = "security-autopilot-sqs"
+DEFAULT_STACK_CANDIDATES = (
+    "security-autopilot-sqs-queues",
+    "security-autopilot-sqs",
+)
 ENV_PATH = os.path.join(os.path.dirname(__file__), "..", ".env")
 KEYS = (
     "SQS_INGEST_QUEUE_URL",
@@ -39,20 +44,67 @@ OUTPUT_KEYS = (
 )
 
 
-def main() -> None:
-    cf = boto3.client("cloudformation")
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Sync SQS queue URLs from CloudFormation outputs into .env.",
+    )
+    parser.add_argument(
+        "--stack-name",
+        default="",
+        help=(
+            "CloudFormation stack name to use. "
+            "If omitted, script auto-detects one of: "
+            f"{', '.join(DEFAULT_STACK_CANDIDATES)}"
+        ),
+    )
+    parser.add_argument(
+        "--region",
+        default="",
+        help="AWS region override (defaults to current AWS CLI/boto3 config).",
+    )
+    return parser
+
+
+def _describe_stack(cf, stack_name: str) -> dict | None:
     try:
-        out = cf.describe_stacks(StackName=STACK_NAME)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
+        out = cf.describe_stacks(StackName=stack_name)
+    except ClientError:
+        return None
     stacks = out.get("Stacks") or []
-    if not stacks:
-        print(f"Stack {STACK_NAME} not found.", file=sys.stderr)
-        sys.exit(1)
+    return stacks[0] if stacks else None
 
-    outputs = {o["OutputKey"]: o["OutputValue"] for o in stacks[0].get("Outputs") or []}
+
+def _resolve_stack(cf, requested_stack_name: str) -> tuple[str, dict]:
+    requested = (requested_stack_name or "").strip()
+    if requested:
+        stack = _describe_stack(cf, requested)
+        if stack is None:
+            print(f"Error: stack '{requested}' not found.", file=sys.stderr)
+            sys.exit(1)
+        return requested, stack
+
+    for candidate in DEFAULT_STACK_CANDIDATES:
+        stack = _describe_stack(cf, candidate)
+        if stack is not None:
+            return candidate, stack
+
+    print(
+        "Error: no matching SQS stack found. Tried: "
+        + ", ".join(DEFAULT_STACK_CANDIDATES),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def main() -> None:
+    args = _build_parser().parse_args()
+    client_kwargs = {}
+    if args.region:
+        client_kwargs["region_name"] = args.region
+    cf = boto3.client("cloudformation", **client_kwargs)
+    stack_name, stack = _resolve_stack(cf, args.stack_name)
+
+    outputs = {o["OutputKey"]: o["OutputValue"] for o in stack.get("Outputs") or []}
     missing = [k for k in OUTPUT_KEYS if k not in outputs]
     if missing:
         print(f"Missing outputs: {missing}", file=sys.stderr)
@@ -95,7 +147,7 @@ def main() -> None:
     with open(ENV_PATH, "w") as f:
         f.writelines(out_lines)
 
-    print("Updated .env with SQS queue URLs from stack outputs.")
+    print(f"Updated .env with SQS queue URLs from stack '{stack_name}'.")
 
 
 if __name__ == "__main__":

@@ -22,8 +22,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.config import settings
 from backend.models.action import Action
+from backend.models.action_group_run import ActionGroupRun
 from backend.models.aws_account import AwsAccount
-from backend.models.enums import RemediationRunMode, RemediationRunStatus
+from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
 from backend.services.remediation_metrics import emit_worker_dispatch_error
 from backend.services.pr_bundle import generate_pr_bundle
@@ -40,6 +41,48 @@ logger = logging.getLogger("worker.jobs.remediation_run")
 
 REMEDIATION_RUN_REQUIRED_FIELDS = {"job_type", "run_id", "tenant_id", "action_id", "mode", "created_at"}
 _RUNNER_TEMPLATE_CACHE: dict[str, object] = {}
+
+
+def _sync_download_bundle_group_runs(session: Session, run: RemediationRun) -> None:
+    """
+    Keep action_group_runs in sync for download_bundle workflows.
+
+    Group runs are created before remediation_run enqueue; if worker processes the run
+    successfully, we should reflect lifecycle state on the associated group run row.
+    """
+    rows = (
+        session.execute(
+            select(ActionGroupRun).where(
+                ActionGroupRun.tenant_id == run.tenant_id,
+                ActionGroupRun.remediation_run_id == run.id,
+                ActionGroupRun.mode == "download_bundle",
+            )
+        )
+    ).scalars().all()
+    if not rows:
+        return
+
+    now = datetime.now(timezone.utc)
+    for row in rows:
+        if run.status == RemediationRunStatus.running:
+            if row.status == ActionGroupRunStatus.queued:
+                row.status = ActionGroupRunStatus.started
+            if row.started_at is None:
+                row.started_at = run.started_at or now
+            continue
+
+        if run.status == RemediationRunStatus.success:
+            row.status = ActionGroupRunStatus.finished
+        elif run.status == RemediationRunStatus.failed:
+            row.status = ActionGroupRunStatus.failed
+        elif run.status == RemediationRunStatus.cancelled:
+            row.status = ActionGroupRunStatus.cancelled
+        else:
+            continue
+
+        if row.started_at is None:
+            row.started_at = run.started_at or now
+        row.finished_at = run.completed_at or now
 
 
 def _parse_s3_uri(uri: str) -> tuple[str, str] | None:
@@ -906,6 +949,7 @@ def execute_remediation_run_job(job: dict) -> None:
         now = datetime.now(timezone.utc)
         run.status = RemediationRunStatus.running
         run.started_at = now
+        _sync_download_bundle_group_runs(session, run)
         session.flush()
 
         log_lines = [f"Run started at {now.isoformat()}."]
@@ -1007,21 +1051,29 @@ def execute_remediation_run_job(job: dict) -> None:
                             if risk_acknowledged:
                                 artifacts["risk_acknowledged"] = True
                             group_bundle = artifacts.get("group_bundle")
-                            if isinstance(group_bundle, dict):
-                                group_bundle["resolved_action_ids"] = [str(grouped.id) for grouped in ordered_actions]
-                                group_bundle["resolved_action_count"] = len(ordered_actions)
-                                missing_count = max(0, len(group_action_ids) - len(ordered_actions))
-                                if missing_count:
-                                    group_bundle["missing_action_count"] = missing_count
-                                if isinstance(pr_bundle, dict):
-                                    metadata = pr_bundle.get("metadata")
-                                    if isinstance(metadata, dict):
-                                        source = metadata.get("runner_template_source")
-                                        version = metadata.get("runner_template_version")
-                                        if isinstance(source, str) and source:
-                                            group_bundle["runner_template_source"] = source
-                                        if isinstance(version, str) and version:
-                                            group_bundle["runner_template_version"] = version
+                            if not isinstance(group_bundle, dict):
+                                # Ensure grouped runs always persist a canonical group bundle payload,
+                                # even when triggered without pre-seeded artifacts.
+                                group_bundle = {
+                                    "action_ids": [str(action_id) for action_id in group_action_ids],
+                                    "action_count": len(group_action_ids),
+                                }
+                                artifacts["group_bundle"] = group_bundle
+
+                            group_bundle["resolved_action_ids"] = [str(grouped.id) for grouped in ordered_actions]
+                            group_bundle["resolved_action_count"] = len(ordered_actions)
+                            missing_count = max(0, len(group_action_ids) - len(ordered_actions))
+                            if missing_count:
+                                group_bundle["missing_action_count"] = missing_count
+                            if isinstance(pr_bundle, dict):
+                                metadata = pr_bundle.get("metadata")
+                                if isinstance(metadata, dict):
+                                    source = metadata.get("runner_template_source")
+                                    version = metadata.get("runner_template_version")
+                                    if isinstance(source, str) and source:
+                                        group_bundle["runner_template_source"] = source
+                                    if isinstance(version, str) and version:
+                                        group_bundle["runner_template_version"] = version
                             artifacts["pr_bundle"] = pr_bundle
                             run.artifacts = artifacts
                             run.outcome = f"Group PR bundle generated ({len(ordered_actions)} actions)"
@@ -1118,6 +1170,7 @@ def execute_remediation_run_job(job: dict) -> None:
         run.completed_at = datetime.now(timezone.utc)
         log_lines.append(f"Run completed at {run.completed_at.isoformat()}.")
         run.logs = "\n".join(log_lines)
+        _sync_download_bundle_group_runs(session, run)
 
         # Optional: one-line audit_log entry for compliance dashboards
         write_remediation_run_audit(session, run)

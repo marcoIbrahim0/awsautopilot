@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-02-17T18:24:41.182656+00:00",
+  "region": "eu-north-1",
+  "identity": {
+    "account": "029037611564",
+    "arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin",
+    "user_id": "AIDAQNQWGZIWGDV4TV6K2"
+  },
+  "stack": {
+    "name": "security-autopilot-dr-backup-controls",
+    "status": "UPDATE_COMPLETE",
+    "last_updated": "2026-02-17 18:21:40.517000+00:00"
+  },
+  "stack_outputs": {
+    "BackupVaultArn": "arn:aws:backup:eu-north-1:029037611564:backup-vault:security-autopilot-dr-vault",
+    "BackupServiceRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrBackupServiceRole",
+    "BackupPlanId": "cb568097-a7ac-4334-b281-cd17c193ef13",
+    "RestoreOperatorRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole"
+  },
+  "stack_parameters": {
+    "BackupPlanName": "security-autopilot-dr-plan",
+    "BackupCompletionWindowMinutes": "480",
+    "BackupVaultName": "security-autopilot-dr-vault",
+    "SecondaryBackupVaultArn": "",
+    "CopyDeleteAfterDays": "35",
+    "BackupStartWindowMinutes": "60",
+    "BackupSelectionTagValue": "SecurityAutopilot",
+    "MoveToColdStorageAfterDays": "0",
+    "BackupScheduleExpression": "cron(0 2 * * ? *)",
+    "BackupDeleteAfterDays": "35",
+    "RestoreRoleName": "SecurityAutopilotDrRestoreOperatorRole",
+    "AlarmTopicArn": ""
+  },
+  "backup": {
+    "backup_vault_name": "security-autopilot-dr-vault",
+    "recovery_points_count": 1,
+    "latest_recovery_points": [
+      {
+        "arn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+        "resource_arn": "arn:aws:ec2:eu-north-1:029037611564:volume/vol-0f6f38ab7b05762de",
+        "status": "COMPLETED",
+        "created_at": "2026-02-17 20:18:53.074000+02:00",
+        "delete_after": "2026-03-24 20:18:53.074000+02:00"
+      }
+    ],
+    "backup_jobs_24h": {
+      "COMPLETED": 1
+    },
+    "restore_jobs_24h": {
+      "COMPLETED": 1
+    }
+  },
+  "readiness": {
+    "checked": false
+  },
+  "json_artifact_path": "docs/audit-remediation/evidence/phase3-architecture-20260217T182441Z.json",
+  "markdown_artifact_path": "docs/audit-remediation/evidence/phase3-architecture-20260217T182441Z.md"
+}

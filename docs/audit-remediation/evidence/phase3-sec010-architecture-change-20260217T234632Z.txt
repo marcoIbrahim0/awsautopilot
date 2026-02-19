@@ -1,0 +1,29 @@
+SEC-010 Architecture Change State Verification
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+OwnerArn=arn:aws:iam::029037611564:user/AutoPilotAdmin
+OwnerName=AutoPilotAdmin
+Decision=Require Architecture Change
+ProductionFrontDoorRestApiId=brplhu7801
+ProductionFrontDoorStage=prod
+
+$ aws --cli-connect-timeout 5 --cli-read-timeout 20 apigateway get-rest-api --region eu-north-1 --rest-api-id brplhu7801 --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 1/6 failed
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 2/6 failed
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 3/6 failed
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 4/6 failed
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 5/6 failed
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+Attempt 6/6 failed
+

@@ -1,0 +1,16 @@
+{
+    "AccountId": "029037611564",
+    "RestoreJobId": "8056c07c-016f-4758-b977-765e796af0f2",
+    "RecoveryPointArn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+    "CreationDate": "2026-02-17T20:22:35.494000+02:00",
+    "CompletionDate": "2026-02-17T20:23:51.441000+02:00",
+    "Status": "COMPLETED",
+    "PercentDone": "100.00%",
+    "BackupSizeInBytes": 1073741824,
+    "IamRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole",
+    "CreatedResourceArn": "arn:aws:ec2:eu-north-1:029037611564:volume/vol-0e04835133326dbc1",
+    "ResourceType": "EBS",
+    "RecoveryPointCreationDate": "2026-02-17T20:18:53.074000+02:00",
+    "CreatedBy": {},
+    "IsParent": false
+}

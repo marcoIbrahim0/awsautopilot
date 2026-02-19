@@ -1,0 +1,8 @@
+Deploying Phase 3 DR stack in region: eu-north-1
+DR stack: security-autopilot-dr-backup-controls
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-dr-backup-controls
+Skipping readiness gate (no API_READY_URL/API_PUBLIC_URL or --skip-readiness-gate).
+Phase 3 deployment step completed.

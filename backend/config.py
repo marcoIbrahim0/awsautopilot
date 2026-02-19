@@ -6,6 +6,8 @@ Never hardcode secrets in code.
 """
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -50,7 +52,7 @@ class Settings(BaseSettings):
         return u
 
     # AWS
-    AWS_REGION: str = Field(default="us-east-1", description="Default AWS region")
+    AWS_REGION: str = Field(default="eu-north-1", description="Default AWS region")
     SAAS_AWS_ACCOUNT_ID: str = Field(
         default="",
         description="Your SaaS AWS account ID (12 digits); used in ReadRole trust and validation",
@@ -175,6 +177,13 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = Field(
         default="http://localhost:3000",
         description="Frontend URL for invite links and redirects",
+    )
+    CSRF_COOKIE_DOMAIN: str = Field(
+        default="",
+        description=(
+            "Optional cookie domain for csrf_token (e.g. .example.com) to allow frontend "
+            "subdomains to read csrf_token and send X-CSRF-Token."
+        ),
     )
     API_PUBLIC_URL: str = Field(
         default="http://localhost:8000",
@@ -344,7 +353,7 @@ class Settings(BaseSettings):
 
     # API
     CORS_ORIGINS: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:3000,http://127.0.0.1:3000",
         description="Comma-separated list of allowed CORS origins (e.g. frontend URL)",
     )
 
@@ -362,6 +371,29 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENV.lower() == "prod"
+
+    @property
+    def csrf_cookie_domain(self) -> str | None:
+        """Domain to use for csrf_token cookie. None keeps host-only cookie."""
+        explicit = (self.CSRF_COOKIE_DOMAIN or "").strip()
+        if explicit:
+            return explicit
+
+        frontend = (self.FRONTEND_URL or "").strip()
+        if not frontend:
+            return None
+
+        parsed = urlparse(frontend if "://" in frontend else f"https://{frontend}")
+        host = (parsed.hostname or "").strip().lower().strip(".")
+        if not host:
+            return None
+        if host in {"localhost", "127.0.0.1"}:
+            return None
+        if host.count(".") < 1:
+            return None
+
+        labels = host.split(".")
+        return f".{labels[-2]}.{labels[-1]}"
 
     @property
     def has_ingest_queue(self) -> bool:

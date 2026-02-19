@@ -1,0 +1,17 @@
+API_NAME=security-autopilot-sec010-waf-drill-20260217T181926Z
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis"
+REST_API_ID=
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis//resources"
+ROOT_ID=
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis//resources//methods/GET"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis//resources//methods/GET/integration"
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis//deployments"
+REST_STAGE_ARN=arn:aws:apigateway:eu-north-1::/restapis//stages/waf-drill
+DRILL_URL=https://.execute-api.eu-north-1.amazonaws.com/waf-drill
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis//stages/waf-drill"

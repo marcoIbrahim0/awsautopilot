@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Build infrastructure for serverless SaaS deployment:
+  - ECR repos (API + worker)
+  - S3 bucket for CodeBuild source zips
+  - CodeBuild project that builds/pushes Lambda container images
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: security-autopilot
+    Description: Resource name prefix.
+
+Resources:
+  SourceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${NamePrefix}-serverless-src-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireBuildSources
+            Status: Enabled
+            ExpirationInDays: 7
+
+  ApiRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${NamePrefix}-saas-api"
+      ImageTagMutability: MUTABLE
+
+  WorkerRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${NamePrefix}-saas-worker"
+      ImageTagMutability: MUTABLE
+
+  ServerlessImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ServerlessImageBuilder
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadSourceZip
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub "${SourceBucket.Arn}/*"
+              - Sid: EcrAuth
+                Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PushToEcr
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource:
+                  - !GetAtt ApiRepository.Arn
+                  - !GetAtt WorkerRepository.Arn
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  ServerlessImageBuilderProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${NamePrefix}-serverless-image-builder"
+      ServiceRole: !GetAtt ServerlessImageBuilderRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: API_REPO_URI
+            Type: PLAINTEXT
+            Value: !GetAtt ApiRepository.RepositoryUri
+          - Name: WORKER_REPO_URI
+            Type: PLAINTEXT
+            Value: !GetAtt WorkerRepository.RepositoryUri
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - set -eu
+                - echo "Logging in to ECR..."
+                - REGISTRY="$(echo "$API_REPO_URI" | cut -d/ -f1)"
+                - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+                - echo "IMAGE_TAG=${IMAGE_TAG:-latest}"
+            build:
+              commands:
+                - set -eu
+                - docker build -f Containerfile.lambda-api -t "$API_REPO_URI:${IMAGE_TAG:-latest}" .
+                - docker build -f Containerfile.lambda-worker -t "$WORKER_REPO_URI:${IMAGE_TAG:-latest}" .
+            post_build:
+              commands:
+                - set -eu
+                - docker push "$API_REPO_URI:${IMAGE_TAG:-latest}"
+                - docker push "$WORKER_REPO_URI:${IMAGE_TAG:-latest}"
+      TimeoutInMinutes: 30
+
+Outputs:
+  SourceBucketName:
+    Description: "S3 bucket used for CodeBuild source zips."
+    Value: !Ref SourceBucket
+  ApiRepositoryUri:
+    Description: "ECR repository URI for the API Lambda image."
+    Value: !GetAtt ApiRepository.RepositoryUri
+  WorkerRepositoryUri:
+    Description: "ECR repository URI for the worker Lambda image."
+    Value: !GetAtt WorkerRepository.RepositoryUri
+  CodeBuildProjectName:
+    Description: "CodeBuild project name for building/pushing images."
+    Value: !Ref ServerlessImageBuilderProject

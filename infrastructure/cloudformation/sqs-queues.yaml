@@ -9,7 +9,8 @@ Description: >
   - Two managed policies: API send-only, Worker consume-only (no DLQ access in normal operation).
 
 # --- Queue configuration (fixed; no parameters) ---
-# Standard queue (not FIFO). Visibility 30s, retention 14 days, long poll 20s, maxReceiveCount 3.
+# Standard queue (not FIFO). Visibility 960s for Lambda worker compatibility (worker timeout 900s),
+# retention 14 days, long poll 20s, maxReceiveCount 3.
 
 Parameters:
   AlarmTopicArn:
@@ -131,7 +132,7 @@ Resources:
     DependsOn: IngestDLQ
     Properties:
       QueueName: security-autopilot-ingest-queue
-      VisibilityTimeout: 30
+      VisibilityTimeout: 960
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -159,7 +160,7 @@ Resources:
     DependsOn: EventsFastLaneDLQ
     Properties:
       QueueName: security-autopilot-events-fastlane-queue
-      VisibilityTimeout: 30
+      VisibilityTimeout: 960
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -187,7 +188,7 @@ Resources:
     DependsOn: InventoryReconcileDLQ
     Properties:
       QueueName: security-autopilot-inventory-reconcile-queue
-      VisibilityTimeout: 30
+      VisibilityTimeout: 960
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -215,7 +216,7 @@ Resources:
     DependsOn: ExportReportDLQ
     Properties:
       QueueName: security-autopilot-export-report-queue
-      VisibilityTimeout: 300
+      VisibilityTimeout: 960
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -245,7 +246,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: SecurityAutopilotApiSqsSendPolicy
-      Description: "Least-privilege SQS send for API services. Attach to API service role."
+      Description: "Least-privilege SQS send for API; ingest queue only. Attach to API service role."
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -264,7 +265,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: SecurityAutopilotWorkerSqsConsumePolicy
-      Description: "Least-privilege SQS consume for Worker; worker queues plus contract-quarantine send."
+      Description: "Least-privilege SQS consume for Worker; ingest queue only. Attach to Worker service role."
       PolicyDocument:
         Version: "2012-10-17"
         Statement:

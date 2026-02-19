@@ -1,0 +1,298 @@
+{
+  "generated_at": "2026-02-12T13:11:59.857563+00:00",
+  "region": "eu-north-1",
+  "identity": {
+    "account": "029037611564",
+    "arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin",
+    "user_id": "AIDAQNQWGZIWGDV4TV6K2"
+  },
+  "stacks": {
+    "sqs": {
+      "name": "security-autopilot-sqs-queues",
+      "status": "UPDATE_COMPLETE",
+      "last_updated": "2026-02-12 11:49:12.876000+00:00"
+    },
+    "forwarder": {
+      "name": "SecurityAutopilotControlPlaneForwarder",
+      "status": "UPDATE_COMPLETE",
+      "last_updated": "2026-02-12 12:20:02.483000+00:00"
+    },
+    "reconcile": {
+      "name": "security-autopilot-reconcile-scheduler",
+      "status": "CREATE_COMPLETE",
+      "last_updated": "2026-02-12 11:55:54.563000+00:00"
+    }
+  },
+  "stack_outputs": {
+    "sqs": {
+      "IngestQueueArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-ingest-queue",
+      "EventsFastLaneDLQURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-dlq",
+      "ExportReportDLQURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-dlq",
+      "InventoryReconcileQueueArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-inventory-reconcile-queue",
+      "ContractQuarantineQueueArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-contract-quarantine-queue",
+      "InventoryReconcileDLQURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-dlq",
+      "IngestDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-ingest-dlq",
+      "ExportReportQueueArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-export-report-queue",
+      "ApiSendPolicyArn": "arn:aws:iam::029037611564:policy/SecurityAutopilotApiSqsSendPolicy",
+      "InventoryReconcileQueueURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-queue",
+      "WorkerConsumePolicyArn": "arn:aws:iam::029037611564:policy/SecurityAutopilotWorkerSqsConsumePolicy",
+      "EventsFastLaneQueueURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-queue",
+      "IngestQueueURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-queue",
+      "EventsFastLaneDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-events-fastlane-dlq",
+      "ExportReportDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-export-report-dlq",
+      "ContractQuarantineQueueURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-contract-quarantine-queue",
+      "ExportReportQueueURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-queue",
+      "InventoryReconcileDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-inventory-reconcile-dlq",
+      "IngestDLQURL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-dlq",
+      "EventsFastLaneQueueArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-events-fastlane-queue"
+    },
+    "forwarder": {
+      "TargetDLQUrl": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-control-plane-target-dlq-eu-north-1",
+      "TargetDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-control-plane-target-dlq-eu-north-1",
+      "RuleArn": "arn:aws:events:eu-north-1:029037611564:rule/SecurityAutopilotControlPlaneApiCallsRule-eu-north-1",
+      "ConnectionArn": "arn:aws:events:eu-north-1:029037611564:connection/SecurityAutopilotControlPlaneConnection-eu-north-1/da0659a8-eb0b-4549-bbc5-7ec020a9fa6c",
+      "ApiDestinationArn": "arn:aws:events:eu-north-1:029037611564:api-destination/SecurityAutopilotControlPlaneApiDestination-eu-north-1/9d67b663-2ed9-4a2f-93f4-96c4557f735d"
+    },
+    "reconcile": {
+      "TargetDLQUrl": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-reconcile-scheduler-target-dlq-eu-north-1",
+      "TargetDLQArn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-reconcile-scheduler-target-dlq-eu-north-1",
+      "RuleArn": "arn:aws:events:eu-north-1:029037611564:rule/SecurityAutopilotReconcileGlobalAllTenants-eu-north-1",
+      "ConnectionArn": "arn:aws:events:eu-north-1:029037611564:connection/SecurityAutopilotReconcileConnection-eu-north-1/2cd1d07a-238f-4723-be35-72a97497f1d5",
+      "ApiDestinationArn": "arn:aws:events:eu-north-1:029037611564:api-destination/SecurityAutopilotReconcileDestination-eu-north-1/0598f62a-6b81-43d9-adfc-249d3e5bbfdd"
+    }
+  },
+  "queue_snapshots": {
+    "IngestQueueURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-queue",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738855",
+      "last_modified_timestamp": "1770738855"
+    },
+    "IngestDLQURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-dlq",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738823",
+      "last_modified_timestamp": "1770738823"
+    },
+    "EventsFastLaneQueueURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-queue",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738855",
+      "last_modified_timestamp": "1770738855"
+    },
+    "EventsFastLaneDLQURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-dlq",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738823",
+      "last_modified_timestamp": "1770900831"
+    },
+    "InventoryReconcileQueueURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-queue",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738855",
+      "last_modified_timestamp": "1770738855"
+    },
+    "InventoryReconcileDLQURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-dlq",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770738823",
+      "last_modified_timestamp": "1770900831"
+    },
+    "ExportReportQueueURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-queue",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770896988",
+      "last_modified_timestamp": "1770896988"
+    },
+    "ExportReportDLQURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-dlq",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770896956",
+      "last_modified_timestamp": "1770896956"
+    },
+    "ContractQuarantineQueueURL": {
+      "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-contract-quarantine-queue",
+      "visible": 0,
+      "not_visible": 0,
+      "delayed": 0,
+      "created_timestamp": "1770896956",
+      "last_modified_timestamp": "1770896956"
+    }
+  },
+  "alarms": [
+    {
+      "name": "security-autopilot-contract-quarantine-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-contract-quarantine-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-control-plane-failed-invocations-eu-north-1",
+      "state": "OK",
+      "metric": "FailedInvocations",
+      "namespace": "AWS/Events"
+    },
+    {
+      "name": "security-autopilot-control-plane-target-dlq-depth-eu-north-1",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-events-dlq-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-events-dlq-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-events-dlq-ingress",
+      "state": "OK",
+      "metric": "NumberOfMessagesSent",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-events-queue-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-events-queue-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-export-report-dlq-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-export-report-dlq-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-export-report-dlq-ingress",
+      "state": "OK",
+      "metric": "NumberOfMessagesSent",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-export-report-queue-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-export-report-queue-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-ingest-dlq-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-ingest-dlq-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-ingest-dlq-ingress",
+      "state": "OK",
+      "metric": "NumberOfMessagesSent",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-ingest-queue-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-ingest-queue-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-inventory-dlq-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-inventory-dlq-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-inventory-dlq-ingress",
+      "state": "OK",
+      "metric": "NumberOfMessagesSent",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-inventory-queue-age",
+      "state": "OK",
+      "metric": "ApproximateAgeOfOldestMessage",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-inventory-queue-depth",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    },
+    {
+      "name": "security-autopilot-reconcile-scheduler-failed-invocations-eu-north-1",
+      "state": "OK",
+      "metric": "FailedInvocations",
+      "namespace": "AWS/Events"
+    },
+    {
+      "name": "security-autopilot-reconcile-scheduler-target-dlq-depth-eu-north-1",
+      "state": "OK",
+      "metric": "ApproximateNumberOfMessagesVisible",
+      "namespace": "AWS/SQS"
+    }
+  ],
+  "json_artifact_path": "docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.json",
+  "markdown_artifact_path": "docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.md"
+}

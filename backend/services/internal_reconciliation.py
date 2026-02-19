@@ -1,0 +1,127 @@
+"""
+Shared reconciliation prechecks extracted from internal router orchestration.
+"""
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Sequence
+
+from botocore.exceptions import ClientError
+
+from backend.models.aws_account import AwsAccount
+from backend.services.aws import assume_role
+
+
+def extract_error_code(exc: Exception) -> str:
+    """Return a stable error code for logging and API responses."""
+    if isinstance(exc, ClientError):
+        return str(exc.response.get("Error", {}).get("Code") or "ClientError")
+    return type(exc).__name__
+
+
+def is_access_denied_code(code: str) -> bool:
+    return code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}
+
+
+def deduplicate_strings(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        token = str(value).strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        deduped.append(token)
+    return deduped
+
+
+async def assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
+    """Best-effort assume-role sanity check used by global reconcile scheduling."""
+
+    def _run() -> tuple[bool, str | None]:
+        try:
+            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+            sts = session.client("sts")
+            identity = sts.get_caller_identity()
+            caller = str(identity.get("Account") or "")
+            if caller and caller != str(account.account_id):
+                return False, f"AccountMismatch:{caller}"
+            return True, None
+        except Exception as exc:  # pragma: no cover - defensive guard
+            return False, extract_error_code(exc)
+
+    return await asyncio.to_thread(_run)
+
+
+async def authoritative_permissions_precheck(
+    account: AwsAccount,
+    tenant_external_id: str,
+    region: str,
+) -> tuple[bool, list[str]]:
+    """Probe read permissions required for authoritative control-plane mode."""
+
+    def _run() -> tuple[bool, list[str]]:
+        missing: list[str] = []
+        try:
+            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+        except Exception as exc:
+            return False, [f"assume_role:{extract_error_code(exc)}"]
+
+        try:
+            session.client("securityhub", region_name=region).get_findings(MaxResults=1)
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("securityhub:GetFindings")
+
+        try:
+            session.client("ec2", region_name=region).describe_security_groups(MaxResults=5)
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("ec2:DescribeSecurityGroups")
+
+        buckets: list[dict] = []
+        try:
+            buckets = session.client("s3", region_name=region).list_buckets().get("Buckets") or []
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("s3:ListAllMyBuckets")
+
+        if buckets:
+            s3 = session.client("s3", region_name=region)
+            bucket_name = str((buckets[0] or {}).get("Name") or "").strip()
+            if bucket_name:
+                probes = (
+                    (
+                        "get_public_access_block",
+                        "s3:GetBucketPublicAccessBlock",
+                        {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"},
+                    ),
+                    ("get_bucket_policy_status", "s3:GetBucketPolicyStatus", {"NoSuchBucketPolicy", "NoSuchBucket"}),
+                    ("get_bucket_policy", "s3:GetBucketPolicy", {"NoSuchBucketPolicy", "NoSuchBucket"}),
+                    ("get_bucket_location", "s3:GetBucketLocation", {"NoSuchBucket"}),
+                    (
+                        "get_bucket_encryption",
+                        "s3:GetEncryptionConfiguration",
+                        {"ServerSideEncryptionConfigurationNotFoundError", "NoSuchBucket"},
+                    ),
+                    ("get_bucket_logging", "s3:GetBucketLogging", {"NoSuchBucket"}),
+                    (
+                        "get_bucket_lifecycle_configuration",
+                        "s3:GetLifecycleConfiguration",
+                        {"NoSuchLifecycleConfiguration", "NoSuchBucket"},
+                    ),
+                )
+                for call_name, required_action, ignored_codes in probes:
+                    try:
+                        getattr(s3, call_name)(Bucket=bucket_name)
+                    except ClientError as exc:
+                        code = extract_error_code(exc)
+                        if is_access_denied_code(code):
+                            missing.append(required_action)
+                        elif code in ignored_codes:
+                            continue
+
+        deduped_missing = deduplicate_strings(missing)
+        return (len(deduped_missing) == 0, deduped_missing)
+
+    return await asyncio.to_thread(_run)

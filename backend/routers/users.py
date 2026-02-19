@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +16,12 @@ from sqlalchemy.orm import selectinload
 
 from backend.auth import (
     AuthResponse,
+    control_plane_token_response_fields,
     create_access_token,
     get_current_user,
     get_saas_and_launch_url,
     hash_password,
+    set_auth_cookies,
     tenant_to_response,
     user_to_response,
 )
@@ -294,6 +296,7 @@ async def get_invite_info(
 @router.post("/accept-invite", response_model=AuthResponse)
 async def accept_invite(
     request: AcceptInviteRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> AuthResponse:
     """
@@ -366,6 +369,7 @@ async def accept_invite(
     
     # Create JWT
     access_token = create_access_token(user.id, user.tenant_id)
+    set_auth_cookies(response, access_token)
     
     logger.info(f"User {user.id} accepted invite for tenant {user.tenant_id}")
     
@@ -394,10 +398,14 @@ async def accept_invite(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
-        control_plane_token=tenant.control_plane_token if getattr(user.role, "value", user.role) == "admin" else None,
         control_plane_forwarder_template_url=control_plane_template_url,
         control_plane_ingest_url=control_plane_ingest_url,
         control_plane_forwarder_default_stack_name=control_plane_default_stack,
+        **(
+            control_plane_token_response_fields(tenant, token_reveal=None)
+            if getattr(user.role, "value", user.role) == "admin"
+            else {}
+        ),
     )
 
 

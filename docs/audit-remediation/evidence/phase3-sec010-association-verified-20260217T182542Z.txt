@@ -1,0 +1,9 @@
+COMMAND (input ARN check): aws wafv2 associate-web-acl --region eu-north-1 --web-acl-arn <edge-web-acl-arn> --resource-arn arn:aws:apigateway:eu-north-1::/apis/g1frb5hhfg/stages/$default
+
+Could not connect to the endpoint URL: "https://wafv2.eu-north-1.amazonaws.com/"
+
+COMMAND (effective association): aws wafv2 associate-web-acl --region eu-north-1 --web-acl-arn <edge-web-acl-arn> --resource-arn arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/waf-drill
+
+Could not connect to the endpoint URL: "https://wafv2.eu-north-1.amazonaws.com/"
+
+COMMAND (verification): aws wafv2 list-resources-for-web-acl --region eu-north-1 --web-acl-arn <edge-web-acl-arn> --resource-type API_GATEWAY --output json

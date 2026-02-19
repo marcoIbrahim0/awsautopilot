@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-02-12T12:58:56.950703+00:00",
+  "model": {
+    "duration_seconds": 300.0,
+    "long_poll_wait_seconds": 20.0,
+    "service_time_seconds": {
+      "events": 0.08,
+      "inventory": 0.2,
+      "export": 1.5,
+      "ingest": 0.05
+    },
+    "queue_order_sequential": [
+      "events",
+      "inventory",
+      "export",
+      "ingest"
+    ],
+    "notes": [
+      "Sequential model emulates legacy single-loop WORKER_POOL=all polling with long-poll blocking.",
+      "Concurrent model emulates independent per-queue pollers introduced in ARC-002.",
+      "Export spike is enabled between 60s and 245s for mixed-load stress."
+    ]
+  },
+  "arc002_mixed_load_before_after": {
+    "before_sequential": {
+      "events": {
+        "messages_processed": 75.0,
+        "latency_p50_ms": 158696.38,
+        "latency_p95_ms": 295059.22,
+        "latency_p99_ms": 357004.39,
+        "max_latency_ms": 357004.39,
+        "max_gap_s": 21.63,
+        "p95_gap_s": 21.63
+      },
+      "inventory": {
+        "messages_processed": 63.0,
+        "latency_p50_ms": 24922.92,
+        "latency_p95_ms": 30852.18,
+        "latency_p99_ms": 32203.14,
+        "max_latency_ms": 32203.14,
+        "max_gap_s": 66.72,
+        "p95_gap_s": 1.83
+      },
+      "export": {
+        "messages_processed": 75.0,
+        "latency_p50_ms": 82958.28,
+        "latency_p95_ms": 237562.32,
+        "latency_p99_ms": 298362.45,
+        "max_latency_ms": 298362.45,
+        "max_gap_s": 21.63,
+        "p95_gap_s": 21.63
+      },
+      "ingest": {
+        "messages_processed": 76.0,
+        "latency_p50_ms": 169940.91,
+        "latency_p95_ms": 340194.81,
+        "latency_p99_ms": 404563.21,
+        "max_latency_ms": 404563.21,
+        "max_gap_s": 21.63,
+        "p95_gap_s": 21.63
+      }
+    },
+    "after_concurrent": {
+      "events": {
+        "messages_processed": 170.0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 40.91,
+        "latency_p99_ms": 74.57,
+        "max_latency_ms": 79.43,
+        "max_gap_s": 83.914,
+        "p95_gap_s": 2.741
+      },
+      "inventory": {
+        "messages_processed": 63.0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 80.71,
+        "latency_p99_ms": 115.91,
+        "max_latency_ms": 115.91,
+        "max_gap_s": 84.154,
+        "p95_gap_s": 6.909
+      },
+      "export": {
+        "messages_processed": 196.0,
+        "latency_p50_ms": 41986.39,
+        "latency_p95_ms": 100826.25,
+        "latency_p99_ms": 107770.9,
+        "max_latency_ms": 109095.04,
+        "max_gap_s": 1.5,
+        "p95_gap_s": 1.5
+      },
+      "ingest": {
+        "messages_processed": 635.0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 26.03,
+        "latency_p99_ms": 45.71,
+        "max_latency_ms": 81.32,
+        "max_gap_s": 4.224,
+        "p95_gap_s": 1.394
+      }
+    },
+    "ingest_latency_p95_delta_percent": -99.99,
+    "ingest_max_starvation_gap_delta_percent": -80.47
+  },
+  "arc006_export_isolation": {
+    "concurrent_with_export_spike": {
+      "messages_processed": 635.0,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 26.03,
+      "latency_p99_ms": 45.71,
+      "max_latency_ms": 81.32,
+      "max_gap_s": 4.224,
+      "p95_gap_s": 1.394
+    },
+    "concurrent_without_export_spike": {
+      "messages_processed": 640.0,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 27.32,
+      "latency_p99_ms": 47.64,
+      "max_latency_ms": 87.96,
+      "max_gap_s": 3.551,
+      "p95_gap_s": 1.406
+    },
+    "ingest_latency_p95_change_percent_with_export_spike": -4.72
+  }
+}

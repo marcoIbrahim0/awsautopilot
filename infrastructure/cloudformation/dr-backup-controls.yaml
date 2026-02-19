@@ -1,0 +1,257 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Phase 3 ARC-008 disaster-recovery backup controls for Security Autopilot.
+  Creates AWS Backup vault/plan/selection, restore permissions, and failure alarms.
+
+Parameters:
+  AlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: Optional SNS topic ARN for backup/restore failure alarms.
+
+  BackupVaultName:
+    Type: String
+    Default: security-autopilot-dr-vault
+    Description: Backup vault used for Security Autopilot recovery points.
+
+  BackupPlanName:
+    Type: String
+    Default: security-autopilot-dr-plan
+    Description: Backup plan name for tagged Security Autopilot resources.
+
+  BackupSelectionTagValue:
+    Type: String
+    Default: SecurityAutopilot
+    Description: Value of Application tag used to include resources in backups.
+
+  BackupScheduleExpression:
+    Type: String
+    Default: cron(0 2 * * ? *)
+    Description: AWS Backup schedule expression (UTC).
+
+  BackupStartWindowMinutes:
+    Type: Number
+    Default: 60
+    Description: Time window in minutes before a backup job starts.
+
+  BackupCompletionWindowMinutes:
+    Type: Number
+    Default: 480
+    Description: Time window in minutes for backup completion.
+
+  BackupDeleteAfterDays:
+    Type: Number
+    Default: 35
+    Description: Retention period for primary-region recovery points.
+
+  MoveToColdStorageAfterDays:
+    Type: Number
+    Default: 0
+    Description: >
+      Move recovery points to cold storage after N days. Set to 0 to disable.
+      If enabled, BackupDeleteAfterDays must be at least 90 days greater.
+
+  SecondaryBackupVaultArn:
+    Type: String
+    Default: ""
+    Description: Optional cross-region backup vault ARN for DR copy.
+
+  CopyDeleteAfterDays:
+    Type: Number
+    Default: 35
+    Description: Retention period for copied recovery points in secondary region.
+
+  RestoreRoleName:
+    Type: String
+    Default: SecurityAutopilotDrRestoreOperatorRole
+    Description: IAM role name for operators performing restores.
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
+  UseColdStorage: !Not [!Equals [!Ref MoveToColdStorageAfterDays, 0]]
+  HasSecondaryCopy: !Not [!Equals [!Ref SecondaryBackupVaultArn, ""]]
+
+Resources:
+  DrBackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Ref BackupVaultName
+      BackupVaultTags:
+        Application: SecurityAutopilot
+        Control: ARC-008
+
+  DrBackupServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SecurityAutopilotDrBackupServiceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: backup.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup
+        - arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Control
+          Value: ARC-008
+
+  DrBackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Ref BackupPlanName
+        BackupPlanRule:
+          - RuleName: security-autopilot-daily
+            TargetBackupVault: !Ref DrBackupVault
+            ScheduleExpression: !Ref BackupScheduleExpression
+            StartWindowMinutes: !Ref BackupStartWindowMinutes
+            CompletionWindowMinutes: !Ref BackupCompletionWindowMinutes
+            Lifecycle:
+              DeleteAfterDays: !Ref BackupDeleteAfterDays
+              MoveToColdStorageAfterDays: !If
+                - UseColdStorage
+                - !Ref MoveToColdStorageAfterDays
+                - !Ref AWS::NoValue
+            RecoveryPointTags:
+              Application: SecurityAutopilot
+              Control: ARC-008
+            CopyActions:
+              - !If
+                - HasSecondaryCopy
+                - DestinationBackupVaultArn: !Ref SecondaryBackupVaultArn
+                  Lifecycle:
+                    DeleteAfterDays: !Ref CopyDeleteAfterDays
+                - !Ref AWS::NoValue
+
+  DrBackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Properties:
+      BackupPlanId: !Ref DrBackupPlan
+      BackupSelection:
+        SelectionName: security-autopilot-tagged
+        IamRoleArn: !GetAtt DrBackupServiceRole.Arn
+        ListOfTags:
+          - ConditionType: STRINGEQUALS
+            ConditionKey: Application
+            ConditionValue: !Ref BackupSelectionTagValue
+
+  DrRestoreOperatorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RestoreRoleName
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              Service: backup.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SecurityAutopilotDrRestorePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BackupRestoreActions
+                Effect: Allow
+                Action:
+                  - backup:StartRestoreJob
+                  - backup:DescribeRestoreJob
+                  - backup:GetRecoveryPointRestoreMetadata
+                  - backup:ListRecoveryPointsByBackupVault
+                  - backup:ListRecoveryPointsByResource
+                  - backup:DescribeRecoveryPoint
+                  - backup:ListBackupJobs
+                  - backup:ListRestoreJobs
+                Resource: "*"
+              - Sid: RdsRestoreActions
+                Effect: Allow
+                Action:
+                  - rds:DescribeDBClusters
+                  - rds:DescribeDBInstances
+                  - rds:RestoreDBClusterFromSnapshot
+                  - rds:RestoreDBInstanceFromDBSnapshot
+                  - rds:CreateDBInstance
+                  - rds:CreateDBCluster
+                  - rds:ModifyDBInstance
+                  - rds:ModifyDBCluster
+                  - rds:AddTagsToResource
+                Resource: "*"
+              - Sid: SupportingRestoreActions
+                Effect: Allow
+                Action:
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeVolumes
+                  - ec2:CreateVolume
+                  - kms:DescribeKey
+                  - kms:Decrypt
+                  - kms:GenerateDataKeyWithoutPlaintext
+                  - kms:CreateGrant
+                Resource: "*"
+      Tags:
+        - Key: Application
+          Value: SecurityAutopilot
+        - Key: Control
+          Value: ARC-008
+
+  BackupJobsFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-backup-jobs-failed
+      AlarmDescription: Security Autopilot backup jobs reported failures.
+      Namespace: AWS/Backup
+      MetricName: NumberOfBackupJobsFailed
+      Dimensions:
+        - Name: BackupVaultName
+          Value: !Ref BackupVaultName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  RestoreJobsFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: security-autopilot-restore-jobs-failed
+      AlarmDescription: Security Autopilot restore jobs reported failures.
+      Namespace: AWS/Backup
+      MetricName: NumberOfRestoreJobsFailed
+      Dimensions:
+        - Name: BackupVaultName
+          Value: !Ref BackupVaultName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+Outputs:
+  BackupVaultArn:
+    Description: Backup vault ARN for DR recovery points.
+    Value: !GetAtt DrBackupVault.BackupVaultArn
+
+  BackupPlanId:
+    Description: Backup plan ID for DR backups.
+    Value: !Ref DrBackupPlan
+
+  BackupServiceRoleArn:
+    Description: IAM role ARN used by AWS Backup for job execution.
+    Value: !GetAtt DrBackupServiceRole.Arn
+
+  RestoreOperatorRoleArn:
+    Description: IAM role ARN for approved restore operators.
+    Value: !GetAtt DrRestoreOperatorRole.Arn

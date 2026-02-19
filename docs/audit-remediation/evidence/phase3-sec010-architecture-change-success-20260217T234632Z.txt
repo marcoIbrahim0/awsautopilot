@@ -1,0 +1,99 @@
+SEC-010 Architecture Change Verification (Successful Run)
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+OwnerArn=arn:aws:iam::029037611564:user/AutoPilotAdmin
+OwnerName=AutoPilotAdmin
+Decision=Require Architecture Change
+ProductionFrontDoorRestApiId=brplhu7801
+ProductionFrontDoorStage=prod
+
+$ aws apigateway get-rest-api --region eu-north-1 --rest-api-id brplhu7801 --output json
+{
+    "id": "brplhu7801",
+    "name": "security-autopilot-prod-front-door",
+    "createdDate": "2026-02-17T20:19:56+02:00",
+    "apiKeySource": "HEADER",
+    "endpointConfiguration": {
+        "types": [
+            "REGIONAL"
+        ],
+        "ipAddressType": "ipv4"
+    },
+    "tags": {},
+    "disableExecuteApiEndpoint": false,
+    "rootResourceId": "usu10ogr1j",
+    "securityPolicy": "TLS_1_0",
+    "apiStatus": "AVAILABLE"
+}
+
+$ aws apigateway get-resources --region eu-north-1 --rest-api-id brplhu7801 --output json
+{
+    "items": [
+        {
+            "id": "a1zjuc",
+            "parentId": "usu10ogr1j",
+            "pathPart": "{proxy+}",
+            "path": "/{proxy+}",
+            "resourceMethods": {
+                "ANY": {}
+            }
+        },
+        {
+            "id": "usu10ogr1j",
+            "path": "/",
+            "resourceMethods": {
+                "ANY": {},
+                "GET": {}
+            }
+        }
+    ]
+}
+
+$ aws apigateway get-method --region eu-north-1 --rest-api-id brplhu7801 --resource-id usu10ogr1j --http-method ANY --output json
+{
+    "httpMethod": "ANY",
+    "authorizationType": "NONE",
+    "apiKeyRequired": false,
+    "methodIntegration": {
+        "type": "AWS_PROXY",
+        "httpMethod": "POST",
+        "uri": "arn:aws:apigateway:eu-north-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api/invocations",
+        "passthroughBehavior": "WHEN_NO_MATCH",
+        "timeoutInMillis": 29000,
+        "cacheNamespace": "usu10ogr1j",
+        "cacheKeyParameters": [],
+        "responseTransferMode": "BUFFERED"
+    }
+}
+
+$ aws apigateway get-method --region eu-north-1 --rest-api-id brplhu7801 --resource-id a1zjuc --http-method ANY --output json
+{
+    "httpMethod": "ANY",
+    "authorizationType": "NONE",
+    "apiKeyRequired": false,
+    "requestParameters": {
+        "method.request.path.proxy": true
+    },
+    "methodIntegration": {
+        "type": "AWS_PROXY",
+        "httpMethod": "POST",
+        "uri": "arn:aws:apigateway:eu-north-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api/invocations",
+        "passthroughBehavior": "WHEN_NO_MATCH",
+        "timeoutInMillis": 29000,
+        "cacheNamespace": "a1zjuc",
+        "cacheKeyParameters": [],
+        "responseTransferMode": "BUFFERED"
+    }
+}
+
+$ aws lambda get-policy --region eu-north-1 --function-name security-autopilot-dev-api --query 'Policy' --output text | rg sec010-rest-front-door-prod
+{"Version":"2012-10-17","Id":"default","Statement":[{"Sid":"security-autopilot-saas-serverless-runtime-ApiInvokePermission-cV9BxSd8J5X3","Effect":"Allow","Principal":{"Service":"apigateway.amazonaws.com"},"Action":"lambda:InvokeFunction","Resource":"arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api","Condition":{"ArnLike":{"AWS:SourceArn":"arn:aws:execute-api:eu-north-1:029037611564:g1frb5hhfg/*/*"}}},{"Sid":"sec010-rest-front-door-prod","Effect":"Allow","Principal":{"Service":"apigateway.amazonaws.com"},"Action":"lambda:InvokeFunction","Resource":"arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api","Condition":{"ArnLike":{"AWS:SourceArn":"arn:aws:execute-api:eu-north-1:029037611564:brplhu7801/*/*/*"}}}]}
+
+$ aws apigateway test-invoke-method --region eu-north-1 --rest-api-id brplhu7801 --resource-id a1zjuc --http-method GET --path-with-query-string '/health' --query '{status:status,body:body,latency:latency}' --output json
+{
+    "status": 200,
+    "body": "{\"status\":\"ok\",\"app\":\"AWS Security Autopilot\"}",
+    "latency": 4408
+}
+
+ARCH_CHANGE_VERIFIED=true

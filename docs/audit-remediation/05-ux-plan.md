@@ -7,6 +7,9 @@ This workstream covers backlog IDs `UX-001`, `UX-002`, `UX-004`, `UX-005`, and `
 Shared security dependency:
 - Token reveal/rotation and secret-safe onboarding behavior is tracked under `SEC-005`.
 
+Shared architecture dependency:
+- Control-plane forwarder deployment/readiness per customer account-region is required onboarding criteria (`ARC-004`), so UX fast-path design must not bypass that gate.
+
 ## Workstream Outcomes
 
 This plan must deliver:
@@ -98,11 +101,18 @@ This plan must deliver:
 **Acceptance criteria**
 - Accessibility regressions are detected automatically before release.
 
+**Execution status (2026-02-17)**
+- Completed: automated accessibility gate added for onboarding/settings/findings using Playwright + axe.
+- CI workflow: `/Users/marcomaher/AWS Security Autopilot/.github/workflows/frontend-accessibility.yml`
+- Baseline evidence:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux004-a11y-baseline-20260217T191445Z.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux004-a11y-baseline-20260217T191445Z.json`
+
 ### UX-005: Onboarding time-to-value is slower than necessary
 
 **Implementation actions**
 1. Introduce a fast path: role registration -> immediate first ingest trigger.
-2. Move non-blocking hardening checks to asynchronous background validation.
+2. Keep required onboarding gates blocking (Inspector, Security Hub, AWS Config, control-plane readiness), and move only non-critical checks to asynchronous background validation.
 3. Show progress and actionable warnings without blocking initial value delivery.
 4. Add guidance for "minimum successful path" vs "full hardening path".
 
@@ -116,6 +126,25 @@ This plan must deliver:
 
 **Acceptance criteria**
 - New users can reach first value significantly faster with clear follow-up actions.
+
+**Execution status (2026-02-17)**
+- Completed: first-value fast path shipped in onboarding with earlier safe ingest trigger and async optional-check handling.
+- Required blocking gates preserved for onboarding completion:
+  - Inspector
+  - Security Hub
+  - AWS Config
+  - Control-plane readiness
+- Non-critical check moved async:
+  - Access Analyzer verification can continue in background without blocking required gate progression.
+- Code changes:
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx`
+  - `/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py`
+- New backend support endpoint:
+  - `POST /api/aws/accounts/{account_id}/onboarding-fast-path`
+- Metric evidence:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux005-ttv-metrics-20260217T193137Z.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux005-ttv-metrics-20260217T193137Z.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-ux005-ttv-command-log-20260217T193137Z.txt`
 
 ### UX-006: Settings context is not URL-stable
 

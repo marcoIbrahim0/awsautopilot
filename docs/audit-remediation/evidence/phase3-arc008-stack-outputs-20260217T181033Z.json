@@ -1,0 +1,77 @@
+{
+    "StackStatus": "UPDATE_COMPLETE",
+    "CreationTime": "2026-02-17T18:15:25.675000+00:00",
+    "LastUpdatedTime": "2026-02-17T18:21:40.517000+00:00",
+    "Outputs": [
+        {
+            "OutputKey": "BackupVaultArn",
+            "OutputValue": "arn:aws:backup:eu-north-1:029037611564:backup-vault:security-autopilot-dr-vault",
+            "Description": "Backup vault ARN for DR recovery points."
+        },
+        {
+            "OutputKey": "BackupServiceRoleArn",
+            "OutputValue": "arn:aws:iam::029037611564:role/SecurityAutopilotDrBackupServiceRole",
+            "Description": "IAM role ARN used by AWS Backup for job execution."
+        },
+        {
+            "OutputKey": "BackupPlanId",
+            "OutputValue": "cb568097-a7ac-4334-b281-cd17c193ef13",
+            "Description": "Backup plan ID for DR backups."
+        },
+        {
+            "OutputKey": "RestoreOperatorRoleArn",
+            "OutputValue": "arn:aws:iam::029037611564:role/SecurityAutopilotDrRestoreOperatorRole",
+            "Description": "IAM role ARN for approved restore operators."
+        }
+    ],
+    "Parameters": [
+        {
+            "ParameterKey": "BackupPlanName",
+            "ParameterValue": "security-autopilot-dr-plan"
+        },
+        {
+            "ParameterKey": "BackupCompletionWindowMinutes",
+            "ParameterValue": "480"
+        },
+        {
+            "ParameterKey": "BackupVaultName",
+            "ParameterValue": "security-autopilot-dr-vault"
+        },
+        {
+            "ParameterKey": "SecondaryBackupVaultArn",
+            "ParameterValue": ""
+        },
+        {
+            "ParameterKey": "CopyDeleteAfterDays",
+            "ParameterValue": "35"
+        },
+        {
+            "ParameterKey": "BackupStartWindowMinutes",
+            "ParameterValue": "60"
+        },
+        {
+            "ParameterKey": "BackupSelectionTagValue",
+            "ParameterValue": "SecurityAutopilot"
+        },
+        {
+            "ParameterKey": "MoveToColdStorageAfterDays",
+            "ParameterValue": "0"
+        },
+        {
+            "ParameterKey": "BackupScheduleExpression",
+            "ParameterValue": "cron(0 2 * * ? *)"
+        },
+        {
+            "ParameterKey": "BackupDeleteAfterDays",
+            "ParameterValue": "35"
+        },
+        {
+            "ParameterKey": "RestoreRoleName",
+            "ParameterValue": "SecurityAutopilotDrRestoreOperatorRole"
+        },
+        {
+            "ParameterKey": "AlarmTopicArn",
+            "ParameterValue": ""
+        }
+    ]
+}

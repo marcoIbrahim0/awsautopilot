@@ -1,0 +1,2 @@
+{"status":"degraded","ready":false,"checked_at":"2026-02-17T18:14:17.021694+00:00","simulation_mode":"dependency_failure","dependencies":{"database":{"ready":false,"error":"Simulated database dependency failure."},"sqs":{"ready":false,"required_queues":["ingest","events_fast_lane","inventory_reconcile","export_report"],"missing_queues":["ingest"],"errors":["Simulated SQS dependency failure."],"queues":{}}},"slo":{"queue_lag_seconds_p95":null,"queue_lag_seconds_max":null}}
+Readiness check passed: http://127.0.0.1:18080/ready (HTTP 503, ready=false)

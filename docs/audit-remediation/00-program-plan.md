@@ -94,6 +94,17 @@ Source reviews covered:
 - All critical backlog IDs are marked complete and validated.
 - Security and architecture owners approve critical-finding closure package.
 
+### Phase 1 Closure Sign-Off (2026-02-12)
+
+- Gate decision: `Phase 1` is closed.
+- Scope closed: `ARC-001`, `SEC-001`, `SEC-002`, `SEC-003`, `SEC-004`, `IMP-001`, `UX-001`.
+- Source of truth:
+  - `docs/audit-remediation/01-priority-backlog.md` (critical IDs marked `Done`; Phase 0/1 milestones checked)
+  - `docs/audit-remediation/02-architecture-plan.md` (Milestone A complete)
+  - `docs/audit-remediation/03-security-plan.md` (Milestone S1 complete)
+  - `docs/audit-remediation/04-implementation-plan.md` (Milestone I1 complete)
+  - `docs/audit-remediation/05-ux-plan.md` (Milestone U1 complete)
+
 ### Phase 2: High-Priority Reliability and UX (Weeks 3-6)
 
 **In-scope priority IDs**
@@ -105,25 +116,49 @@ Source reviews covered:
 3. Add EventBridge target DLQ/retry policies and complete queue alarm coverage across all critical queues.
 4. Isolate export/report workloads onto dedicated queue and worker pool.
 5. Implement queue payload versioning and compatibility enforcement.
-6. Harden token and internal secret handling with rotation-ready architecture.
-7. Correct account validation status semantics and CORS config behavior.
-8. Align settings behavior with URL-based state and non-misleading validation actions.
+6. `SEC-005`: replace persistent control-plane token display/storage with one-time reveal plus rotate/revoke flow and audit logging.
+7. `SEC-006`: segment internal secrets by endpoint class and remove scheduler fallback to control-plane secret material.
+8. `IMP-003`: expand account validation outcomes (`validated`, `validated_with_warnings`, `insufficient_permissions`) and enforce downstream behavior accordingly.
+9. `IMP-005`: enforce config-driven CORS origin policy with fail-closed startup validation for non-local deployments.
+10. `UX-002`: remove no-op "Validate Read Role" affordance by wiring to real validation results and actionable operator guidance.
+11. `UX-006`: bind settings tab context to URL query parameters so refresh/back/forward/deep-link behavior is deterministic.
+12. Enforce control-plane forwarder deployment and readiness verification per customer account/region as an onboarding completion gate.
 
 **Expected outputs**
 - Throughput and latency improvements under mixed queue traffic with measured SLO gains.
 - Deterministic, resumable reconciliation orchestration with checkpointing.
 - Complete event/queue reliability controls with actionable alarms and runbooks.
+- Real-time control-plane intake is operational per onboarded customer account/region, not only in SaaS-owned AWS accounts.
 - Secure token lifecycle and secret segregation model operational in production.
-- Operator-facing settings flows that are reachable, deterministic, and trustworthy.
+- Account validation and CORS behavior are production-accurate and environment-configurable.
+- Operator-facing settings flows are reachable, deterministic, and trustworthy.
 
 **Required evidence artifacts**
 - Load/performance test report before/after concurrency and queue isolation changes.
 - CloudWatch alarm inventory proving coverage for ingest/events/inventory + DLQs.
-- Integration and E2E tests for token lifecycle, account validation states, and settings URL state.
+- Tenant/account control-plane readiness evidence proving required forwarder rollout in monitored regions.
+- API/integration/E2E tests for token lifecycle, secret segmentation, account validation states, CORS policy enforcement, and settings URL state/action behavior.
 
 **Phase gate to Phase 3**
 - `P1` high-priority items are complete or have approved exception with committed remediation date.
 - SLO dashboard and alarm posture are live and reviewed by on-call owners.
+
+### Phase 2 Remaining Non-Architecture Scope Sign-Off (2026-02-12)
+
+- Gate decision: remaining non-architecture `Phase 2` scope is closed.
+- Scope closed: `SEC-005`, `SEC-006`, `IMP-003`, `IMP-005`, `UX-002`, `UX-006`.
+- Closure summary:
+  - `SEC-005`: control-plane token lifecycle moved to one-time reveal plus rotation/revocation with auditability controls.
+  - `SEC-006`: internal auth secret classes are isolated and scheduler fallback reuse is removed.
+  - `IMP-003`: account validation status now reflects permission completeness and degraded capability states.
+  - `IMP-005`: CORS behavior is driven by configuration, with startup validation to prevent insecure deployment drift.
+  - `UX-002`: read-role validation action and copy now match actual backend behavior.
+  - `UX-006`: settings tab state is URL-backed and support-shareable across refresh and browser navigation.
+- Source of truth:
+  - `docs/audit-remediation/03-security-plan.md` (Milestone `S2`)
+  - `docs/audit-remediation/04-implementation-plan.md` (Milestone `I2`)
+  - `docs/audit-remediation/05-ux-plan.md` (Milestone `U2`)
+  - `docs/audit-remediation/01-priority-backlog.md` (Phase 2 traceability for all mapped IDs)
 
 ### Phase 3: Recommendations and Compliance Maturity (Weeks 6-8)
 
@@ -180,6 +215,19 @@ Source reviews covered:
 - Critical findings = `0`.
 - High findings = `0` or formally risk-accepted with dated owner commitment.
 - Evidence package is audit-ready for SOC 2 / ISO 27001 control review.
+
+### Phase 3/4 Closure Reconciliation (2026-02-18)
+
+- Phase 3 gate decision: `Complete` (all scoped Phase 3 IDs have objective evidence; required architecture/security/implementation/UX/engineering-lead sign-off artifacts are attached; `SEC-010` is resolved with explicit disposition and architecture-change verification evidence).
+- Phase 4 gate decision: `Not Closed` (both closure conditions are currently unsatisfied).
+- Single traceable closure evidence index:
+  - `docs/audit-remediation/evidence/phase3-phase4-closure-index-20260217T195458Z.md`
+- Closure condition 1 (live branch-protection evidence proving required-check matrix/baseline enforcement on `main`): `Not Satisfied`.
+  - `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` records the latest snapshot attempt as `Blocked`, with required-check and baseline verification results marked `Fail`.
+- Closure condition 2 (final leadership residual-risk artifact with `owner_arn`, `owner_name`, `decision` [`Approve`/`Reject`], `decision_timestamp_utc`, `scope`, `evidence_basis`): `Not Satisfied`.
+  - `docs/audit-remediation/evidence/phase4-leadership-signoff-request-20260218T011355Z.md` is a blocked request artifact (`decision=Blocked`) and still contains placeholder owner fields.
+- Phase 3 blockers:
+  1. None.
 
 ## Critical Path Dependencies
 

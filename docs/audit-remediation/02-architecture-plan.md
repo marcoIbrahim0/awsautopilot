@@ -46,6 +46,41 @@ This plan must deliver:
 Use `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase2-architecture-closure-checklist.md`
 as the required closure checklist and evidence index for `ARC-002` through `ARC-007`.
 
+## Phase 2 Finalization (2026-02-12)
+
+`ARC-002` through `ARC-007` are implemented and closed with attached operational evidence:
+
+- Closure evidence index:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-architecture-closure-evidence-20260212T131159Z.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-architecture-closure-evidence-20260212T131159Z.json`
+- Latest architecture snapshot (all queues + alarms healthy):
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-architecture-20260212T131159Z.json`
+
+Closure highlights:
+- DLQ alarm backlog from prior snapshot is remediated (`events` and `inventory` DLQs back to `0`, alarms `OK`).
+- EventBridge target failure-injection drill (`ARC-004`) validated target DLQ + retry behavior with captured error metadata.
+- Synthetic alarm trigger and recovery drill (`ARC-005`) completed for queue-backlog and DLQ-ingress alarms across ingest/events/inventory/export.
+- Customer-account forwarder readiness gate evidence is attached (stack state, rule target config, readiness gate tests).
+- CI gate evidence (`ARC-007`) is attached with all required tests passing.
+
+## Phase 3 Closure Tracking
+
+Use `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase3-architecture-closure-checklist.md`
+as the required closure checklist and evidence index for `ARC-008` and `ARC-009`.
+
+Phase 3 implementation artifacts added in-repo:
+- DR backup/restore IaC:
+  - `/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/dr-backup-controls.yaml`
+- Dependency-aware readiness endpoints:
+  - `/Users/marcomaher/AWS Security Autopilot/backend/main.py` (`/ready`, `/health/ready`)
+  - `/Users/marcomaher/AWS Security Autopilot/backend/services/health_checks.py`
+- DR runbook + deployment/evidence scripts:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/disaster-recovery-runbook.md`
+  - `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase3_architecture.sh`
+  - `/Users/marcomaher/AWS Security Autopilot/scripts/check_api_readiness.py`
+  - `/Users/marcomaher/AWS Security Autopilot/scripts/collect_phase3_architecture_evidence.py`
+
 ## Detailed Plan
 
 ### ARC-001: Poison-message handling bypasses DLQ
@@ -119,14 +154,17 @@ as the required closure checklist and evidence index for `ARC-002` through `ARC-
 2. Add explicit `RetryPolicy` with bounded retry age/attempts.
 3. Add alarms for EventBridge failed invocations and target DLQ depth.
 4. Document replay procedure for DLQ events.
+5. Require control-plane forwarder onboarding verification per customer account/region before onboarding completion.
 
 **Code touchpoints**
 - `infrastructure/cloudformation/control-plane-forwarder-template.yaml`
 - `infrastructure/cloudformation/reconcile-scheduler-template.yaml`
+- `frontend/src/app/onboarding/page.tsx`
 
 **Validation**
 - Template deploy diff confirms DLQ/retry config on both targets.
 - Failure injection test routes undeliverable events to DLQ.
+- Onboarding cannot complete until control-plane readiness is healthy for monitored regions.
 
 **Acceptance criteria**
 - Delivery failure behavior is explicit, monitored, and replayable.

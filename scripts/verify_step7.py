@@ -57,7 +57,7 @@ def main() -> int:
                 "id": uuid.uuid4(),
                 "action_type": action_type,
                 "account_id": "123456789012",
-                "region": "us-east-1",
+                "region": "eu-north-1",
                 "target_id": "target-1",
                 "title": "Remediation",
                 "control_id": "control-1",

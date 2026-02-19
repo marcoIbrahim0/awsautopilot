@@ -1,0 +1,30 @@
+SEC-010 WAF Production Association Verification
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+WebAclArn=arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a
+ProductionRestApiStageArn=arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod
+
+$ aws wafv2 associate-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-arn arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod
+
+Could not connect to the endpoint URL: "https://wafv2.eu-north-1.amazonaws.com/"
+
+$ aws wafv2 disassociate-web-acl --region eu-north-1 --resource-arn arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/waf-drill
+
+Could not connect to the endpoint URL: "https://wafv2.eu-north-1.amazonaws.com/"
+
+$ aws wafv2 list-resources-for-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-type API_GATEWAY --output json
+
+Could not connect to the endpoint URL: "https://wafv2.eu-north-1.amazonaws.com/"
+
+$ aws apigateway get-rest-api --region eu-north-1 --rest-api-id brplhu7801 --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801"
+
+$ aws apigateway get-stage --region eu-north-1 --rest-api-id brplhu7801 --stage-name prod --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/stages/prod"
+
+$ aws apigateway test-invoke-method --region eu-north-1 --rest-api-id brplhu7801 --resource-id a1zjuc --http-method GET --path-with-query-string '/health' --query '{status:status,body:body,latency:latency}' --output json
+
+Could not connect to the endpoint URL: "https://apigateway.eu-north-1.amazonaws.com/restapis/brplhu7801/resources/a1zjuc/methods/GET"
+

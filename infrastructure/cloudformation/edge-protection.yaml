@@ -1,0 +1,233 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Edge protections for Security Autopilot public API exposure.
+  Creates a WAFv2 Web ACL with managed rule groups, IP-based rate limiting,
+  optional IPv4 allow-list enforcement, and CloudWatch alarms.
+
+Parameters:
+  WebAclName:
+    Type: String
+    Default: security-autopilot-edge-web-acl
+    Description: Name for the WAFv2 Web ACL.
+
+  Scope:
+    Type: String
+    Default: REGIONAL
+    AllowedValues:
+      - REGIONAL
+      - CLOUDFRONT
+    Description: Use REGIONAL for API Gateway/ALB; CLOUDFRONT for CloudFront distributions.
+
+  RateLimitRequestsPer5Min:
+    Type: Number
+    Default: 2000
+    MinValue: 100
+    Description: Max requests per source IP in a 5-minute window before WAF blocks.
+
+  EnableIpv4AllowList:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: When true, only AllowedIpv4Cidrs are allowed and default action becomes Block.
+
+  AllowedIpv4Cidrs:
+    Type: CommaDelimitedList
+    Default: 203.0.113.10/32
+    Description: Comma-separated IPv4 CIDRs used when EnableIpv4AllowList=true.
+
+  ApiGatewayStageArn:
+    Type: String
+    Default: ''
+    Description: Optional ARN of the API Gateway stage to associate with this Web ACL.
+
+  ApplicationLoadBalancerArn:
+    Type: String
+    Default: ''
+    Description: Optional ARN of the ALB to associate with this Web ACL.
+
+  AlarmTopicArn:
+    Type: String
+    Default: ''
+    Description: Optional SNS topic ARN for WAF CloudWatch alarms.
+
+  BlockedRequestsThreshold:
+    Type: Number
+    Default: 100
+    Description: Sum of blocked requests in 5 minutes that triggers a general edge alarm.
+
+  RateLimitedRequestsThreshold:
+    Type: Number
+    Default: 25
+    Description: Sum of blocked requests by the rate-limit rule in 5 minutes that triggers an alarm.
+
+Conditions:
+  UseAllowList: !Equals [!Ref EnableIpv4AllowList, 'true']
+  HasApiGatewayArn: !Not [!Equals [!Ref ApiGatewayStageArn, '']]
+  HasAlbArn: !Not [!Equals [!Ref ApplicationLoadBalancerArn, '']]
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, '']]
+  IsCloudFrontScope: !Equals [!Ref Scope, 'CLOUDFRONT']
+
+Resources:
+  AllowedIpv4Set:
+    Type: AWS::WAFv2::IPSet
+    Condition: UseAllowList
+    Properties:
+      Name: !Sub '${WebAclName}-allow-ipv4'
+      Scope: !Ref Scope
+      IPAddressVersion: IPV4
+      Addresses: !Ref AllowedIpv4Cidrs
+      Description: Allowed IPv4 CIDRs for Security Autopilot API access.
+
+  EdgeWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Ref WebAclName
+      Scope: !Ref Scope
+      Description: Web ACL for Security Autopilot edge controls.
+      DefaultAction: !If
+        - UseAllowList
+        - Block: {}
+        - Allow: {}
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: true
+        MetricName: !Ref WebAclName
+        SampledRequestsEnabled: true
+      Rules:
+        - !If
+          - UseAllowList
+          - Name: AllowListedIpv4
+            Priority: 0
+            Action:
+              Allow: {}
+            Statement:
+              IPSetReferenceStatement:
+                Arn: !GetAtt AllowedIpv4Set.Arn
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: true
+              MetricName: allow-listed-ipv4
+              SampledRequestsEnabled: true
+          - !Ref AWS::NoValue
+        - Name: AWSManagedCommonRuleSet
+          Priority: 10
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: aws-managed-common
+            SampledRequestsEnabled: true
+        - Name: AWSManagedKnownBadInputs
+          Priority: 20
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: aws-managed-known-bad-inputs
+            SampledRequestsEnabled: true
+        - Name: IPAddressRateLimit
+          Priority: 30
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              AggregateKeyType: IP
+              Limit: !Ref RateLimitRequestsPer5Min
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: ip-rate-limit
+            SampledRequestsEnabled: true
+
+  ApiGatewayWebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Condition: HasApiGatewayArn
+    Properties:
+      ResourceArn: !Ref ApiGatewayStageArn
+      WebACLArn: !GetAtt EdgeWebAcl.Arn
+
+  AlbWebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Condition: HasAlbArn
+    Properties:
+      ResourceArn: !Ref ApplicationLoadBalancerArn
+      WebACLArn: !GetAtt EdgeWebAcl.Arn
+
+  WafBlockedRequestsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${WebAclName}-blocked-requests'
+      AlarmDescription: High volume of blocked requests at the Security Autopilot edge.
+      Namespace: AWS/WAFV2
+      MetricName: BlockedRequests
+      Dimensions:
+        - Name: WebACL
+          Value: !Ref WebAclName
+        - Name: Region
+          Value: !If [IsCloudFrontScope, Global, !Ref AWS::Region]
+        - Name: Rule
+          Value: ALL
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref BlockedRequestsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  WafRateLimitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${WebAclName}-rate-limit-triggered'
+      AlarmDescription: Rate-limiting rule is actively blocking source IPs.
+      Namespace: AWS/WAFV2
+      MetricName: BlockedRequests
+      Dimensions:
+        - Name: WebACL
+          Value: !Ref WebAclName
+        - Name: Region
+          Value: !If [IsCloudFrontScope, Global, !Ref AWS::Region]
+        - Name: Rule
+          # For WAFv2, the Rule dimension uses the rule visibility metric name.
+          Value: ip-rate-limit
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref RateLimitedRequestsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+Outputs:
+  EdgeWebAclArn:
+    Description: ARN of the deployed edge Web ACL.
+    Value: !GetAtt EdgeWebAcl.Arn
+
+  EdgeWebAclId:
+    Description: ID of the deployed edge Web ACL.
+    Value: !Ref EdgeWebAcl
+
+  EdgeWebAclName:
+    Description: Name of the deployed edge Web ACL.
+    Value: !Ref WebAclName
+
+  ApiGatewayAssociationArn:
+    Condition: HasApiGatewayArn
+    Description: API Gateway stage ARN associated to the Web ACL.
+    Value: !Ref ApiGatewayStageArn
+
+  ApplicationLoadBalancerAssociationArn:
+    Condition: HasAlbArn
+    Description: Application Load Balancer ARN associated to the Web ACL.
+    Value: !Ref ApplicationLoadBalancerArn

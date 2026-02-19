@@ -81,13 +81,71 @@ Each backlog item is managed as a controlled remediation ticket with these requi
 | UX-005 | UX | Medium | UX | M | P2 | Phase 3 | Onboarding flow delays time-to-value with strict sequential checks. |
 | UX-006 | UX | Medium | UX | S | P2 | Phase 2 | Settings tab state is local-only and not URL/deep-link stable. |
 
+## Status Updates (2026-02-12)
+
+### Phase 1 Critical IDs (Closure)
+
+| ID | Status |
+| --- | --- |
+| ARC-001 | Done |
+| SEC-001 | Done |
+| SEC-002 | Done |
+| SEC-003 | Done |
+| SEC-004 | Done |
+| IMP-001 | Done |
+| UX-001 | Done |
+
+### Phase 2 Architecture IDs (`ARC-002` through `ARC-007`)
+
+| ID | Status | Operational/Test Evidence |
+| --- | --- | --- |
+| ARC-002 | Done | `docs/audit-remediation/evidence/phase2-arc002-arc006-load-20260212T125856Z.md` |
+| ARC-003 | Done | `docs/audit-remediation/evidence/phase2-arc003-failure-resume-20260212T130046Z.txt` |
+| ARC-004 | Done | `docs/audit-remediation/evidence/phase2-arc004-failure-injection-20260212T130923Z.md` |
+| ARC-005 | Done | `docs/audit-remediation/evidence/phase2-arc005-synthetic-alarm-drill-20260212T131050Z.md` |
+| ARC-006 | Done | `docs/audit-remediation/evidence/phase2-arc002-arc006-load-20260212T125856Z.md` |
+| ARC-007 | Done | `docs/audit-remediation/evidence/phase2-ci-gate-20260212T130032Z.txt` |
+
+Phase 2 closure index for architecture reliability (`ARC-002` through `ARC-007`):
+- `docs/audit-remediation/phase2-architecture-closure-checklist.md`
+- `docs/audit-remediation/evidence/phase2-architecture-closure-evidence-20260212T131159Z.md`
+
+### Phase 2 Non-Architecture IDs (`SEC-005`, `SEC-006`, `IMP-003`, `IMP-005`, `UX-002`, `UX-006`)
+
+| ID | Status | Source of Truth |
+| --- | --- | --- |
+| SEC-005 | Done | `docs/audit-remediation/03-security-plan.md` (Milestone `S2`) |
+| SEC-006 | Done | `docs/audit-remediation/03-security-plan.md` (Milestone `S2`) |
+| IMP-003 | Done | `docs/audit-remediation/04-implementation-plan.md` (Milestone `I2`) |
+| IMP-005 | Done | `docs/audit-remediation/04-implementation-plan.md` (Milestone `I2`) |
+| UX-002 | Done | `docs/audit-remediation/05-ux-plan.md` (Milestone `U2`) |
+| UX-006 | Done | `docs/audit-remediation/05-ux-plan.md` (Milestone `U2`) |
+
+### Phase 3 and Phase 4 ID Reconciliation (2026-02-18T01:33:22Z)
+
+| ID | Status | Objective Evidence |
+| --- | --- | --- |
+| ARC-008 | Done | `docs/audit-remediation/evidence/phase3-arc008-restore-drill-20260217T181033Z.md`, `docs/audit-remediation/evidence/phase3-arc008-stack-outputs-20260217T181033Z.json` |
+| ARC-009 | Done | `docs/audit-remediation/evidence/phase3-arc009-pytest-20260217T181247Z.txt`, `docs/audit-remediation/evidence/phase3-arc009-readiness-failure-20260217T181415Z.json`, `docs/audit-remediation/evidence/phase3-arc009-readiness-recovery-20260217T181415Z.json` |
+| SEC-008 | Done | `docs/audit-remediation/evidence/phase3-sec008-pytest-20260217T195312Z.txt`, `docs/audit-remediation/evidence/phase3-sec008-localstorage-audit-20260217T195341Z.txt` |
+| SEC-010 | Done (Resolved via Architecture Change) | `docs/audit-remediation/evidence/phase3-sec010-httpapi-verification-20260217T225816Z.md`, `docs/audit-remediation/evidence/phase3-sec010-decision-20260217T234632Z.md`, `docs/audit-remediation/evidence/phase3-sec010-architecture-change-success-20260217T234632Z.txt`, `docs/audit-remediation/evidence/phase3-sec010-waf-production-association-success-20260217T234632Z.txt`, `docs/audit-remediation/evidence/phase3-sec010-alarm-notification-success-20260217T234632Z.txt` |
+| IMP-007 | Done | `docs/audit-remediation/evidence/phase3-imp007-ci-governance-20260217T195312Z.txt` |
+| IMP-008 | Done | `docs/audit-remediation/evidence/phase3-imp008-service-refactor-pytest-20260217T195312Z.txt` |
+| IMP-009 | Done | `docs/audit-remediation/evidence/phase3-imp009-tenant-isolation-pytest-20260217T195312Z.txt` |
+| UX-004 | Done | `docs/audit-remediation/evidence/phase3-ux004-a11y-baseline-20260217T191445Z.md` |
+| UX-005 | Done | `docs/audit-remediation/evidence/phase3-ux005-ttv-metrics-20260217T193137Z.md` |
+| Phase 4 gate objective | Not Closed | Closure condition 1 is not satisfied: `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` shows no live `main` branch-protection proof and required-check/baseline verification remains `Fail`. Closure condition 2 is not satisfied: `docs/audit-remediation/evidence/phase4-leadership-signoff-request-20260218T011355Z.md` is a blocked request artifact with `decision=Blocked` and placeholder `owner_arn`/`owner_name`, so a final `Approve`/`Reject` artifact with required fields is still missing. |
+
+Single traceable closure index:
+- `docs/audit-remediation/evidence/phase3-phase4-closure-index-20260217T195458Z.md`
+
 ## Shared Findings (Intentionally Merged)
 
 | Shared Area | Canonical ID(s) | Duplicate Source Findings Covered |
 | --- | --- | --- |
 | Unreachable Settings report tabs | UX-001 | Implementation High #1 and UX Critical #1 |
 | Queue contract drift and unknown payload handling | ARC-001, ARC-007 | Architecture Critical #1 and Implementation High #5 |
-| Control-plane token exposure and onboarding handling | SEC-005 | Security High #1 and UX High #2 |
+| Control-plane token exposure and onboarding handling | SEC-005 | Security High #1 and UX High #2 (includes per-customer account/region forwarder rollout ownership in onboarding) |
 | Environment/secret fail-closed startup controls | SEC-002, SEC-007, SEC-009 | Security Critical #2 and Security Recommendations #1 |
 
 ## Traceability Matrix (Source Finding -> Plan ID)
@@ -99,7 +157,7 @@ Each backlog item is managed as a controlled remediation ticket with these requi
 | Critical #1 Poison-message bypasses DLQ | ARC-001 |
 | High #1 `WORKER_POOL=all` serialized polling | ARC-002 |
 | High #2 Reconcile fan-out in API path | ARC-003 |
-| High #3 EventBridge target DLQ/retry missing | ARC-004 |
+| High #3 EventBridge target DLQ/retry missing | ARC-004 (with required customer account/region forwarder onboarding verification) |
 | High #4 Queue alarm coverage incomplete | ARC-005 |
 | High #5 Export/report jobs share ingest queue | ARC-006 |
 | Recommendation #1 Queue payload versioning strategy missing | ARC-007 |
@@ -148,11 +206,15 @@ Each backlog item is managed as a controlled remediation ticket with these requi
 
 ## Milestone Checklist
 
-- [ ] Phase 0 complete (all `P0` containment controls shipped and verified)
-- [ ] Phase 1 complete (all critical IDs complete)
-- [ ] Phase 2 complete (all high IDs complete)
-- [ ] Phase 3 complete (all medium recommendation IDs complete)
+- [x] Phase 0 complete (all `P0` containment controls shipped and verified)
+- [x] Phase 1 complete (all critical IDs complete)
+- [x] Phase 2 complete (all IDs targeted for Phase 2 are complete)
+- [x] Phase 3 complete (all medium recommendation IDs complete)
 - [ ] Phase 4 complete (regression guardrails and evidence package finalized)
+
+Gate notes:
+- Phase 3 IDs are `Done` with objective evidence attached; architecture, security, implementation, UX, and engineering-lead sign-off artifacts are attached in the closure index. Phase 3 gate status is `Complete`.
+- Phase 4 remains `Not Closed` because both closure conditions are unsatisfied: (1) no live branch-protection artifact proves required-check and baseline enforcement on `main`; (2) no final leadership residual-risk sign-off artifact exists with `owner_arn`, `owner_name`, `decision` (`Approve`/`Reject`), `decision_timestamp_utc`, `scope`, and `evidence_basis`.
 
 ## Formal Closure Criteria
 

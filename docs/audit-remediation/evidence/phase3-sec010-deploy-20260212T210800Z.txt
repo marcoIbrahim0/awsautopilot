@@ -1,0 +1,10 @@
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: us-east-1
+Scope: REGIONAL
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+
+Failed to create/update the stack. Run the following command
+to fetch the list of events leading up to the failure
+aws cloudformation describe-stack-events --stack-name security-autopilot-edge-protection

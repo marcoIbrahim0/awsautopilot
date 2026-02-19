@@ -24,13 +24,21 @@ from backend.database import get_db
 from backend.models.aws_account import AwsAccount
 from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
 from backend.models.enums import AwsAccountStatus
-from backend.models.finding import Finding
 from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.aws_account_cleanup import AwsCleanupError, cleanup_account_resources
+from backend.services.aws_account_orchestration import (
+    IngestRegionResolutionError,
+    assume_and_verify_role_account,
+    collect_service_readiness,
+    resolve_ingest_regions,
+    run_validation_probes,
+    validate_registration_role_accounts,
+)
 from backend.services.aws import assume_role
 from backend.services.cloudformation_templates import get_latest_template_version
 from backend.utils.sqs import (
+    build_compute_actions_job_payload,
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
     build_ingest_job_payload,
@@ -236,6 +244,34 @@ class AccountServiceReadinessResponse(BaseModel):
     missing_access_analyzer_regions: list[str] = Field(default_factory=list)
     missing_inspector_regions: list[str] = Field(default_factory=list)
     regions: list[RegionServiceReadiness] = Field(default_factory=list)
+
+
+class OnboardingFastPathResponse(BaseModel):
+    """Response for onboarding fast-path evaluation and queue trigger."""
+
+    account_id: str = Field(..., description="AWS account ID (12 digits)")
+    fast_path_triggered: bool = Field(
+        ...,
+        description="True when first-value ingest was queued immediately.",
+    )
+    triggered_at: datetime = Field(..., description="UTC timestamp when fast-path evaluation ran")
+    ingest_jobs_queued: int = Field(default=0, description="Number of ingest jobs queued (one per region)")
+    ingest_regions: list[str] = Field(default_factory=list, description="Regions used for fast-path ingest queueing")
+    ingest_message_ids: list[str] = Field(default_factory=list, description="SQS message IDs for ingest jobs")
+    compute_actions_queued: bool = Field(
+        default=False,
+        description="Whether a compute_actions job was queued for this account",
+    )
+    compute_actions_message_id: str | None = Field(
+        default=None,
+        description="SQS message ID for compute_actions when queued",
+    )
+    missing_security_hub_regions: list[str] = Field(default_factory=list)
+    missing_aws_config_regions: list[str] = Field(default_factory=list)
+    missing_inspector_regions: list[str] = Field(default_factory=list)
+    missing_control_plane_regions: list[str] = Field(default_factory=list)
+    missing_access_analyzer_regions: list[str] = Field(default_factory=list)
+    message: str = Field(..., description="Human-readable status and next action guidance")
 
 
 class RegionControlPlaneReadiness(BaseModel):
@@ -504,6 +540,105 @@ def _enqueue_ingest_inspector_jobs(
         resp = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
         message_ids.append(resp["MessageId"])
     return message_ids
+
+
+def _enqueue_compute_actions_job(tenant_id: uuid.UUID, account_id: str) -> str:
+    """Send one compute_actions job scoped to an account."""
+    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    now = datetime.now(timezone.utc).isoformat()
+    payload = build_compute_actions_job_payload(tenant_id, now, account_id=account_id)
+    response = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+    return str(response["MessageId"])
+
+
+def _normalize_db_timestamp(value: datetime | None) -> datetime | None:
+    """Ensure DB datetimes are timezone-aware for age comparisons."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+async def _missing_control_plane_regions(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    account_id: str,
+    expected_regions: list[str],
+    stale_after_minutes: int = 30,
+) -> list[str]:
+    """Return account regions with stale or missing control-plane intake status."""
+    stmt = (
+        select(ControlPlaneEventIngestStatus)
+        .where(
+            ControlPlaneEventIngestStatus.tenant_id == tenant_id,
+            ControlPlaneEventIngestStatus.account_id == account_id,
+            ControlPlaneEventIngestStatus.region.in_(expected_regions),
+        )
+    )
+    rows = {row.region: row for row in (await db.execute(stmt)).scalars().all()}
+    now = datetime.now(timezone.utc)
+    missing: list[str] = []
+    for region in expected_regions:
+        row = rows.get(region)
+        last_intake = _normalize_db_timestamp(getattr(row, "last_intake_time", None)) if row else None
+        if not last_intake:
+            missing.append(region)
+            continue
+        age_minutes = (now - last_intake).total_seconds() / 60.0
+        if age_minutes > float(stale_after_minutes):
+            missing.append(region)
+    return missing
+
+
+def _resolve_async_ingest_regions(
+    account_regions: list[str] | None,
+    body: IngestTriggerRequest | None,
+) -> list[str]:
+    override_regions = body.regions if body and body.regions is not None else None
+    try:
+        return resolve_ingest_regions(account_regions=account_regions, override_regions=override_regions)
+    except IngestRegionResolutionError as exc:
+        if exc.code == "override_empty":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Bad request", "detail": "regions override cannot be empty. Omit to use account regions."},
+            ) from exc
+        if exc.code == "override_not_subset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Bad request", "detail": "regions must be a subset of the account's configured regions."},
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Bad request", "detail": "No regions configured for this account. Add regions in account settings."},
+        ) from exc
+
+
+def _resolve_sync_ingest_regions(
+    account_regions: list[str] | None,
+    body: IngestTriggerRequest | None,
+) -> list[str]:
+    override_regions = body.regions if body and body.regions is not None else None
+    try:
+        return resolve_ingest_regions(account_regions=account_regions, override_regions=override_regions)
+    except IngestRegionResolutionError as exc:
+        if exc.code == "override_empty":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "regions override cannot be empty"},
+            ) from exc
+        if exc.code == "override_not_subset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "regions must be a subset of account regions"},
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "No regions configured for this account"},
+        ) from exc
 
 
 # List accounts response model
@@ -981,23 +1116,14 @@ async def register_account(
     # Get tenant and verify it exists
     tenant = await get_tenant(tenant_uuid, db)
 
-    # Verify account_id in provided ARNs matches the request account_id.
-    # ARN format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
-    arns_to_validate = [("role_read_arn", request.role_read_arn)]
-    if request.role_write_arn:
-        arns_to_validate.append(("role_write_arn", request.role_write_arn))
-    for arn_name, arn_value in arns_to_validate:
-        arn_parts = arn_value.split(":")
-        if len(arn_parts) < 5:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid {arn_name} format: {arn_value}",
-            )
-        if arn_parts[4] != request.account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"account_id {request.account_id} does not match the account ID in {arn_name} ({arn_parts[4]})",
-            )
+    try:
+        validate_registration_role_accounts(
+            account_id=request.account_id,
+            role_read_arn=request.role_read_arn,
+            role_write_arn=request.role_write_arn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     # Check if account already exists for this tenant
     result = await db.execute(
@@ -1022,34 +1148,24 @@ async def register_account(
     try:
         # Validate ReadRole: assume and verify account_id
         logger.info(f"Validating ReadRole for account {request.account_id}")
-        read_session = assume_role(
+        assume_and_verify_role_account(
             role_arn=request.role_read_arn,
             external_id=tenant.external_id,
+            account_id=request.account_id,
+            role_label="ReadRole",
+            assume_role_fn=assume_role,
         )
-        sts_client = read_session.client("sts")
-        identity = sts_client.get_caller_identity()
-        caller_account_id = identity.get("Account")
-        if caller_account_id != request.account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Account ID mismatch (ReadRole): expected {request.account_id}, got {caller_account_id}",
-            )
 
         # Validate WriteRole only when provided (optional at onboarding).
         if request.role_write_arn:
             logger.info(f"Validating WriteRole for account {request.account_id}")
-            write_session = assume_role(
+            assume_and_verify_role_account(
                 role_arn=request.role_write_arn,
                 external_id=tenant.external_id,
+                account_id=request.account_id,
+                role_label="WriteRole",
+                assume_role_fn=assume_role,
             )
-            write_sts = write_session.client("sts")
-            write_identity = write_sts.get_caller_identity()
-            write_caller_account_id = write_identity.get("Account")
-            if write_caller_account_id != request.account_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Account ID mismatch (WriteRole): expected {request.account_id}, got {write_caller_account_id}",
-                )
 
         account_data["status"] = AwsAccountStatus.validated
         account_data["last_validated_at"] = datetime.now(timezone.utc)
@@ -1184,125 +1300,17 @@ async def validate_account(
 
     try:
         logger.info(f"Validating account {account_id} for tenant {tenant_uuid}")
-        session = assume_role(
-            role_arn=acc.role_read_arn,
-            external_id=tenant.external_id,
+        probe_result = run_validation_probes(
+            account_id=account_id,
+            role_read_arn=acc.role_read_arn,
+            tenant_external_id=tenant.external_id,
+            configured_regions=acc.regions,
+            default_region=settings.AWS_REGION or "eu-north-1",
+            assume_role_fn=assume_role,
         )
-        sts_client = session.client("sts")
-        identity = sts_client.get_caller_identity()
-        caller_account_id = identity.get("Account")
-        if caller_account_id != account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Account ID mismatch: expected {account_id}, got {caller_account_id}",
-            )
-
-        region = (acc.regions or [settings.AWS_REGION or "us-east-1"])[0] if acc.regions else (settings.AWS_REGION or "us-east-1")
-
-        # Baseline probes to catch missing permissions early (Phase 1/2 enrichment + reconciliation).
-        # These are best-effort checks; we only mark missing_permissions on clear access-denied signals.
-        def _code(e: ClientError) -> str:
-            return str(e.response.get("Error", {}).get("Code") or "ClientError")
-
-        def _is_access_denied(code: str) -> bool:
-            return code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}
-
-        # Security Hub (legacy ingest)
-        try:
-            sh = session.client("securityhub", region_name=region)
-            sh.get_findings(MaxResults=1)
-        except ClientError as e:
-            code = _code(e)
-            logger.warning("Security Hub probe failed for account %s: %s", account_id, e)
-            if _is_access_denied(code):
-                missing_permissions.append("securityhub:GetFindings")
-            else:
-                warnings.append(f"Security Hub probe failed: {code}")
-
-        # EC2 (Phase 1 SG enrichment)
-        try:
-            ec2 = session.client("ec2", region_name=region)
-            ec2.describe_security_groups(MaxResults=5)
-        except ClientError as e:
-            code = _code(e)
-            logger.warning("EC2 probe failed for account %s: %s", account_id, e)
-            if _is_access_denied(code):
-                missing_permissions.append("ec2:DescribeSecurityGroups")
-            else:
-                warnings.append(f"EC2 probe failed: {code}")
-
-        # S3 (Phase 1 bucket enrichment) - probe using first bucket if available
-        try:
-            s3 = session.client("s3", region_name=region)
-            buckets = (s3.list_buckets().get("Buckets") or [])
-        except ClientError as e:
-            code = _code(e)
-            logger.warning("S3 list_buckets probe failed for account %s: %s", account_id, e)
-            if _is_access_denied(code):
-                missing_permissions.append("s3:ListAllMyBuckets")
-            else:
-                warnings.append(f"S3 list_buckets probe failed: {code}")
-            buckets = []
-
-        if buckets:
-            bucket_name = str(buckets[0].get("Name") or "").strip()
-            if bucket_name:
-                def _probe_bucket_permission(
-                    call_name: str,
-                    required_action: str,
-                    ignored_codes: set[str],
-                ) -> None:
-                    try:
-                        getattr(s3, call_name)(Bucket=bucket_name)
-                    except ClientError as e:
-                        code = _code(e)
-                        if _is_access_denied(code):
-                            missing_permissions.append(required_action)
-                        elif code not in ignored_codes:
-                            warnings.append(f"S3 {call_name} probe failed: {code}")
-
-                _probe_bucket_permission(
-                    call_name="get_public_access_block",
-                    required_action="s3:GetBucketPublicAccessBlock",
-                    ignored_codes={"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_policy_status",
-                    required_action="s3:GetBucketPolicyStatus",
-                    ignored_codes={"NoSuchBucketPolicy", "NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_policy",
-                    required_action="s3:GetBucketPolicy",
-                    ignored_codes={"NoSuchBucketPolicy", "NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_location",
-                    required_action="s3:GetBucketLocation",
-                    ignored_codes={"NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_encryption",
-                    required_action="s3:GetEncryptionConfiguration",
-                    ignored_codes={"ServerSideEncryptionConfigurationNotFoundError", "NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_logging",
-                    required_action="s3:GetBucketLogging",
-                    ignored_codes={"NoSuchBucket"},
-                )
-                _probe_bucket_permission(
-                    call_name="get_bucket_lifecycle_configuration",
-                    required_action="s3:GetLifecycleConfiguration",
-                    ignored_codes={"NoSuchLifecycleConfiguration", "NoSuchBucket"},
-                )
-        else:
-            warnings.append("No S3 buckets found to probe bucket-level read permissions.")
-
-        # De-dup while keeping stable order for UI rendering.
-        missing_permissions = list(dict.fromkeys(missing_permissions))
-        warnings = list(dict.fromkeys(warnings))
-        permissions_ok = len(missing_permissions) == 0
+        permissions_ok = probe_result.permissions_ok
+        missing_permissions = probe_result.missing_permissions
+        warnings = probe_result.warnings
         authoritative_mode_block_reasons: list[str] = []
         if missing_permissions:
             authoritative_mode_block_reasons.append(
@@ -1325,6 +1333,11 @@ async def validate_account(
             authoritative_mode_block_reasons=authoritative_mode_block_reasons,
         )
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except HTTPException:
         raise
     except ClientError as e:
@@ -1385,173 +1398,47 @@ async def check_account_service_readiness(
         )
 
     try:
-        async def _has_findings_for_source(region_name: str, source_name: str) -> bool:
-            stmt = (
-                select(Finding.id)
-                .where(
-                    Finding.tenant_id == tenant_uuid,
-                    Finding.account_id == account_id,
-                    Finding.region == region_name,
-                    Finding.source == source_name,
-                )
-                .limit(1)
-            )
-            result = await db.execute(stmt)
-            return result.scalar_one_or_none() is not None
-
-        async def _has_security_hub_control_findings(region_name: str) -> bool:
-            stmt = (
-                select(Finding.id)
-                .where(
-                    Finding.tenant_id == tenant_uuid,
-                    Finding.account_id == account_id,
-                    Finding.region == region_name,
-                    Finding.source == "security_hub",
-                    Finding.control_id.isnot(None),
-                )
-                .limit(1)
-            )
-            result = await db.execute(stmt)
-            return result.scalar_one_or_none() is not None
-
-        session = assume_role(
-            role_arn=acc.role_read_arn,
-            external_id=tenant.external_id,
+        summary = await collect_service_readiness(
+            db=db,
+            tenant_id=tenant_uuid,
+            account_id=account_id,
+            role_read_arn=acc.role_read_arn,
+            tenant_external_id=tenant.external_id,
+            regions=acc.regions,
+            default_region=settings.AWS_REGION or "eu-north-1",
+            assume_role_fn=assume_role,
         )
-        sts_client = session.client("sts")
-        identity = sts_client.get_caller_identity()
-        caller_account_id = identity.get("Account")
-        if caller_account_id != account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Account ID mismatch: expected {account_id}, got {caller_account_id}",
-            )
-
-        regions = acc.regions or ["us-east-1"]
-        region_results: list[RegionServiceReadiness] = []
-        missing_security_hub_regions: list[str] = []
-        missing_aws_config_regions: list[str] = []
-        missing_access_analyzer_regions: list[str] = []
-        missing_inspector_regions: list[str] = []
-
-        for region in regions:
-            security_hub_enabled = False
-            aws_config_enabled = False
-            access_analyzer_enabled = False
-            inspector_enabled = False
-            security_hub_error: str | None = None
-            aws_config_error: str | None = None
-            access_analyzer_error: str | None = None
-            inspector_error: str | None = None
-
-            try:
-                security_hub = session.client("securityhub", region_name=region)
-                security_hub.describe_hub()
-                security_hub_enabled = True
-            except ClientError as e:
-                security_hub_error = e.response.get("Error", {}).get("Message", str(e))
-                if await _has_findings_for_source(region, "security_hub"):
-                    security_hub_enabled = True
-                    security_hub_error = "Inferred enabled from ingested Security Hub findings."
-
-            try:
-                config = session.client("config", region_name=region)
-                recorders_resp = config.describe_configuration_recorders()
-                recorder_status_resp = config.describe_configuration_recorder_status()
-                has_recorders = bool(recorders_resp.get("ConfigurationRecorders"))
-                statuses = recorder_status_resp.get("ConfigurationRecordersStatus", [])
-                has_active_recorder = any(bool(s.get("recording")) for s in statuses)
-                aws_config_enabled = has_recorders and has_active_recorder
-                if has_recorders and not has_active_recorder:
-                    aws_config_error = "AWS Config recorder exists but is not recording."
-                elif not has_recorders:
-                    aws_config_error = "No AWS Config recorder found."
-            except ClientError as e:
-                aws_config_error = e.response.get("Error", {}).get("Message", str(e))
-                if await _has_security_hub_control_findings(region):
-                    aws_config_enabled = True
-                    aws_config_error = "Inferred enabled from ingested Security Hub control findings."
-
-            try:
-                access_analyzer = session.client("accessanalyzer", region_name=region)
-                active_analyzers = []
-                for analyzer_scope in ("ACCOUNT", "ORGANIZATION"):
-                    next_token = None
-                    while True:
-                        kwargs = {"type": analyzer_scope}
-                        if next_token:
-                            kwargs["nextToken"] = next_token
-                        analyzers_resp = access_analyzer.list_analyzers(**kwargs)
-                        analyzers = analyzers_resp.get("analyzers", [])
-                        active_analyzers.extend(
-                            analyzer for analyzer in analyzers if analyzer.get("status") == "ACTIVE"
-                        )
-                        next_token = analyzers_resp.get("nextToken")
-                        if not next_token:
-                            break
-                access_analyzer_enabled = len(active_analyzers) > 0
-                if not access_analyzer_enabled:
-                    access_analyzer_error = "No active Access Analyzer analyzer found."
-            except ClientError as e:
-                access_analyzer_error = e.response.get("Error", {}).get("Message", str(e))
-                if await _has_findings_for_source(region, "access_analyzer"):
-                    access_analyzer_enabled = True
-                    access_analyzer_error = "Inferred enabled from ingested Access Analyzer findings."
-
-            try:
-                inspector = session.client("inspector2", region_name=region)
-                status_resp = inspector.batch_get_account_status(accountIds=[account_id])
-                accounts = status_resp.get("accounts", [])
-                account_status = accounts[0].get("state", {}).get("status") if accounts else None
-                inspector_enabled = account_status == "ENABLED"
-                if not inspector_enabled:
-                    inspector_error = f"Inspector account status is {account_status or 'UNKNOWN'}."
-            except ClientError as e:
-                inspector_error = e.response.get("Error", {}).get("Message", str(e))
-                if await _has_findings_for_source(region, "inspector"):
-                    inspector_enabled = True
-                    inspector_error = "Inferred enabled from ingested Inspector findings."
-
-            if not security_hub_enabled:
-                missing_security_hub_regions.append(region)
-            if not aws_config_enabled:
-                missing_aws_config_regions.append(region)
-            if not access_analyzer_enabled:
-                missing_access_analyzer_regions.append(region)
-            if not inspector_enabled:
-                missing_inspector_regions.append(region)
-
-            region_results.append(
-                RegionServiceReadiness(
-                    region=region,
-                    security_hub_enabled=security_hub_enabled,
-                    aws_config_enabled=aws_config_enabled,
-                    access_analyzer_enabled=access_analyzer_enabled,
-                    inspector_enabled=inspector_enabled,
-                    security_hub_error=security_hub_error,
-                    aws_config_error=aws_config_error,
-                    access_analyzer_error=access_analyzer_error,
-                    inspector_error=inspector_error,
-                )
-            )
-
-        all_security_hub_enabled = len(missing_security_hub_regions) == 0
-        all_aws_config_enabled = len(missing_aws_config_regions) == 0
-        all_access_analyzer_enabled = len(missing_access_analyzer_regions) == 0
-        all_inspector_enabled = len(missing_inspector_regions) == 0
         return AccountServiceReadinessResponse(
             account_id=account_id,
-            overall_ready=all_security_hub_enabled and all_aws_config_enabled,
-            all_security_hub_enabled=all_security_hub_enabled,
-            all_aws_config_enabled=all_aws_config_enabled,
-            all_access_analyzer_enabled=all_access_analyzer_enabled,
-            all_inspector_enabled=all_inspector_enabled,
-            missing_security_hub_regions=missing_security_hub_regions,
-            missing_aws_config_regions=missing_aws_config_regions,
-            missing_access_analyzer_regions=missing_access_analyzer_regions,
-            missing_inspector_regions=missing_inspector_regions,
-            regions=region_results,
+            overall_ready=summary.all_security_hub_enabled and summary.all_aws_config_enabled,
+            all_security_hub_enabled=summary.all_security_hub_enabled,
+            all_aws_config_enabled=summary.all_aws_config_enabled,
+            all_access_analyzer_enabled=summary.all_access_analyzer_enabled,
+            all_inspector_enabled=summary.all_inspector_enabled,
+            missing_security_hub_regions=summary.missing_security_hub_regions,
+            missing_aws_config_regions=summary.missing_aws_config_regions,
+            missing_access_analyzer_regions=summary.missing_access_analyzer_regions,
+            missing_inspector_regions=summary.missing_inspector_regions,
+            regions=[
+                RegionServiceReadiness(
+                    region=item.region,
+                    security_hub_enabled=item.security_hub_enabled,
+                    aws_config_enabled=item.aws_config_enabled,
+                    access_analyzer_enabled=item.access_analyzer_enabled,
+                    inspector_enabled=item.inspector_enabled,
+                    security_hub_error=item.security_hub_error,
+                    aws_config_error=item.aws_config_error,
+                    access_analyzer_error=item.access_analyzer_error,
+                    inspector_error=item.inspector_error,
+                )
+                for item in summary.regions
+            ],
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except HTTPException:
         raise
     except ClientError as e:
@@ -1566,6 +1453,149 @@ async def check_account_service_readiness(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while checking Security Hub and AWS Config readiness",
         )
+
+
+@router.post(
+    "/{account_id}/onboarding-fast-path",
+    response_model=OnboardingFastPathResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Trigger onboarding first-value fast path",
+    description=(
+        "Evaluates readiness and, when safe, queues first ingest + action computation early. "
+        "Required security gates still block onboarding completion."
+    ),
+    responses={
+        404: {"description": "Tenant or account not found"},
+        409: {"description": "Account not validated"},
+        503: {"description": "Ingest queue unavailable"},
+    },
+)
+async def trigger_onboarding_fast_path(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> OnboardingFastPathResponse:
+    if not settings.has_ingest_queue:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
+        )
+
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    tenant = await get_tenant(tenant_uuid, db)
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"AWS account {account_id} not found for tenant",
+        )
+    if acc.status != AwsAccountStatus.validated:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Validate the AWS account connection before starting fast path.",
+        )
+
+    try:
+        summary = await collect_service_readiness(
+            db=db,
+            tenant_id=tenant_uuid,
+            account_id=account_id,
+            role_read_arn=acc.role_read_arn,
+            tenant_external_id=tenant.external_id,
+            regions=acc.regions,
+            default_region=settings.AWS_REGION or "eu-north-1",
+            assume_role_fn=assume_role,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except ClientError as exc:
+        error_message = exc.response.get("Error", {}).get("Message", str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to evaluate fast-path readiness: {error_message}",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected onboarding fast-path readiness error for account %s: %s", account_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while evaluating fast-path readiness",
+        ) from exc
+    expected_regions = [region for region in (acc.regions or []) if region] or [settings.AWS_REGION or "eu-north-1"]
+    missing_control_plane_regions = await _missing_control_plane_regions(
+        db,
+        tenant_uuid,
+        account_id,
+        expected_regions,
+        stale_after_minutes=30,
+    )
+
+    safe_to_trigger = len(summary.missing_security_hub_regions) == 0 and len(summary.missing_aws_config_regions) == 0
+    triggered_at = datetime.now(timezone.utc)
+    ingest_message_ids: list[str] = []
+    compute_actions_queued = False
+    compute_actions_message_id: str | None = None
+
+    if safe_to_trigger:
+        try:
+            ingest_message_ids = _enqueue_ingest_jobs(tenant_uuid, account_id, expected_regions)
+        except ClientError as exc:
+            logger.exception("SQS send_message failed for onboarding fast-path ingest: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not enqueue fast-path ingest jobs. Please try again later.",
+            ) from exc
+
+        try:
+            compute_actions_message_id = _enqueue_compute_actions_job(tenant_uuid, account_id)
+            compute_actions_queued = True
+        except ClientError as exc:
+            logger.warning("SQS send_message failed for onboarding fast-path compute_actions: %s", exc)
+
+    pending_required_gates: list[str] = []
+    if summary.missing_inspector_regions:
+        pending_required_gates.append("Inspector")
+    if summary.missing_security_hub_regions:
+        pending_required_gates.append("Security Hub")
+    if summary.missing_aws_config_regions:
+        pending_required_gates.append("AWS Config")
+    if missing_control_plane_regions:
+        pending_required_gates.append("Control-plane forwarder")
+
+    if safe_to_trigger:
+        message = "First-value fast path started: initial ingest queued."
+        if pending_required_gates:
+            message += f" Required onboarding gates still pending: {', '.join(pending_required_gates)}."
+    else:
+        message = "Fast path deferred until Security Hub and AWS Config are enabled in all monitored regions."
+        if pending_required_gates:
+            message += f" Pending required gates: {', '.join(pending_required_gates)}."
+
+    return OnboardingFastPathResponse(
+        account_id=account_id,
+        fast_path_triggered=safe_to_trigger,
+        triggered_at=triggered_at,
+        ingest_jobs_queued=len(ingest_message_ids),
+        ingest_regions=expected_regions if safe_to_trigger else [],
+        ingest_message_ids=ingest_message_ids,
+        compute_actions_queued=compute_actions_queued,
+        compute_actions_message_id=compute_actions_message_id,
+        missing_security_hub_regions=summary.missing_security_hub_regions,
+        missing_aws_config_regions=summary.missing_aws_config_regions,
+        missing_inspector_regions=summary.missing_inspector_regions,
+        missing_control_plane_regions=missing_control_plane_regions,
+        missing_access_analyzer_regions=summary.missing_access_analyzer_regions,
+        message=message,
+    )
 
 
 @router.get(
@@ -1723,28 +1753,7 @@ async def trigger_ingest(
             status_code=status.HTTP_409_CONFLICT,
             detail={"error": "Account not validated", "detail": "Validate the AWS account connection before triggering ingestion."},
         )
-    account_regions = list(acc.regions or [])
-    if body and body.regions is not None:
-        if not body.regions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Bad request", "detail": "regions override cannot be empty. Omit to use account regions."},
-            )
-        allowed = set(account_regions)
-        for r in body.regions:
-            if r not in allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"error": "Bad request", "detail": "regions must be a subset of the account's configured regions."},
-                )
-        regions = body.regions
-    else:
-        regions = account_regions
-    if not regions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Bad request", "detail": "No regions configured for this account. Add regions in account settings."},
-        )
+    regions = _resolve_async_ingest_regions(acc.regions, body)
     try:
         message_ids = _enqueue_ingest_jobs(tenant_uuid, account_id, regions)
     except ClientError as e:
@@ -1820,28 +1829,7 @@ async def trigger_ingest_access_analyzer(
             status_code=status.HTTP_409_CONFLICT,
             detail={"error": "Account not validated", "detail": "Validate the AWS account connection before triggering ingestion."},
         )
-    account_regions = list(acc.regions or [])
-    if body and body.regions is not None:
-        if not body.regions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Bad request", "detail": "regions override cannot be empty. Omit to use account regions."},
-            )
-        allowed = set(account_regions)
-        for r in body.regions:
-            if r not in allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"error": "Bad request", "detail": "regions must be a subset of the account's configured regions."},
-                )
-        regions = body.regions
-    else:
-        regions = account_regions
-    if not regions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Bad request", "detail": "No regions configured for this account. Add regions in account settings."},
-        )
+    regions = _resolve_async_ingest_regions(acc.regions, body)
     try:
         message_ids = _enqueue_ingest_access_analyzer_jobs(tenant_uuid, account_id, regions)
     except ClientError as e:
@@ -1917,28 +1905,7 @@ async def trigger_ingest_inspector(
             status_code=status.HTTP_409_CONFLICT,
             detail={"error": "Account not validated", "detail": "Validate the AWS account connection before triggering ingestion."},
         )
-    account_regions = list(acc.regions or [])
-    if body and body.regions is not None:
-        if not body.regions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Bad request", "detail": "regions override cannot be empty. Omit to use account regions."},
-            )
-        allowed = set(account_regions)
-        for r in body.regions:
-            if r not in allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"error": "Bad request", "detail": "regions must be a subset of the account's configured regions."},
-                )
-        regions = body.regions
-    else:
-        regions = account_regions
-    if not regions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Bad request", "detail": "No regions configured for this account. Add regions in account settings."},
-        )
+    regions = _resolve_async_ingest_regions(acc.regions, body)
     try:
         message_ids = _enqueue_ingest_inspector_jobs(tenant_uuid, account_id, regions)
     except ClientError as e:
@@ -2011,26 +1978,7 @@ async def trigger_ingest_sync(
             status_code=status.HTTP_409_CONFLICT,
             detail={"error": "Account not validated", "detail": "Validate the account first."},
         )
-    regions = list(acc.regions or [])
-    if body and body.regions is not None:
-        if not body.regions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "regions override cannot be empty"},
-            )
-        allowed = set(regions)
-        for r in body.regions:
-            if r not in allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={"error": "regions must be a subset of account regions"},
-                )
-        regions = body.regions
-    if not regions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "No regions configured for this account"},
-        )
+    regions = _resolve_sync_ingest_regions(acc.regions, body)
     now = datetime.now(timezone.utc).isoformat()
     from worker.jobs.ingest_findings import execute_ingest_job
 

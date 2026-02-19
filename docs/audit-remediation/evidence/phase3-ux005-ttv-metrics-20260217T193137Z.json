@@ -1,0 +1,32 @@
+{
+  "metric_id": "ux005_onboarding_time_to_first_ingest_trigger",
+  "captured_at": "2026-02-17T19:31:37Z",
+  "method": "Deterministic onboarding flow replay from code paths in frontend/src/app/onboarding/page.tsx before and after UX-005 changes.",
+  "start_event": "integration_role_validated",
+  "before": {
+    "first_ingest_trigger_step": "processing",
+    "blocking_required_gate_checks_before_trigger": 4,
+    "estimated_time_to_first_ingest_seconds": 360
+  },
+  "after": {
+    "first_ingest_trigger_step": "security-hub-config",
+    "blocking_required_gate_checks_before_trigger": 2,
+    "estimated_time_to_first_ingest_seconds": 180
+  },
+  "delta": {
+    "blocking_required_gate_checks_reduction": 2,
+    "estimated_time_reduction_seconds": 180,
+    "estimated_time_reduction_percent": 50.0
+  },
+  "assumptions": {
+    "required_gate_check_duration_seconds": 90,
+    "rationale": "Onboarding UI states an estimated 12-20 minute setup. Using 90 seconds per required gate check models the lower-bound path consistently across before/after flows."
+  },
+  "evidence_paths": {
+    "frontend_onboarding": "/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx",
+    "backend_fast_path_endpoint": "/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py"
+  },
+  "needs_verification": [
+    "Validate these modeled deltas against production onboarding telemetry once live tenant event samples are collected."
+  ]
+}

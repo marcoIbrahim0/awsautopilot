@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and fill secrets locally.
+
+# Neon
+database_url      = "postgresql+asyncpg://USER:PASSWORD@HOST/DB?sslmode=require"
+database_url_sync = ""
+
+# App secrets
+jwt_secret                 = "replace-with-strong-random-secret"
+control_plane_events_secret = "replace-with-strong-random-secret"
+
+# Optional: ACM cert in eu-north-1 for api_domain (enables HTTPS listener)
+certificate_arn = ""
+
+# Optional: if you want API_PUBLIC_URL to be https://<api_domain>
+api_domain = "api.valensjewelry.com"
+

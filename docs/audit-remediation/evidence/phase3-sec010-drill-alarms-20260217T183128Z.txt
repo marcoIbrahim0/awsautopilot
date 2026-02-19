@@ -1,0 +1,22 @@
+START_ISO=2026-02-17T18:31:28Z
+COMMAND: aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-blocked-requests --state-value ALARM --state-reason 'SEC-010 synthetic drill 20260217T183128Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+COMMAND: aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-rate-limit-triggered --state-value ALARM --state-reason 'SEC-010 synthetic drill 20260217T183128Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+STATE_AFTER_SET_ALARM
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+COMMAND: aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-blocked-requests --state-value OK --state-reason 'SEC-010 synthetic recovery 20260217T183128Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+COMMAND: aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-rate-limit-triggered --state-value OK --state-reason 'SEC-010 synthetic recovery 20260217T183128Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+STATE_AFTER_RECOVERY
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"

@@ -1,0 +1,25 @@
+{
+    "AccountId": "029037611564",
+    "BackupJobId": "c14b4709-a5c5-46e1-8a61-ca3dc1b43d68",
+    "BackupVaultName": "security-autopilot-dr-vault",
+    "RecoveryPointLifecycle": {
+        "DeleteAfterDays": 35
+    },
+    "BackupVaultArn": "arn:aws:backup:eu-north-1:029037611564:backup-vault:security-autopilot-dr-vault",
+    "RecoveryPointArn": "arn:aws:ec2:eu-north-1::snapshot/snap-092557d4323022fb2",
+    "IsEncrypted": false,
+    "ResourceArn": "arn:aws:ec2:eu-north-1:029037611564:volume/vol-0f6f38ab7b05762de",
+    "CreationDate": "2026-02-17T20:18:53.074000+02:00",
+    "CompletionDate": "2026-02-17T20:19:54.678000+02:00",
+    "State": "COMPLETED",
+    "PercentDone": "100.0",
+    "BackupSizeInBytes": 1073741824,
+    "IamRoleArn": "arn:aws:iam::029037611564:role/SecurityAutopilotDrBackupServiceRole",
+    "ResourceType": "EBS",
+    "BytesTransferred": 0,
+    "StartBy": "2026-02-17T21:18:53.074000+02:00",
+    "IsParent": false,
+    "ResourceName": "arc008-restore-drill-source-20260217T181033Z",
+    "InitiationDate": "2026-02-17T20:18:53.541000+02:00",
+    "MessageCategory": "SUCCESS"
+}

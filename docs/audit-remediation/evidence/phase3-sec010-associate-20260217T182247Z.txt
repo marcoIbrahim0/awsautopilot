@@ -1,0 +1,18 @@
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Retry 1/6 after transient failure...
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Retry 2/6 after transient failure...
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Retry 3/6 after transient failure...
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Retry 4/6 after transient failure...
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Retry 5/6 after transient failure...
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+Command failed after 6 retries: aws cloudformation deploy --region eu-north-1 --stack-name security-autopilot-edge-protection --template-file infrastructure/cloudformation/edge-protection.yaml --parameter-overrides Scope=REGIONAL ApiGatewayStageArn=arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/waf-drill ApplicationLoadBalancerArn= RateLimitRequestsPer5Min=2000 BlockedRequestsThreshold=100 RateLimitedRequestsThreshold=25 EnableIpv4AllowList=false AllowedIpv4Cidrs=203.0.113.10/32 AlarmTopicArn=arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms --no-fail-on-empty-changeset

@@ -133,3 +133,89 @@ def test_orchestration_worker_resumes_from_service_checkpoint(monkeypatch) -> No
     final_status, final_summary = states[-1]
     assert final_status == "succeeded"
     assert int(final_summary["stats"]["enqueued"]) == 1
+
+
+def test_orchestration_worker_forced_failure_then_resume(monkeypatch) -> None:
+    payload_summary = {
+        "services": ["ec2", "s3", "iam"],
+        "max_resources": 250,
+        "checkpoint": {"account_index": 0, "region_index": 0, "service_index": 0},
+        "stats": {"enqueued": 0},
+    }
+    accounts = [
+        SimpleNamespace(
+            account_id="123456789012",
+            regions=["us-east-1"],
+            status="validated",
+            external_id="ext-1",
+            role_read_arn="arn:aws:iam::123456789012:role/ReadRole",
+        )
+    ]
+    states: list[tuple[str, dict]] = []
+
+    monkeypatch.setattr(
+        orchestration,
+        "_load_orchestration_context",
+        lambda tenant_id, orchestration_job_id, job: (payload_summary, "ext-1", accounts),
+    )
+    monkeypatch.setattr(
+        orchestration,
+        "_persist_orchestration_state",
+        lambda tenant_id, orchestration_job_id, summary, *, status, error_message=None: states.append(
+            (status, json.loads(json.dumps(summary)))
+        ),
+    )
+    monkeypatch.setattr(orchestration, "collect_reconciliation_queue_snapshot", lambda: {})
+    monkeypatch.setattr(
+        orchestration,
+        "evaluate_reconciliation_prereqs",
+        lambda *args, **kwargs: {"ok": True, "reasons": [], "snapshot": {}},
+    )
+    monkeypatch.setattr(orchestration, "session_scope", _dummy_session_scope)
+
+    monkeypatch.setattr(
+        orchestration.settings,
+        "SQS_INVENTORY_RECONCILE_QUEUE_URL",
+        "https://sqs.us-east-1.amazonaws.com/123/inventory",
+        raising=False,
+    )
+    monkeypatch.setattr(orchestration.settings, "AWS_REGION", "us-east-1", raising=False)
+    monkeypatch.setattr(orchestration.settings, "CONTROL_PLANE_SHADOW_MODE", True, raising=False)
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.side_effect = [{"MessageId": "msg-1"}, RuntimeError("injected send failure")]
+    monkeypatch.setattr(orchestration.boto3, "client", lambda *args, **kwargs: mock_sqs)
+
+    job = {
+        "tenant_id": "00000000-0000-0000-0000-000000000111",
+        "orchestration_job_id": "00000000-0000-0000-0000-000000000222",
+        "job_type": "reconcile_inventory_global_orchestration",
+        "created_at": "2026-02-12T10:00:00Z",
+    }
+
+    try:
+        orchestration.execute_reconcile_inventory_global_orchestration_job(job)
+        assert False, "Expected injected send failure"
+    except RuntimeError as exc:
+        assert "injected send failure" in str(exc)
+
+    failed_status, failed_summary = states[-1]
+    assert failed_status == "error"
+    assert failed_summary["checkpoint"]["service_index"] == 1
+    assert int(failed_summary["stats"]["enqueued"]) == 1
+
+    states.clear()
+    mock_sqs.send_message.reset_mock()
+    mock_sqs.send_message.side_effect = None
+    mock_sqs.send_message.return_value = {"MessageId": "msg-resume"}
+
+    orchestration.execute_reconcile_inventory_global_orchestration_job(job)
+
+    assert mock_sqs.send_message.call_count == 2
+    resume_bodies = [json.loads(call.kwargs["MessageBody"]) for call in mock_sqs.send_message.call_args_list]
+    assert [body["service"] for body in resume_bodies] == ["s3", "iam"]
+
+    final_status, final_summary = states[-1]
+    assert final_status == "succeeded"
+    assert final_summary["checkpoint"]["account_index"] == 1
+    assert int(final_summary["stats"]["enqueued"]) == 3

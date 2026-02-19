@@ -1,0 +1,32 @@
+SEC-010 Alarm and Notification Path Verification
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+
+$ aws cloudwatch describe-alarms --region eu-north-1 --alarm-names security-autopilot-edge-web-acl-blocked-requests security-autopilot-edge-web-acl-rate-limit-triggered --query 'MetricAlarms[].{Name:AlarmName,State:StateValue,Reason:StateReason,Updated:StateUpdatedTimestamp,Actions:AlarmActions}' --output json
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-blocked-requests --state-value ALARM --state-reason 'SEC-010 architecture change validation alarm 20260217T234632Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-rate-limit-triggered --state-value ALARM --state-reason 'SEC-010 architecture change validation alarm 20260217T234632Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-blocked-requests --state-value OK --state-reason 'SEC-010 architecture change validation recovery 20260217T234632Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws cloudwatch set-alarm-state --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-rate-limit-triggered --state-value OK --state-reason 'SEC-010 architecture change validation recovery 20260217T234632Z'
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws cloudwatch describe-alarms --region eu-north-1 --alarm-names security-autopilot-edge-web-acl-blocked-requests security-autopilot-edge-web-acl-rate-limit-triggered --query 'MetricAlarms[].{Name:AlarmName,State:StateValue,Reason:StateReason,Updated:StateUpdatedTimestamp,Actions:AlarmActions}' --output json
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+$ aws sns list-subscriptions-by-topic --region eu-north-1 --topic-arn arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms --output json
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+

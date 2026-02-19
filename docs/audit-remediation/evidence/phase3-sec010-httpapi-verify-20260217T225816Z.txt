@@ -1,0 +1,73 @@
+$ aws sts get-caller-identity --region eu-north-1 --output json
+{
+    "UserId": "AIDAQNQWGZIWGDV4TV6K2",
+    "Account": "029037611564",
+    "Arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin"
+}
+
+$ aws apigatewayv2 get-api --region eu-north-1 --api-id g1frb5hhfg --output json
+{
+    "ApiEndpoint": "https://g1frb5hhfg.execute-api.eu-north-1.amazonaws.com",
+    "ApiId": "g1frb5hhfg",
+    "ApiKeySelectionExpression": "$request.header.x-api-key",
+    "CorsConfiguration": {
+        "AllowCredentials": true,
+        "AllowHeaders": [
+            "*"
+        ],
+        "AllowMethods": [
+            "*"
+        ],
+        "AllowOrigins": [
+            "http://localhost:3000"
+        ]
+    },
+    "CreatedDate": "2026-02-17T17:27:39+00:00",
+    "DisableExecuteApiEndpoint": false,
+    "IpAddressType": "ipv4",
+    "Name": "security-autopilot-dev-httpapi",
+    "ProtocolType": "HTTP",
+    "RouteSelectionExpression": "$request.method $request.path",
+    "Tags": {
+        "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-saas-serverless-runtime/ef1ec350-0c25-11f1-b03d-0ef71c28793d",
+        "aws:cloudformation:stack-name": "security-autopilot-saas-serverless-runtime",
+        "aws:cloudformation:logical-id": "HttpApi"
+    }
+}
+
+$ aws apigatewayv2 get-stage --region eu-north-1 --api-id g1frb5hhfg --stage-name '' --output json
+{
+    "AutoDeploy": true,
+    "CreatedDate": "2026-02-17T17:27:41+00:00",
+    "DefaultRouteSettings": {
+        "DetailedMetricsEnabled": false
+    },
+    "DeploymentId": "5ubr5h",
+    "LastDeploymentStatusMessage": "Successfully deployed stage with deployment ID '5ubr5h'",
+    "LastUpdatedDate": "2026-02-17T17:28:24+00:00",
+    "RouteSettings": {},
+    "StageName": "$default",
+    "StageVariables": {},
+    "Tags": {
+        "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-saas-serverless-runtime/ef1ec350-0c25-11f1-b03d-0ef71c28793d",
+        "aws:cloudformation:stack-name": "security-autopilot-saas-serverless-runtime",
+        "aws:cloudformation:logical-id": "DefaultStage"
+    }
+}
+
+$ aws wafv2 associate-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-arn 'arn:aws:apigateway:eu-north-1::/apis/g1frb5hhfg/stages/$default'
+
+An error occurred (WAFInvalidParameterException) when calling the AssociateWebACL operation: Error reason: The ARN isn't valid. A valid ARN begins with arn: and includes other information separated by colons or slashes., field: RESOURCE_ARN, parameter: arn:aws:apigateway:eu-north-1::/apis/g1frb5hhfg/stages/$default
+AssociateExitCode=254
+
+$ aws wafv2 list-resources-for-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-type API_GATEWAY --output json
+{
+    "ResourceArns": [
+        "arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/waf-drill"
+    ]
+}
+
+$ aws wafv2 list-resources-for-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-type APPLICATION_LOAD_BALANCER --output json
+{
+    "ResourceArns": []
+}

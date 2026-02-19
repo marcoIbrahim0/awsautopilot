@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Annotated, Any, Optional
@@ -28,6 +29,7 @@ from backend.services.bundle_reporting_tokens import issue_group_run_reporting_t
 from backend.utils.sqs import build_remediation_run_job_payload, parse_queue_region
 
 router = APIRouter(prefix="/action-groups", tags=["action-groups"])
+logger = logging.getLogger("backend.routers.action_groups")
 
 
 class ActionGroupCountersResponse(BaseModel):
@@ -423,7 +425,14 @@ async def create_action_group_bundle_run(
     sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
     try:
         sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-    except ClientError as exc:
+    except Exception as exc:
+        logger.exception("SQS send_message failed for action group bundle run enqueue: %s", exc)
+        now = datetime.now(timezone.utc)
+        group_run.status = ActionGroupRunStatus.failed
+        group_run.finished_at = now
+        remediation_run.status = RemediationRunStatus.failed
+        remediation_run.outcome = "Queue enqueue failed for bundle generation."
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Could not enqueue group bundle run job.",

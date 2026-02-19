@@ -1,0 +1,69 @@
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=1
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=2
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=3
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=4
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=5
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=6
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=7
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"
+
+RETRY_ATTEMPT=8
+$ EDGE_API_GATEWAY_STAGE_ARN='arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod' EDGE_ALARM_TOPIC_ARN='arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms' ./scripts/deploy_phase3_security.sh --region eu-north-1 --stack security-autopilot-edge-protection
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"

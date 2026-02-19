@@ -32,6 +32,11 @@ from backend.models.user import User
 from backend.routers.aws_accounts import get_account_for_tenant, get_tenant, resolve_tenant_id
 from backend.services.aws import assume_role
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
+from backend.services.direct_fix_bridge import (
+    DirectFixModuleUnavailable,
+    get_supported_direct_fix_action_types,
+    run_remediation_preview_bridge,
+)
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_strategy import (
     list_mode_options_for_action_type,
@@ -712,9 +717,8 @@ async def get_remediation_options(
     if not strategies:
         # Backward-compatible behavior for action types not yet migrated to strategy catalog.
         mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
-        from worker.services.direct_fix import SUPPORTED_ACTION_TYPES
-
-        if action.action_type in SUPPORTED_ACTION_TYPES:
+        supported_direct_fix_action_types = get_supported_direct_fix_action_types()
+        if action.action_type in supported_direct_fix_action_types:
             mode_options.append("direct_fix")
         return RemediationOptionsResponse(
             action_id=str(action.id),
@@ -817,9 +821,14 @@ async def get_remediation_preview(
             detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
         )
 
-    from worker.services.direct_fix import SUPPORTED_ACTION_TYPES, run_remediation_preview
-
-    if action.action_type not in SUPPORTED_ACTION_TYPES:
+    supported_direct_fix_action_types = get_supported_direct_fix_action_types()
+    if not supported_direct_fix_action_types:
+        return RemediationPreviewResponse(
+            compliant=False,
+            message="Direct-fix preview is unavailable in this API deployment. Use PR bundle mode.",
+            will_apply=False,
+        )
+    if action.action_type not in supported_direct_fix_action_types:
         return RemediationPreviewResponse(
             compliant=False,
             message=f"Action type '{action.action_type}' does not support direct fix.",
@@ -868,7 +877,7 @@ async def get_remediation_preview(
             external_id=account.external_id,
         )
         preview = await asyncio.to_thread(
-            run_remediation_preview,
+            run_remediation_preview_bridge,
             wr_session,
             action.action_type,
             action.account_id,
@@ -886,6 +895,12 @@ async def get_remediation_preview(
         return RemediationPreviewResponse(
             compliant=False,
             message=f"Could not assume WriteRole: {code}",
+            will_apply=False,
+        )
+    except DirectFixModuleUnavailable as e:
+        return RemediationPreviewResponse(
+            compliant=False,
+            message=str(e),
             will_apply=False,
         )
     except Exception as e:

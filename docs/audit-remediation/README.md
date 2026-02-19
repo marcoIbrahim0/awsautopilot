@@ -11,6 +11,11 @@ Use this folder as the execution source of truth for the architecture, security,
 4. `03-security-plan.md` - detailed remediation tasks for `SEC-*` issues.
 5. `04-implementation-plan.md` - detailed remediation tasks for `IMP-*` issues.
 6. `05-ux-plan.md` - detailed remediation tasks for `UX-*` issues.
+7. `phase2-architecture-closure-checklist.md` - closure evidence checklist for `ARC-002` through `ARC-007`.
+8. `phase3-architecture-closure-checklist.md` - closure evidence checklist for `ARC-008` and `ARC-009`.
+9. `phase3-security-closure-checklist.md` - closure evidence checklist for `SEC-008` and `SEC-010`.
+10. `06-multi-agent-execution-plan.md` - phased parallel execution plan to close open remediation scope.
+11. `phase4-required-check-governance.md` - final required-check matrix and branch-protection governance baseline.
 
 ## How to Execute
 

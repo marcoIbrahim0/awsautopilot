@@ -9,6 +9,8 @@ Provides:
 from __future__ import annotations
 
 import logging
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
@@ -16,7 +18,7 @@ from urllib.parse import urlencode
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
@@ -35,6 +37,10 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 # JWT settings
 JWT_ALGORITHM = "HS256"
+AUTH_COOKIE_NAME = "access_token"
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "X-CSRF-Token"
+SAFE_HTTP_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
 # ============================================
@@ -91,7 +97,12 @@ class AuthResponse(BaseModel):
     write_role_template_url: str | None = None
     write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
     # Control-plane event forwarder (Phase 1)
+    # One-time reveal only (signup / rotation). Never returned on read endpoints.
     control_plane_token: str | None = None
+    control_plane_token_fingerprint: str | None = None
+    control_plane_token_created_at: str | None = None
+    control_plane_token_revoked_at: str | None = None
+    control_plane_token_active: bool = False
     control_plane_forwarder_template_url: str | None = None
     control_plane_ingest_url: str | None = None
     control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
@@ -112,6 +123,10 @@ class MeResponse(BaseModel):
     write_role_default_stack_name: str = DEFAULT_WRITE_ROLE_STACK_NAME
     # Control-plane event forwarder (Phase 1)
     control_plane_token: str | None = None
+    control_plane_token_fingerprint: str | None = None
+    control_plane_token_created_at: str | None = None
+    control_plane_token_revoked_at: str | None = None
+    control_plane_token_active: bool = False
     control_plane_forwarder_template_url: str | None = None
     control_plane_ingest_url: str | None = None
     control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
@@ -122,6 +137,8 @@ class MeResponse(BaseModel):
 # ============================================
 
 BCRYPT_MAX_PASSWORD_BYTES = 72
+CONTROL_PLANE_TOKEN_PREFIX = "cptok-"
+CONTROL_PLANE_TOKEN_BYTES = 32
 
 
 def _password_bytes(password: str) -> bytes:
@@ -146,6 +163,25 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return bcrypt.checkpw(pw_bytes, hashed_password.encode("utf-8"))
     except (ValueError, TypeError):
         return False
+
+
+def generate_control_plane_token() -> str:
+    """Generate a new high-entropy tenant control-plane token (one-time reveal)."""
+    return f"{CONTROL_PLANE_TOKEN_PREFIX}{secrets.token_urlsafe(CONTROL_PLANE_TOKEN_BYTES)}"
+
+
+def hash_control_plane_token(token: str) -> str:
+    """Return deterministic SHA-256 hash used for control-plane token lookup."""
+    normalized = (token or "").strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def control_plane_token_fingerprint(token: str) -> str:
+    """Return short non-secret identifier safe to display in UI/audit logs."""
+    normalized = (token or "").strip()
+    if len(normalized) <= 12:
+        return normalized
+    return f"{normalized[:8]}...{normalized[-4:]}"
 
 
 # ============================================
@@ -186,12 +222,120 @@ def decode_access_token(token: str) -> TokenData | None:
         return None
 
 
+def _cookie_secure() -> bool:
+    return not settings.is_local
+
+
+def _csrf_cookie_domain() -> str | None:
+    return settings.csrf_cookie_domain
+
+
+def create_csrf_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def set_auth_cookies(response: Response, access_token: str, csrf_token: str | None = None) -> str:
+    csrf_value = csrf_token or create_csrf_token()
+    max_age_seconds = int(settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    secure = _cookie_secure()
+    csrf_cookie_domain = _csrf_cookie_domain()
+
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        max_age=max_age_seconds,
+        expires=max_age_seconds,
+        path="/",
+    )
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=csrf_value,
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+        max_age=max_age_seconds,
+        expires=max_age_seconds,
+        path="/",
+        domain=csrf_cookie_domain,
+    )
+    return csrf_value
+
+
+def clear_auth_cookies(response: Response) -> None:
+    secure = _cookie_secure()
+    csrf_cookie_domain = _csrf_cookie_domain()
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value="",
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        max_age=0,
+        expires=0,
+        path="/",
+    )
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value="",
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+        max_age=0,
+        expires=0,
+        path="/",
+        domain=csrf_cookie_domain,
+    )
+
+
+def _resolve_request_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> tuple[str | None, str]:
+    bearer_token = (credentials.credentials or "").strip() if credentials else ""
+    if bearer_token:
+        return bearer_token, "bearer"
+
+    cookie_token = (request.cookies.get(AUTH_COOKIE_NAME) or "").strip()
+    if cookie_token:
+        return cookie_token, "cookie"
+
+    return None, "none"
+
+
+def _enforce_csrf_for_cookie_auth(
+    request: Request,
+    csrf_header: str | None,
+    auth_source: str,
+) -> None:
+    if auth_source != "cookie":
+        return
+    if request.method.upper() in SAFE_HTTP_METHODS:
+        return
+
+    csrf_cookie = (request.cookies.get(CSRF_COOKIE_NAME) or "").strip()
+    csrf_header_value = (csrf_header or "").strip()
+    if (
+        not csrf_cookie
+        or not csrf_header_value
+        or not secrets.compare_digest(csrf_cookie, csrf_header_value)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF validation failed.",
+        )
+
+
 # ============================================
 # FastAPI dependencies
 # ============================================
 
 async def get_optional_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    csrf_header: Annotated[str | None, Header(alias=CSRF_HEADER_NAME)] = None,
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """
@@ -200,10 +344,12 @@ async def get_optional_user(
     Does NOT raise 401 if no token is present. Use for optional auth on
     endpoints that support both authenticated and unauthenticated access.
     """
-    if credentials is None:
+    token, auth_source = _resolve_request_token(request, credentials)
+    if token is None:
         return None
-    
-    token_data = decode_access_token(credentials.credentials)
+
+    _enforce_csrf_for_cookie_auth(request, csrf_header, auth_source)
+    token_data = decode_access_token(token)
     if token_data is None:
         return None
     
@@ -224,7 +370,9 @@ async def get_optional_user(
 
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    csrf_header: Annotated[str | None, Header(alias=CSRF_HEADER_NAME)] = None,
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -232,14 +380,16 @@ async def get_current_user(
     
     Use for endpoints that require authentication.
     """
-    if credentials is None:
+    token, auth_source = _resolve_request_token(request, credentials)
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    token_data = decode_access_token(credentials.credentials)
+
+    _enforce_csrf_for_cookie_auth(request, csrf_header, auth_source)
+    token_data = decode_access_token(token)
     if token_data is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -301,6 +451,20 @@ def tenant_to_response(tenant) -> TenantResponse:
         name=tenant.name,
         external_id=tenant.external_id,
     )
+
+
+def control_plane_token_response_fields(tenant, token_reveal: str | None = None) -> dict[str, str | bool | None]:
+    """Build token metadata payload without exposing recoverable token by default."""
+    created_at = getattr(tenant, "control_plane_token_created_at", None)
+    revoked_at = getattr(tenant, "control_plane_token_revoked_at", None)
+    active = bool(getattr(tenant, "control_plane_token", None) and revoked_at is None)
+    return {
+        "control_plane_token": token_reveal,
+        "control_plane_token_fingerprint": getattr(tenant, "control_plane_token_fingerprint", None),
+        "control_plane_token_created_at": created_at.isoformat() if created_at else None,
+        "control_plane_token_revoked_at": revoked_at.isoformat() if revoked_at else None,
+        "control_plane_token_active": active,
+    }
 
 
 def _sanitize_stack_name(name: str, default_stack_name: str) -> str:

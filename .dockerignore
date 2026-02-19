@@ -1,0 +1,29 @@
+.git
+.gitignore
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Local secrets / artifacts
+.env
+backups/
+docs/audit-remediation/evidence/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+

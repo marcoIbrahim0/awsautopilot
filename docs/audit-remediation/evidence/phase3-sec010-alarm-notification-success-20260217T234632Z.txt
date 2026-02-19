@@ -1,0 +1,37 @@
+SEC-010 Alarm and Notification Path Verification (Successful Run)
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+ValidationMarker=SEC-010 architecture change validation recovery 20260217T234632Z
+
+$ aws cloudwatch describe-alarms --region eu-north-1 --alarm-names security-autopilot-edge-web-acl-blocked-requests security-autopilot-edge-web-acl-rate-limit-triggered --query 'MetricAlarms[].{Name:AlarmName,State:StateValue,Reason:StateReason,Updated:StateUpdatedTimestamp,Actions:AlarmActions}' --output json
+[
+    {
+        "Name": "security-autopilot-edge-web-acl-blocked-requests",
+        "State": "OK",
+        "Reason": "SEC-010 architecture change validation recovery 20260217T234632Z",
+        "Updated": "2026-02-18T02:22:52.110000+02:00",
+        "Actions": [
+            "arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms"
+        ]
+    },
+    {
+        "Name": "security-autopilot-edge-web-acl-rate-limit-triggered",
+        "State": "OK",
+        "Reason": "SEC-010 architecture change validation recovery 20260217T234632Z",
+        "Updated": "2026-02-18T02:22:53.180000+02:00",
+        "Actions": [
+            "arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms"
+        ]
+    }
+]
+
+$ aws sns list-subscriptions-by-topic --region eu-north-1 --topic-arn arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms --query 'Subscriptions[].{Protocol:Protocol,Endpoint:Endpoint,SubscriptionArn:SubscriptionArn}' --output json
+[
+    {
+        "Protocol": "email",
+        "Endpoint": "marcoibrahim11@outlook.com",
+        "SubscriptionArn": "arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms:74d16de9-b4fc-4e84-adb8-86548e708ea9"
+    }
+]
+
+ALARM_NOTIFICATION_PATH_VERIFIED=true

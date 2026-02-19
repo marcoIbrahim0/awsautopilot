@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.config import settings
 from backend.routers.actions import router as actions_router
@@ -22,6 +23,7 @@ from backend.routers.remediation_runs import router as remediation_runs_router
 from backend.routers.saas_admin import router as saas_admin_router
 from backend.routers.support_files import router as support_files_router
 from backend.routers.users import router as users_router
+from backend.services.health_checks import build_readiness_report
 from backend.services.migration_guard import assert_database_revision_at_head
 
 
@@ -38,10 +40,7 @@ app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,10 +69,18 @@ app.include_router(users_router, prefix="/api")
 # Root
 @app.get("/")
 async def root():
-    return {"app": settings.APP_NAME, "docs": "/docs", "health": "/health"}
+    return {"app": settings.APP_NAME, "docs": "/docs", "health": "/health", "ready": "/ready"}
 
 
 # Basic health check
 @app.get("/health")
 async def health():
     return {"status": "ok", "app": settings.APP_NAME}
+
+
+@app.get("/ready")
+@app.get("/health/ready")
+async def ready():
+    report = await build_readiness_report()
+    status_code = 200 if report.get("ready") else 503
+    return JSONResponse(status_code=status_code, content=report)

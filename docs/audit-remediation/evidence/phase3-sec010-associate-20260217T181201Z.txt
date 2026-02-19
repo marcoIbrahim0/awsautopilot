@@ -1,0 +1,5 @@
+Deploying edge protection stack: security-autopilot-edge-protection
+Region: eu-north-1
+Scope: REGIONAL
+
+Could not connect to the endpoint URL: "https://cloudformation.eu-north-1.amazonaws.com/"

@@ -1,0 +1,19 @@
+Wrote: docs/audit-remediation/evidence/phase3-arc009-system-health-slo-20260217T181442Z.json
+{
+  "http_status": 200,
+  "response": {
+    "window_hours": 24,
+    "queue_configured": true,
+    "export_bucket_configured": true,
+    "support_bucket_configured": true,
+    "failing_remediation_runs_24h": 2,
+    "failing_baseline_reports_24h": 1,
+    "failing_exports_24h": 0,
+    "remediation_failure_rate_24h": 0.2,
+    "baseline_report_failure_rate_24h": 0.25,
+    "export_failure_rate_24h": 0.0,
+    "worker_failure_rate_24h": 0.1875,
+    "p95_queue_lag_ms_24h": 4500.0,
+    "control_plane_drop_rate_24h": 0.1
+  }
+}

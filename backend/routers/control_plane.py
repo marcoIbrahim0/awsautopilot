@@ -4,7 +4,8 @@ Public control-plane intake endpoints.
 These endpoints are designed to be called by AWS EventBridge API Destinations
 deployed in customer accounts (per account/region).
 
-Authentication: per-tenant API key header (X-Control-Plane-Token).
+Authentication: per-tenant API key header (X-Control-Plane-Token),
+validated against stored token hashes.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.auth import hash_control_plane_token
 from backend.config import settings
 from backend.database import get_db
 from backend.models.aws_account import AwsAccount
@@ -65,7 +67,11 @@ def _extract_event_fields(event: dict[str, Any]) -> tuple[str | None, str | None
 
 
 async def _get_tenant_for_token(db: AsyncSession, token: str) -> Tenant | None:
-    stmt = select(Tenant).where(Tenant.control_plane_token == token)
+    token_hash = hash_control_plane_token(token)
+    stmt = select(Tenant).where(
+        Tenant.control_plane_token == token_hash,
+        Tenant.control_plane_token_revoked_at.is_(None),
+    )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -174,4 +180,3 @@ async def ingest_control_plane_event(
     await db.commit()
 
     return ControlPlaneIntakeResponse(enqueued=1, dropped=0, drop_reasons={})
-

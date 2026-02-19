@@ -1,0 +1,40 @@
+name: Architecture Phase 3 Readiness and DR
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  phase3-tests:
+    name: Phase 3 Architecture Tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      ENV: ci
+      AWS_REGION: us-east-1
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/security_autopilot_ci
+      DATABASE_URL_SYNC: postgresql+psycopg2://postgres:postgres@localhost:5432/security_autopilot_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r worker/requirements.txt
+
+      - name: Run Phase 3 Architecture Tests
+        run: |
+          pytest -q \
+            tests/test_health_readiness.py \
+            tests/test_saas_system_health_phase3.py \
+            tests/test_cloudformation_phase3_resilience.py \
+            --noconftest

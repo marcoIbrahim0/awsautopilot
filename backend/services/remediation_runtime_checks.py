@@ -148,7 +148,10 @@ def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[b
     region = (action.region or "").strip()
     try:
         if action_type == "s3_block_public_access":
-            s3c = session.client("s3control", region_name="us-east-1")
+            # S3 account-level Public Access Block is global-to-account but S3Control is a regional endpoint.
+            # Default to the session/config region (eu-north-1 in this repo) unless an explicit action region is provided.
+            s3c_region = region or session.region_name or "eu-north-1"
+            s3c = session.client("s3control", region_name=s3c_region)
             try:
                 s3c.get_public_access_block(AccountId=account_id)
             except ClientError as exc:

@@ -1,0 +1,688 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Dev SaaS runtime: ECS Fargate (API + worker) behind an ALB.
+  Uses existing SQS stack exports for queue URLs + IAM policies.
+  Stores DATABASE_URL/JWT_SECRET/CONTROL_PLANE_EVENTS_SECRET in Secrets Manager and injects into tasks.
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: security-autopilot-dev
+    Description: Prefix for resource names.
+
+  AppName:
+    Type: String
+    Default: AWS Security Autopilot
+    Description: APP_NAME env var.
+
+  AppEnv:
+    Type: String
+    Default: dev
+    AllowedValues: [local, dev, prod]
+    Description: ENV env var (controls cookie Secure flag, etc.).
+
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [DEBUG, INFO, WARNING, ERROR]
+    Description: LOG_LEVEL env var.
+
+  FrontendUrl:
+    Type: String
+    Default: https://valensjewelry.com
+    Description: FRONTEND_URL env var.
+
+  CorsOrigins:
+    Type: String
+    Default: https://valensjewelry.com
+    Description: CORS_ORIGINS env var (comma-separated).
+
+  WorkerPool:
+    Type: String
+    Default: all
+    AllowedValues: [legacy, events, inventory, export, all]
+    Description: WORKER_POOL env var.
+
+  # Image
+  EcrRepoName:
+    Type: String
+    Default: security-autopilot-app
+    Description: ECR repository name to create.
+
+  ImageTag:
+    Type: String
+    Default: dev
+    Description: Container image tag in the ECR repo.
+
+  CpuArchitecture:
+    Type: String
+    Default: ARM64
+    AllowedValues: [ARM64, X86_64]
+    Description: ECS task CPU architecture (match your built image).
+
+  # Networking
+  VpcCidr:
+    Type: String
+    Default: 10.42.0.0/16
+
+  # TLS (optional)
+  ApiDomain:
+    Type: String
+    Default: api.valensjewelry.com
+    Description: Public API hostname used for API_PUBLIC_URL when CertificateArn is set.
+
+  CertificateArn:
+    Type: String
+    Default: ""
+    Description: Optional ACM cert ARN in this region. If set, creates HTTPS listener and redirects HTTP->HTTPS.
+
+  # Existing stacks
+  SqsStackName:
+    Type: String
+    Default: security-autopilot-sqs-queues
+    Description: CloudFormation stack name that exported queue URLs and IAM policy ARNs.
+
+  # Secrets (NoEcho)
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: DATABASE_URL (Neon async URL).
+
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: JWT_SECRET.
+
+  ControlPlaneEventsSecret:
+    Type: String
+    NoEcho: true
+    Description: CONTROL_PLANE_EVENTS_SECRET (must match reconcile scheduler ControlPlaneSecret).
+
+  # Service sizing / rollout
+  ApiDesiredCount:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: API service desired tasks (set to 1 after pushing image).
+
+  WorkerDesiredCount:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: Worker service desired tasks (set to 1 after API is healthy and migrations are applied).
+
+  ApiCpu:
+    Type: Number
+    Default: 512
+
+  ApiMemory:
+    Type: Number
+    Default: 1024
+
+  WorkerCpu:
+    Type: Number
+    Default: 512
+
+  WorkerMemory:
+    Type: Number
+    Default: 1024
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref CertificateArn, ""]]
+  NoCertificate: !Equals [!Ref CertificateArn, ""]
+
+Resources:
+  # ----------------------------
+  # Network (public-only VPC)
+  # ----------------------------
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-vpc"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-igw"
+
+  VpcIgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-public-rt"
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcIgwAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      # Create /20 subnets from the VPC /16 (add 4 bits).
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 4]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-public-a"
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 4, 4]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-public-b"
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  # ----------------------------
+  # Security groups
+  # ----------------------------
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "ALB ingress for ${NamePrefix}"
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-alb-sg"
+
+  ApiTaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Allow ALB -> API (${NamePrefix})"
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-api-task-sg"
+
+  WorkerTaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "Worker outbound only (${NamePrefix})"
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${NamePrefix}-worker-task-sg"
+
+  # ----------------------------
+  # ECR
+  # ----------------------------
+  AppRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref EcrRepoName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+  # ----------------------------
+  # ALB
+  # ----------------------------
+  ApiLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${NamePrefix}-api"
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+
+  ApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${NamePrefix}-api"
+      VpcId: !Ref Vpc
+      TargetType: ip
+      Port: 8000
+      Protocol: HTTP
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      Matcher:
+        HttpCode: "200"
+
+  HttpListenerForward:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: NoCertificate
+    Properties:
+      LoadBalancerArn: !Ref ApiLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ApiTargetGroup
+
+  HttpListenerRedirect:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref ApiLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            StatusCode: HTTP_301
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref ApiLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ApiTargetGroup
+
+  # ----------------------------
+  # Secrets Manager
+  # ----------------------------
+  DatabaseUrlSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${NamePrefix}/DATABASE_URL"
+      SecretString: !Ref DatabaseUrl
+
+  JwtSecretSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${NamePrefix}/JWT_SECRET"
+      SecretString: !Ref JwtSecret
+
+  ControlPlaneEventsSecretSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${NamePrefix}/CONTROL_PLANE_EVENTS_SECRET"
+      SecretString: !Ref ControlPlaneEventsSecret
+
+  # ----------------------------
+  # ECS
+  # ----------------------------
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${NamePrefix}-cluster"
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${NamePrefix}/api"
+      RetentionInDays: 14
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${NamePrefix}/worker"
+      RetentionInDays: 14
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-ecs-exec"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ApiTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-api-task"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !ImportValue
+          "Fn::Sub": "${SqsStackName}-ApiSendPolicyArn"
+      Policies:
+        - PolicyName: AssumeTenantRoles
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource:
+                  - arn:aws:iam::*:role/SecurityAutopilotReadRole
+                  - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+
+  WorkerTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-worker-task"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !ImportValue
+          "Fn::Sub": "${SqsStackName}-WorkerConsumePolicyArn"
+      Policies:
+        - PolicyName: AssumeTenantRoles
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource:
+                  - arn:aws:iam::*:role/SecurityAutopilotReadRole
+                  - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+
+  ApiTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${NamePrefix}-api"
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: !Ref ApiCpu
+      Memory: !Ref ApiMemory
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ApiTaskRole.Arn
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: !Ref CpuArchitecture
+      ContainerDefinitions:
+        - Name: api
+          Essential: true
+          Image: !Sub
+            - "${RepoUri}:${Tag}"
+            - RepoUri: !GetAtt AppRepository.RepositoryUri
+              Tag: !Ref ImageTag
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Command:
+            - /bin/sh
+            - -lc
+            - alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8000
+          Environment:
+            - Name: APP_NAME
+              Value: !Ref AppName
+            - Name: ENV
+              Value: !Ref AppEnv
+            - Name: LOG_LEVEL
+              Value: !Ref LogLevel
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: SAAS_AWS_ACCOUNT_ID
+              Value: !Ref AWS::AccountId
+            - Name: ROLE_SESSION_NAME
+              Value: security-autopilot-session
+            - Name: WORKER_POOL
+              Value: !Ref WorkerPool
+            - Name: FRONTEND_URL
+              Value: !Ref FrontendUrl
+            - Name: CORS_ORIGINS
+              Value: !Ref CorsOrigins
+            - Name: API_PUBLIC_URL
+              Value: !If
+                - HasCertificate
+                - !Sub "https://${ApiDomain}"
+                - !Sub "http://${ApiLoadBalancer.DNSName}"
+            - Name: SQS_INGEST_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-IngestQueueURL"
+            - Name: SQS_INGEST_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-IngestDLQURL"
+            - Name: SQS_EVENTS_FAST_LANE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueURL"
+            - Name: SQS_EVENTS_FAST_LANE_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-EventsFastLaneDLQURL"
+            - Name: SQS_INVENTORY_RECONCILE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueURL"
+            - Name: SQS_INVENTORY_RECONCILE_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-InventoryReconcileDLQURL"
+            - Name: SQS_EXPORT_REPORT_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ExportReportQueueURL"
+            - Name: SQS_EXPORT_REPORT_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ExportReportDLQURL"
+            - Name: SQS_CONTRACT_QUARANTINE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ContractQuarantineQueueURL"
+          Secrets:
+            - Name: DATABASE_URL
+              ValueFrom: !Ref DatabaseUrlSecret
+            - Name: JWT_SECRET
+              ValueFrom: !Ref JwtSecretSecret
+            - Name: CONTROL_PLANE_EVENTS_SECRET
+              ValueFrom: !Ref ControlPlaneEventsSecretSecret
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ApiLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: api
+
+  WorkerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${NamePrefix}-worker"
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: !Ref WorkerCpu
+      Memory: !Ref WorkerMemory
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt WorkerTaskRole.Arn
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: !Ref CpuArchitecture
+      ContainerDefinitions:
+        - Name: worker
+          Essential: true
+          Image: !Sub
+            - "${RepoUri}:${Tag}"
+            - RepoUri: !GetAtt AppRepository.RepositoryUri
+              Tag: !Ref ImageTag
+          Command:
+            - /bin/sh
+            - -lc
+            - python -m worker.main
+          Environment:
+            - Name: APP_NAME
+              Value: !Ref AppName
+            - Name: ENV
+              Value: !Ref AppEnv
+            - Name: LOG_LEVEL
+              Value: !Ref LogLevel
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: SAAS_AWS_ACCOUNT_ID
+              Value: !Ref AWS::AccountId
+            - Name: ROLE_SESSION_NAME
+              Value: security-autopilot-session
+            - Name: WORKER_POOL
+              Value: !Ref WorkerPool
+            - Name: FRONTEND_URL
+              Value: !Ref FrontendUrl
+            - Name: CORS_ORIGINS
+              Value: !Ref CorsOrigins
+            - Name: API_PUBLIC_URL
+              Value: !If
+                - HasCertificate
+                - !Sub "https://${ApiDomain}"
+                - !Sub "http://${ApiLoadBalancer.DNSName}"
+            - Name: SQS_INGEST_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-IngestQueueURL"
+            - Name: SQS_INGEST_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-IngestDLQURL"
+            - Name: SQS_EVENTS_FAST_LANE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueURL"
+            - Name: SQS_EVENTS_FAST_LANE_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-EventsFastLaneDLQURL"
+            - Name: SQS_INVENTORY_RECONCILE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueURL"
+            - Name: SQS_INVENTORY_RECONCILE_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-InventoryReconcileDLQURL"
+            - Name: SQS_EXPORT_REPORT_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ExportReportQueueURL"
+            - Name: SQS_EXPORT_REPORT_DLQ_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ExportReportDLQURL"
+            - Name: SQS_CONTRACT_QUARANTINE_QUEUE_URL
+              Value: !ImportValue
+                "Fn::Sub": "${SqsStackName}-ContractQuarantineQueueURL"
+          Secrets:
+            - Name: DATABASE_URL
+              ValueFrom: !Ref DatabaseUrlSecret
+            - Name: JWT_SECRET
+              ValueFrom: !Ref JwtSecretSecret
+            - Name: CONTROL_PLANE_EVENTS_SECRET
+              ValueFrom: !Ref ControlPlaneEventsSecretSecret
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref WorkerLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: worker
+
+  ApiService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ApiLoadBalancer
+      - ApiTargetGroup
+    Properties:
+      ServiceName: !Sub "${NamePrefix}-api"
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref ApiTaskDefinition
+      DesiredCount: !Ref ApiDesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnetA
+            - !Ref PublicSubnetB
+          SecurityGroups:
+            - !Ref ApiTaskSecurityGroup
+      LoadBalancers:
+        - ContainerName: api
+          ContainerPort: 8000
+          TargetGroupArn: !Ref ApiTargetGroup
+
+  WorkerService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub "${NamePrefix}-worker"
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref WorkerTaskDefinition
+      DesiredCount: !Ref WorkerDesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnetA
+            - !Ref PublicSubnetB
+          SecurityGroups:
+            - !Ref WorkerTaskSecurityGroup
+
+Outputs:
+  EcrRepositoryUri:
+    Description: Push images to this repository URI (append :tag).
+    Value: !GetAtt AppRepository.RepositoryUri
+
+  LoadBalancerDnsName:
+    Description: ALB DNS name (use for initial testing, or as CNAME target).
+    Value: !GetAtt ApiLoadBalancer.DNSName
+
+  LoadBalancerArn:
+    Description: ALB ARN (use to attach WAF via deploy_phase3_security.sh --alb-arn).
+    Value: !Ref ApiLoadBalancer
+
+  ApiBaseUrlEffective:
+    Description: Effective API base URL (https if CertificateArn was provided, else http ALB DNS).
+    Value: !If
+      - HasCertificate
+      - !Sub "https://${ApiDomain}"
+      - !Sub "http://${ApiLoadBalancer.DNSName}"

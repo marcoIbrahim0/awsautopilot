@@ -38,6 +38,7 @@ from backend.services.remediation_runtime_checks import (
     collect_runtime_risk_signals,
     probe_direct_fix_permissions,
 )
+from backend.services.direct_fix_bridge import get_supported_direct_fix_action_types
 from backend.services.remediation_strategy import (
     map_legacy_variant_to_strategy,
     strategy_required_for_action_type,
@@ -733,9 +734,26 @@ async def create_remediation_run(
         )
 
     if body.mode == "direct_fix":
-        from worker.services.direct_fix import SUPPORTED_ACTION_TYPES
-
-        if action.action_type not in SUPPORTED_ACTION_TYPES:
+        supported_direct_fix_action_types = get_supported_direct_fix_action_types()
+        if not supported_direct_fix_action_types:
+            emit_validation_failure(
+                logger,
+                reason="direct_fix_runtime_unavailable",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": "Direct-fix runtime unavailable",
+                    "detail": (
+                        "This API deployment does not include direct-fix runtime modules. "
+                        "Use PR bundle mode or deploy worker-enabled runtime."
+                    ),
+                },
+            )
+        if action.action_type not in supported_direct_fix_action_types:
             emit_validation_failure(
                 logger,
                 reason="direct_fix_unsupported",
@@ -748,7 +766,8 @@ async def create_remediation_run(
                     "error": "Action not fixable",
                     "detail": (
                         f"Action type '{action.action_type}' does not support direct fix. "
-                        f"Supported: {', '.join(sorted(SUPPORTED_ACTION_TYPES))}. Use PR bundle instead."
+                        f"Supported: {', '.join(sorted(supported_direct_fix_action_types))}. "
+                        "Use PR bundle instead."
                     ),
                 },
             )

@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-02-18T01:28:48Z",
+  "status": "blocked",
+  "snapshot_target": "main branch protection",
+  "repo_owner_name_resolution": {
+    "method": "git remote origin URL",
+    "derived_owner_repo": "",
+    "status": "blocked",
+    "detail": "origin is missing; owner/repo could not be derived"
+  },
+  "origin_verification": {
+    "status": "fail",
+    "detail": "error: No such remote 'origin'"
+  },
+  "gh_auth_verification": {
+    "status": "fail",
+    "detail": "github.com   X Failed to log in to github.com account marcoIbrahim0 (default)   - Active account: true   - The token in default is invalid.   - To re-authenticate, run: gh auth login -h github.com   - To forget about this account, run: gh auth logout -h github.com -u marcoIbrahim0"
+  },
+  "gh_api_request": "repos/UNRESOLVED_OWNER/UNRESOLVED_REPO/branches/main/protection",
+  "gh_api_status": "fail",
+  "gh_api_detail": "error connecting to api.github.com check your internet connection or https://githubstatus.com",
+  "required_check_matrix_source": "/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase4-required-check-governance.md",
+  "transcript_artifact": "/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase4-main-branch-protection-blocked-20260218T012807Z.txt"
+}

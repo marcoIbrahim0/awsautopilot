@@ -1,0 +1,17 @@
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://sns.eu-north-1.amazonaws.com/"
+FAILED_AFTER_RETRIES: aws sns list-subscriptions-by-topic --region eu-north-1 --topic-arn arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms --output table

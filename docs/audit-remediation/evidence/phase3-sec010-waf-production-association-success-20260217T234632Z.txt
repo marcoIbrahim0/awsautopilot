@@ -1,0 +1,29 @@
+SEC-010 WAF Production Association Verification (Successful Run)
+TimestampUtc=2026-02-17T23:46:32Z
+Region=eu-north-1
+WebAclArn=arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a
+ProductionRestApiStageArn=arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod
+
+$ aws wafv2 list-resources-for-web-acl --region eu-north-1 --web-acl-arn arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a --resource-type API_GATEWAY --output json
+{
+    "ResourceArns": [
+        "arn:aws:apigateway:eu-north-1::/restapis/brplhu7801/stages/prod"
+    ]
+}
+
+$ aws apigateway get-stage --region eu-north-1 --rest-api-id brplhu7801 --stage-name prod --query '{stageName:stageName,webAclArn:webAclArn,deploymentId:deploymentId,lastUpdatedDate:lastUpdatedDate}' --output json
+{
+    "stageName": "prod",
+    "webAclArn": "arn:aws:wafv2:eu-north-1:029037611564:regional/webacl/security-autopilot-edge-web-acl/078ed15a-046c-419c-954a-528561d4807a",
+    "deploymentId": "ksh8mk",
+    "lastUpdatedDate": "2026-02-18T02:21:35+02:00"
+}
+
+$ aws apigateway test-invoke-method --region eu-north-1 --rest-api-id brplhu7801 --resource-id a1zjuc --http-method GET --path-with-query-string '/health' --query '{status:status,body:body,latency:latency}' --output json
+{
+    "status": 200,
+    "body": "{\"status\":\"ok\",\"app\":\"AWS Security Autopilot\"}",
+    "latency": 4408
+}
+
+WAF_ASSOCIATION_VERIFIED=true

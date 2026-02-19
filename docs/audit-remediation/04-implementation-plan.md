@@ -8,6 +8,12 @@ Shared findings are implemented in other plans:
 - Settings report tab accessibility: `UX-001`
 - Queue contract drift handling: `ARC-001`, `ARC-007`
 
+## Deployment Ownership Boundary
+
+- SaaS admin changes in this plan apply to shared SaaS platform code/config and must not be used as proxy evidence for customer-account onboarding rollout.
+- Customer-account forwarder rollout ownership is per tenant admin during onboarding and is tracked in architecture/UX/security plans.
+- Any status/readiness logic implemented in this plan must remain scoped to the tenant/account/region under evaluation.
+
 ## Workstream Outcomes
 
 This plan must deliver:
@@ -76,6 +82,7 @@ This plan must deliver:
 2. Update validation endpoint to set status based on permission completeness.
 3. Ensure downstream workflows respect degraded/insufficient states.
 4. Update UI labels and operator guidance for new states.
+5. Ensure control-plane readiness and related status checks are derived from the customer tenant/account/region scope, not SaaS-owner AWS account stack state.
 
 **Code touchpoints**
 - `backend/routers/aws_accounts.py`
@@ -85,6 +92,7 @@ This plan must deliver:
 **Validation**
 - API tests for each status transition path.
 - UI tests ensure warning/insufficient states are not shown as healthy.
+- Regression tests confirm one tenant/account readiness cannot be satisfied by unrelated SaaS-account infrastructure state.
 
 **Acceptance criteria**
 - Account status accurately reflects real capability and risk.

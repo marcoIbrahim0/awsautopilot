@@ -1,0 +1,8 @@
+$ ./venv/bin/pytest -q tests/test_onboarding_fast_path.py tests/test_account_service_readiness.py tests/test_ingest_trigger.py
+18 passed in 0.11s
+
+$ cd frontend && npm run lint
+0 errors, existing warnings only (no new onboarding fast-path lint errors)
+
+$ date -u +%Y%m%dT%H%M%SZ
+20260217T193137Z

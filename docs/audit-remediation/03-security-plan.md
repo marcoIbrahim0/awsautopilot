@@ -12,6 +12,12 @@ This plan must deliver:
 - Secure token/session lifecycle for both backend and frontend surfaces.
 - Auditable edge and repository controls that meet compliance scrutiny.
 
+## Deployment Ownership Boundary
+
+- SaaS admin scope: maintain shared SaaS-account infrastructure, secret issuance/rotation controls, and template publication.
+- Tenant admin scope: deploy and maintain customer-account control-plane forwarder stacks in each monitored region during onboarding.
+- Security evidence for control-plane token handling must prove tenant/account/region rollout in customer AWS accounts, not only SaaS-owned AWS accounts.
+
 ## Sequencing
 
 1. `SEC-001`, `SEC-002`, `SEC-007`, `SEC-009` are immediate fail-closed controls.
@@ -41,6 +47,37 @@ This plan must deliver:
 | SEC-008 | Secure cookie-based browser auth | Browser no longer stores bearer token in `localStorage` | Frontend tests, E2E session flow evidence |
 | SEC-009 | Centralized startup validation controls | Misconfiguration blocked before serving traffic | Startup test matrix, error log examples |
 | SEC-010 | Edge protections in architecture and IaC | WAF/rate limiting/IP policy controls are explicit and auditable | IaC deployment output, runbook + dashboard links |
+
+## Phase 3 Closure Tracking
+
+Use `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase3-security-closure-checklist.md`
+as the required closure checklist and evidence index for `SEC-008` and `SEC-010`.
+
+`SEC-010` disposition update (`2026-02-17T23:46:32Z`):
+- Security owner `arn:aws:iam::029037611564:user/AutoPilotAdmin` recorded `Require Architecture Change`.
+- Architecture-change path was applied and re-verified with objective artifacts:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-sec010-httpapi-verification-20260217T225816Z.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-sec010-architecture-change-success-20260217T234632Z.txt`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-sec010-waf-production-association-success-20260217T234632Z.txt`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-sec010-alarm-notification-success-20260217T234632Z.txt`
+
+Phase 3 implementation artifacts added in-repo:
+- Cookie + CSRF auth handling (backend):
+  - `/Users/marcomaher/AWS Security Autopilot/backend/auth.py`
+  - `/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py`
+  - `/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py`
+- Cookie-session frontend migration:
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/contexts/AuthContext.tsx`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/next.config.ts`
+- Edge protection IaC + runbooks:
+  - `/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/edge-protection.yaml`
+  - `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase3_security.sh`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/edge-protection-architecture.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/edge-traffic-incident-runbook.md`
+- Phase 3 security CI/test gate:
+  - `/Users/marcomaher/AWS Security Autopilot/tests/test_security_phase3_hardening.py`
+  - `/Users/marcomaher/AWS Security Autopilot/.github/workflows/security-phase3.yml`
 
 ## Detailed Plan
 
@@ -109,16 +146,20 @@ This plan must deliver:
 
 ### SEC-005: Control-plane token plaintext storage and UI exposure
 
+> ✅ Implemented (2026-02-17): token storage is hash + fingerprint metadata, `/api/auth/login` and `/api/auth/me` no longer return existing token material, and tenant-admin rotate/revoke endpoints (`POST /api/auth/control-plane-token/rotate`, `POST /api/auth/control-plane-token/revoke`) emit audit-log events.
+
 **Implementation actions**
 1. Replace plaintext token column with hashed fingerprint storage.
 2. Implement one-time token reveal flow at creation/regeneration only.
 3. Add rotate/revoke endpoint and UI path.
 4. Remove persistent token display from onboarding/settings.
 5. Add audit logs for token generation and rotation events.
+6. Document and enforce that token usage is tied to forwarders deployed in customer AWS accounts/regions, with onboarding completion gated on readiness.
 
 **Validation**
 - DB does not store recoverable token values.
 - UI never displays existing token after initial creation event.
+- Tenant/account control-plane readiness evidence is collected from customer account regions, not inferred from SaaS-account stack state.
 
 **Acceptance criteria**
 - Token compromise window and exposure surface are significantly reduced.
@@ -196,6 +237,11 @@ This plan must deliver:
 
 **Acceptance criteria**
 - Public endpoint protections are explicit, auditable, and reproducible.
+
+**Closure evidence (current)**
+- `SEC-010` status: `Resolved` through architecture change to a WAF-supported production front door.
+- Verification artifact:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-sec010-httpapi-verification-20260217T225816Z.md`
 
 ## Milestones
 

@@ -1,13 +1,13 @@
 # AWS SDK (SQS, Security Hub)
-boto3>=1.34.0
+boto3>=1.34.0,<2.0.0
 
 # Database – sync for worker loop (psycopg2)
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.9,<3.0.0
 
 # Config – worker uses backend.config; same .env
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
 
 # Retries (transient AWS errors, etc.)
-tenacity>=8.2.0
+tenacity>=8.2.0,<10.0.0

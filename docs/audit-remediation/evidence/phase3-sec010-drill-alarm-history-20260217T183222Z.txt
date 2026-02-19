@@ -1,0 +1,34 @@
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+FAILED_AFTER_RETRIES: aws cloudwatch describe-alarm-history --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-blocked-requests --start-date 2026-02-17T18:32:22Z --history-item-type StateUpdate --max-records 50 --output table
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+
+Could not connect to the endpoint URL: "https://monitoring.eu-north-1.amazonaws.com/"
+FAILED_AFTER_RETRIES: aws cloudwatch describe-alarm-history --region eu-north-1 --alarm-name security-autopilot-edge-web-acl-rate-limit-triggered --start-date 2026-02-17T18:32:22Z --history-item-type StateUpdate --max-records 50 --output table

@@ -226,12 +226,19 @@ class FinalizeSupportFileRequest(BaseModel):
 
 
 class SystemHealthResponse(BaseModel):
+    window_hours: int
     queue_configured: bool
     export_bucket_configured: bool
     support_bucket_configured: bool
     failing_remediation_runs_24h: int
     failing_baseline_reports_24h: int
     failing_exports_24h: int
+    remediation_failure_rate_24h: float
+    baseline_report_failure_rate_24h: float
+    export_failure_rate_24h: float
+    worker_failure_rate_24h: float
+    p95_queue_lag_ms_24h: float | None
+    control_plane_drop_rate_24h: float
 
 
 class ControlPlaneSLOResponse(BaseModel):
@@ -480,11 +487,18 @@ async def get_system_health(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SystemHealthResponse:
     since = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    def _rate(failed: int, total: int) -> float:
+        return float(failed / total) if total > 0 else 0.0
+
     remediation_failed = await db.execute(
         select(func.count()).select_from(RemediationRun).where(
             RemediationRun.status == RemediationRunStatus.failed,
             RemediationRun.created_at >= since,
         )
+    )
+    remediation_total = await db.execute(
+        select(func.count()).select_from(RemediationRun).where(RemediationRun.created_at >= since)
     )
     baseline_failed = await db.execute(
         select(func.count()).select_from(BaselineReport).where(
@@ -492,19 +506,70 @@ async def get_system_health(
             BaselineReport.created_at >= since,
         )
     )
+    baseline_total = await db.execute(
+        select(func.count()).select_from(BaselineReport).where(BaselineReport.created_at >= since)
+    )
     exports_failed = await db.execute(
         select(func.count()).select_from(EvidenceExport).where(
             EvidenceExport.status == EvidenceExportStatus.failed,
             EvidenceExport.created_at >= since,
         )
     )
+    exports_total = await db.execute(
+        select(func.count()).select_from(EvidenceExport).where(EvidenceExport.created_at >= since)
+    )
+    control_plane_total = await db.execute(
+        select(func.count()).select_from(ControlPlaneEvent).where(ControlPlaneEvent.event_time >= since)
+    )
+    control_plane_dropped = await db.execute(
+        select(func.count())
+        .select_from(ControlPlaneEvent)
+        .where(
+            ControlPlaneEvent.event_time >= since,
+            ControlPlaneEvent.processing_status == "dropped",
+        )
+    )
+    queue_lag_p95 = await db.execute(
+        select(func.percentile_cont(0.95).within_group(ControlPlaneEvent.queue_lag_ms)).where(
+            ControlPlaneEvent.event_time >= since,
+            ControlPlaneEvent.queue_lag_ms.isnot(None),
+        )
+    )
+
+    remediation_failed_count = int(remediation_failed.scalar() or 0)
+    remediation_total_count = int(remediation_total.scalar() or 0)
+    baseline_failed_count = int(baseline_failed.scalar() or 0)
+    baseline_total_count = int(baseline_total.scalar() or 0)
+    exports_failed_count = int(exports_failed.scalar() or 0)
+    exports_total_count = int(exports_total.scalar() or 0)
+    control_plane_total_count = int(control_plane_total.scalar() or 0)
+    control_plane_dropped_count = int(control_plane_dropped.scalar() or 0)
+    queue_lag_p95_raw = queue_lag_p95.scalar()
+
+    worker_failed_total = remediation_failed_count + baseline_failed_count + exports_failed_count
+    worker_runs_total = remediation_total_count + baseline_total_count + exports_total_count
+
+    queue_lag_p95_ms: float | None = None
+    if queue_lag_p95_raw is not None:
+        try:
+            queue_lag_p95_ms = float(queue_lag_p95_raw)
+        except (TypeError, ValueError):
+            queue_lag_p95_ms = None
+
     return SystemHealthResponse(
+        window_hours=24,
         queue_configured=bool(settings.SQS_INGEST_QUEUE_URL.strip()),
         export_bucket_configured=bool(settings.S3_EXPORT_BUCKET.strip()),
         support_bucket_configured=bool(settings.S3_SUPPORT_BUCKET.strip()),
-        failing_remediation_runs_24h=int(remediation_failed.scalar() or 0),
-        failing_baseline_reports_24h=int(baseline_failed.scalar() or 0),
-        failing_exports_24h=int(exports_failed.scalar() or 0),
+        failing_remediation_runs_24h=remediation_failed_count,
+        failing_baseline_reports_24h=baseline_failed_count,
+        failing_exports_24h=exports_failed_count,
+        remediation_failure_rate_24h=_rate(remediation_failed_count, remediation_total_count),
+        baseline_report_failure_rate_24h=_rate(baseline_failed_count, baseline_total_count),
+        export_failure_rate_24h=_rate(exports_failed_count, exports_total_count),
+        worker_failure_rate_24h=_rate(worker_failed_total, worker_runs_total),
+        p95_queue_lag_ms_24h=queue_lag_p95_ms,
+        control_plane_drop_rate_24h=_rate(control_plane_dropped_count, control_plane_total_count),
     )
 
 
