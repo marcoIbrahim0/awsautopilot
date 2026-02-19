@@ -44,7 +44,7 @@ jobs:
                 )
 
           check_python_requirements("backend/requirements.txt")
-          check_python_requirements("worker/requirements.txt")
+          check_python_requirements("backend/workers/requirements.txt")
 
           package_json_path = Path("frontend/package.json")
           package_lock_path = Path("frontend/package-lock.json")
@@ -100,7 +100,7 @@ jobs:
           - target: backend
             requirements: backend/requirements.txt
           - target: worker
-            requirements: worker/requirements.txt
+            requirements: backend/workers/requirements.txt
     steps:
       - name: Checkout
         uses: actions/checkout@v4

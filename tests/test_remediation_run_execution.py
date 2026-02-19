@@ -12,7 +12,7 @@ from backend.models.enums import (
     RemediationRunMode,
     RemediationRunStatus,
 )
-from worker.jobs.remediation_run_execution import execute_pr_bundle_execution_job
+from backend.workers.jobs.remediation_run_execution import execute_pr_bundle_execution_job
 
 
 def _build_apply_execution(action_type: str, target_id: str | None = None, resource_id: str | None = None):
@@ -94,21 +94,21 @@ def _run_apply_job(
     )
     mock_sqs = MagicMock()
 
-    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
                 mock_run_cmd.side_effect = [
                     {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
                     {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
                     {"command": "terraform apply", "returncode": 0, "stdout": "", "stderr": ""},
                 ]
-                with patch("worker.services.post_apply_reconcile.settings", helper_settings):
+                with patch("backend.workers.services.post_apply_reconcile.settings", helper_settings):
                     with patch(
-                        "worker.services.post_apply_reconcile.collect_reconciliation_queue_snapshot",
+                        "backend.workers.services.post_apply_reconcile.collect_reconciliation_queue_snapshot",
                         return_value={
                             "inventory_queue_depth": 0,
                             "inventory_queue_depth_threshold": 100,
@@ -117,10 +117,10 @@ def _run_apply_job(
                         },
                     ):
                         with patch(
-                            "worker.services.post_apply_reconcile.evaluate_reconciliation_prereqs",
+                            "backend.workers.services.post_apply_reconcile.evaluate_reconciliation_prereqs",
                             return_value=prereq_result,
                         ):
-                            with patch("worker.services.post_apply_reconcile.boto3") as helper_boto3:
+                            with patch("backend.workers.services.post_apply_reconcile.boto3") as helper_boto3:
                                 helper_boto3.client.return_value = mock_sqs
                                 execute_pr_bundle_execution_job(job)
 

@@ -7,7 +7,12 @@ This guide covers environment variable management and AWS Secrets Manager config
 AWS Security Autopilot uses environment variables for configuration. In production:
 - **Secrets** (passwords, tokens) → AWS Secrets Manager
 - **Non-secret config** → CloudFormation parameters or environment variables
-- **Local development** → `.env` file (never commit to Git)
+- **Local development / ops** → split env files:
+  - `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+  - `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+  - `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+  - Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
 
 ## Environment Variables Reference
 
@@ -209,22 +214,38 @@ Secrets:
 
 ## Local Development
 
-For local development, use `.env` file (never commit to Git):
+For local development and ops scripts, use split env files (never commit secrets to Git):
 
 ```bash
-# .env (local development only)
+# backend/.env (backend runtime)
 DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/db"
 JWT_SECRET="change-me-in-production-do-not-use-in-prod"
 CONTROL_PLANE_EVENTS_SECRET="local-dev-secret"
+
+# backend/workers/.env (worker runtime)
+WORKER_POOL="all"
+SQS_INGEST_QUEUE_URL="https://sqs.eu-north-1.amazonaws.com/ACCOUNT_ID/security-autopilot-ingest-queue"
+
+# frontend/.env (public frontend vars)
+NEXT_PUBLIC_API_URL="http://localhost:8000"
+
+# config/.env.ops (deploy/ops scripts)
+AWS_REGION="eu-north-1"
+SQS_STACK_NAME="security-autopilot-sqs-queues"
 ```
 
-**Security**: Add `.env` to `.gitignore`:
+Root `.env` remains a backup-only commented file and should not be used as a runtime source.
+
+**Security**: Add service env files to `.gitignore`:
 
 ```bash
 # .gitignore
-.env
-.env.local
-.env.*.local
+backend/.env
+backend/workers/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+config/.env.ops
 ```
 
 ---
@@ -263,7 +284,7 @@ Consider using AWS Secrets Manager automatic rotation for:
 
 ### 1. Never Commit Secrets
 
-- ✅ Use `.env` for local development (gitignored)
+- ✅ Use split env files for local development and ops (`backend/.env`, `backend/workers/.env`, `frontend/.env`, `config/.env.ops`)
 - ✅ Use Secrets Manager for production
 - ❌ Never commit secrets to Git
 - ❌ Never hardcode secrets in code

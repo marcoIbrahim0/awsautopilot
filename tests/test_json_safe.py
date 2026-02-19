@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from worker.services.json_safe import make_json_safe
+from backend.workers.services.json_safe import make_json_safe
 
 
 def test_make_json_safe_converts_nested_datetime_values() -> None:

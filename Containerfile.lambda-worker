@@ -2,7 +2,7 @@ FROM public.ecr.aws/lambda/python:3.12
 
 # Worker needs both worker + backend deps (models, migration guard, shared utils).
 COPY backend/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-backend.txt
-COPY worker/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-worker.txt
+COPY backend/workers/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-worker.txt
 RUN pip install --no-cache-dir \
   -r ${LAMBDA_TASK_ROOT}/requirements-backend.txt \
   -r ${LAMBDA_TASK_ROOT}/requirements-worker.txt \
@@ -12,7 +12,6 @@ RUN pip install --no-cache-dir \
 COPY alembic ${LAMBDA_TASK_ROOT}/alembic
 COPY alembic.ini ${LAMBDA_TASK_ROOT}/alembic.ini
 COPY backend ${LAMBDA_TASK_ROOT}/backend
-COPY worker ${LAMBDA_TASK_ROOT}/worker
+COPY backend/workers ${LAMBDA_TASK_ROOT}/backend/workers
 
-CMD ["worker.lambda_handler.handler"]
-
+CMD ["backend.workers.lambda_handler.handler"]

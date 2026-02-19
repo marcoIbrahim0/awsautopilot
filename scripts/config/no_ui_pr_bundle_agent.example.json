@@ -1,0 +1,20 @@
+{
+  "api_base": "https://api.valensjewelry.com",
+  "account_id": "029037611564",
+  "region": "eu-north-1",
+  "control_preference": "EC2.53,S3.2",
+  "poll_interval_sec": 10,
+  "phase_timeout_sec": 300,
+  "run_timeout_sec": 1800,
+  "verify_timeout_sec": 900,
+  "terraform_timeout_sec": 900,
+  "stale_resend_sec": 120,
+  "client_timeout_sec": 30,
+  "client_retries": 3,
+  "client_retry_backoff_sec": 1.0,
+  "resume_from_checkpoint": false,
+  "dry_run": false,
+  "keep_workdir": false,
+  "allow_insecure_http": false,
+  "output_dir": ""
+}

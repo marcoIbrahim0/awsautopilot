@@ -880,7 +880,7 @@ def test_build_remediation_run_job_payload_with_variant() -> None:
 
 def test_remediation_run_handler_registered() -> None:
     """Worker has a handler for remediation_run job type."""
-    from worker.jobs import get_job_handler
+    from backend.workers.jobs import get_job_handler
     handler = get_job_handler(REMEDIATION_RUN_JOB_TYPE)
     assert handler is not None
     assert callable(handler)

@@ -273,7 +273,7 @@ resource "aws_ecs_task_definition" "worker" {
       command = [
         "/bin/sh",
         "-lc",
-        "python -m worker.main"
+        "python -m backend.workers.main"
       ]
       logConfiguration = {
         logDriver = "awslogs"

@@ -6,6 +6,22 @@ Close all open remediation work with parallel agents, starting from the highest-
 
 Date baseline: 2026-02-17
 
+## Agent Startup Required Reads (Mandatory For Every Agent)
+
+Before starting any scoped task, each agent must read these files in full:
+
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/rules/core-behavior.mdc`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/rules/console-protocol.mdc`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/README.md`
+
+Required completion criteria before task execution:
+
+- Confirm startup reads are complete in the agent's first task note or handoff comment.
+- Do not begin implementation, deployment, or evidence updates until the read set is complete.
+
 ## Current Open Scope
 
 - Re-opened security/implementation regressions:
@@ -41,6 +57,8 @@ Agent A1 - Security token lifecycle (`SEC-005`)
   - DB no longer stores recoverable token.
   - Existing token is never returned by read endpoints.
   - Rotate/revoke flow tested and documented.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent A2 - Signup error sanitization (`IMP-004`)
 - Scope:
@@ -52,6 +70,8 @@ Agent A2 - Signup error sanitization (`IMP-004`)
 - Done when:
   - HTTP response does not include raw exception text.
   - Regression tests pass.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 ### Phase B: Architecture and Security Operational Closure (`ARC-008`, `ARC-009`, `SEC-010`)
 
@@ -71,6 +91,8 @@ Agent B1 - DR controls and restore drill (`ARC-008`)
   - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-architecture-*.md`
 - Done when:
   - DR stack exists and checklist proof items are checked.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent B2 - Readiness dependency validation (`ARC-009`)
 - Scope:
@@ -86,6 +108,8 @@ Agent B2 - Readiness dependency validation (`ARC-009`)
   - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-architecture-*.md`
 - Done when:
   - All `ARC-009` checklist boxes are checked with attached artifacts.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent B3 - WAF association and alarm drill (`SEC-010`)
 - Scope:
@@ -101,6 +125,8 @@ Agent B3 - WAF association and alarm drill (`SEC-010`)
   - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase3-security-*.md`
 - Done when:
   - WAF is attached and `SEC-010` checklist boxes are checked.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 ### Phase C: Remaining Phase 3 Engineering (`IMP-007`, `IMP-008`, `IMP-009`, `UX-004`, `UX-005`)
 
@@ -114,10 +140,12 @@ Agent C1 - CI and dependency governance (`IMP-007`)
 - Primary files:
   - `/Users/marcomaher/AWS Security Autopilot/.github/workflows/*`
   - `/Users/marcomaher/AWS Security Autopilot/backend/requirements.txt`
-  - `/Users/marcomaher/AWS Security Autopilot/worker/requirements.txt`
+  - `/Users/marcomaher/AWS Security Autopilot/backend/workers/requirements.txt`
   - `/Users/marcomaher/AWS Security Autopilot/frontend/package.json`
 - Done when:
   - Full test matrix and dependency scans run on pull requests.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent C2 - Router/service refactor (`IMP-008`)
 - Scope:
@@ -129,6 +157,8 @@ Agent C2 - Router/service refactor (`IMP-008`)
   - `/Users/marcomaher/AWS Security Autopilot/backend/services/*`
 - Done when:
   - Router complexity reduced and tests show no API contract regressions.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent C3 - Tenant isolation regression suite (`IMP-009`)
 - Scope:
@@ -140,6 +170,8 @@ Agent C3 - Tenant isolation regression suite (`IMP-009`)
   - `/Users/marcomaher/AWS Security Autopilot/.github/workflows/*`
 - Done when:
   - Cross-tenant mutation/access regressions fail CI reliably.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent C4 - Accessibility CI baseline (`UX-004`)
 - Scope:
@@ -151,6 +183,8 @@ Agent C4 - Accessibility CI baseline (`UX-004`)
   - `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/*`
 - Done when:
   - Accessibility checks run in CI with artifact output.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent C5 - Onboarding fast-path (`UX-005`)
 - Scope:
@@ -161,6 +195,8 @@ Agent C5 - Onboarding fast-path (`UX-005`)
   - `/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py`
 - Done when:
   - Faster first ingest path shipped with evidence metrics.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 ### Phase D: Phase 4 Closure and Governance
 
@@ -172,6 +208,8 @@ Agent D1 - Required checks and branch protections
   - Document governance and release gate matrix.
 - Done when:
   - Phase 4 evidence includes branch protection snapshot and required checks list.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 Agent D2 - Final remediation closure package
 - Scope:
@@ -183,6 +221,8 @@ Agent D2 - Final remediation closure package
   - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/phase3-security-closure-checklist.md`
 - Done when:
   - Phase 3 and Phase 4 are checked complete in backlog.
+- Startup requirements:
+  - Complete all files listed in `Agent Startup Required Reads (Mandatory For Every Agent)` before starting.
 
 ## Parallel Start Order
 

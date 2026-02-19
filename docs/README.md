@@ -9,16 +9,23 @@
 - **[API Reference](api/README.md)** — Complete REST API documentation with request/response schemas
 - **[Data Model](data-model/README.md)** — Database schema, entity relationships, and data flow patterns
 - **[Architectural Decisions](decisions/README.md)** — ADRs explaining key design choices
+> ⚠️ Status: Planned — not yet implemented
+> `docs/api/`, `docs/data-model/`, and `docs/decisions/` are planned documentation areas.
 
 ### For SaaS Owners / Operators
 - **[Owner Deployment Guide](deployment/README.md)** — Step-by-step infrastructure deployment on AWS (ECS Fargate or Lambda)
 - **[CI Dependency Governance Policy](deployment/ci-dependency-governance.md)** — Required checks, dependency lock/version policy, and vulnerability gates
 - **[Owner-Side Architecture](architecture/owner/README.md)** — System architecture, backend services, AWS resources, and data flows
+- **[Deployer Runbook (Phase 1-3)](audit-remediation/deployer-runbook-phase1-phase3.md)** — End-to-end SaaS deployer sequence (`.env.ops` -> AWS serverless deploy -> worker enablement -> Cloudflare custom domain -> verification)
 - **[Monitoring & Runbooks](runbooks/README.md)** — Operational procedures for incidents, DR, and queue management
+> ⚠️ Status: Planned — not yet implemented
+> `docs/architecture/owner/` remains a planned documentation area.
 
 ### For Customers
 - **[Customer Onboarding Guide](customer-guide/README.md)** — Account creation, AWS account connection, and feature walkthroughs
 - **[Client-Side AWS Resources](architecture/client/README.md)** — What gets deployed in your AWS account and why
+> ⚠️ Status: Planned — not yet implemented
+> `docs/architecture/client/` is a planned documentation area.
 
 ### For Auditors & Compliance
 - **[Audit Remediation Package](audit-remediation/README.md)** — Architecture, security, implementation, and UX remediation plans
@@ -32,7 +39,7 @@
 
 - **Frontend**: React/Next.js application
 - **API**: Python FastAPI REST API (`backend/main.py`)
-- **Worker**: Python SQS consumers (`worker/main.py`) for background job processing
+- **Worker**: Python SQS consumers (`backend/workers/main.py`) for background job processing (legacy import/entrypoint compatibility remains via `worker` shim package)
 - **Database**: PostgreSQL (RDS) with async SQLAlchemy 2.0
 - **Queues**: Amazon SQS (4 main queues + 4 DLQs + 1 quarantine queue)
   - `security-autopilot-ingest-queue` — Legacy ingestion jobs
@@ -46,6 +53,13 @@
   - Template bucket — Versioned CloudFormation templates
 - **Observability**: CloudWatch (logs, metrics, alarms)
 - **Secrets**: AWS Secrets Manager (`DATABASE_URL`, `JWT_SECRET`, `CONTROL_PLANE_EVENTS_SECRET`)
+- **Runtime Env Model (split by service)**:
+  - Backend runtime: `backend/.env`
+  - Worker runtime: `backend/workers/.env`
+  - Frontend public vars: `frontend/.env`
+  - Deploy/ops scripts: `config/.env.ops`
+  - Root `.env` is backup-only and not a runtime source
+  - Cross-reference: [Local Development Environment Setup](local-dev/environment.md)
 - **Deployment Options**:
   - **ECS Fargate** (recommended for dev/prod) — ALB, persistent connections, easier debugging
   - **Lambda** (serverless alternative) — HTTP API + SQS triggers, cost-efficient scaling
@@ -98,9 +112,12 @@ Non-technical customer onboarding and usage:
 - `team-management.md` — User invites, roles, notifications
 - `billing.md` — Subscription and billing (current vs planned)
 - `troubleshooting.md` — FAQs and common issues
+> ⚠️ Status: Planned — not yet implemented
+> `features-walkthrough.md`, `team-management.md`, and `billing.md` are planned but not present yet.
 
 ### `/docs/architecture/owner/`
 Technical reference for SaaS infrastructure:
+> ⚠️ Status: Planned — not yet implemented
 - `README.md` — Architecture overview
 - `system-architecture.md` — High-level component diagram
 - `backend-services.md` — FastAPI routers, worker jobs, services
@@ -113,6 +130,7 @@ Technical reference for SaaS infrastructure:
 
 ### `/docs/architecture/client/`
 Customer-side AWS resources:
+> ⚠️ Status: Planned — not yet implemented
 - `README.md` — Overview
 - `customer-resources.md` — What gets created per customer
 - `naming-and-tagging.md` — Resource naming conventions
@@ -121,11 +139,13 @@ Customer-side AWS resources:
 
 ### `/docs/api/`
 Complete API reference:
+> ⚠️ Status: Planned — not yet implemented
 - `README.md` — Authentication, base URLs, error handling
 - Domain-specific docs (`auth.md`, `aws-accounts.md`, `findings.md`, `actions.md`, `exceptions.md`, `remediation-runs.md`, `exports.md`, `baseline-report.md`, `users.md`, `reconciliation.md`, `control-plane.md`, `internal.md`, `saas-admin.md`)
 
 ### `/docs/data-model/`
 Database schema and relationships:
+> ⚠️ Status: Planned — not yet implemented
 - `README.md` — Entity overview
 - `schema.md` — ER diagram and table descriptions
 - `tenancy-and-accounts.md` — Tenant/account relationships
@@ -134,7 +154,7 @@ Database schema and relationships:
 ### `/docs/local-dev/`
 Local development setup:
 - `README.md` — Overview
-- `environment.md` — `.env` setup, Python dependencies
+- `environment.md` — Split env-file setup, Python dependencies
 - `backend.md` — Running FastAPI locally
 - `worker.md` — Running worker against SQS
 - `tests.md` — Running pytest and interpreting results
@@ -142,13 +162,14 @@ Local development setup:
 
 ### `/docs/decisions/`
 Architectural Decision Records (ADRs):
+> ⚠️ Status: Planned — not yet implemented
 - `README.md` — ADR conventions
 - Individual ADRs (e.g., `0001-multi-tenant-single-db.md`, `0002-hybrid-remediation-strategy.md`)
 
 ### `/docs/runbooks/`
 Operational procedures:
 - `README.md` — Runbook index
-- Links to existing runbooks (DR, edge incidents, queue quarantine, control-plane monitoring)
+- `no-ui-pr-bundle-agent.md` — Fully automated no-UI PR-bundle validation flow
 
 ### `/docs/audit-remediation/`
 Audit remediation program documentation (preserved from existing structure):
@@ -159,6 +180,7 @@ Audit remediation program documentation (preserved from existing structure):
 - `03-security-plan.md` — Security remediation tasks
 - `04-implementation-plan.md` — Implementation remediation tasks
 - `05-ux-plan.md` — UX remediation tasks
+- `deployer-runbook-phase1-phase3.md` — Deployer-grade runbook for Phases 1-3 with exact deployment and verification commands
 - `phase4-required-check-governance.md` — Required CI checks and branch-protection governance baseline
 - Phase closure checklists
 

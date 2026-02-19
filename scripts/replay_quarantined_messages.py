@@ -15,7 +15,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from backend.utils.sqs import parse_queue_region
-from worker.config import settings
+from backend.workers.config import settings
 
 
 def _build_parser() -> argparse.ArgumentParser:

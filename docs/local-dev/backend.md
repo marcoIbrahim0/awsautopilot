@@ -35,10 +35,18 @@ The API will be available at:
 
 On startup, the backend:
 
-1. **Loads configuration** from `.env` via `backend/config.py`
+1. **Loads configuration** from `backend/.env` via `backend/config.py`
 2. **Checks database revision** — Fails fast if DB revision != Alembic head (via `backend/services/migration_guard.py`)
 3. **Mounts routers** — All API routes under `/api` prefix
 4. **Starts uvicorn** — ASGI server
+
+### Runtime Environment Files
+
+- Backend runtime: `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
 
 ### Health Endpoints
 
@@ -102,7 +110,7 @@ uvicorn backend.main:app --reload
 
 ### Debug Logging
 
-Set `LOG_LEVEL=DEBUG` in `.env` for verbose logging:
+Set `LOG_LEVEL=DEBUG` in `backend/.env` for verbose logging:
 
 ```bash
 LOG_LEVEL=DEBUG
@@ -110,7 +118,7 @@ LOG_LEVEL=DEBUG
 
 ### CORS Configuration
 
-Configure allowed origins in `.env`:
+Configure allowed origins in `backend/.env`:
 
 ```bash
 CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
@@ -244,7 +252,7 @@ Visit http://localhost:8000/docs for interactive API documentation:
        MY_NEW_VAR: str = Field(default="default", description="My new variable")
    ```
 
-2. **Update `.env`** with the new variable
+2. **Update `backend/.env`** with the new variable
 
 3. **Use in code**:
    ```python
@@ -258,7 +266,7 @@ Visit http://localhost:8000/docs for interactive API documentation:
 
 ### Logging
 
-Set `LOG_LEVEL=DEBUG` in `.env` for verbose logs:
+Set `LOG_LEVEL=DEBUG` in `backend/.env` for verbose logs:
 
 ```bash
 LOG_LEVEL=DEBUG
@@ -322,7 +330,7 @@ No built-in caching. Consider adding Redis for:
 
 For production deployment, see [Owner Deployment Guide](../deployment/infrastructure-ecs.md). Key differences:
 
-- **Secrets**: Use AWS Secrets Manager instead of `.env`
+- **Secrets**: Use AWS Secrets Manager instead of local env files (`backend/.env`, `backend/workers/.env`)
 - **Database**: RDS PostgreSQL with automated backups
 - **Deployment**: ECS Fargate or Lambda (not uvicorn directly)
 - **Monitoring**: CloudWatch logs and metrics

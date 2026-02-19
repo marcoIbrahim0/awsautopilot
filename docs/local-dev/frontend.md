@@ -22,7 +22,7 @@ The frontend codebase may be:
 
 ### Environment Variables
 
-The frontend needs to know the backend API URL. Configure in frontend `.env.local` or `.env`:
+The frontend needs to know the backend API URL. Configure canonical public vars in `frontend/.env` (optionally override locally in `frontend/.env.local`):
 
 ```bash
 # Backend API URL
@@ -32,9 +32,16 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_API_URL=https://your-ngrok-url.ngrok-free.app
 ```
 
+Canonical env model used by this project:
+- Backend runtime: `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
+
 ### CORS Configuration
 
-Ensure backend CORS allows frontend origin. In backend `.env`:
+Ensure backend CORS allows frontend origin. In `backend/.env`:
 
 ```bash
 CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"

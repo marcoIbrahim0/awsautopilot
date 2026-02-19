@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
-from worker.jobs.backfill_action_groups import _map_legacy_run_status, _parse_group_action_ids
+from backend.workers.jobs.backfill_action_groups import _map_legacy_run_status, _parse_group_action_ids
 
 
 def test_parse_group_action_ids_dedup_and_invalid_entries() -> None:

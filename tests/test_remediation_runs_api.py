@@ -736,7 +736,7 @@ def test_remediation_preview_success(client: TestClient) -> None:
         return user
 
     from backend.auth import get_optional_user
-    from worker.services.direct_fix import RemediationPreviewResult
+    from backend.workers.services.direct_fix import RemediationPreviewResult
 
     preview_result = RemediationPreviewResult(
         compliant=False,
@@ -748,7 +748,7 @@ def test_remediation_preview_success(client: TestClient) -> None:
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
     with patch("backend.routers.actions.assume_role", return_value=MagicMock()):
         with patch(
-            "worker.services.direct_fix.run_remediation_preview",
+            "backend.workers.services.direct_fix.run_remediation_preview",
             return_value=preview_result,
         ):
             try:

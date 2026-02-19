@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-ENV_FILE="${PHASE2_ENV_FILE:-.env}"
+ENV_FILE="${PHASE2_ENV_FILE:-config/.env.ops}"
 
 read_env_file_value() {
   local key="$1"

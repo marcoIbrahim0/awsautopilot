@@ -4,7 +4,7 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from worker.services.inventory_assets import (
+from backend.workers.services.inventory_assets import (
     InventorySnapshot,
     compute_state_hash,
     upsert_inventory_asset,

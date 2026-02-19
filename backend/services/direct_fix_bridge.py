@@ -17,7 +17,7 @@ class DirectFixModuleUnavailable(RuntimeError):
 def get_supported_direct_fix_action_types() -> frozenset[str]:
     """Best-effort list of direct-fix action types; empty when module unavailable."""
     try:
-        from worker.services.direct_fix import SUPPORTED_ACTION_TYPES
+        from backend.workers.services.direct_fix import SUPPORTED_ACTION_TYPES
     except ModuleNotFoundError:
         return frozenset()
     return frozenset(str(action_type) for action_type in SUPPORTED_ACTION_TYPES)
@@ -33,7 +33,7 @@ def run_remediation_preview_bridge(
 ) -> Any:
     """Run worker direct-fix preview or raise an explicit availability error."""
     try:
-        from worker.services.direct_fix import run_remediation_preview
+        from backend.workers.services.direct_fix import run_remediation_preview
     except ModuleNotFoundError as exc:
         raise DirectFixModuleUnavailable(
             "Direct-fix preview runtime is not available in this API deployment."

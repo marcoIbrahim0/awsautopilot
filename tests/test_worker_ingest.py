@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from worker.jobs.ingest_findings import (
+from backend.workers.jobs.ingest_findings import (
     _extract_finding_fields,
     _normalized_finding_status,
     _parse_ts,
@@ -261,7 +261,7 @@ def test_execute_ingest_job_account_not_found() -> None:
     mock_query.filter.return_value.first.return_value = None  # No account
     mock_session.query.return_value = mock_query
     
-    with patch("worker.jobs.ingest_findings.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.ingest_findings.session_scope") as mock_scope:
         mock_scope.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_scope.return_value.__exit__ = MagicMock(return_value=False)
         
@@ -305,15 +305,15 @@ def test_execute_ingest_job_success() -> None:
         }
     ]
     
-    with patch("worker.jobs.ingest_findings.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.ingest_findings.session_scope") as mock_scope:
         mock_scope.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_scope.return_value.__exit__ = MagicMock(return_value=False)
         
-        with patch("worker.jobs.ingest_findings.assume_role") as mock_assume:
+        with patch("backend.workers.jobs.ingest_findings.assume_role") as mock_assume:
             mock_boto_session = MagicMock()
             mock_assume.return_value = mock_boto_session
             
-            with patch("worker.jobs.ingest_findings.fetch_all_findings", return_value=mock_findings):
+            with patch("backend.workers.jobs.ingest_findings.fetch_all_findings", return_value=mock_findings):
                 execute_ingest_job(job)
         
         # Verify assume_role was called with correct args
@@ -342,11 +342,11 @@ def test_execute_ingest_job_empty_findings() -> None:
     mock_query.filter.return_value.first.return_value = mock_account
     mock_session.query.return_value = mock_query
     
-    with patch("worker.jobs.ingest_findings.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.ingest_findings.session_scope") as mock_scope:
         mock_scope.return_value.__enter__ = MagicMock(return_value=mock_session)
         mock_scope.return_value.__exit__ = MagicMock(return_value=False)
         
-        with patch("worker.jobs.ingest_findings.assume_role"):
-            with patch("worker.jobs.ingest_findings.fetch_all_findings", return_value=[]):
+        with patch("backend.workers.jobs.ingest_findings.assume_role"):
+            with patch("backend.workers.jobs.ingest_findings.fetch_all_findings", return_value=[]):
                 # Should complete without error
                 execute_ingest_job(job)

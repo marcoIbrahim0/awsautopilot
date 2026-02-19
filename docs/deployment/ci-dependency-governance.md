@@ -38,7 +38,7 @@ Policy:
 
 Implemented in:
 - `backend/requirements.txt`
-- `worker/requirements.txt`
+- `backend/workers/requirements.txt`
 - `.github/workflows/dependency-governance.yml` (`Dependency Policy` job validation)
 
 ### Frontend (`frontend`)
@@ -60,7 +60,7 @@ Implemented in:
 ### Python
 
 - Scanner: `pip-audit`
-- Scope: `backend/requirements.txt`, `worker/requirements.txt`
+- Scope: `backend/requirements.txt`, `backend/workers/requirements.txt`
 - Gate behavior: workflow fails when known vulnerabilities are found.
 
 ### Frontend
@@ -73,7 +73,7 @@ Implemented in:
 
 When updating dependencies:
 
-1. Update bounded ranges in `backend/requirements.txt` and/or `worker/requirements.txt`.
+1. Update bounded ranges in `backend/requirements.txt` and/or `backend/workers/requirements.txt`.
 2. For frontend changes, update `frontend/package.json` and regenerate `frontend/package-lock.json`.
 3. Run local targeted checks:
    - Backend/worker pytest subsets

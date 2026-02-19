@@ -128,7 +128,7 @@ def main() -> int:
     # 4. Worker handler registered
     try:
         from backend.utils.sqs import REMEDIATION_RUN_JOB_TYPE
-        from worker.jobs import get_job_handler
+        from backend.workers.jobs import get_job_handler
         handler = get_job_handler(REMEDIATION_RUN_JOB_TYPE)
         assert handler is not None, "remediation_run handler should be registered"
         assert callable(handler), "handler should be callable"

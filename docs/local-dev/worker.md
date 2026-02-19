@@ -4,7 +4,7 @@ This guide covers running the SQS worker locally for development and testing.
 
 ## Overview
 
-The worker (`worker/main.py`) is a Python application that:
+The worker (`backend/workers/main.py`) is a Python application that:
 - Polls SQS queues for background jobs
 - Routes jobs by `job_type` to appropriate handlers
 - Processes jobs (ingestion, action computation, remediation, exports, etc.)
@@ -20,15 +20,23 @@ From the project root:
 # Activate virtual environment (if using one)
 source venv/bin/activate
 
-# Run worker
-PYTHONPATH=. python -m worker.main
+# Run worker (canonical entrypoint)
+PYTHONPATH=. python -m backend.workers.main
 ```
 
 The worker will:
-1. **Load configuration** from `.env` (uses `backend/config.py` via `worker/config.py`)
+1. **Load configuration** from `backend/workers/.env` (via `backend/workers/config.py`)
 2. **Check database revision** — Fails fast if DB revision != Alembic head
 3. **Resolve queue configs** — Based on `WORKER_POOL` environment variable
 4. **Start polling** — Long-poll SQS queues (20s wait time)
+
+### Runtime Environment Files
+
+- Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- Backend runtime (shared variables used by some jobs): `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
 
 ### Worker Pool Configuration
 
@@ -73,20 +81,20 @@ The worker uses **long polling** (20s wait time) to reduce empty polls:
 
 Jobs are routed by `job_type` field:
 
-- `ingest` — Security Hub findings ingestion (`worker/jobs/ingest_findings.py`)
-- `ingest_access_analyzer` — IAM Access Analyzer ingestion (`worker/jobs/ingest_access_analyzer.py`)
-- `ingest_inspector` — Inspector ingestion (`worker/jobs/ingest_inspector.py`)
-- `ingest_control_plane_events` — Control-plane event ingestion (`worker/jobs/ingest_control_plane_events.py`)
-- `compute_actions` — Action computation (`worker/jobs/compute_actions.py`)
-- `remediation_run` — Remediation execution (`worker/jobs/remediation_run.py`)
-- `generate_export` — Evidence/compliance pack generation (`worker/jobs/evidence_export.py`)
-- `generate_baseline_report` — Baseline report generation (`worker/jobs/generate_baseline_report.py`)
-- `weekly_digest` — Weekly digest email/Slack (`worker/jobs/weekly_digest.py`)
-- `reconcile_inventory_shard` — Inventory reconciliation shard (`worker/jobs/reconcile_inventory_shard.py`)
-- `reconcile_inventory_global_orchestration` — Global orchestration (`worker/jobs/reconcile_inventory_global_orchestration.py`)
-- `reconcile_recently_touched_resources` — Recently touched resources (`worker/jobs/reconcile_recently_touched_resources.py`)
-- `backfill_finding_keys` — Finding key backfill (`worker/jobs/backfill_finding_keys.py`)
-- `backfill_action_groups` — Action group backfill (`worker/jobs/backfill_action_groups.py`)
+- `ingest` — Security Hub findings ingestion (`backend/workers/jobs/ingest_findings.py`)
+- `ingest_access_analyzer` — IAM Access Analyzer ingestion (`backend/workers/jobs/ingest_access_analyzer.py`)
+- `ingest_inspector` — Inspector ingestion (`backend/workers/jobs/ingest_inspector.py`)
+- `ingest_control_plane_events` — Control-plane event ingestion (`backend/workers/jobs/ingest_control_plane_events.py`)
+- `compute_actions` — Action computation (`backend/workers/jobs/compute_actions.py`)
+- `remediation_run` — Remediation execution (`backend/workers/jobs/remediation_run.py`)
+- `generate_export` — Evidence/compliance pack generation (`backend/workers/jobs/evidence_export.py`)
+- `generate_baseline_report` — Baseline report generation (`backend/workers/jobs/generate_baseline_report.py`)
+- `weekly_digest` — Weekly digest email/Slack (`backend/workers/jobs/weekly_digest.py`)
+- `reconcile_inventory_shard` — Inventory reconciliation shard (`backend/workers/jobs/reconcile_inventory_shard.py`)
+- `reconcile_inventory_global_orchestration` — Global orchestration (`backend/workers/jobs/reconcile_inventory_global_orchestration.py`)
+- `reconcile_recently_touched_resources` — Recently touched resources (`backend/workers/jobs/reconcile_recently_touched_resources.py`)
+- `backfill_finding_keys` — Finding key backfill (`backend/workers/jobs/backfill_finding_keys.py`)
+- `backfill_action_groups` — Action group backfill (`backend/workers/jobs/backfill_action_groups.py`)
 
 ### Error Handling
 
@@ -188,7 +196,7 @@ See [Testing](tests.md) for test-specific mocking.
    MY_NEW_JOB_TYPE = "my_new_job"
    ```
 
-2. **Create job handler** in `worker/jobs/my_new_job.py`:
+2. **Create job handler** in `backend/workers/jobs/my_new_job.py`:
    ```python
    from backend.utils.sqs import MY_NEW_JOB_TYPE
    
@@ -197,9 +205,9 @@ See [Testing](tests.md) for test-specific mocking.
        # Process job...
    ```
 
-3. **Register handler** in `worker/jobs/__init__.py`:
+3. **Register handler** in `backend/workers/jobs/__init__.py`:
    ```python
-   from worker.jobs.my_new_job import handle_my_new_job
+   from backend.workers.jobs.my_new_job import handle_my_new_job
    
    JOB_HANDLERS = {
        MY_NEW_JOB_TYPE: handle_my_new_job,
@@ -207,7 +215,7 @@ See [Testing](tests.md) for test-specific mocking.
    }
    ```
 
-4. **Update required fields** in `worker/main.py`:
+4. **Update required fields** in `backend/workers/main.py`:
    ```python
    MY_NEW_JOB_REQUIRED_FIELDS = {"job_type", "tenant_id", "created_at"}
    ```
@@ -269,7 +277,7 @@ The worker uses long polling (20s wait) to reduce empty polls. For faster proces
 The worker uses sync SQLAlchemy (not async). Ensure connection pool is sized appropriately:
 
 ```python
-# In worker/database.py (if customizing)
+# In backend/workers/database.py (if customizing)
 engine = create_engine(
     DATABASE_URL_SYNC,
     pool_size=10,
@@ -283,7 +291,7 @@ engine = create_engine(
 
 For production deployment, see [Owner Deployment Guide](../deployment/infrastructure-ecs.md). Key differences:
 
-- **Deployment**: ECS Fargate task or Lambda function (not `python -m worker.main` directly)
+- **Deployment**: ECS Fargate task or Lambda function (not `python -m backend.workers.main` directly)
 - **Scaling**: Multiple worker tasks for parallel processing
 - **Monitoring**: CloudWatch logs and metrics
 - **DLQ Alarms**: CloudWatch alarms for DLQ depth
@@ -304,7 +312,7 @@ For production deployment, see [Owner Deployment Guide](../deployment/infrastruc
 
 Error: `No worker queue configured for WORKER_POOL=...`
 
-**Solution**: Set queue URLs in `.env`:
+**Solution**: Set queue URLs in `backend/workers/.env`:
 ```bash
 SQS_INGEST_QUEUE_URL="https://sqs.region.amazonaws.com/account/queue-name"
 ```

@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from worker.jobs import reconcile_inventory_global_orchestration as orchestration
+from backend.workers.jobs import reconcile_inventory_global_orchestration as orchestration
 
 
 @contextmanager

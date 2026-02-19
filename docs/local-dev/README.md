@@ -7,7 +7,7 @@ This guide helps you set up and run AWS Security Autopilot locally for developme
 The AWS Security Autopilot project consists of:
 
 - **Backend API** — FastAPI application (`backend/main.py`) running on port 8000
-- **Worker** — Python SQS consumer (`worker/main.py`) for background job processing
+- **Worker** — Python SQS consumer (`backend/workers/main.py`) for background job processing
 - **Database** — PostgreSQL (can use local Postgres or cloud-hosted like Neon)
 - **SQS Queues** — Amazon SQS queues (can use real AWS queues or mocked for testing)
 
@@ -17,6 +17,18 @@ The AWS Security Autopilot project consists of:
 2. **Run backend** — See [Backend Development](backend.md)
 3. **Run worker** — See [Worker Development](worker.md)
 4. **Run tests** — See [Testing](tests.md)
+
+---
+
+## Canonical Env Files
+
+Use split service env files for local runtime and ops automation:
+
+- Backend runtime: `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
 
 ---
 
@@ -40,14 +52,21 @@ The AWS Security Autopilot project consists of:
 │   ├── routers/         # API route handlers
 │   ├── services/        # Business logic
 │   ├── models/          # SQLAlchemy models
-│   └── utils/           # Utilities
-├── worker/              # SQS worker
-│   ├── main.py          # Worker entrypoint
-│   ├── jobs/            # Job handlers
-│   └── services/       # Worker services
+│   ├── utils/           # Utilities
+│   └── workers/         # Canonical worker package
+│       ├── main.py      # Worker entrypoint
+│       ├── jobs/        # Job handlers
+│       └── services/    # Worker services
+├── worker/              # Compatibility shim for legacy worker.* imports
+│   ├── __init__.py      # Namespace shim to backend.workers.*
+│   └── requirements.txt # Compatibility include to backend/workers/requirements.txt
+├── frontend/
+│   └── .env             # Frontend public variables
+├── config/
+│   └── .env.ops         # Deploy/ops variables for scripts
 ├── alembic/             # Database migrations
 ├── tests/               # Test suite
-├── .env                 # Environment variables (create from .env.example)
+├── .env                 # Backup-only commented env snapshot (not runtime source)
 └── requirements.txt     # Python dependencies
 ```
 
@@ -55,7 +74,7 @@ The AWS Security Autopilot project consists of:
 
 ## Next Steps
 
-- **[Environment Setup](environment.md)** — Configure `.env` file and Python dependencies
+- **[Environment Setup](environment.md)** — Configure split env files and Python dependencies
 - **[Backend Development](backend.md)** — Run the FastAPI API locally
 - **[Worker Development](worker.md)** — Run the SQS worker locally
 - **[Testing](tests.md)** — Run tests and understand test structure
@@ -101,14 +120,14 @@ The worker logs to stdout. Look for:
 
 ### Database Connection Issues
 
-- Verify `DATABASE_URL` in `.env` is correct
+- Verify `DATABASE_URL` in `backend/.env` is correct
 - Ensure PostgreSQL is running (if using local DB)
 - Check SSL settings for cloud-hosted databases (Neon requires SSL)
 
 ### SQS Queue Issues
 
 - Verify AWS credentials are configured (`aws configure`)
-- Check queue URLs in `.env` match your AWS account
+- Check queue URLs in `backend/workers/.env` match your AWS account
 - Ensure IAM permissions allow SQS access
 
 ### Migration Errors
@@ -120,17 +139,17 @@ The worker logs to stdout. Look for:
 ### Port Already in Use
 
 - Change `uvicorn` port: `uvicorn backend.main:app --port 8001`
-- Update `CORS_ORIGINS` in `.env` if frontend uses different port
+- Update `CORS_ORIGINS` in `backend/.env` if frontend uses different port
 
 ---
 
 ## Development Workflow
 
 1. **Create feature branch**
-2. **Update `.env`** if new environment variables are needed
+2. **Update split env files** (`backend/.env`, `backend/workers/.env`, `frontend/.env`, or `config/.env.ops`) as needed
 3. **Run migrations** if schema changes: `alembic upgrade head`
 4. **Start backend**: `uvicorn backend.main:app --reload`
-5. **Start worker** (in separate terminal): `python -m worker.main`
+5. **Start worker** (in separate terminal): `python -m backend.workers.main`
 6. **Write tests** in `tests/`
 7. **Run tests**: `pytest`
 8. **Commit changes**

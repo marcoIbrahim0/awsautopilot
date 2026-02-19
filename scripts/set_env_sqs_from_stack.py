@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Fetch SQS queue URLs from the security-autopilot SQS CloudFormation stack
-and set key worker queue URLs in .env.
+and set key worker queue URLs in config/.env.ops.
 
 Run from project root. Idempotent: updates existing vars or appends if missing.
 """
@@ -19,7 +19,7 @@ DEFAULT_STACK_CANDIDATES = (
     "security-autopilot-sqs-queues",
     "security-autopilot-sqs",
 )
-ENV_PATH = os.path.join(os.path.dirname(__file__), "..", ".env")
+ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".env.ops")
 KEYS = (
     "SQS_INGEST_QUEUE_URL",
     "SQS_INGEST_DLQ_URL",
@@ -46,7 +46,7 @@ OUTPUT_KEYS = (
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Sync SQS queue URLs from CloudFormation outputs into .env.",
+        description="Sync SQS queue URLs from CloudFormation outputs into config/.env.ops.",
     )
     parser.add_argument(
         "--stack-name",
@@ -115,6 +115,8 @@ def main() -> None:
         for index in range(len(KEYS))
     }
 
+    os.makedirs(os.path.dirname(ENV_PATH), exist_ok=True)
+
     if not os.path.isfile(ENV_PATH):
         with open(ENV_PATH, "w") as f:
             for k in KEYS:
@@ -147,7 +149,7 @@ def main() -> None:
     with open(ENV_PATH, "w") as f:
         f.writelines(out_lines)
 
-    print(f"Updated .env with SQS queue URLs from stack '{stack_name}'.")
+    print(f"Updated {ENV_PATH} with SQS queue URLs from stack '{stack_name}'.")
 
 
 if __name__ == "__main__":

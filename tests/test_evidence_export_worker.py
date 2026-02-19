@@ -17,7 +17,7 @@ import pytest
 
 from backend.models.enums import EvidenceExportStatus
 from backend.utils.sqs import build_generate_export_job_payload, GENERATE_EXPORT_JOB_TYPE
-from worker.jobs.evidence_export import execute_evidence_export_job
+from backend.workers.jobs.evidence_export import execute_evidence_export_job
 
 
 def test_build_generate_export_job_payload() -> None:
@@ -89,7 +89,7 @@ def test_execute_evidence_export_job_idempotent_skip_when_success() -> None:
     mock_session.execute.return_value = result
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.evidence_export.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.evidence_export.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
@@ -124,13 +124,13 @@ def test_execute_evidence_export_job_sets_failed_when_generate_raises() -> None:
     mock_session.execute.return_value = result
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.evidence_export.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.evidence_export.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.evidence_export.generate_evidence_pack") as mock_gen:
+        with patch("backend.workers.jobs.evidence_export.generate_evidence_pack") as mock_gen:
             mock_gen.side_effect = RuntimeError("S3 upload failed")
 
             execute_evidence_export_job(job)
@@ -163,13 +163,13 @@ def test_execute_evidence_export_job_passes_pack_type_to_generate() -> None:
     mock_session.execute.return_value = result
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.evidence_export.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.evidence_export.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.evidence_export.generate_evidence_pack") as mock_gen:
+        with patch("backend.workers.jobs.evidence_export.generate_evidence_pack") as mock_gen:
             mock_gen.return_value = ("bucket", "key", 1234)
 
             execute_evidence_export_job(job)

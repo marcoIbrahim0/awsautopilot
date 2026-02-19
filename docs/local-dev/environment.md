@@ -4,15 +4,24 @@ This guide covers setting up your local development environment, including envir
 
 ## Environment Variables
 
-All configuration is managed via environment variables, loaded from a `.env` file in the project root. The application uses Pydantic Settings (`backend/config.py`) to validate and provide defaults.
+All configuration is managed via environment variables, with split files per service/runtime.
 
-### Creating `.env` File
+### Canonical Env Files
 
-Create a `.env` file in the project root (copy from `.env.example` if available):
+- Backend runtime: `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
+
+The backend and worker settings loaders use these service-local files rather than root `.env`.
+
+### Creating Service Env Files
+
+If any file is missing in your local workspace:
 
 ```bash
-cp .env.example .env  # If example exists
-# Or create manually
+touch backend/.env backend/workers/.env frontend/.env config/.env.ops
 ```
 
 ### Required Environment Variables
@@ -233,7 +242,7 @@ Install dependencies using `pip`:
 pip install -r backend/requirements.txt
 
 # Install worker dependencies
-pip install -r worker/requirements.txt
+pip install -r backend/workers/requirements.txt
 ```
 
 Or use a virtual environment (recommended):
@@ -248,7 +257,7 @@ source venv/bin/activate  # On macOS/Linux
 
 # Install dependencies
 pip install -r backend/requirements.txt
-pip install -r worker/requirements.txt
+pip install -r backend/workers/requirements.txt
 ```
 
 ### Key Dependencies
@@ -265,7 +274,7 @@ pip install -r worker/requirements.txt
 - `pyjwt>=2.8.0` — JWT tokens
 - `bcrypt>=4.0.0` — Password hashing
 
-**Worker** (`worker/requirements.txt`):
+**Worker** (`backend/workers/requirements.txt`):
 - `boto3>=1.34.0` — AWS SDK (SQS, Security Hub)
 - `sqlalchemy>=2.0.0` — ORM (sync)
 - `psycopg2-binary>=2.9.9` — PostgreSQL driver
@@ -294,7 +303,7 @@ pip install -r worker/requirements.txt
    createdb security_autopilot
    ```
 
-3. **Update `.env`**:
+3. **Update `backend/.env`**:
    ```bash
    DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/security_autopilot"
    DATABASE_URL_SYNC="postgresql://postgres:postgres@localhost:5432/security_autopilot"
@@ -304,7 +313,7 @@ pip install -r worker/requirements.txt
 
 1. **Create Neon account** at https://neon.tech
 2. **Create project** and copy connection string
-3. **Update `.env`** with Neon connection string (see example above)
+3. **Update `backend/.env`** with Neon connection string (see example above)
 
 **Note**: Neon requires SSL. The application automatically configures SSL for Neon connections (`backend/database.py`).
 
@@ -387,6 +396,11 @@ aws sqs get-queue-attributes --queue-url $SQS_INGEST_QUEUE_URL --attribute-names
 
 ### Environment Variable Not Loading
 
-- Ensure `.env` file is in project root (same directory as `backend/` and `worker/`)
+- Ensure these files exist and are readable:
+  - `backend/.env`
+  - `backend/workers/.env`
+  - `frontend/.env`
+  - `config/.env.ops`
+- Root `.env` is backup-only and not used as a runtime source.
 - Check file permissions (should be readable)
 - Verify variable name matches exactly (case-sensitive for some variables)

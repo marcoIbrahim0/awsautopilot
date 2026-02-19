@@ -1,20 +1,23 @@
 """
 Application configuration. All values are read from environment variables.
-Locally: use a .env file in the project root (or backend/). In AWS: set env vars
-or load from Secrets Manager and inject into the process environment.
+Locally: load from backend/.env. In AWS: set env vars or load from Secrets
+Manager and inject into the process environment.
 Never hardcode secrets in code.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import urlparse
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_BACKEND_ENV_FILE = Path("/Users/marcomaher/AWS Security Autopilot/backend/.env")
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(_BACKEND_ENV_FILE),),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,

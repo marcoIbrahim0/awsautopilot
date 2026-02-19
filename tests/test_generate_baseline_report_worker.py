@@ -14,7 +14,7 @@ from backend.utils.sqs import (
     GENERATE_BASELINE_REPORT_JOB_TYPE,
     build_generate_baseline_report_job_payload,
 )
-from worker.jobs.generate_baseline_report import execute_generate_baseline_report_job
+from backend.workers.jobs.generate_baseline_report import execute_generate_baseline_report_job
 
 
 def test_build_generate_baseline_report_job_payload() -> None:
@@ -68,7 +68,7 @@ def test_execute_generate_baseline_report_job_idempotent_skip_when_success() -> 
     mock_session.execute.return_value = result
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.generate_baseline_report.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.generate_baseline_report.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
@@ -105,13 +105,13 @@ def test_execute_generate_baseline_report_job_sets_failed_when_service_raises() 
     mock_session.execute.return_value = result
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.generate_baseline_report.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.generate_baseline_report.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
         with patch(
-            "worker.jobs.generate_baseline_report.generate_baseline_report"
+            "backend.workers.jobs.generate_baseline_report.generate_baseline_report"
         ) as mock_gen:
             mock_gen.side_effect = RuntimeError("S3 upload failed")
 

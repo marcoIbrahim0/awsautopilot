@@ -28,7 +28,7 @@ pytest tests/test_health_readiness.py
 pytest -v
 
 # Run tests with coverage
-pytest --cov=backend --cov=worker
+pytest --cov=backend --cov=backend.workers
 
 # Run tests matching a pattern
 pytest -k "health"
@@ -47,7 +47,7 @@ Tests use pytest configuration (can be in `pytest.ini`, `setup.cfg`, or `pyproje
 Tests may require:
 - **Database**: Test database (can use same as dev or separate)
 - **AWS credentials**: For SQS/other AWS service tests (or mocked)
-- **Environment variables**: Some tests read from `.env` or set test-specific values
+- **Environment variables**: Some tests read from `backend/.env` or `backend/workers/.env` (or set test-specific values)
 
 ---
 
@@ -200,7 +200,7 @@ Generate coverage reports:
 
 ```bash
 # Run with coverage
-pytest --cov=backend --cov=worker --cov-report=html
+pytest --cov=backend --cov=backend.workers --cov-report=html
 
 # View HTML report
 open htmlcov/index.html
@@ -321,7 +321,7 @@ def test_create_resource():
 
 ```python
 from unittest.mock import patch, MagicMock
-from worker.jobs.my_job import handle_my_job
+from backend.workers.jobs.my_job import handle_my_job
 
 def test_handle_my_job():
     """Test my job handler."""
@@ -332,7 +332,7 @@ def test_handle_my_job():
         "created_at": "2024-01-01T00:00:00Z"
     }
     
-    with patch("worker.services.my_service.process") as mock_process:
+    with patch("backend.workers.services.my_service.process") as mock_process:
         handle_my_job(job)
         mock_process.assert_called_once_with(job["tenant_id"])
 ```
@@ -360,8 +360,8 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-      - run: pip install -r backend/requirements.txt -r worker/requirements.txt
-      - run: pytest --cov=backend --cov=worker
+      - run: pip install -r backend/requirements.txt -r backend/workers/requirements.txt
+      - run: pytest --cov=backend --cov=backend.workers
 ```
 
 ---
@@ -370,7 +370,7 @@ jobs:
 
 ### Tests Failing Locally
 
-1. **Check environment**: Ensure `.env` is configured
+1. **Check environment**: Ensure `backend/.env` and `backend/workers/.env` are configured
 2. **Check database**: Test database is accessible
 3. **Check AWS credentials**: For AWS service tests
 4. **Check dependencies**: Install test dependencies (`pytest`, `pytest-asyncio`)

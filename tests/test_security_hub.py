@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
-from worker.services.security_hub import (
+from backend.workers.services.security_hub import (
     DEFAULT_FILTERS,
     fetch_all_findings,
     fetch_security_hub_findings,

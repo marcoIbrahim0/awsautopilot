@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from worker.services.inspector import normalize_inspector_finding
+from backend.workers.services.inspector import normalize_inspector_finding
 
 
 def test_normalize_inspector_finding_package_vulnerability() -> None:

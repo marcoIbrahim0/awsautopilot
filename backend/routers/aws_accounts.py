@@ -15,13 +15,14 @@ import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import get_optional_user
 from backend.config import settings
 from backend.database import get_db
 from backend.models.aws_account import AwsAccount
+from backend.models.finding import Finding
 from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
 from backend.models.enums import AwsAccountStatus
 from backend.models.tenant import Tenant
@@ -395,6 +396,29 @@ class IngestTriggerErrorResponse(BaseModel):
 
     error: str = Field(..., description="Error code or short message")
     detail: str = Field(..., description="Detailed message for client")
+
+
+class IngestProgressResponse(BaseModel):
+    """Progress snapshot for an ingest request started by the UI."""
+
+    account_id: str = Field(..., description="AWS account ID (12 digits)")
+    source: Literal["security_hub", "access_analyzer", "inspector"] | None = Field(
+        default=None,
+        description="Optional source filter used for this progress query.",
+    )
+    started_after: datetime = Field(..., description="Client-provided refresh start timestamp (UTC).")
+    elapsed_seconds: int = Field(..., description="Elapsed seconds since started_after.")
+    status: Literal["queued", "running", "completed", "no_changes_detected"] = Field(
+        ...,
+        description="Current ingest progress state for this account/source window.",
+    )
+    progress: int = Field(..., ge=0, le=100, description="UI progress value (0-100).")
+    updated_findings_count: int = Field(..., description="Number of findings updated since started_after.")
+    last_finding_update_at: datetime | None = Field(
+        default=None,
+        description="Most recent Finding.updated_at in the monitored window.",
+    )
+    message: str = Field(..., description="Human-readable progress guidance.")
 
 
 def _extract_template_version(template_url: str) -> str | None:
@@ -896,7 +920,10 @@ async def update_read_role_stack(
     if not saas_account_id:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="SAAS_AWS_ACCOUNT_ID is not configured.",
+            detail=(
+                "SAAS_AWS_ACCOUNT_ID is not configured. "
+                "Set it in backend/.env for local runs or as a process environment variable in deployed runtime."
+            ),
         )
 
     configured_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
@@ -1199,7 +1226,12 @@ async def register_account(
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials from the SaaS account (SAAS_AWS_ACCOUNT_ID in .env), (2) that principal has sts:AssumeRole permission on the role, (3) the role trust policy allows your SaaS account and the ExternalId matches.",
+                detail=(
+                    f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials "
+                    "from the SaaS account (SAAS_AWS_ACCOUNT_ID in backend/.env for local runs, or as process "
+                    "environment in deployed runtime), (2) that principal has sts:AssumeRole permission on the "
+                    "role, (3) the role trust policy allows your SaaS account and the ExternalId matches."
+                ),
             )
 
         # Create new account with error status
@@ -1210,7 +1242,12 @@ async def register_account(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials from the SaaS account (SAAS_AWS_ACCOUNT_ID in .env), (2) that principal has sts:AssumeRole permission on the role, (3) the role trust policy allows your SaaS account and the ExternalId matches.",
+            detail=(
+                f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials "
+                "from the SaaS account (SAAS_AWS_ACCOUNT_ID in backend/.env for local runs, or as process "
+                "environment in deployed runtime), (2) that principal has sts:AssumeRole permission on the "
+                "role, (3) the role trust policy allows your SaaS account and the ExternalId matches."
+            ),
         )
 
     except Exception as e:
@@ -1771,6 +1808,104 @@ async def trigger_ingest(
     )
 
 
+@router.get(
+    "/{account_id}/ingest-progress",
+    response_model=IngestProgressResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check ingest progress for notification center tracking",
+    description=(
+        "Returns a lightweight progress snapshot by checking findings updated after "
+        "the provided start timestamp."
+    ),
+)
+async def get_ingest_progress(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    started_after: Annotated[
+        datetime,
+        Query(description="UTC timestamp when the refresh request started."),
+    ],
+    source: Annotated[
+        Literal["security_hub", "access_analyzer", "inspector"] | None,
+        Query(description="Optional ingest source filter."),
+    ] = None,
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> IngestProgressResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Account not found", "detail": "No AWS account found with the given ID for this tenant."},
+        )
+
+    if started_after.tzinfo is None:
+        started_after = started_after.replace(tzinfo=timezone.utc)
+
+    stmt = (
+        select(func.count(Finding.id), func.max(Finding.updated_at))
+        .where(
+            Finding.tenant_id == tenant_uuid,
+            Finding.account_id == account_id,
+            Finding.updated_at >= started_after,
+        )
+    )
+    if source:
+        stmt = stmt.where(Finding.source == source)
+
+    result = await db.execute(stmt)
+    updated_count_raw, last_updated = result.one()
+    updated_count = int(updated_count_raw or 0)
+
+    now = datetime.now(timezone.utc)
+    elapsed_seconds = max(0, int((now - started_after).total_seconds()))
+
+    if updated_count > 0:
+        return IngestProgressResponse(
+            account_id=account_id,
+            source=source,
+            started_after=started_after,
+            elapsed_seconds=elapsed_seconds,
+            status="completed",
+            progress=100,
+            updated_findings_count=updated_count,
+            last_finding_update_at=last_updated,
+            message="Refresh completed. Findings were updated.",
+        )
+
+    if elapsed_seconds < 20:
+        status_value: Literal["queued", "running", "completed", "no_changes_detected"] = "queued"
+        progress_value = min(25, 8 + elapsed_seconds)
+        message = "Refresh queued. Waiting for worker pickup."
+    elif elapsed_seconds < 120:
+        status_value = "running"
+        progress_value = min(90, 25 + int((elapsed_seconds - 20) * 0.6))
+        message = "Refresh is processing in the background."
+    else:
+        status_value = "no_changes_detected"
+        progress_value = 100
+        message = "No finding updates detected for this refresh window yet."
+
+    return IngestProgressResponse(
+        account_id=account_id,
+        source=source,
+        started_after=started_after,
+        elapsed_seconds=elapsed_seconds,
+        status=status_value,
+        progress=progress_value,
+        updated_findings_count=updated_count,
+        last_finding_update_at=last_updated,
+        message=message,
+    )
+
+
 @router.post(
     "/{account_id}/ingest-access-analyzer",
     response_model=IngestTriggerResponse,
@@ -1980,7 +2115,7 @@ async def trigger_ingest_sync(
         )
     regions = _resolve_sync_ingest_regions(acc.regions, body)
     now = datetime.now(timezone.utc).isoformat()
-    from worker.jobs.ingest_findings import execute_ingest_job
+    from backend.workers.jobs.ingest_findings import execute_ingest_job
 
     for r in regions:
         job = build_ingest_job_payload(tenant_uuid, account_id, r, now)

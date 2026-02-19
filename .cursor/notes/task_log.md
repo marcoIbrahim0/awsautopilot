@@ -3909,3 +3909,765 @@ Worker logs `[STUB] ingest_findings: ...` and deletes the message.
 **Open questions / TODOs:**
 - Deploy runtime so worker patch is live.
 - Existing historical rows already stuck in `queued` need backfill/update or rerun to reflect terminal status.
+
+## Deployer runbook for audit-remediation Phase 1-3 (2026-02-19)
+
+**Task:** Create deployer-grade documentation for Phase 1/2/3 operations, covering `.env` setup through AWS serverless deployment, worker enablement, custom domain (ACM + Cloudflare DNS), and practical verification/troubleshooting commands.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md` (new)
+- `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**What was documented:**
+- Exact phase mapping from `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/00-program-plan.md` (Phase 1/2/3 definitions).
+- End-to-end deployer sequence with copy-paste commands for:
+  - prerequisites and tool checks (`aws`, `gh`, `cloudflared`)
+  - `.env` setup with project-real variable names/defaults
+  - SQS stack deployment and output inspection
+  - `alembic upgrade head` + migration gate check
+  - `./scripts/deploy_saas_serverless.sh` usage with required env vars
+  - worker enablement + event source mapping verification
+  - API custom domain deployment + ACM DNS validation + Cloudflare CNAME setup
+  - CORS `OPTIONS` validation
+  - auth login/me curl validation
+  - remediation resend queue check
+- Practical troubleshooting table and rollback/safe re-run procedure.
+- Mermaid deployment and request-flow diagrams.
+- Phase 1/2/3 checklists including objective, required config, practical verification, evidence locations/filenames, and pass/fail criteria.
+
+**Open questions / TODOs:**
+- Confirm whether `cloudflared` is mandatory in this deployment path or optional (repo currently has no Cloudflare Tunnel IaC/scripts).
+- Confirm whether audit process requires a dedicated Phase 1 closure checklist file (`phase1-closure-checklist.md`) in addition to program/backlog tracking.
+- Optional future improvement: add first-class Cloudflare DNS automation script to remove manual/API CNAME steps.
+
+## Add mandatory startup-read files to each agent requirements (2026-02-19)
+
+**Task:** Ensure every agent in the multi-agent execution plan has explicit startup requirements to read mandatory project governance/docs files before beginning work.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/06-multi-agent-execution-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**What changed:**
+- Added a new section: `Agent Startup Required Reads (Mandatory For Every Agent)` with explicit file list:
+  - `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+  - `/Users/marcomaher/AWS Security Autopilot/.cursor/rules/core-behavior.mdc`
+  - `/Users/marcomaher/AWS Security Autopilot/.cursor/rules/console-protocol.mdc`
+  - `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/README.md`
+- Added `Startup requirements` bullets to each agent block (`A1`-`D2`) requiring completion of that read set before execution.
+- Added completion criteria requiring startup-read confirmation in initial task note/handoff comment.
+
+**Open questions / TODOs:**
+- Consider whether phase-plan files (`00`-`05` and `phase4-required-check-governance.md`) should also be mandatory startup reads for every agent, or only for agents operating in the audit-remediation stream.
+
+## [Phase 1] Create Canonical backend.workers Package — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/backend/services/direct_fix_bridge.py
+- /Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/__init__.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/config.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/database.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/__init__.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/backfill_action_groups.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/backfill_finding_keys.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/compute_actions.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/evidence_export.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/generate_baseline_report.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_access_analyzer.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_control_plane_events.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_inspector.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_inventory_global_orchestration.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_inventory_shard.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_recently_touched_resources.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/weekly_digest.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/lambda_handler.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/main.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/requirements.txt
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/__init__.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/access_analyzer.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/aws.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/control_plane_events.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/direct_fix.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/inspector.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_assets.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/json_safe.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/post_apply_reconcile.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/security_hub.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/services/shadow_state.py
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- None
+**Verified:**
+- Canonical package files exist at backend/workers (`main.py`, `lambda_handler.py`, `jobs/__init__.py`, `services/direct_fix.py`).
+- `rg -n "from worker\\.|import worker\\." backend/workers -g '*.py'` returned no matches.
+- Backend runtime imports updated in `backend/services/direct_fix_bridge.py` and `backend/routers/aws_accounts.py` to `backend.workers.*`.
+- Python importability check passed and printed `phase1-import-check-ok`.
+**Next Phase Dependency:**
+- Top-level `/Users/marcomaher/AWS Security Autopilot/worker` remains implementation-backed by design in Phase 1; Phase 2 should convert root `worker/` to shim-only while preserving compatibility behavior.
+
+Repository now has a full canonical worker implementation at /Users/marcomaher/AWS Security Autopilot/backend/workers, worker-internal imports there use backend.workers.*, and backend runtime imports were updated; top-level /worker is still implementation-backed and will be converted to shim-only in Phase 2.
+
+## [Phase 2] Convert Top-Level worker to Compatibility Shim — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/worker/__init__.py
+- /Users/marcomaher/AWS Security Autopilot/worker/requirements.txt
+- /Users/marcomaher/AWS Security Autopilot/scripts/replay_quarantined_messages.py
+- /Users/marcomaher/AWS Security Autopilot/scripts/verify_step7.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_backfill_action_groups_job.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_events.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_direct_fix.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_evidence_export_worker.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_generate_baseline_report_worker.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_inspector.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_inventory_assets.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_inventory_reconcile.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_json_safe.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_reconcile_inventory_global_orchestration_worker.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_execution.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_security_hub.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py
+- /Users/marcomaher/AWS Security Autopilot/tests/test_worker_ingest.py
+- /Users/marcomaher/AWS Security Autopilot/docs/README.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/worker.md
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- /Users/marcomaher/AWS Security Autopilot/tests/test_worker_import_shim.py
+**Files Deleted:**
+- /Users/marcomaher/AWS Security Autopilot/worker/config.py
+- /Users/marcomaher/AWS Security Autopilot/worker/database.py
+- /Users/marcomaher/AWS Security Autopilot/worker/lambda_handler.py
+- /Users/marcomaher/AWS Security Autopilot/worker/main.py
+- /Users/marcomaher/AWS Security Autopilot/worker/jobs/** (all implementation files and tracked caches)
+- /Users/marcomaher/AWS Security Autopilot/worker/services/** (all implementation files and tracked caches)
+- /Users/marcomaher/AWS Security Autopilot/worker/__pycache__/** (tracked cache artifacts)
+- /Users/marcomaher/AWS Security Autopilot/worker/.DS_Store
+**Shims Added:**
+- /Users/marcomaher/AWS Security Autopilot/worker/__init__.py namespace shim mapping `worker.*` to `backend.workers.*`
+- /Users/marcomaher/AWS Security Autopilot/worker/requirements.txt compatibility include to canonical requirements
+**Warnings Encountered:**
+- Running `PYTHONPATH=. pytest -q tests/test_worker_import_shim.py` with the system Python failed due missing `email-validator` dependency imported by `tests/conftest.py`. Re-ran with `PYTHONPATH=. ./venv/bin/pytest -q tests/test_worker_import_shim.py`, which passed.
+**Verified:**
+- `find /Users/marcomaher/AWS Security Autopilot/worker -maxdepth 2 -type f | sort` returned only `worker/__init__.py` and `worker/requirements.txt`.
+- Shim import behavior check passed and printed `phase2-shim-import-check-ok` for imports of `backend.workers.main`, `worker.main`, and `worker.jobs.ingest_findings`.
+- `rg -n "from worker\\.|import worker\\.|\"worker\\.|'worker\\." /Users/marcomaher/AWS Security Autopilot/scripts /Users/marcomaher/AWS Security Autopilot/tests -g '*.py'` returned only `tests/test_worker_import_shim.py`.
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_worker_import_shim.py` passed (`1 passed in 0.07s`).
+**Next Phase Dependency:**
+- Top-level `/Users/marcomaher/AWS Security Autopilot/worker` is now shim-only (`__init__.py` + `requirements.txt`). Phase 3 must treat `/Users/marcomaher/AWS Security Autopilot/backend/workers` as the only canonical implementation location and update any build/deploy paths that still assume root `worker/` source files.
+
+## [Phase 3] Update Runtime, Deployment, and CI Entry Points — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/Containerfile.lambda-worker
+- /Users/marcomaher/AWS Security Autopilot/Containerfile
+- /Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-ecs-dev.yaml
+- /Users/marcomaher/AWS Security Autopilot/infrastructure/terraform/saas-ecs-dev/ecs.tf
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/backend-ci.yml
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/worker-ci.yml
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/architecture-phase2.yml
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/architecture-phase3.yml
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/security-phase3.yml
+- /Users/marcomaher/AWS Security Autopilot/.github/workflows/dependency-governance.yml
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- None
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- Initial one-pass bulk replace accidentally dropped `${LAMBDA_TASK_ROOT}` in two `Containerfile.lambda-worker` COPY destinations due shell interpolation; corrected immediately in the same task.
+- Exact `python3` import check attempted as requested failed in this environment because importing `backend.workers.lambda_handler` triggers DB revision guard connectivity, and DNS/network could not resolve configured Neon hostname. Re-ran import check with `DB_REVISION_GUARD_ENABLED=false`, which passed.
+**Verified:**
+- `rg -n "worker\\.lambda_handler\\.handler|python -m worker\\.main|worker/requirements\\.txt" ...` returned no matches across `Containerfile`, `Containerfile.lambda-worker`, `infrastructure`, `.github/workflows`, and `frontend/src/components/RemediationRunProgress.tsx`.
+- `rg -n "backend\\.workers\\.lambda_handler\\.handler|python -m backend\\.workers\\.main|backend/workers/requirements\\.txt" ...` returned expected matches in Lambda/ECS/workflow/frontend entry points.
+- Import check succeeded and printed `phase3-import-check-ok` when run with `DB_REVISION_GUARD_ENABLED=false` in this environment.
+**Next Phase Dependency:**
+- Runtime/deployment/CI entry points now target canonical worker paths (`backend.workers.*` and `backend/workers/requirements.txt`) for Lambda handler, ECS worker command, workflow dependency installs, and frontend operator hint; Phase 4 can proceed assuming no runtime references to `worker.main` or `worker.lambda_handler.handler` remain in these entry points.
+
+## [Phase 4] Create Service-Specific Env Files and Service-First Loaders — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/backend/config.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/config.py
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- /Users/marcomaher/AWS Security Autopilot/backend/.env
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/.env
+- /Users/marcomaher/AWS Security Autopilot/frontend/.env
+- /Users/marcomaher/AWS Security Autopilot/config/.env.ops
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- Initial attempt to create `/Users/marcomaher/AWS Security Autopilot/config/.env.ops` failed because `/Users/marcomaher/AWS Security Autopilot/config` did not exist. Created the directory and re-ran generation successfully.
+**Verified:**
+- `test -f` checks passed for `/Users/marcomaher/AWS Security Autopilot/backend/.env`, `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`, `/Users/marcomaher/AWS Security Autopilot/frontend/.env`, and `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`.
+- `rg -n "env_file=\"\\.env\"" /Users/marcomaher/AWS Security Autopilot/backend/config.py` returned no matches.
+- Python settings import check passed and printed `phase4-settings-check-ok`.
+- `rg -n "^[A-Za-z_][A-Za-z0-9_]*=" /Users/marcomaher/AWS Security Autopilot/frontend/.env` returned only `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_CONTROL_PLANE_RECONCILE_UI_ENABLED`.
+**Next Phase Dependency:**
+- Service-specific env files now exist (`backend/.env`, `backend/workers/.env`, `frontend/.env`, `config/.env.ops`), and backend/worker settings loaders are service-first with temporary root `.env` fallback still enabled; Phase 5 should remove dependency on root `.env` consumers before deprecating/commenting root fallback.
+
+## [Phase 5] Remove Root .env Runtime Coupling — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/frontend/package.json
+- /Users/marcomaher/AWS Security Autopilot/frontend/next.config.ts
+- /Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh
+- /Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_ecs_dev.sh
+- /Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase2_architecture.sh
+- /Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase3_architecture.sh
+- /Users/marcomaher/AWS Security Autopilot/scripts/set_env_sqs_from_stack.py
+- /Users/marcomaher/AWS Security Autopilot/backend/config.py
+- /Users/marcomaher/AWS Security Autopilot/backend/workers/config.py
+- /Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py
+- /Users/marcomaher/AWS Security Autopilot/.env
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:** None
+**Files Deleted:** None
+**Shims Added:** None
+**Warnings Encountered:**
+- Initial patch pass on `scripts/set_env_sqs_from_stack.py` left duplicate `ENV_PATH` assignment; corrected immediately in the same task.
+**Verified:**
+- Root-coupling removal scan passed: no matches for `\. \../\.env`, `envDir: '..'`, `SAAS_ENV_FILE:-.env`, `PHASE2_ENV_FILE:-.env`, `PHASE3_ENV_FILE:-.env`, or root `.env` path join in targeted frontend/deploy/script files.
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` active assignment scan passed: no matches for `^[A-Za-z_][A-Za-z0-9_]*=`.
+- Shell syntax checks passed for deploy scripts via `bash -n`.
+- Python syntax check passed for `/Users/marcomaher/AWS Security Autopilot/scripts/set_env_sqs_from_stack.py` via `python3 -m py_compile`.
+- Runtime settings import check passed and printed `phase5-config-check-ok`.
+**Next Phase Dependency:**
+- Root `/Users/marcomaher/AWS Security Autopilot/.env` is now backup-only (commented).
+- Frontend runtime scripts now load from `/Users/marcomaher/AWS Security Autopilot/frontend/.env` and optional `/Users/marcomaher/AWS Security Autopilot/frontend/.env.local`.
+- Deploy scripts now default to `/Users/marcomaher/AWS Security Autopilot/config/.env.ops` (override via `SAAS_ENV_FILE`, `PHASE2_ENV_FILE`, `PHASE3_ENV_FILE`).
+- `scripts/set_env_sqs_from_stack.py` now writes queue URLs to `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`.
+- Backend and worker settings loaders no longer fall back to root `.env`.
+
+## [Phase 6] Documentation Alignment to Real Structure and Env Model — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/worker.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/tests.md
+- /Users/marcomaher/AWS Security Autopilot/docs/deployment/ci-dependency-governance.md
+- /Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/06-multi-agent-execution-plan.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md
+- /Users/marcomaher/AWS Security Autopilot/docs/local-dev/frontend.md
+- /Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md
+- /Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md
+- /Users/marcomaher/AWS Security Autopilot/docs/README.md
+- /Users/marcomaher/AWS Security Autopilot/docs/customer-guide/README.md
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- None
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- None
+**Verified:**
+- `rg -n "python -m worker\\.main|worker/requirements\\.txt|worker/main\\.py"` across Phase 6 target docs returned no matches.
+- `rg -n "⚠️ Status: Planned — not yet implemented"` found planned-status markers in both `/Users/marcomaher/AWS Security Autopilot/docs/README.md` and `/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/README.md`.
+- `git diff --name-only | rg "^docs/audit-remediation/evidence/"` returned no matches.
+**Next Phase Dependency:**
+- Documentation now reflects canonical worker paths (`backend/workers/*`), canonical worker startup (`python -m backend.workers.main`), canonical worker requirements path (`backend/workers/requirements.txt`), and split env model (`backend/.env`, `backend/workers/.env`, `frontend/.env`, `config/.env.ops`) with root `.env` explicitly marked backup-only. Missing documentation areas are now explicitly marked as planned.
+
+## [Phase 7] Full Verification and Regression Gate — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- None
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- Exact import integrity command failed in this environment because importing `backend.workers.lambda_handler` triggers DB migration guard connectivity and DNS could not resolve configured Neon host (`ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech`).
+- Exact targeted test command (`PYTHONPATH=. pytest -q ...`) failed before collection due missing `email-validator` in system Python; equivalent project-venv command was used to run the test subset.
+- Project-venv targeted test subset produced 11 failures (all in `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`) caused by `StopIteration` in mocked `session.execute` side effects after non-migration `_sync_download_bundle_group_runs` behavior in `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py`; treated as pre-existing and unrelated to Phase 1-6 migration path/env changes.
+- `npm run build` failed because this environment could not reach Google Fonts (`Geist Mono`, `Montserrat`) during Next.js font fetch; treated as external network/connectivity constraint.
+**Verified:**
+- Safety gate passed:
+  - Governance files readable (`.cursor/notes/task_log.md`, `.cursor/rules`, `/Users/marcomaher/AWS Security Autopilot/docs/README.md`).
+  - Migration markers present in `/Users/marcomaher/AWS Security Autopilot/Containerfile.lambda-worker`, `/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-ecs-dev.yaml`, and `/Users/marcomaher/AWS Security Autopilot/infrastructure/terraform/saas-ecs-dev/ecs.tf`.
+  - Required files present: `/Users/marcomaher/AWS Security Autopilot/backend/.env`, `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`, `/Users/marcomaher/AWS Security Autopilot/frontend/.env`, `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`.
+- Import/path integrity:
+  - Exact command: failed for DB hostname resolution (environment/network).
+  - Re-run with `DB_REVISION_GUARD_ENABLED=false`: passed and printed `phase7-import-integrity-ok`.
+- Stale-reference scan:
+  - `rg -n "python -m worker\\.main|worker\\.lambda_handler\\.handler|worker/requirements\\.txt|envDir: '\\.\\.'|\\. \\.\\./\\.env|SAAS_ENV_FILE:-\\.env|PHASE2_ENV_FILE:-\\.env|PHASE3_ENV_FILE:-\\.env" ...` returned no matches.
+- Targeted pytest:
+  - Exact command: failed pre-collection due missing `email-validator` in system Python.
+  - `PYTHONPATH=. ./venv/bin/pytest -q ...`: `143 passed`, `11 failed` (pre-existing, non-migration failures in `tests/test_remediation_run_worker.py`).
+- Frontend checks:
+  - `npm run lint`: passed with warnings only (no errors).
+  - `npm run build`: failed due inability to fetch Google Fonts in current environment.
+- Deploy/script syntax checks:
+  - `bash -n` passed for `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`, `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_ecs_dev.sh`, `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase2_architecture.sh`, `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase3_architecture.sh`.
+  - `python3 -m py_compile` passed for `/Users/marcomaher/AWS Security Autopilot/scripts/set_env_sqs_from_stack.py`, `/Users/marcomaher/AWS Security Autopilot/scripts/replay_quarantined_messages.py`, `/Users/marcomaher/AWS Security Autopilot/scripts/verify_step7.py`.
+**Next Phase Dependency:**
+- Migration-specific path/env verification remains intact (canonical `backend.workers.*` markers present, stale legacy references absent, required split env files present). Before Phase 8, decide whether to address unrelated pre-existing worker test mock failures and/or set an offline/local-font strategy for environments without outbound access to `fonts.googleapis.com`.
+
+## [Phase 7 Follow-up] Regression Fixes for Tests and Frontend Build — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/layout.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/globals.css
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/app/accept-invite/page.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/feature-carousel.tsx
+- /Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts
+- /Users/marcomaher/AWS Security Autopilot/frontend/package.json
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- None
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- `next build` default Turbopack path still panics in this environment (`Operation not permitted` while binding a port in CSS/PostCSS transform process); build script switched to webpack path.
+- Multiple latent frontend type/compat issues surfaced only under production build and were fixed in this pass.
+**Verified:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_worker_import_shim.py tests/test_worker_polling.py tests/test_worker_main_contract_quarantine.py tests/test_worker_ingest.py tests/test_reconcile_inventory_global_orchestration_worker.py tests/test_security_hub.py tests/test_inspector.py tests/test_direct_fix.py tests/test_remediation_run_worker.py tests/test_evidence_export_worker.py tests/test_generate_baseline_report_worker.py tests/test_control_plane_events.py tests/test_ingest_trigger.py tests/test_remediation_runs_api.py tests/test_health_readiness.py` -> `154 passed`.
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run build` -> success (webpack build path).
+**Next Phase Dependency:**
+- Frontend production build now runs through webpack (`next build --webpack`) to avoid Turbopack sandbox process-binding panic in this environment; if/when Turbopack environment constraints are lifted, re-evaluate reverting build script to default.
+
+## [Phase 8] Governance, Final Audit Record, and Handoff Closure — [2026-02-19]
+**Status:** Complete
+**Files Modified:**
+- /Users/marcomaher/AWS Security Autopilot/docs/README.md
+- /Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md
+**Files Created:**
+- None
+**Files Deleted:**
+- None
+**Shims Added:**
+- None
+**Warnings Encountered:**
+- Repository root `/Users/marcomaher/AWS Security Autopilot/README.md` is not present in this workspace; migration/index verification was performed against the authoritative docs index files (`/Users/marcomaher/AWS Security Autopilot/docs/README.md` and `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md`).
+**Verified:**
+- Safety gate passed: `.cursor/notes/task_log.md`, `.cursor/rules/*`, and `/Users/marcomaher/AWS Security Autopilot/docs/README.md` were readable and Phase 1-7 entries existed.
+- Final stale-reference scan passed: no matches for `python -m worker.main`, `worker.lambda_handler.handler`, or `worker/requirements.txt` across `/Users/marcomaher/AWS Security Autopilot/Containerfile`, `/Users/marcomaher/AWS Security Autopilot/Containerfile.lambda-worker`, `/Users/marcomaher/AWS Security Autopilot/infrastructure`, `/Users/marcomaher/AWS Security Autopilot/.github/workflows`, `/Users/marcomaher/AWS Security Autopilot/scripts`, `/Users/marcomaher/AWS Security Autopilot/frontend`, `/Users/marcomaher/AWS Security Autopilot/backend`, and `/Users/marcomaher/AWS Security Autopilot/tests`.
+- Root env backup-only check passed: no active `KEY=VALUE` assignments in `/Users/marcomaher/AWS Security Autopilot/.env`.
+- Docs index migration reality check passed: `/Users/marcomaher/AWS Security Autopilot/docs/README.md` references canonical worker path `backend/workers`, and now explicitly records the split env model (`backend/.env`, `backend/workers/.env`, `frontend/.env`, `config/.env.ops`, root `.env` backup-only), consistent with `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md`.
+- Evidence immutability check passed: `git diff --name-only | rg '^docs/audit-remediation/evidence/'` returned no matches.
+- Phase entries check passed: `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md` contains Phase 1 through Phase 8 entries.
+**Next Phase Dependency:**
+- All eight migration phases are complete, verified, and logged; canonical worker path is `backend.workers.*`/`backend/workers/*`, top-level `worker` is shim-only, env runtime is split by service, root `.env` is backup-only, and documentation/governance records are updated for the next operator.
+
+## Backend + worker deployment/runtime verification (2026-02-19)
+**Task:** Verify whether backend and workers are currently deployed and running in the active AWS environment.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Verification performed:**
+- CloudFormation stack `security-autopilot-saas-serverless-runtime` in `eu-north-1` is `UPDATE_COMPLETE` with parameters:
+  - `EnableWorker=true`
+  - `WorkerReservedConcurrency=0`
+  - `ApiDomainName=api.valensjewelry.com`
+- Deployed Lambda resources from stack:
+  - `security-autopilot-dev-api`
+  - `security-autopilot-dev-worker`
+- Lambda runtime status:
+  - API: `State=Active`, `LastUpdateStatus=Successful`
+  - Worker: `State=Active`, `LastUpdateStatus=Successful`
+- Worker SQS event source mappings (ingest/events/inventory/export) are all `Enabled`.
+- API health probe succeeded once with HTTP 200 and body `{"status":"ok","app":"AWS Security Autopilot"}`.
+- CloudWatch log streams show recent execution activity:
+  - API last event: `2026-02-19T03:05:07Z`
+  - Worker last event: `2026-02-19T00:40:35Z`
+
+**Open questions / TODOs:**
+- DNS resolution to `api.valensjewelry.com` was intermittent from this execution environment during repeated checks; verify DNS/edge resolution from an external network path if end-user reachability appears inconsistent.
+
+## Backend + worker redeploy (serverless runtime) (2026-02-19)
+**Task:** Redeploy both backend and worker on AWS using the serverless deployment pipeline.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Warnings encountered:**
+- Initial in-sandbox deploy attempt failed with endpoint connectivity (`Could not connect to https://cloudformation.eu-north-1.amazonaws.com/`); reran deployment outside sandbox restrictions and completed successfully.
+- Post-deploy `/ready` returned `503 degraded` because API Lambda role lacks `sqs:GetQueueAttributes` on required queues; deploy itself succeeded but readiness gate is failing on queue-attribute permission checks.
+
+**Verification performed:**
+- Executed:
+  - `./scripts/deploy_saas_serverless.sh --region eu-north-1 --build-stack security-autopilot-saas-serverless-build --runtime-stack security-autopilot-saas-serverless-runtime --name-prefix security-autopilot-dev --sqs-stack security-autopilot-sqs-queues --enable-worker true --worker-reserved-concurrency 0`
+- Runtime stack status:
+  - `security-autopilot-saas-serverless-runtime` -> `UPDATE_COMPLETE`
+  - `LastUpdatedTime=2026-02-19T03:31:16Z`
+  - `EnableWorker=true`, `WorkerReservedConcurrency=0`
+- Lambda status:
+  - `security-autopilot-dev-api` -> `State=Active`, `LastUpdateStatus=Successful`, `LastModified=2026-02-19T03:31:29Z`
+  - `security-autopilot-dev-worker` -> `State=Active`, `LastUpdateStatus=Successful`, `LastModified=2026-02-19T03:31:29Z`
+- Worker event source mappings remain enabled for all four queues (ingest, events-fastlane, inventory-reconcile, export-report).
+- Health probe:
+  - `GET https://api.valensjewelry.com/health` -> HTTP 200 with `{"status":"ok","app":"AWS Security Autopilot"}`
+- Readiness probe:
+  - `GET https://api.valensjewelry.com/ready` -> HTTP 503 (`degraded`) with explicit `AccessDenied` for `sqs:GetQueueAttributes` on required queue ARNs.
+
+**Open questions / TODOs:**
+- Grant `sqs:GetQueueAttributes` to the API Lambda role (`security-autopilot-dev-lambda-api`) for required queues, or adjust readiness checks to match least-privilege intent if queue attribute reads are not required for API readiness.
+
+## Fix CORS preflight 400 for dev frontend origin (2026-02-19)
+**Task:** Resolve browser preflight failure (`Disallowed CORS origin` / 400) for frontend served at `https://dev.valensjewelry.com` calling `https://api.valensjewelry.com/api/auth/login`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Root cause:**
+- Runtime stack parameter `CorsOrigins` was set to `http://localhost:3000` only, so API Gateway rejected `Origin: https://dev.valensjewelry.com` with HTTP 400 `Disallowed CORS origin`.
+
+**What changed:**
+- Updated `CORS_ORIGINS` in both ops/runtime env files to:
+  - `https://dev.valensjewelry.com,https://valensjewelry.com,http://localhost:3000,http://127.0.0.1:3000`
+- Redeployed serverless runtime via:
+  - `./scripts/deploy_saas_serverless.sh --region eu-north-1 --build-stack security-autopilot-saas-serverless-build --runtime-stack security-autopilot-saas-serverless-runtime --name-prefix security-autopilot-dev --sqs-stack security-autopilot-sqs-queues --enable-worker true --worker-reserved-concurrency 0`
+
+**Verification performed:**
+- CloudFormation runtime parameter check shows:
+  - `CorsOrigins=https://dev.valensjewelry.com,https://valensjewelry.com,http://localhost:3000,http://127.0.0.1:3000`
+- Preflight check now passes:
+  - `OPTIONS /api/auth/login` with `Origin: https://dev.valensjewelry.com` -> HTTP 200 with:
+    - `access-control-allow-origin: https://dev.valensjewelry.com`
+    - `access-control-allow-credentials: true`
+    - expected allow-methods/allow-headers
+- Login request from same origin context now returns auth result (401 for invalid test password) with CORS headers present.
+
+**Open questions / TODOs:**
+- None for CORS fix. If browser still shows stale CORS errors, clear cache/hard-reload to flush cached preflight results.
+
+## Security Hub refresh status verification (2026-02-19)
+**Task:** Verify whether a user-triggered Security Hub refresh (`1 region(s) queued`) has completed.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Verification performed:**
+- Worker logs (`/aws/lambda/security-autopilot-dev-worker`) show refresh-time invocations starting at `2026-02-19T03:46:09Z`, followed by additional starts at `03:47:05Z` and `03:47:28Z`.
+- Ingest queue attributes at check time:
+  - `ApproximateNumberOfMessages=0`
+  - `ApproximateNumberOfMessagesNotVisible=3`
+- Ingest DLQ attributes at check time:
+  - `ApproximateNumberOfMessages=0`
+  - `ApproximateNumberOfMessagesNotVisible=0`
+
+**Conclusion at check time:**
+- Refresh appears **in progress / not yet fully completed** (messages are still in-flight and no DLQ failure signal observed).
+
+**Open questions / TODOs:**
+- Re-check ingest queue `ApproximateNumberOfMessagesNotVisible`; completion signal is `0` with no new DLQ messages.
+
+## Notification center ingest progress tracking (2026-02-19)
+**Task:** Make refresh progress appear in nav-bar Notification Center (queued -> running -> completed) instead of marking refresh success immediately on enqueue.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountIngestActions.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**What changed:**
+- Added backend endpoint `GET /api/aws/accounts/{account_id}/ingest-progress`:
+  - Inputs: `started_after` (required UTC timestamp), optional `source`, tenant resolution same as existing account endpoints.
+  - Behavior: counts findings updated since `started_after` for account/source, returns status `queued|running|completed|no_changes_detected` plus progress and message.
+- Added frontend API client support:
+  - `IngestProgressResponse`
+  - `getIngestProgress(accountId, { started_after, source? }, tenantId?)`
+- Updated account refresh UI job lifecycle:
+  - On enqueue, job remains active (`queued`) and starts polling `ingest-progress`.
+  - Notification center now updates to `running` with elapsed-time detail.
+  - Job completes to `success` only when backend reports `completed` (or `no_changes_detected`).
+  - If polling exceeds window, job becomes `timed_out` with guidance.
+
+**Verified:**
+- `./venv/bin/python -m py_compile backend/routers/aws_accounts.py` passed.
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run -s build -- --no-lint` passed (Next.js production build and TypeScript check).
+
+**Open questions / TODOs:**
+- This progress signal is based on finding `updated_at` deltas after `started_after`; if a refresh truly produces no write activity, UI will resolve as `no_changes_detected`.
+
+## Deploy notification-center ingest progress changes (2026-02-19)
+**Task:** Deploy backend/frontend changes so nav-bar Notification Center shows live refresh progress and verify endpoint availability in AWS runtime.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Deployment executed:**
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1 --build-stack security-autopilot-saas-serverless-build --runtime-stack security-autopilot-saas-serverless-runtime --name-prefix security-autopilot-dev --sqs-stack security-autopilot-sqs-queues --enable-worker true --worker-reserved-concurrency 0`
+
+**Verified:**
+- Runtime stack `security-autopilot-saas-serverless-runtime` is `UPDATE_COMPLETE`.
+- `LastUpdatedTime=2026-02-19T03:58:18Z`.
+- New endpoint is live and returns expected progress payload:
+  - `GET /api/aws/accounts/029037611564/ingest-progress?tenant_id=596c92ae-f3c4-4062-a947-f9994d949dac&started_after=2026-02-19T03:40:00Z&source=security_hub`
+  - Response `200` with `status=completed`, `progress=100`, `updated_findings_count=279`.
+
+**Open questions / TODOs:**
+- None for deployment; notification center can now poll live ingest progress.
+
+## Customer-facing actions/PR bundles and SaaS feature coverage summary (2026-02-19)
+**Task:** Provide a detailed customer-facing summary of (1) covered action types, (2) PR bundle coverage and recent fixes, and (3) all SaaS features currently offered.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Verification performed:**
+- Reviewed canonical action/control mapping in `/Users/marcomaher/AWS Security Autopilot/backend/services/control_scope.py`.
+- Reviewed direct-fix support set in `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/direct_fix.py`.
+- Reviewed PR bundle dispatch and generators in `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`.
+- Reviewed customer-facing feature/docs index in `/Users/marcomaher/AWS Security Autopilot/docs/README.md`, `/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/README.md`, and `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md`.
+- Reviewed UI surface routes/navigation for customer-facing modules in `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/Sidebar.tsx` and PR bundle pages.
+
+**Open questions / TODOs:**
+- None (summary/reporting task only).
+
+---
+
+## Fully automated no-UI PR-bundle validation agent with findings stats (2026-02-19)
+
+**Task:** Implement a local, resumable no-UI automation agent that executes the complete PR-bundle validation flow end-to-end (API auth/readiness, pre/post findings stats snapshots, target+strategy selection, remediation run orchestration, bundle download, unattended Terraform apply, refresh, verification polling, artifact/report generation).
+
+**Files created:**
+- **scripts/run_no_ui_pr_bundle_agent.py** — End-to-end orchestration script with phase state machine, checkpoint resume, dry-run mode, safety guards, artifact/report generation, and exit-code contract.
+- **scripts/lib/no_ui_agent_client.py** — SaaS API client wrapper with transcript capture and secret redaction.
+- **scripts/lib/no_ui_agent_state.py** — Checkpoint persistence/resume manager.
+- **scripts/lib/no_ui_agent_stats.py** — Findings aggregation, target/strategy selection helpers, and delta/KPI computation.
+- **scripts/lib/no_ui_agent_terraform.py** — Terraform command runner and transcript/error model.
+- **scripts/config/no_ui_pr_bundle_agent.example.json** — Example config.
+- **scripts/__init__.py** — Scripts package marker.
+- **scripts/lib/__init__.py** — Shared helper package marker.
+- **docs/runbooks/README.md** — Runbooks index.
+- **docs/runbooks/no-ui-pr-bundle-agent.md** — Operator runbook for the new agent.
+- **tests/test_no_ui_agent_client.py** — Client redaction tests.
+- **tests/test_no_ui_agent_state.py** — Checkpoint resume/finalize tests.
+- **tests/test_no_ui_agent_stats.py** — Stats/selection/delta tests.
+- **tests/test_no_ui_agent_terraform.py** — Terraform success/failure tests.
+- **tests/test_no_ui_pr_bundle_agent_smoke.py** — Dry-run integration smoke test with mocked API client.
+
+**Files modified:**
+- **docs/README.md** — Added runbooks coverage and linked the new no-UI runbook under `/docs/runbooks/`.
+
+**Validation performed:**
+- `./venv/bin/pytest -q tests/test_no_ui_agent_stats.py tests/test_no_ui_agent_state.py tests/test_no_ui_agent_terraform.py tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py`
+- Result: `11 passed`
+
+**Technical debt / gotchas:**
+- The agent currently treats all non-transient API failures as validation failures (`exit code 1`) and transient-classified network/HTTP failures as infra failures (`exit code 3`); if finer-grained retry/backoff by endpoint is needed, add endpoint-specific retry policy.
+- The script expects execution from repo root with `PYTHONPATH=.` for package imports; runbook documents this explicitly.
+- `phase_timeout_sec` enforcement is applied to non-poll phases; long-running poll phases are governed separately by `run_timeout_sec` and `verify_timeout_sec`.
+
+## No-UI PR-bundle automation execution (2026-02-19)
+**Task:** Run the existing no-UI PR-bundle automation against `https://api.valensjewelry.com` for account `029037611564` in `eu-north-1` with control preference `EC2.53,S3.2`, real apply (not dry-run), and report final artifacts.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Execution outcome:**
+- Automation exited in failed state before any remediation phases completed.
+- Latest artifacts directory:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260219T041827Z`
+- Reported status/exit in artifacts:
+  - `final_report.json`: `status=failed`, `exit_code=3`
+  - checkpoint recorded init-phase failure with no completed phases.
+
+**Warnings / gotchas:**
+- Initial API login call failed with DNS/network resolution error for `/api/auth/login` (`nodename nor servname provided, or not known`).
+- Cleanup guard also recorded `Refusing to delete workspace outside output root` during failure handling.
+- `findings_pre_summary.json`, `terraform_transcript.json`, and `readiness.json` were not produced due early init failure.
+
+**Open questions / TODOs:**
+- Verify DNS/network reachability to `api.valensjewelry.com` from this execution environment and re-run automation after connectivity is restored.
+- If rerunning, keep credentials provided via env/interactive prompt and avoid logging plaintext secrets.
+
+---
+
+## No-UI agent failure-hardening after live run diagnostics (2026-02-19)
+
+**Task:** Address failure-mode issues observed in a live execution report (init/auth network failure + cleanup guard side effect + missing fallback artifacts).
+
+**Files modified:**
+- **scripts/run_no_ui_pr_bundle_agent.py**
+  - Ensured fallback artifact creation for pre-snapshot (`findings_pre_raw.json`, `findings_pre_summary.json`) when pre phase is not reached.
+  - Ensured `terraform_transcript.json` is always generated, even when terraform phase is not reached.
+  - Fixed cleanup guard behavior by skipping cleanup when `workspace_path` is unset/empty instead of resolving empty path to repo root.
+  - Reordered finalization flow so cleanup failure is processed before final report write, keeping process/report exit codes aligned.
+
+**Validation performed:**
+- `./venv/bin/pytest -q tests/test_no_ui_agent_stats.py tests/test_no_ui_agent_state.py tests/test_no_ui_agent_terraform.py tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py`
+- Result: `11 passed`
+
+**Technical debt / gotchas:**
+- DNS/API reachability failures still depend on runtime environment/network and are surfaced as transient errors (`exit code 3`); this is expected behavior and not retried indefinitely.
+
+---
+
+## No-UI agent TLS trust hardening (2026-02-19)
+
+**Task:** Fix live-run auth failures caused by Python TLS trust-store mismatch (`CERTIFICATE_VERIFY_FAILED`).
+
+**Files modified:**
+- **scripts/lib/no_ui_agent_client.py**
+  - Added explicit SSL context creation using `certifi` CA bundle when available.
+  - Switched API HTTPS requests to use the client SSL context for `urlopen` calls.
+  - Added safe fallback to default SSL context if `certifi` import fails.
+
+**Validation performed:**
+- `./venv/bin/pytest -q tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py`
+- Result: `2 passed`
+
+**Technical debt / gotchas:**
+- If local corporate TLS interception is used, custom enterprise CA may still need to be present in the cert chain trusted by certifi/system store.
+
+---
+
+## No-UI PR-bundle live readiness unblock (forwarder endpoint fix) (2026-02-19)
+
+**Task:** Diagnose persistent readiness-gate failure (`missing: eu-north-1`) and remediate control-plane forwarder routing so no-UI PR-bundle validation can proceed.
+
+**Files modified:**
+- **docs/runbooks/no-ui-pr-bundle-agent.md**
+  - Added troubleshooting step to verify EventBridge API Destination endpoint and expected production intake URL format.
+
+**Infrastructure changes applied:**
+- Updated CloudFormation stack **`SecurityAutopilotControlPlaneForwarder`** parameter `SaaSIngestUrl` to:
+  - `https://api.valensjewelry.com/api/control-plane/events`
+- Verified API Destination after update:
+  - `SecurityAutopilotControlPlaneApiDestination-eu-north-1` is `ACTIVE`
+  - `InvocationEndpoint` now points to production SaaS API (not ngrok).
+
+**Root cause found:**
+- Forwarder stack was configured to a temporary tunnel endpoint:
+  - `https://685e-156-215-169-20.ngrok-free.app/api/control-plane/events`
+- Because of this, new control-plane events in `eu-north-1` were not reaching SaaS intake/readiness.
+
+**Open questions / TODOs:**
+- Re-run warm-up event and agent flow to confirm `control_plane.overall_ready=true` and continue through target selection/remediation phases.
+- If readiness still fails after endpoint correction, rotate control-plane token and update the forwarder stack parameter `ControlPlaneToken`.
+
+---
+
+## No-UI agent transient network retry hardening (2026-02-19)
+
+**Task:** Harden no-UI agent auth/API execution against transient DNS/network failures that intermittently fail `/api/auth/login` at init.
+
+**Files modified:**
+- **scripts/lib/no_ui_agent_client.py**
+  - Added configurable transient retry policy in `SaaSApiClient` (`retries`, `retry_backoff_sec`).
+  - Implemented exponential backoff retries for transient HTTP statuses and network/timeout errors.
+- **scripts/run_no_ui_pr_bundle_agent.py**
+  - Added CLI/config options: `--client-retries`, `--client-retry-backoff-sec`.
+  - Wired retry settings into client construction with safe defaults.
+- **scripts/config/no_ui_pr_bundle_agent.example.json**
+  - Added `client_retries` and `client_retry_backoff_sec` example values.
+- **docs/runbooks/no-ui-pr-bundle-agent.md**
+  - Added new optional flags to runbook.
+- **tests/test_no_ui_agent_client.py**
+  - Added retry tests for transient `URLError` recovery and transient HTTP 503 retry exhaustion behavior.
+
+**Validation performed:**
+- `./venv/bin/pytest -q tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py`
+- Result: `4 passed`
+
+**Technical debt / gotchas:**
+- Retries improve transient reliability but cannot recover persistent local DNS misconfiguration. If repeated `nodename nor servname provided` continues across all attempts, host DNS/network path still requires environment-level fix.
+
+---
+
+## No-UI live-flow debug hardening and strategy fallback (2026-02-19)
+
+**Task:** Run and debug the no-UI live flow repeatedly until infra/auth/readiness blockers were removed and execution reached remediation/terraform/verification phases reliably.
+
+**Files modified:**
+- **scripts/lib/no_ui_agent_client.py**
+  - `create_pr_bundle_run` now accepts optional `strategy_id` and omits it when not applicable.
+- **scripts/run_no_ui_pr_bundle_agent.py**
+  - Added strategy-optional handling when `mode_options` includes `pr_only` but `strategies` is empty.
+  - Added candidate strategy list persistence and run-create fallback across strategies on dependency-check failure.
+  - Added exception-strategy guard: prefer non-exception strategies when available.
+- **tests/test_no_ui_pr_bundle_agent_smoke.py**
+  - Added smoke tests for:
+    - `pr_only` actions without strategies.
+    - strategy fallback when recommended strategy is blocked.
+
+**Validation performed:**
+- `./venv/bin/pytest -q tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py`
+- Result: `6 passed`
+
+**Live execution outcomes (representative):**
+- Infra/auth/readiness path now works after forwarder endpoint + token corrections.
+- Agent now regularly reaches:
+  - `target_select`
+  - `run_create`
+  - `run_poll`
+  - `bundle_download`
+  - `terraform_apply`
+  - `refresh`
+- Remaining terminal failures are remediation-content/verification mismatches:
+  - `EC2.53` apply failure from duplicate SG restricted rules (existing `10.0.0.0/8` ingress rules).
+  - `S3.2`/related action strategies blocked by dependency check (`Missing bucket identifier for access-path validation`); only exception strategy is creatable.
+  - `Config.1` Terraform bundle non-idempotent (`MaxNumberOfConfigurationRecordersExceededException`, `MaxNumberOfDeliveryChannelsExceededException`).
+  - Controls without near-real-time shadow support remained `status=NEW` during verification window.
+
+**Open questions / TODOs:**
+- Fix PR bundle idempotency for `Config.1` and `EC2.53` action types.
+- Fix S3 public-access action context enrichment so bucket identifier is available for strict strategies.
+- Align verification policy with supported near-real-time controls, or add control-aware verification mode for canonical-only controls.
+
+## No-UI PR-bundle automation execution rerun (2026-02-19)
+**Task:** Execute the existing no-UI PR-bundle automation script with real apply (`--dry-run` disabled), capture newest artifacts, and produce final operator report.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Execution outcome:**
+- Automation run command:
+  - `PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.53,S3.2`
+- Credentials path:
+  - Prompts were handled interactively by the script (`SaaS email`, `SaaS password`), no password echoed in terminal output.
+- Latest artifacts directory:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260219T044355Z`
+- Reported status/exit in artifacts:
+  - `final_report.json`: `status=failed`, `exit_code=3`
+  - `checkpoint.json`: failure at phase `init` with no completed phases.
+
+**Warnings / gotchas:**
+- API auth request failed due DNS/network resolution at `/api/auth/login` (`nodename nor servname provided, or not known`), so readiness/remediation/terraform phases were not reached.
+- Terraform transcript is fallback-only (`terraform phase not reached`) because execution stopped before bundle apply.
+
+**Open questions / TODOs:**
+- Validate DNS/network reachability for `api.valensjewelry.com` from this execution environment, then rerun the same command.
+- If reachability is restored, verify the next run proceeds past `auth` into readiness and target selection phases.

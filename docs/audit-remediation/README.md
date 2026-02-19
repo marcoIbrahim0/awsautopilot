@@ -16,6 +16,7 @@ Use this folder as the execution source of truth for the architecture, security,
 9. `phase3-security-closure-checklist.md` - closure evidence checklist for `SEC-008` and `SEC-010`.
 10. `06-multi-agent-execution-plan.md` - phased parallel execution plan to close open remediation scope.
 11. `phase4-required-check-governance.md` - final required-check matrix and branch-protection governance baseline.
+12. `deployer-runbook-phase1-phase3.md` - deployer-grade runbook for audit-remediation Phases 1-3 (`.env` -> serverless deploy -> worker enablement -> custom domain/DNS -> verification).
 
 ## How to Execute
 

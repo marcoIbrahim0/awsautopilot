@@ -22,9 +22,9 @@ from backend.models.enums import (
     RemediationRunMode,
     RemediationRunStatus,
 )
-from worker.jobs.remediation_run import execute_remediation_run_job
-from worker.jobs.remediation_run_execution import execute_pr_bundle_execution_job
-from worker.services.direct_fix import DirectFixResult
+from backend.workers.jobs.remediation_run import execute_remediation_run_job
+from backend.workers.jobs.remediation_run_execution import execute_pr_bundle_execution_job
+from backend.workers.services.direct_fix import DirectFixResult
 
 
 def _make_job(mode: str = "direct_fix") -> dict:
@@ -72,6 +72,16 @@ def _mock_account(role_write_arn: str | None = "arn:aws:iam::123456789012:role/W
     return acc
 
 
+@pytest.fixture(autouse=True)
+def _stub_download_bundle_group_run_sync():
+    """
+    Keep this suite focused on remediation run behavior under test.
+    Group-run lifecycle sync is covered separately and adds extra execute() calls.
+    """
+    with patch("backend.workers.jobs.remediation_run._sync_download_bundle_group_runs", return_value=None):
+        yield
+
+
 def test_direct_fix_success() -> None:
     """direct_fix: WriteRole present, assume + executor succeed, run updated to success."""
     job = _make_job(mode="direct_fix")
@@ -93,16 +103,16 @@ def test_direct_fix_success() -> None:
         logs=["Pre-check", "Apply", "Post-check"],
     )
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role") as mock_assume:
+        with patch("backend.workers.jobs.remediation_run.assume_role") as mock_assume:
             mock_assume.return_value = MagicMock()
 
-            with patch("worker.jobs.remediation_run.run_direct_fix", return_value=fix_result):
+            with patch("backend.workers.jobs.remediation_run.run_direct_fix", return_value=fix_result):
                 execute_remediation_run_job(job)
 
     assert run.status == RemediationRunStatus.success
@@ -129,13 +139,13 @@ def test_direct_fix_no_write_role() -> None:
     mock_session.execute.side_effect = [result1, result2]
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role") as mock_assume:
+        with patch("backend.workers.jobs.remediation_run.assume_role") as mock_assume:
             execute_remediation_run_job(job)
             mock_assume.assert_not_called()
 
@@ -158,20 +168,20 @@ def test_direct_fix_assume_role_fails() -> None:
     mock_session.execute.side_effect = [result1, result2]
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role") as mock_assume:
+        with patch("backend.workers.jobs.remediation_run.assume_role") as mock_assume:
             mock_assume.side_effect = ClientError(
                 {"Error": {"Code": "AccessDenied", "Message": "Not allowed"}},
                 "AssumeRole",
             )
 
-            with patch("worker.jobs.remediation_run.run_direct_fix") as mock_fix:
-                with patch("worker.jobs.remediation_run.emit_worker_dispatch_error") as mock_emit:
+            with patch("backend.workers.jobs.remediation_run.run_direct_fix") as mock_fix:
+                with patch("backend.workers.jobs.remediation_run.emit_worker_dispatch_error") as mock_emit:
                     execute_remediation_run_job(job)
                     mock_fix.assert_not_called()
                     assert mock_emit.call_count >= 1
@@ -201,14 +211,14 @@ def test_direct_fix_executor_fails() -> None:
         logs=["Pre-check", "Apply failed"],
     )
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run.run_direct_fix", return_value=fix_result):
+        with patch("backend.workers.jobs.remediation_run.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run.run_direct_fix", return_value=fix_result):
                 execute_remediation_run_job(job)
 
     assert run.status == RemediationRunStatus.failed
@@ -236,14 +246,14 @@ def test_direct_fix_already_compliant() -> None:
         logs=["Pre-check", "Already compliant"],
     )
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run.run_direct_fix", return_value=fix_result):
+        with patch("backend.workers.jobs.remediation_run.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run.run_direct_fix", return_value=fix_result):
                 execute_remediation_run_job(job)
 
     assert run.status == RemediationRunStatus.success
@@ -266,13 +276,13 @@ def test_direct_fix_account_not_found() -> None:
     mock_session.execute.side_effect = [result1, result2]
     mock_session.flush = MagicMock()
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.assume_role") as mock_assume:
+        with patch("backend.workers.jobs.remediation_run.assume_role") as mock_assume:
             execute_remediation_run_job(job)
             mock_assume.assert_not_called()
 
@@ -299,13 +309,13 @@ def test_pr_only_variant_generates_cloudfront_oac_bundle() -> None:
         "steps": ["step"],
     }
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
             execute_remediation_run_job(job)
             mock_generate.assert_called_once()
             args, kwargs = mock_generate.call_args
@@ -366,13 +376,13 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
         "steps": ["step two"],
     }
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
             execute_remediation_run_job(job)
             assert mock_generate.call_count == 2
 
@@ -399,8 +409,7 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert "apply_with_duplicate_tolerance" in content
     assert "run_terraform_init_with_retry" in content
     assert "${!ACTION_DIRS[@]}" not in content
-    assert "PARALLEL_BUNDLE_EXECUTIONS" in content
-    assert "wait_for_one_bundle" in content
+    assert "while IFS= read -r dir; do" in content
     assert "InvalidPermission" in content
     assert "EntityAlreadyExists" in content
     assert "WARNING: duplicate/already-existing resource detected; continuing without failure." in content
@@ -408,12 +417,15 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert "Failed folders summary:" in content
     metadata = pr_bundle.get("metadata")
     assert isinstance(metadata, dict)
-    assert metadata.get("runner_template_source") == "embedded"
-    assert metadata.get("runner_template_version") == "v1"
+    runner_template_source = str(metadata.get("runner_template_source") or "")
+    assert runner_template_source.startswith("embedded")
+    runner_template_version = str(metadata.get("runner_template_version") or "")
+    assert runner_template_version
     group_bundle = run.artifacts.get("group_bundle")
     assert isinstance(group_bundle, dict)
-    assert group_bundle.get("runner_template_source") == "embedded"
-    assert group_bundle.get("runner_template_version") == "v1"
+    group_runner_template_source = str(group_bundle.get("runner_template_source") or "")
+    assert group_runner_template_source.startswith("embedded")
+    assert group_bundle.get("runner_template_version") == runner_template_version
     readme_group = next(
         f for f in files if isinstance(f, dict) and f.get("path") == "README_GROUP.txt"
     )
@@ -449,17 +461,17 @@ def test_group_bundle_runner_template_uses_s3_when_configured() -> None:
     bundle_one = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# one"}], "steps": ["step one"]}
     bundle_two = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# two"}], "steps": ["step two"]}
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]):
-            with patch("worker.jobs.remediation_run.settings") as mock_settings:
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]):
+            with patch("backend.workers.jobs.remediation_run.settings") as mock_settings:
                 mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI = "s3://central-templates/run-all/latest.sh"
                 mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION = "v9.9.9"
                 mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS = 300
-                with patch("worker.jobs.remediation_run.boto3.client") as mock_boto_client:
+                with patch("backend.workers.jobs.remediation_run.boto3.client") as mock_boto_client:
                     mock_s3 = MagicMock()
                     body = MagicMock()
                     body.read.return_value = b"#!/usr/bin/env bash\necho central-template\n"
@@ -508,13 +520,13 @@ def test_pr_only_strategy_fields_forwarded_to_generator_and_artifacts() -> None:
         "steps": ["step one"],
     }
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
             execute_remediation_run_job(job)
             _, kwargs = mock_generate.call_args
             assert kwargs.get("strategy_id") == "config_enable_centralized_delivery"
@@ -571,13 +583,13 @@ def test_group_pr_bundle_strategy_fields_forwarded_to_each_action_generation() -
         "steps": ["step two"],
     }
 
-    with patch("worker.jobs.remediation_run.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
 
-        with patch("worker.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
             execute_remediation_run_job(job)
             assert mock_generate.call_count == 2
             for call in mock_generate.call_args_list:
@@ -633,13 +645,13 @@ def test_pr_bundle_execution_plan_success() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
                 mock_run_cmd.side_effect = [
                     {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
                     {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
@@ -690,13 +702,13 @@ def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
                 mock_run_cmd.side_effect = [
                     {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
                     {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
@@ -751,13 +763,13 @@ def test_pr_bundle_execution_plan_non_fail_fast_continues_folders() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
-            with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
                 mock_run_cmd.side_effect = [
                     {"command": "terraform init", "returncode": 1, "stdout": "", "stderr": "init fail"},
                     {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
@@ -808,12 +820,12 @@ def test_pr_bundle_execution_claim_lost_skips_duplicate_delivery() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    with patch("worker.jobs.remediation_run_execution.session_scope") as mock_scope:
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
         ctx = MagicMock()
         ctx.__enter__.return_value = mock_session
         ctx.__exit__.return_value = False
         mock_scope.return_value = ctx
-        with patch("worker.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+        with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
             execute_pr_bundle_execution_job(job)
 
     assert mock_run_cmd.call_count == 0

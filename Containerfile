@@ -8,14 +8,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install Python deps (API + worker) first for better layer caching.
 COPY backend/requirements.txt /app/requirements-backend.txt
-COPY worker/requirements.txt /app/requirements-worker.txt
+COPY backend/workers/requirements.txt /app/requirements-worker.txt
 RUN pip install --no-cache-dir -r /app/requirements-backend.txt -r /app/requirements-worker.txt
 
 # App code + migrations.
 COPY alembic /app/alembic
 COPY alembic.ini /app/alembic.ini
 COPY backend /app/backend
-COPY worker /app/worker
+COPY backend/workers /app/backend/workers
 COPY infrastructure /app/infrastructure
 
 EXPOSE 8000

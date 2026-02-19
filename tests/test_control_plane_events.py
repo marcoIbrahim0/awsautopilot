@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from worker.services.control_plane_events import (
+from backend.workers.services.control_plane_events import (
     build_fingerprint,
     evaluate_s3_bucket_public_posture,
     evaluate_security_group_public_admin_ports,

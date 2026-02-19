@@ -560,7 +560,7 @@ Resources:
           Command:
             - /bin/sh
             - -lc
-            - python -m worker.main
+            - python -m backend.workers.main
           Environment:
             - Name: APP_NAME
               Value: !Ref AppName

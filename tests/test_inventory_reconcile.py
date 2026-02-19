@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from botocore.exceptions import ClientError
 
-from worker.services.inventory_reconcile import collect_inventory_snapshots
+from backend.workers.services.inventory_reconcile import collect_inventory_snapshots
 
 
 class _FakeSession:

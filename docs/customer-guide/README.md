@@ -18,12 +18,16 @@ AWS Security Autopilot is a SaaS platform that:
 3. **[Complete Onboarding](features-walkthrough.md#onboarding-wizard)** — Follow the onboarding wizard
 4. **[View Findings](features-walkthrough.md#findings-page)** — See your security findings
 5. **[Review Actions](features-walkthrough.md#actions-page)** — Prioritized actions to fix
+> ⚠️ Status: Planned — not yet implemented
+> `features-walkthrough.md` is planned and not present yet.
 
 ## Getting Help
 
 - **[Troubleshooting](troubleshooting.md)** — Common issues and solutions
 - **Support**: Contact support@yourcompany.com
 - **[API Documentation](../api/README.md)** — For technical integrations
+> ⚠️ Status: Planned — not yet implemented
+> `../api/README.md` is part of the planned `docs/api/` documentation area.
 
 ## Documentation
 
@@ -33,6 +37,8 @@ AWS Security Autopilot is a SaaS platform that:
 - **[Team Management](team-management.md)** — User invites and roles
 - **[Billing](billing.md)** — Subscription and billing
 - **[Troubleshooting](troubleshooting.md)** — FAQs and common issues
+> ⚠️ Status: Planned — not yet implemented
+> `features-walkthrough.md`, `team-management.md`, and `billing.md` are planned and not present yet.
 
 ---
 

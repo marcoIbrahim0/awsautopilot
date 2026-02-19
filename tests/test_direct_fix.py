@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
-from worker.services.direct_fix import (
+from backend.workers.services.direct_fix import (
     DirectFixResult,
     SUPPORTED_ACTION_TYPES,
     run_direct_fix,
