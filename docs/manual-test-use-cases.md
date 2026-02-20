@@ -103,6 +103,7 @@ These actions generate a **PR bundle** (Terraform or CloudFormation). You apply 
    - Identify SG attachments first (EC2/ENI/ALB/NLB/RDS/ECS/EKS), and treat production workloads with extra caution.
    - Confirm alternative admin path first (SSM Session Manager, bastion, or VPN). Optionally validate current sources via VPC Flow Logs.
    - Replace broad sources (**0.0.0.0/0** and/or **::/0**) incrementally with restricted source(s) (VPN CIDR, office IP, or source SG).
+   - Terraform bundle now runs a preflight revoke for conflicting public/duplicate 22/3389 CIDR rules before creating restricted rules.
    - Apply one change at a time and test app/dependency connectivity after each step.
 5. **Recompute actions** and confirm the action/finding is resolved.
 
@@ -316,4 +317,4 @@ These actions can be fixed **directly** by the app using the account’s **Write
 
 ---
 
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-20*

@@ -36,6 +36,7 @@ def test_aggregate_findings_counts() -> None:
     assert summary["resolved_count"] == 1
     assert summary["by_status"]["NEW"] == 1
     assert summary["by_control_id"]["EC2.53"] == 2
+    assert summary["by_control_id_open"]["EC2.53"] == 1
 
 
 def test_compute_delta_with_kpis() -> None:
@@ -43,11 +44,13 @@ def test_compute_delta_with_kpis() -> None:
         "by_status": {"NEW": 3, "NOTIFIED": 2, "RESOLVED": 1},
         "by_severity": {"HIGH": 2},
         "by_control_id": {"EC2.53": 4, "S3.2": 2},
+        "by_control_id_open": {"EC2.53": 4, "S3.2": 1},
     }
     post = {
         "by_status": {"NEW": 1, "NOTIFIED": 1, "RESOLVED": 4},
         "by_severity": {"HIGH": 1},
         "by_control_id": {"EC2.53": 1, "S3.2": 2},
+        "by_control_id_open": {"EC2.53": 1, "S3.2": 1},
     }
 
     delta = compute_delta(pre, post, "EC2.53")
@@ -55,6 +58,22 @@ def test_compute_delta_with_kpis() -> None:
     assert delta["kpis"]["open_drop"] == 3
     assert delta["kpis"]["resolved_gain"] == 3
     assert delta["kpis"]["tested_control_delta"] == -3
+
+
+def test_aggregate_findings_prefers_shadow_status_when_present() -> None:
+    findings = [
+        {
+            "status": "NEW",
+            "severity_label": "MEDIUM",
+            "control_id": "S3.11",
+            "source": "security_hub",
+            "shadow": {"status_normalized": "RESOLVED"},
+        }
+    ]
+
+    summary = aggregate_findings(findings)
+    assert summary["by_status"]["RESOLVED"] == 1
+    assert summary["open_count"] == 0
 
 
 def test_select_target_finding_prefers_control_then_severity_then_time() -> None:

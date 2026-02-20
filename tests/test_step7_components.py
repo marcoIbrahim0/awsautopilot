@@ -516,8 +516,11 @@ def test_pr_bundle_s3_bucket_access_logging_terraform() -> None:
     assert r["format"] == "terraform"
     content = next(f for f in r["files"] if f["path"] == "s3_bucket_access_logging.tf")["content"]
     assert 'resource "aws_s3_bucket_logging" "security_autopilot"' in content
-    assert 'bucket        = "log-source-bucket"' in content
+    assert 'variable "source_bucket_name"' in content
+    assert 'default     = "log-source-bucket"' in content
+    assert "bucket        = var.source_bucket_name" in content
     assert 'variable "log_bucket_name"' in content
+    assert content.count('default     = "log-source-bucket"') >= 2
     assert "target_bucket = var.log_bucket_name" in content
     assert "S3.9" in content or "Control:" in content
 
@@ -543,7 +546,7 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform() -> None:
 
 
 def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
-    """S3.15: encryption bundle configures default SSE-KMS with caller-provided key ARN."""
+    """S3.15: encryption bundle configures SSE-KMS with safe default AWS-managed key."""
     action = _make_action(
         action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
         target_id="kms-bucket",
@@ -557,6 +560,7 @@ def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
     assert 'bucket = "kms-bucket"' in content
     assert 'sse_algorithm     = "aws:kms"' in content
     assert 'variable "kms_key_arn"' in content
+    assert 'default     = "arn:aws:kms:us-east-1:123456789012:alias/aws/s3"' in content
     assert "S3.15" in content or "Control:" in content
 
 
@@ -619,6 +623,9 @@ def test_pr_bundle_sg_restrict_terraform_step_9_11_exact_structure() -> None:
     assert 'resource "aws_vpc_security_group_ingress_rule" "rdp_restricted"' in content
     assert 'resource "aws_vpc_security_group_ingress_rule" "ssh_restricted_ipv6"' in content
     assert 'resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6"' in content
+    assert 'resource "null_resource" "revoke_public_admin_ingress"' in content
+    assert "IpRanges=[{CidrIp=${var.allowed_cidr}}]" in content
+    assert "Ipv6Ranges=[{CidrIpv6=${var.allowed_cidr_ipv6}}]" in content
     assert 'from_port         = 22' in content
     assert 'to_port           = 22' in content
     assert 'from_port         = 3389' in content

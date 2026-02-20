@@ -84,6 +84,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--client-timeout-sec", type=int)
     parser.add_argument("--client-retries", type=int)
     parser.add_argument("--client-retry-backoff-sec", type=float)
+    parser.add_argument("--reconcile-timeout-sec", type=int)
+    parser.add_argument("--reconcile-poll-interval-sec", type=int)
+    parser.add_argument("--reconcile-after-apply", dest="reconcile_after_apply", action="store_true")
+    parser.add_argument("--no-reconcile-after-apply", dest="reconcile_after_apply", action="store_false")
+    parser.set_defaults(reconcile_after_apply=None)
     return parser.parse_args()
 
 
@@ -123,6 +128,13 @@ def merge_settings(args: argparse.Namespace, config: dict[str, Any]) -> dict[str
         "verify_timeout_sec": int(pick("verify_timeout_sec", 900)),
         "terraform_timeout_sec": int(pick("terraform_timeout_sec", 900)),
         "stale_resend_sec": int(pick("stale_resend_sec", 120)),
+        "reconcile_timeout_sec": int(pick("reconcile_timeout_sec", 900)),
+        "reconcile_poll_interval_sec": int(pick("reconcile_poll_interval_sec", 10)),
+        "reconcile_after_apply": (
+            bool(pick("reconcile_after_apply", True))
+            if pick("reconcile_after_apply", True) is not None
+            else True
+        ),
         "resume_from_checkpoint": bool(args.resume_from_checkpoint or config.get("resume_from_checkpoint", False)),
         "dry_run": bool(args.dry_run or config.get("dry_run", False)),
         "keep_workdir": bool(args.keep_workdir or config.get("keep_workdir", False)),
@@ -279,7 +291,7 @@ class NoUiPrBundleAgent:
             raise AgentValidationError(f"Control-plane readiness failed (missing: {missing})")
 
     def phase_pre_snapshot(self) -> None:
-        self._trigger_refresh()
+        self._trigger_refresh(include_reconcile=False)
         findings = self._fetch_all_findings(status_filter=None)
         summary = aggregate_findings(findings)
         write_json(self.output_dir / "findings_pre_raw.json", findings)
@@ -448,7 +460,7 @@ class NoUiPrBundleAgent:
             raise AgentValidationError(str(exc)) from exc
 
     def phase_refresh(self) -> None:
-        self._trigger_refresh()
+        self._trigger_refresh(include_reconcile=True)
 
     def phase_verification_poll(self) -> None:
         finding_id = str(self.state.checkpoint.context.get("target_finding_id") or "")
@@ -528,12 +540,51 @@ class NoUiPrBundleAgent:
 
         return all_items
 
-    def _trigger_refresh(self) -> None:
+    def _trigger_refresh(self, include_reconcile: bool) -> None:
         account_id = self.settings["account_id"]
         region = self.settings["region"]
         ingest = self.client.trigger_ingest(account_id, [region])
         compute = self.client.trigger_compute_actions(account_id, region)
-        write_json(self.output_dir / "refresh_last.json", {"ingest": ingest, "compute": compute})
+        payload: dict[str, Any] = {"ingest": ingest, "compute": compute}
+        if include_reconcile and bool(self.settings.get("reconcile_after_apply", True)):
+            payload["reconcile"] = self._trigger_reconcile_for_target()
+        write_json(self.output_dir / "refresh_last.json", payload)
+
+    def _trigger_reconcile_for_target(self) -> dict[str, Any]:
+        control_id = str(self.state.checkpoint.context.get("target_control_id") or "").upper()
+        services = _reconcile_services_for_control(control_id)
+        if not services:
+            return {"skipped": True, "reason": "no_reconcile_service_for_control", "control_id": control_id}
+
+        account_id = self.settings["account_id"]
+        region = self.settings["region"]
+        response = self.client.trigger_reconciliation_run(
+            account_id=account_id,
+            regions=[region],
+            services=services,
+            require_preflight_pass=False,
+            force=True,
+            sweep_mode="global",
+            max_resources=500,
+        )
+        run_id = str(response.get("run_id") or "")
+        if not run_id:
+            return {"trigger": response, "status": "unknown", "reason": "missing_run_id"}
+
+        timeout_sec = int(self.settings.get("reconcile_timeout_sec", 900))
+        poll_sec = int(self.settings.get("reconcile_poll_interval_sec", 10))
+        terminal = {"succeeded", "partial_failed", "failed"}
+        started = time.monotonic()
+
+        while True:
+            status_payload = self.client.get_reconciliation_status(account_id, limit=100)
+            run = _find_reconciliation_run(status_payload, run_id)
+            status_value = str((run or {}).get("status") or "").lower()
+            if status_value in terminal:
+                return {"trigger": response, "run": run, "status": status_value}
+            if (time.monotonic() - started) >= timeout_sec:
+                return {"trigger": response, "run": run, "status": "timeout"}
+            time.sleep(max(1, poll_sec))
 
     def _write_api_transcript(self) -> None:
         write_json(self.output_dir / "api_transcript.json", self.client.get_transcript())
@@ -704,6 +755,37 @@ def _is_dependency_check_failed(exc: ApiError) -> bool:
         return False
     error = str(detail.get("error") or "").strip().lower()
     return error == "dependency check failed"
+
+
+def _reconcile_services_for_control(control_id: str) -> list[str]:
+    token = str(control_id or "").strip().upper()
+    if token.startswith("S3."):
+        return ["s3"]
+    if token.startswith("EC2."):
+        return ["ec2"]
+    if token.startswith("IAM."):
+        return ["iam"]
+    if token.startswith("SSM."):
+        return ["ssm"]
+    if token.startswith("CLOUDTRAIL."):
+        return ["cloudtrail"]
+    if token.startswith("CONFIG."):
+        return ["config"]
+    if token.startswith("GUARDDUTY."):
+        return ["guardduty"]
+    return []
+
+
+def _find_reconciliation_run(payload: dict[str, Any], run_id: str) -> dict[str, Any] | None:
+    if not run_id:
+        return None
+    runs = payload.get("runs") if isinstance(payload.get("runs"), list) else []
+    for row in runs:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("id") or "") == run_id:
+            return row
+    return None
 
 
 def _load_summary(path: Path) -> dict[str, Any]:

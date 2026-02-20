@@ -1217,7 +1217,10 @@ def _generate_for_s3_bucket_access_logging(action: ActionLike, format: PRBundleF
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
-            f"Set bucket name (target: {bucket_name}) and logging target bucket variables.",
+            (
+                f"Default source/log bucket is target bucket ({bucket_name}); "
+                "override log_bucket_name/log_prefix when using a centralized log bucket."
+            ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enable S3 server access logging.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
@@ -1233,9 +1236,16 @@ def _terraform_s3_bucket_access_logging_content(meta: dict[str, str]) -> str:
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
 # Control: {meta["control_id"]}
 
+variable "source_bucket_name" {{
+  type        = string
+  description = "S3 source bucket where server access logging is enabled"
+  default     = "{bucket}"
+}}
+
 variable "log_bucket_name" {{
   type        = string
   description = "S3 bucket that will receive access logs"
+  default     = "{bucket}"
 }}
 
 variable "log_prefix" {{
@@ -1245,7 +1255,7 @@ variable "log_prefix" {{
 }}
 
 resource "aws_s3_bucket_logging" "security_autopilot" {{
-  bucket        = "{bucket}"
+  bucket        = var.source_bucket_name
   target_bucket = var.log_bucket_name
   target_prefix = var.log_prefix
 }}
@@ -1269,6 +1279,7 @@ Parameters:
     Description: Source bucket to enable logging on
   LogBucketName:
     Type: String
+    Default: "{bucket}"
     Description: Destination bucket receiving access logs
   LogPrefix:
     Type: String
@@ -1423,7 +1434,10 @@ def _generate_for_s3_bucket_encryption_kms(action: ActionLike, format: PRBundleF
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
-            f"Set bucket name (target: {bucket_name}) and kms_key_arn before apply.",
+            (
+                f"Bucket defaults to target ({bucket_name}); "
+                "override kms_key_arn if customer-managed key is required."
+            ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enforce SSE-KMS default encryption.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
@@ -1434,6 +1448,7 @@ def _generate_for_s3_bucket_encryption_kms(action: ActionLike, format: PRBundleF
 def _terraform_s3_bucket_encryption_kms_content(meta: dict[str, str]) -> str:
     """Terraform for S3 bucket SSE-KMS encryption (S3.15)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    default_kms_arn = f"arn:aws:kms:{meta['region']}:{meta['account_id']}:alias/aws/s3"
     return f"""# S3 bucket SSE-KMS encryption - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -1441,7 +1456,8 @@ def _terraform_s3_bucket_encryption_kms_content(meta: dict[str, str]) -> str:
 
 variable "kms_key_arn" {{
   type        = string
-  description = "KMS key ARN to use for bucket default encryption"
+  description = "KMS key ARN to use for bucket default encryption (override for customer-managed key)"
+  default     = "{default_kms_arn}"
 }}
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {{
@@ -1475,7 +1491,8 @@ Parameters:
     Description: S3 bucket name to enable SSE-KMS encryption
   KmsKeyArn:
     Type: String
-    Description: KMS key ARN used for default bucket encryption
+    Default: "arn:aws:kms:{meta["region"]}:{meta["account_id"]}:alias/aws/s3"
+    Description: KMS key ARN used for default bucket encryption (override for customer-managed key)
 Resources:
   BucketEncryption:
     Type: AWS::S3::Bucket
@@ -1495,7 +1512,8 @@ Resources:
 # ---------------------------------------------------------------------------
 # Scope: per security group; target_id = SG ID. Canonical control EC2.53 → sg_restrict_public_ports (control_scope 9.8).
 # Aliases: EC2.13 / EC2.19 / EC2.18 map to the same action_type and canonicalize to EC2.53.
-# Restrict 0.0.0.0/0 and optional ::/0 on 22/3389; optional allowlist (variables/parameters). User must remove existing public rules first.
+# Restrict 0.0.0.0/0 and optional ::/0 on 22/3389 with optional allowlist (variables/parameters).
+# Terraform bundle includes preflight revoke for conflicting 22/3389 CIDR rules; CloudFormation path remains operator-managed.
 # Terraform: aws_vpc_security_group_ingress_rule with parameterized CIDR. CloudFormation: AWS::EC2::SecurityGroupIngress.
 # ---------------------------------------------------------------------------
 
@@ -1551,6 +1569,7 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
             "Do not delete broad rules blindly. Narrow sources incrementally to VPN CIDR, office IP, or source security group.",
             f"Set security_group_id and allowed_cidr in the Terraform file (target SG: {sg_id}).",
             "Optionally set allowed_cidr_ipv6 (e.g. fd00::/8) to add IPv6-restricted ingress.",
+            "Bundle preflight auto-revokes conflicting public/duplicate 22/3389 CIDR rules before creating restricted rules.",
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to add restricted SSH/RDP ingress. Keep public 80/443 only where explicitly required.",
             "Test connectivity after each change and tighten in small steps.",
@@ -1593,54 +1612,12 @@ variable "remediation_region" {{
   description = "Region used by local AWS CLI revoke commands."
 }}
 
-data "aws_security_group" "target" {{
-  id = var.security_group_id
-}}
-
-locals {{
-  existing_ingress_ipv4 = flatten([
-    for rule in data.aws_security_group.target.ingress : [
-      for cidr in try(rule.cidr_blocks, []) : {{
-        protocol  = lower(try(rule.protocol, ""))
-        from_port = tonumber(try(rule.from_port, -1))
-        to_port   = tonumber(try(rule.to_port, -1))
-        cidr      = cidr
-      }}
-    ]
-  ])
-  existing_ingress_ipv6 = flatten([
-    for rule in data.aws_security_group.target.ingress : [
-      for cidr in try(rule.ipv6_cidr_blocks, []) : {{
-        protocol  = lower(try(rule.protocol, ""))
-        from_port = tonumber(try(rule.from_port, -1))
-        to_port   = tonumber(try(rule.to_port, -1))
-        cidr      = cidr
-      }}
-    ]
-  ])
-
-  has_ssh_ipv4_allowed = length([
-    for rule in local.existing_ingress_ipv4 : 1
-    if rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidr == var.allowed_cidr
-  ]) > 0
-  has_rdp_ipv4_allowed = length([
-    for rule in local.existing_ingress_ipv4 : 1
-    if rule.protocol == "tcp" && rule.from_port == 3389 && rule.to_port == 3389 && rule.cidr == var.allowed_cidr
-  ]) > 0
-  has_ssh_ipv6_allowed = length([
-    for rule in local.existing_ingress_ipv6 : 1
-    if rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidr == var.allowed_cidr_ipv6
-  ]) > 0
-  has_rdp_ipv6_allowed = length([
-    for rule in local.existing_ingress_ipv6 : 1
-    if rule.protocol == "tcp" && rule.from_port == 3389 && rule.to_port == 3389 && rule.cidr == var.allowed_cidr_ipv6
-  ]) > 0
-}}
-
 resource "null_resource" "revoke_public_admin_ingress" {{
   triggers = {{
     security_group_id = var.security_group_id
     region            = var.remediation_region
+    allowed_cidr      = var.allowed_cidr
+    allowed_cidr_ipv6 = var.allowed_cidr_ipv6
   }}
 
   provisioner "local-exec" {{
@@ -1651,13 +1628,20 @@ aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --g
 aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
 aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
 aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+if [ -n "${{var.allowed_cidr}}" ]; then
+  aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{{CidrIp=${{var.allowed_cidr}}}}]' >/dev/null 2>&1 || true
+  aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{{CidrIp=${{var.allowed_cidr}}}}]' >/dev/null 2>&1 || true
+fi
+if [ -n "${{var.allowed_cidr_ipv6}}" ]; then
+  aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{{CidrIpv6=${{var.allowed_cidr_ipv6}}}}]' >/dev/null 2>&1 || true
+  aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{{CidrIpv6=${{var.allowed_cidr_ipv6}}}}]' >/dev/null 2>&1 || true
+fi
 exit 0
 EOT
   }}
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "ssh_restricted" {{
-  count             = local.has_ssh_ipv4_allowed ? 0 : 1
   security_group_id = var.security_group_id
   cidr_ipv4         = var.allowed_cidr
   from_port         = 22
@@ -1668,7 +1652,6 @@ resource "aws_vpc_security_group_ingress_rule" "ssh_restricted" {{
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "rdp_restricted" {{
-  count             = local.has_rdp_ipv4_allowed ? 0 : 1
   security_group_id = var.security_group_id
   cidr_ipv4         = var.allowed_cidr
   from_port         = 3389
@@ -1679,7 +1662,7 @@ resource "aws_vpc_security_group_ingress_rule" "rdp_restricted" {{
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "ssh_restricted_ipv6" {{
-  count             = var.allowed_cidr_ipv6 != "" && !local.has_ssh_ipv6_allowed ? 1 : 0
+  count             = var.allowed_cidr_ipv6 != "" ? 1 : 0
   security_group_id = var.security_group_id
   cidr_ipv6         = var.allowed_cidr_ipv6
   from_port         = 22
@@ -1690,7 +1673,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh_restricted_ipv6" {{
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6" {{
-  count             = var.allowed_cidr_ipv6 != "" && !local.has_rdp_ipv6_allowed ? 1 : 0
+  count             = var.allowed_cidr_ipv6 != "" ? 1 : 0
   security_group_id = var.security_group_id
   cidr_ipv6         = var.allowed_cidr_ipv6
   from_port         = 3389

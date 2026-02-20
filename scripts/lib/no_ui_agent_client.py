@@ -124,6 +124,32 @@ class SaaSApiClient:
         path = f"/api/remediation-runs/{run_id}/pr-bundle.zip"
         return self._request_bytes("GET", path)
 
+    def trigger_reconciliation_run(
+        self,
+        account_id: str,
+        regions: list[str],
+        services: list[str],
+        *,
+        require_preflight_pass: bool = False,
+        force: bool = True,
+        sweep_mode: str = "global",
+        max_resources: int = 500,
+    ) -> dict[str, Any]:
+        body = {
+            "account_id": account_id,
+            "regions": regions,
+            "services": services,
+            "max_resources": int(max_resources),
+            "sweep_mode": sweep_mode,
+            "require_preflight_pass": bool(require_preflight_pass),
+            "force": bool(force),
+        }
+        return self._request_json("POST", "/api/reconciliation/run", body=body)
+
+    def get_reconciliation_status(self, account_id: str, limit: int = 20) -> dict[str, Any]:
+        query = {"account_id": account_id, "limit": int(limit)}
+        return self._request_json("GET", "/api/reconciliation/status", query=query)
+
     def _request_json(
         self,
         method: str,

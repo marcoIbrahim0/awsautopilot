@@ -31,6 +31,48 @@ def _write_sg_bundle(workdir: Path) -> None:
     )
 
 
+def _write_s3_logging_bundle_missing_log_bucket(workdir: Path) -> None:
+    (workdir / "providers.tf").write_text('provider "aws" { region = "eu-north-1" }\n', encoding="utf-8")
+    (workdir / "s3_bucket_access_logging.tf").write_text(
+        '\n'.join(
+            [
+                '# Account: 029037611564 | Region: eu-north-1 | Bucket: demo-bucket',
+                'variable "log_bucket_name" { type = string }',
+                'resource "aws_s3_bucket_logging" "security_autopilot" {',
+                '  bucket        = "demo-bucket"',
+                "  target_bucket = var.log_bucket_name",
+                '  target_prefix = "logs/"',
+                "}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_s3_kms_bundle_missing_key(workdir: Path) -> None:
+    (workdir / "providers.tf").write_text('provider "aws" { region = "eu-north-1" }\n', encoding="utf-8")
+    (workdir / "s3_bucket_encryption_kms.tf").write_text(
+        '\n'.join(
+            [
+                '# Account: 029037611564 | Region: eu-north-1 | Bucket: secure-bucket',
+                'variable "kms_key_arn" { type = string }',
+                'resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {',
+                '  bucket = "secure-bucket"',
+                "  rule {",
+                "    apply_server_side_encryption_by_default {",
+                '      sse_algorithm     = "aws:kms"',
+                "      kms_master_key_id = var.kms_key_arn",
+                "    }",
+                "  }",
+                "}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_run_terraform_apply_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
@@ -129,3 +171,34 @@ def test_run_terraform_apply_sg_preflight_noop_when_no_target_rules(
     assert calls[0][:3] == ["aws", "ec2", "describe-security-group-rules"]
     assert all(cmd[:3] != ["aws", "ec2", "revoke-security-group-ingress"] for cmd in calls)
     assert transcript[1]["command"] == "sg_preflight_noop"
+
+
+def test_run_terraform_apply_autofills_s3_logging_var(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_s3_logging_bundle_missing_log_bucket(tmp_path)
+
+    def fake_run(command, cwd, env, capture_output, text, check, timeout):
+        del command, cwd, env, capture_output, text, check, timeout
+        return _Completed(0, stdout="ok")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    transcript = run_terraform_apply(tmp_path, timeout_sec=30)
+
+    tfvars_path = tmp_path / "security_autopilot.auto.tfvars.json"
+    payload = json.loads(tfvars_path.read_text(encoding="utf-8"))
+    assert payload["log_bucket_name"] == "demo-bucket"
+    assert any(item.get("command") == "autofill_tfvars" for item in transcript)
+
+
+def test_run_terraform_apply_autofills_s3_kms_var(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_s3_kms_bundle_missing_key(tmp_path)
+
+    def fake_run(command, cwd, env, capture_output, text, check, timeout):
+        del command, cwd, env, capture_output, text, check, timeout
+        return _Completed(0, stdout="ok")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    run_terraform_apply(tmp_path, timeout_sec=30)
+
+    tfvars_path = tmp_path / "security_autopilot.auto.tfvars.json"
+    payload = json.loads(tfvars_path.read_text(encoding="utf-8"))
+    assert payload["kms_key_arn"] == "arn:aws:kms:eu-north-1:029037611564:alias/aws/s3"

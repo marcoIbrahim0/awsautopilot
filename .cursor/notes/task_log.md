@@ -4812,3 +4812,309 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Confirm control-plane event recency recovery in `eu-north-1`, then rerun sequence and final required execution using existing script only.
+
+## No-UI readiness root-cause fix + final required EC2.53,S3.2 rerun (2026-02-20)
+
+**Task:** Diagnose persistent no-UI readiness failure for account `029037611564` in `eu-north-1`, apply infra-only fixes (no code edits), recover control-plane freshness, and rerun final required execution `EC2.53,S3.2`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Infrastructure/config changes applied (persisted):**
+- Updated CloudFormation stack `SecurityAutopilotControlPlaneForwarder` in `eu-north-1` using current template `infrastructure/cloudformation/control-plane-forwarder-template.yaml`.
+  - Result: deployed EventBridge `eventName` allowlist now includes expanded management events (`PutAccountPublicAccessBlock`, `EnableSecurityHub`, `CreateDetector`, `PutConfigurationRecorder`, etc.) instead of legacy short list.
+- Ran one-shot freshness canary:
+  - `PYTHONPATH=. ./venv/bin/python scripts/control_plane_freshness_canary.py --region eu-north-1 --once`
+  - Result: emitted `AuthorizeSecurityGroupIngress` + `RevokeSecurityGroupIngress` management events and restored readiness recency.
+
+**Execution outcome:**
+- Final required command rerun (real apply) succeeded.
+- Latest artifact directory:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T025606Z`
+- `final_report.json`: `status=success`, `exit_code=0`
+- Target IDs populated:
+  - `target_finding_id=ec2b4d4c-4356-4132-a435-64783c59bd1a`
+  - `target_action_id=cad38c6b-100e-4c12-8c05-976114a49821`
+  - `target_control_id=EC2.53`
+  - `run_id=9aadfa6a-9ff2-4281-856d-50d56de966be`
+
+**Technical debt / gotchas:**
+- Forwarder target DLQ still contains historical messages from prior misconfigurations (legacy ngrok endpoint + invalid token periods); current run produced healthy readiness and successful remediation flow.
+
+**Open questions / TODOs:**
+- Optionally replay/purge historical DLQ messages after confirming no operational need for retained failure payloads.
+
+## No-UI readiness-gate debug plan implementation + exact final rerun (2026-02-20)
+
+**Task:** Implement full readiness-gate debug plan for account `029037611564` in `eu-north-1`: baseline evidence, repeated readiness checks, forwarder parity verification, DLQ signal inspection, canary freshness recovery proof, and exact final run rerun (`EC2.53,S3.2`).
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts created/used:**
+- Baseline failed run evidence:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/final_report.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/checkpoint.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/readiness.json`
+- Baseline readiness timeline (~10 min, 6 checks):
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-pre-fix-20260220T$(date -u +%H%M%SZ).jsonl`
+- Canary evidence:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/canary-once-20260220T030529Z.jsonl`
+- Post-canary readiness proof:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-post-canary-2-20260220T030540Z.jsonl`
+- Exact final run artifact (latest):
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T030558Z`
+
+**Infrastructure/config verification applied:**
+- Verified stack `SecurityAutopilotControlPlaneForwarder` in `eu-north-1` is `UPDATE_COMPLETE` and persisted with:
+  - `SaaSIngestUrl=https://api.valensjewelry.com/api/control-plane/events`
+  - expanded EventBridge allowlist pattern (includes `PutAccountPublicAccessBlock`, `EnableSecurityHub`, `CreateDetector`, `PutConfigurationRecorder`, etc.)
+- Verified EventBridge target chain:
+  - API Destination `ACTIVE`, endpoint correct
+  - Connection `AUTHORIZED`, `X-Control-Plane-Token` header key present
+  - Rule target points to API Destination with retry + DLQ
+- DLQ signal sample still shows historical `403 Invalid control-plane token` message class; depth remains non-zero from historical events.
+
+**Execution outcome:**
+- Exact final command rerun succeeded:
+  - `status=success`, `exit_code=0`
+  - artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T030558Z`
+- Tested target:
+  - `finding_id=ec2b4d4c-4356-4132-a435-64783c59bd1a`
+  - `action_id=cad38c6b-100e-4c12-8c05-976114a49821`
+  - `control_id=EC2.53`
+  - `run_id=16ad15a0-f692-4849-8719-1c56d819f908`
+
+**Technical debt / gotchas:**
+- Baseline readiness timeline filename includes literal shell expression text due initial quoting (`$(date...)`) but contains valid captured data.
+- Forwarder target DLQ retains historical failed deliveries; current readiness and final run are healthy.
+
+**Open questions / TODOs:**
+- Optional operational cleanup: replay or purge historical target DLQ messages after confirming no audit/forensics retention need.
+
+## Solve plan implementation: readiness failure `missing eu-north-1` + exact rerun (2026-02-20)
+
+**Task:** Implement the decision-complete solve plan for no-UI readiness failure in `eu-north-1` (baseline timeline, forwarder parity, EventBridge delivery chain, DLQ error classification, canary freshness proof, exact final rerun).
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts used/created:**
+- Failed reference evidence:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/final_report.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/checkpoint.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/readiness.json`
+- Fresh baseline timeline (6 checks over ~10 min):
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-baseline-20260220T031122Z.jsonl`
+- Canary proof:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/canary-once-20260220T032143Z.jsonl`
+- Post-canary readiness proof:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-post-canary-20260220T032153Z.jsonl`
+- Exact final rerun artifact (newest):
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T032209Z`
+
+**Infra/config verification outcome:**
+- `SecurityAutopilotControlPlaneForwarder` stack in `eu-north-1` is persisted `UPDATE_COMPLETE`.
+- `SaaSIngestUrl` confirmed: `https://api.valensjewelry.com/api/control-plane/events`.
+- Rule `SecurityAutopilotControlPlaneApiCallsRule-eu-north-1` confirmed `ENABLED` with expanded allowlisted event names from template parity.
+- API Destination `ACTIVE`, Connection `AUTHORIZED` (`X-Control-Plane-Token` key), target is API Destination with retry + DLQ.
+- DLQ sample classified as historical delivery auth failure: `403 Invalid control-plane token`.
+
+**Execution outcome:**
+- Exact final command rerun completed successfully:
+  - `status=success`, `exit_code=0`
+  - artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T032209Z`
+- Target IDs:
+  - `finding_id=ec2b4d4c-4356-4132-a435-64783c59bd1a`
+  - `action_id=cad38c6b-100e-4c12-8c05-976114a49821`
+  - `control_id=EC2.53`
+  - `run_id=73545b55-d31d-4ea4-b97b-640bffea2804`
+
+**Technical debt / gotchas:**
+- Baseline during this run remained healthy (no reappearance of stale readiness); stale-state root cause is demonstrated by failed run + historical baseline evidence.
+- Target DLQ still contains historical failure messages and alarm remains in ALARM due retained backlog.
+
+**Open questions / TODOs:**
+- Decide whether to replay/purge historical target DLQ backlog after retention/forensics policy confirmation.
+
+## PR-bundle future-user hardening for fixed controls (2026-02-20)
+
+**Task:** Update PR-bundle generation so future users get the same remediation hardening used in successful no-UI fixes (non-interactive S3 defaults + SG conflict preflight in generated Terraform), without code outside bundle execution.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+  - `s3_bucket_access_logging` Terraform/CloudFormation bundles now default source and log bucket to the target bucket (override supported).
+  - `s3_bucket_encryption_kms` Terraform/CloudFormation bundles now default KMS key to `alias/aws/s3` ARN for account/region (override supported).
+  - `sg_restrict_public_ports` Terraform bundle now includes expanded preflight revoke coverage for public and duplicate allowlist CIDR rules on 22/3389 and always recreates restricted ingress rules after preflight.
+  - Updated SG Terraform guidance text to reflect preflight behavior.
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+  - Added assertions for S3 logging defaults, S3.15 default KMS ARN, and SG preflight revoke command snippets.
+- `/Users/marcomaher/AWS Security Autopilot/docs/manual-test-use-cases.md`
+  - Documented SG Terraform preflight revoke behavior in EC2.53 PR-bundle test steps.
+  - Updated “Last updated” date.
+
+**Validation performed:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` → `51 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_no_ui_agent_terraform.py` → `4 passed`
+
+**Technical debt / gotchas:**
+- SG Terraform preflight revokes matching 22/3389 CIDR rules before creating restricted rules; this introduces a short revoke→recreate window for admin ports during apply.
+- CloudFormation path for EC2.53 remains operator-managed (no CLI preflight in template path).
+
+**Open questions / TODOs:**
+- Confirm live backend deployment picks up these generator changes, then run a no-UI campaign targeting S3.9 and S3.15 to verify non-interactive apply success end-to-end.
+- If SG transient-access interruption is unacceptable for some environments, add a strategy variant for maintenance-window-safe staged rollout.
+
+## No-UI readiness recovery + exact final rerun (2026-02-20, 04:30 UTC cycle)
+
+**Task:** Execute full readiness-debug flow for account `029037611564` in `eu-north-1`, recover control-plane freshness, and rerun required no-UI command with control preference `EC2.53,S3.2`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts created/used:**
+- Baseline failed evidence: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z/*`
+- Baseline readiness timeline: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-baseline-20260220T041629Z.jsonl`
+- Canary evidence: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/canary-once-20260220T042752Z.jsonl`
+- Post-canary readiness: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/readiness-live-post-canary-20260220T042804Z.jsonl`
+- Final required execution artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T043028Z`
+
+**Execution outcome:**
+- Exact final command completed with `status=success`, `exit_code=0`.
+- Target IDs populated:
+  - `finding_id=733d3dc5-9726-4dc1-8455-8f1df8205c0c`
+  - `action_id=816f6431-a604-4a19-97ee-0928aeccb275`
+  - `control_id=EC2.53`
+  - `run_id=e2fccfd9-b4d5-4dd5-bf1b-4b7b4336ec5c`
+
+**Technical debt / gotchas:**
+- No infra drift found in forwarder chain; readiness failure mode was stale control-plane recency for `eu-north-1`.
+- DLQ still contains historical delivery failures from older endpoint/token incidents; backlog remains non-zero and DLQ alarm remains ALARM.
+
+**Open questions / TODOs:**
+- Decide operational policy for freshness maintenance (periodic canary vs natural management-event cadence) to avoid future readiness-gate stalls.
+
+## S3 no-UI PR-bundle end-to-end debugging/testing plan (2026-02-20)
+
+**Task:** Produce a comprehensive functionality-only debugging/testing plan for the no-UI lifecycle (programmatic signup/auth -> ingest -> compute -> PR bundle download -> local apply -> finding-state verification) focused on controls `S3.9`, `S3.15`, `S3.11`, and `S3.5`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/s3-pr-bundle-e2e-debug-plan.md` (new) — Full stage-by-stage plan with concrete checks/assertions/log points, control triage matrix, and definition of done.
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/README.md` — Added cross-link to the new S3 E2E debug runbook.
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Technical debt / gotchas:**
+- Current live baseline remains vulnerable to readiness-gate stalls (`missing: eu-north-1`) which prevent downstream phase debugging until control-plane freshness is green.
+- `S3.5` remains strategy-gated (`dependency check failed`) when runtime access-path evidence is unavailable, so run-creation diagnostics must explicitly capture strategy/risk snapshots.
+
+**Open questions / TODOs:**
+- Verify whether `S3.11` generated lifecycle policy (abort-incomplete-multipart baseline) is consistently accepted as compliant by the active Security Hub evaluator profile in this environment.
+- Implement planned enhancement noted in the new runbook: control-specific post-apply AWS read-back assertions inside `/Users/marcomaher/AWS Security Autopilot/scripts/run_no_ui_pr_bundle_agent.py`.
+
+## Stage 0 readiness gate hardening in S3 campaign runner (2026-02-20)
+
+**Task:** Patch `scripts/run_s3_controls_campaign.py` to enforce Stage 0 readiness as a hard gate before control execution and validate script-level gate behavior (pass path + hard-abort path).
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/scripts/run_s3_controls_campaign.py`
+  - Added explicit Stage 0 readiness-gate phase before first control execution.
+  - Removed bypass behavior (`attempting anyway`) and replaced with hard-abort when gate fails.
+  - Added bounded retry loop (`canary -> readiness poll`) with per-attempt JSONL artifacts.
+  - Persisted readiness diagnostics (`missing_regions`, `target_last_intake_time`, `target_age_minutes`, region recency presence) to stage artifacts.
+  - Added `--stage0-only` and gate-tuning flags for isolated validation.
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/s3-pr-bundle-e2e-debug-plan.md`
+  - Added script-level Stage 0 gate command examples and optional hard-abort simulation command.
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Validation performed:**
+- Syntax: `./venv/bin/python -m py_compile scripts/run_s3_controls_campaign.py`
+- Stage 0 pass (script-enforced, isolation):
+  - Command: `./venv/bin/python scripts/run_s3_controls_campaign.py --stage0-only ...`
+  - Artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/s3-campaign-20260220T135854Z/stage0/`
+  - Result: gate `passed=true`, `overall_ready=true`, `target_is_recent=true` for `eu-north-1`.
+- Hard-abort simulation (script-enforced stale/unmet target gate):
+  - Command: `./venv/bin/python scripts/run_s3_controls_campaign.py --stage0-only --region us-west-2 ...`
+  - Artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/s3-campaign-20260220T135927Z/stage0/`
+  - Result: gate `passed=false`, campaign exited before any control execution (`controls_executed=0`).
+
+**Technical debt / gotchas:**
+- Hard-abort simulation used a non-target region to validate gating mechanics without mutating production freshness state.
+- Full Stage 1-6 control execution has not started yet by design; awaiting explicit unlock after Stage 0 confirmation.
+
+**Open questions / TODOs:**
+- None for Stage 0 patch itself. Next step is Stage 1+ controlled execution under the patched gate.
+
+## S3 campaign Stage 2-4 gated execution (2026-02-20)
+
+**Task:** Execute Stages 2 through 4 only (Ingest -> Compute -> Run creation + bundle download) with hard stage gating and per-control first-failure capture, and do not run Stage 5 or Stage 6.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts created:**
+- Root: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z`
+- Stage 2: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage2/`
+  - includes `findings_pre_raw.json`, `findings_pre_summary.json`, `api_transcript_stage2.json`, `ingest_trigger_response.json`, `findings_poll_history.jsonl`
+- Stage 3: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage3/`
+  - includes `compute_trigger_response.json`, `api_transcript_stage3.json`, `compute_worker_output.json`
+- Stage 4: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage4/`
+  - per-control folders `S3_9`, `S3_15`, `S3_11`, `S3_5` each with `remediation_options.json`, `run_create.json`, `run_final.json`, `run_poll_history.jsonl`, `api_transcript.json`, and downloaded PR bundle zip
+- Aggregate summaries:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/pipeline_summary.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage4/stage4_result.json`
+
+**Execution outcome:**
+- Stage 2: PASS for `S3.9`, `S3.15`, `S3.11`, `S3.5`.
+  - ingest returned HTTP `202`
+  - all four controls had findings in `NEW`/`NOTIFIED`, `in_scope=true`, and non-null `remediation_action_id`
+- Stage 3: PASS for `S3.9`, `S3.15`, `S3.11`, `S3.5`.
+  - compute returned HTTP `202`
+  - exact control->action mappings confirmed
+  - each selected finding linked to exactly one open actionable action
+- Stage 4: PASS for `S3.9`, `S3.15`, `S3.11`, `S3.5`.
+  - run creation succeeded, run final status `success`, PR bundle ZIP downloaded for each control
+  - `S3.5` strategy/dependency gate failure list was empty (`s3_5_strategy_gate_failures=[]`)
+- `first_failure_by_control` remained empty for all stages.
+- Stages 5 and 6 were not executed by design.
+
+**Technical debt / gotchas:**
+- `compute_worker_output.json` recorded no matching compute-worker events in the queried CloudWatch window (`events_count=0`), while API-side Stage 3 assertions still passed.
+
+**Open questions / TODOs:**
+- Await explicit user unlock to run Stage 5 (local Terraform execution) and Stage 6 (before/after finding-state verification).
+
+## S3 campaign Stage 5-6 execution (2026-02-20)
+
+**Task:** Execute Stage 5 (local Terraform init/plan/apply per control with transcript + failure inspection) and Stage 6 (refresh + before/after verification for apply-success controls only) using Stage 4 run outputs.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts created:**
+- Stage 5 root: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage5/`
+  - Per control: `stage5_control_result.json`, `terraform_transcript.json`, `tf_files_index.json`
+  - Failure controls also include `tf_files_snapshot_on_failure.json`
+  - Aggregate: `stage5_result.json`
+- Stage 6 root: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/stages2-4-20260220T140811Z/stage6/`
+  - Apply-success controls (`S3.11`, `S3.5`): `findings_pre_raw.json`, `findings_pre_summary.json`, `refresh_trigger.json`, `verification_poll_history.jsonl`, `findings_post_raw.json`, `findings_post_summary.json`, `findings_delta.json`, `verification_result.json`
+  - Apply-failed controls (`S3.9`, `S3.15`): `verification_result.json` with skip reason
+  - Aggregate: `api_transcript_stage6.json`, `stage6_result.json`
+
+**Execution outcome:**
+- Stage 5:
+  - `S3.9` FAIL at `terraform plan`: required variable `log_bucket_name` missing.
+  - `S3.15` FAIL at `terraform plan`: required variable `kms_key_arn` missing.
+  - `S3.11` PASS (`init=0`, `plan=0`, `apply=0`).
+  - `S3.5` PASS (`init=0`, `plan=0`, `apply=0`).
+- Stage 6 (run only where Stage 5 apply exit code was 0):
+  - `S3.11` FAIL: target finding did not transition to resolved within verification timeout.
+  - `S3.5` FAIL: target finding reached `RESOLVED`, and `resolved_gain>0`, but `tested_control_delta` stayed `0` (required `<0`).
+  - `S3.9`/`S3.15` skipped by design because Stage 5 apply did not complete.
+
+**Technical debt / gotchas:**
+- Generated bundles for `S3.9` and `S3.15` still require runtime input variables, breaking non-interactive Terraform plan/apply in Stage 5.
+- Stage 6 KPI contract (`tested_control_delta < 0`) can fail even when the target finding becomes `RESOLVED` if control-level aggregate count remains unchanged during the snapshot window.
+
+**Open questions / TODOs:**
+- Determine whether Stage 6 success criteria should prioritize target-finding resolved transition over aggregate `tested_control_delta < 0` for one-finding runs.
+- Patch generator/runtime defaults for `S3.9` (`log_bucket_name`) and `S3.15` (`kms_key_arn`) so Stage 5 is non-interactive for future users.

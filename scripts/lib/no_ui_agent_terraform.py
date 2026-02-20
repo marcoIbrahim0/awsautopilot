@@ -26,6 +26,7 @@ def run_terraform_apply(
 
     transcript: list[dict[str, Any]] = []
     _run_sg_preflight(workdir, timeout_sec, merged_env, transcript)
+    _write_bundle_auto_tfvars(workdir, merged_env, transcript)
     commands = [
         ["terraform", "init", "-input=false"],
         ["terraform", "plan", "-input=false", "-out=tfplan"],
@@ -60,6 +61,122 @@ def _run_sg_preflight(
 
     revoke = _sg_revoke_command(config, rule_ids)
     _run_or_raise(revoke, workdir, timeout_sec, env, transcript, "Preflight command failed")
+
+
+def _write_bundle_auto_tfvars(
+    workdir: Path,
+    env: dict[str, str],
+    transcript: list[dict[str, Any]],
+) -> None:
+    inferred = {}
+    inferred.update(_infer_s3_access_logging_vars(workdir))
+    inferred.update(_infer_s3_kms_vars(workdir, env))
+    if not inferred:
+        return
+
+    path = workdir / "security_autopilot.auto.tfvars.json"
+    existing = _parse_existing_tfvars(path)
+    existing.update(inferred)
+    path.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+    keys = ", ".join(sorted(inferred.keys()))
+    transcript.append(_note_record("autofill_tfvars", f"Wrote {path.name} with inferred vars: {keys}"))
+
+
+def _parse_existing_tfvars(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _infer_s3_access_logging_vars(workdir: Path) -> dict[str, str]:
+    tf_path = workdir / "s3_bucket_access_logging.tf"
+    if not tf_path.exists():
+        return {}
+
+    tf_text = tf_path.read_text(encoding="utf-8")
+    if not _variable_requires_value(tf_text, "log_bucket_name"):
+        return {}
+    bucket_name = _extract_logging_source_bucket(tf_text)
+    return {"log_bucket_name": bucket_name} if bucket_name else {}
+
+
+def _infer_s3_kms_vars(workdir: Path, env: dict[str, str]) -> dict[str, str]:
+    tf_path = workdir / "s3_bucket_encryption_kms.tf"
+    if not tf_path.exists():
+        return {}
+
+    tf_text = tf_path.read_text(encoding="utf-8")
+    if not _variable_requires_value(tf_text, "kms_key_arn"):
+        return {}
+
+    region = _bundle_region(workdir, env)
+    account_id = _bundle_account_id(tf_text, env)
+    if not region or not account_id:
+        return {}
+    return {"kms_key_arn": f"arn:aws:kms:{region}:{account_id}:alias/aws/s3"}
+
+
+def _variable_requires_value(tf_text: str, variable_name: str) -> bool:
+    pattern = rf'variable\s+"{re.escape(variable_name)}"\s*\{{(.*?)\}}'
+    match = re.search(pattern, tf_text, flags=re.DOTALL)
+    if not match:
+        return False
+    block = str(match.group(1) or "")
+    return re.search(r"^\s*default\s*=", block, flags=re.MULTILINE) is None
+
+
+def _extract_logging_source_bucket(tf_text: str) -> str:
+    resource_pattern = r'resource\s+"aws_s3_bucket_logging"\s+"[^"]+"\s*\{(.*?)\}'
+    resource_match = re.search(resource_pattern, tf_text, flags=re.DOTALL)
+    resource_block = str(resource_match.group(1) or "") if resource_match else ""
+    bucket_match = re.search(r'^\s*bucket\s*=\s*"([^"]+)"', resource_block, flags=re.MULTILINE)
+    if bucket_match:
+        return str(bucket_match.group(1) or "").strip()
+    comment_match = re.search(r"\|\s*Bucket:\s*([A-Za-z0-9._:-]+)", tf_text)
+    return str(comment_match.group(1) or "").strip() if comment_match else ""
+
+
+def _bundle_region(workdir: Path, env: dict[str, str]) -> str:
+    providers = (workdir / "providers.tf")
+    providers_text = providers.read_text(encoding="utf-8") if providers.exists() else ""
+    region = _extract_provider_region(providers_text)
+    if region:
+        return region
+    return str(env.get("AWS_REGION") or env.get("AWS_DEFAULT_REGION") or "").strip()
+
+
+def _bundle_account_id(tf_text: str, env: dict[str, str]) -> str:
+    env_account = str(env.get("AWS_ACCOUNT_ID") or "").strip()
+    if env_account:
+        return env_account
+    comment_match = re.search(r"Account:\s*(\d{12})", tf_text)
+    if comment_match:
+        return str(comment_match.group(1) or "").strip()
+    return _caller_account_id(env)
+
+
+def _caller_account_id(env: dict[str, str]) -> str:
+    try:
+        completed = subprocess.run(
+            ["aws", "sts", "get-caller-identity", "--output", "json"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=20,
+        )
+    except Exception:
+        return ""
+    if int(completed.returncode) != 0:
+        return ""
+    payload = _parse_json(completed.stdout)
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("Account") or "").strip()
 
 
 def _sg_describe_command(config: dict[str, str]) -> list[str]:
