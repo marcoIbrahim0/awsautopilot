@@ -4770,3 +4770,45 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 - Run `scripts/control_plane_freshness_canary.py` in campaign windows and verify `GET /api/aws/accounts/029037611564/control-plane-readiness` stays `overall_ready=true` for `eu-north-1`.
 - Deploy updated `control-plane-forwarder-template.yaml` to affected customer regions/accounts and watch for new (post-fix) target DLQ increments only.
 - Re-run canonical no-UI PR-bundle campaign and confirm readiness-phase `missing eu-north-1` failures are eliminated.
+
+## No-UI PR-bundle canonical campaign rerun + final required execution (2026-02-20)
+
+**Task:** Execute the existing no-UI PR-bundle agent across the full canonical control sequence (with one retry for transient/readiness/network failures), then run the final required execution with control preference `EC2.53,S3.2`, real apply only, no code edits.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Artifacts created:**
+- Campaign aggregate:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/campaign-20260220T021951Z/control_runs.jsonl`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/campaign-20260220T021951Z/coverage_table.tsv`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/campaign-20260220T021951Z/final_run_record.json`
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/campaign-20260220T021951Z/final_artifact_dir.txt`
+- Final required run artifact:
+  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022833Z`
+
+**Execution outcome:**
+- All canonical controls failed after retry due readiness gate:
+  - `Control-plane readiness failed (missing: eu-north-1)`
+- Final required execution (`EC2.53,S3.2`) failed at readiness phase:
+  - `status=failed`, `exit_code=1`
+  - completed phases: `auth`
+  - terraform phase not reached (`terraform_transcript.json` fallback)
+
+**Open questions / TODOs:**
+- Restore control-plane freshness/recency for account `029037611564` in `eu-north-1` so readiness returns `overall_ready=true` before rerunning campaign.
+- Re-run canonical campaign and final required run after readiness recovery to collect a target-bound remediation run (`finding/action/control/run IDs`).
+
+## Next-agent handoff report for no-UI PR-bundle campaign (2026-02-20)
+
+**Task:** Write a consolidated handoff report for the next agent covering the canonical campaign execution, final required run outcome, root-cause evidence, artifact map, and exact follow-up actions.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/next_agent_report_20260220.md` (new)
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Technical debt / gotchas:**
+- Campaign remains blocked by readiness freshness for `eu-north-1`; until this is restored, runs stop at `readiness` and produce empty target IDs with no terraform phase execution.
+
+**Open questions / TODOs:**
+- Confirm control-plane event recency recovery in `eu-north-1`, then rerun sequence and final required execution using existing script only.
