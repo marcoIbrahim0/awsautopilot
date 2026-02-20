@@ -138,6 +138,20 @@ Resources:
             - "PutBucketAcl"
             - "PutPublicAccessBlock"
             - "DeletePublicAccessBlock"
+            - "PutAccountPublicAccessBlock"
+            - "DeleteAccountPublicAccessBlock"
+            - "PutBucketEncryption"
+            - "DeleteBucketEncryption"
+            - "EnableSecurityHub"
+            - "CreateDetector"
+            - "UpdateDetector"
+            - "CreateTrail"
+            - "UpdateTrail"
+            - "StartLogging"
+            - "StopLogging"
+            - "PutConfigurationRecorder"
+            - "PutDeliveryChannel"
+            - "StartConfigurationRecorder"
       State: ENABLED
       Targets:
         - Id: SecurityAutopilotControlPlaneApiDestinationTarget

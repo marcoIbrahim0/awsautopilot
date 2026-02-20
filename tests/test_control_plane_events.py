@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from backend.workers.services.control_plane_events import (
     build_fingerprint,
     evaluate_s3_bucket_public_posture,
@@ -14,6 +16,27 @@ def test_is_supported_management_event_accepts_allowlisted_management_event() ->
     event = {
         "detail-type": "AWS API Call via CloudTrail",
         "detail": {"eventName": "AuthorizeSecurityGroupIngress", "eventCategory": "Management"},
+    }
+    ok, reason = is_supported_management_event(event)
+    assert ok is True
+    assert reason is None
+
+
+@pytest.mark.parametrize(
+    "event_name",
+    (
+        "PutAccountPublicAccessBlock",
+        "PutBucketEncryption",
+        "EnableSecurityHub",
+        "CreateDetector",
+        "CreateTrail",
+        "PutConfigurationRecorder",
+    ),
+)
+def test_is_supported_management_event_accepts_expanded_allowlist(event_name: str) -> None:
+    event = {
+        "detail-type": "AWS API Call via CloudTrail",
+        "detail": {"eventName": event_name, "eventCategory": "Management"},
     }
     ok, reason = is_supported_management_event(event)
     assert ok is True

@@ -14,25 +14,21 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
-SUPPORTED_DETAIL_TYPE = "AWS API Call via CloudTrail"
+from backend.services.control_plane_event_allowlist import (
+    SECURITY_GROUP_EVENT_NAMES,
+    S3_BUCKET_POSTURE_EVALUATION_EVENT_NAMES,
+    SUPPORTED_CONTROL_PLANE_DETAIL_TYPE,
+    SUPPORTED_CONTROL_PLANE_EVENT_NAMES,
+)
+
+SUPPORTED_DETAIL_TYPE = SUPPORTED_CONTROL_PLANE_DETAIL_TYPE
 WORLD_IPV4 = "0.0.0.0/0"
 WORLD_IPV6 = "::/0"
 ADMIN_PORTS = (22, 3389)
 
-SG_EVENT_NAMES = {
-    "AuthorizeSecurityGroupIngress",
-    "RevokeSecurityGroupIngress",
-    "ModifySecurityGroupRules",
-    "UpdateSecurityGroupRuleDescriptionsIngress",
-}
-S3_EVENT_NAMES = {
-    "PutBucketPolicy",
-    "DeleteBucketPolicy",
-    "PutBucketAcl",
-    "PutPublicAccessBlock",
-    "DeletePublicAccessBlock",
-}
-SUPPORTED_EVENT_NAMES = SG_EVENT_NAMES | S3_EVENT_NAMES
+SG_EVENT_NAMES = set(SECURITY_GROUP_EVENT_NAMES)
+S3_EVENT_NAMES = set(S3_BUCKET_POSTURE_EVALUATION_EVENT_NAMES)
+SUPPORTED_EVENT_NAMES = set(SUPPORTED_CONTROL_PLANE_EVENT_NAMES)
 
 SHADOW_STATUS_OPEN = "OPEN"
 SHADOW_STATUS_RESOLVED = "RESOLVED"

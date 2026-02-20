@@ -12,18 +12,10 @@ from __future__ import annotations
 
 from typing import Any
 
-SUPPORTED_CONTROL_PLANE_DETAIL_TYPE = "AWS API Call via CloudTrail"
-SUPPORTED_CONTROL_PLANE_EVENT_NAMES: set[str] = {
-    "AuthorizeSecurityGroupIngress",
-    "RevokeSecurityGroupIngress",
-    "ModifySecurityGroupRules",
-    "UpdateSecurityGroupRuleDescriptionsIngress",
-    "PutBucketPolicy",
-    "DeleteBucketPolicy",
-    "PutBucketAcl",
-    "PutPublicAccessBlock",
-    "DeletePublicAccessBlock",
-}
+from backend.services.control_plane_event_allowlist import (
+    SUPPORTED_CONTROL_PLANE_DETAIL_TYPE,
+    SUPPORTED_CONTROL_PLANE_EVENT_NAMES,
+)
 
 
 def is_supported_control_plane_event(event: dict[str, Any]) -> tuple[bool, str | None]:
@@ -47,4 +39,3 @@ def is_supported_control_plane_event(event: dict[str, Any]) -> tuple[bool, str |
         return False, "unsupported_event_category"
 
     return True, None
-

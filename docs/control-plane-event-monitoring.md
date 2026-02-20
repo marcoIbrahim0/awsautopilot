@@ -17,6 +17,43 @@ Validation endpoint (tenant-facing):
 - `GET /api/aws/accounts/{account_id}/control-plane-readiness`
   - Returns last seen event time / intake time per configured region.
 
+## Canonical Event Allowlist (Parity Contract)
+- Source of truth: `backend/services/control_plane_event_allowlist.py`
+- Forwarder contract: `infrastructure/cloudformation/control-plane-forwarder-template.yaml`
+- Parity enforcement:
+  - `tests/test_control_plane_allowlist_parity.py`
+  - `tests/test_cloudformation_phase2_reliability.py`
+
+Allowlisted `detail.eventName` values:
+- `AuthorizeSecurityGroupIngress`
+- `RevokeSecurityGroupIngress`
+- `ModifySecurityGroupRules`
+- `UpdateSecurityGroupRuleDescriptionsIngress`
+- `PutBucketPolicy`
+- `DeleteBucketPolicy`
+- `PutBucketAcl`
+- `PutPublicAccessBlock`
+- `DeletePublicAccessBlock`
+- `PutAccountPublicAccessBlock`
+- `DeleteAccountPublicAccessBlock`
+- `PutBucketEncryption`
+- `DeleteBucketEncryption`
+- `EnableSecurityHub`
+- `CreateDetector`
+- `UpdateDetector`
+- `CreateTrail`
+- `UpdateTrail`
+- `StartLogging`
+- `StopLogging`
+- `PutConfigurationRecorder`
+- `PutDeliveryChannel`
+- `StartConfigurationRecorder`
+
+Debug evidence from the 2026-02-20 readiness incident:
+- `control_plane_event_ingest_status.last_intake_time` for `eu-north-1` stayed at `2026-02-20T00:50:29.897235Z`.
+- CloudTrail showed `PutAccountPublicAccessBlock`, which was previously absent from the allowlist.
+- Readiness then failed with `missing_regions=["eu-north-1"]` during no-UI campaigns.
+
 ## Event + Targeted Enrichment
 Phase 1 is intentionally not event-only:
 1. Event arrives (for example `AuthorizeSecurityGroupIngress`).

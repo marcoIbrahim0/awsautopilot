@@ -4671,3 +4671,102 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - Validate DNS/network reachability for `api.valensjewelry.com` from this execution environment, then rerun the same command.
 - If reachability is restored, verify the next run proceeds past `auth` into readiness and target selection phases.
+
+---
+
+## No-UI PR-bundle live run fix: EC2.53 preflight compatibility + successful end-to-end pass (2026-02-19)
+
+**Task:** Debug and fix remaining live-run blocker so no-UI PR-bundle validation completes successfully on account `029037611564` in `eu-north-1`.
+
+**Files modified:**
+- **scripts/lib/no_ui_agent_terraform.py**
+  - Added EC2.53 compatibility preflight before Terraform:
+    - Detect `sg_restrict_public_ports.tf` bundles.
+    - Describe SG rules via AWS CLI.
+    - Revoke matching duplicate/public ingress rules on ports 22/3389 (`0.0.0.0/0`, `::/0`, and existing restricted CIDR defaults) before Terraform apply.
+  - Added structured preflight transcript records and failure propagation through existing `TerraformError`.
+  - Fixed preflight describe filter to avoid unsupported `is-egress` filter.
+- **tests/test_no_ui_agent_terraform.py**
+  - Added coverage for:
+    - SG preflight revoke path (matching rules found).
+    - SG preflight noop path (no matching rules).
+- **docs/runbooks/no-ui-pr-bundle-agent.md**
+  - Updated execution scope/prerequisites/troubleshooting to document EC2.53 compatibility preflight and AWS CLI dependency.
+- **.cursor/notes/task_log.md**
+  - Appended this entry.
+
+**Validation performed:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_no_ui_agent_terraform.py tests/test_no_ui_pr_bundle_agent_smoke.py tests/test_no_ui_agent_client.py tests/test_no_ui_agent_stats.py`
+- Result: `14 passed`
+- Live command:
+  - `SAAS_EMAIL=... SAAS_PASSWORD=... PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.53,S3.2 --client-retries 8 --client-retry-backoff-sec 1.5`
+- Latest successful artifacts:
+  - `artifacts/no-ui-agent/20260219T235326Z`
+  - `checkpoint.json`: `status=success`, `exit_code=0`, all phases completed.
+  - `verification_result.json`: target finding `733d3dc5-9726-4dc1-8455-8f1df8205c0c` resolved; control-plane readiness recent/healthy for `eu-north-1`.
+ - Confirmation rerun successful:
+   - `artifacts/no-ui-agent/20260219T235748Z`
+   - same target finding remained `RESOLVED`; full phase completion and exit code `0`.
+
+**Technical debt / gotchas:**
+- This is an agent-side compatibility shim for legacy EC2.53 bundles currently returned by the live API. Preferred long-term fix remains server-side idempotent bundle generation so standalone user Terraform runs succeed without preflight normalization.
+
+**Open questions / TODOs:**
+- Promote equivalent idempotent fix in live backend PR-bundle generator and redeploy, then confirm this preflight can be reduced or removed.
+
+## No-UI PR-bundle canonical campaign sequence + final required run (2026-02-20)
+
+**Task:** Run the existing no-UI PR-bundle automation across the canonical control sequence in order (with one retry for transient/readiness failures), then run the final required execution with control preference `EC2.53,S3.2`, real apply (not dry-run), and collect artifact-backed operator results.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+
+**Execution summary:**
+- Canonical controls executed sequentially: `S3.1`, `SecurityHub.1`, `GuardDuty.1`, `S3.2`, `S3.4`, `EC2.53`, `CloudTrail.1`, `Config.1`, `SSM.7`, `EC2.182`, `EC2.7`, `S3.5`, `IAM.4`, `S3.9`, `S3.11`, `S3.15`.
+- Retry policy applied once per control when transient/readiness failure detected.
+- Final required execution run completed with control preference `EC2.53,S3.2`.
+- Final required run artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T014358Z`.
+- Final required run result: `status=failed`, `exit_code=1`, failure at readiness gate (`missing: eu-north-1`).
+
+**Technical debt / gotchas:**
+- Campaign was broadly blocked by control-plane recency/readiness for `eu-north-1` (`overall_ready=false`, missing region freshness), causing repeated readiness-phase failures before remediation target selection on most controls.
+- `S3.1` retry reached verification and then failed by verification timeout (`finding resolution/control-plane freshness`).
+- Final required run did not reach terraform phase (`terraform_transcript.json` fallback: `terraform phase not reached`).
+
+**Open questions / TODOs:**
+- Restore `eu-north-1` control-plane freshness (forwarder/event intake recency) and rerun the canonical campaign.
+- Confirm EventBridge/API-destination delivery recency for `eu-north-1` and verify `/api/aws/accounts/029037611564/control-plane-readiness` returns `overall_ready=true` before rerunning.
+- After readiness recovery, rerun final required `EC2.53,S3.2` execution to obtain a target-bound final report with non-empty finding/action/run IDs.
+
+## Control-plane freshness debug fix: allowlist parity + canary (2026-02-20)
+
+**Task:** Implement the no-UI campaign freshness debug plan by fixing allowlist drift (`PutAccountPublicAccessBlock` mismatch), centralizing event-name contract, adding canary tooling, and locking parity with tests.
+
+**Files modified:**
+- **backend/services/control_plane_event_allowlist.py** (new) — canonical control-plane management-event allowlist module for intake/worker/template parity.
+- **backend/services/control_plane_intake.py** — switched intake filter to import canonical allowlist constants.
+- **backend/workers/services/control_plane_events.py** — switched worker management-event filter to canonical allowlist while preserving SG/S3 posture evaluation flow.
+- **infrastructure/cloudformation/control-plane-forwarder-template.yaml** — expanded `EventPattern.detail.eventName` list to match canonical allowlist.
+- **scripts/control_plane_freshness_canary.py** (new) — periodic SG ingress authorize/revoke canary (default 8-minute interval), optional `--sg-id`, auto SG resolution fallback, cleanup-safe revoke path.
+- **tests/test_control_plane_public_intake.py** — added coverage for newly allowlisted events accepted by public intake.
+- **tests/test_control_plane_events.py** — added expanded management-event acceptance coverage.
+- **tests/test_control_plane_allowlist_parity.py** (new) — asserts parity across canonical allowlist, intake allowlist, worker allowlist, and forwarder template event list.
+- **tests/test_cloudformation_phase2_reliability.py** — added required-token assertions for expanded forwarder event names.
+- **docs/runbooks/no-ui-pr-bundle-agent.md** — added concrete 2026-02-20 `eu-north-1` freshness incident evidence and fix references.
+- **docs/control-plane-event-monitoring.md** — documented canonical allowlist contract, explicit event-name list, parity tests, and incident evidence.
+- **.cursor/notes/task_log.md** — appended this entry.
+
+**Validation performed:**
+- `./venv/bin/pytest tests/test_control_plane_public_intake.py tests/test_control_plane_events.py tests/test_control_plane_allowlist_parity.py tests/test_cloudformation_phase2_reliability.py tests/test_internal_control_plane_events.py -q`
+- Result: `30 passed`
+- `./venv/bin/python -m py_compile scripts/control_plane_freshness_canary.py`
+- Result: success
+
+**Technical debt / gotchas:**
+- Worker still derives control evaluations only for SG/S3 posture events. Newly allowlisted SecurityHub/GuardDuty/CloudTrail/Config events now refresh intake readiness contract, but do not yet produce additional posture-derived shadow updates.
+- Forwarder stack in customer accounts must be redeployed/updated so EventBridge actually emits the expanded names; code parity alone does not retroactively change deployed rules.
+
+**Open questions / TODOs:**
+- Run `scripts/control_plane_freshness_canary.py` in campaign windows and verify `GET /api/aws/accounts/029037611564/control-plane-readiness` stays `overall_ready=true` for `eu-north-1`.
+- Deploy updated `control-plane-forwarder-template.yaml` to affected customer regions/accounts and watch for new (post-fix) target DLQ increments only.
+- Re-run canonical no-UI PR-bundle campaign and confirm readiness-phase `missing eu-north-1` failures are eliminated.

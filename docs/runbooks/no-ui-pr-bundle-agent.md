@@ -12,7 +12,9 @@ The agent executes this sequence against one AWS account and one region:
 4. Target finding and strategy selection
 5. PR bundle remediation run creation and polling
 6. PR bundle ZIP download (`GET /api/remediation-runs/{id}/pr-bundle.zip`)
-7. Local Terraform apply (`init`, `plan`, `apply`)
+7. Local remediation apply:
+   - EC2.53 compatibility preflight (revoke duplicate/public SG rules on 22/3389 when present)
+   - Terraform (`init`, `plan`, `apply`)
 8. Refresh (`ingest`, `actions/compute`)
 9. Verification polling (finding resolution + control-plane freshness)
 10. Post-test findings snapshot and delta report
@@ -48,6 +50,7 @@ sequenceDiagram
 - Python environment with backend dependencies:
   - `backend/requirements.txt`
 - Local Terraform CLI installed and available in `PATH`
+- AWS CLI installed and available in `PATH` (used by EC2.53 compatibility preflight)
 - AWS credentials configured locally for the target account/region:
   - `AWS_PROFILE=<YOUR_PROFILE_NAME>`
   - `AWS_REGION=<YOUR_REGION>`
@@ -144,6 +147,7 @@ Files produced:
 
 - If runs remain `pending`/`running`, the script automatically retries one resend via `/api/remediation-runs/{id}/resend` after the stale threshold.
 - If Terraform fails, inspect `terraform_transcript.json` for the exact failing command and stderr.
+  - For EC2.53 runs, `terraform_transcript.json` includes any preflight AWS CLI commands executed before Terraform.
 - If verification times out, inspect:
   - `verification_result.json` (if present)
   - `readiness.json`
@@ -160,6 +164,22 @@ aws events describe-api-destination \
 
 Expected endpoint format:
 `https://api.valensjewelry.com/api/control-plane/events`
+
+### Debug Note: `eu-north-1` Freshness Incident (2026-02-20)
+
+During a full PR-bundle campaign on **2026-02-20**, most controls failed at readiness with:
+- `Control-plane readiness failed (missing: eu-north-1)`
+- `control_plane_event_ingest_status.last_intake_time` stuck at `2026-02-20T00:50:29.897235Z`
+
+Root-cause evidence:
+- CloudTrail showed remediation activity using `PutAccountPublicAccessBlock` in the campaign window.
+- Forwarder/intake allowlists were keyed to `PutPublicAccessBlock`, so those account-level events were dropped before they could refresh readiness.
+
+Current fix:
+- Allowlist is now centralized in `backend/services/control_plane_event_allowlist.py`.
+- Backend intake, worker filters, and `infrastructure/cloudformation/control-plane-forwarder-template.yaml` are kept in parity by tests:
+  - `tests/test_control_plane_allowlist_parity.py`
+  - `tests/test_cloudformation_phase2_reliability.py`
 
 ## Related Documentation
 

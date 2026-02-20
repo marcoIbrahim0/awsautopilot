@@ -1587,42 +1587,117 @@ variable "allowed_cidr_ipv6" {{
   description = "Optional IPv6 CIDR allowed for SSH/RDP (e.g. fd00::/8). Leave empty to skip IPv6 ingress."
 }}
 
+variable "remediation_region" {{
+  type        = string
+  default     = "{meta["region"]}"
+  description = "Region used by local AWS CLI revoke commands."
+}}
+
+data "aws_security_group" "target" {{
+  id = var.security_group_id
+}}
+
+locals {{
+  existing_ingress_ipv4 = flatten([
+    for rule in data.aws_security_group.target.ingress : [
+      for cidr in try(rule.cidr_blocks, []) : {{
+        protocol  = lower(try(rule.protocol, ""))
+        from_port = tonumber(try(rule.from_port, -1))
+        to_port   = tonumber(try(rule.to_port, -1))
+        cidr      = cidr
+      }}
+    ]
+  ])
+  existing_ingress_ipv6 = flatten([
+    for rule in data.aws_security_group.target.ingress : [
+      for cidr in try(rule.ipv6_cidr_blocks, []) : {{
+        protocol  = lower(try(rule.protocol, ""))
+        from_port = tonumber(try(rule.from_port, -1))
+        to_port   = tonumber(try(rule.to_port, -1))
+        cidr      = cidr
+      }}
+    ]
+  ])
+
+  has_ssh_ipv4_allowed = length([
+    for rule in local.existing_ingress_ipv4 : 1
+    if rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidr == var.allowed_cidr
+  ]) > 0
+  has_rdp_ipv4_allowed = length([
+    for rule in local.existing_ingress_ipv4 : 1
+    if rule.protocol == "tcp" && rule.from_port == 3389 && rule.to_port == 3389 && rule.cidr == var.allowed_cidr
+  ]) > 0
+  has_ssh_ipv6_allowed = length([
+    for rule in local.existing_ingress_ipv6 : 1
+    if rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidr == var.allowed_cidr_ipv6
+  ]) > 0
+  has_rdp_ipv6_allowed = length([
+    for rule in local.existing_ingress_ipv6 : 1
+    if rule.protocol == "tcp" && rule.from_port == 3389 && rule.to_port == 3389 && rule.cidr == var.allowed_cidr_ipv6
+  ]) > 0
+}}
+
+resource "null_resource" "revoke_public_admin_ingress" {{
+  triggers = {{
+    security_group_id = var.security_group_id
+    region            = var.remediation_region
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set +e
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+exit 0
+EOT
+  }}
+}}
+
 resource "aws_vpc_security_group_ingress_rule" "ssh_restricted" {{
+  count             = local.has_ssh_ipv4_allowed ? 0 : 1
   security_group_id = var.security_group_id
   cidr_ipv4         = var.allowed_cidr
   from_port         = 22
   to_port           = 22
   ip_protocol       = "tcp"
   description       = "SSH from allowed CIDR - Security Autopilot"
+  depends_on        = [null_resource.revoke_public_admin_ingress]
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "rdp_restricted" {{
+  count             = local.has_rdp_ipv4_allowed ? 0 : 1
   security_group_id = var.security_group_id
   cidr_ipv4         = var.allowed_cidr
   from_port         = 3389
   to_port           = 3389
   ip_protocol       = "tcp"
   description       = "RDP from allowed CIDR - Security Autopilot"
+  depends_on        = [null_resource.revoke_public_admin_ingress]
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "ssh_restricted_ipv6" {{
-  count             = var.allowed_cidr_ipv6 == "" ? 0 : 1
+  count             = var.allowed_cidr_ipv6 != "" && !local.has_ssh_ipv6_allowed ? 1 : 0
   security_group_id = var.security_group_id
   cidr_ipv6         = var.allowed_cidr_ipv6
   from_port         = 22
   to_port           = 22
   ip_protocol       = "tcp"
   description       = "SSH from allowed IPv6 CIDR - Security Autopilot"
+  depends_on        = [null_resource.revoke_public_admin_ingress]
 }}
 
 resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6" {{
-  count             = var.allowed_cidr_ipv6 == "" ? 0 : 1
+  count             = var.allowed_cidr_ipv6 != "" && !local.has_rdp_ipv6_allowed ? 1 : 0
   security_group_id = var.security_group_id
   cidr_ipv6         = var.allowed_cidr_ipv6
   from_port         = 3389
   to_port           = 3389
   ip_protocol       = "tcp"
   description       = "RDP from allowed IPv6 CIDR - Security Autopilot"
+  depends_on        = [null_resource.revoke_public_admin_ingress]
 }}
 """
 
@@ -2137,44 +2212,93 @@ def _terraform_aws_config_enabled_content(
 ) -> str:
     bucket = str(strategy_inputs.get("delivery_bucket", "")).strip() or f"security-autopilot-config-{meta['account_id']}"
     kms_key_arn = str(strategy_inputs.get("kms_key_arn", "")).strip()
-    if strategy == "config_enable_centralized_delivery":
-        bucket_resource = ""
-        bucket_name_expr = f"\"{bucket}\""
-    else:
-        bucket_resource = f"""
-resource "aws_s3_bucket" "config_delivery" {{
-  bucket = "{bucket}"
-}}
-"""
-        bucket_name_expr = "aws_s3_bucket.config_delivery.id"
-
-    kms_config = ""
-    if kms_key_arn:
-        kms_config = f'  s3_kms_key_arn = "{kms_key_arn}"\n'
-
+    create_local_bucket = strategy != "config_enable_centralized_delivery"
+    create_local_bucket_text = "true" if create_local_bucket else "false"
     return f"""# AWS Config enablement - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]}
 # Control: {meta["control_id"]}
 
-{bucket_resource}
-resource "aws_config_configuration_recorder" "security_autopilot" {{
-  name     = "security-autopilot-recorder"
-  role_arn = "arn:aws:iam::{meta["account_id"]}:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
-  recording_group {{
-    all_supported = true
-  }}
+variable "remediation_region" {{
+  type        = string
+  default     = "{meta["region"]}"
+  description = "Region for AWS Config enablement."
 }}
 
-resource "aws_config_delivery_channel" "security_autopilot" {{
-  name           = "security-autopilot-delivery-channel"
-  s3_bucket_name = {bucket_name_expr}
-{kms_config}}}
+variable "delivery_bucket_name" {{
+  type        = string
+  default     = "{bucket}"
+  description = "S3 bucket for AWS Config delivery."
+}}
 
-resource "aws_config_configuration_recorder_status" "security_autopilot" {{
-  name       = aws_config_configuration_recorder.security_autopilot.name
-  is_enabled = true
-  depends_on = [aws_config_delivery_channel.security_autopilot]
+variable "config_role_arn" {{
+  type        = string
+  default     = "arn:aws:iam::{meta["account_id"]}:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+  description = "IAM role ARN used by AWS Config recorder."
+}}
+
+variable "kms_key_arn" {{
+  type        = string
+  default     = "{kms_key_arn}"
+  description = "Optional KMS key ARN for Config delivery channel."
+}}
+
+variable "create_local_bucket" {{
+  type        = bool
+  default     = {create_local_bucket_text}
+  description = "When true, create delivery bucket in this account if missing."
+}}
+
+resource "null_resource" "aws_config_enablement" {{
+  triggers = {{
+    region              = var.remediation_region
+    delivery_bucket     = var.delivery_bucket_name
+    config_role_arn     = var.config_role_arn
+    kms_key_arn         = var.kms_key_arn
+    create_local_bucket = tostring(var.create_local_bucket)
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set -euo pipefail
+REGION="${{var.remediation_region}}"
+BUCKET="${{var.delivery_bucket_name}}"
+ROLE_ARN="${{var.config_role_arn}}"
+KMS_ARN="${{var.kms_key_arn}}"
+CREATE_LOCAL_BUCKET="${{var.create_local_bucket}}"
+
+if [ "$CREATE_LOCAL_BUCKET" = "true" ]; then
+  if ! aws s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1; then
+    if [ "$REGION" = "us-east-1" ]; then
+      aws s3api create-bucket --bucket "$BUCKET" >/dev/null
+    else
+      aws s3api create-bucket --bucket "$BUCKET" --create-bucket-configuration LocationConstraint="$REGION" >/dev/null
+    fi
+  fi
+fi
+
+RECORDER_NAME=$(aws configservice describe-configuration-recorders --region "$REGION" --query 'ConfigurationRecorders[0].name' --output text 2>/dev/null || true)
+if [ -z "$RECORDER_NAME" ] || [ "$RECORDER_NAME" = "None" ] || [ "$RECORDER_NAME" = "null" ]; then
+  RECORDER_NAME="security-autopilot-recorder"
+fi
+
+aws configservice put-configuration-recorder --region "$REGION" --configuration-recorder "name=$RECORDER_NAME,roleARN=$ROLE_ARN,recordingGroup={{allSupported=true,includeGlobalResourceTypes=true}}" >/dev/null
+
+DELIVERY_NAME=$(aws configservice describe-delivery-channels --region "$REGION" --query 'DeliveryChannels[0].name' --output text 2>/dev/null || true)
+if [ -z "$DELIVERY_NAME" ] || [ "$DELIVERY_NAME" = "None" ] || [ "$DELIVERY_NAME" = "null" ]; then
+  DELIVERY_NAME="security-autopilot-delivery-channel"
+fi
+
+if [ -n "$KMS_ARN" ]; then
+  aws configservice put-delivery-channel --region "$REGION" --delivery-channel "name=$DELIVERY_NAME,s3BucketName=$BUCKET,s3KmsKeyArn=$KMS_ARN" >/dev/null
+else
+  aws configservice put-delivery-channel --region "$REGION" --delivery-channel "name=$DELIVERY_NAME,s3BucketName=$BUCKET" >/dev/null
+fi
+
+aws configservice start-configuration-recorder --region "$REGION" --configuration-recorder-name "$RECORDER_NAME" >/dev/null || true
+EOT
+  }}
 }}
 """
 

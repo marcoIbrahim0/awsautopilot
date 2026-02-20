@@ -121,3 +121,45 @@ def test_public_intake_drops_unsupported_event(client: TestClient) -> None:
     assert body["enqueued"] == 0
     assert body["dropped"] == 1
 
+
+@pytest.mark.parametrize(
+    "event_name",
+    (
+        "PutAccountPublicAccessBlock",
+        "EnableSecurityHub",
+        "StartConfigurationRecorder",
+    ),
+)
+def test_public_intake_accepts_expanded_allowlist_events(client: TestClient, event_name: str) -> None:
+    tenant = MagicMock()
+    tenant.id = uuid.UUID("123e4567-e89b-12d3-a456-426614174000")
+    account = MagicMock()
+
+    async def override_get_db() -> AsyncGenerator[MagicMock, None]:
+        r1 = MagicMock()
+        r1.scalar_one_or_none.return_value = tenant
+        r2 = MagicMock()
+        r2.scalar_one_or_none.return_value = account
+        session = MagicMock()
+        session.execute = AsyncMock(side_effect=[r1, r2, MagicMock()])
+        session.commit = AsyncMock()
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with patch("backend.routers.control_plane.settings") as mock_settings:
+        mock_settings.SQS_EVENTS_FAST_LANE_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/events"
+        with patch("backend.routers.control_plane.boto3") as mock_boto3:
+            mock_sqs = MagicMock()
+            mock_boto3.client.return_value = mock_sqs
+            resp = client.post(
+                "/api/control-plane/events",
+                headers={"X-Control-Plane-Token": "cptok-test"},
+                json=_valid_event(event_name=event_name),
+            )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["enqueued"] == 1
+    assert body["dropped"] == 0
+    assert mock_sqs.send_message.call_count == 1
