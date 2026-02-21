@@ -265,9 +265,25 @@ class NoUiPrBundleAgent:
         started = time.monotonic()
         method()
         elapsed = time.monotonic() - started
-        if phase not in POLL_PHASES and elapsed > self.settings["phase_timeout_sec"]:
+        timeout_sec = self._phase_timeout_limit_sec(phase)
+        if phase not in POLL_PHASES and elapsed > timeout_sec:
             raise AgentValidationError(f"Phase exceeded timeout: {phase}")
         self.state.mark_phase_complete(phase)
+
+    def _phase_timeout_limit_sec(self, phase: str) -> int:
+        """
+        Resolve timeout budget for a phase.
+
+        `refresh` can include reconciliation polling, so its budget must be at
+        least the configured reconciliation timeout (plus one poll interval and
+        small cushion) to avoid false timeout failures.
+        """
+        base = int(self.settings.get("phase_timeout_sec", 300))
+        if phase == "refresh" and bool(self.settings.get("reconcile_after_apply", True)):
+            reconcile_timeout = int(self.settings.get("reconcile_timeout_sec", base))
+            reconcile_poll = int(self.settings.get("reconcile_poll_interval_sec", 10))
+            return max(base, reconcile_timeout + reconcile_poll + 30)
+        return base
 
     def phase_auth(self) -> None:
         login = self.client.login(self.email, self.password)
@@ -311,6 +327,17 @@ class NoUiPrBundleAgent:
         }
         if not context["target_finding_id"] or not context["target_action_id"]:
             raise AgentValidationError("Selected finding is missing required identifiers")
+        preference_raw = self.settings.get("control_preference")
+        preference_items = preference_raw if isinstance(preference_raw, list) else []
+        preferred_controls = {
+            token for token in (_canonical_control_token(item) for item in preference_items) if token
+        }
+        selected_control = _canonical_control_token(context["target_control_id"])
+        if preferred_controls and selected_control and selected_control not in preferred_controls:
+            expected = ", ".join(sorted(preferred_controls))
+            raise AgentValidationError(
+                f"Selected control '{selected_control}' is outside requested control_preference: {expected}"
+            )
 
         for key, value in context.items():
             self.state.set_context(key, value)
@@ -761,6 +788,8 @@ def _reconcile_services_for_control(control_id: str) -> list[str]:
     token = str(control_id or "").strip().upper()
     if token.startswith("S3."):
         return ["s3"]
+    if token in {"EC2.7", "EC2.182"}:
+        return ["ebs"]
     if token.startswith("EC2."):
         return ["ec2"]
     if token.startswith("IAM."):
@@ -786,6 +815,24 @@ def _find_reconciliation_run(payload: dict[str, Any], run_id: str) -> dict[str, 
         if str(row.get("id") or "") == run_id:
             return row
     return None
+
+
+def _canonical_control_token(control_id: Any) -> str:
+    token = str(control_id or "").strip()
+    if not token:
+        return ""
+    try:
+        from backend.services.control_scope import action_type_from_control, canonical_control_id_for_action_type
+
+        action_type = action_type_from_control(token)
+        canonical = canonical_control_id_for_action_type(action_type, token)
+        if canonical:
+            normalized = str(canonical).strip().upper()
+            if normalized:
+                return normalized
+    except Exception:
+        pass
+    return token.upper()
 
 
 def _load_summary(path: Path) -> dict[str, Any]:

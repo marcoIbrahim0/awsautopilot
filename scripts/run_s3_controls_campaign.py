@@ -53,6 +53,9 @@ DEFAULT_MAX_READINESS_WAIT_SEC = 300
 DEFAULT_READINESS_POLL_INTERVAL_SEC = 15
 DEFAULT_STAGE0_MAX_ATTEMPTS = 3
 DEFAULT_STAGE0_RETRY_SLEEP_SEC = 5
+DEFAULT_CLIENT_TIMEOUT_SEC = 30
+DEFAULT_CLIENT_RETRIES = 8
+DEFAULT_CLIENT_RETRY_BACKOFF_SEC = 1.5
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -85,6 +88,29 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         type=int,
         default=DEFAULT_STAGE0_RETRY_SLEEP_SEC,
         help="Sleep between stage0 attempts",
+    )
+    parser.add_argument(
+        "--controls",
+        default=",".join(TARGET_CONTROLS),
+        help="Comma-separated control IDs to execute in order (default: S3 campaign controls).",
+    )
+    parser.add_argument(
+        "--client-timeout-sec",
+        type=int,
+        default=DEFAULT_CLIENT_TIMEOUT_SEC,
+        help="HTTP timeout seconds for no-UI agent API requests.",
+    )
+    parser.add_argument(
+        "--client-retries",
+        type=int,
+        default=DEFAULT_CLIENT_RETRIES,
+        help="Retry count for transient no-UI agent API failures.",
+    )
+    parser.add_argument(
+        "--client-retry-backoff-sec",
+        type=float,
+        default=DEFAULT_CLIENT_RETRY_BACKOFF_SEC,
+        help="Initial exponential backoff seconds for API retries.",
     )
     return parser.parse_args(argv)
 
@@ -261,6 +287,9 @@ def _build_settings(
     api_base: str,
     account_id: str,
     region: str,
+    client_timeout_sec: int,
+    client_retries: int,
+    client_retry_backoff_sec: float,
 ) -> dict[str, Any]:
     return {
         "api_base": api_base,
@@ -278,9 +307,12 @@ def _build_settings(
         "dry_run": dry_run,
         "keep_workdir": True,
         "allow_insecure_http": False,
-        "client_timeout_sec": 30,
-        "client_retries": 3,
-        "client_retry_backoff_sec": 1.0,
+        "client_timeout_sec": max(5, int(client_timeout_sec)),
+        "client_retries": max(0, int(client_retries)),
+        "client_retry_backoff_sec": max(0.1, float(client_retry_backoff_sec)),
+        "reconcile_after_apply": True,
+        "reconcile_timeout_sec": 900,
+        "reconcile_poll_interval_sec": 10,
     }
 
 
@@ -293,12 +325,25 @@ def _run_single_control(
     api_base: str,
     account_id: str,
     region: str,
+    client_timeout_sec: int,
+    client_retries: int,
+    client_retry_backoff_sec: float,
 ) -> dict[str, Any]:
     """Run the full agent flow for one control. Returns a result dict."""
     control_dir = campaign_dir / control_id.replace(".", "_")
     control_dir.mkdir(parents=True, exist_ok=True)
 
-    settings = _build_settings(control_id, str(control_dir), dry_run, api_base, account_id, region)
+    settings = _build_settings(
+        control_id,
+        str(control_dir),
+        dry_run,
+        api_base,
+        account_id,
+        region,
+        client_timeout_sec,
+        client_retries,
+        client_retry_backoff_sec,
+    )
     started = datetime.now(timezone.utc).isoformat()
 
     try:
@@ -372,8 +417,101 @@ def _write_coverage_table(path: Path, results: list[dict[str, Any]]) -> None:
     path.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _terraform_apply_exit_code(control_dir: Path) -> int | None:
+    transcript_path = control_dir / "terraform_transcript.json"
+    if not transcript_path.exists():
+        return None
+    try:
+        payload = json.loads(transcript_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, list):
+        return None
+    for row in payload:
+        if not isinstance(row, dict):
+            continue
+        command = str(row.get("command") or "")
+        if command.startswith("terraform apply"):
+            code = row.get("exit_code")
+            return int(code) if isinstance(code, int) else None
+    return None
+
+
+def _build_final_campaign_summary(
+    campaign_dir: Path,
+    results: list[dict[str, Any]],
+    controls: list[str],
+) -> dict[str, Any]:
+    result_by_control = {str(row.get("control_id") or ""): row for row in results}
+    control_summaries: dict[str, Any] = {}
+
+    for control_id in controls:
+        row = result_by_control.get(control_id, {})
+        output_dir_raw = str(row.get("output_dir") or "").strip()
+        control_dir = Path(output_dir_raw) if output_dir_raw else (campaign_dir / control_id.replace(".", "_"))
+        report = _read_json(control_dir / "final_report.json")
+
+        report_status = str(report.get("status") or row.get("status") or "").lower()
+        run_id = str(row.get("run_id") or report.get("run_id") or "")
+        target_finding_id = str(row.get("target_finding_id") or report.get("target_finding_id") or "")
+        target_action_id = str(row.get("target_action_id") or report.get("target_action_id") or "")
+
+        delta = report.get("delta") if isinstance(report.get("delta"), dict) else {}
+        kpis = delta.get("kpis") if isinstance(delta.get("kpis"), dict) else {}
+        tested_control_delta = kpis.get("tested_control_delta")
+        resolved_gain = kpis.get("resolved_gain")
+        tested_control_delta_lt_0 = isinstance(tested_control_delta, (int, float)) and tested_control_delta < 0
+        resolved_gain_gt_0 = isinstance(resolved_gain, (int, float)) and resolved_gain > 0
+
+        apply_exit_code = _terraform_apply_exit_code(control_dir)
+        checks = {
+            "final_report_status_success": report_status == "success",
+            "run_id_non_empty": bool(run_id),
+            "target_finding_id_non_empty": bool(target_finding_id),
+            "target_action_id_non_empty": bool(target_action_id),
+            "terraform_apply_exit_code_0": apply_exit_code == 0,
+            "resolved_state_verification_passed": report_status == "success",
+            "tested_control_delta_lt_0": tested_control_delta_lt_0,
+            "resolved_gain_gt_0": resolved_gain_gt_0,
+        }
+        definition_of_done_passed = all(bool(v) for v in checks.values())
+
+        control_summaries[control_id] = {
+            "control_id": control_id,
+            "run_id": run_id,
+            "target_finding_id": target_finding_id,
+            "target_action_id": target_action_id,
+            "status": report_status or str(row.get("status") or ""),
+            "exit_code": row.get("exit_code"),
+            "tested_control_delta": tested_control_delta,
+            "resolved_gain": resolved_gain,
+            "definition_of_done_checks": checks,
+            "definition_of_done_passed": definition_of_done_passed,
+            "output_dir": str(control_dir),
+        }
+
+    overall_passed = all(
+        bool(control_summaries.get(control_id, {}).get("definition_of_done_passed")) for control_id in controls
+    )
+    return {"controls": control_summaries, "overall_passed": overall_passed}
+
+
 def main() -> int:
     args = parse_args(sys.argv[1:])
+    target_controls = [c.strip() for c in str(args.controls or "").split(",") if c.strip()]
+    if not target_controls:
+        print("ERROR: No controls provided in --controls", file=sys.stderr)
+        return 2
     email, password = _prompt_credentials()
 
     campaign_ts = _utc_ts()
@@ -382,7 +520,7 @@ def main() -> int:
 
     print(f"Campaign started at {campaign_ts}")
     print(f"Output directory: {campaign_dir}")
-    print(f"Target controls: {TARGET_CONTROLS}")
+    print(f"Target controls: {target_controls}")
     print(f"Dry-run: {args.dry_run}")
     print(f"Stage0 only: {args.stage0_only}")
     print(f"Region: {args.region}")
@@ -416,7 +554,7 @@ def main() -> int:
             "campaign_timestamp": campaign_ts,
             "dry_run": args.dry_run,
             "all_passed": False,
-            "controls_targeted": len(TARGET_CONTROLS),
+            "controls_targeted": len(target_controls),
             "controls_executed": 0,
             "controls_passed": 0,
             "stage0": stage0,
@@ -434,7 +572,7 @@ def main() -> int:
             "campaign_timestamp": campaign_ts,
             "dry_run": args.dry_run,
             "all_passed": True,
-            "controls_targeted": len(TARGET_CONTROLS),
+            "controls_targeted": len(target_controls),
             "controls_executed": 0,
             "controls_passed": 0,
             "stage0": stage0,
@@ -448,9 +586,9 @@ def main() -> int:
     results: list[dict[str, Any]] = []
     all_passed = True
 
-    for index, control_id in enumerate(TARGET_CONTROLS):
+    for index, control_id in enumerate(target_controls):
         print(f"\n{'=' * 60}")
-        print(f"[{index + 1}/{len(TARGET_CONTROLS)}] Control: {control_id}")
+        print(f"[{index + 1}/{len(target_controls)}] Control: {control_id}")
         print(f"{'=' * 60}")
 
         print(f"  Running readiness canary for {args.region}...")
@@ -512,6 +650,9 @@ def main() -> int:
             api_base=args.api_base,
             account_id=args.account_id,
             region=args.region,
+            client_timeout_sec=args.client_timeout_sec,
+            client_retries=args.client_retries,
+            client_retry_backoff_sec=args.client_retry_backoff_sec,
         )
         result["passed"] = result["exit_code"] == 0 and result["status"] == "success"
         results.append(result)
@@ -527,12 +668,15 @@ def main() -> int:
         if result.get("errors"):
             for err in result["errors"]:
                 print(f"  Error: {err.get('message', str(err))}")
+        if not result["passed"]:
+            print("  Gate failure: stopping campaign at first failed control.")
+            break
 
     summary = {
         "campaign_timestamp": campaign_ts,
         "dry_run": args.dry_run,
         "all_passed": all_passed,
-        "controls_targeted": len(TARGET_CONTROLS),
+        "controls_targeted": len(target_controls),
         "controls_executed": len(results),
         "controls_passed": sum(1 for row in results if row.get("passed")),
         "stage0": stage0,
@@ -544,16 +688,21 @@ def main() -> int:
     tsv_path = campaign_dir / "coverage_table.tsv"
     _write_coverage_table(tsv_path, results)
 
+    final_campaign_summary = _build_final_campaign_summary(campaign_dir, results, target_controls)
+    final_campaign_summary_path = campaign_dir / "final_campaign_summary.json"
+    final_campaign_summary_path.write_text(json.dumps(final_campaign_summary, indent=2), encoding="utf-8")
+
     print(f"\n{'=' * 60}")
     print("CAMPAIGN SUMMARY")
     print(f"{'=' * 60}")
     print(
-        f"Targeted: {len(TARGET_CONTROLS)} | Executed: {len(results)} | "
+        f"Targeted: {len(target_controls)} | Executed: {len(results)} | "
         f"Passed: {summary['controls_passed']} | Failed: {len(results) - summary['controls_passed']}"
     )
     print(f"All passed: {all_passed}")
     print(f"Summary: {summary_path}")
     print(f"Coverage: {tsv_path}")
+    print(f"Final summary: {final_campaign_summary_path}")
     for row in results:
         tag = "PASS" if row.get("passed") else "FAIL"
         print(f"  {tag} {row.get('control_id','')}: exit_code={row.get('exit_code')}, status={row.get('status')}")

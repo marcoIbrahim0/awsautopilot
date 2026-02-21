@@ -170,6 +170,7 @@ Architectural Decision Records (ADRs):
 Operational procedures:
 - `README.md` — Runbook index
 - `no-ui-pr-bundle-agent.md` — Fully automated no-UI PR-bundle validation flow
+- `e2e_no_ui_agent_debug_reference.md` — Known no-UI E2E issues, S0–S6 code mapping, and required code-level fixes
 
 ### `/docs/audit-remediation/`
 Audit remediation program documentation (preserved from existing structure):

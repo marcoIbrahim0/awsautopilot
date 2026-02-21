@@ -644,11 +644,13 @@ def _collect_ebs_account(
         else ("inventory_api_unavailable" if not snapshot_supported else "inventory_confirmed_non_compliant")
     )
 
+    resource_id = f"AWS::::Account:{account_id}"
+    resource_type = "AwsAccount"
     evals = [
         _control_eval(
             control_id="EC2.7",
-            resource_id=f"{account_id}:{region}",
-            resource_type="AwsAccountRegion",
+            resource_id=resource_id,
+            resource_type=resource_type,
             status=SHADOW_STATUS_RESOLVED if ebs7_compliant else SHADOW_STATUS_OPEN,
             title="EBS default encryption enabled",
             description="Inventory reconciliation for EC2.7.",
@@ -657,8 +659,8 @@ def _collect_ebs_account(
         ),
         _control_eval(
             control_id="EC2.182",
-            resource_id=f"{account_id}:{region}",
-            resource_type="AwsAccountRegion",
+            resource_id=resource_id,
+            resource_type=resource_type,
             status=ec2182_status,
             title="EBS snapshot public sharing block enabled",
             description="Inventory reconciliation for EC2.182.",
@@ -678,8 +680,8 @@ def _collect_ebs_account(
     return [
         InventorySnapshot(
             service="ebs",
-            resource_id=f"{account_id}:{region}",
-            resource_type="AwsAccountRegion",
+            resource_id=resource_id,
+            resource_type=resource_type,
             key_fields=state_for_hash.copy(),
             state_for_hash=state_for_hash,
             metadata_json=None,
@@ -960,19 +962,23 @@ def _collect_guardduty_account(
         "detector_statuses": detector_statuses,
         "access_ok": access_ok,
     }
+    # GuardDuty.1 findings are account-scoped (AwsAccount). Keep the same
+    # identity here so shadow evaluation can attach to the target finding.
+    resource_id = account_id
+    resource_type = "AwsAccount"
     return [
         InventorySnapshot(
             service="guardduty",
-            resource_id=f"{account_id}:{region}",
-            resource_type="AwsAccountRegion",
+            resource_id=resource_id,
+            resource_type=resource_type,
             key_fields=state_for_hash.copy(),
             state_for_hash=state_for_hash,
             metadata_json=None,
             evaluations=[
                 _control_eval(
                     control_id="GuardDuty.1",
-                    resource_id=f"{account_id}:{region}",
-                    resource_type="AwsAccountRegion",
+                    resource_id=resource_id,
+                    resource_type=resource_type,
                     status=status,
                     title="GuardDuty detector enabled",
                     description="Inventory reconciliation for GuardDuty.1.",

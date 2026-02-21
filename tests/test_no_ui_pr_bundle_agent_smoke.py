@@ -12,6 +12,7 @@ class FakeClient:
     def __init__(self) -> None:
         self.run_polls = 0
         self.transcript = []
+        self.reconcile_run_id = "recon-1"
 
     def login(self, email: str, password: str):
         del email, password
@@ -101,6 +102,23 @@ class FakeClient:
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("main.tf", "terraform {}")
         return buf.getvalue()
+
+    def trigger_reconciliation_run(
+        self,
+        account_id: str,
+        regions: list[str],
+        services: list[str],
+        require_preflight_pass: bool,
+        force: bool,
+        sweep_mode: str,
+        max_resources: int,
+    ):
+        del account_id, regions, services, require_preflight_pass, force, sweep_mode, max_resources
+        return {"run_id": self.reconcile_run_id}
+
+    def get_reconciliation_status(self, account_id: str, limit: int = 20):
+        del account_id, limit
+        return {"runs": [{"id": self.reconcile_run_id, "status": "succeeded"}]}
 
     def get_transcript(self):
         return self.transcript
@@ -250,3 +268,105 @@ def test_no_ui_agent_dry_run_smoke_strategy_fallback(tmp_path: Path) -> None:
     assert code == 0
     run_create = (tmp_path / "run_create.json").read_text(encoding="utf-8")
     assert "fallback_ok" in run_create
+
+
+def test_refresh_phase_timeout_budget_uses_reconcile_window(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53", "S3.2"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": True,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+        "reconcile_after_apply": True,
+        "reconcile_timeout_sec": 900,
+        "reconcile_poll_interval_sec": 10,
+    }
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: FakeClient(),
+    )
+
+    refresh_budget = agent._phase_timeout_limit_sec("refresh")
+    auth_budget = agent._phase_timeout_limit_sec("auth")
+
+    assert refresh_budget > settings["phase_timeout_sec"]
+    assert auth_budget == settings["phase_timeout_sec"]
+
+
+class FakeClientControlMismatch(FakeClient):
+    def list_findings(
+        self,
+        account_id: str,
+        region: str | None,
+        limit: int,
+        offset: int,
+        status_filter: str | None = None,
+    ):
+        del account_id, region, limit, status_filter
+        if offset > 0:
+            return {"items": [], "total": 1}
+        return {
+            "items": [
+                {
+                    "id": "finding-ssm-1",
+                    "status": "NEW",
+                    "severity_label": "HIGH",
+                    "control_id": "SSM.7",
+                    "resource_id": "account-1",
+                    "remediation_action_id": "action-ssm-1",
+                    "updated_at_db": "2026-02-20T10:00:00Z",
+                    "source": "security_hub",
+                }
+            ],
+            "total": 1,
+        }
+
+
+def test_target_select_fails_when_selected_control_not_preferred(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["SecurityHub.1"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": True,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+        "reconcile_after_apply": False,
+    }
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: FakeClientControlMismatch(),
+    )
+    code = agent.run()
+
+    assert code == 1
+    checkpoint = (tmp_path / "checkpoint.json").read_text(encoding="utf-8")
+    assert "outside requested control_preference" in checkpoint

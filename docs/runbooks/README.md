@@ -10,5 +10,6 @@ This folder contains operational runbooks for AWS Security Autopilot.
 ## Related
 
 - [Control-Plane Event Monitoring](../control-plane-event-monitoring.md)
+- [E2E No-UI Agent Debug Reference](../e2e_no_ui_agent_debug_reference.md)
 - [Deployer Runbook (Phase 1-3)](../audit-remediation/deployer-runbook-phase1-phase3.md)
 - [Manual Test Use Cases](../manual-test-use-cases.md)
