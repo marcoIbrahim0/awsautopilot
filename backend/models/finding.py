@@ -75,6 +75,7 @@ class Finding(Base):
     first_observed_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_observed_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sh_updated_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Shadow overlay fields (control-plane wiring; does not replace canonical status in shadow mode).
     shadow_status_raw: Mapped[str | None] = mapped_column(String(32), nullable=True)

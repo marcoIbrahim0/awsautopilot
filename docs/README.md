@@ -18,6 +18,7 @@
 - **[Owner-Side Architecture](architecture/owner/README.md)** — System architecture, backend services, AWS resources, and data flows
 - **[Deployer Runbook (Phase 1-3)](audit-remediation/deployer-runbook-phase1-phase3.md)** — End-to-end SaaS deployer sequence (`.env.ops` -> AWS serverless deploy -> worker enablement -> Cloudflare custom domain -> verification)
 - **[Monitoring & Runbooks](runbooks/README.md)** — Operational procedures for incidents, DR, and queue management
+- **[Reconciliation Quality Review](reconciliation_quality_review.md)** — Control-by-control audit of inventory collectors, reconciliation logic quality, and prioritized fixes
 > ⚠️ Status: Planned — not yet implemented
 > `docs/architecture/owner/` remains a planned documentation area.
 

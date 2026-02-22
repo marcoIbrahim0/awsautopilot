@@ -109,6 +109,47 @@ def test_select_target_finding_prefers_control_then_severity_then_time() -> None
     assert selected["id"] == "f-c"
 
 
+def test_select_target_finding_returns_none_when_preference_has_no_match() -> None:
+    findings = [
+        {
+            "id": "f-a",
+            "status": "NEW",
+            "control_id": "SSM.7",
+            "severity_label": "HIGH",
+            "updated_at_db": "2026-02-19T10:00:00Z",
+            "remediation_action_id": "a-a",
+        }
+    ]
+
+    selected = select_target_finding(findings, ["EC2.182"])
+    assert selected is None
+
+
+def test_select_target_finding_falls_back_only_without_preference() -> None:
+    findings = [
+        {
+            "id": "f-a",
+            "status": "NEW",
+            "control_id": "SSM.7",
+            "severity_label": "HIGH",
+            "updated_at_db": "2026-02-19T10:00:00Z",
+            "remediation_action_id": "a-a",
+        },
+        {
+            "id": "f-b",
+            "status": "NOTIFIED",
+            "control_id": "IAM.4",
+            "severity_label": "CRITICAL",
+            "updated_at_db": "2026-02-19T09:00:00Z",
+            "remediation_action_id": "a-b",
+        },
+    ]
+
+    selected = select_target_finding(findings, [])
+    assert selected is not None
+    assert selected["id"] == "f-b"
+
+
 def test_select_pr_only_strategy_recommended_first() -> None:
     strategies = [
         {

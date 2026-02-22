@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +12,8 @@ from backend.models.finding_shadow_state import FindingShadowState
 from backend.workers.services.control_plane_events import build_fingerprint
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
 from backend.workers.config import settings
+
+logger = logging.getLogger("worker.services.shadow_state")
 
 
 def _normalize_shadow_status(status_raw: str | None) -> str:
@@ -75,7 +78,7 @@ def upsert_shadow_state(
         # Only update findings when we have stable join keys.
         if not canonical_control_id or not resource_key:
             return
-        session.query(Finding).filter(
+        overlay_matched = session.query(Finding).filter(
             Finding.tenant_id == tenant_id,
             Finding.account_id == account_id,
             Finding.region == region,
@@ -93,6 +96,19 @@ def upsert_shadow_state(
             },
             synchronize_session=False,
         )
+        if overlay_matched == 0:
+            logger.warning(
+                "shadow overlay update matched zero rows tenant_id=%s account_id=%s region=%s "
+                "canonical_control_id=%s resource_key=%s fingerprint=%s source=%s status=%s",
+                tenant_id,
+                account_id,
+                region,
+                canonical_control_id,
+                resource_key,
+                fingerprint,
+                source,
+                getattr(evaluation, "status", None),
+            )
 
         # Promotion path: when shadow is authoritative, drive canonical finding.status.
         if (
@@ -100,14 +116,30 @@ def upsert_shadow_state(
             and canonical_control_id.upper() in authoritative_controls
         ):
             if shadow_norm == "RESOLVED":
-                session.query(Finding).filter(
+                promoted = session.query(Finding).filter(
                     Finding.tenant_id == tenant_id,
                     Finding.account_id == account_id,
                     Finding.region == region,
                     Finding.source == "security_hub",
                     Finding.canonical_control_id == canonical_control_id,
                     Finding.resource_key == resource_key,
-                ).update({Finding.status: "RESOLVED"}, synchronize_session=False)
+                ).update(
+                    {
+                        Finding.status: "RESOLVED",
+                        Finding.resolved_at: now,
+                    },
+                    synchronize_session=False,
+                )
+                if promoted == 0:
+                    logger.warning(
+                        "shadow promotion matched zero rows tenant_id=%s account_id=%s region=%s "
+                        "canonical_control_id=%s resource_key=%s",
+                        tenant_id,
+                        account_id,
+                        region,
+                        canonical_control_id,
+                        resource_key,
+                    )
             elif shadow_norm == "OPEN":
                 # Reopen previously-resolved findings when drift is detected.
                 session.query(Finding).filter(
@@ -118,7 +150,13 @@ def upsert_shadow_state(
                     Finding.status == "RESOLVED",
                     Finding.canonical_control_id == canonical_control_id,
                     Finding.resource_key == resource_key,
-                ).update({Finding.status: "NEW"}, synchronize_session=False)
+                ).update(
+                    {
+                        Finding.status: "NEW",
+                        Finding.resolved_at: None,
+                    },
+                    synchronize_session=False,
+                )
 
     if existing:
         last_event = _to_utc(existing.last_observed_event_time)

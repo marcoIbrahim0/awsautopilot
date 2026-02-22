@@ -97,6 +97,9 @@ def select_target_finding(
     preferred = _pick_by_control_preference(eligible, control_preference)
     if preferred is not None:
         return preferred
+    has_preference = any(str(item or "").strip() for item in control_preference)
+    if has_preference:
+        return None
     return _sort_candidates(eligible)[0]
 
 

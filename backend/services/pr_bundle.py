@@ -2250,6 +2250,7 @@ BUCKET="${{var.delivery_bucket_name}}"
 ROLE_ARN="${{var.config_role_arn}}"
 KMS_ARN="${{var.kms_key_arn}}"
 CREATE_LOCAL_BUCKET="${{var.create_local_bucket}}"
+ACCOUNT_ID="{meta["account_id"]}"
 
 if [ "$CREATE_LOCAL_BUCKET" = "true" ]; then
   if ! aws s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1; then
@@ -2259,6 +2260,12 @@ if [ "$CREATE_LOCAL_BUCKET" = "true" ]; then
       aws s3api create-bucket --bucket "$BUCKET" --create-bucket-configuration LocationConstraint="$REGION" >/dev/null
     fi
   fi
+
+  CONFIG_BUCKET_POLICY=$(cat <<JSON
+{{"Version":"2012-10-17","Statement":[{{"Sid":"AWSConfigBucketPermissionsCheck","Effect":"Allow","Principal":{{"Service":"config.amazonaws.com"}},"Action":"s3:GetBucketAcl","Resource":"arn:aws:s3:::$BUCKET"}},{{"Sid":"AWSConfigBucketDelivery","Effect":"Allow","Principal":{{"Service":"config.amazonaws.com"}},"Action":"s3:PutObject","Resource":"arn:aws:s3:::$BUCKET/AWSLogs/$ACCOUNT_ID/Config/*","Condition":{{"StringEquals":{{"s3:x-amz-acl":"bucket-owner-full-control"}}}}}}]}}
+JSON
+)
+  aws s3api put-bucket-policy --bucket "$BUCKET" --region "$REGION" --policy "$CONFIG_BUCKET_POLICY" >/dev/null
 fi
 
 RECORDER_NAME=$(aws configservice describe-configuration-recorders --region "$REGION" --query 'ConfigurationRecorders[0].name' --output text 2>/dev/null || true)
@@ -2266,7 +2273,11 @@ if [ -z "$RECORDER_NAME" ] || [ "$RECORDER_NAME" = "None" ] || [ "$RECORDER_NAME
   RECORDER_NAME="security-autopilot-recorder"
 fi
 
-aws configservice put-configuration-recorder --region "$REGION" --configuration-recorder "name=$RECORDER_NAME,roleARN=$ROLE_ARN,recordingGroup={{allSupported=true,includeGlobalResourceTypes=true}}" >/dev/null
+RECORDER_PAYLOAD=$(cat <<JSON
+{{"name":"$RECORDER_NAME","roleARN":"$ROLE_ARN","recordingGroup":{{"allSupported":true,"includeGlobalResourceTypes":true}}}}
+JSON
+)
+aws configservice put-configuration-recorder --region "$REGION" --configuration-recorder "$RECORDER_PAYLOAD" >/dev/null
 
 DELIVERY_NAME=$(aws configservice describe-delivery-channels --region "$REGION" --query 'DeliveryChannels[0].name' --output text 2>/dev/null || true)
 if [ -z "$DELIVERY_NAME" ] || [ "$DELIVERY_NAME" = "None" ] || [ "$DELIVERY_NAME" = "null" ]; then

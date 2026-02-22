@@ -11,7 +11,7 @@ Tests cover:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -108,6 +108,26 @@ def test_extract_finding_fields_basic() -> None:
     assert fields["resource_type"] == "AwsS3Bucket"
     assert fields["control_id"] == "S3.4"
     assert fields["status"] == "NEW"
+    assert fields["resolved_at"] is None
+
+
+def test_extract_finding_fields_sets_resolved_at_when_compliance_passed() -> None:
+    """Resolved findings carry a resolved_at timestamp from AWS observation times."""
+    tenant_id = uuid.uuid4()
+    raw = {
+        "Id": "arn:aws:securityhub:us-east-1:123456789012:finding/99999",
+        "Title": "EBS encryption default enabled",
+        "Severity": {"Label": "LOW"},
+        "Resources": [{"Id": "AWS::::Account:123456789012", "Type": "AwsAccount"}],
+        "Compliance": {"SecurityControlId": "EC2.7", "Status": "PASSED"},
+        "Workflow": {"Status": "NEW"},
+        "UpdatedAt": "2026-02-21T22:00:00Z",
+    }
+
+    fields = _extract_finding_fields(raw, "123456789012", "us-east-1", tenant_id)
+
+    assert fields["status"] == "RESOLVED"
+    assert fields["resolved_at"] == datetime(2026, 2, 21, 22, 0, 0, tzinfo=timezone.utc)
 
 
 def test_extract_finding_fields_prefers_security_group_resource_for_ec2_control() -> None:

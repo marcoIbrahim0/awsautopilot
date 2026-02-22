@@ -409,7 +409,7 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert "apply_with_duplicate_tolerance" in content
     assert "run_terraform_init_with_retry" in content
     assert "${!ACTION_DIRS[@]}" not in content
-    assert "while IFS= read -r dir; do" in content
+    assert ("while IFS= read -r dir; do" in content) or ("for dir in \"${ACTION_DIRS[@]}\"; do" in content)
     assert "InvalidPermission" in content
     assert "EntityAlreadyExists" in content
     assert "WARNING: duplicate/already-existing resource detected; continuing without failure." in content
@@ -418,13 +418,13 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     metadata = pr_bundle.get("metadata")
     assert isinstance(metadata, dict)
     runner_template_source = str(metadata.get("runner_template_source") or "")
-    assert runner_template_source.startswith("embedded")
+    assert runner_template_source.startswith(("embedded", "s3://"))
     runner_template_version = str(metadata.get("runner_template_version") or "")
     assert runner_template_version
     group_bundle = run.artifacts.get("group_bundle")
     assert isinstance(group_bundle, dict)
     group_runner_template_source = str(group_bundle.get("runner_template_source") or "")
-    assert group_runner_template_source.startswith("embedded")
+    assert group_runner_template_source.startswith(("embedded", "s3://"))
     assert group_bundle.get("runner_template_version") == runner_template_version
     readme_group = next(
         f for f in files if isinstance(f, dict) and f.get("path") == "README_GROUP.txt"

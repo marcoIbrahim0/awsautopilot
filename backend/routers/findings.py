@@ -10,7 +10,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -71,6 +71,7 @@ class FindingResponse(BaseModel):
     severity_label: str
     severity_normalized: int
     status: str
+    display_badge: str
     in_scope: bool = True
     title: str
     description: str | None
@@ -80,6 +81,7 @@ class FindingResponse(BaseModel):
     standard_name: str | None
     first_observed_at: str | None
     last_observed_at: str | None
+    resolved_at: str | None
     updated_at: str | None
     created_at: str
     updated_at_db: str
@@ -150,6 +152,7 @@ def finding_to_response(
         severity_label=finding.severity_label,
         severity_normalized=finding.severity_normalized,
         status=finding.status,
+        display_badge="resolved" if str(finding.status or "").upper() == "RESOLVED" else "open",
         in_scope=bool(getattr(finding, "in_scope", True)),
         title=finding.title,
         description=finding.description,
@@ -159,6 +162,7 @@ def finding_to_response(
         standard_name=finding.standard_name,
         first_observed_at=finding.first_observed_at.isoformat() if finding.first_observed_at else None,
         last_observed_at=finding.last_observed_at.isoformat() if finding.last_observed_at else None,
+        resolved_at=finding.resolved_at.isoformat() if getattr(finding, "resolved_at", None) else None,
         updated_at=finding.sh_updated_at.isoformat() if finding.sh_updated_at else None,
         created_at=finding.created_at.isoformat() if finding.created_at else "",
         updated_at_db=finding.updated_at.isoformat() if finding.updated_at else "",
@@ -408,9 +412,12 @@ async def list_findings(
     total = total_result.scalar() or 0
 
     # Apply ordering and pagination
+    resolved_first = case((Finding.status == "RESOLVED", 0), else_=1)
     query = query.order_by(
-        Finding.severity_normalized.desc(),  # Most severe first
-        Finding.sh_updated_at.desc().nullslast(),  # Most recently updated
+        resolved_first.asc(),  # Resolved findings first for explicit visual confirmation.
+        Finding.resolved_at.desc().nullslast(),  # Most recently resolved first within resolved.
+        Finding.severity_normalized.desc(),  # Most severe first for non-resolved findings.
+        Finding.sh_updated_at.desc().nullslast(),  # Most recently updated.
     )
     query = query.limit(limit).offset(offset)
 

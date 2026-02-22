@@ -171,6 +171,8 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         resource_id=str(rid) if rid is not None else None,
         resource_type=str(rtype) if rtype is not None else None,
     )
+    status = _normalized_finding_status(raw)[:32]
+    resolved_at = (last_obs or updated or datetime.now(timezone.utc)) if status == "RESOLVED" else None
 
     return {
         "tenant_id": tenant_id,
@@ -188,7 +190,8 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         "canonical_control_id": _trunc(canonical_control_id, 64),
         "resource_key": _trunc(resource_key, 512),
         "standard_name": _trunc(std_name, 256),
-        "status": _normalized_finding_status(raw)[:32],
+        "status": status,
+        "resolved_at": resolved_at,
         "in_scope": bool(in_scope),
         "first_observed_at": created,
         "last_observed_at": last_obs or updated,
@@ -231,6 +234,7 @@ def _upsert_one(
         existing.resource_key = data.get("resource_key")
         existing.standard_name = data["standard_name"]
         existing.status = data["status"]
+        existing.resolved_at = data.get("resolved_at") if data["status"] == "RESOLVED" else None
         existing.in_scope = bool(data.get("in_scope", False))
         existing.last_observed_at = data["last_observed_at"]
         existing.sh_updated_at = data["sh_updated_at"]

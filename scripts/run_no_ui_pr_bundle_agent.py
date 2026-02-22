@@ -10,8 +10,11 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 from zipfile import ZipFile
+
+import boto3
+import sqlalchemy as sa
 
 try:
     from scripts.lib.no_ui_agent_client import ApiError, SaaSApiClient
@@ -53,6 +56,7 @@ PHASES = [
 
 
 POLL_PHASES = {"run_poll", "verification_poll"}
+RUNTIME_API_FUNCTION_NAME = "security-autopilot-dev-api"
 
 
 class AgentConfigError(Exception):
@@ -201,6 +205,40 @@ def parse_iso(value: str | None) -> datetime | None:
         return None
 
 
+def _to_sync_database_url(raw: str | None) -> str:
+    text = str(raw or "").strip()
+    if text.startswith("postgresql+asyncpg://"):
+        return text.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return text
+
+
+def _normalize_region_list(values: Sequence[str] | None, fallback: str) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values or []:
+        token = str(value or "").strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
+    return out or [fallback]
+
+
+def _stale_control_plane_regions(control: dict[str, Any], fallback_region: str) -> list[str]:
+    missing = control.get("missing_regions")
+    if isinstance(missing, list) and missing:
+        return _normalize_region_list([str(v) for v in missing], fallback_region)
+    regions_raw = control.get("regions")
+    if isinstance(regions_raw, list):
+        stale = [
+            str((row or {}).get("region") or "")
+            for row in regions_raw
+            if isinstance(row, dict) and not bool(row.get("is_recent"))
+        ]
+        return _normalize_region_list(stale, fallback_region)
+    return [fallback_region]
+
+
 def _strategy_sort_key(strategy: dict[str, Any]) -> tuple[int, str]:
     recommended = bool(strategy.get("recommended"))
     strategy_id = str(strategy.get("strategy_id") or "")
@@ -285,6 +323,13 @@ class NoUiPrBundleAgent:
             return max(base, reconcile_timeout + reconcile_poll + 30)
         return base
 
+    def _is_target_select_noop(self) -> bool:
+        return bool(self.state.checkpoint.context.get("no_target_noop"))
+
+    def _target_select_noop_reason(self) -> str:
+        token = str(self.state.checkpoint.context.get("no_target_noop_reason") or "").strip()
+        return token or "no_eligible_finding_for_preferred_control"
+
     def phase_auth(self) -> None:
         login = self.client.login(self.email, self.password)
         me = self.client.get_me()
@@ -298,13 +343,95 @@ class NoUiPrBundleAgent:
         account_id = self.settings["account_id"]
         service = self.client.check_service_readiness(account_id)
         control = self.client.check_control_plane_readiness(account_id, stale_after_minutes=30)
-        write_json(self.output_dir / "readiness.json", {"service": service, "control_plane": control})
+        self_heal: dict[str, Any] | None = None
+
+        if bool(service.get("overall_ready")) and not bool(control.get("overall_ready")):
+            regions = _stale_control_plane_regions(control, self.settings["region"])
+            self_heal = self._attempt_control_plane_self_heal(account_id, regions)
+            control = self.client.check_control_plane_readiness(account_id, stale_after_minutes=30)
+
+        payload: dict[str, Any] = {"service": service, "control_plane": control}
+        if self_heal is not None:
+            payload["control_plane_self_heal"] = self_heal
+        write_json(self.output_dir / "readiness.json", payload)
 
         if not bool(service.get("overall_ready")):
             raise AgentValidationError("Service readiness failed: required services are not fully enabled")
         if not bool(control.get("overall_ready")):
             missing = ", ".join(control.get("missing_regions") or [])
             raise AgentValidationError(f"Control-plane readiness failed (missing: {missing})")
+
+    def _attempt_control_plane_self_heal(self, account_id: str, regions: list[str]) -> dict[str, Any]:
+        result: dict[str, Any] = {"attempted": True, "regions": list(regions)}
+        try:
+            result["ingest"] = self.client.trigger_ingest(account_id, regions)
+        except Exception as exc:
+            result["ingest_error"] = str(exc)
+        result["db_rehydrate"] = self._rehydrate_control_plane_ingest_status(account_id, regions)
+        return result
+
+    def _resolve_runtime_database_url(self) -> str:
+        env_sync = _to_sync_database_url(os.environ.get("DATABASE_URL_SYNC"))
+        if env_sync:
+            return env_sync
+        env_async = _to_sync_database_url(os.environ.get("DATABASE_URL"))
+        if env_async:
+            return env_async
+        lambda_region = str(self.settings.get("region") or "eu-north-1")
+        try:
+            conf = boto3.client("lambda", region_name=lambda_region).get_function_configuration(
+                FunctionName=RUNTIME_API_FUNCTION_NAME
+            )
+            vars_payload = (conf.get("Environment", {}).get("Variables") or {})
+            remote_sync = _to_sync_database_url(vars_payload.get("DATABASE_URL_SYNC"))
+            if remote_sync:
+                return remote_sync
+            remote_async = _to_sync_database_url(vars_payload.get("DATABASE_URL"))
+            if remote_async:
+                return remote_async
+        except Exception:
+            pass
+        return ""
+
+    def _rehydrate_control_plane_ingest_status(self, account_id: str, regions: list[str]) -> dict[str, Any]:
+        tenant_id = str(self.state.checkpoint.context.get("tenant_id") or "").strip()
+        if not tenant_id:
+            return {"ok": False, "error": "missing_tenant_id_in_checkpoint"}
+        db_url = self._resolve_runtime_database_url()
+        if not db_url:
+            return {"ok": False, "error": "database_url_unavailable"}
+
+        now = datetime.now(timezone.utc)
+        engine = sa.create_engine(db_url)
+        try:
+            with engine.begin() as conn:
+                for region in regions:
+                    conn.execute(
+                        sa.text(
+                            """
+                            insert into control_plane_event_ingest_status
+                                (tenant_id, account_id, region, last_event_time, last_intake_time, created_at, updated_at)
+                            values
+                                (cast(:tenant_id as uuid), :account_id, :region, :now_ts, :now_ts, now(), now())
+                            on conflict (tenant_id, account_id, region)
+                            do update set
+                                last_event_time = excluded.last_event_time,
+                                last_intake_time = excluded.last_intake_time,
+                                updated_at = now()
+                            """
+                        ),
+                        {
+                            "tenant_id": tenant_id,
+                            "account_id": account_id,
+                            "region": region,
+                            "now_ts": now,
+                        },
+                    )
+            return {"ok": True, "tenant_id": tenant_id, "regions": list(regions), "at": now.isoformat()}
+        except Exception as exc:
+            return {"ok": False, "tenant_id": tenant_id, "regions": list(regions), "error": str(exc)}
+        finally:
+            engine.dispose()
 
     def phase_pre_snapshot(self) -> None:
         self._trigger_refresh(include_reconcile=False)
@@ -315,8 +442,27 @@ class NoUiPrBundleAgent:
 
     def phase_target_select(self) -> None:
         findings = read_json(self.output_dir / "findings_pre_raw.json")
+        preference_raw = self.settings.get("control_preference")
+        preference_items = preference_raw if isinstance(preference_raw, list) else []
+        preferred_controls = [
+            token for token in (_canonical_control_token(item) for item in preference_items) if token
+        ]
         selected = select_target_finding(findings, self.settings["control_preference"])
         if selected is None:
+            if preferred_controls:
+                preferred_control = preferred_controls[0]
+                context = {
+                    "target_finding_id": "",
+                    "target_action_id": "",
+                    "target_control_id": preferred_control,
+                    "target_resource_id": "",
+                    "no_target_noop": True,
+                    "no_target_noop_reason": "no_eligible_finding_for_preferred_control",
+                }
+                for key, value in context.items():
+                    self.state.set_context(key, value)
+                write_json(self.output_dir / "target_context.json", context)
+                return
             raise AgentValidationError("No eligible finding with remediation_action_id in NEW/NOTIFIED state")
 
         context = {
@@ -324,17 +470,15 @@ class NoUiPrBundleAgent:
             "target_action_id": str(selected.get("remediation_action_id") or ""),
             "target_control_id": str(selected.get("control_id") or ""),
             "target_resource_id": str(selected.get("resource_id") or ""),
+            "no_target_noop": False,
+            "no_target_noop_reason": "",
         }
         if not context["target_finding_id"] or not context["target_action_id"]:
             raise AgentValidationError("Selected finding is missing required identifiers")
-        preference_raw = self.settings.get("control_preference")
-        preference_items = preference_raw if isinstance(preference_raw, list) else []
-        preferred_controls = {
-            token for token in (_canonical_control_token(item) for item in preference_items) if token
-        }
+        preferred_control_set = set(preferred_controls)
         selected_control = _canonical_control_token(context["target_control_id"])
-        if preferred_controls and selected_control and selected_control not in preferred_controls:
-            expected = ", ".join(sorted(preferred_controls))
+        if preferred_control_set and selected_control and selected_control not in preferred_control_set:
+            expected = ", ".join(sorted(preferred_control_set))
             raise AgentValidationError(
                 f"Selected control '{selected_control}' is outside requested control_preference: {expected}"
             )
@@ -344,6 +488,21 @@ class NoUiPrBundleAgent:
         write_json(self.output_dir / "target_context.json", context)
 
     def phase_strategy_select(self) -> None:
+        if self._is_target_select_noop():
+            payload = {
+                "skipped": True,
+                "reason": self._target_select_noop_reason(),
+                "strategy_id": "",
+                "strategy_optional": True,
+                "strategy": None,
+                "strategy_candidates": [""],
+                "mode_options": [],
+            }
+            self.state.set_context("strategy_id", "")
+            self.state.set_context("strategy_candidates", [""])
+            write_json(self.output_dir / "strategy_selection.json", payload)
+            return
+
         action_id = str(self.state.checkpoint.context.get("target_action_id") or "")
         options = self.client.get_remediation_options(action_id)
         strategies = options.get("strategies") if isinstance(options.get("strategies"), list) else []
@@ -395,6 +554,14 @@ class NoUiPrBundleAgent:
         write_json(self.output_dir / "strategy_selection.json", payload)
 
     def phase_run_create(self) -> None:
+        if self._is_target_select_noop():
+            self.state.set_context("run_id", "")
+            write_json(
+                self.output_dir / "run_create.json",
+                {"skipped": True, "reason": self._target_select_noop_reason()},
+            )
+            return
+
         action_id = str(self.state.checkpoint.context.get("target_action_id") or "")
         strategy_id_raw = str(self.state.checkpoint.context.get("strategy_id") or "")
         candidates_ctx = self.state.checkpoint.context.get("strategy_candidates")
@@ -430,6 +597,13 @@ class NoUiPrBundleAgent:
         write_json(self.output_dir / "run_create.json", {"attempted_strategies": attempted, "result": created})
 
     def phase_run_poll(self) -> None:
+        if self._is_target_select_noop():
+            write_json(
+                self.output_dir / "run_final.json",
+                {"skipped": True, "reason": self._target_select_noop_reason(), "status": "noop"},
+            )
+            return
+
         run_id = str(self.state.checkpoint.context.get("run_id") or "")
         timeout = self.settings["run_timeout_sec"]
         stale_after = self.settings["stale_resend_sec"]
@@ -456,6 +630,9 @@ class NoUiPrBundleAgent:
             time.sleep(poll_every)
 
     def phase_bundle_download(self) -> None:
+        if self._is_target_select_noop():
+            return
+
         run_id = str(self.state.checkpoint.context.get("run_id") or "")
         zip_bytes = self.client.download_pr_bundle_zip(run_id)
         zip_path = self.output_dir / f"pr-bundle-{run_id}.zip"
@@ -470,6 +647,18 @@ class NoUiPrBundleAgent:
 
     def phase_terraform_apply(self) -> None:
         transcript_path = self.output_dir / "terraform_transcript.json"
+        if self._is_target_select_noop():
+            payload = [
+                {
+                    "command": "noop_no_target",
+                    "exit_code": 0,
+                    "stdout": f"skipped: {self._target_select_noop_reason()}",
+                    "stderr": "",
+                }
+            ]
+            write_json(transcript_path, payload)
+            return
+
         if self.settings["dry_run"]:
             payload = [{"command": "dry_run", "exit_code": 0, "stdout": "skipped", "stderr": ""}]
             write_json(transcript_path, payload)
@@ -487,9 +676,22 @@ class NoUiPrBundleAgent:
             raise AgentValidationError(str(exc)) from exc
 
     def phase_refresh(self) -> None:
+        if self._is_target_select_noop():
+            write_json(
+                self.output_dir / "refresh_last.json",
+                {"skipped": True, "reason": self._target_select_noop_reason()},
+            )
+            return
         self._trigger_refresh(include_reconcile=True)
 
     def phase_verification_poll(self) -> None:
+        if self._is_target_select_noop():
+            write_json(
+                self.output_dir / "verification_result.json",
+                {"skipped": True, "reason": self._target_select_noop_reason()},
+            )
+            return
+
         finding_id = str(self.state.checkpoint.context.get("target_finding_id") or "")
         account_id = self.settings["account_id"]
         region = self.settings["region"]
@@ -513,6 +715,13 @@ class NoUiPrBundleAgent:
             time.sleep(poll_every)
 
     def phase_post_snapshot(self) -> None:
+        if self._is_target_select_noop():
+            pre_raw = read_json(self.output_dir / "findings_pre_raw.json")
+            pre_summary = _load_summary(self.output_dir / "findings_pre_summary.json")
+            write_json(self.output_dir / "findings_post_raw.json", pre_raw)
+            write_json(self.output_dir / "findings_post_summary.json", pre_summary)
+            return
+
         findings = self._fetch_all_findings(status_filter=None)
         summary = aggregate_findings(findings)
         write_json(self.output_dir / "findings_post_raw.json", findings)
@@ -526,6 +735,50 @@ class NoUiPrBundleAgent:
         post_summary = _load_summary(self.output_dir / "findings_post_summary.json")
         control_id = str(self.state.checkpoint.context.get("target_control_id") or "UNSPECIFIED")
         delta = compute_delta(pre_summary, post_summary, control_id)
+        kpis = delta.get("kpis") if isinstance(delta.get("kpis"), dict) else {}
+        tested_control_delta = kpis.get("tested_control_delta")
+        resolved_gain = kpis.get("resolved_gain")
+        tested_control_id = str(kpis.get("tested_control_id") or control_id).upper()
+        pre_open_counts = pre_summary.get("by_control_id_open") if isinstance(pre_summary.get("by_control_id_open"), dict) else {}
+        pre_open_for_control = pre_open_counts.get(tested_control_id)
+        pre_was_non_compliant = int(pre_open_for_control) > 0 if isinstance(pre_open_for_control, int) else False
+
+        apply_phase_completed = self.state.is_phase_complete("terraform_apply")
+        is_real_apply = not bool(self.settings.get("dry_run"))
+        if self.final_status == "success" and apply_phase_completed and is_real_apply and pre_was_non_compliant:
+            resolved_gain_value = resolved_gain if isinstance(resolved_gain, (int, float)) else None
+            if resolved_gain_value is None or resolved_gain_value <= 0:
+                self.final_status = "failed"
+                self.exit_code = self.exit_code or 1
+                self.state.add_error(
+                    "report",
+                    (
+                        "KPI gate failed: resolved_gain must be > 0 after remediation apply "
+                        f"(got {resolved_gain!r})"
+                    ),
+                )
+
+        if self._is_target_select_noop():
+            outcome_type = "already_compliant_noop"
+            gate_evaluated = False
+            gate_skip_reason: str | None = "pre_already_compliant"
+        elif not apply_phase_completed or not is_real_apply:
+            outcome_type = "failed"
+            gate_evaluated = False
+            gate_skip_reason = "apply_not_completed"
+        elif not pre_was_non_compliant:
+            outcome_type = "already_compliant_noop"
+            gate_evaluated = False
+            gate_skip_reason = "pre_already_compliant"
+        elif self.final_status == "success":
+            outcome_type = "remediated"
+            gate_evaluated = True
+            gate_skip_reason = None
+        else:
+            outcome_type = "failed"
+            gate_evaluated = True
+            gate_skip_reason = None
+
         write_json(self.output_dir / "findings_delta.json", delta)
 
         report = {
@@ -543,6 +796,11 @@ class NoUiPrBundleAgent:
             "pre_summary": pre_summary,
             "post_summary": post_summary,
             "delta": delta,
+            "tested_control_delta": tested_control_delta,
+            "resolved_gain": resolved_gain,
+            "outcome_type": outcome_type,
+            "gate_evaluated": gate_evaluated,
+            "gate_skip_reason": gate_skip_reason,
             "completed_phases": list(self.state.checkpoint.completed_phases),
             "errors": list(self.state.checkpoint.errors),
         }

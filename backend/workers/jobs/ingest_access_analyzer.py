@@ -63,6 +63,8 @@ def _upsert_one(
         )
         .first()
     )
+    status = str(data.get("status") or "").upper()
+    resolved_at = datetime.now(timezone.utc) if status == "RESOLVED" else None
     if existing:
         existing.severity_label = data["severity_label"]
         existing.severity_normalized = data["severity_normalized"]
@@ -73,12 +75,15 @@ def _upsert_one(
         existing.canonical_control_id = data.get("canonical_control_id")
         existing.resource_key = data.get("resource_key")
         existing.status = data["status"]
+        existing.resolved_at = resolved_at
         existing.in_scope = bool(data.get("in_scope", False))
         existing.last_observed_at = data["last_observed_at"]
         existing.sh_updated_at = data["sh_updated_at"]
         existing.raw_json = data["raw_json"]
         return "updated"
-    session.add(Finding(**data))
+    payload = dict(data)
+    payload["resolved_at"] = resolved_at
+    session.add(Finding(**payload))
     return "new"
 
 

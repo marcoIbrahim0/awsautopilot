@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 from pathlib import Path
 
@@ -201,6 +202,104 @@ def test_no_ui_agent_dry_run_smoke(tmp_path: Path) -> None:
     assert (tmp_path / "findings_post_summary.json").exists()
     assert (tmp_path / "findings_delta.json").exists()
     assert (tmp_path / "terraform_transcript.json").exists()
+    final_report = json.loads((tmp_path / "final_report.json").read_text(encoding="utf-8"))
+    delta = final_report.get("delta") if isinstance(final_report.get("delta"), dict) else {}
+    kpis = delta.get("kpis") if isinstance(delta.get("kpis"), dict) else {}
+    assert final_report.get("tested_control_delta") == kpis.get("tested_control_delta")
+    assert final_report.get("resolved_gain") == kpis.get("resolved_gain")
+
+
+def test_outcome_type_failed(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53", "S3.2"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": False,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+
+    def _terraform_runner(workspace: Path, timeout_sec: int):
+        del timeout_sec
+        assert workspace.exists()
+        return [{"command": "terraform apply", "exit_code": 0, "stdout": "ok", "stderr": ""}]
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: FakeClient(),
+        terraform_runner=_terraform_runner,
+    )
+    code = agent.run()
+
+    assert code == 1
+    final_report = json.loads((tmp_path / "final_report.json").read_text(encoding="utf-8"))
+    assert final_report["status"] == "failed"
+    assert final_report["exit_code"] == 1
+    assert final_report.get("resolved_gain") == 0
+    assert final_report.get("tested_control_delta") == 0
+    assert final_report.get("outcome_type") == "failed"
+    assert final_report.get("gate_evaluated") is True
+    assert final_report.get("gate_skip_reason") is None
+    assert any("resolved_gain must be > 0" in str(err.get("message", "")) for err in final_report["errors"])
+
+
+def test_outcome_type_remediated(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": False,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+
+    def _terraform_runner(workspace: Path, timeout_sec: int):
+        del timeout_sec
+        assert workspace.exists()
+        return [{"command": "terraform apply", "exit_code": 0, "stdout": "ok", "stderr": ""}]
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: FakeClientRemediated(),
+        terraform_runner=_terraform_runner,
+    )
+    code = agent.run()
+
+    assert code == 0
+    final_report = json.loads((tmp_path / "final_report.json").read_text(encoding="utf-8"))
+    assert final_report["status"] == "success"
+    assert final_report["exit_code"] == 0
+    assert final_report.get("resolved_gain") == 1
+    assert final_report.get("tested_control_delta") == -1
+    assert final_report.get("outcome_type") == "remediated"
+    assert final_report.get("gate_evaluated") is True
+    assert final_report.get("gate_skip_reason") is None
 
 
 def test_no_ui_agent_dry_run_smoke_pr_only_without_strategy(tmp_path: Path) -> None:
@@ -337,7 +436,98 @@ class FakeClientControlMismatch(FakeClient):
         }
 
 
-def test_target_select_fails_when_selected_control_not_preferred(tmp_path: Path) -> None:
+class FakeClientReadinessSelfHeal(FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.readiness_calls = 0
+        self.ingest_calls: list[tuple[str, list[str]]] = []
+
+    def check_control_plane_readiness(self, account_id: str, stale_after_minutes: int = 30):
+        del account_id, stale_after_minutes
+        self.readiness_calls += 1
+        if self.readiness_calls == 1:
+            return {
+                "overall_ready": False,
+                "missing_regions": ["eu-north-1"],
+                "regions": [{"region": "eu-north-1", "is_recent": False}],
+            }
+        return {
+            "overall_ready": True,
+            "missing_regions": [],
+            "regions": [{"region": "eu-north-1", "is_recent": True}],
+        }
+
+    def trigger_ingest(self, account_id: str, regions: list[str]):
+        self.ingest_calls.append((account_id, list(regions)))
+        return {"message": "queued", "regions": list(regions)}
+
+
+class FakeClientAlreadyCompliant(FakeClient):
+    def list_findings(
+        self,
+        account_id: str,
+        region: str | None,
+        limit: int,
+        offset: int,
+        status_filter: str | None = None,
+    ):
+        del account_id, region, limit, status_filter
+        if offset > 0:
+            return {"items": [], "total": 1}
+        return {
+            "items": [
+                {
+                    "id": "finding-1",
+                    "status": "NEW",
+                    "severity_label": "HIGH",
+                    "control_id": "EC2.53",
+                    "resource_id": "sg-1",
+                    "remediation_action_id": "action-1",
+                    "updated_at_db": "2026-02-19T10:00:00Z",
+                    "source": "security_hub",
+                    "shadow": {"status_normalized": "RESOLVED"},
+                }
+            ],
+            "total": 1,
+        }
+
+
+class FakeClientRemediated(FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.list_calls = 0
+
+    def list_findings(
+        self,
+        account_id: str,
+        region: str | None,
+        limit: int,
+        offset: int,
+        status_filter: str | None = None,
+    ):
+        del account_id, region, limit, status_filter
+        if offset > 0:
+            return {"items": [], "total": 1}
+        self.list_calls += 1
+        pre_snapshot = self.list_calls == 1
+        return {
+            "items": [
+                {
+                    "id": "finding-1",
+                    "status": "NEW" if pre_snapshot else "RESOLVED",
+                    "severity_label": "HIGH",
+                    "control_id": "EC2.53",
+                    "resource_id": "sg-1",
+                    "remediation_action_id": "action-1",
+                    "updated_at_db": "2026-02-19T10:00:00Z",
+                    "source": "security_hub",
+                }
+            ],
+            "total": 1,
+        }
+
+
+def test_target_select_noops_when_preferred_control_has_no_eligible_finding(tmp_path: Path) -> None:
     settings = {
         "api_base": "https://api.valensjewelry.com",
         "account_id": "029037611564",
@@ -367,6 +557,114 @@ def test_target_select_fails_when_selected_control_not_preferred(tmp_path: Path)
     )
     code = agent.run()
 
-    assert code == 1
-    checkpoint = (tmp_path / "checkpoint.json").read_text(encoding="utf-8")
-    assert "outside requested control_preference" in checkpoint
+    assert code == 0
+    checkpoint = json.loads((tmp_path / "checkpoint.json").read_text(encoding="utf-8"))
+    assert checkpoint.get("status") == "success"
+    assert checkpoint.get("errors") == []
+
+    final_report = json.loads((tmp_path / "final_report.json").read_text(encoding="utf-8"))
+    assert final_report["status"] == "success"
+    assert final_report["target_control_id"] == "SECURITYHUB.1"
+    assert final_report.get("target_finding_id") == ""
+    assert final_report.get("target_action_id") == ""
+    assert final_report.get("run_id") == ""
+    assert final_report.get("outcome_type") == "already_compliant_noop"
+    assert final_report.get("gate_evaluated") is False
+    assert final_report.get("gate_skip_reason") == "pre_already_compliant"
+
+
+def test_readiness_self_heal_retries_once_before_failing(tmp_path: Path, monkeypatch) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": True,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+    fake_client = FakeClientReadinessSelfHeal()
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: fake_client,
+    )
+
+    called: dict[str, object] = {}
+
+    def _fake_rehydrate(account_id: str, regions: list[str]) -> dict[str, object]:
+        called["account_id"] = account_id
+        called["regions"] = list(regions)
+        return {"ok": True, "regions": list(regions)}
+
+    monkeypatch.setattr(agent, "_rehydrate_control_plane_ingest_status", _fake_rehydrate)
+
+    agent.phase_auth()
+    agent.phase_readiness()
+
+    assert fake_client.readiness_calls == 2
+    assert fake_client.ingest_calls == [("029037611564", ["eu-north-1"])]
+    assert called["account_id"] == "029037611564"
+    assert called["regions"] == ["eu-north-1"]
+
+    readiness_payload = json.loads((tmp_path / "readiness.json").read_text(encoding="utf-8"))
+    assert readiness_payload["control_plane"]["overall_ready"] is True
+    assert readiness_payload["control_plane_self_heal"]["attempted"] is True
+
+
+def test_outcome_type_already_compliant_noop(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.valensjewelry.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": False,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+
+    def _terraform_runner(workspace: Path, timeout_sec: int):
+        del timeout_sec
+        assert workspace.exists()
+        return [{"command": "terraform apply", "exit_code": 0, "stdout": "ok", "stderr": ""}]
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: FakeClientAlreadyCompliant(),
+        terraform_runner=_terraform_runner,
+    )
+    code = agent.run()
+
+    assert code == 0
+    final_report = json.loads((tmp_path / "final_report.json").read_text(encoding="utf-8"))
+    assert final_report["status"] == "success"
+    assert final_report["exit_code"] == 0
+    assert final_report.get("resolved_gain") == 0
+    assert final_report.get("tested_control_delta") == 0
+    assert final_report.get("outcome_type") == "already_compliant_noop"
+    assert final_report.get("gate_evaluated") is False
+    assert final_report.get("gate_skip_reason") == "pre_already_compliant"
+    assert not any("resolved_gain must be > 0" in str(err.get("message", "")) for err in final_report["errors"])

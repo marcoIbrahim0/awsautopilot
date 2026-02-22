@@ -66,6 +66,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--account-id", default=DEFAULT_ACCOUNT_ID, help="AWS account ID")
     parser.add_argument("--region", default=DEFAULT_REGION, help="AWS region")
     parser.add_argument(
+        "--output-dir",
+        help=(
+            "Campaign artifact output directory. "
+            "Default: artifacts/no-ui-agent/s3-campaign-<UTC_TIMESTAMP>"
+        ),
+    )
+    parser.add_argument(
+        "--reconcile-after-apply",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Trigger reconcile during refresh after terraform apply (default: true).",
+    )
+    parser.add_argument(
         "--max-readiness-wait-sec",
         type=int,
         default=DEFAULT_MAX_READINESS_WAIT_SEC,
@@ -284,6 +297,7 @@ def _build_settings(
     control_id: str,
     output_dir: str,
     dry_run: bool,
+    reconcile_after_apply: bool,
     api_base: str,
     account_id: str,
     region: str,
@@ -310,7 +324,7 @@ def _build_settings(
         "client_timeout_sec": max(5, int(client_timeout_sec)),
         "client_retries": max(0, int(client_retries)),
         "client_retry_backoff_sec": max(0.1, float(client_retry_backoff_sec)),
-        "reconcile_after_apply": True,
+        "reconcile_after_apply": bool(reconcile_after_apply),
         "reconcile_timeout_sec": 900,
         "reconcile_poll_interval_sec": 10,
     }
@@ -322,6 +336,7 @@ def _run_single_control(
     email: str,
     password: str,
     dry_run: bool,
+    reconcile_after_apply: bool,
     api_base: str,
     account_id: str,
     region: str,
@@ -337,6 +352,7 @@ def _run_single_control(
         control_id,
         str(control_dir),
         dry_run,
+        reconcile_after_apply,
         api_base,
         account_id,
         region,
@@ -465,6 +481,9 @@ def _build_final_campaign_summary(
         run_id = str(row.get("run_id") or report.get("run_id") or "")
         target_finding_id = str(row.get("target_finding_id") or report.get("target_finding_id") or "")
         target_action_id = str(row.get("target_action_id") or report.get("target_action_id") or "")
+        outcome_type = str(report.get("outcome_type") or "failed").strip().lower() or "failed"
+        gate_evaluated = report.get("gate_evaluated")
+        gate_skip_reason = report.get("gate_skip_reason")
 
         delta = report.get("delta") if isinstance(report.get("delta"), dict) else {}
         kpis = delta.get("kpis") if isinstance(delta.get("kpis"), dict) else {}
@@ -474,16 +493,29 @@ def _build_final_campaign_summary(
         resolved_gain_gt_0 = isinstance(resolved_gain, (int, float)) and resolved_gain > 0
 
         apply_exit_code = _terraform_apply_exit_code(control_dir)
-        checks = {
-            "final_report_status_success": report_status == "success",
-            "run_id_non_empty": bool(run_id),
-            "target_finding_id_non_empty": bool(target_finding_id),
-            "target_action_id_non_empty": bool(target_action_id),
-            "terraform_apply_exit_code_0": apply_exit_code == 0,
-            "resolved_state_verification_passed": report_status == "success",
-            "tested_control_delta_lt_0": tested_control_delta_lt_0,
-            "resolved_gain_gt_0": resolved_gain_gt_0,
-        }
+        if outcome_type == "already_compliant_noop":
+            checks = {
+                "final_report_status_success": report_status == "success",
+                "outcome_type_already_compliant_noop": True,
+                "gate_evaluated_false": gate_evaluated is False,
+                "gate_skip_reason_pre_already_compliant": str(gate_skip_reason or "") == "pre_already_compliant",
+            }
+        elif outcome_type == "remediated":
+            checks = {
+                "final_report_status_success": report_status == "success",
+                "run_id_non_empty": bool(run_id),
+                "target_finding_id_non_empty": bool(target_finding_id),
+                "target_action_id_non_empty": bool(target_action_id),
+                "terraform_apply_exit_code_0": apply_exit_code == 0,
+                "resolved_state_verification_passed": report_status == "success",
+                "tested_control_delta_lt_0": tested_control_delta_lt_0,
+                "resolved_gain_gt_0": resolved_gain_gt_0,
+            }
+        else:
+            checks = {
+                "final_report_status_success": report_status == "success",
+                "known_failure_outcome": outcome_type == "failed",
+            }
         definition_of_done_passed = all(bool(v) for v in checks.values())
 
         control_summaries[control_id] = {
@@ -495,6 +527,9 @@ def _build_final_campaign_summary(
             "exit_code": row.get("exit_code"),
             "tested_control_delta": tested_control_delta,
             "resolved_gain": resolved_gain,
+            "outcome_type": outcome_type,
+            "gate_evaluated": gate_evaluated,
+            "gate_skip_reason": gate_skip_reason,
             "definition_of_done_checks": checks,
             "definition_of_done_passed": definition_of_done_passed,
             "output_dir": str(control_dir),
@@ -503,7 +538,20 @@ def _build_final_campaign_summary(
     overall_passed = all(
         bool(control_summaries.get(control_id, {}).get("definition_of_done_passed")) for control_id in controls
     )
-    return {"controls": control_summaries, "overall_passed": overall_passed}
+    outcome_counts = {"remediated": 0, "already_compliant_noop": 0, "failed": 0}
+    for control_id in controls:
+        token = str(control_summaries.get(control_id, {}).get("outcome_type") or "failed")
+        if token not in outcome_counts:
+            token = "failed"
+        outcome_counts[token] += 1
+
+    return {
+        "controls": control_summaries,
+        "overall_passed": overall_passed,
+        "remediated_count": outcome_counts["remediated"],
+        "already_compliant_noop_count": outcome_counts["already_compliant_noop"],
+        "failed_count": outcome_counts["failed"],
+    }
 
 
 def main() -> int:
@@ -515,13 +563,18 @@ def main() -> int:
     email, password = _prompt_credentials()
 
     campaign_ts = _utc_ts()
-    campaign_dir = Path("artifacts/no-ui-agent") / f"s3-campaign-{campaign_ts}"
+    campaign_dir = (
+        Path(str(args.output_dir)).expanduser()
+        if str(args.output_dir or "").strip()
+        else Path("artifacts/no-ui-agent") / f"s3-campaign-{campaign_ts}"
+    )
     campaign_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Campaign started at {campaign_ts}")
     print(f"Output directory: {campaign_dir}")
     print(f"Target controls: {target_controls}")
     print(f"Dry-run: {args.dry_run}")
+    print(f"Reconcile after apply: {args.reconcile_after_apply}")
     print(f"Stage0 only: {args.stage0_only}")
     print(f"Region: {args.region}")
     print()
@@ -647,6 +700,7 @@ def main() -> int:
             email=email,
             password=password,
             dry_run=args.dry_run,
+            reconcile_after_apply=args.reconcile_after_apply,
             api_base=args.api_base,
             account_id=args.account_id,
             region=args.region,

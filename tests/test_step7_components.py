@@ -302,6 +302,27 @@ def test_pr_bundle_supported_action_types_all_sixteen() -> None:
     assert ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT in SUPPORTED_ACTION_TYPES
 
 
+def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload() -> None:
+    """Config.1 Terraform bundle sets recorder booleans and Config delivery bucket policy payloads."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+
+    assert 'RECORDER_PAYLOAD=$(cat <<JSON' in content
+    assert '"recordingGroup":{"allSupported":true,"includeGlobalResourceTypes":true}' in content
+    assert '--configuration-recorder "$RECORDER_PAYLOAD"' in content
+    assert 'recordingGroup={allSupported=true,includeGlobalResourceTypes=true}' not in content
+    assert 'CONFIG_BUCKET_POLICY=$(cat <<JSON' in content
+    assert '"Sid":"AWSConfigBucketPermissionsCheck"' in content
+    assert '"Sid":"AWSConfigBucketDelivery"' in content
+    assert '--policy "$CONFIG_BUCKET_POLICY"' in content
+
+
 def test_pr_bundle_dispatch_s3_bucket_block_terraform_step_9_9() -> None:
     """Step 9.9: s3_bucket_block_public_access returns Terraform with aws_s3_bucket_public_access_block."""
     action = _make_action(

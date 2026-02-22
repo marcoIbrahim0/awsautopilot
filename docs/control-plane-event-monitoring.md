@@ -17,6 +17,24 @@ Validation endpoint (tenant-facing):
 - `GET /api/aws/accounts/{account_id}/control-plane-readiness`
   - Returns last seen event time / intake time per configured region.
 
+Automated verification script (console-free):
+- `scripts/verify_control_plane_forwarder.sh`
+- Verifies:
+  - Phase 1 wiring (`Rule ENABLED`, `API Destination ACTIVE`, endpoint path, `Connection AuthorizationType=API_KEY`, DLQ depth)
+  - Phase 2 synthetic management event injection (`security.autopilot.synthetic` source with allowlisted `eventName`)
+  - Phase 3 tenant readiness poll (`overall_ready` + region `is_recent`)
+  - Phase 4 CloudWatch/DLQ diagnosis on timeout
+- Example:
+
+```bash
+./scripts/verify_control_plane_forwarder.sh \
+  --stack-name SecurityAutopilotControlPlaneForwarder \
+  --account-id 029037611564 \
+  --region eu-north-1 \
+  --saas-api-url https://api.valensjewelry.com \
+  --saas-token <YOUR_SAAS_BEARER_TOKEN_HERE>
+```
+
 ## Canonical Event Allowlist (Parity Contract)
 - Source of truth: `backend/services/control_plane_event_allowlist.py`
 - Forwarder contract: `infrastructure/cloudformation/control-plane-forwarder-template.yaml`
