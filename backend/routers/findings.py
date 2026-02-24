@@ -73,6 +73,7 @@ class FindingResponse(BaseModel):
     status: str
     display_badge: str
     in_scope: bool = True
+    is_shared_resource: bool = False  # A3: future detection logic; defaults False
     title: str
     description: str | None
     resource_id: str | None
@@ -102,8 +103,30 @@ class FindingResponse(BaseModel):
 
 class FindingsListResponse(BaseModel):
     """Paginated response for findings list."""
-    
+
     items: list[FindingResponse]
+    total: int
+
+
+class FindingGroupItem(BaseModel):
+    """A single group in the grouped findings response."""
+
+    group_key: str
+    rule_title: str
+    resource_type: str | None
+    finding_count: int
+    severity_distribution: dict[str, int]
+    account_ids: list[str]
+    regions: list[str]
+    remediation_action_id: str | None = None
+    remediation_action_type: str | None = None
+    remediation_action_status: str | None = None
+
+
+class FindingsGroupedResponse(BaseModel):
+    """Paginated response for grouped findings."""
+
+    items: list[FindingGroupItem]
     total: int
 
 
@@ -154,6 +177,7 @@ def finding_to_response(
         status=finding.status,
         display_badge="resolved" if str(finding.status or "").upper() == "RESOLVED" else "open",
         in_scope=bool(getattr(finding, "in_scope", True)),
+        is_shared_resource=False,  # A3: real detection is a future task
         title=finding.title,
         description=finding.description,
         resource_id=finding.resource_id,
@@ -312,8 +336,209 @@ def resolve_tenant_id(
 
 
 # ============================================
+# Grouped-findings helpers (A2)
+# ============================================
+
+_SEVERITY_LABELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]
+
+
+def _apply_finding_filters(
+    query: object,
+    account_id: str | None,
+    region: str | None,
+    severity: str | None,
+    source: str | None,
+    status_filter: str | None,
+) -> object:
+    """Apply optional column filters shared by list and grouped endpoints."""
+    if account_id:
+        query = query.where(Finding.account_id == account_id)
+    if region:
+        query = query.where(Finding.region == region)
+    if severity:
+        severities = [s.strip().upper() for s in severity.split(",")]
+        query = query.where(Finding.severity_label.in_(severities))
+    if source:
+        sources = [s.strip().lower() for s in source.split(",")]
+        query = query.where(Finding.source.in_(sources))
+    if status_filter:
+        statuses = [s.strip().upper() for s in status_filter.split(",")]
+        query = query.where(Finding.status.in_(statuses))
+    return query
+
+
+def _build_severity_distribution(row: object) -> dict[str, int]:
+    """Build {CRITICAL: n, HIGH: n, …} from aggregated count columns."""
+    return {
+        "CRITICAL": int(row.cnt_critical or 0),
+        "HIGH": int(row.cnt_high or 0),
+        "MEDIUM": int(row.cnt_medium or 0),
+        "LOW": int(row.cnt_low or 0),
+        "INFORMATIONAL": int(row.cnt_informational or 0),
+    }
+
+
+async def _fetch_action_hints_for_controls(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    control_ids: list[str],
+) -> dict[str, dict]:
+    """
+    Return one action hint per control_id (first action found).
+    Reuses the Action/ActionFinding join already used by get_remediation_hints_for_findings.
+    """
+    if not control_ids:
+        return {}
+    rows_result = await db.execute(
+        select(
+            Finding.control_id,
+            Action.id,
+            Action.action_type,
+            Action.status,
+        )
+        .join(ActionFinding, ActionFinding.finding_id == Finding.id)
+        .join(Action, Action.id == ActionFinding.action_id)
+        .where(
+            Finding.tenant_id == tenant_id,
+            Finding.control_id.in_(control_ids),
+            Action.tenant_id == tenant_id,
+        )
+        .order_by(Action.updated_at.desc().nullslast())
+    )
+    hints: dict[str, dict] = {}
+    for control_id, action_id, action_type, action_status in rows_result.all():
+        if control_id not in hints:
+            hints[control_id] = {
+                "remediation_action_id": str(action_id),
+                "remediation_action_type": action_type,
+                "remediation_action_status": action_status,
+            }
+    return hints
+
+
+def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
+    """Map one SQLAlchemy grouped row + action hint → FindingGroupItem."""
+    control = row.control_id or ""
+    rtype = row.resource_type or ""
+    group_key = f"{control}::{rtype}" if rtype else control
+    return FindingGroupItem(
+        group_key=group_key,
+        rule_title=row.rule_title or "",
+        resource_type=row.resource_type or None,
+        finding_count=int(row.finding_count),
+        severity_distribution=_build_severity_distribution(row),
+        account_ids=sorted(set(a for a in (row.account_ids or []) if a)),
+        regions=sorted(set(r for r in (row.regions or []) if r)),
+        remediation_action_id=hint.get("remediation_action_id"),
+        remediation_action_type=hint.get("remediation_action_type"),
+        remediation_action_status=hint.get("remediation_action_status"),
+    )
+
+
+# ============================================
 # Endpoints
 # ============================================
+
+@router.get("/grouped", response_model=FindingsGroupedResponse)
+async def list_findings_grouped(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+    account_id: Annotated[str | None, Query(description="Filter by AWS account ID")] = None,
+    region: Annotated[str | None, Query(description="Filter by AWS region")] = None,
+    control_id: Annotated[str | None, Query(description="Filter by control ID (e.g., S3.1)")] = None,
+    resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
+    severity: Annotated[str | None, Query(description="Filter by severity (comma-separated)")] = None,
+    source: Annotated[str | None, Query(description="Filter by source (comma-separated)")] = None,
+    status_filter: Annotated[str | None, Query(alias="status", description="Filter by status (comma-separated)")] = None,
+    limit: Annotated[int, Query(ge=1, le=200, description="Max groups to return")] = 50,
+    offset: Annotated[int, Query(ge=0, description="Groups to skip")] = 0,
+) -> FindingsGroupedResponse:
+    """
+    List findings grouped by (control_id, resource_type).
+
+    Applies the same tenant isolation, in-scope filter, and column filters as
+    GET /findings. Returns one item per unique (control_id, resource_type) pair,
+    sorted by max severity then by finding count descending.
+    """
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    tenant = await get_tenant_by_uuid(db, tenant_uuid)
+
+    base = (
+        select(Finding)
+        .where(Finding.tenant_id == tenant.id)
+    )
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        base = base.where(Finding.in_scope.is_(True))
+    if control_id:
+        base = base.where(Finding.control_id == control_id.strip())
+    if resource_id:
+        base = base.where(Finding.resource_id == resource_id.strip())
+    base = _apply_finding_filters(base, account_id, region, severity, source, status_filter)
+
+    # Total distinct groups for pagination metadata.
+    count_subq = (
+        select(Finding.control_id, Finding.resource_type)
+        .where(Finding.tenant_id == tenant.id)
+    )
+    if settings.ONLY_IN_SCOPE_CONTROLS:
+        count_subq = count_subq.where(Finding.in_scope.is_(True))
+    if control_id:
+        count_subq = count_subq.where(Finding.control_id == control_id.strip())
+    if resource_id:
+        count_subq = count_subq.where(Finding.resource_id == resource_id.strip())
+    count_subq = _apply_finding_filters(count_subq, account_id, region, severity, source, status_filter)
+    count_subq = count_subq.group_by(Finding.control_id, Finding.resource_type).subquery()
+    total_result = await db.execute(select(func.count()).select_from(count_subq))
+    total = total_result.scalar() or 0
+
+    grouped_q = _build_grouped_select(base)
+    rows_result = await db.execute(grouped_q.limit(limit).offset(offset))
+    rows = rows_result.all()
+
+    control_ids = [r.control_id for r in rows if r.control_id]
+    hints_by_control = await _fetch_action_hints_for_controls(db, tenant_uuid, control_ids)
+
+    items = [
+        _row_to_group_item(row, hints_by_control.get(row.control_id, {}))
+        for row in rows
+    ]
+    logger.info(
+        "Grouped findings: %d groups for tenant %s (total: %d)",
+        len(items), str(tenant_uuid), total,
+    )
+    return FindingsGroupedResponse(items=items, total=total)
+
+
+def _build_grouped_select(base_query: object) -> object:
+    """Wrap a base Finding query into a GROUP BY aggregate query."""
+    subq = base_query.subquery()
+    f = subq.c  # alias columns from the subquery
+    return (
+        select(
+            f.control_id,
+            f.resource_type,
+            func.min(f.title).label("rule_title"),
+            func.count(f.id).label("finding_count"),
+            func.max(f.severity_normalized).label("max_severity_normalized"),
+            func.array_agg(func.distinct(f.account_id)).label("account_ids"),
+            func.array_agg(func.distinct(f.region)).label("regions"),
+            func.count(case((f.severity_label == "CRITICAL", 1))).label("cnt_critical"),
+            func.count(case((f.severity_label == "HIGH", 1))).label("cnt_high"),
+            func.count(case((f.severity_label == "MEDIUM", 1))).label("cnt_medium"),
+            func.count(case((f.severity_label == "LOW", 1))).label("cnt_low"),
+            func.count(case((f.severity_label == "INFORMATIONAL", 1))).label("cnt_informational"),
+        )
+        .group_by(f.control_id, f.resource_type)
+        .order_by(
+            func.max(f.severity_normalized).desc(),
+            func.count(f.id).desc(),
+        )
+    )
+
 
 @router.get("", response_model=FindingsListResponse)
 async def list_findings(
