@@ -22,6 +22,11 @@ from backend.models.enums import (
     RemediationRunMode,
     RemediationRunStatus,
 )
+from backend.services.pr_bundle import PRBundleGenerationError
+from backend.services.root_credentials_workflow import (
+    MANUAL_HIGH_RISK_MARKER,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+)
 from backend.workers.jobs.remediation_run import execute_remediation_run_job
 from backend.workers.jobs.remediation_run_execution import execute_pr_bundle_execution_job
 from backend.workers.services.direct_fix import DirectFixResult
@@ -326,6 +331,83 @@ def test_pr_only_variant_generates_cloudfront_oac_bundle() -> None:
     assert isinstance(run.artifacts, dict)
     assert run.artifacts.get("pr_bundle_variant") == "cloudfront_oac_private_s3"
     assert "pr_bundle" in run.artifacts
+
+
+def test_pr_only_generation_structured_error_persists_error_artifact() -> None:
+    """PR bundle generation errors are stored as structured artifacts and mark run failed."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("iam_root_access_key_absent")
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    error = PRBundleGenerationError(
+        {
+            "code": "unsupported_format_for_action_type",
+            "detail": "cloudformation format is not supported for iam_root_access_key_absent.",
+            "action_type": "iam_root_access_key_absent",
+            "format": "cloudformation",
+            "strategy_id": "iam_root_key_disable",
+            "variant": "",
+        }
+    )
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=error):
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.failed
+    assert run.outcome == "PR bundle generation failed: unsupported_format_for_action_type"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle_error = run.artifacts.get("pr_bundle_error")
+    assert isinstance(pr_bundle_error, dict)
+    assert pr_bundle_error.get("code") == "unsupported_format_for_action_type"
+    assert pr_bundle_error.get("action_type") == "iam_root_access_key_absent"
+
+
+def test_pr_only_root_run_persists_manual_high_risk_marker_in_artifacts_and_logs() -> None:
+    """Root-key PR runs persist manual/high-risk markers in artifacts and worker logs."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("iam_root_access_key_absent")
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    bundle = {
+        "format": "terraform",
+        "files": [{"path": "iam_root_access_key_absent.tf", "content": "# root"}],
+        "steps": ["step one"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle):
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert isinstance(run.artifacts, dict)
+    marker = run.artifacts.get("manual_high_risk")
+    assert isinstance(marker, dict)
+    assert marker.get("marker") == MANUAL_HIGH_RISK_MARKER
+    assert marker.get("requires_root_credentials") is True
+    assert marker.get("runbook_url") == ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH
+    assert MANUAL_HIGH_RISK_MARKER in (run.logs or "")
+    assert ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH in (run.logs or "")
 
 
 def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
@@ -663,6 +745,58 @@ def test_pr_bundle_execution_plan_success() -> None:
     assert run.status == RemediationRunStatus.awaiting_approval
     assert isinstance(execution.workspace_manifest, dict)
     assert isinstance(execution.results, dict)
+
+
+def test_pr_bundle_execution_root_credentials_required_fails_fast() -> None:
+    """SaaS plan/apply worker rejects root-key runs before any terraform command executes."""
+    run = _mock_run_with_action("iam_root_access_key_absent")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [exec_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+            execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 0
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert execution.error_summary == "root_credentials_required"
+    assert run.status == RemediationRunStatus.failed
+    assert "Root credentials required" in str(run.outcome)
+    assert isinstance(run.artifacts, dict)
+    marker = run.artifacts.get("manual_high_risk")
+    assert isinstance(marker, dict)
+    assert marker.get("marker") == MANUAL_HIGH_RISK_MARKER
+    assert MANUAL_HIGH_RISK_MARKER in str(run.logs or "")
 
 
 def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:

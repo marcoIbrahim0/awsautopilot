@@ -1,0 +1,112 @@
+# Task Index
+
+This index maps notable tasks to discoverable entries in `.cursor/notes/task_log.md`.
+
+## 2026-02
+
+- [Production docs guardrail + deployment baseline (low-cost default, scale-up, rollout, rollback) (2026-02-25)](task_log.md#production-docs-guardrail--deployment-baseline-low-cost-default-scale-up-rollout-rollback-2026-02-25)
+  - Added protected `/docs/Production/` folder with first operator file: `deployment.md`.
+  - Added rules-folder policy `production-docs-protection.mdc` and core-behavior reference so `/docs/Production/` is only edited via explicit command.
+  - Published command-first production baseline: low-cost default profile, scale-up profile, rollout flow, and rollback flow.
+- [Follow-up closure: Alembic lineage reconciliation + DB revision guard re-enable (2026-02-25)](task_log.md#follow-up-closure-alembic-lineage-reconciliation--db-revision-guard-re-enable-2026-02-25)
+  - Reconciled DB revision metadata from orphaned `0039_baseline_report_snapshot` to deployed head `2b2bad9b8967` using deployed-source Alembic lineage.
+  - Re-enabled `DB_REVISION_GUARD_ENABLED=true` on `security-autopilot-dev-api`.
+  - Re-verified `health`, CORS preflight, login response path, and absence of migration-guard startup crashes in live logs.
+- [Login preflight 500 CORS error resolved via API migration-guard hotfix (2026-02-25)](task_log.md#login-preflight-500-cors-error-resolved-via-api-migration-guard-hotfix-2026-02-25)
+  - Diagnosed browser CORS/preflight symptom as API Lambda startup crash from Alembic revision mismatch (`0039_baseline_report_snapshot` vs expected head `2b2bad9b8967`).
+  - Applied live operational hotfix by setting `DB_REVISION_GUARD_ENABLED=false` on `security-autopilot-dev-api`.
+  - Verified recovery with live `OPTIONS /api/auth/login` (200 + CORS headers) and `POST /api/auth/login` (401 with CORS headers, no 500).
+- [Compiled deployment teardown coverage and summary bundles (08 final outputs) (2026-02-25)](task_log.md#compiled-deployment-teardown-coverage-and-summary-bundles-08-final-outputs-2026-02-25)
+  - Added `docs/prod-readiness/08-deployment-scripts.md` by compiling Task 2/3/4/5 scripts into one deployment/reset document.
+  - Added `docs/prod-readiness/08-teardown-scripts.md` by compiling Task 6/7 teardown scripts into one teardown document.
+  - Added `docs/prod-readiness/08-coverage-matrix.md` (copied from `08-task8-coverage-matrix.md`) and `docs/prod-readiness/08-summary.md`.
+- [Architecture 2 teardown scripts for Group A, Group B, and full delete order (08-task7) (2026-02-25)](task_log.md#architecture-2-teardown-scripts-for-group-a-group-b-and-full-delete-order-08-task7-2026-02-25)
+  - Added `docs/prod-readiness/08-task7-teardown-arch2-groupA.sh` for Group A teardown with dependency guard on `arch2_eks_cluster_c`.
+  - Added `docs/prod-readiness/08-task7-teardown-arch2-groupB.sh` for Group B teardown of `arch2_mixed_policy_role_b3`.
+  - Added `docs/prod-readiness/08-task7-teardown-arch2-full.sh` for full Architecture 2 reverse dependency teardown using Section 4 delete order.
+- [Architecture 1 teardown scripts for Group A, Group B, and full delete order (08-task6) (2026-02-25)](task_log.md#architecture-1-teardown-scripts-for-group-a-group-b-and-full-delete-order-08-task6-2026-02-25)
+  - Added `docs/prod-readiness/08-task6-teardown-arch1-groupA.sh` for Group A-only reverse-order teardown scoped to `TestGroup=detection`.
+  - Added `docs/prod-readiness/08-task6-teardown-arch1-groupB.sh` for Group B-only reverse-order teardown scoped to `TestGroup=negative`.
+  - Added `docs/prod-readiness/08-task6-teardown-arch1-full.sh` for full Architecture 1 reverse dependency teardown.
+- [Architecture 1 reset script for adversarial misconfiguration restoration (08-task4) (2026-02-25)](task_log.md#architecture-1-reset-script-for-adversarial-misconfiguration-restoration-08-task4-2026-02-25)
+  - Added `docs/prod-readiness/08-task4-reset-arch1.sh` with standalone AWS CLI reset blocks that restore A1/A2 and requested B1/B2 misconfiguration states.
+  - Reused variable names from `08-task2-deploy-arch1.sh`, including region/account and resource-lookup variables for SG IDs and bucket names.
+  - Updated docs indexes to cross-link the new reset script under `/docs/prod-readiness/`.
+- [High-risk architecture-source remediation + medium/low risk backlog updates (2026-02-25)](task_log.md#high-risk-architecture-source-remediation--mediumlow-risk-backlog-updates-2026-02-25)
+  - Added `docs/prod-readiness/07-architecture-design.md` as canonical architecture resource-design source for script prep.
+  - Replaced placeholder inventory output with full extraction in `docs/prod-readiness/08-task1-resource-inventory.md`.
+  - Added medium/low residual risk actions (#14, #15) to `docs/prod-readiness/important-to-do.md`.
+- [Resource inventory extraction and validation for deployment-script prep (2026-02-25)](task_log.md#resource-inventory-extraction-and-validation-for-deployment-script-prep-2026-02-25)
+  - Added `docs/prod-readiness/08-task1-resource-inventory.md` with the required Sections 1-7 for architecture inventory and validation.
+  - Captured explicit validation blockers caused by missing `07-architecture-design.md` (unresolved architecture resource/dependency extraction).
+  - Updated docs indexes for discoverability under `/docs/prod-readiness/`.
+- [Important-to-do update for B-series residual risks (2026-02-25)](task_log.md#important-to-do-update-for-b-series-residual-risks-2026-02-25)
+  - Added two new `important-to-do` actions for B-series follow-up risk control.
+  - Captured explicit severities: Low (Terraform plan text variability) and Medium (dirty worktree staging risk).
+  - Added concrete execution steps and references to the B-series resource specification.
+- [Important-to-do update for A-series residual risks (2026-02-25)](task_log.md#important-to-do-update-for-a-series-residual-risks-2026-02-25)
+  - Added two new `important-to-do` actions for A-series follow-up risk control.
+  - Captured explicit severities: Low (wording interpretation drift) and Medium (task-scope/process boundary drift).
+  - Added concrete execution steps and references to source task documents.
+- [Discovery contract bootstrap and Task 1 validation rerun (2026-02-25)](task_log.md#discovery-contract-bootstrap-and-task-1-validation-rerun-2026-02-25)
+  - Created `docs/prod-readiness/01-discovery.md` to define authoritative discovery scope, normalization, runtime-boundary rules, and validation gates.
+  - Re-ran the Task 1 input-validation workflow with both required source files available.
+  - Added cross-links in docs indexes so discovery and validation inputs are discoverable.
+- [Architecture control-coverage validation + domain-distinctness follow-up (2026-02-25)](task_log.md#architecture-control-coverage-validation--domain-distinctness-follow-up-2026-02-25)
+  - Added `docs/prod-readiness/07-task3-control-coverage-validation.md` to lock A1/A2 control assignment (25 total, no overlap, no gaps).
+  - Added a new `important-to-do` item for Architecture 2 domain-distinctness verification before resource design.
+  - Updated docs indexes and prod-readiness cross-links for discoverability.
+- [Architecture control-split reconciliation + scenario-drift follow-up (2026-02-25)](task_log.md#architecture-control-split-reconciliation--scenario-drift-follow-up-2026-02-25)
+  - Reconciled Architecture 2 control ownership to the remaining 11 controls so A1+A2 have no overlaps or gaps.
+  - Added a medium-severity `important-to-do` item to prevent narrative-to-resource drift during upcoming implementation tasks.
+  - Cross-linked follow-up to inventory and scenario documents for implementation-time validation.
+- [B-series adversarial resources documentation (07-task5) (2026-02-25)](task_log.md#b-series-adversarial-resources-documentation-07-task5-2026-02-25)
+  - Added `docs/prod-readiness/07-task5-b-series-resources.md` with full B1/B2/B3 resource specifications.
+  - Captured destructive-vs-correct Terraform plan outcomes for each resource while preserving legitimate configuration context.
+  - Kept all B-series resources unassigned to architecture for a later embedding task.
+- [Architecture 1 scenario narrative for production-readiness Task 2 (2026-02-25)](task_log.md#architecture-1-scenario-narrative-for-production-readiness-task-2-2026-02-25)
+  - Produced `docs/prod-readiness/07-task2-arch1-scenario.md` from inventory-driven requirements only.
+  - Defined a realistic business narrative, service-category rationale, tier structure, and natural-misconfiguration context.
+  - Split all 25 controls across Architecture 1 and Architecture 2 with no unassigned controls.
+- [Architecture 2 scenario narrative for production-readiness Task 3 (2026-02-25)](task_log.md#architecture-2-scenario-narrative-for-production-readiness-task-3-2026-02-25)
+  - Produced `docs/prod-readiness/07-task3-arch2-scenario.md` from inventory-driven requirements only.
+  - Kept scope narrative-only (no concrete resource list, no misconfiguration assignment).
+  - Covered the remaining control half as a distinct Architecture 2 scenario plan.
+- [A-series adversarial resource documentation (2026-02-25)](task_log.md#a-series-adversarial-resource-documentation-2026-02-25)
+  - Produced `docs/prod-readiness/07-task4-a-series-resources.md` with full A1/A2/A3 tables and exact required fields.
+  - Documented blast-radius-aware naive vs correct remediation guidance and required detection API signal per resource.
+  - Kept scope architecture-agnostic as requested for later embedding.
+- [EKS.PUBLIC_ENDPOINT explicit unsupported classification closure (2026-02-25)](task_log.md#ekspublic_endpoint-explicit-unsupported-classification-closure-2026-02-25)
+  - Classified EKS public endpoint as a real inventory control signal with explicit unsupported remediation status.
+  - Enforced structured unsupported metadata propagation in EKS inventory evaluations.
+  - Added regression tests and updated control-action inventory docs to remove `UNKNOWN/UNCLASSIFIED` ambiguity.
+- [RDS.PUBLIC_ACCESS and RDS.ENCRYPTION explicit unsupported classification closure (2026-02-25)](task_log.md#rdspublic_access-and-rdsencryption-explicit-unsupported-classification-closure-2026-02-25)
+  - Classified both controls as inventory-only with explicit unsupported remediation decisions (no silent fallback ambiguity).
+  - Propagated unsupported metadata into RDS inventory evaluations (`support_status`, `remediation_classification`, `action_type`, `support_reason`).
+  - Updated control-scope/inventory tests and production-readiness control-action inventory rows + summary counts.
+- [ARC-008 registry mismatch resolution (2026-02-25)](task_log.md#arc-008-registry-mismatch-resolution-2026-02-25)
+  - Classified ARC-008 as infra-only architecture metadata, not a runtime control ID.
+  - Segregated DR template tagging to `ArchitectureObjectiveId` and removed `Control: ARC-008`.
+  - Added control-registry guard tests to prevent architecture objective IDs and undefined runtime control IDs from entering runtime mappings.
+- [Raw control extraction from Section A/B control-flagged files (2026-02-25)](task_log.md#raw-control-extraction-from-section-ab-control-flagged-files-2026-02-25)
+  - Produced `docs/prod-readiness/06-task2-raw-controls.md` from Section A/B `controls` candidates only.
+  - Captured explicit class/model control-finding definitions, literal control-ID lists, and explicit `control_id` literals with source lines.
+  - Included full files-read line-count ledger and explicit no-relevant-definition file list.
+- [Security control-action-id candidate file map scan (2026-02-25)](task_log.md#security-control-action-id-candidate-file-map-scan-2026-02-25)
+  - Created `docs/prod-readiness/06-task1-file-map.md` with 229 candidate files grouped into high/medium/low/ruled-out confidence buckets.
+  - Applied requested triage dimensions: why-flagged reason and likely contents (`controls` / `actions` / `ids` / `fix-logic` / `unknown`).
+  - Excluded generated/vendor trees from the search set to keep focus on source-owned definition files.
+- [Root-credentials-required remediation workflow for iam_root_access_key_absent (2026-02-25)](task_log.md#root-credentials-required-remediation-workflow-for-iam_root_access_key_absent-2026-02-25)
+  - Added explicit API/worker `Root credentials required` messaging and SaaS executor fail-fast rejection for root-key remediation.
+  - Persisted durable `MANUAL_HIGH_RISK_ROOT_CREDENTIALS_REQUIRED` markers in remediation artifacts/logs.
+  - Added end-to-end prod-readiness runbook and tests for root-required error path, marker persistence, and runbook-link response visibility.
+- [Exception-only remediation UX + API preflight rejection (2026-02-25)](task_log.md#exception-only-remediation-ux--api-preflight-rejection-2026-02-25)
+  - Added `exception_only` machine-readable strategy flag in remediation options payload.
+  - Added API-side 400 rejection before run creation/queueing for exception-only strategy selections, with explicit guidance to use exception workflow.
+  - Updated remediation modal and tests so exception-only selection routes directly to `Create exception` and never creates PR runs.
+- [Remove pr_only placeholder output for remaining action types (2026-02-25)](task_log.md#remove-pr_only-placeholder-output-for-remaining-action-types-2026-02-25)
+  - Replaced README-only fallback behavior in PR bundle generation with executable IaC or explicit structured errors.
+  - Added per-action-type artifact-generation tests and worker structured-error persistence coverage.
+- [PM follow-up: prompts for risk #1 and #2 + docs important-to-do for #3/#4 (2026-02-25)](task_log.md#pm-follow-up-prompts-for-risk-1-and-2--docs-important-to-do-for-34-2026-02-25)
+  - Added `docs/prod-readiness/important-to-do.md` with severity-tagged follow-up actions for risks #3 and #4.
+  - Linked the checklist from docs indexes for discoverability.

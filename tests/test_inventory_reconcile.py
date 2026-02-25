@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from botocore.exceptions import ClientError
 
+from backend.services.control_scope import unsupported_control_decision
 from backend.workers.services.inventory_reconcile import (
     INVENTORY_SERVICES_DEFAULT,
     _policy_has_ssl_deny,
@@ -402,6 +403,43 @@ class _FakeSsmThrottling:
             },
             "GetServiceSetting",
         )
+
+
+class _FakeRds:
+    def __init__(self, publicly_accessible: bool, storage_encrypted: bool) -> None:
+        self.publicly_accessible = publicly_accessible
+        self.storage_encrypted = storage_encrypted
+
+    def describe_db_instances(self, DBInstanceIdentifier):  # noqa: N803
+        return {
+            "DBInstances": [
+                {
+                    "DBInstanceIdentifier": str(DBInstanceIdentifier),
+                    "PubliclyAccessible": self.publicly_accessible,
+                    "StorageEncrypted": self.storage_encrypted,
+                    "Engine": "postgres",
+                    "DBInstanceStatus": "available",
+                }
+            ]
+        }
+
+
+class _FakeEks:
+    def __init__(self, endpoint_public_access: bool, public_access_cidrs: list[str] | None = None) -> None:
+        self.endpoint_public_access = endpoint_public_access
+        self.public_access_cidrs = list(public_access_cidrs or [])
+
+    def describe_cluster(self, name):  # noqa: N803
+        return {
+            "cluster": {
+                "name": str(name),
+                "resourcesVpcConfig": {
+                    "endpointPublicAccess": self.endpoint_public_access,
+                    "endpointPrivateAccess": not self.endpoint_public_access,
+                    "publicAccessCidrs": self.public_access_cidrs,
+                },
+            }
+        }
 
 
 class _FakeSecurityHub:
@@ -868,6 +906,102 @@ def test_ssm_7_throttling_is_reraised() -> None:
             region="eu-north-1",
             service="ssm",
         )
+
+
+def test_rds_public_access_is_open_and_explicitly_unsupported() -> None:
+    session = _FakeSession(clients={"rds": _FakeRds(publicly_accessible=True, storage_encrypted=False)})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="rds",
+        resource_ids=["db-public"],
+    )
+
+    assert len(snapshots) == 1
+    snapshot = snapshots[0]
+    assert snapshot.resource_id == "db-public"
+    assert snapshot.resource_type == "AwsRdsDbInstance"
+
+    evaluation = next(item for item in snapshot.evaluations if item.control_id == "RDS.PUBLIC_ACCESS")
+    assert evaluation.status == "OPEN"
+
+    decision = unsupported_control_decision("RDS.PUBLIC_ACCESS")
+    assert decision is not None
+    assert evaluation.evidence_ref.get("support_status") == decision["support_status"]
+    assert evaluation.evidence_ref.get("remediation_classification") == decision["remediation_classification"]
+    assert evaluation.evidence_ref.get("action_type") == decision["action_type"]
+    assert evaluation.evidence_ref.get("support_reason") == decision["reason"]
+
+
+def test_rds_encryption_is_resolved_and_explicitly_unsupported() -> None:
+    session = _FakeSession(clients={"rds": _FakeRds(publicly_accessible=False, storage_encrypted=True)})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="rds",
+        resource_ids=["db-encrypted"],
+    )
+
+    assert len(snapshots) == 1
+    snapshot = snapshots[0]
+    evaluation = next(item for item in snapshot.evaluations if item.control_id == "RDS.ENCRYPTION")
+    assert evaluation.status == "RESOLVED"
+    assert evaluation.severity_label == "MEDIUM"
+
+    decision = unsupported_control_decision("RDS.ENCRYPTION")
+    assert decision is not None
+    assert evaluation.evidence_ref.get("support_status") == decision["support_status"]
+    assert evaluation.evidence_ref.get("remediation_classification") == decision["remediation_classification"]
+    assert evaluation.evidence_ref.get("action_type") == decision["action_type"]
+    assert evaluation.evidence_ref.get("support_reason") == decision["reason"]
+
+
+def test_eks_public_endpoint_world_exposed_is_open_and_explicitly_unsupported() -> None:
+    session = _FakeSession(clients={"eks": _FakeEks(endpoint_public_access=True, public_access_cidrs=["0.0.0.0/0"])})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="eks",
+        resource_ids=["cluster-world-open"],
+    )
+
+    assert len(snapshots) == 1
+    snapshot = snapshots[0]
+    assert snapshot.resource_id == "cluster-world-open"
+    assert snapshot.resource_type == "AwsEksCluster"
+    assert len(snapshot.evaluations) == 1
+
+    evaluation = snapshot.evaluations[0]
+    assert evaluation.control_id == "EKS.PUBLIC_ENDPOINT"
+    assert evaluation.status == "OPEN"
+
+    decision = unsupported_control_decision("EKS.PUBLIC_ENDPOINT")
+    assert decision is not None
+    assert evaluation.evidence_ref.get("support_status") == decision["support_status"]
+    assert evaluation.evidence_ref.get("remediation_classification") == decision["remediation_classification"]
+    assert evaluation.evidence_ref.get("action_type") == decision["action_type"]
+    assert evaluation.evidence_ref.get("support_reason") == decision["reason"]
+
+
+def test_eks_public_endpoint_restricted_cidrs_is_resolved_and_still_unsupported() -> None:
+    session = _FakeSession(clients={"eks": _FakeEks(endpoint_public_access=True, public_access_cidrs=["10.0.0.0/8"])})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="eks",
+        resource_ids=["cluster-restricted"],
+    )
+
+    assert len(snapshots) == 1
+    evaluation = snapshots[0].evaluations[0]
+    assert evaluation.control_id == "EKS.PUBLIC_ENDPOINT"
+    assert evaluation.status == "RESOLVED"
+    assert evaluation.evidence_ref.get("support_status") == "unsupported"
+    assert evaluation.evidence_ref.get("action_type") == "pr_only"
 
 
 def test_collect_inventory_snapshots_s3_includes_s31_account_evaluation() -> None:

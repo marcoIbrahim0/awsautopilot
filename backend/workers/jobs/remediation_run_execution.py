@@ -31,6 +31,13 @@ from backend.models.enums import (
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
 from backend.services.action_run_confirmation import evaluate_confirmation_for_action, record_execution_result
+from backend.services.root_credentials_workflow import (
+    MANUAL_HIGH_RISK_MARKER,
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+    build_manual_high_risk_marker,
+    is_root_credentials_required_action,
+)
 from backend.workers.database import session_scope
 from backend.workers.services.aws import assume_role
 from backend.workers.services.post_apply_reconcile import enqueue_post_apply_reconcile
@@ -198,6 +205,20 @@ def _append_run_log(run: RemediationRun, message: str) -> None:
         run.logs = f"{existing}\n{message}"
     else:
         run.logs = message
+
+
+def _mark_manual_high_risk(run: RemediationRun) -> None:
+    """Persist root-credential manual/high-risk marker on run artifacts."""
+    artifacts: dict[str, object] = {}
+    if isinstance(run.artifacts, dict):
+        artifacts.update(run.artifacts)
+    approved_by_user_id = run.approved_by_user_id if isinstance(run.approved_by_user_id, uuid.UUID) else None
+    artifacts["manual_high_risk"] = build_manual_high_risk_marker(
+        approved_by_user_id=approved_by_user_id,
+        strategy_id=str(artifacts.get("selected_strategy") or ""),
+        action_type=run.action.action_type if run.action else None,
+    )
+    run.artifacts = artifacts
 
 
 def _group_bundle_payload(run: RemediationRun) -> dict | None:
@@ -466,6 +487,24 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                 execution.status,
                 execution.id,
             )
+            return
+        if is_root_credentials_required_action(run.action.action_type if run.action else None):
+            now = datetime.now(timezone.utc)
+            execution.status = RemediationRunExecutionStatus.failed
+            execution.error_summary = "root_credentials_required"
+            execution.completed_at = now
+            run.status = RemediationRunStatus.failed
+            run.outcome = (
+                "Root credentials required. This remediation cannot run in SaaS executor mode. "
+                f"Follow runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+            )
+            _mark_manual_high_risk(run)
+            _append_run_log(
+                run,
+                f"{MANUAL_HIGH_RISK_MARKER}: {ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
+                f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}.",
+            )
+            session.flush()
             return
 
         now = datetime.now(timezone.utc)

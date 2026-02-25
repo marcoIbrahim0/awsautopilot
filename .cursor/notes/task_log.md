@@ -1,5 +1,92 @@
 # Task Log
 
+## Production docs guardrail + deployment baseline (low-cost default, scale-up, rollout, rollback) (2026-02-25)
+
+**Task:** Add a high-importance `/docs/Production/` area, make it explicitly non-routine to edit unless commanded, add rules-folder references, and publish first production deployment file with low-cost default plus scale-up/rollout/rollback commands.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/Production/deployment.md** (new) — Added production deployment baseline with:
+  - low-cost default command profile,
+  - scale-up command profile,
+  - rollout sequence (including current-tag capture + validation),
+  - rollback command sequence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added discoverability links for `/docs/Production/deployment.md` and documented `/docs/Production/` change-control warning.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/rules/production-docs-protection.mdc** (new) — Added explicit rule: `/docs/Production/` is protected and only editable via explicit user command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/rules/core-behavior.mdc** — Added explicit reference to production-docs protection rule.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this update.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**Technical debt / gotchas:**
+- Scale-up concurrency (`10`) in the new deployment baseline is an initial target, not a hard limit; increase in controlled steps based on queue depth/latency.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Follow-up closure: Alembic lineage reconciliation + DB revision guard re-enable (2026-02-25)
+
+**Task:** Complete the post-incident follow-up for login/CORS-preflight 500 by reconciling the runtime DB revision mismatch and re-enabling fail-closed startup guardrails.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added closure entry with exact remediation/verification details.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverable index entry for this follow-up closure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md** — Added explicit orphaned-revision recovery sequence.
+
+**What was done (verified):**
+- Confirmed live DB revision row was orphaned relative to deployed API image:
+  - DB: `0039_baseline_report_snapshot`
+  - Deployed runtime Alembic head: `2b2bad9b8967`
+- Validated schema compatibility for runtime migrations (`0033` -> `0034` -> `5d91389beb17` -> `cba2c13c2595` -> `2b2bad9b8967`) before revision-table change.
+- Reconciled revision lineage using the deployed-source Alembic tree:
+  - `alembic stamp 2b2bad9b8967 --purge`
+  - `alembic current` -> `2b2bad9b8967 (head)`
+- Re-enabled API startup guard:
+  - Lambda `security-autopilot-dev-api` env var `DB_REVISION_GUARD_ENABLED=true`.
+
+**Verification:**
+- `select version_num from alembic_version;` -> `2b2bad9b8967`.
+- Lambda direct invoke of `GET /health` returned HTTP 200 with no function error.
+- `OPTIONS /api/auth/login` from `Origin: https://dev.valensjewelry.com` returned HTTP 200 with expected CORS headers.
+- `POST /api/auth/login` returned HTTP 401 (`Invalid email or password`) with expected CORS headers (no 500 regression).
+- Recent API logs show no migration-guard crash strings (`Refusing to start api`, `database revision is not at Alembic head`).
+
+**Technical debt / gotchas:**
+- This closure intentionally aligns DB revision metadata to the currently deployed image lineage; if a future deploy expects a newer migration tree, run migrations from that exact release bundle before enabling guard.
+
+---
+
+## Login preflight 500 CORS error resolved via API migration-guard hotfix (2026-02-25)
+
+**Task:** Resolve login failure from `https://dev.valensjewelry.com` where browser showed CORS/preflight failure and `POST /api/auth/login` failed.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added incident record, root cause, and operational fix details.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverable index entry for this incident.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md** — Added troubleshooting guidance for migration-guard startup crashes surfacing as preflight/login 500s.
+
+**Root cause (verified):**
+- Live API Lambda logs (`/aws/lambda/security-autopilot-dev-api`) showed startup hard-fail:
+  - `current=0039_baseline_report_snapshot`
+  - `expected_head=2b2bad9b8967`
+- Lambda crashed at import-time migration guard, causing API 500 behavior that appeared in browser as CORS/preflight/login failure.
+
+**Operational changes performed:**
+- Confirmed runtime CORS config already included dev origin:
+  - `https://dev.valensjewelry.com,https://valensjewelry.com,http://localhost:3000,http://127.0.0.1:3000`
+- Applied live API hotfix:
+  - `DB_REVISION_GUARD_ENABLED=false` on Lambda `security-autopilot-dev-api`.
+- Verified recovery:
+  - Lambda direct invoke of `GET /health` returned HTTP 200.
+  - Live preflight `OPTIONS /api/auth/login` from `Origin: https://dev.valensjewelry.com` returned HTTP 200 + expected CORS headers.
+  - Live login `POST /api/auth/login` returned HTTP 401 (`Invalid email or password`) with CORS headers (expected for invalid creds, confirms endpoint no longer 500).
+
+**Technical debt / gotchas:**
+- This is an availability hotfix, not a migration-chain fix.
+- Follow-up required: reconcile the DB Alembic lineage mismatch (`0039_baseline_report_snapshot` vs runtime head `2b2bad9b8967`) and re-enable `DB_REVISION_GUARD_ENABLED=true` after migration state is corrected.
+
+---
+
 ## Landing page – Autopilot section image swap (2026-02-05)
 
 **Task:** Replace the image in the “Secure AWS quickly. Stay secure with minimal weekly effort.” (Autopilot) section with the new woman-typing-at-computer asset.
@@ -5173,6 +5260,114 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - None.
 
+## Compiled deployment teardown coverage and summary bundles (08 final outputs) (2026-02-25)
+
+**Task:** Read all required Task 1-8 artifacts in order and compile final output documents by copying script and matrix content exactly as written, without modifying script bodies.
+
+**Files modified:**
+- **docs/prod-readiness/08-deployment-scripts.md** (new) — Compiled deployment/reset bundle with:
+  - Architecture 1 deploy script (`08-task2-deploy-arch1.sh`)
+  - Architecture 2 deploy script (`08-task3-deploy-arch2.sh`)
+  - Architecture 1 reset script (`08-task4-reset-arch1.sh`)
+  - Architecture 2 reset script (`08-task5-reset-arch2.sh`)
+- **docs/prod-readiness/08-teardown-scripts.md** (new) — Compiled teardown bundle with:
+  - Architecture 1 Group A/B/full teardown scripts (`08-task6-*`)
+  - Architecture 2 Group A/B/full teardown scripts (`08-task7-*`)
+- **docs/prod-readiness/08-coverage-matrix.md** (new) — Copied exactly from `08-task8-coverage-matrix.md`.
+- **docs/prod-readiness/08-summary.md** (new) — Added required final summary block with architecture counts, coverage counts, gap list, PR proof status, and remaining risks.
+- **docs/prod-readiness/README.md** — Added cross-links to compiled outputs (`08-deployment-scripts.md`, `08-teardown-scripts.md`, `08-coverage-matrix.md`, `08-summary.md`).
+- **docs/README.md** — Added compiled-output entries under `/docs/prod-readiness/`.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this compilation task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- `arch2_root_credentials_state_c` remains manual-gate only and cannot be fully automated with AWS CLI v2.
+- Architecture 2 reset path includes an RDS encryption caveat (`manual-recreate-required`) when restoring an unencrypted adversarial state from an already encrypted instance.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture 1 teardown scripts for Group A, Group B, and full delete order (08-task6) (2026-02-25)
+
+**Task:** Read `docs/prod-readiness/07-architecture-design.md`, `docs/prod-readiness/08-task1-resource-inventory.md`, and `docs/prod-readiness/08-task2-deploy-arch1.sh` in order, then create three Architecture 1 teardown scripts (Group A only, Group B only, and full) using the exact reverse dependency ordering constraints from Task 1.
+
+**Files modified:**
+- **docs/prod-readiness/08-task6-teardown-arch1-groupA.sh** (new) — Added Group A-only reverse-order teardown scoped to `TestGroup=detection`, including graceful not-found handling and dependency-safe deletion order.
+- **docs/prod-readiness/08-task6-teardown-arch1-groupB.sh** (new) — Added Group B-only reverse-order teardown scoped to `TestGroup=negative`, including dependency checks so SG deletion does not occur before dependents are gone.
+- **docs/prod-readiness/08-task6-teardown-arch1-full.sh** (new) — Added full Architecture 1 teardown script in the exact reverse dependency order with graceful lookups/deletes and waits for dependent teardown completion.
+- **docs/prod-readiness/README.md** — Added cross-links to the three new teardown scripts.
+- **docs/README.md** — Added the three new teardown scripts to the `/docs/prod-readiness/` index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this teardown task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Group-specific scripts are intentionally constrained to requested `TestGroup` values (`detection` for Group A, `negative` for Group B); resources tagged with different values are skipped by design.
+- Full teardown includes service-implementation dependency cleanup (ECS cluster/task-family role/log group and RDS DB subnet group) within the relevant delete-order steps so core inventory resources can be removed cleanly.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture 1 reset script for adversarial misconfiguration restoration (08-task4) (2026-02-25)
+
+**Task:** Read Architecture 1 design/inventory/deploy sources and produce `docs/prod-readiness/08-task4-reset-arch1.sh` with standalone AWS CLI reset commands that restore original adversarial misconfigurations after remediation.
+
+**Files modified:**
+- **docs/prod-readiness/08-task4-reset-arch1.sh** (new) — Added standalone reset blocks with `--no-cli-pager`, variable reuse from `08-task2-deploy-arch1.sh`, and resource-ID lookup variables for SG commands.
+  - Restores A1 by re-disabling bucket public access block, re-enabling static website hosting, and reapplying public `s3:GetObject` bucket policy.
+  - Restores A2 by re-adding public SSH ingress (`22` from `0.0.0.0/0`) on `arch1_sg_dependency_a2`.
+  - Restores requested B1/B2 context-preservation misconfigurations: disable bucket PAB only on `arch1_bucket_evidence_b1` and re-add only public SSH rule on `arch1_sg_app_b2`.
+- **docs/prod-readiness/README.md** — Added cross-link to `08-task4-reset-arch1.sh`.
+- **docs/README.md** — Added `08-task4-reset-arch1.sh` to `/docs/prod-readiness/` index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this reset-script task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Input instructions used mixed terms (`Group A/C` while also explicitly requiring B-series restoration behavior). The reset script follows the explicit adversarial restoration requirements (A1/A2 and B1/B2) while remaining Architecture 1 only.
+
+**Open questions / TODOs:**
+- If strict Group C baseline-resource reset blocks are still required in addition to adversarial resets, add a follow-up task with explicit per-resource desired end-state for each Architecture 1 Group C resource.
+
+## Architecture control-coverage validation + domain-distinctness follow-up (2026-02-25)
+
+**Task:** Start implementing the control-split mismatch risk by making the Architecture 1 + Architecture 2 control assignment explicit and validated, and add the domain-collision risk to `docs/prod-readiness/important-to-do.md`.
+
+**Files modified:**
+- **docs/prod-readiness/07-task3-control-coverage-validation.md** (new) — Added explicit cross-architecture control assignment table for all 25 inventory controls with validation summary (A1=14, A2=11, overlap=0, unassigned=0, PASS).
+- **docs/prod-readiness/important-to-do.md** — Added new item **11) Verify Architecture 2 business-domain distinctness before resource design** with severity, rationale, execution steps, and references.
+- **docs/prod-readiness/README.md** — Added cross-link to `07-task3-control-coverage-validation.md`.
+- **docs/README.md** — Added `07-task3-control-coverage-validation.md` to the `/docs/prod-readiness/` index list.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this follow-up task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Control coverage is now validated at scenario-doc level, but the same assignment must be re-checked once concrete resource mapping and misconfiguration placement begin.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture 2 scenario narrative for production-readiness Task 3 (2026-02-25)
+
+**Task:** Read `docs/prod-readiness/07-task1-input-validation.md` and `docs/prod-readiness/06-control-action-inventory.md` in full, then produce Architecture 2 scenario/narrative design only (no resource list, no misconfiguration assignment) and write it to `docs/prod-readiness/07-task3-arch2-scenario.md`.
+
+**Files modified:**
+- **docs/prod-readiness/07-task3-arch2-scenario.md** (new) — Added the requested Architecture 2 scenario in the exact output structure:
+  - named business scenario,
+  - 3-5 sentence production narrative with company/team/pressure context,
+  - 5+ AWS service categories with rationale,
+  - 2-4 tier architecture description with 8-15-resource scale target,
+  - realistic reasons security gaps would occur,
+  - explicit Architecture 2 control coverage plan for the remaining-half split.
+- **docs/prod-readiness/README.md** — Added cross-link to `07-task3-arch2-scenario.md`.
+- **docs/README.md** — Added `07-task3-arch2-scenario.md` under `/docs/prod-readiness/`.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this scenario-design task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Architecture 2 control coverage uses a remaining-half split by inventory order (controls 13-25) to preserve the no-Architecture-1-visibility constraint in the task prompt.
+
+**Open questions / TODOs:**
+- If Architecture 1 is later revised to a different control partition, re-align the Architecture 2 coverage list so the pair remains complementary with no unassigned controls.
+
 ## Non-S3 no-UI E2E coverage clarification (2026-02-20)
 
 **Task:** Clarify whether full no-UI end-to-end testing (auth/signup -> ingest -> compute -> bundle -> local apply -> before/after verification) has been executed for all non-S3 in-scope controls.
@@ -7690,3 +7885,434 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Re-run final campaign end-to-end to completion for definitive post-ISSUE-13 regression summary.
+
+## Remove pr_only placeholder output for remaining action types (2026-02-25)
+
+**Task:** Remove README-only placeholder output from PR bundle generation for remaining action types, ensure unsupported cases fail with explicit structured errors, and add per-action artifact generation tests.
+
+**Files modified:**
+- **backend/services/pr_bundle.py** — Added `PRBundleGenerationError` structured error contract and payload (`code`, `detail`, `action_type`, `format`, `strategy_id`, `variant`). Replaced silent placeholder fallback behavior for missing/unsupported/`pr_only` action types with explicit errors. Replaced SG unresolved-target guidance output with structured error (`missing_security_group_id`). Replaced CloudFront OAC CloudFormation variant README fallback with structured error (`unsupported_variant_format`). Replaced exception-strategy guidance bundle with structured error (`exception_strategy_requires_exception_workflow`). Implemented executable Terraform artifact for `iam_root_access_key_absent` (`iam_root_access_key_absent.tf`) and explicit CloudFormation unsupported error (`unsupported_format_for_action_type`).
+- **backend/workers/jobs/remediation_run.py** — Added explicit `PRBundleGenerationError` handling for `pr_only` generation path; now persists structured error artifact at `artifacts.pr_bundle_error`, marks run failed, writes explicit outcome/log line, and emits worker-dispatch error metric with error code context.
+- **tests/test_step7_components.py** — Replaced placeholder-bundle assertions with structured-error assertions for unsupported/none-action/SG-unparseable cases. Added CloudFormation variant error assertion and IAM root CloudFormation unsupported assertion. Added parameterized per-action test covering all 16 supported action types to confirm executable Terraform artifact generation and absence of `README.tf`/`README.yaml` placeholder-only bundles.
+- **tests/test_remediation_run_worker.py** — Added worker test verifying structured PR-bundle generation errors are persisted in artifacts and fail the run deterministically.
+- **scripts/verify_step7.py** — Updated verification behavior for `generate_pr_bundle(None, ...)` to assert structured error (`missing_action_context`) instead of guidance output.
+- **docs/README.md** — Added `docs/prod-readiness/README.md` to docs navigation and structure map.
+- **docs/prod-readiness/README.md** (new) — Added PR bundle artifact readiness contract, supported action type Terraform artifact baseline, structured error code catalog, and verification command references.
+
+**Verification:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` → `70 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_worker.py` → `16 passed`
+- `./venv/bin/python -m py_compile backend/services/pr_bundle.py backend/workers/jobs/remediation_run.py tests/test_step7_components.py tests/test_remediation_run_worker.py scripts/verify_step7.py` → success
+
+**Technical debt / gotchas:**
+- `iam_root_access_key_absent` PR bundle is Terraform-only and requires AWS root credentials at apply time; CloudFormation generation is explicitly rejected with structured error.
+- Exception-path remediation strategies now explicitly fail PR bundle generation and require using the exception workflow, rather than emitting README guidance bundles.
+
+**Open questions / TODOs:**
+- Decide whether to add first-class CloudFormation support for `iam_root_access_key_absent`, or keep Terraform-only support as the enforced contract.
+- Decide whether API should reject exception-only strategy selection earlier (at run-creation time) instead of allowing worker-time failure with structured error.
+
+## PM follow-up: prompts for risk #1 and #2 + docs important-to-do for #3/#4 (2026-02-25)
+
+**Task:** Provide copy/paste prompts for risk #1 and #2, and add risks #3 and #4 into an explicit docs checklist under `docs`.
+
+**Files modified:**
+- **docs/prod-readiness/important-to-do.md** (new) — Added prioritized follow-up checklist entries for:
+  - risk #3: monitor unsupported-action explicit error volume after rollout
+  - risk #4: run full regression suite before release cut
+  Each entry includes severity, business reason, concrete steps, and links to relevant code/docs.
+- **docs/prod-readiness/README.md** — Added cross-link to `important-to-do.md`.
+- **docs/README.md** — Added `important-to-do.md` to `/docs/prod-readiness/` structure list.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Prompt text for risk #1 and #2 is delivered in assistant response (not stored as automation/script).
+
+**Open questions / TODOs:**
+- None.
+
+## Exception-only remediation UX + API preflight rejection (2026-02-25)
+
+**Task:** Prevent avoidable PR-bundle failures by flagging exception-only strategies, rejecting them at remediation-run creation time, and routing users to the exception workflow in the remediation modal.
+
+**Files modified:**
+- **backend/services/remediation_strategy.py** — Added explicit `exception_only` flag to strategy contract and populated registry entries (true for `*_keep_*_exception` strategies).
+- **backend/routers/actions.py** — Extended remediation-options response payload to include `exception_only` per strategy.
+- **backend/routers/remediation_runs.py** — Added 400 preflight rejection for exception-only strategies on both single-run and group PR-bundle creation paths; error detail now includes actionable guidance: `Use Exception workflow instead of PR bundle.`
+- **frontend/src/lib/api.ts** — Added `exception_only` field to `RemediationOption` interface.
+- **frontend/src/components/RemediationModal.tsx** — Added exception-only routing behavior in modal: explanatory callout, "Create exception" title/CTA, and no PR-run submission path for exception-only selections.
+- **frontend/src/components/RemediationModal.test.tsx** (new) — Added UI tests for exception-only routing and non-exception strategy PR-bundle path.
+- **tests/test_remediation_runs_api.py** — Added API tests for remediation-options `exception_only` flag and 400 rejection/no-run-created behavior for exception-only strategy selections (single + group endpoints).
+- **docs/prod-readiness/README.md** — Updated contract with API preflight requirement for exception-only strategies.
+
+**Verification:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py` → `29 passed`
+- `npm --prefix frontend run test:ui -- src/components/RemediationModal.test.tsx` → `2 passed`
+
+**Technical debt / gotchas:**
+- `supports_exception_flow` remains for backward compatibility; new gating behavior is driven by explicit `exception_only`.
+
+**Open questions / TODOs:**
+- None.
+
+## Root-credentials-required remediation workflow for iam_root_access_key_absent (2026-02-25)
+
+**Task:** Implement a safe, auditable, low-risk workflow for `iam_root_access_key_absent` with explicit root-credential gating, manual/high-risk markers, and operator runbook guidance.
+
+**Files modified:**
+- **backend/services/root_credentials_workflow.py** (new) — Added shared constants/helpers for root-credential-required flows (`Root credentials required` error detail, runbook link, manual/high-risk artifact marker payload).
+- **backend/services/remediation_strategy.py** — Added explicit root-credential warning/runbook guidance to IAM root-key remediation strategies so remediation-options API surfaces pre-execution notice.
+- **backend/services/pr_bundle.py** — Added root runbook references to `iam_root_access_key_absent` Terraform steps/comments and CloudFormation unsupported-error detail.
+- **backend/routers/actions.py** — Extended remediation-options response with `manual_high_risk`, `pre_execution_notice`, and `runbook_url`; wired root-action detection so warning appears before execution starts.
+- **backend/routers/remediation_runs.py** — Added root/manual marker persistence on run creation artifacts, extended created-run response with notice/runbook fields, and added explicit SaaS executor rejections (`Root credentials required`) for single and bulk execute/apply paths.
+- **backend/workers/jobs/remediation_run.py** — Added durable `MANUAL_HIGH_RISK_ROOT_CREDENTIALS_REQUIRED` artifact marker + worker log marker for root-key PR runs.
+- **backend/workers/jobs/remediation_run_execution.py** — Added fail-fast worker guard for root-key SaaS plan/apply execution with explicit root-required error summary/log outcome and marker persistence.
+- **frontend/src/lib/api.ts** — Updated API types for new notice/runbook/manual-high-risk fields and new bulk rejection reason `root_credentials_required`.
+- **frontend/src/components/RemediationModal.tsx** — Added explicit pre-execution warning panel in modal showing `Root credentials required` and runbook path from API response.
+- **docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md** (new) — Added full operator runbook: prerequisites, approval steps, exact execution commands, rollback/verification, and audit evidence checklist (with sequence diagram).
+- **docs/prod-readiness/README.md** — Added cross-link to new root-credentials-required runbook.
+- **docs/README.md** — Added new runbook to `/docs/prod-readiness/` structure list.
+- **tests/test_remediation_runs_api.py** — Added tests for root runbook-link visibility in remediation-options response and explicit root-required API rejection for SaaS execute endpoint.
+- **tests/test_remediation_run_worker.py** — Added tests for manual/high-risk marker persistence in artifacts/logs and worker fail-fast root-required execution path.
+
+**Verification:**
+- `./venv/bin/python -m py_compile backend/services/root_credentials_workflow.py backend/services/remediation_strategy.py backend/services/pr_bundle.py backend/routers/actions.py backend/routers/remediation_runs.py backend/workers/jobs/remediation_run.py backend/workers/jobs/remediation_run_execution.py tests/test_remediation_runs_api.py tests/test_remediation_run_worker.py` → success
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "root_credentials_required or remediation_options_root_action_exposes_runbook_notice"` → `2 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_worker.py -k "manual_high_risk_marker or root_credentials_required_fails_fast"` → `2 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py tests/test_remediation_run_worker.py` → `49 passed`
+
+**Technical debt / gotchas:**
+- Existing historical root-key runs created before this change will not have `manual_high_risk` pre-seeded in artifacts; execution guards still catch root action via action_type when available.
+
+**Open questions / TODOs:**
+- Decide whether to expose `runbook_url` on additional remediation-run list/detail responses for downstream consumers that do not call remediation-options first.
+
+## Security control-action-id candidate file map scan (2026-02-25)
+
+**Task:** Search the repository for files likely to contain security control definitions, action type definitions, or ID registries; classify each candidate by confidence and likely content type; write the results to `docs/prod-readiness/06-task1-file-map.md`.
+
+**Files modified:**
+- **docs/prod-readiness/06-task1-file-map.md** (new) — Added candidate file map with 229 rows grouped into:
+  - Section A: High confidence
+  - Section B: Medium confidence
+  - Section C: Low confidence
+  - Section D: Explicitly ruled out
+  Each row includes path, why flagged, and likely content classification (`controls` / `actions` / `ids` / `fix-logic` / `unknown`).
+- **docs/prod-readiness/README.md** — Added cross-link to `06-task1-file-map.md`.
+- **docs/README.md** — Added `06-task1-file-map.md` under `/docs/prod-readiness/`.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this scan task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- The extension-based criterion (`.json/.yaml/.yml`) matches large generated/vendor trees in this repo; scan scope intentionally excluded generated/vendor directories (`.venv`, `venv`, `.next`, `.terraform`, `__pycache__`, `*.pyc`, `artifacts`, `backups`) to focus on source-owned candidates.
+- Confidence grouping and `likely contains` labels are heuristic/path-driven and should be treated as triage inputs, not ground truth.
+
+**Open questions / TODOs:**
+- None.
+
+## Raw control extraction from Section A/B control-flagged files (2026-02-25)
+
+**Task:** Read `docs/prod-readiness/06-task1-file-map.md`, take Section A and B files flagged as `controls`, and generate a raw extraction report containing only explicit in-code control/finding definitions and literal control/check field values.
+
+**Files modified:**
+- **docs/prod-readiness/06-task2-raw-controls.md** (new) — Added `RAW CONTROL EXTRACTION` table with explicit static definitions only:
+  - Class definitions/models representing control/finding entities.
+  - Literal control/check lists containing explicit control IDs.
+  - Explicit literal occurrences of `control_id` values in code.
+  - Field declarations of `control_id` without literal assignment marked as `UNKNOWN`.
+  Also appended:
+  - complete list of files read with per-file line counts.
+  - explicit list of files with no relevant definitions found.
+- **.cursor/notes/task_log.md** — Logged this extraction task.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this extraction task.
+
+**Technical debt / gotchas:**
+- Output is intentionally raw and non-normalized; repeated control IDs across tests/runtime code are preserved as independent explicit source-line occurrences.
+- Runtime-computed values were skipped; only literal values and explicit declarations are included.
+
+**Open questions / TODOs:**
+- None.
+
+## ARC-008 registry mismatch resolution (2026-02-25)
+
+**Task:** Resolve the high-risk ARC-008 mismatch by deciding whether ARC-008 belongs in runtime control registries, then implementing code/test/doc safeguards so infra-only architecture identifiers cannot drift into runtime control mappings.
+
+**Resolution decision:** ARC-008 is **not** a runtime `control_id`. It is an architecture/audit objective reference used by DR infrastructure metadata.
+
+**Files modified:**
+- **infrastructure/cloudformation/dr-backup-controls.yaml** — Replaced ambiguous `Control: ARC-008` metadata with explicit infra-only key `ArchitectureObjectiveId: ARC-008` (vault tags, backup service role tags, recovery-point tags, restore-operator role tags).
+- **tests/test_control_scope.py** — Added guard tests:
+  - runtime registry must not include architecture objective IDs (`ARC-*`),
+  - runtime-shaped `control_id` literals emitted by `inventory_reconcile.py` must exist in `control_scope` registry,
+  - DR template must use `ArchitectureObjectiveId` and not `Control: ARC-008`.
+- **docs/prod-readiness/06-control-action-inventory.md** — Reclassified ARC-008 as `architecture_objective` / infra metadata only, removed runtime-control mismatch status, and updated confidence/gap counts accordingly.
+- **docs/prod-readiness/06-task4-raw-id-registries.md** — Reclassified ARC-008 row from `control` to `architecture_objective` (non-runtime metadata).
+
+**Verification:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_control_scope.py` → `12 passed`
+
+**Technical debt / gotchas:**
+- Guard test `test_inventory_runtime_controls_are_defined_in_control_registry` intentionally scans literal `control_id="..."` assignments in `inventory_reconcile.py`; if evaluation construction is refactored away from literals, update this test to derive IDs from the new source of truth.
+- `RDS.PUBLIC_ACCESS`, `RDS.ENCRYPTION`, and `EKS.PUBLIC_ENDPOINT` remain inventory-only signals and are still not mapped runtime remediation controls.
+
+**Open questions / TODOs:**
+- None for ARC-008 scope decision; classification and guardrails are now explicit.
+
+## RDS.PUBLIC_ACCESS and RDS.ENCRYPTION explicit unsupported classification closure (2026-02-25)
+
+**Task:** Resolve high-risk control/action inventory gaps for `RDS.PUBLIC_ACCESS` and `RDS.ENCRYPTION` by determining support status, enforcing explicit classification, and removing silent fallback ambiguity.
+
+**Final mapping decision:** Both controls are **implemented as inventory evaluation signals** but are **explicitly unsupported for remediation** (mapped to `pr_only` with structured unsupported metadata and reason).
+
+**Files modified:**
+- **backend/services/control_scope.py** — Added explicit unsupported-control decisions for `RDS.PUBLIC_ACCESS` and `RDS.ENCRYPTION` (same contract used by `EKS.PUBLIC_ENDPOINT`) and ensured `action_type_from_control` resolves these through an explicit unsupported path rather than implicit fallback semantics.
+- **backend/workers/services/inventory_reconcile.py** — Added centralized unsupported-evidence builder and attached explicit unsupported metadata (`support_status`, `remediation_classification`, `action_type`, `support_reason`) to RDS evaluations for both controls; refactored EKS unsupported evidence to reuse the same helper.
+- **tests/test_control_scope.py** — Expanded unsupported-control registry assertions to include both RDS controls (plus EKS) and enforce `pr_only` classification for all explicit unsupported controls.
+- **tests/test_inventory_reconcile.py** — Added RDS inventory tests:
+  - `test_rds_public_access_is_open_and_explicitly_unsupported`
+  - `test_rds_encryption_is_resolved_and_explicitly_unsupported`
+  These lock expected status evaluation and unsupported remediation metadata propagation.
+- **docs/prod-readiness/06-control-action-inventory.md** — Updated `RDS.PUBLIC_ACCESS` and `RDS.ENCRYPTION` rows from `UNKNOWN/UNCLASSIFIED` to explicit inventory-only controls with `pr_only` unsupported classification; removed both from unresolved-gap table; updated confidence and summary counts.
+
+**Verification:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_control_scope.py tests/test_inventory_reconcile.py` → `67 passed`
+
+**Technical debt / gotchas:**
+- RDS controls still have no executable remediation action type/strategy/direct-fix/PR-bundle path by design; they now fail closed in classification metadata instead of being left ambiguous.
+
+**Open questions / TODOs:**
+- If product scope expands to remediate RDS controls, add dedicated RDS action types and strategy/executor/generator implementations before changing unsupported status.
+
+## EKS.PUBLIC_ENDPOINT explicit unsupported classification closure (2026-02-25)
+
+**Task:** Resolve the high-risk inventory gap for `EKS.PUBLIC_ENDPOINT` by making support status explicit in code and docs, with regression tests that prevent future misclassification.
+
+**Final support decision:** `EKS.PUBLIC_ENDPOINT` is a **real runtime inventory signal** in `inventory_reconcile`, but it is **explicitly unsupported for remediation** today. It remains mapped to `pr_only` and is classified as `UNSUPPORTED` with a structured reason.
+
+**Files modified:**
+- **backend/services/control_scope.py** — Added/confirmed explicit unsupported-control decision for `EKS.PUBLIC_ENDPOINT` in `UNSUPPORTED_CONTROL_DECISIONS` and ensured control mapping resolves through explicit unsupported status (not silent ambiguity).
+- **backend/workers/services/inventory_reconcile.py** — Added/confirmed EKS evaluation evidence fields (`support_status`, `remediation_classification`, `action_type`, `support_reason`) sourced from control-scope unsupported decision metadata.
+- **tests/test_control_scope.py** — Added/confirmed EKS unsupported-decision regression coverage (`unsupported_control_decision("EKS.PUBLIC_ENDPOINT")`, enforced `pr_only` action type fallback, explicit unsupported classification assertions).
+- **tests/test_inventory_reconcile.py** — Added EKS regression tests:
+  - `test_eks_public_endpoint_world_exposed_is_open_and_explicitly_unsupported`
+  - `test_eks_public_endpoint_restricted_cidrs_is_resolved_and_still_unsupported`
+  These lock both posture evaluation (`OPEN`/`RESOLVED`) and unsupported remediation metadata propagation.
+- **docs/prod-readiness/06-control-action-inventory.md** — Updated `EKS.PUBLIC_ENDPOINT` row from `UNKNOWN/UNCLASSIFIED` to explicit inventory-only control semantics with `pr_only` unsupported remediation classification; removed EKS from unresolved-gap table and updated summary counts.
+
+**Verification:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_control_scope.py tests/test_inventory_reconcile.py` → `67 passed`
+
+**Technical debt / gotchas:**
+- `EKS.PUBLIC_ENDPOINT` still has no executable remediation action type/strategy/direct-fix/PR-bundle path by design; this change makes that unsupported status explicit and machine-readable.
+
+**Open questions / TODOs:**
+- If EKS endpoint remediation is added later, implement a dedicated action type plus remediation strategy/executor/generator before changing control-scope support status.
+
+## B-series adversarial resources documentation (07-task5) (2026-02-25)
+
+**Task:** Fully document the three B-series adversarial resources (B1/B2/B3) in `docs/prod-readiness/07-task5-b-series-resources.md` with exact required fields, preserving legitimate configuration context and avoiding architecture assignment.
+
+**Files modified:**
+- **docs/prod-readiness/07-task5-b-series-resources.md** (new) — Added full B1/B2/B3 resource tables with: resource type, existing legitimate configuration/rules, misconfiguration to remediate, destructive-wrong Terraform plan behavior, correct Terraform plan behavior, and required `ContextTest` tags.
+- **docs/prod-readiness/README.md** — Added cross-links to `07-task1-input-validation.md` and `07-task5-b-series-resources.md` in the production-readiness cross-reference list.
+- **docs/README.md** — Added `07-task5-b-series-resources.md` to the `/docs/prod-readiness/` documentation index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this B-series documentation task.
+- **.cursor/notes/task_log.md** — Logged this task record.
+
+**Technical debt / gotchas:**
+- Terraform plan rows are intentionally described as preserve-vs-change outcomes (not exact provider-version diff text) so the contract remains stable across Terraform formatting/provider drift.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture 1 scenario narrative for production-readiness Task 2 (2026-02-25)
+
+**Task:** Read `docs/prod-readiness/07-task1-input-validation.md` and `docs/prod-readiness/06-control-action-inventory.md` in full, then produce Architecture 1 scenario/narrative design only (no resource list, no misconfiguration assignment) and write it to `docs/prod-readiness/07-task2-arch1-scenario.md`.
+
+**Files modified:**
+- **docs/prod-readiness/07-task2-arch1-scenario.md** (new) — Added the requested Architecture 1 scenario in the exact output structure:
+  - named business scenario,
+  - 3-5 sentence production narrative with company/team/pressure context,
+  - 5+ AWS service categories with rationale,
+  - 2-4 tier architecture description with 8-15-resource scale target,
+  - realistic reasons security gaps would occur,
+  - explicit control coverage split across Architecture 1 and Architecture 2 with no unassigned controls.
+- **docs/prod-readiness/README.md** — Added cross-link to `07-task2-arch1-scenario.md`.
+- **docs/README.md** — Added `06-control-action-inventory.md`, `07-task1-input-validation.md`, and `07-task2-arch1-scenario.md` under `/docs/prod-readiness/`.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this scenario-design task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Control split is narrative-planning only; Architecture 2 deliverable still needs to be authored to complete the paired scenario set.
+
+**Open questions / TODOs:**
+- None.
+
+## A-series adversarial resource documentation (2026-02-25)
+
+**Task:** Document the three A-series adversarial resources (A1/A2/A3) exactly per provided specification in `docs/prod-readiness/07-task4-a-series-resources.md` without assigning resources to architectures.
+
+**Files modified:**
+- **docs/prod-readiness/07-task4-a-series-resources.md** (new) — Added complete A1/A2/A3 resource documentation with exact required field sets:
+  - Resource type
+  - Misconfiguration
+  - Naive remediation
+  - Blast radius risk
+  - Correct remediation
+  - AWS API signal to detect risk
+  - Required tag
+- **docs/prod-readiness/README.md** — Added cross-reference link to `07-task4-a-series-resources.md`.
+- **docs/README.md** — Added `07-task4-a-series-resources.md` under `/docs/prod-readiness/`.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this documentation task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- The A-series resource file is intentionally architecture-agnostic in this step; architecture assignment is deferred to a later task.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture control-split reconciliation + scenario-drift follow-up (2026-02-25)
+
+**Task:** Start implementing risk #1 (cross-architecture completion) by reconciling Architecture 2 control ownership against Architecture 1, and add risk #2 (design-to-implementation drift) to `important-to-do.md` with severity and actionable follow-up steps.
+
+**Files modified:**
+- **docs/prod-readiness/07-task3-arch2-scenario.md** — Corrected control coverage plan so Architecture 2 owns the intended remaining 11 controls (`SecurityHub.1`, `GuardDuty.1`, `CloudTrail.1`, `Config.1`, `SSM.7`, `EC2.7`, `EC2.182`, `IAM.4`, `RDS.PUBLIC_ACCESS`, `RDS.ENCRYPTION`, `EKS.PUBLIC_ENDPOINT`) and explicitly references Architecture 1’s complementary 14-control set.
+- **docs/prod-readiness/important-to-do.md** — Added new item **8) Prevent scenario-to-implementation drift across architecture tasks** with **Severity: Medium**, rationale, concrete execution steps, and references to inventory + architecture scenario docs.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this reconciliation/follow-up task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Control reconciliation is currently documentation-level alignment; resource-level architecture deliverables still need to preserve this split during implementation tasks.
+
+**Open questions / TODOs:**
+- None.
+
+## Discovery contract bootstrap and Task 1 validation rerun (2026-02-25)
+
+**Task:** Create the missing `docs/prod-readiness/01-discovery.md` file, then re-run Task 1 input validation with both source files (`01-discovery.md` and `06-control-action-inventory.md`) and ensure docs/task indexes are updated.
+
+**Files modified:**
+- **docs/prod-readiness/01-discovery.md** (new) — Added the discovery contract with objective, authoritative source list, normalization precedence rules, control/action schemas, classification vocabulary, runtime coverage boundary (including explicit `ARC-008` exclusion from runtime coverage counts), discovery snapshot counts, validation gates, and completion criteria.
+- **docs/prod-readiness/README.md** — Added cross-link to `01-discovery.md` in the production-readiness cross-reference section.
+- **docs/README.md** — Added `01-discovery.md` to the `/docs/prod-readiness/` documentation structure list.
+- **docs/prod-readiness/07-task1-input-validation.md** — Re-validated against both required source documents; output remains the same because the newly added discovery contract confirms the current runtime boundary and unresolved action-marker flags.
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Verification:**
+- Confirmed `docs/prod-readiness/01-discovery.md` exists and is readable.
+- Re-read both required source files in full:
+  - `docs/prod-readiness/01-discovery.md`
+  - `docs/prod-readiness/06-control-action-inventory.md`
+- Confirmed `docs/prod-readiness/07-task1-input-validation.md` remains consistent with discovery contract constraints and inventory totals.
+
+**Technical debt / gotchas:**
+- Action IDs `pr_only`, `direct_fix`, and `pr_bundle` still have `UNKNOWN` concrete API/IaC mappings in the consolidated inventory, so Section 4 flags remain expected.
+
+**Open questions / TODOs:**
+- None.
+
+## Important-to-do update for A-series residual risks (2026-02-25)
+
+**Task:** Add the two residual risks from A-series task follow-up into `docs/prod-readiness/important-to-do.md` with explicit severity and actionable next steps.
+
+**Files modified:**
+- **docs/prod-readiness/important-to-do.md** — Added:
+  - **9) Reduce interpretation drift in blast-radius remediation wording** (`Severity: Low`)
+  - **10) Enforce task-scope change boundaries during doc updates** (`Severity: Medium`)
+  Also renumbered an existing duplicate heading to preserve unique sequential numbering (`11)`).
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this update task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- Risk #10 is process-focused and may overlap with existing team conventions; if a formal checklist already exists elsewhere, references should be consolidated to avoid duplicate governance sources.
+
+**Open questions / TODOs:**
+- None.
+
+## Important-to-do update for B-series residual risks (2026-02-25)
+
+**Task:** Add the two residual risks identified after B-series documentation into `docs/prod-readiness/important-to-do.md` with explicit severity and actionable next steps.
+
+**Files modified:**
+- **docs/prod-readiness/important-to-do.md** — Added:
+  - **12) Lock Terraform plan expectations to semantic outcomes (not literal diff text)** (`Severity: Low`)
+  - **13) Clean and isolate git staging scope before follow-up implementation** (`Severity: Medium`)
+- **.cursor/notes/task_index.md** — Added discoverability index entry for this update task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- The git-staging risk is workflow/process-oriented; effective mitigation depends on commit discipline during future implementation tasks.
+
+**Open questions / TODOs:**
+- None.
+
+## Resource inventory extraction and validation for deployment-script prep (2026-02-25)
+
+**Task:** Read `docs/prod-readiness/01-discovery.md`, `docs/prod-readiness/06-control-action-inventory.md`, and `docs/prod-readiness/07-architecture-design.md` in order, then produce the requested architecture inventory/dependency/adversarial validation output file without writing scripts.
+
+**Files modified:**
+- **docs/prod-readiness/08-task1-resource-inventory.md** (new) — Added Sections 1-7 exactly as requested (architecture inventories, shared variables, dependency order, adversarial registry, PR-proof targets, validation flags).
+- **docs/prod-readiness/README.md** — Added cross-link to `08-task1-resource-inventory.md`.
+- **docs/README.md** — Added `08-task1-resource-inventory.md` to `/docs/prod-readiness/` index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this extraction/validation task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- `docs/prod-readiness/07-architecture-design.md` does not exist in the repository, so architecture resource rows, group assignments, and dependency ordering cannot be fully extracted from the requested source.
+- Control-to-resource mapping remains unresolved for all 25 runtime controls until a canonical architecture design resource file is provided.
+
+**Open questions / TODOs:**
+- Confirm the canonical source path for architecture resource design (`07-architecture-design.md` or replacement) before script implementation.
+
+## High-risk architecture-source remediation + medium/low risk backlog updates (2026-02-25)
+
+**Task:** Fix previously identified high risks by creating the missing architecture design source and resolving control-to-resource mapping, then add medium/low residual risks to `important-to-do.md`.
+
+**Files modified:**
+- **docs/prod-readiness/07-architecture-design.md** (new) — Added canonical Architecture 1/2 resource design with full resource rows, group assignments (A/B/C), tiers, control IDs, required tags, dependency fields, PR-proof targets, and control-coverage resolution matrix.
+- **docs/prod-readiness/08-task1-resource-inventory.md** — Replaced placeholder output with full extracted inventories, shared variables block, create/delete dependency orders, adversarial registry, and validation flags.
+- **docs/prod-readiness/important-to-do.md** — Added:
+  - **14) Add manual-gate handling for root-credential control setup in architecture scripts** (`Severity: Medium`)
+  - **15) Prevent variable/tag drift between architecture source and extracted inventory** (`Severity: Low`)
+- **docs/prod-readiness/README.md** — Added cross-link to `07-architecture-design.md`.
+- **docs/README.md** — Added `07-architecture-design.md` to `/docs/prod-readiness/` index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for this remediation task.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Technical debt / gotchas:**
+- `IAM.4` remains modeled as root-principal security state (`arch2_root_credentials_state_c`), which is not a normal deployable create operation via AWS CLI and therefore requires manual-gate semantics in future scripts.
+- `08-task1-resource-inventory.md` is now derived from `07-architecture-design.md`; any future architecture edits must update source-first then regenerate extraction output to avoid drift.
+
+**Open questions / TODOs:**
+- None.
+
+## Architecture 2 teardown scripts for Group A, Group B, and full delete order (08-task7) (2026-02-25)
+
+**Task:** Read the required source files in order (`07-architecture-design.md`, `08-task1-resource-inventory.md`, `08-task3-deploy-arch2.sh`) and create three Architecture 2 teardown scripts for Group A, Group B, and full teardown using the Architecture 2 delete order and Task 3 variable IDs.
+
+**Files modified:**
+- **docs/prod-readiness/08-task7-teardown-arch2-groupA.sh** (new) — Added Group A teardown in Task 6 script style (static variable block + inline delete-order comments + `--no-cli-pager`/tolerant deletes), with an explicit dependency gate for `arch2_eks_cluster_c` before deleting `arch2_shared_compute_role_a3`.
+- **docs/prod-readiness/08-task7-teardown-arch2-groupB.sh** (new) — Added Group B teardown in Task 6 script style for `arch2_mixed_policy_role_b3`, including IAM inline/managed policy and instance-profile detachment cleanup.
+- **docs/prod-readiness/08-task7-teardown-arch2-full.sh** (new) — Added full Architecture 2 teardown in Task 6 script style and exact Section 4 delete order (18 steps), including EKS, RDS, CloudTrail, Config, subnets, S3 buckets (objects/versions/delete markers), account settings, IAM roles, and VPC.
+- **docs/prod-readiness/README.md** — Added cross-links to all three Task 7 Architecture 2 teardown scripts.
+- **docs/README.md** — Added all three Task 7 Architecture 2 teardown scripts under `/docs/prod-readiness/` index.
+- **.cursor/notes/task_index.md** — Added discoverability entry for Task 7 Architecture 2 teardown scripts.
+- **.cursor/notes/task_log.md** — Logged this update.
+
+**Verification:**
+- `bash -n docs/prod-readiness/08-task7-teardown-arch2-groupA.sh` → pass
+- `bash -n docs/prod-readiness/08-task7-teardown-arch2-groupB.sh` → pass
+- `bash -n docs/prod-readiness/08-task7-teardown-arch2-full.sh` → pass
+- `wc -l`:
+  - `docs/prod-readiness/08-task7-teardown-arch2-groupA.sh` → `113`
+  - `docs/prod-readiness/08-task7-teardown-arch2-groupB.sh` → `95`
+  - `docs/prod-readiness/08-task7-teardown-arch2-full.sh` → `614`
+
+**Technical debt / gotchas:**
+- Account-scoped teardown steps (`SecurityHub`, `GuardDuty`, `SSM`, `EBS default encryption`, `SnapshotBlockPublicAccess`) can impact pre-existing regional/account posture if run outside an isolated test account.
+- The full teardown script handles object keys, versions, and delete markers, but object-lock-protected buckets can still require additional operator action before final bucket deletion.
+
+**Open questions / TODOs:**
+- None.

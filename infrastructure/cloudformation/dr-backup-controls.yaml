@@ -78,7 +78,7 @@ Resources:
       BackupVaultName: !Ref BackupVaultName
       BackupVaultTags:
         Application: SecurityAutopilot
-        Control: ARC-008
+        ArchitectureObjectiveId: ARC-008
 
   DrBackupServiceRole:
     Type: AWS::IAM::Role
@@ -97,7 +97,7 @@ Resources:
       Tags:
         - Key: Application
           Value: SecurityAutopilot
-        - Key: Control
+        - Key: ArchitectureObjectiveId
           Value: ARC-008
 
   DrBackupPlan:
@@ -119,7 +119,7 @@ Resources:
                 - !Ref AWS::NoValue
             RecoveryPointTags:
               Application: SecurityAutopilot
-              Control: ARC-008
+              ArchitectureObjectiveId: ARC-008
             CopyActions:
               - !If
                 - HasSecondaryCopy
@@ -196,7 +196,7 @@ Resources:
       Tags:
         - Key: Application
           Value: SecurityAutopilot
-        - Key: Control
+        - Key: ArchitectureObjectiveId
           Value: ARC-008
 
   BackupJobsFailedAlarm:

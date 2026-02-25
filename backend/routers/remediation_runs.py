@@ -12,7 +12,7 @@ import logging
 import uuid
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Any, Literal, NoReturn, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -45,6 +45,13 @@ from backend.services.remediation_strategy import (
     validate_strategy,
     validate_strategy_inputs,
 )
+from backend.services.root_credentials_workflow import (
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+    build_manual_high_risk_marker,
+    is_root_credentials_required_action,
+    root_credentials_required_error_detail,
+)
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
 from backend.utils.sqs import (
@@ -63,10 +70,49 @@ PR_BUNDLE_UNSUPPORTED_DETAIL = (
     "This action group is pr_only (unmapped control). Terraform/CloudFormation generation "
     "isn't supported yet. Remediate manually in AWS, then click Recompute actions."
 )
+EXCEPTION_ONLY_STRATEGY_ERROR = "Exception-only strategy"
+EXCEPTION_ONLY_STRATEGY_DETAIL = "Use Exception workflow instead of PR bundle."
 ACTIVE_EXECUTION_STATUSES = {
     RemediationRunExecutionStatus.queued,
     RemediationRunExecutionStatus.running,
 }
+
+
+def _root_notice(action_type: str | None) -> tuple[bool, str | None, str | None]:
+    required = is_root_credentials_required_action(action_type)
+    if not required:
+        return False, None, None
+    return True, ROOT_CREDENTIALS_REQUIRED_MESSAGE, ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH
+
+
+def _with_manual_high_risk_marker(
+    artifacts: dict[str, Any] | None,
+    *,
+    approved_by_user_id: uuid.UUID | None,
+    strategy_id: str | None,
+    action_type: str | None,
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(artifacts or {})
+    merged["manual_high_risk"] = build_manual_high_risk_marker(
+        approved_by_user_id=approved_by_user_id,
+        strategy_id=strategy_id,
+        action_type=action_type,
+    )
+    return merged
+
+
+def _run_requires_root_credentials(run: RemediationRun) -> bool:
+    action = getattr(run, "action", None)
+    if action is not None and is_root_credentials_required_action(getattr(action, "action_type", None)):
+        return True
+    if not isinstance(run.artifacts, dict):
+        return False
+    marker = run.artifacts.get("manual_high_risk")
+    if not isinstance(marker, dict):
+        return False
+    if marker.get("requires_root_credentials") is True:
+        return True
+    return is_root_credentials_required_action(str(marker.get("action_type") or ""))
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +195,9 @@ class RemediationRunCreatedResponse(BaseModel):
     status: str
     created_at: str
     updated_at: str
+    manual_high_risk: bool = False
+    pre_execution_notice: str | None = None
+    runbook_url: str | None = None
 
 
 class RemediationRunListItem(BaseModel):
@@ -289,6 +338,7 @@ class BulkExecutionRejectedItem(BaseModel):
         "not_awaiting_approval",
         "already_running",
         "capacity_exceeded",
+        "root_credentials_required",
         "queue_failed",
     ]
     detail: str
@@ -366,6 +416,29 @@ def _enqueue_pr_bundle_execution_message(
 
 def _new_batch_key() -> str:
     return str(uuid.uuid4())
+
+
+def _raise_exception_only_strategy_selected(
+    *,
+    action_type: str,
+    strategy_id: str | None,
+    mode: Literal["pr_only", "direct_fix"],
+) -> NoReturn:
+    emit_validation_failure(
+        logger,
+        reason="exception_only_strategy_selected",
+        action_type=action_type,
+        strategy_id=strategy_id,
+        mode=mode,
+    )
+    strategy_fragment = f" '{strategy_id}'" if strategy_id else ""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail={
+            "error": EXCEPTION_ONLY_STRATEGY_ERROR,
+            "detail": f"Selected strategy{strategy_fragment} is exception-only. {EXCEPTION_ONLY_STRATEGY_DETAIL}",
+        },
+    )
 
 
 def _artifacts_summary(artifacts: dict | None) -> str | None:
@@ -648,6 +721,13 @@ async def create_remediation_run(
                 detail={"error": "Invalid strategy selection", "detail": str(exc)},
             ) from exc
 
+        if selected_strategy.get("exception_only"):
+            _raise_exception_only_strategy_selected(
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+
         risk_snapshot = evaluate_strategy_impact(
             action,
             selected_strategy,
@@ -867,6 +947,14 @@ async def create_remediation_run(
         artifacts["pr_bundle_variant"] = normalized_variant
     if legacy_variant_mapped_from:
         artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
+    root_required, pre_execution_notice, runbook_url = _root_notice(action.action_type)
+    if root_required:
+        artifacts = _with_manual_high_risk_marker(
+            artifacts,
+            approved_by_user_id=current_user.id,
+            strategy_id=selected_strategy_id,
+            action_type=action.action_type,
+        )
 
     run = RemediationRun(
         tenant_id=tenant_uuid,
@@ -933,6 +1021,9 @@ async def create_remediation_run(
         status=run.status.value,
         created_at=run.created_at.isoformat(),
         updated_at=run.updated_at.isoformat(),
+        manual_high_risk=root_required,
+        pre_execution_notice=pre_execution_notice,
+        runbook_url=runbook_url,
     )
 
 
@@ -1135,6 +1226,13 @@ async def create_group_pr_bundle_run(
                 detail={"error": "Invalid strategy selection", "detail": str(exc)},
             ) from exc
 
+        if selected_strategy.get("exception_only"):
+            _raise_exception_only_strategy_selected(
+                action_type=action_type,
+                strategy_id=selected_strategy_id,
+                mode="pr_only",
+            )
+
         risk_snapshot = evaluate_strategy_impact(
             representative,
             selected_strategy,
@@ -1277,6 +1375,14 @@ async def create_group_pr_bundle_run(
         artifacts["pr_bundle_variant"] = normalized_variant
     if legacy_variant_mapped_from:
         artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
+    root_required, pre_execution_notice, runbook_url = _root_notice(action_type)
+    if root_required:
+        artifacts = _with_manual_high_risk_marker(
+            artifacts,
+            approved_by_user_id=current_user.id,
+            strategy_id=selected_strategy_id,
+            action_type=action_type,
+        )
 
     run = RemediationRun(
         tenant_id=tenant_uuid,
@@ -1344,6 +1450,9 @@ async def create_group_pr_bundle_run(
         status=run.status.value,
         created_at=run.created_at.isoformat(),
         updated_at=run.updated_at.isoformat(),
+        manual_high_risk=root_required,
+        pre_execution_notice=pre_execution_notice,
+        runbook_url=runbook_url,
     )
 
 
@@ -1677,6 +1786,18 @@ async def bulk_execute_pr_bundle_plan(
                 )
             )
             continue
+        if _run_requires_root_credentials(run):
+            response.rejected.append(
+                BulkExecutionRejectedItem(
+                    run_id=value,
+                    reason="root_credentials_required",
+                    detail=(
+                        "Root credentials required. This remediation cannot run in SaaS executor mode. "
+                        f"Follow runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+                    ),
+                )
+            )
+            continue
         if not isinstance(run.artifacts, dict) or not isinstance(run.artifacts.get("pr_bundle"), dict):
             response.rejected.append(
                 BulkExecutionRejectedItem(
@@ -1845,7 +1966,9 @@ async def bulk_approve_apply_pr_bundle(
 
     if parsed_ids:
         runs_result = await db.execute(
-            select(RemediationRun).where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.id.in_(parsed_ids))
+            select(RemediationRun)
+            .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.id.in_(parsed_ids))
+            .options(selectinload(RemediationRun.action))
         )
         runs = {run.id: run for run in runs_result.scalars().all()}
     else:
@@ -1874,6 +1997,18 @@ async def bulk_approve_apply_pr_bundle(
                     run_id=value,
                     reason="invalid_mode",
                     detail="Only pr_only runs are supported.",
+                )
+            )
+            continue
+        if _run_requires_root_credentials(run):
+            response.rejected.append(
+                BulkExecutionRejectedItem(
+                    run_id=value,
+                    reason="root_credentials_required",
+                    detail=(
+                        "Root credentials required. This remediation cannot run in SaaS executor mode. "
+                        f"Follow runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+                    ),
                 )
             )
             continue
@@ -2067,6 +2202,11 @@ async def execute_pr_bundle_plan(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Invalid mode", "detail": "SaaS bundle execution is only supported for pr_only runs."},
         )
+    if _run_requires_root_credentials(run):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=root_credentials_required_error_detail(),
+        )
     if not isinstance(run.artifacts, dict) or not isinstance(run.artifacts.get("pr_bundle"), dict):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2173,6 +2313,7 @@ async def approve_apply_pr_bundle(
     run_result = await db.execute(
         select(RemediationRun)
         .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
+        .options(selectinload(RemediationRun.action))
     )
     run = run_result.scalar_one_or_none()
     if run is None:
@@ -2184,6 +2325,11 @@ async def approve_apply_pr_bundle(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Invalid mode", "detail": "SaaS bundle execution is only supported for pr_only runs."},
+        )
+    if _run_requires_root_credentials(run):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=root_credentials_required_error_detail(),
         )
 
     latest_result = await db.execute(

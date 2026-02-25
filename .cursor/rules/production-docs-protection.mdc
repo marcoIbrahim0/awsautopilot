@@ -1,0 +1,17 @@
+---
+description: Guardrails for high-importance production documentation
+globs: **/*
+alwaysApply: true
+---
+# Production Docs Protection Rule
+
+- Treat `/docs/Production/` as protected, high-importance operator documentation.
+- Do not create, edit, move, or delete files under `/docs/Production/` unless the user gives an explicit command to do so.
+- When changes are explicitly requested:
+  - keep scope minimal and command-focused,
+  - use real stack names and script paths from this repository,
+  - include rollout and rollback commands.
+- Any `/docs/Production/` change must also update:
+  - `/docs/README.md`,
+  - `.cursor/notes/task_log.md`,
+  - `.cursor/notes/task_index.md`.

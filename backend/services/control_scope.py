@@ -48,6 +48,16 @@ class InScopeControl(TypedDict):
     subsection: str
 
 
+class UnsupportedControlDecision(TypedDict):
+    """Explicit support decision for controls intentionally out of remediation scope."""
+
+    control_id: str
+    action_type: str
+    remediation_classification: str
+    support_status: str
+    reason: str
+
+
 # Canonical list for documentation and tests (one primary control per action type).
 IN_SCOPE_CONTROLS: tuple[InScopeControl, ...] = (
     InScopeControl(
@@ -208,6 +218,43 @@ IN_SCOPE_CONTROL_TOKENS: frozenset[str] = frozenset(
 # Default action type when control is not in scope.
 ACTION_TYPE_DEFAULT = "pr_only"
 
+# Explicitly unsupported controls: known inventory signals with no implemented remediation.
+UNSUPPORTED_CONTROL_DECISIONS: dict[str, UnsupportedControlDecision] = {
+    "RDS.PUBLIC_ACCESS": UnsupportedControlDecision(
+        control_id="RDS.PUBLIC_ACCESS",
+        action_type=ACTION_TYPE_DEFAULT,
+        remediation_classification="UNSUPPORTED",
+        support_status="unsupported",
+        reason=(
+            "Inventory-only visibility exists, but no mapped remediation action type, "
+            "strategy, direct-fix executor, or PR-bundle generator is implemented."
+        ),
+    ),
+    "RDS.ENCRYPTION": UnsupportedControlDecision(
+        control_id="RDS.ENCRYPTION",
+        action_type=ACTION_TYPE_DEFAULT,
+        remediation_classification="UNSUPPORTED",
+        support_status="unsupported",
+        reason=(
+            "Inventory-only visibility exists, but no mapped remediation action type, "
+            "strategy, direct-fix executor, or PR-bundle generator is implemented."
+        ),
+    ),
+    "EKS.PUBLIC_ENDPOINT": UnsupportedControlDecision(
+        control_id="EKS.PUBLIC_ENDPOINT",
+        action_type=ACTION_TYPE_DEFAULT,
+        remediation_classification="UNSUPPORTED",
+        support_status="unsupported",
+        reason=(
+            "Inventory-only visibility exists, but no mapped remediation action type, "
+            "strategy, direct-fix executor, or PR-bundle generator is implemented."
+        ),
+    ),
+}
+_UNSUPPORTED_CONTROL_DECISIONS_NORMALIZED: dict[str, UnsupportedControlDecision] = {
+    control_id.upper(): decision for control_id, decision in UNSUPPORTED_CONTROL_DECISIONS.items()
+}
+
 
 def _normalize_control_id(control_id: str | None) -> str | None:
     """
@@ -235,7 +282,17 @@ def action_type_from_control(control_id: str | None) -> str:
         return ACTION_TYPE_DEFAULT
     if normalized in _CONTROL_TO_ACTION_TYPE_NORMALIZED:
         return _CONTROL_TO_ACTION_TYPE_NORMALIZED[normalized]
+    if normalized in _UNSUPPORTED_CONTROL_DECISIONS_NORMALIZED:
+        return ACTION_TYPE_DEFAULT
     return _CONTROL_ALIAS_TO_ACTION_TYPE_NORMALIZED.get(normalized, ACTION_TYPE_DEFAULT)
+
+
+def unsupported_control_decision(control_id: str | None) -> UnsupportedControlDecision | None:
+    """Return explicit unsupported-control metadata when a control is intentionally unsupported."""
+    normalized = _normalize_control_id(control_id)
+    if not normalized:
+        return None
+    return _UNSUPPORTED_CONTROL_DECISIONS_NORMALIZED.get(normalized)
 
 
 def canonical_control_id_for_action_type(action_type: str, observed_control_id: str | None) -> str | None:

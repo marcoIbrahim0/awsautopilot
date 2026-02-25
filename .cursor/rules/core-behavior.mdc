@@ -9,6 +9,7 @@ alwaysApply: true
 - ALWAYS read `.cursor/notes/project_status.md` before starting a task.
 - ALWAYS ask for clarification if a task is ambiguous. 
 - NEVER assume AWS service names; check the `aws_constants.py` file first.
+- ALWAYS apply the production-docs protection policy in `.cursor/rules/production-docs-protection.mdc` before touching `/docs/Production/`.
 - Before writing code, provide a **Step-by-Step Plan** and wait for user approval.
 
 ## 2. Complexity Control

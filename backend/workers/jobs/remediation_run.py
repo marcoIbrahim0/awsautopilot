@@ -2,7 +2,7 @@
 Remediation run job handler (Step 7.3 + 8.3).
 
 Picks up remediation_run jobs from SQS, updates run status (pending → running → success/failed),
-calls PR bundle scaffold for pr_only, or direct fix executor for direct_fix. Idempotent: skips
+calls PR bundle generator for pr_only, or direct fix executor for direct_fix. Idempotent: skips
 if run already success or failed.
 """
 from __future__ import annotations
@@ -27,8 +27,15 @@ from backend.models.aws_account import AwsAccount
 from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
 from backend.services.remediation_metrics import emit_worker_dispatch_error
-from backend.services.pr_bundle import generate_pr_bundle
+from backend.services.pr_bundle import PRBundleGenerationError, generate_pr_bundle
 from backend.services.remediation_audit import allow_update_outcome, write_remediation_run_audit
+from backend.services.root_credentials_workflow import (
+    MANUAL_HIGH_RISK_MARKER,
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+    build_manual_high_risk_marker,
+    is_root_credentials_required_action,
+)
 from backend.workers.database import session_scope
 from backend.workers.services.aws import assume_role
 from backend.workers.services.direct_fix import run_direct_fix
@@ -855,6 +862,50 @@ def _execute_direct_fix(session: Session, run: RemediationRun, log_lines: list[s
         run.artifacts["direct_fix"] = {"outcome": result.outcome}
 
 
+def _ensure_manual_high_risk_marker(run: RemediationRun, strategy_id: str | None) -> bool:
+    """Attach manual/high-risk marker for root-credentials-required remediation runs."""
+    action_type = run.action.action_type if run.action else None
+    if not is_root_credentials_required_action(action_type):
+        return False
+    approved_by_user_id = getattr(run, "approved_by_user_id", None)
+    if not isinstance(approved_by_user_id, uuid.UUID):
+        approved_by_user_id = None
+    artifacts: dict[str, object] = {}
+    if isinstance(run.artifacts, dict):
+        artifacts.update(run.artifacts)
+    artifacts["manual_high_risk"] = build_manual_high_risk_marker(
+        approved_by_user_id=approved_by_user_id,
+        strategy_id=strategy_id,
+        action_type=action_type,
+    )
+    run.artifacts = artifacts
+    return True
+
+
+def _apply_pr_bundle_error(
+    run: RemediationRun,
+    *,
+    error: PRBundleGenerationError,
+    log_lines: list[str],
+) -> str:
+    """Store structured PR-bundle error details on remediation run artifacts."""
+    payload = error.as_dict()
+    artifacts: dict = {}
+    if isinstance(run.artifacts, dict):
+        artifacts.update(run.artifacts)
+    artifacts["pr_bundle_error"] = payload
+    run.artifacts = artifacts
+    raw_strategy = payload.get("strategy_id")
+    selected_strategy_id = raw_strategy if isinstance(raw_strategy, str) and raw_strategy.strip() else None
+    _ensure_manual_high_risk_marker(run, selected_strategy_id)
+    code = payload.get("code") or "pr_bundle_generation_error"
+    detail = payload.get("detail") or "PR bundle generation failed."
+    run.outcome = f"PR bundle generation failed: {code}"
+    run.status = RemediationRunStatus.failed
+    log_lines.append(f"PR bundle generation failed ({code}): {detail}")
+    return code
+
+
 def execute_remediation_run_job(job: dict) -> None:
     """
     Process a remediation_run job: update run row, call PR bundle scaffold for pr_only,
@@ -998,6 +1049,11 @@ def execute_remediation_run_job(job: dict) -> None:
                         stored_risk = run.artifacts.get("risk_snapshot")
                         if isinstance(stored_risk, dict):
                             selected_risk_snapshot = stored_risk
+                    if _ensure_manual_high_risk_marker(run, selected_strategy_id):
+                        log_lines.append(
+                            f"{MANUAL_HIGH_RISK_MARKER}: {ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
+                            f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+                        )
                     raw_group_action_ids = job.get("group_action_ids")
                     group_reporting_callback_url: str | None = None
                     group_reporting_token: str | None = None
@@ -1135,6 +1191,17 @@ def execute_remediation_run_job(job: dict) -> None:
                             log_lines.append(
                                 f"PR bundle generated for action_type={action.action_type}."
                             )
+            except PRBundleGenerationError as error:
+                error_code = _apply_pr_bundle_error(run, error=error, log_lines=log_lines)
+                emit_worker_dispatch_error(
+                    logger,
+                    phase=f"pr_bundle_generation_error:{error_code}",
+                    run_id=run_id_str,
+                    action_type=run.action.action_type if run.action else None,
+                    strategy_id=selected_strategy_id,
+                    mode=mode_str,
+                )
+                worker_error_emitted = True
             except Exception as e:
                 logger.exception("PR bundle generation failed for run_id=%s: %s", run_id_str, e)
                 run.outcome = f"PR bundle generation failed: {e}"

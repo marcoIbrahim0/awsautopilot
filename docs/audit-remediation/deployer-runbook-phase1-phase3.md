@@ -401,12 +401,39 @@ Expected success response:
 | --- | --- | --- |
 | Worker queue grows, runs stay pending | Worker mappings disabled or function throttled | Re-run deploy with `--enable-worker true --worker-reserved-concurrency 0`; verify mappings are `Enabled` |
 | `alembic` mismatch / startup fails | DB not at head revision | Run `alembic upgrade head` and `python3 scripts/check_migration_gate.py` |
+| Browser shows `CORS error` with preflight/login 500 | API Lambda cold-start crash (migration guard fail) despite correct CORS config | Check `/aws/lambda/<name>-api` for `database revision is not at Alembic head`; run migrations from the same deployed code lineage. For emergency availability restore, temporarily set `DB_REVISION_GUARD_ENABLED=false`, then reconcile revision lineage and re-enable. |
 | Browser login fails with CORS despite OPTIONS success | CORS origins/headers mismatch for credentialed requests | Ensure `CORS_ORIGINS` includes frontend origins and API stack has explicit allow methods/headers |
 | `CSRF validation failed` on cross-subdomain | CSRF cookie domain not shared across subdomains | Ensure `FRONTEND_URL` is set correctly and/or set `CSRF_COOKIE_DOMAIN=.valensjewelry.com` |
 | `ApiMapping CREATE_FAILED` on custom domain | Domain/certificate mapping race or invalid domain/cert | Verify `ApiDomainName` + `ApiCertificateArn` values, certificate status `ISSUED`, then redeploy runtime |
 | `curl: Could not resolve host api.valensjewelry.com` | DNS propagation or Cloudflare record issue | Verify Cloudflare CNAME points to `ApiCustomDomainTarget`, wait propagation, keep proxy off initially |
 | Runs stuck queued after enqueue error | Queue send failed at API time | Check API logs, fix queue config, then retry using `/api/remediation-runs/{run_id}/resend` |
 | `/ready` returns degraded | DB/SQS readiness issue | Validate DB connectivity, queue URLs in `config/.env.ops`, and queue attributes via `aws sqs get-queue-attributes` |
+
+### Orphaned Alembic Revision Recovery (fail-closed startup restore)
+
+Use this when API startup fails with `database revision is not at Alembic head` and the `alembic_version` value is not present in the deployed image's Alembic tree.
+
+1. Identify the currently deployed runtime source bundle for the active image tag and extract it (so Alembic commands run against the exact migration lineage used by runtime).
+2. Confirm expected head from that extracted bundle:
+```bash
+cd /tmp/saas_runtime_src_<DEPLOYED_TAG>
+alembic heads
+```
+3. Validate schema compatibility for migrations up to that head (table/column/index checks via `psql`).
+4. Restamp revision metadata to the deployed head:
+```bash
+cd /tmp/saas_runtime_src_<DEPLOYED_TAG>
+alembic stamp <EXPECTED_HEAD> --purge
+alembic current
+```
+5. Re-enable startup guard (`DB_REVISION_GUARD_ENABLED=true`) on the API Lambda and verify:
+```bash
+aws lambda get-function-configuration --region eu-north-1 --function-name security-autopilot-dev-api \
+  --query "Environment.Variables.DB_REVISION_GUARD_ENABLED"
+```
+6. Final checks: `GET /health`, CORS preflight/login path, and log scan for absence of:
+   - `Refusing to start api`
+   - `database revision is not at Alembic head`
 
 ## Rollback / Safe Re-Run Procedure
 

@@ -13,6 +13,7 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
+from backend.services.control_scope import unsupported_control_decision
 from backend.workers.services.control_plane_events import (
     SHADOW_STATUS_OPEN,
     SHADOW_STATUS_RESOLVED,
@@ -39,6 +40,12 @@ INVENTORY_SERVICES_DEFAULT: tuple[str, ...] = (
     "guardduty",
     "securityhub",
 )
+_RDS_PUBLIC_ACCESS_CONTROL_ID = "RDS.PUBLIC_ACCESS"
+_RDS_ENCRYPTION_CONTROL_ID = "RDS.ENCRYPTION"
+_EKS_PUBLIC_ENDPOINT_CONTROL_ID = "EKS.PUBLIC_ENDPOINT"
+_RDS_PUBLIC_ACCESS_UNSUPPORTED_DECISION = unsupported_control_decision(_RDS_PUBLIC_ACCESS_CONTROL_ID)
+_RDS_ENCRYPTION_UNSUPPORTED_DECISION = unsupported_control_decision(_RDS_ENCRYPTION_CONTROL_ID)
+_EKS_PUBLIC_ENDPOINT_UNSUPPORTED_DECISION = unsupported_control_decision(_EKS_PUBLIC_ENDPOINT_CONTROL_ID)
 
 
 def _extract_error_code(exc: Exception) -> str:
@@ -98,6 +105,25 @@ def _control_eval(
         state_confidence=state_confidence,
         evidence_ref=evidence_ref,
     )
+
+
+def _unsupported_control_evidence(decision: dict[str, Any] | None) -> dict[str, str]:
+    if decision is None:
+        return {
+            "support_status": "unsupported",
+            "remediation_classification": "UNSUPPORTED",
+            "action_type": "pr_only",
+            "support_reason": (
+                "Inventory-only visibility exists, but no mapped remediation action type, "
+                "strategy, direct-fix executor, or PR-bundle generator is implemented."
+            ),
+        }
+    return {
+        "support_status": str(decision["support_status"]),
+        "remediation_classification": str(decision["remediation_classification"]),
+        "action_type": str(decision["action_type"]),
+        "support_reason": str(decision["reason"]),
+    }
 
 
 def _s3_bucket_region(s3_client: Any, bucket: str) -> str | None:
@@ -1003,6 +1029,12 @@ def _collect_rds_instances(
     max_resources: int,
 ) -> list[InventorySnapshot]:
     rds = session_boto.client("rds", region_name=region)
+    public_access_unsupported_evidence = _unsupported_control_evidence(
+        _RDS_PUBLIC_ACCESS_UNSUPPORTED_DECISION
+    )
+    encryption_unsupported_evidence = _unsupported_control_evidence(
+        _RDS_ENCRYPTION_UNSUPPORTED_DECISION
+    )
     instances: list[dict[str, Any]] = []
     if resource_ids:
         for rid in resource_ids:
@@ -1034,24 +1066,32 @@ def _collect_rds_instances(
         encrypted = bool(inst.get("StorageEncrypted"))
         evals = [
             _control_eval(
-                control_id="RDS.PUBLIC_ACCESS",
+                control_id=_RDS_PUBLIC_ACCESS_CONTROL_ID,
                 resource_id=identifier,
                 resource_type="AwsRdsDbInstance",
                 status=SHADOW_STATUS_OPEN if public else SHADOW_STATUS_RESOLVED,
                 title="RDS instance is publicly accessible",
                 description="Inventory-only signal for RDS network exposure.",
                 status_reason=("inventory_confirmed_non_compliant" if public else "inventory_confirmed_compliant"),
-                evidence_ref={"source": "inventory", "publicly_accessible": public},
+                evidence_ref={
+                    "source": "inventory",
+                    "publicly_accessible": public,
+                    **public_access_unsupported_evidence,
+                },
             ),
             _control_eval(
-                control_id="RDS.ENCRYPTION",
+                control_id=_RDS_ENCRYPTION_CONTROL_ID,
                 resource_id=identifier,
                 resource_type="AwsRdsDbInstance",
                 status=SHADOW_STATUS_RESOLVED if encrypted else SHADOW_STATUS_OPEN,
                 title="RDS storage encryption enabled",
                 description="Inventory-only signal for RDS at-rest encryption.",
                 status_reason=("inventory_confirmed_compliant" if encrypted else "inventory_confirmed_non_compliant"),
-                evidence_ref={"source": "inventory", "storage_encrypted": encrypted},
+                evidence_ref={
+                    "source": "inventory",
+                    "storage_encrypted": encrypted,
+                    **encryption_unsupported_evidence,
+                },
                 severity_label="MEDIUM",
             ),
         ]
@@ -1088,6 +1128,7 @@ def _collect_eks_clusters(
     max_resources: int,
 ) -> list[InventorySnapshot]:
     eks = session_boto.client("eks", region_name=region)
+    unsupported_evidence = _unsupported_control_evidence(_EKS_PUBLIC_ENDPOINT_UNSUPPORTED_DECISION)
     if resource_ids:
         cluster_names = [str(v).strip() for v in resource_ids if str(v).strip()]
     else:
@@ -1117,7 +1158,7 @@ def _collect_eks_clusters(
         world_exposed = endpoint_public and (not public_cidrs or WORLD_IPV4 in public_cidrs)
         evals = [
             _control_eval(
-                control_id="EKS.PUBLIC_ENDPOINT",
+                control_id=_EKS_PUBLIC_ENDPOINT_CONTROL_ID,
                 resource_id=cluster_name,
                 resource_type="AwsEksCluster",
                 status=SHADOW_STATUS_OPEN if world_exposed else SHADOW_STATUS_RESOLVED,
@@ -1130,6 +1171,7 @@ def _collect_eks_clusters(
                     "source": "inventory",
                     "endpoint_public_access": endpoint_public,
                     "public_access_cidrs": public_cidrs,
+                    **unsupported_evidence,
                 },
             )
         ]

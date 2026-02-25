@@ -12,7 +12,12 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Any, Literal, NoReturn, Protocol, TypedDict
+
+from backend.services.root_credentials_workflow import (
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+)
 
 # ---------------------------------------------------------------------------
 # Contract: return shape and action interface
@@ -44,6 +49,27 @@ class PRBundleResult(TypedDict):
     files: list[PRBundleFile]
     steps: list[str]
 
+
+class PRBundleErrorPayload(TypedDict):
+    """Structured payload emitted when PR bundle generation cannot continue."""
+
+    code: str
+    detail: str
+    action_type: str
+    format: str
+    strategy_id: str
+    variant: str
+
+
+class PRBundleGenerationError(RuntimeError):
+    """Typed error for unsupported or non-runnable PR bundle requests."""
+
+    def __init__(self, payload: PRBundleErrorPayload) -> None:
+        super().__init__(payload["detail"])
+        self.payload = payload
+
+    def as_dict(self) -> PRBundleErrorPayload:
+        return PRBundleErrorPayload(**self.payload)
 
 class ActionLike(Protocol):
     """
@@ -107,6 +133,27 @@ SUPPORTED_ACTION_TYPES = frozenset({
 })
 
 
+def _raise_pr_bundle_error(
+    *,
+    code: str,
+    detail: str,
+    action_type: str | None = None,
+    format: str | None = None,
+    strategy_id: str | None = None,
+    variant: str | None = None,
+) -> NoReturn:
+    """Raise a structured PR-bundle generation error."""
+    payload: PRBundleErrorPayload = {
+        "code": code,
+        "detail": detail,
+        "action_type": action_type or "",
+        "format": format or "",
+        "strategy_id": strategy_id or "",
+        "variant": variant or "",
+    }
+    raise PRBundleGenerationError(payload)
+
+
 def generate_pr_bundle(
     action: ActionLike | None,
     format: str = "terraform",
@@ -120,13 +167,13 @@ def generate_pr_bundle(
 
     Loads action context (action_type, account_id, region, target_id, title,
     control_id) from the provided action object and delegates to the
-    appropriate generator. Unsupported or missing action yields a guidance
-    placeholder.
+    appropriate generator. Unsupported or missing action raises a structured
+    error.
 
     Args:
         action: Action instance (e.g. run.action from worker). Must have
             action_type, account_id, region, target_id, title, control_id.
-            If None, returns unsupported-guidance bundle.
+            If None, raises PRBundleGenerationError.
         format: "terraform" or "cloudformation". Default terraform.
         strategy_id: Optional strategy identifier selected in remediation flow.
         strategy_inputs: Optional strategy input values.
@@ -139,11 +186,36 @@ def generate_pr_bundle(
     normalized_format = _normalize_format(format)
 
     if action is None:
-        return _maybe_append_terraform_readme(_generate_unsupported(None, normalized_format))
+        _raise_pr_bundle_error(
+            code="missing_action_context",
+            detail="Action context is required for PR bundle generation.",
+            format=normalized_format,
+        )
 
     action_type = (action.action_type or "").strip().lower()
+    if not action_type:
+        _raise_pr_bundle_error(
+            code="missing_action_type",
+            detail="Action type is required for PR bundle generation.",
+            format=normalized_format,
+        )
+    if action_type == ACTION_TYPE_PR_ONLY:
+        _raise_pr_bundle_error(
+            code="pr_only_action_type_unsupported",
+            detail=(
+                "Action type 'pr_only' does not map to executable IaC generation. "
+                "Use a mapped remediation action type."
+            ),
+            action_type=action_type,
+            format=normalized_format,
+        )
     if action_type not in SUPPORTED_ACTION_TYPES:
-        return _maybe_append_terraform_readme(_generate_unsupported(action, normalized_format))
+        _raise_pr_bundle_error(
+            code="unsupported_action_type",
+            detail=f"Action type '{action_type}' is not supported for PR bundle generation.",
+            action_type=action_type,
+            format=normalized_format,
+        )
 
     # Dispatch: all 7 generators (9.2–9.5, 9.9–9.12)
     result: PRBundleResult
@@ -447,8 +519,8 @@ def _security_group_id_from_action_context(action: ActionLike, target_id: str) -
     Resolve SG ID from action context, trying target_id first then richer fields.
 
     Older/stale actions may have account-scoped target_id while resource_id still
-    contains the SG ARN. Returning None lets callers produce guidance instead of
-    invalid IaC with a placeholder SG ID.
+    contains the SG ARN. Returning None lets callers raise a structured error
+    instead of emitting invalid IaC with placeholder IDs.
     """
     candidates = [
         target_id,
@@ -842,23 +914,16 @@ def _generate_for_s3_cloudfront_oac_private(action: ActionLike, format: PRBundle
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
 
     if format == CLOUDFORMATION_FORMAT:
-        files = [
-            PRBundleFile(
-                path="README.yaml",
-                content=(
-                    f"# S3.2 migration variant requested for action {meta['action_id']}\n"
-                    "# CloudFormation bundle is not implemented for this variant yet.\n"
-                    "# Use Terraform format to generate CloudFront + OAC + private S3 resources.\n"
-                ),
-            )
-        ]
-        steps = [
-            f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
-            "Regenerate this remediation in Terraform format.",
-            "Apply Terraform resources (CloudFront + OAC + private S3 hardening).",
-            "Recompute actions after validation.",
-        ]
-        return PRBundleResult(format=format, files=files, steps=steps)
+        _raise_pr_bundle_error(
+            code="unsupported_variant_format",
+            detail=(
+                "Variant 'cloudfront_oac_private_s3' is only supported for terraform format."
+            ),
+            action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            format=format,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+        )
 
     files = [
         PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
@@ -1524,15 +1589,14 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
     region = meta["region"]
     sg_id = _security_group_id_from_action_context(action, meta["target_id"])
     if not sg_id:
-        return _generate_for_guidance_bundle(
-            action,
-            format,
-            "Security group ID required for EC2.53 remediation",
-            [
-                "Could not infer a valid `sg-...` identifier from this action target/resource metadata.",
-                "Refresh finding ingest and recompute actions so EC2.53 maps to an `AwsEc2SecurityGroup` resource.",
-                "Regenerate the PR bundle after the action includes a concrete security-group ID.",
-            ],
+        _raise_pr_bundle_error(
+            code="missing_security_group_id",
+            detail=(
+                "Unable to infer a security group ID from action target/resource metadata. "
+                "Refresh findings and recompute actions, then retry PR bundle generation."
+            ),
+            action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+            format=format,
         )
     if format == CLOUDFORMATION_FORMAT:
         files = [
@@ -2139,53 +2203,64 @@ def _generate_for_iam_root_access_key_absent(
     format: PRBundleFormat,
     strategy_id: str | None,
 ) -> PRBundleResult:
-    """Generate guided IAM root access key remediation bundle."""
+    """Generate executable IAM root access key remediation bundle (terraform only)."""
+    meta = _action_meta(action)
     strategy = (strategy_id or "iam_root_key_disable").strip().lower()
     if strategy == "iam_root_key_keep_exception":
         return _generate_for_exception_guidance(action, format, "Keep root access key (exception path)")
-    if strategy == "iam_root_key_delete":
-        title = "Delete IAM root access key"
-        step_action = "Delete root access key after validating fallback console MFA access."
-    else:
-        title = "Disable IAM root access key"
-        step_action = "Disable root access key and validate that no automation relies on it."
-    return _generate_for_guidance_bundle(action, format, title, [step_action])
+    if format == CLOUDFORMATION_FORMAT:
+        _raise_pr_bundle_error(
+            code="unsupported_format_for_action_type",
+            detail=(
+                "cloudformation format is not supported for iam_root_access_key_absent. "
+                "Generate terraform bundle and apply using root credentials. "
+                f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+            ),
+            action_type=ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT,
+            format=format,
+            strategy_id=strategy,
+        )
+
+    delete_root_keys = strategy == "iam_root_key_delete"
+    provider_meta = dict(meta)
+    if provider_meta["region"] == "N/A":
+        provider_meta["region"] = "us-east-1"
+    files = [
+        PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(provider_meta)),
+        PRBundleFile(
+            path="iam_root_access_key_absent.tf",
+            content=_terraform_iam_root_access_key_absent_content(meta, delete_root_keys=delete_root_keys),
+        ),
+    ]
+    mode_label = "delete" if delete_root_keys else "disable"
+    steps = [
+        (
+            f"{ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
+            f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+        ),
+        "Authenticate AWS CLI with root credentials for the target account before apply.",
+        "Run `terraform init` and `terraform plan` and confirm root key remediation mode.",
+        f"Run `terraform apply` to {mode_label} root access keys.",
+        "Validate root account fallback controls (MFA + break-glass process), then recompute actions.",
+    ]
+    return PRBundleResult(format=format, files=files, steps=steps)
 
 
 def _generate_for_exception_guidance(
     action: ActionLike,
     format: PRBundleFormat,
     title: str,
-) -> PRBundleResult:
-    """Return a PR bundle that explicitly guides users into exception workflow."""
-    return _generate_for_guidance_bundle(
-        action,
-        format,
-        title,
-        [
-            "Create or update an exception with approval owner and expiry date.",
-            "Document compensating controls and periodic review cadence.",
-            "Recompute actions after exception approval to keep workflow consistent.",
-        ],
+) -> NoReturn:
+    """Exception-only strategy selections are not executable IaC bundles."""
+    _raise_pr_bundle_error(
+        code="exception_strategy_requires_exception_workflow",
+        detail=(
+            f"Strategy '{title}' is exception-only and does not generate executable IaC. "
+            "Use the action exception workflow instead of PR bundle generation."
+        ),
+        action_type=(action.action_type or "").strip().lower(),
+        format=format,
     )
-
-
-def _generate_for_guidance_bundle(
-    action: ActionLike,
-    format: PRBundleFormat,
-    title: str,
-    steps: list[str],
-) -> PRBundleResult:
-    """Create a guidance-only bundle for non-IaC exception/human-runbook paths."""
-    meta = _action_meta(action)
-    content = (
-        f"# {title}\n"
-        f"# Action: {meta['action_id']}\n"
-        f"# Action type: {action.action_type}\n"
-        f"# Account: {meta['account_id']} | Region: {meta['region']}\n"
-    )
-    path = "README.yaml" if format == CLOUDFORMATION_FORMAT else "README.tf"
-    return PRBundleResult(format=format, files=[PRBundleFile(path=path, content=content)], steps=steps)
 
 
 def _terraform_aws_config_enabled_content(
@@ -2619,6 +2694,70 @@ Resources:
 """
 
 
+def _terraform_iam_root_access_key_absent_content(meta: dict[str, str], delete_root_keys: bool) -> str:
+    """Terraform bundle content for root access key disable/delete workflow."""
+    delete_flag = "true" if delete_root_keys else "false"
+    mode = "delete" if delete_root_keys else "disable"
+    return f"""# IAM root access key remediation - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]}
+# Control: {meta["control_id"]}
+# NOTE: This bundle requires AWS root credentials for the target account.
+# NOTE: Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}
+
+variable "expected_account_id" {{
+  type        = string
+  default     = "{meta["account_id"]}"
+  description = "Target account ID expected by this remediation."
+}}
+
+variable "delete_root_keys" {{
+  type        = bool
+  default     = {delete_flag}
+  description = "When true, delete root keys after disabling. When false, disable only."
+}}
+
+resource "null_resource" "iam_root_access_key_absent" {{
+  triggers = {{
+    action_id           = "{meta["action_id"]}"
+    expected_account_id = var.expected_account_id
+    delete_root_keys    = tostring(var.delete_root_keys)
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set -euo pipefail
+CALLER_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text)"
+if [ "$CALLER_ACCOUNT" != "${{var.expected_account_id}}" ]; then
+  echo "ERROR: caller account does not match expected account ID."
+  exit 1
+fi
+case "$CALLER_ARN" in
+  arn:aws:iam::*:root) ;;
+  *)
+    echo "ERROR: root credentials are required to {mode} root access keys."
+    exit 1
+    ;;
+esac
+KEY_IDS="$(aws iam list-access-keys --query 'AccessKeyMetadata[].AccessKeyId' --output text || true)"
+if [ -z "$KEY_IDS" ] || [ "$KEY_IDS" = "None" ]; then
+  echo "No root access keys found."
+  exit 0
+fi
+for key_id in $KEY_IDS; do
+  aws iam update-access-key --access-key-id "$key_id" --status Inactive >/dev/null
+  if [ "${{var.delete_root_keys}}" = "true" ]; then
+    aws iam delete-access-key --access-key-id "$key_id" >/dev/null
+  fi
+done
+EOT
+  }}
+}}
+"""
+
+
 # ---------------------------------------------------------------------------
 # Unsupported / pr_only / fallback
 # ---------------------------------------------------------------------------
@@ -2627,47 +2766,23 @@ Resources:
 def _generate_unsupported(
     action: ActionLike | None,
     format: PRBundleFormat,
-) -> PRBundleResult:
+) -> NoReturn:
     """
-    Return a guidance placeholder for unsupported or missing action types.
-
-    Used for pr_only, unmapped action_type, or when action is None.
+    Raise a structured error for unsupported or missing action types.
     """
     action_type = (action.action_type or "pr_only").strip() if action else "pr_only"
-    meta = _action_meta(action)
-    guidance = (
-        "This action type does not yet have IaC generation. "
-        "Apply the fix manually in AWS Console or use direct fix if supported."
-    )
-    if format == CLOUDFORMATION_FORMAT:
-        path = "README.yaml"
-        content = f"""# Action type: {action_type}
-# Action: {meta["action_id"] or "N/A"}
-# {guidance}
-"""
-    else:
-        path = "README.tf"
-        content = f"""# Action type: {action_type}
-# Action: {meta["action_id"] or "N/A"}
-# {guidance}
-"""
-
-    steps = [
-        "Review the finding and control in Security Hub.",
-        "Apply the remediation manually in the AWS Console for this account/region.",
-        "Use **Direct fix** from the action detail page if this control supports it.",
-        "Return to the action and click **Recompute actions** after applying the fix.",
-    ]
-
-    return PRBundleResult(
+    _raise_pr_bundle_error(
+        code="unsupported_action_type",
+        detail=f"Action type '{action_type}' is not supported for PR bundle generation.",
+        action_type=action_type,
         format=format,
-        files=[PRBundleFile(path=path, content=content)],
-        steps=steps,
     )
 
 
 __all__ = [
     "ActionLike",
+    "PRBundleErrorPayload",
+    "PRBundleGenerationError",
     "PRBundleFile",
     "PRBundleResult",
     "PRBundleFormat",

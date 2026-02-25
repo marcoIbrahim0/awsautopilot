@@ -10,6 +10,11 @@ from typing import Any, Literal, TypedDict
 
 from typing_extensions import NotRequired
 
+from backend.services.root_credentials_workflow import (
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+)
+
 Mode = Literal["pr_only", "direct_fix"]
 RiskLevel = Literal["low", "medium", "high"]
 InputType = Literal["string", "string_array"]
@@ -43,6 +48,7 @@ class RemediationStrategy(TypedDict):
     requires_inputs: bool
     input_schema: StrategyInputSchema
     supports_exception_flow: bool
+    exception_only: bool
     warnings: list[str]
     legacy_pr_bundle_variant: str | None
 
@@ -64,6 +70,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 (
                     "May break workloads that depend on direct public S3 access. "
@@ -85,6 +92,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 (
                     "Requires careful validation of bucket policies and KMS permissions. "
@@ -106,6 +114,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Keeps public exposure; requires explicit business approval and compensating controls.",
             ],
@@ -124,6 +133,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Enabling Config can increase logging/storage costs.",
             ],
@@ -154,6 +164,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                 ]
             ),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Cross-account bucket and key policies must be reviewed before apply.",
             ],
@@ -169,6 +180,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Skipping Config reduces change visibility and audit evidence quality.",
             ],
@@ -186,6 +198,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Shared public documents will no longer be publicly available.",
             ],
@@ -201,6 +214,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Publicly shareable SSM documents can expose sensitive operational content.",
             ],
@@ -218,6 +232,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Existing workflows that rely on public snapshot sharing may fail.",
             ],
@@ -233,6 +248,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Previously shared public snapshots may remain exposed.",
             ],
@@ -248,6 +264,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Public snapshots can leak data and AMI lineage.",
             ],
@@ -265,6 +282,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "New volumes will encrypt by default; existing volumes are unchanged.",
             ],
@@ -280,6 +298,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Apply the bundle before creating new volumes to enforce encryption by default.",
             ],
@@ -304,6 +323,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                 ]
             ),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Key policy and grant coverage must include all required compute roles.",
             ],
@@ -328,6 +348,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                 ]
             ),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Validate key policy access and regional key alignment before apply.",
             ],
@@ -345,6 +366,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Non-TLS clients or legacy integrations will fail after apply.",
             ],
@@ -369,6 +391,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                 ]
             ),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
                 "Exemptions weaken blanket enforcement and must be tightly scoped.",
             ],
@@ -384,6 +407,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Allowing non-SSL requests increases credential and data interception risk.",
             ],
@@ -401,7 +425,12 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
+                (
+                    f"{ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
+                    f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+                ),
                 "Disabling root keys can impact break-glass automations that still use root credentials.",
             ],
             legacy_pr_bundle_variant=None,
@@ -416,7 +445,12 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=False,
+            exception_only=False,
             warnings=[
+                (
+                    f"{ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
+                    f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
+                ),
                 "Deleting root keys is irreversible and requires validated fallback access.",
             ],
             legacy_pr_bundle_variant=None,
@@ -431,6 +465,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=False,
             input_schema=_schema(),
             supports_exception_flow=True,
+            exception_only=True,
             warnings=[
                 "Root access keys are a critical compromise path and should be time-bounded exceptions only.",
             ],

@@ -46,6 +46,7 @@ def main() -> int:
     try:
         from backend.services.pr_bundle import (
             ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+            PRBundleGenerationError,
             generate_pr_bundle,
             PRBundleResult,
             TERRAFORM_FORMAT,
@@ -79,8 +80,11 @@ def main() -> int:
         r2 = generate_pr_bundle(action, "cloudformation")
         assert r2["format"] == "cloudformation", "cloudformation format"
         assert r2["files"][0]["path"].endswith(".yaml"), "cloudformation file"
-        r3 = generate_pr_bundle(None, "terraform")
-        assert r3["format"] == "terraform" and len(r3["files"]) >= 1, "None action returns guidance"
+        try:
+            generate_pr_bundle(None, "terraform")
+            raise AssertionError("None action should raise PRBundleGenerationError")
+        except PRBundleGenerationError as exc:
+            assert exc.as_dict()["code"] == "missing_action_context"
         ok.append("PR bundle service: format, files, steps, dispatch OK")
     except Exception as e:
         errors.append(f"PR bundle service: {e}")

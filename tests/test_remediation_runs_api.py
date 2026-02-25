@@ -398,6 +398,62 @@ def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
     assert str(action2.id) in body
 
 
+def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: TestClient) -> None:
+    """Group PR creation rejects exception-only strategies before creating a run."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="aws_config_enabled")
+    action.account_id = "123456789012"
+    action.region = "eu-north-1"
+    action.status = "open"
+    action.priority = 100
+
+    actions_result = MagicMock()
+    actions_result.scalars.return_value.unique.return_value.all.return_value = [action]
+    account_result = MagicMock()
+    account_result.scalar_one_or_none.return_value = None
+
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[actions_result, account_result])
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            try:
+                r = client.post(
+                    "/api/remediation-runs/group-pr-bundle",
+                    json={
+                        "action_type": "aws_config_enabled",
+                        "account_id": "123456789012",
+                        "region": "eu-north-1",
+                        "status": "open",
+                        "strategy_id": "config_keep_exception",
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Exception-only strategy"
+        assert "Use Exception workflow instead of PR bundle." in str(detail.get("detail", ""))
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
 def test_create_group_pr_bundle_requires_region_filter(client: TestClient) -> None:
     """group-pr-bundle requires exact region or region_is_null=true."""
     tenant = _mock_tenant()
@@ -466,6 +522,47 @@ def test_create_run_missing_strategy_id_for_strategy_action_400(client: TestClie
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
         assert detail.get("error") == "Missing strategy_id"
+
+
+def test_create_run_exception_only_strategy_rejected_400_no_run_created(client: TestClient) -> None:
+    """Exception-only strategy selections must be routed to exception workflow, not PR runs."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="aws_config_enabled")
+    session = _mock_async_session(action, None)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            try:
+                r = client.post(
+                    "/api/remediation-runs",
+                    json={
+                        "action_id": str(action.id),
+                        "mode": "pr_only",
+                        "strategy_id": "config_keep_exception",
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Exception-only strategy"
+        assert "Use Exception workflow instead of PR bundle." in str(detail.get("detail", ""))
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
 
 
 def test_create_run_strategy_mode_mismatch_400(client: TestClient) -> None:
@@ -646,6 +743,66 @@ def test_create_run_legacy_variant_maps_to_strategy_success(client: TestClient) 
     body = mock_sqs.send_message.call_args.kwargs.get("MessageBody", "")
     assert '"pr_bundle_variant": "cloudfront_oac_private_s3"' in body
     assert '"strategy_id": "s3_migrate_cloudfront_oac_private"' in body
+
+
+def test_remediation_options_marks_exception_only_strategies(client: TestClient) -> None:
+    """Remediation options payload includes machine-readable exception_only flags."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="aws_config_enabled")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = {item["strategy_id"]: item for item in r.json().get("strategies", [])}
+    assert strategies["config_keep_exception"]["exception_only"] is True
+    assert strategies["config_keep_exception"]["supports_exception_flow"] is True
+    assert strategies["config_enable_account_local_delivery"]["exception_only"] is False
+
+
+def test_remediation_options_root_action_exposes_runbook_notice(client: TestClient) -> None:
+    """Root-key remediation options include root-credentials notice and runbook link."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("manual_high_risk") is True
+    assert "Root credentials required" in str(body.get("pre_execution_notice", ""))
+    assert body.get("runbook_url") == "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md"
 
 
 # ---------------------------------------------------------------------------
@@ -974,6 +1131,50 @@ def test_execute_pr_bundle_plan_queues_execution(client: TestClient) -> None:
     assert "execution_id" in data
     assert data["status"] == "queued"
     assert mock_sqs.send_message.call_count == 1
+
+
+def test_execute_pr_bundle_plan_root_credentials_required_400(client: TestClient) -> None:
+    """SaaS executor must fail fast for root-key runs with explicit root-credentials-required error."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.success
+    run.outcome = "PR bundle generated"
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
+    run.action = action
+
+    run_result = MagicMock()
+    run_result.scalar_one_or_none.return_value = run
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=run_result)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Root credentials required"
+        assert "Root credentials required" in str(detail.get("detail", ""))
+        assert detail.get("runbook_url") == "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md"
 
 
 def test_execute_pr_bundle_plan_throttled_429(client: TestClient) -> None:

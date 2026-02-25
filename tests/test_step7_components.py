@@ -30,6 +30,7 @@ from backend.services.pr_bundle import (
     ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING,
     CLOUDFORMATION_FORMAT,
     PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+    PRBundleGenerationError,
     SUPPORTED_ACTION_TYPES,
     TERRAFORM_FORMAT,
     generate_pr_bundle,
@@ -51,7 +52,7 @@ from backend.utils.sqs import (
 
 
 def _make_action(
-    action_type: str = "pr_only",
+    action_type: str = "s3_block_public_access",
     action_id: uuid.UUID | None = None,
     account_id: str = "123456789012",
     region: str | None = "us-east-1",
@@ -158,30 +159,28 @@ def test_pr_bundle_cloudformation_guardduty_step_9_5() -> None:
 
 def test_pr_bundle_invalid_format_defaults_terraform() -> None:
     """Invalid format falls back to terraform."""
-    action = _make_action()
+    action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
     r = generate_pr_bundle(action, "invalid")
     assert r["format"] == "terraform"
 
 
-def test_pr_bundle_unsupported_action_type_returns_guidance() -> None:
-    """Unsupported or pr_only action type returns guidance placeholder."""
+def test_pr_bundle_unsupported_action_type_raises_structured_error() -> None:
+    """Unsupported action types fail with structured errors (no README placeholder bundle)."""
     action = _make_action(action_type="pr_only")
-    r = generate_pr_bundle(action, "terraform")
-    assert r["format"] == "terraform"
-    # Terraform unsupported: README.tf + README.txt (credentials instructions)
-    assert len(r["files"]) == 2
-    paths = [f["path"] for f in r["files"]]
-    assert "README.txt" in paths
-    assert any("README" in p or "action type" in (f.get("content") or "") for p, f in [(f["path"], f) for f in r["files"]])
-    assert "does not yet have IaC" in r["files"][0]["content"] or "manually" in r["files"][0]["content"].lower()
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(action, "terraform")
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "pr_only_action_type_unsupported"
+    assert payload["action_type"] == "pr_only"
 
 
-def test_pr_bundle_none_action_returns_guidance() -> None:
-    """None action returns unsupported-guidance bundle."""
-    r = generate_pr_bundle(None, "terraform")
-    assert r["format"] == "terraform"
-    assert len(r["files"]) >= 1
-    assert len(r["steps"]) >= 2
+def test_pr_bundle_none_action_raises_structured_error() -> None:
+    """None action fails with a structured error payload."""
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(None, "terraform")
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "missing_action_context"
+    assert payload["format"] == TERRAFORM_FORMAT
 
 
 def test_pr_bundle_dispatch_s3_terraform() -> None:
@@ -300,6 +299,41 @@ def test_pr_bundle_supported_action_types_all_sixteen() -> None:
     assert ACTION_TYPE_EBS_DEFAULT_ENCRYPTION in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_S3_BUCKET_REQUIRE_SSL in SUPPORTED_ACTION_TYPES
     assert ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT in SUPPORTED_ACTION_TYPES
+
+
+@pytest.mark.parametrize(
+    ("action_type", "target_id", "expected_path"),
+    [
+        (ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS, "account-target", "s3_block_public_access.tf"),
+        (ACTION_TYPE_ENABLE_SECURITY_HUB, "regional-target", "enable_security_hub.tf"),
+        (ACTION_TYPE_ENABLE_GUARDDUTY, "regional-target", "enable_guardduty.tf"),
+        (ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS, "bucket-one", "s3_bucket_block_public_access.tf"),
+        (ACTION_TYPE_S3_BUCKET_ENCRYPTION, "bucket-two", "s3_bucket_encryption.tf"),
+        (ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING, "bucket-three", "s3_bucket_access_logging.tf"),
+        (ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION, "bucket-four", "s3_bucket_lifecycle_configuration.tf"),
+        (ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS, "bucket-five", "s3_bucket_encryption_kms.tf"),
+        (ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS, "sg-0123456789abcdef0", "sg_restrict_public_ports.tf"),
+        (ACTION_TYPE_CLOUDTRAIL_ENABLED, "trail-target", "cloudtrail_enabled.tf"),
+        (ACTION_TYPE_AWS_CONFIG_ENABLED, "config-target", "aws_config_enabled.tf"),
+        (ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING, "ssm-target", "ssm_block_public_sharing.tf"),
+        (ACTION_TYPE_EBS_SNAPSHOT_BLOCK_PUBLIC_ACCESS, "ebs-snapshot-target", "ebs_snapshot_block_public_access.tf"),
+        (ACTION_TYPE_EBS_DEFAULT_ENCRYPTION, "ebs-default-target", "ebs_default_encryption.tf"),
+        (ACTION_TYPE_S3_BUCKET_REQUIRE_SSL, "bucket-six", "s3_bucket_require_ssl.tf"),
+        (ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT, "root-target", "iam_root_access_key_absent.tf"),
+    ],
+)
+def test_pr_bundle_supported_action_type_generates_executable_terraform_artifact(
+    action_type: str,
+    target_id: str,
+    expected_path: str,
+) -> None:
+    """Every supported action type emits executable Terraform files (no README-only placeholder bundles)."""
+    action = _make_action(action_type=action_type, target_id=target_id, region="us-east-1")
+    r = generate_pr_bundle(action, "terraform")
+    paths = [f["path"] for f in r["files"]]
+    assert expected_path in paths
+    assert "README.tf" not in paths
+    assert "README.yaml" not in paths
 
 
 def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload() -> None:
@@ -435,6 +469,24 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_has_specific_readme_section
     readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
     assert "S3.2 migration variant (CloudFront + OAC + private S3)" in readme
     assert "additional_read_principal_arns" in readme
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_variant_cloudformation_raises_error() -> None:
+    """CloudFormation for CloudFront/OAC S3 variant is rejected with a structured error."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+        )
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "unsupported_variant_format"
 
 
 def test_s3_bucket_name_from_target_id() -> None:
@@ -726,19 +778,33 @@ def test_pr_bundle_sg_restrict_uses_resource_id_when_target_id_not_parseable() -
     assert 'Default: "sg-0de002382892023f5"' in cfn_content
 
 
-def test_pr_bundle_sg_restrict_unparseable_target_returns_guidance() -> None:
-    """When SG ID cannot be resolved, return guidance instead of invalid Terraform placeholders."""
+def test_pr_bundle_sg_restrict_unparseable_target_raises_structured_error() -> None:
+    """When SG ID cannot be resolved, generation fails with explicit error payload."""
     action = _make_action(
         action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
         target_id="029037611564|eu-north-1|aws-account:029037611564|EC2.53",
         region="eu-north-1",
         control_id="EC2.53",
     )
-    r = generate_pr_bundle(action, "terraform")
-    paths = [f["path"] for f in r["files"]]
-    assert "README.tf" in paths
-    assert "sg_restrict_public_ports.tf" not in paths
-    assert any("security-group id" in step.lower() for step in r["steps"])
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(action, "terraform")
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "missing_security_group_id"
+    assert payload["action_type"] == ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS
+
+
+def test_pr_bundle_iam_root_cloudformation_raises_structured_error() -> None:
+    """IAM root access key remediation supports Terraform only."""
+    action = _make_action(
+        action_type=ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT,
+        region="us-east-1",
+        control_id="IAM.9",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(action, CLOUDFORMATION_FORMAT)
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "unsupported_format_for_action_type"
+    assert payload["action_type"] == ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT
 
 
 def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:

@@ -6,17 +6,31 @@ uses the same mapping, and every in-scope action_type has a PR bundle generator.
 """
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from backend.services.control_scope import (
     ACTION_TYPE_DEFAULT,
     CONTROL_ALIAS_TO_ACTION_TYPE,
     CONTROL_TO_ACTION_TYPE,
     IN_SCOPE_CONTROL_IDS,
     IN_SCOPE_CONTROLS,
+    UNSUPPORTED_CONTROL_DECISIONS,
     action_type_from_control,
     canonical_control_id_for_action_type,
+    unsupported_control_decision,
 )
 from backend.services.action_engine import _action_type_from_control
 from backend.services.pr_bundle import SUPPORTED_ACTION_TYPES
+
+_RUNTIME_CONTROL_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*\.\d+$")
+_ARCHITECTURE_OBJECTIVE_ID_PATTERN = re.compile(r"^ARC-\d+$")
+
+
+def _inventory_reconcile_control_ids() -> set[str]:
+    source_path = Path(__file__).resolve().parents[1] / "backend/workers/services/inventory_reconcile.py"
+    source = source_path.read_text(encoding="utf-8")
+    return set(re.findall(r'control_id="([^"]+)"', source))
 
 
 def test_in_scope_controls_has_sixteen_rows() -> None:
@@ -83,6 +97,19 @@ def test_action_type_from_control_unmapped_returns_pr_only() -> None:
     assert action_type_from_control("CIS.1.1") == ACTION_TYPE_DEFAULT
 
 
+def test_explicitly_unsupported_controls_have_pr_only_action_type() -> None:
+    """Known inventory-only controls are explicitly unsupported and map to pr_only."""
+    for control_id in ("RDS.PUBLIC_ACCESS", "RDS.ENCRYPTION", "EKS.PUBLIC_ENDPOINT"):
+        decision = unsupported_control_decision(control_id)
+        assert decision is not None
+        assert UNSUPPORTED_CONTROL_DECISIONS[control_id] == decision
+        assert decision["action_type"] == ACTION_TYPE_DEFAULT
+        assert decision["remediation_classification"] == "UNSUPPORTED"
+        assert decision["support_status"] == "unsupported"
+        assert "inventory-only visibility exists" in decision["reason"].lower()
+        assert action_type_from_control(control_id) == ACTION_TYPE_DEFAULT
+
+
 def test_action_engine_uses_control_scope_mapping() -> None:
     """Step 9.8: action_engine._action_type_from_control uses control_scope mapping."""
     for control_id, action_type in CONTROL_TO_ACTION_TYPE.items():
@@ -143,3 +170,32 @@ def test_in_scope_all_have_pr_bundle() -> None:
     """All in-scope controls have pr_bundle True (real IaC or strategy guidance)."""
     for c in IN_SCOPE_CONTROLS:
         assert c["pr_bundle"] is True
+
+
+def test_runtime_registry_excludes_architecture_objective_ids() -> None:
+    """Architecture objective IDs (ARC-*) must never be registered as runtime controls."""
+    runtime_registry = set(CONTROL_TO_ACTION_TYPE) | set(CONTROL_ALIAS_TO_ACTION_TYPE)
+    unexpected = {
+        control_id for control_id in runtime_registry if _ARCHITECTURE_OBJECTIVE_ID_PATTERN.fullmatch(control_id)
+    }
+    assert not unexpected, f"Architecture objective IDs leaked into runtime control registry: {sorted(unexpected)}"
+
+
+def test_inventory_runtime_controls_are_defined_in_control_registry() -> None:
+    """Runtime-shaped control IDs emitted by inventory must be mapped in control_scope."""
+    runtime_registry = set(CONTROL_TO_ACTION_TYPE) | set(CONTROL_ALIAS_TO_ACTION_TYPE)
+    inventory_runtime_controls = {
+        control_id
+        for control_id in _inventory_reconcile_control_ids()
+        if _RUNTIME_CONTROL_ID_PATTERN.fullmatch(control_id)
+    }
+    missing = inventory_runtime_controls - runtime_registry
+    assert not missing, f"Inventory emits runtime controls without definitions: {sorted(missing)}"
+
+
+def test_dr_template_uses_architecture_objective_tag_for_arc008() -> None:
+    """ARC-008 should stay infra metadata, not a runtime control-tag key."""
+    template_path = Path(__file__).resolve().parents[1] / "infrastructure/cloudformation/dr-backup-controls.yaml"
+    template_text = template_path.read_text(encoding="utf-8")
+    assert "ArchitectureObjectiveId: ARC-008" in template_text
+    assert "Control: ARC-008" not in template_text

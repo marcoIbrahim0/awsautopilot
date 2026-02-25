@@ -43,6 +43,11 @@ from backend.services.remediation_strategy import (
     list_strategies_for_action_type,
     validate_strategy,
 )
+from backend.services.root_credentials_workflow import (
+    ROOT_CREDENTIALS_REQUIRED_MESSAGE,
+    ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
+    is_root_credentials_required_action,
+)
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 
 logger = logging.getLogger(__name__)
@@ -180,6 +185,7 @@ class RemediationOptionResponse(BaseModel):
     dependency_checks: list[DependencyCheckResponse]
     warnings: list[str]
     supports_exception_flow: bool
+    exception_only: bool
 
 
 class RemediationOptionsResponse(BaseModel):
@@ -189,6 +195,9 @@ class RemediationOptionsResponse(BaseModel):
     action_type: str
     mode_options: list[Literal["pr_only", "direct_fix"]]
     strategies: list[RemediationOptionResponse]
+    manual_high_risk: bool = False
+    pre_execution_notice: str | None = None
+    runbook_url: str | None = None
 
 
 def _action_to_list_item(
@@ -714,6 +723,9 @@ async def get_remediation_options(
     account = account_result.scalar_one_or_none()
 
     strategies = list_strategies_for_action_type(action.action_type)
+    root_required = is_root_credentials_required_action(action.action_type)
+    pre_execution_notice = ROOT_CREDENTIALS_REQUIRED_MESSAGE if root_required else None
+    runbook_url = ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH if root_required else None
     if not strategies:
         # Backward-compatible behavior for action types not yet migrated to strategy catalog.
         mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
@@ -725,6 +737,9 @@ async def get_remediation_options(
             action_type=action.action_type,
             mode_options=mode_options,
             strategies=[],
+            manual_high_risk=root_required,
+            pre_execution_notice=pre_execution_notice,
+            runbook_url=runbook_url,
         )
 
     option_items: list[RemediationOptionResponse] = []
@@ -752,6 +767,7 @@ async def get_remediation_options(
                 dependency_checks=checks,
                 warnings=risk_snapshot["warnings"],
                 supports_exception_flow=strategy["supports_exception_flow"],
+                exception_only=strategy["exception_only"],
             )
         )
 
@@ -761,6 +777,9 @@ async def get_remediation_options(
         action_type=action.action_type,
         mode_options=mode_options,
         strategies=option_items,
+        manual_high_risk=root_required,
+        pre_execution_notice=pre_execution_notice,
+        runbook_url=runbook_url,
     )
 
 

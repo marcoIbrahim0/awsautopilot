@@ -6,6 +6,7 @@
 
 ### For Developers
 - **[Local Development Guide](local-dev/README.md)** — Set up your development environment, run the backend and worker locally, and execute tests
+- **[Prod Readiness](prod-readiness/README.md)** — Production-hardening notes and verification checklists for remediation artifact generation
 - **[API Reference](api/README.md)** — Complete REST API documentation with request/response schemas
 - **[Data Model](data-model/README.md)** — Database schema, entity relationships, and data flow patterns
 - **[Architectural Decisions](decisions/README.md)** — ADRs explaining key design choices
@@ -14,6 +15,7 @@
 
 ### For SaaS Owners / Operators
 - **[Owner Deployment Guide](deployment/README.md)** — Step-by-step infrastructure deployment on AWS (ECS Fargate or Lambda)
+- **[Production Deployment Profile](Production/deployment.md)** — High-importance deployment command set: low-cost standard, scale-up, rollout, rollback
 - **[CI Dependency Governance Policy](deployment/ci-dependency-governance.md)** — Required checks, dependency lock/version policy, and vulnerability gates
 - **[Owner-Side Architecture](architecture/owner/README.md)** — System architecture, backend services, AWS resources, and data flows
 - **[Deployer Runbook (Phase 1-3)](audit-remediation/deployer-runbook-phase1-phase3.md)** — End-to-end SaaS deployer sequence (`.env.ops` -> AWS serverless deploy -> worker enablement -> Cloudflare custom domain -> verification)
@@ -160,6 +162,40 @@ Local development setup:
 - `worker.md` — Running worker against SQS
 - `tests.md` — Running pytest and interpreting results
 - `frontend.md` — Frontend development (if applicable)
+
+### `/docs/prod-readiness/`
+Production-readiness implementation notes and validation records:
+- `01-discovery.md` — Discovery contract and normalization rules for control/action inventory validation
+- `README.md` — PR bundle artifact generation readiness contract, unsupported-case error model, and test verification matrix
+- `important-to-do.md` — High-priority follow-up checklist for rollout monitoring and release-readiness validation
+- `06-task1-file-map.md` — Candidate inventory of control/action/ID definition files grouped by confidence
+- `06-control-action-inventory.md` — Consolidated control/action inventory used as scenario and architecture planning input
+- `07-task1-input-validation.md` — Input validation summary for control/action coverage constraints and scenario requirements
+- `07-task2-arch1-scenario.md` — Architecture 1 business scenario, tier narrative, and control coverage split plan
+- `07-task3-arch2-scenario.md` — Architecture 2 business scenario, tier narrative, and remaining-control coverage split plan
+- `07-task3-control-coverage-validation.md` — Cross-architecture control assignment validation (full coverage, no overlap)
+- `07-architecture-design.md` — Canonical Architecture 1/2 resource design tables (groups, tiers, tags, dependencies, and PR-proof targets)
+- `07-task4-a-series-resources.md` — A1/A2/A3 adversarial resource definitions for blast-radius-safe remediation behavior tests
+- `07-task5-b-series-resources.md` — B1/B2/B3 adversarial resource definitions with preserve-vs-remediate Terraform plan expectations
+- `08-task1-resource-inventory.md` — Architecture resource-inventory extraction, dependency ordering, adversarial registry, and validation flags for script-prep
+- `08-task8-coverage-matrix.md` — Control-level Group A/B/C coverage matrix plus PR proof validation checklist and pass/fail summary
+- `08-task4-reset-arch1.sh` — Standalone Architecture 1 reset commands that reintroduce adversarial misconfiguration states after remediation validation
+- `08-task6-teardown-arch1-groupA.sh` — Architecture 1 Group A-only teardown in reverse dependency order scoped to `TestGroup=detection`
+- `08-task6-teardown-arch1-groupB.sh` — Architecture 1 Group B-only teardown in reverse dependency order scoped to `TestGroup=negative`
+- `08-task6-teardown-arch1-full.sh` — Architecture 1 full teardown in exact reverse dependency order across all groups
+- `08-task7-teardown-arch2-groupA.sh` — Architecture 2 Group A-only teardown using the Architecture 2 delete-order dependency guard for `arch2_eks_cluster_c` before role deletion
+- `08-task7-teardown-arch2-groupB.sh` — Architecture 2 Group B-only teardown for `arch2_mixed_policy_role_b3`
+- `08-task7-teardown-arch2-full.sh` — Architecture 2 full teardown in exact `08-task1-resource-inventory.md` delete order across Group A, Group B, and Group C
+- `08-deployment-scripts.md` — Compiled deployment and reset script bundle for Architecture 1 and Architecture 2
+- `08-teardown-scripts.md` — Compiled teardown script bundle with Group A/B and full teardown variants for both architectures
+- `08-coverage-matrix.md` — Published coverage matrix and PR proof checklist copied from Task 8 output
+- `08-summary.md` — Final compilation summary with architecture resource counts, coverage counts, and residual risk list
+- `root-credentials-required-iam-root-access-key-absent.md` — Manual/high-risk runbook for `iam_root_access_key_absent` with root-credential approvals, execution, rollback, and audit evidence capture
+
+### `/docs/Production/`
+High-importance operator documentation:
+> ⚠️ Change Control: This folder is not routine-editable. Update only when explicitly commanded.
+- `deployment.md` — Standard low-cost deployment profile, scale-up command, rollout procedure, and rollback command set
 
 ### `/docs/decisions/`
 Architectural Decision Records (ADRs):
