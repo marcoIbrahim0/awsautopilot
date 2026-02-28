@@ -23,6 +23,7 @@ from backend.auth import (
     hash_password,
     set_auth_cookies,
     tenant_to_response,
+    user_token_version,
     user_to_response,
 )
 from backend.database import get_db
@@ -136,6 +137,50 @@ class SlackSettingsUpdateRequest(BaseModel):
 # ============================================
 # Endpoints
 # ============================================
+
+
+def _parse_invite_token_or_400(token: str) -> uuid.UUID:
+    """Validate invite token format and return parsed UUID."""
+    try:
+        return uuid.UUID(token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid invite token format",
+        ) from exc
+
+
+async def _invite_info_response_for_token(
+    token: str,
+    db: AsyncSession,
+) -> AcceptInviteInfoResponse:
+    """Resolve invite metadata for canonical and legacy GET invite-info endpoints."""
+    token_uuid = _parse_invite_token_or_400(token)
+    result = await db.execute(
+        select(UserInvite)
+        .options(
+            selectinload(UserInvite.tenant),
+            selectinload(UserInvite.created_by_user),
+        )
+        .where(UserInvite.token == token_uuid)
+    )
+    invite = result.scalar_one_or_none()
+    if not invite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invite not found or expired",
+        )
+    if invite.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="This invite has expired",
+        )
+    inviter_name = invite.created_by_user.name if invite.created_by_user else "Team Admin"
+    return AcceptInviteInfoResponse(
+        email=invite.email,
+        tenant_name=invite.tenant.name,
+        inviter_name=inviter_name,
+    )
 
 @router.get("", response_model=list[UserListItem])
 async def list_users(
@@ -253,44 +298,20 @@ async def get_invite_info(
     Does not require authentication.
     Validates the token and returns invite details.
     """
-    # Validate token format
-    try:
-        token_uuid = uuid.UUID(token)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid invite token format",
-        )
-    
-    # Find invite with related data
-    result = await db.execute(
-        select(UserInvite)
-        .options(
-            selectinload(UserInvite.tenant),
-            selectinload(UserInvite.created_by_user),
-        )
-        .where(UserInvite.token == token_uuid)
-    )
-    invite = result.scalar_one_or_none()
-    
-    if not invite:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invite not found or expired",
-        )
-    
-    # Check expiry
-    if invite.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="This invite has expired",
-        )
-    
-    return AcceptInviteInfoResponse(
-        email=invite.email,
-        tenant_name=invite.tenant.name,
-        inviter_name=invite.created_by_user.name if invite.created_by_user else "Team Admin",
-    )
+    return await _invite_info_response_for_token(token=token, db=db)
+
+
+@router.get("/invite-info", response_model=AcceptInviteInfoResponse)
+async def get_invite_info_legacy_alias(
+    token: Annotated[str, Query(..., description="Invite token from the link")],
+    db: AsyncSession = Depends(get_db),
+) -> AcceptInviteInfoResponse:
+    """
+    Backward-compatible alias for legacy clients expecting /users/invite-info.
+
+    Canonical invite-info endpoint remains GET /users/accept-invite.
+    """
+    return await _invite_info_response_for_token(token=token, db=db)
 
 
 @router.post("/accept-invite", response_model=AuthResponse)
@@ -368,7 +389,11 @@ async def accept_invite(
     tenant = result.scalar_one()
     
     # Create JWT
-    access_token = create_access_token(user.id, user.tenant_id)
+    access_token = create_access_token(
+        user.id,
+        user.tenant_id,
+        token_version=user_token_version(user),
+    )
     set_auth_cookies(response, access_token)
     
     logger.info(f"User {user.id} accepted invite for tenant {user.tenant_id}")

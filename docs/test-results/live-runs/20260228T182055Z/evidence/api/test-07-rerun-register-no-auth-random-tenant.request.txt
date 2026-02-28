@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/aws/accounts
+{"account_id":"029037611564","role_read_arn":"arn:aws:iam::029037611564:role/SecurityAutopilotReadRole","role_write_arn":"arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole","regions":["eu-north-1"],"tenant_id":"8a37cf87-39b0-4a67-9ad4-9fd4db5e44f7"}

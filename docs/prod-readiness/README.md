@@ -11,7 +11,7 @@ This document defines the production-readiness contract for PR bundle generation
 5. Exception-only strategies must be rejected at `POST /api/remediation-runs` (HTTP 400) before queue dispatch with guidance: `Use Exception workflow instead of PR bundle.`
 
 Cross-reference:
-- [Implementation Plan — Step 9](../implementation-plan.md)
+- [Implementation Plan — archived snapshot](../archive/2026-02-doc-cleanup/implementation-plan.md)
 - [No-UI PR Bundle Agent Runbook](../runbooks/no-ui-pr-bundle-agent.md)
 - [Important To Do](important-to-do.md)
 - [Discovery Contract](01-discovery.md)

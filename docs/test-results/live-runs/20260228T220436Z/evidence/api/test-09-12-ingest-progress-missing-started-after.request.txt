@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/aws/accounts/029037611564/ingest-progress
+Authorization: Bearer <admin_token>

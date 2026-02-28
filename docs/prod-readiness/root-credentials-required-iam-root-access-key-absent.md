@@ -8,7 +8,7 @@ This remediation is marked `manual/high-risk` in API and worker artifacts and re
 
 Cross-reference:
 - [PR Bundle Artifact Readiness](README.md)
-- [Implementation Plan](../implementation-plan.md)
+- [Implementation Plan (archived snapshot)](../archive/2026-02-doc-cleanup/implementation-plan.md)
 
 ## Workflow Overview
 

@@ -284,7 +284,7 @@ Customers deploy in their AWS accounts:
 - **WriteRole** — IAM role for remediation access
 - **Control-Plane Forwarder** — EventBridge rule + API Destination (optional)
 
-See [Client-Side AWS Resources](../architecture/client/README.md) for details.
+See [Connecting Your AWS Account](../customer-guide/connecting-aws.md) and the [Connect WriteRole guide](../connect-write-role.md) for customer-side role setup details.
 
 ---
 

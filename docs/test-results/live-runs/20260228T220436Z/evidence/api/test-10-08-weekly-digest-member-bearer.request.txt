@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/internal/weekly-digest
+Authorization: Bearer <member_token>

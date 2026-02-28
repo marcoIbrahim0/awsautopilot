@@ -1,7 +1,8 @@
 """
 Tests for POST /api/internal/weekly-digest (Step 11.1).
 
-Covers: 403 without/invalid secret, 503 when DIGEST_CRON_SECRET or queue unset,
+Covers: 403 without/invalid secret, 403 deny-closed when DIGEST_CRON_SECRET is unset,
+503 when queue is unset,
 200 with valid secret and mocked DB/SQS.
 """
 from __future__ import annotations
@@ -40,8 +41,8 @@ def test_weekly_digest_403_wrong_secret() -> None:
     assert resp.status_code == 403
 
 
-def test_weekly_digest_503_secret_unset() -> None:
-    """When DIGEST_CRON_SECRET is unset returns 503."""
+def test_weekly_digest_403_secret_unset() -> None:
+    """When DIGEST_CRON_SECRET is unset endpoint remains deny-closed with 403."""
     with patch("backend.routers.internal.settings") as mock_settings:
         mock_settings.DIGEST_CRON_SECRET = ""
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/queue"
@@ -50,8 +51,8 @@ def test_weekly_digest_503_secret_unset() -> None:
             "/api/internal/weekly-digest",
             headers={"X-Digest-Cron-Secret": "any"},
         )
-    assert resp.status_code == 503
-    assert "DIGEST_CRON_SECRET" in resp.json().get("detail", "")
+    assert resp.status_code == 403
+    assert "X-Digest-Cron-Secret" in resp.json().get("detail", "")
 
 
 def test_weekly_digest_503_queue_unset() -> None:

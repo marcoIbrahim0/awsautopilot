@@ -1,0 +1,75 @@
+gui/501/com.valens.frontend.dev = {
+	active count = 1
+	path = /Users/marcomaher/Library/LaunchAgents/com.valens.frontend.dev.plist
+	type = LaunchAgent
+	state = running
+
+	program = /bin/zsh
+	arguments = {
+		/bin/zsh
+		-lc
+		export PATH='/Users/marcomaher/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '/Users/marcomaher/AWS Security Autopilot/frontend'; npm run dev
+	}
+
+	working directory = /Users/marcomaher/AWS Security Autopilot/frontend
+
+	stdout path = /tmp/valens-frontend-launchd.out.log
+	stderr path = /tmp/valens-frontend-launchd.err.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /private/tmp/com.apple.launchd.FdsbwaUF6x/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => com.valens.frontend.dev
+	}
+
+	domain = gui/501 [100022]
+	asid = 100022
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 1
+	pid = 96795
+	immediate reason = speculative
+	forks = 15
+	execs = 3
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = (never exited)
+
+	resource coalition = {
+		ID = 9880
+		type = resource
+		state = active
+		active count = 1
+		name = com.valens.frontend.dev
+	}
+
+	jetsam coalition = {
+		ID = 9881
+		type = jetsam
+		state = active
+		active count = 1
+		name = com.valens.frontend.dev
+	}
+
+	spawn type = daemon (3)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)
+	jetsamproperties category = daemon
+	jetsam thread limit = 32
+	cpumon = default
+	job state = running
+
+	properties = keepalive | runatload | inferred program | system service | tle system
+}

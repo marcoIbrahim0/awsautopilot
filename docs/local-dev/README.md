@@ -1,163 +1,40 @@
 # Local Development Guide
 
-This guide helps you set up and run AWS Security Autopilot locally for development and testing.
+Use this section to run API, worker, frontend, and tests locally.
 
-## Overview
-
-The AWS Security Autopilot project consists of:
-
-- **Backend API** — FastAPI application (`backend/main.py`) running on port 8000
-- **Worker** — Python SQS consumer (`backend/workers/main.py`) for background job processing
-- **Database** — PostgreSQL (can use local Postgres or cloud-hosted like Neon)
-- **SQS Queues** — Amazon SQS queues (can use real AWS queues or mocked for testing)
-
-## Quick Start
-
-1. **Set up environment** — See [Environment Setup](environment.md)
-2. **Run backend** — See [Backend Development](backend.md)
-3. **Run worker** — See [Worker Development](worker.md)
-4. **Run tests** — See [Testing](tests.md)
-
----
-
-## Canonical Env Files
-
-Use split service env files for local runtime and ops automation:
+## Canonical Runtime Env Files
 
 - Backend runtime: `/Users/marcomaher/AWS Security Autopilot/backend/.env`
 - Worker runtime: `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
 - Frontend public vars: `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
 - Deploy/ops scripts: `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
-- Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
+- Root `.env` is backup-only and not a runtime source.
 
----
+## Start Here
 
-## Prerequisites
+1. [Environment setup](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/environment.md)
+2. [Backend development](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/backend.md)
+3. [Worker development](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/worker.md)
+4. [Frontend development](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/frontend.md)
+5. [Testing](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/tests.md)
 
-- **Python 3.10+** (tested with 3.10 and 3.12)
-- **PostgreSQL** — Local installation or cloud-hosted (e.g., Neon)
-- **AWS Account** — For SQS queues (or use mocked queues for testing)
-- **AWS CLI** — Configured with credentials (for SQS access)
-- **Git** — For cloning the repository
-
----
-
-## Directory Structure
-
-```
-.
-├── backend/              # FastAPI application
-│   ├── main.py          # API entrypoint
-│   ├── config.py        # Configuration (Pydantic settings)
-│   ├── routers/         # API route handlers
-│   ├── services/        # Business logic
-│   ├── models/          # SQLAlchemy models
-│   ├── utils/           # Utilities
-│   └── workers/         # Canonical worker package
-│       ├── main.py      # Worker entrypoint
-│       ├── jobs/        # Job handlers
-│       └── services/    # Worker services
-├── worker/              # Compatibility shim for legacy worker.* imports
-│   ├── __init__.py      # Namespace shim to backend.workers.*
-│   └── requirements.txt # Compatibility include to backend/workers/requirements.txt
-├── frontend/
-│   └── .env             # Frontend public variables
-├── config/
-│   └── .env.ops         # Deploy/ops variables for scripts
-├── alembic/             # Database migrations
-├── tests/               # Test suite
-├── .env                 # Backup-only commented env snapshot (not runtime source)
-└── requirements.txt     # Python dependencies
-```
-
----
-
-## Next Steps
-
-- **[Environment Setup](environment.md)** — Configure split env files and Python dependencies
-- **[Backend Development](backend.md)** — Run the FastAPI API locally
-- **[Worker Development](worker.md)** — Run the SQS worker locally
-- **[Testing](tests.md)** — Run tests and understand test structure
-- **[Frontend Development](frontend.md)** — Frontend setup (if applicable)
-
----
-
-## Common Tasks
-
-### Apply Database Migrations
+## Common Commands
 
 ```bash
-# From project root
+# migrate DB
 alembic upgrade head
+
+# run API
+uvicorn backend.main:app --reload
+
+# run worker
+PYTHONPATH=. python -m backend.workers.main
+
+# run tests
+pytest
 ```
 
-### Check API Health
+## Related
 
-```bash
-# Health check (always returns 200)
-curl http://localhost:8000/health
-
-# Readiness check (checks DB + SQS)
-curl http://localhost:8000/ready
-```
-
-### View API Documentation
-
-Once the backend is running, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Check Worker Status
-
-The worker logs to stdout. Look for:
-- Queue connection status
-- Job processing logs
-- Error messages
-
----
-
-## Troubleshooting
-
-### Database Connection Issues
-
-- Verify `DATABASE_URL` in `backend/.env` is correct
-- Ensure PostgreSQL is running (if using local DB)
-- Check SSL settings for cloud-hosted databases (Neon requires SSL)
-
-### SQS Queue Issues
-
-- Verify AWS credentials are configured (`aws configure`)
-- Check queue URLs in `backend/workers/.env` match your AWS account
-- Ensure IAM permissions allow SQS access
-
-### Migration Errors
-
-- Ensure `DATABASE_URL_SYNC` is set (for Alembic)
-- Check database revision: `alembic current`
-- Apply migrations: `alembic upgrade head`
-
-### Port Already in Use
-
-- Change `uvicorn` port: `uvicorn backend.main:app --port 8001`
-- Update `CORS_ORIGINS` in `backend/.env` if frontend uses different port
-
----
-
-## Development Workflow
-
-1. **Create feature branch**
-2. **Update split env files** (`backend/.env`, `backend/workers/.env`, `frontend/.env`, or `config/.env.ops`) as needed
-3. **Run migrations** if schema changes: `alembic upgrade head`
-4. **Start backend**: `uvicorn backend.main:app --reload`
-5. **Start worker** (in separate terminal): `python -m backend.workers.main`
-6. **Write tests** in `tests/`
-7. **Run tests**: `pytest`
-8. **Commit changes**
-
----
-
-## See Also
-
-- [API Reference](../api/README.md) — Complete API documentation
-- [Data Model](../data-model/README.md) — Database schema
-- [Owner Deployment Guide](../deployment/README.md) — Production deployment
+- [Docs index](/Users/marcomaher/AWS%20Security%20Autopilot/docs/README.md)
+- [Deployment guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/deployment/README.md)

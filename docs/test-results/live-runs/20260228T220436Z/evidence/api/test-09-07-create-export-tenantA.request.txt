@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/exports
+Authorization: Bearer <admin_token>
+{"format":"json"}

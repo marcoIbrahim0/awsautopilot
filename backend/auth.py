@@ -51,6 +51,7 @@ class TokenData(BaseModel):
     """Data encoded in JWT."""
     sub: str  # user_id as string
     tenant_id: str
+    token_version: int = 0
     exp: datetime
 
 
@@ -139,6 +140,7 @@ class MeResponse(BaseModel):
 BCRYPT_MAX_PASSWORD_BYTES = 72
 CONTROL_PLANE_TOKEN_PREFIX = "cptok-"
 CONTROL_PLANE_TOKEN_BYTES = 32
+PASSWORD_RESET_TOKEN_BYTES = 32
 
 
 def _password_bytes(password: str) -> bytes:
@@ -184,11 +186,22 @@ def control_plane_token_fingerprint(token: str) -> str:
     return f"{normalized[:8]}...{normalized[-4:]}"
 
 
+def generate_password_reset_token() -> str:
+    """Generate a one-time password reset token."""
+    return secrets.token_urlsafe(PASSWORD_RESET_TOKEN_BYTES)
+
+
+def hash_password_reset_token(token: str) -> str:
+    """Hash password reset token for one-way storage and lookup."""
+    normalized = (token or "").strip()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 # ============================================
 # JWT utilities
 # ============================================
 
-def create_access_token(user_id: uuid.UUID, tenant_id: uuid.UUID) -> str:
+def create_access_token(user_id: uuid.UUID, tenant_id: uuid.UUID, token_version: int = 0) -> str:
     """
     Create a JWT access token for a user.
     
@@ -198,6 +211,7 @@ def create_access_token(user_id: uuid.UUID, tenant_id: uuid.UUID) -> str:
     payload = {
         "sub": str(user_id),
         "tenant_id": str(tenant_id),
+        "token_version": int(token_version),
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -214,11 +228,14 @@ def decode_access_token(token: str) -> TokenData | None:
         return TokenData(
             sub=payload["sub"],
             tenant_id=payload["tenant_id"],
+            token_version=int(payload.get("token_version", 0)),
             exp=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
         )
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
+        return None
+    except (KeyError, TypeError, ValueError):
         return None
 
 
@@ -305,6 +322,11 @@ def _resolve_request_token(
     return None, "none"
 
 
+def user_token_version(user: User) -> int:
+    """Return normalized token version for a user object."""
+    return int(getattr(user, "token_version", 0) or 0)
+
+
 def _enforce_csrf_for_cookie_auth(
     request: Request,
     csrf_header: str | None,
@@ -365,7 +387,10 @@ async def get_optional_user(
         .where(User.id == user_id)
     )
     user = result.scalar_one_or_none()
-    
+    if user is None:
+        return None
+    if token_data.token_version != user_token_version(user):
+        return None
     return user
 
 
@@ -418,6 +443,12 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if token_data.token_version != user_token_version(user):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     

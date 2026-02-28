@@ -430,5 +430,5 @@ aws elbv2 describe-target-health \
 ## See Also
 
 - [Infrastructure: Serverless](infrastructure-serverless.md) — Lambda deployment option
-- [Architecture Documentation](../architecture/owner/README.md) — System architecture
+- [Runbooks index](../runbooks/README.md) — Incident/debug runbooks for deployed services
 - [ECS Fargate Documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html)

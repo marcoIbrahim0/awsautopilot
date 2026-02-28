@@ -151,6 +151,60 @@ If you didn't expect this email, you can safely ignore it.
         
         return self._send_smtp(to_email, subject, html_body, text_body)
 
+    def send_password_reset_email(
+        self,
+        to_email: str,
+        reset_token: str,
+    ) -> bool:
+        """
+        Send password reset email with one-time token link.
+        """
+        reset_url = f"{self.frontend_url}/reset-password?token={reset_token}"
+        subject = "Reset your AWS Security Autopilot password"
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
+                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
+                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
+                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Reset your password</h1>
+                <p>We received a request to reset your password.</p>
+                <a href="{reset_url}" class="button">Reset password</a>
+                <p>If you did not request this change, you can ignore this email.</p>
+                <div class="footer">
+                    <p>This reset link expires in 1 hour.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        text_body = f"""
+We received a request to reset your password.
+
+Reset password:
+{reset_url}
+
+If you did not request this change, you can ignore this email.
+This reset link expires in 1 hour.
+        """.strip()
+
+        if settings.is_local:
+            logger.info("[LOCAL MODE] Password reset email for %s", to_email)
+            logger.info("  Reset URL: %s", reset_url)
+            return True
+
+        return self._send_smtp(to_email, subject, html_body, text_body)
+
     def send_weekly_digest(
         self,
         tenant_name: str,

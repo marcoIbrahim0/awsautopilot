@@ -1,0 +1,14 @@
+credential_source=.cursor/notes/task_log.md (Pre-live QA Test 04 entry)
+credentials_used=maromaher54@gmail.com / Maher730
+test04_source_login_status=200
+profile_endpoint_used=/api/auth/me
+password_change_wrong_status=400
+password_change_correct_status=204
+login_new_password_status=200
+password_revert_status=204
+forgot_password_existing_status=200
+forgot_password_existing_body={"message":"If an account exists, a reset link was sent."}
+forgot_password_non_existing_email=no-user-test04-rerun-1772309688@example.com
+forgot_password_non_existing_status=200
+forgot_password_non_existing_body={"message":"If an account exists, a reset link was sent."}
+forgot_password_account_enumeration_signal=no_diff_observed

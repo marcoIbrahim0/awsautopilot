@@ -17,6 +17,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import get_optional_user
@@ -424,6 +425,17 @@ class IngestProgressResponse(BaseModel):
         description="Current ingest progress state for this account/source window.",
     )
     progress: int = Field(..., ge=0, le=100, description="UI progress value (0-100).")
+    percent_complete: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Backward-compatible alias for progress (0-100).",
+    )
+    estimated_time_remaining: int | None = Field(
+        default=None,
+        ge=0,
+        description="Estimated seconds remaining until terminal state; null when unknown.",
+    )
     updated_findings_count: int = Field(..., description="Number of findings updated since started_after.")
     last_finding_update_at: datetime | None = Field(
         default=None,
@@ -1236,7 +1248,14 @@ async def register_account(
     - If Bearer token is provided, tenant is resolved from the token.
     - Otherwise, tenant_id in request body is required.
     """
-    # Resolve tenant from auth or request
+    # Register is auth-required. Do not allow tenant_id fallback for unauthenticated callers.
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
+    # Resolve tenant from auth context.
     tenant_uuid = resolve_tenant_id(current_user, request.tenant_id)
 
     # Get tenant and verify it exists
@@ -1259,6 +1278,14 @@ async def register_account(
         )
     )
     existing_account = result.scalar_one_or_none()
+    if existing_account:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Account already connected",
+                "detail": f"AWS account {request.account_id} is already connected for this tenant.",
+            },
+        )
 
     # Prepare account data
     account_data = {
@@ -1356,37 +1383,28 @@ async def register_account(
             detail="An unexpected error occurred during account registration",
         )
 
-    # Create or update account
-    if existing_account:
-        # Update existing account
-        existing_account.role_read_arn = request.role_read_arn
-        existing_account.role_write_arn = request.role_write_arn
-        existing_account.regions = request.regions
-        existing_account.external_id = tenant.external_id
-        existing_account.status = account_data["status"]
-        existing_account.last_validated_at = account_data["last_validated_at"]
+    # Create new account
+    new_account = AwsAccount(**account_data)
+    db.add(new_account)
+    try:
         await db.commit()
-        await db.refresh(existing_account)
-
-        return AccountRegistrationResponse(
-            id=str(existing_account.id),
-            account_id=existing_account.account_id,
-            status=existing_account.status.value,
-            last_validated_at=existing_account.last_validated_at,
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Account already connected",
+                "detail": f"AWS account {request.account_id} is already connected for this tenant.",
+            },
         )
-    else:
-        # Create new account
-        new_account = AwsAccount(**account_data)
-        db.add(new_account)
-        await db.commit()
-        await db.refresh(new_account)
+    await db.refresh(new_account)
 
-        return AccountRegistrationResponse(
-            id=str(new_account.id),
-            account_id=new_account.account_id,
-            status=new_account.status.value,
-            last_validated_at=new_account.last_validated_at,
-        )
+    return AccountRegistrationResponse(
+        id=str(new_account.id),
+        account_id=new_account.account_id,
+        status=new_account.status.value,
+        last_validated_at=new_account.last_validated_at,
+    )
 
 
 @router.post(
@@ -2041,6 +2059,8 @@ async def get_ingest_progress(
             elapsed_seconds=elapsed_seconds,
             status="completed",
             progress=100,
+            percent_complete=100,
+            estimated_time_remaining=0,
             updated_findings_count=updated_count,
             last_finding_update_at=last_updated,
             message="Refresh completed. Findings were updated.",
@@ -2058,6 +2078,7 @@ async def get_ingest_progress(
         status_value = "no_changes_detected"
         progress_value = 100
         message = "No finding updates detected for this refresh window yet."
+    eta_seconds = 0 if status_value in {"completed", "no_changes_detected"} else max(0, 120 - elapsed_seconds)
 
     return IngestProgressResponse(
         account_id=account_id,
@@ -2066,6 +2087,8 @@ async def get_ingest_progress(
         elapsed_seconds=elapsed_seconds,
         status=status_value,
         progress=progress_value,
+        percent_complete=progress_value,
+        estimated_time_remaining=eta_seconds,
         updated_findings_count=updated_count,
         last_finding_update_at=last_updated,
         message=message,

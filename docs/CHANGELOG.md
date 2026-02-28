@@ -241,7 +241,7 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
   - `source` column on `findings` table
   - `worker/services/access_analyzer.py` — Access Analyzer API wrapper
   - `worker/jobs/ingest_access_analyzer.py` — Access Analyzer ingestion job
-  - `POST /api/aws-accounts/{id}/ingest-access-analyzer` endpoint
+  - `POST /api/aws/accounts/{id}/ingest-access-analyzer` endpoint
   - ReadRole permissions for Access Analyzer
   - Findings API source filter
 
@@ -287,11 +287,11 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
 ### Added
 - **AWS Account Registration**
   - `aws_accounts` table schema
-  - `POST /api/aws-accounts` — Register account
-  - `GET /api/aws-accounts` — List accounts
-  - `POST /api/aws-accounts/{id}/validate` — Validate role access
-  - `POST /api/aws-accounts/{id}/ingest` — Trigger ingestion
-  - `GET /api/aws-accounts/{id}/ping` — Ping account
+  - `POST /api/aws/accounts` — Register account
+  - `GET /api/aws/accounts` — List accounts
+  - `POST /api/aws/accounts/{id}/validate` — Validate role access
+  - `POST /api/aws/accounts/{id}/ingest` — Trigger ingestion
+  - `GET /api/aws/accounts/{id}/ping` — Ping account
 - **STS AssumeRole**
   - `backend/services/aws.py` — STS AssumeRole utility
   - ExternalId per tenant for security
@@ -425,7 +425,7 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
   - `tests/test_sqs_utils.py` — SQS utility tests
 
 ### Documentation
-- `docs/implementation-plan.md` — Full implementation plan
+- `docs/archive/2026-02-doc-cleanup/implementation-plan.md` — Full implementation plan (archived snapshot)
 - `docs/remediation-safety-model.md` — Remediation safety model
 - `docs/connect-write-role.md` — Write role connection guide
 - `docs/control-plane-event-monitoring.md` — Control-plane event monitoring

@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/aws/accounts
+Authorization: Bearer <admin_token>
+{"tenant_id":"19b8d7c6-0100-421a-a084-c8b06d466837","account_id":"029037611564","role_read_arn":"bad-arn","role_write_arn":"arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole","regions":["eu-north-1"]}

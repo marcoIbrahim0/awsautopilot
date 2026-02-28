@@ -1,82 +1,27 @@
 # Customer Onboarding Guide
 
-Welcome to AWS Security Autopilot! This guide helps you get started with securing your AWS infrastructure.
+This section covers account setup, AWS connection, and troubleshooting.
 
-## What is AWS Security Autopilot?
+## Start Here
 
-AWS Security Autopilot is a SaaS platform that:
-- **Ingests security findings** from AWS Security Hub, GuardDuty, IAM Access Analyzer, and Inspector
-- **Converts findings into prioritized actions** — Deduplicates and groups related findings
-- **Manages exceptions** — Suppress false positives with expiry dates and approvals
-- **Executes remediation** — Safe direct fixes or Infrastructure-as-Code PR bundles
-- **Generates evidence packs** — SOC 2 / ISO-ready compliance reports
-
-## Quick Start
-
-1. **[Create Account](account-creation.md)** — Sign up and log in
-2. **[Connect AWS Account](connecting-aws.md)** — Deploy IAM roles in your AWS account
-3. **[Complete Onboarding](features-walkthrough.md#onboarding-wizard)** — Follow the onboarding wizard
-4. **[View Findings](features-walkthrough.md#findings-page)** — See your security findings
-5. **[Review Actions](features-walkthrough.md#actions-page)** — Prioritized actions to fix
-> ⚠️ Status: Planned — not yet implemented
-> `features-walkthrough.md` is planned and not present yet.
-
-## Getting Help
-
-- **[Troubleshooting](troubleshooting.md)** — Common issues and solutions
-- **Support**: Contact support@yourcompany.com
-- **[API Documentation](../api/README.md)** — For technical integrations
-> ⚠️ Status: Planned — not yet implemented
-> `../api/README.md` is part of the planned `docs/api/` documentation area.
-
-## Documentation
-
-- **[Account Creation](account-creation.md)** — Signup, login, invites
-- **[Connecting AWS](connecting-aws.md)** — AWS account connection steps
-- **[Features Walkthrough](features-walkthrough.md)** — Complete feature guide
-- **[Team Management](team-management.md)** — User invites and roles
-- **[Billing](billing.md)** — Subscription and billing
-- **[Troubleshooting](troubleshooting.md)** — FAQs and common issues
-> ⚠️ Status: Planned — not yet implemented
-> `features-walkthrough.md`, `team-management.md`, and `billing.md` are planned and not present yet.
-
----
+1. [Account creation and login](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/account-creation.md)
+2. [Connect your AWS account](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/connecting-aws.md)
+3. [Troubleshooting](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/troubleshooting.md)
 
 ## Core Concepts
 
-### Findings vs Actions
+- Findings are raw security signals from AWS services.
+- Actions are prioritized remediation units derived from findings.
+- Exceptions document risk acceptance with reason and expiry.
+- Remediation modes: direct fix (limited safe scope) and PR bundle.
 
-- **Findings** — Raw security issues from AWS services (Security Hub, GuardDuty, etc.)
-- **Actions** — Prioritized, deduplicated tasks derived from findings
+## Planned customer docs (not implemented)
 
-### Remediation Modes
+- Features walkthrough
+- Team management guide
+- Billing guide
 
-- **Direct Fix** — Safe, automated fixes (e.g., enable S3 public access block)
-- **PR Bundle** — Infrastructure-as-Code patches (Terraform/CloudFormation) for you to review and apply
+## Related
 
-### Exceptions
-
-Suppress false positives with:
-- **Reason** — Why this finding is acceptable
-- **Expiry date** — When to re-evaluate
-- **Approval** — Who approved the exception
-
----
-
-## Next Steps
-
-After completing onboarding:
-
-1. **Review findings** — Understand your security posture
-2. **Create exceptions** — Suppress false positives
-3. **Approve remediations** — Fix security issues
-4. **Generate evidence packs** — Export compliance reports
-5. **Invite team members** — Collaborate on security
-
----
-
-## Support
-
-- **Email**: support@yourcompany.com
-- **Documentation**: [Full Documentation Index](../README.md)
-- **Troubleshooting**: [Troubleshooting Guide](troubleshooting.md)
+- [Main docs index](/Users/marcomaher/AWS%20Security%20Autopilot/docs/README.md)
+- [Connect WriteRole guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/connect-write-role.md)

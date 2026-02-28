@@ -269,7 +269,7 @@ aws cloudwatch put-dashboard \
 ## Next Steps
 
 - **[CI/CD](ci-cd.md)** — Set up deployment pipelines
-- **[Architecture Documentation](../architecture/owner/README.md)** — Understand system architecture
+- **[Runbooks index](../runbooks/README.md)** — Use incident/debug runbooks during alert response
 
 ---
 

@@ -130,8 +130,8 @@ See [CI/CD](ci-cd.md#rollback-procedures) for detailed rollback steps.
 ## Support
 
 - **Deployment Issues**: Check [Troubleshooting](#troubleshooting) section
-- **Infrastructure Questions**: See [Architecture Documentation](../architecture/owner/README.md)
-- **API Questions**: See [API Reference](../api/README.md)
+- **Infrastructure Questions**: See [Runbooks index](../runbooks/README.md)
+- **API Questions**: See [Local backend API guide](../local-dev/backend.md)
 
 ---
 
@@ -165,5 +165,5 @@ See [CI/CD](ci-cd.md#rollback-procedures) for detailed rollback steps.
 After deployment:
 
 1. **[Customer Onboarding Guide](../customer-guide/README.md)** — Help customers get started
-2. **[Architecture Documentation](../architecture/owner/README.md)** — Understand system architecture
+2. **[Runbooks index](../runbooks/README.md)** — Use operator runbooks for incidents and debugging
 3. **[Monitoring & Alerting](monitoring-alerting.md)** — Set up comprehensive monitoring

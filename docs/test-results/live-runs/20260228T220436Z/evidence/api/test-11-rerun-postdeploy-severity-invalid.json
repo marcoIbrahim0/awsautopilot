@@ -1,0 +1,1 @@
+{"detail":{"error":"Invalid severity","detail":"severity must be one of: CRITICAL, HIGH, INFORMATIONAL, LOW, MEDIUM, UNTRIAGED","invalid_values":["NOPE"]}}

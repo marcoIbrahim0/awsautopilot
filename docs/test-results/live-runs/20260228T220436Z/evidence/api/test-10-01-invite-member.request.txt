@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/users/invite
+Authorization: Bearer <admin_token>
+{"email":"wave4.member.20260228T220631Z@example.com","role":"member"}

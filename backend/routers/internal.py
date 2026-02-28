@@ -175,14 +175,21 @@ class GroupRunReportRequest(BaseModel):
 
 
 def _verify_digest_cron_secret(x_digest_cron_secret: str | None) -> None:
-    """Raise 403 if secret is not configured or does not match."""
+    """Raise 403 for unauthorized calls; deny closed when unset to avoid config-state leakage."""
     secret = (settings.DIGEST_CRON_SECRET or "").strip()
-    if not secret:
+    provided = (x_digest_cron_secret or "").strip()
+    if not provided:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Weekly digest cron is not configured (DIGEST_CRON_SECRET unset).",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Digest-Cron-Secret.",
         )
-    if not x_digest_cron_secret or x_digest_cron_secret.strip() != secret:
+    if not secret:
+        logger.error("DIGEST_CRON_SECRET is unset; internal weekly-digest endpoint denied request.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Digest-Cron-Secret.",
+        )
+    if provided != secret:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing X-Digest-Cron-Secret.",

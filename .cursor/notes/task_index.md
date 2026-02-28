@@ -2,8 +2,97 @@
 
 This index maps notable tasks to discoverable entries in `.cursor/notes/task_log.md`.
 
+## 2026-03
+
+- [Wave 4 fixes (Tests 09-12): contract/security rerun and tracker sync (2026-03-01)](task_log.md#wave-4-fixes-tests-09-12-contractsecurity-rerun-and-tracker-sync-2026-03-01)
+  - Executed full Wave 4 baseline + post-deploy rerun in run `20260228T220436Z`, then populated `wave-04/test-09.md` through `test-12.md` with evidence-backed final PASS outcomes.
+  - Fixed observed Wave 4 issues: ingest-progress compatibility fields (`percent_complete`, `estimated_time_remaining`), invalid findings severity validation (`400`), and internal weekly-digest auth guard deny-closed behavior (`403`).
+  - Updated base tracker Wave 4 board/sections/checklist/changelog and added focused regression coverage in `tests/test_wave4_contract_fixes.py` plus updated `tests/test_internal_weekly_digest.py`.
+
 ## 2026-02
 
+- [Wave 3 live rerun documentation recovery (2026-02-28)](task_log.md#wave-3-live-rerun-documentation-recovery-2026-02-28)
+  - Rebuilt `wave-03/test-05.md` through `wave-03/test-08.md` from `rerun-20260228T214336Z` evidence after an interrupted shell rewrite left those files empty.
+  - Refreshed tracker timestamp while keeping Wave 3 board counts and fixed-row mappings aligned with observed all-pass rerun evidence.
+- [Wave 3 Test 05 documentation drift fix (2026-02-28)](task_log.md#wave-3-test-05-documentation-drift-fix-2026-02-28)
+  - Updated `docs/prod-readiness/08-deployment-report.md` to explicitly include `TEST_ACCOUNT_ID`, `READ_ROLE_ARN`, and `WRITE_ROLE_ARN`.
+  - Kept scope minimal and factual; existing docs index links to this report were already present, so no additional cross-link changes were needed.
+- [Wave 3 Test 08 contract + token lifecycle fix and live rerun (2026-02-28)](task_log.md#wave-3-test-08-contract--token-lifecycle-fix-and-live-rerun-2026-02-28)
+  - Implemented backward-compatible alias `GET /api/users/invite-info` while keeping `GET /api/users/accept-invite` canonical via shared invite-info logic in `backend/routers/users.py`.
+  - Added focused invite contract coverage in `tests/test_invite_contract_wave3.py` for valid/invalid/expired/reused token behavior and verified with `10 passed`.
+  - Deployed runtime image `20260228T212720Z`, reran live Test 08, and captured post-deploy evidence proving alias fix (`400` not `405`), single-use token enforcement (`404` on replay), and expired token rejection (`410`).
+- [Wave 3 Test 05 frontend outage fix and live verification (2026-02-28)](task_log.md#wave-3-test-05-frontend-outage-fix-and-live-verification-2026-02-28)
+  - Root cause verified from live evidence: Cloudflare tunnel host route (`dev.valensjewelry.com` -> `127.0.0.1:3000`) had no active tunnel connector and local frontend origin was down, producing Cloudflare `530` / `1033`.
+  - Restored frontend availability by installing persistent launchd services for frontend origin and `valens-dev` tunnel; post-fix live checks now return `200` with fresh curl/screenshot artifacts.
+  - Updated Wave 3 Test 05 output and tracker: Test 05 moved from `FAIL` to `PARTIAL` (frontend outage fixed; deployment-report labeling gap remains).
+- [Wave 3 Test 07 fixes and post-deploy live rerun (2026-02-28)](task_log.md#wave-3-test-07-fixes-and-post-deploy-live-rerun-2026-02-28)
+  - Locked down `POST /api/aws/accounts` to require authenticated users only and removed unauthenticated tenant-id fallback/enumeration behavior.
+  - Changed duplicate account registration to deterministic `409` conflict with explicit error contract (`detail.error`, `detail.detail`).
+  - Added auth/duplicate regression coverage in `tests/test_register_account.py`, deployed runtime image `20260228T210148Z`, and verified live Test 07 rerun evidence (`401/401/401/409`) under `docs/test-results/live-runs/20260228T182055Z/evidence/api/test-07-rerun-postdeploy-*`.
+- [Live E2E run execution: Wave 3 tests 05-08 (2026-02-28)](task_log.md#live-e2e-run-execution-wave-3-tests-05-08-2026-02-28)
+  - Executed Wave 3 tests (`05`, `06`, `07`, `08`) in run `20260228T182055Z` with full API/UI/screenshot evidence capture under `docs/test-results/live-runs/20260228T182055Z/evidence/`.
+  - Final statuses: Test 05 **FAIL** (frontend `530`), Test 06 **PASS**, Test 07 **FAIL** (critical no-auth account-registration bypass), Test 08 **PARTIAL**.
+  - Updated `wave-03/test-05.md` through `wave-03/test-08.md` plus base tracker Quick Status/Sections 1/2/3/4/6/7/8/9 from observed evidence only.
+- [Live E2E rerun: Wave 2 tests 02-04 all-pass verification (2026-02-28)](task_log.md#live-e2e-rerun-wave-2-tests-02-04-all-pass-verification-2026-02-28)
+  - Re-executed Wave 2 tests (`02`, `03`, `04`) and refreshed all required evidence artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Confirmed all three Wave 2 tests are now passing from live evidence (Test 02 signup contract, Test 03 refresh/logout/token invalidation, Test 04 password and forgot-password flows).
+  - Updated `wave-02/test-02.md`, `wave-02/test-03.md`, `wave-02/test-04.md`, and base tracker rows/checklist/changelog to reflect fixed statuses.
+- [Redeploy serverless runtime with existing AWS profile + Wave 2 auth smoke verification (2026-02-28)](task_log.md#redeploy-serverless-runtime-with-existing-aws-profile--wave-2-auth-smoke-verification-2026-02-28)
+  - Applied DB migration to head (`0033_user_auth_reset_fields`) and passed migration gate checks against the ops database.
+  - Redeployed `security-autopilot-saas-serverless-runtime` using profile `default` with preserved runtime toggles (`EnableWorker=true`, `WorkerReservedConcurrency=1`, `ControlPlaneShadowMode=true`, `TenantReconciliationEnabled=false`).
+  - Live API smoke checks confirmed Wave 2 auth blockers are resolved (`/api/auth/refresh` present, logout invalidates old bearer token, password/forgot/reset endpoints active with expected status codes).
+- [Live E2E rerun: Wave 2 tests 02-04 regression confirmation (2026-02-28)](task_log.md#live-e2e-rerun-wave-2-tests-02-04-regression-confirmation-2026-02-28)
+  - Re-executed Wave 2 tests (`02`, `03`, `04`) in run `20260228T182055Z` and refreshed all required evidence artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Updated rerun outcomes in `wave-02/test-02.md`, `wave-02/test-03.md`, and `wave-02/test-04.md` with current timestamps/contracts.
+  - Reconfirmed open auth/password gaps in tracker (`/api/auth/refresh`, `/api/auth/password`, `/api/auth/forgot-password`, and post-logout bearer-token validity).
+- [Wave 2 blocking auth fixes implementation (Tests 03 + 04) (2026-02-28)](task_log.md#wave-2-blocking-auth-fixes-implementation-tests-03--04-2026-02-28)
+  - Implemented missing auth endpoints (`POST /api/auth/refresh`, `PUT /api/auth/password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`) and server-side bearer-token invalidation on logout/password/reset via user `token_version`.
+  - Added user auth/reset schema fields with Alembic migration `0033_user_auth_reset_fields`.
+  - Added and passed focused auth regression tests in `tests/test_auth_wave2_blocking_fixes.py` plus required existing security/auth targeted suites.
+- [Live E2E run execution: Wave 2 Test 04 password management and settings-security behavior (2026-02-28)](task_log.md#live-e2e-run-execution-wave-2-test-04-password-management-and-settings-security-behavior-2026-02-28)
+  - Executed required password/security checks in run `20260228T182055Z` and captured all required Test 04 artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Filled `wave-02/test-04.md` with concrete statuses (`200`, `404`, `404`, `401`, `SKIPPED_PRECONDITION_NOT_MET`, `404`) and set final result **FAIL** with **🔴 BLOCKING** severity.
+  - Updated consolidated tracker (`docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`) for Last updated, Wave 2 quick-status counts, Section 1 missing password endpoints, and Section 4 Test 04 flow failures.
+- [Live E2E run execution: Wave 2 Test 03 login/session lifecycle and logout invalidation (2026-02-28)](task_log.md#live-e2e-run-execution-wave-2-test-03-loginsession-lifecycle-and-logout-invalidation-2026-02-28)
+  - Executed required login/session checks in run `20260228T182055Z` and captured all required Test 03 artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Filled `wave-02/test-03.md` with concrete statuses (`401`, `200`, `200`, `200`, `404`, `204`, `200`), timestamps, assertions, and final result **FAIL** with **🔴 BLOCKING** severity.
+  - Updated consolidated tracker (`docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`) for Last updated, Wave 2 quick-status counts, Section 1 refresh endpoint status, and Test 03 logout invalidation/security findings.
+- [Live E2E run execution: Wave 2 Test 02 signup and tenant creation contract (2026-02-28)](task_log.md#live-e2e-run-execution-wave-2-test-02-signup-and-tenant-creation-contract-2026-02-28)
+  - Executed required signup checks in run `20260228T182055Z` and captured all required Test 02 artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Filled `wave-02/test-02.md` with concrete statuses (`422`, `201`, `409`, `200`), timestamps, assertions, and final result **PASS**.
+  - Updated consolidated tracker (`docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`) for Last updated, Wave 2 quick-status counts, Section 2 row #1 resolution, and Section 9 changelog.
+- [Live E2E run execution: Wave 1 Test 01 platform/API baseline (2026-02-28)](task_log.md#live-e2e-run-execution-wave-1-test-01-platformapi-baseline-2026-02-28)
+  - Executed Test 01 in run `20260228T182055Z` and captured evidence artifacts under `docs/test-results/live-runs/20260228T182055Z/evidence/api/`.
+  - Filled `wave-01/test-01.md` with concrete API/protocol outcomes and set result to **FAIL** with severity **🟠 HIGH**.
+  - Updated consolidated tracker (`docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`) for Last updated, Wave 1 quick status, and Section 7 Test 01 environment note.
+- [Documentation cleanup and deconfliction (balanced prune) (2026-02-28)](task_log.md#documentation-cleanup-and-deconfliction-balanced-prune-2026-02-28)
+  - Archived stale feature/implementation snapshots into `docs/archive/2026-02-doc-cleanup/` and replaced active `docs/features/` with a maintained current-state README.
+  - Rewrote active indexes/local-dev/customer/deployment docs to remove dead links and align endpoint docs to `/api/aws/accounts`.
+  - Replaced stale base E2E issue content with a current tracker template and normalized legacy changelog API path references.
+- [Consolidate live E2E documentation into one folder (2026-02-28)](task_log.md#consolidate-live-e2e-documentation-into-one-folder-2026-02-28)
+  - Consolidated tracker, runbook, workspace guide, and templates into `docs/live-e2e-testing/` for single-folder access.
+  - Updated `scripts/init_live_e2e_run.sh` and docs indexes so live-run scaffolding and discoverability use the new consolidated paths.
+  - Kept `docs/test-results/live-runs/` as execution output-only storage for per-run artifacts.
+- [Live SaaS E2E tracker-driven runbook and artifact scaffolding (2026-02-28)](task_log.md#live-saas-e2e-tracker-driven-runbook-and-artifact-scaffolding-2026-02-28)
+  - Added a canonical live execution runbook (now under `docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md`) with wave order (Tests 01–35), tracker section mapping rules, severity discipline, and completion criteria.
+  - Added reusable test-results workspace docs/templates plus an executable scaffold script `scripts/init_live_e2e_run.sh` that creates date-stamped run folders with wave directories and `test-01..35` stubs.
+  - Updated `docs/README.md` and `docs/runbooks/README.md` to make the new live E2E workflow discoverable from primary docs indexes.
+- [Pre-live QA Test 03 (Scenario): returning-admin login journey validation (2026-02-28)](task_log.md#pre-live-qa-test-03-scenario-returning-admin-login-journey-validation-2026-02-28)
+  - Executed wrong-password and correct-login flow against `https://api.valensjewelry.com`, confirmed login-form-compatible error shape (`detail`), and captured a fresh final `ADMIN_TOKEN`.
+  - Validated requested and actual post-login mount calls (`/api/users/me`, `/api/aws/accounts`, `/api/findings`, `/api/meta/scope`, `/api/findings/grouped`, `/api/auth/me`) and published strict output in `docs/test-results/test-03-login-scenario.md`.
+  - Result status: **FAIL** (`/api/auth/refresh` returned `404`, `/api/users/me` returned `405`, and the pre-logout bearer token remained valid after `/api/auth/logout`).
+- [Pre-live QA Test 04: password management and settings-security validation (2026-02-28)](task_log.md#pre-live-qa-test-04-password-management-and-settings-security-validation-2026-02-28)
+  - Executed suspicious-login response scenario end-to-end (settings profile load, wrong/correct password-change attempts, new-password login verification, revert attempt, forgot-password call) against `https://api.valensjewelry.com`.
+  - Published strict-format output at `docs/test-results/test-04-password-management.md`, including API-map contract findings and field-coverage diagnostics.
+  - Result status: **FAIL** (`PUT /api/auth/password` and `POST /api/auth/forgot-password` returned `404`; `GET /api/users/me` returned `405`).
+- [Pre-live QA Test 02 (Scenario): first-time signup customer journey validation (2026-02-28)](task_log.md#pre-live-qa-test-02-scenario-first-time-signup-customer-journey-validation-2026-02-28)
+  - Simulated first-time signup flow with missing-field, correct-submit, token/session, first-login API calls, and duplicate-email checks.
+  - Captured canonical downstream artifacts in `docs/test-results/test-02-signup-scenario.md`, including `SARAH_EMAIL` and `SARAH_TOKEN` for Test 07.
+  - Identified contract mismatches: prompt payload used `full_name` while frontend/API require `name`, and `onboarding_complete` flag is absent (frontend uses `user.onboarding_completed_at`).
+- [QA review: Test 01 Frontend API Discovery and Session script suitability (2026-02-28)](task_log.md#qa-review-test-01-frontend-api-discovery-and-session-script-suitability-2026-02-28)
+  - Validated proposed script against current frontend source and runtime config (`NEXT_PUBLIC_API_URL`, auth/session behavior, context/page wiring).
+  - Identified outdated/irrelevant steps (missing context files, redirected actions routes, non-existent `team/users` route, wrong config file names, same-domain API assumption).
+  - Captured recommended alignment points: cookie+CSRF auth fidelity, `https://api.valensjewelry.com` base URL, and paginated-response-safe `jq` patterns.
 - [Pre-live QA Test 16: action detail and remediation endpoint validation (2026-02-28)](task_log.md#pre-live-qa-test-16-action-detail-and-remediation-endpoint-validation-2026-02-28)
   - Executed Action API checks (16.1-16.7) on `https://api.valensjewelry.com`, including list/field contract checks, action detail/options/preview behavior, and direct-fix/PR action discovery.
   - Published strict-format output at `docs/test-results/test-16-action-detail.md` with downstream IDs `DIRECT_ACTION_ID` and `PR_ACTION_ID`.

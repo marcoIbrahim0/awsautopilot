@@ -1,0 +1,11 @@
+HTTP/2 200 
+date: Sat, 28 Feb 2026 18:27:58 GMT
+content-type: text/plain; charset=utf-8
+content-length: 2
+vary: Origin
+access-control-allow-origin: https://dev.valensjewelry.com
+access-control-allow-methods: DELETE,GET,OPTIONS,PATCH,POST,PUT
+access-control-allow-headers: accept,authorization,content-type,x-csrf-token
+access-control-allow-credentials: true
+apigw-requestid: ZgUDUiXGgi0EMvw=
+

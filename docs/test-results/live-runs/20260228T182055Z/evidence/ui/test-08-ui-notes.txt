@@ -1,0 +1,4 @@
+Test 08 UI Notes
+Execution mode: API contract validation only (invite + related endpoints).
+Observed UI behavior: No direct browser interaction executed in this test.
+Relevant UI contract observation: GET /api/users/invite-info returned 405; invite page contract should rely on /api/users/accept-invite.

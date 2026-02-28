@@ -351,4 +351,4 @@ Consider using AWS Secrets Manager automatic rotation for:
 
 - [AWS Secrets Manager Documentation](https://docs.aws.amazon.com/secretsmanager/)
 - [Local Development Environment Setup](../local-dev/environment.md)
-- [Backend Configuration](../architecture/owner/backend-services.md)
+- [Backend development guide](../local-dev/backend.md)

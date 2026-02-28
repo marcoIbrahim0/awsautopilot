@@ -1,0 +1,2 @@
+Command: rg -n "TEST_ACCOUNT_ID|SecurityAutopilotReadRole|SecurityAutopilotWriteRole|029037611564" docs/prod-readiness/08-deployment-report.md
+2:Deployed AWS security test environment to account 029037611564 

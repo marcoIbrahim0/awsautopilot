@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
 
+from backend.auth import get_optional_user
 from backend.database import get_db
 from backend.main import app
 from backend.models.enums import AwsAccountStatus
@@ -54,10 +56,67 @@ def _valid_request() -> dict:
     }
 
 
+@pytest.fixture
+def authenticated_user() -> None:
+    """Override optional auth dependency with an authenticated tenant-scoped user."""
+    async def _override_current_user() -> SimpleNamespace:
+        return SimpleNamespace(tenant_id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"))
+
+    app.dependency_overrides[get_optional_user] = _override_current_user
+    yield
+
+
+# ---------------------------------------------------------------------------
+# 401 — Auth required
+# ---------------------------------------------------------------------------
+def test_register_401_no_auth(client: TestClient) -> None:
+    """Registration requires authentication (tenant_id in body is not sufficient)."""
+    req = _valid_request()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        # Auth dependency resolves DB before returning unauthenticated user=None.
+        yield MagicMock()
+
+    app.dependency_overrides[get_db] = mock_get_db
+    try:
+        known_tenant = client.post(_register_url(), json=req)
+        req_random = dict(req)
+        req_random["tenant_id"] = "8a37cf87-39b0-4a67-9ad4-9fd4db5e44f7"
+        random_tenant = client.post(_register_url(), json=req_random)
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert known_tenant.status_code == 401
+    assert random_tenant.status_code == 401
+    assert known_tenant.json()["detail"] == "Authentication required"
+    assert random_tenant.json()["detail"] == "Authentication required"
+
+
+def test_register_401_invalid_token(client: TestClient) -> None:
+    """Invalid bearer token is treated as unauthenticated for register and must return 401."""
+    req = _valid_request()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield MagicMock()
+
+    app.dependency_overrides[get_db] = mock_get_db
+    try:
+        response = client.post(
+            _register_url(),
+            json=req,
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+
+
 # ---------------------------------------------------------------------------
 # 422 — Validation errors (Pydantic)
 # ---------------------------------------------------------------------------
-def test_register_422_invalid_account_id(client: TestClient) -> None:
+def test_register_422_invalid_account_id(client: TestClient, authenticated_user: None) -> None:
     """Account ID must be exactly 12 digits."""
     req = _valid_request()
     req["account_id"] = "12345"  # Too short
@@ -66,7 +125,7 @@ def test_register_422_invalid_account_id(client: TestClient) -> None:
     assert "account_id" in r.text.lower()
 
 
-def test_register_422_invalid_role_arn(client: TestClient) -> None:
+def test_register_422_invalid_role_arn(client: TestClient, authenticated_user: None) -> None:
     """Role ARN must match IAM ARN pattern."""
     req = _valid_request()
     req["role_read_arn"] = "invalid-arn"
@@ -75,7 +134,7 @@ def test_register_422_invalid_role_arn(client: TestClient) -> None:
     assert "role" in r.text.lower() or "arn" in r.text.lower()
 
 
-def test_register_422_empty_regions(client: TestClient) -> None:
+def test_register_422_empty_regions(client: TestClient, authenticated_user: None) -> None:
     """Regions list cannot be empty."""
     req = _valid_request()
     req["regions"] = []
@@ -84,7 +143,7 @@ def test_register_422_empty_regions(client: TestClient) -> None:
     assert "region" in r.text.lower()
 
 
-def test_register_422_invalid_region_format(client: TestClient) -> None:
+def test_register_422_invalid_region_format(client: TestClient, authenticated_user: None) -> None:
     """Regions must match AWS region pattern (e.g., us-east-1)."""
     req = _valid_request()
     req["regions"] = ["invalid-region-format-123"]
@@ -93,7 +152,7 @@ def test_register_422_invalid_region_format(client: TestClient) -> None:
     assert "region" in r.text.lower()
 
 
-def test_register_422_invalid_tenant_id(client: TestClient) -> None:
+def test_register_422_invalid_tenant_id(client: TestClient, authenticated_user: None) -> None:
     """Tenant ID must be a valid UUID."""
     req = _valid_request()
     req["tenant_id"] = "not-a-uuid"
@@ -102,7 +161,7 @@ def test_register_422_invalid_tenant_id(client: TestClient) -> None:
     assert "tenant_id" in r.text.lower()
 
 
-def test_register_201_missing_role_write_arn(client: TestClient) -> None:
+def test_register_201_missing_role_write_arn(client: TestClient, authenticated_user: None) -> None:
     """WriteRole ARN is optional; registration should succeed with ReadRole only."""
     req = _valid_request()
     del req["role_write_arn"]
@@ -146,7 +205,7 @@ def test_register_201_missing_role_write_arn(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # 400 — ARN account_id mismatch
 # ---------------------------------------------------------------------------
-def test_register_400_arn_account_mismatch(client: TestClient) -> None:
+def test_register_400_arn_account_mismatch(client: TestClient, authenticated_user: None) -> None:
     """Account ID in request must match account ID in role ARN."""
     req = _valid_request()
     req["role_read_arn"] = "arn:aws:iam::999999999999:role/TestRole"  # Different account
@@ -172,7 +231,7 @@ def test_register_400_arn_account_mismatch(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # 404 — Tenant not found
 # ---------------------------------------------------------------------------
-def test_register_404_tenant_not_found(client: TestClient) -> None:
+def test_register_404_tenant_not_found(client: TestClient, authenticated_user: None) -> None:
     """Registration fails if tenant_id doesn't exist."""
     req = _valid_request()
     
@@ -196,7 +255,7 @@ def test_register_404_tenant_not_found(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # 400 — STS assume_role failure
 # ---------------------------------------------------------------------------
-def test_register_400_sts_access_denied(client: TestClient) -> None:
+def test_register_400_sts_access_denied(client: TestClient, authenticated_user: None) -> None:
     """Registration fails if STS assume_role returns AccessDenied."""
     req = _valid_request()
     
@@ -232,7 +291,7 @@ def test_register_400_sts_access_denied(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # 400 — Account ID mismatch from get_caller_identity
 # ---------------------------------------------------------------------------
-def test_register_400_caller_identity_mismatch(client: TestClient) -> None:
+def test_register_400_caller_identity_mismatch(client: TestClient, authenticated_user: None) -> None:
     """Registration fails if get_caller_identity returns different account ID.
     
     Note: The endpoint catches HTTPException in a generic except Exception block
@@ -277,7 +336,7 @@ def test_register_400_caller_identity_mismatch(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # 201 — Success: new account created
 # ---------------------------------------------------------------------------
-def test_register_201_new_account(client: TestClient) -> None:
+def test_register_201_new_account(client: TestClient, authenticated_user: None) -> None:
     """Successfully register a new AWS account.
     
     This test uses a more complete mock setup to handle SQLAlchemy select() calls.
@@ -344,10 +403,10 @@ def test_register_201_new_account(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 201 — Success: update existing account
+# 409 — Duplicate account conflict
 # ---------------------------------------------------------------------------
-def test_register_201_update_existing_account(client: TestClient) -> None:
-    """Successfully update an existing AWS account."""
+def test_register_409_duplicate_account(client: TestClient, authenticated_user: None) -> None:
+    """Duplicate registration must return 409 conflict with explicit error contract."""
     req = _valid_request()
     
     tenant = MagicMock()
@@ -368,19 +427,13 @@ def test_register_201_update_existing_account(client: TestClient) -> None:
         session.refresh = AsyncMock()
         yield session
     
-    # Mock assume_role to return a valid session
-    mock_boto_session = MagicMock()
-    mock_sts = MagicMock()
-    mock_sts.get_caller_identity.return_value = {"Account": req["account_id"]}
-    mock_boto_session.client.return_value = mock_sts
-    
-    with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
-        app.dependency_overrides[get_db] = mock_get_db
-        try:
-            r = client.post(_register_url(), json=req)
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-    
-    assert r.status_code == 201
-    # The existing account should be updated
-    assert existing.status == AwsAccountStatus.validated
+    app.dependency_overrides[get_db] = mock_get_db
+    try:
+        r = client.post(_register_url(), json=req)
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert r.status_code == 409
+    payload = r.json()
+    assert payload["detail"]["error"] == "Account already connected"
+    assert req["account_id"] in payload["detail"]["detail"]

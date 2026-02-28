@@ -1,0 +1,1 @@
+{"detail":[{"type":"value_error","loc":["body","account_id"],"msg":"Value error, account_id must be exactly 12 digits","input":"abc","ctx":{"error":{}}}]}

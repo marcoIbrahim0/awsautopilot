@@ -340,6 +340,31 @@ def resolve_tenant_id(
 # ============================================
 
 _SEVERITY_LABELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]
+_ALLOWED_SEVERITY_FILTERS = set(_SEVERITY_LABELS + ["UNTRIAGED"])
+
+
+def _parse_severity_filter_values(raw_value: str) -> list[str]:
+    values = [part.strip().upper() for part in raw_value.split(",") if part.strip()]
+    if not values:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Invalid severity",
+                "detail": "severity must include at least one value.",
+            },
+        )
+    invalid = sorted({value for value in values if value not in _ALLOWED_SEVERITY_FILTERS})
+    if invalid:
+        allowed = ", ".join(sorted(_ALLOWED_SEVERITY_FILTERS))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Invalid severity",
+                "detail": f"severity must be one of: {allowed}",
+                "invalid_values": invalid,
+            },
+        )
+    return values
 
 
 def _apply_finding_filters(
@@ -356,7 +381,7 @@ def _apply_finding_filters(
     if region:
         query = query.where(Finding.region == region)
     if severity:
-        severities = [s.strip().upper() for s in severity.split(",")]
+        severities = _parse_severity_filter_values(severity)
         query = query.where(Finding.severity_label.in_(severities))
     if source:
         sources = [s.strip().lower() for s in source.split(",")]
@@ -612,7 +637,7 @@ async def list_findings(
         query = query.where(Finding.resource_id == resource_id.strip())
     if severity:
         # Support comma-separated severities (e.g., "CRITICAL,HIGH")
-        severities = [s.strip().upper() for s in severity.split(",")]
+        severities = _parse_severity_filter_values(severity)
         query = query.where(Finding.severity_label.in_(severities))
     if status_filter:
         # Support comma-separated statuses (e.g., "NEW,NOTIFIED")

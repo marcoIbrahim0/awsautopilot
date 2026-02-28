@@ -1,0 +1,11 @@
+invite-info invalid token: 400
+accept-invite GET invalid token: 400
+accept-invite POST invalid token: 400
+invite auth (control): 201
+invite no-auth (control): 401
+invite-info valid token: 200
+accept-invite valid token: 200
+invite-info reused token: 404
+accept-invite reused token: 404
+invite-info expired token: 410
+accept-invite expired token: 410

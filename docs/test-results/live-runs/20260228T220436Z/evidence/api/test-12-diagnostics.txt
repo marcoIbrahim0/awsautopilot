@@ -1,0 +1,7 @@
+test-12-01-finding-direct-cross-tenant.status=404
+test-12-02-action-direct-cross-tenant.status=404
+test-12-03-accounts-list-tenantb.status=200
+test-12-04-ingest-cross-tenant.status=404
+test-12-05-ingest-aa-cross-tenant.status=404
+test-12-06-ingest-inspector-cross-tenant.status=404
+test-12-07-service-readiness-cross-tenant.status=404

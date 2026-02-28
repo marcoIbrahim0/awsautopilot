@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/users/accept-invite
+{"token":"","password":"***REDACTED***","name":"Wave4 Member"}

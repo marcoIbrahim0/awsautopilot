@@ -2,6 +2,11 @@
 Deployed AWS security test environment to account 029037611564 
 in region eu-north-1 on 2026-02-27 18:50:55 UTC.
 
+Explicit test environment identifiers:
+* TEST_ACCOUNT_ID=029037611564
+* READ_ROLE_ARN=arn:aws:iam::029037611564:role/SecurityAutopilotReadRole
+* WRITE_ROLE_ARN=arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole
+
 Architecture 1 — architecture-1: 19 resources created
 Architecture 2 — architecture-2: 18 resources created
 Total resources deployed: 37

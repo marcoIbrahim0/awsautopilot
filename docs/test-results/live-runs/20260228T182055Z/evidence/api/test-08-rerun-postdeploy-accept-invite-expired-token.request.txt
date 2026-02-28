@@ -1,0 +1,1 @@
+POST https://api.valensjewelry.com/api/users/accept-invite\n{"token":"cb2f1d4f-657c-4d6b-988f-c6a9356df1b8","password":"Wave3Temp123!","name":"Wave3 Expired User"}

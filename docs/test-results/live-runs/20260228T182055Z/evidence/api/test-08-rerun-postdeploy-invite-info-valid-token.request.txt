@@ -1,0 +1,1 @@
+GET https://api.valensjewelry.com/api/users/invite-info?token=9c978b43-4802-4c5d-8949-a19b355f12a9

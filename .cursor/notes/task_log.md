@@ -1,5 +1,913 @@
 # Task Log
 
+## Wave 4 fixes (Tests 09-12): contract/security rerun and tracker sync (2026-03-01)
+
+**Task:** Execute Wave 4 (`09-12`) from live evidence in a fresh run folder, fix only observed failures, add regression tests, redeploy runtime, rerun Wave 4, and synchronize tracker/docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Added backward-compatible ingest-progress contract fields `percent_complete` and `estimated_time_remaining` while keeping `progress`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py** — Added strict severity-filter validation; invalid severity values now return `400` with explicit error contract.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py** — Hardened weekly-digest secret guard to deny closed with `403` for unauthorized/unconfigured cases (no config-state leak via `503`).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Extended `IngestProgressResponse` type with optional `percent_complete` and `estimated_time_remaining`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_weekly_digest.py** — Updated unset-secret expectation to match deny-closed `403` contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py** (new) — Added focused tests for severity validation and ingest-progress compatibility fields.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-04/test-09.md** — Filled full Wave 4 Test 09 execution + post-fix rerun evidence and final PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-04/test-10.md** — Filled full Wave 4 Test 10 execution + post-fix rerun evidence and final PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-04/test-11.md** — Filled full Wave 4 Test 11 execution + post-fix rerun evidence and final PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-04/test-12.md** — Filled full Wave 4 Test 12 execution + post-fix rerun evidence and final PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Wave 4 board row, affected Section 1/2/3/4 rows, Section 8 checklist items, and Section 9 changelog entries.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/** (new run scaffold and API evidence artifacts) — Added baseline + rerun evidence files for Wave 4 execution.
+
+**What was done (verified):**
+- Created run workspace `20260228T220436Z` and captured baseline Wave 4 evidence under `docs/test-results/live-runs/20260228T220436Z/evidence/api/`.
+- Baseline failures observed:
+  - ingest-progress response missing compatibility fields (`percent_complete`, `estimated_time_remaining`).
+  - `/api/internal/weekly-digest` unauthorized calls returned `503` with config-state detail.
+  - invalid findings severity filter (`severity=NOPE`) returned `200` empty set instead of validation error.
+- Implemented fixes and regression tests, then executed:
+  - `./venv/bin/pytest -q tests/test_wave4_contract_fixes.py tests/test_internal_weekly_digest.py`
+  - Result: `8 passed`.
+- Deployed runtime:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag: `20260228T221242Z`.
+- Post-deploy Wave 4 rerun outcomes (evidence-backed):
+  - Test 09: PASS
+  - Test 10: PASS
+  - Test 11: PASS
+  - Test 12: PASS
+
+**Technical debt / gotchas:**
+- Member-user setup in live runs still depends on invite-token acquisition path not exposed directly in invite response; RBAC probes used a previously captured same-tenant member token artifact.
+- `ingest-progress` still requires `started_after`; compatibility fields were added without changing this requirement.
+
+**Open questions / TODOs:**
+- Optional follow-up: decide whether `ingest-progress` should support a default window when `started_after` is omitted (`422` currently preserved by design).
+
+## Wave 3 live rerun documentation recovery (2026-02-28)
+
+**Task:** Complete Wave 3 live rerun artifacts for Tests `05-08` in run `20260228T182055Z` after a failed shell rewrite left `wave-03/test-05.md` through `test-08.md` empty, using observed rerun evidence only and without product-code changes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-05.md** — Rebuilt full Test 05 output from `test-05-rerun-20260228T214336Z-*` artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-06.md** — Rebuilt full Test 06 output from `test-06-rerun-20260228T214336Z-*` artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-07.md** — Rebuilt full Test 07 output from `test-07-rerun-20260228T214336Z-*` artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-08.md** — Rebuilt full Test 08 output from `test-08-rerun-20260228T214336Z-*` artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Refreshed `Last updated` timestamp; preserved existing Wave 3 counts and fixed-row mappings already supported by evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this recovery task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Restored all required Test 05/06/07/08 sections: preconditions, executed steps, API evidence tables, UI evidence, assertions, tracker mapping, and final status/severity.
+- Confirmed final Wave 3 rerun statuses from artifacts:
+  - Test 05: PASS
+  - Test 06: PASS
+  - Test 07: PASS
+  - Test 08: PASS
+- Confirmed tracker quick-status values remain aligned with Wave 3 all-pass rerun state (`4 pass / 0 fail / 0 partial / 0 blocked`).
+
+**Technical debt / gotchas:**
+- None in this documentation-recovery scope.
+
+**Open questions / TODOs:**
+- Proceed to Wave 4 execution (`Tests 09-12`) when ready.
+
+## Wave 3 Test 05 documentation drift fix (2026-02-28)
+
+**Task:** Fix the Wave 3 Test 05 documentation drift by making `docs/prod-readiness/08-deployment-report.md` explicitly list `TEST_ACCOUNT_ID`, `READ_ROLE_ARN`, and `WRITE_ROLE_ARN`, then update task tracking notes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/08-deployment-report.md** — Added explicit identifier lines:
+  - `TEST_ACCOUNT_ID=029037611564`
+  - `READ_ROLE_ARN=arn:aws:iam::029037611564:role/SecurityAutopilotReadRole`
+  - `WRITE_ROLE_ARN=arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole`
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Updated the deployment report to include the three explicit labels requested by Wave 3 Test 05.
+- Confirmed existing docs indexes already cross-link the deployment report (`docs/prod-readiness/README.md`), so no additional cross-link edits were required.
+
+**Technical debt / gotchas:**
+- None.
+
+**Open questions / TODOs:**
+- None.
+
+## Wave 3 Test 08 contract + token lifecycle fix and live rerun (2026-02-28)
+
+**Task:** Resolve Wave 3 Test 08 partial status from run `20260228T182055Z` using evidence-only verification: implement canonical invite contract with backward compatibility, make valid/invalid/expired/reused invite-token behavior explicit and tested, rerun live checks, and update tracking docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** — Added shared invite-info resolver, kept canonical `GET /api/users/accept-invite`, and added backward-compatible alias `GET /api/users/invite-info` with identical contract behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_invite_contract_wave3.py** (new) — Added focused invite contract tests covering:
+  - valid invite-info retrieval on canonical + alias endpoints,
+  - invalid token format rejection (`400`) on canonical + alias GET and POST accept,
+  - expired token rejection (`410`) on canonical + alias GET and POST accept,
+  - valid accept once then replay rejection (`404`) for reused token.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-*.{status,headers,json,request.txt}** (new) — Post-deploy live rerun artifacts for alias compatibility, valid token flow, replay rejection, expired rejection, and auth controls.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-*.txt** (new) — Rerun summary plus DB token query/update evidence used to execute deterministic valid/reused/expired lifecycle probes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-08.md** — Rewritten with post-deploy evidence and final status updated to **PASS**.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 3/TOTAL counts, Section 1 row #3, Section 3 row #10, Section 8 checkbox `T08-10`, and Section 9 changelog entries.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry.
+
+**What was done (verified):**
+- Backend tests:
+  - `./venv/bin/pytest -q tests/test_invite_contract_wave3.py tests/test_control_plane_token_lifecycle.py -k invite`
+  - Output: `..........                                                               [100%]`
+  - Output: `10 passed, 6 deselected in 0.81s`
+- Runtime deploy:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime updated with image tag `20260228T212720Z`.
+- Live Test 08 rerun evidence (post-deploy):
+  - `GET /api/users/invite-info?token=not-a-uuid` -> `400` (previously `405`)
+  - `GET /api/users/accept-invite?token=not-a-uuid` -> `400`
+  - `POST /api/users/accept-invite` invalid token format -> `400`
+  - `POST /api/users/invite` with auth -> `201`; without auth -> `401`
+  - Valid invite token: `GET /api/users/invite-info` -> `200`, `POST /api/users/accept-invite` -> `200`
+  - Reused consumed token: `GET /api/users/invite-info` -> `404`, `POST /api/users/accept-invite` -> `404`
+  - Expired token: `GET /api/users/invite-info` -> `410`, `POST /api/users/accept-invite` -> `410`
+
+**Technical debt / gotchas:**
+- Live expired-token verification required explicit test setup via DB update to move invite expiry into the past (captured in evidence artifacts).
+- Live evidence artifacts contain one-time invite tokens and session tokens; keep these files scoped to internal test-results usage.
+
+**Open questions / TODOs:**
+- None.
+
+## Wave 3 Test 05 frontend outage fix and live verification (2026-02-28)
+
+**Task:** Investigate and fix Wave 3 Test 05 frontend outage from run `20260228T182055Z` using evidence-only verification, restore `https://dev.valensjewelry.com` to `200`, capture post-fix artifacts (curl + screenshot), and update tracker/docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-postfix.status** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-postfix.headers** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-postfix.html** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-postfix.request.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-prefix-rerun.status** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-prefix-rerun.headers** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-prefix-rerun.html** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-frontend-root-prefix-rerun.request.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-cloudflared-tunnel-info-before-fix.command.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-cloudflared-tunnel-info-before-fix.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-cloudflared-tunnel-info-after-fix.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-launchctl-frontend-after-fix.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-launchctl-cloudflared-after-fix.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-before-fix-summary.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/screenshots/test-05-frontend-root-postfix.png** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-05.md** — Rewritten with root cause, fix actions, and post-fix evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 3/TOTAL counts, Section 7 row #1 status text, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+- **/Users/marcomaher/Library/LaunchAgents/com.valens.frontend.dev.plist** (operational, outside repo) — Persistent frontend origin service.
+- **/Users/marcomaher/Library/LaunchAgents/com.valens.cloudflared.dev.plist** (operational, outside repo) — Persistent Cloudflare tunnel service.
+
+**What was done (verified):**
+- Reproduced outage in-session:
+  - `GET https://dev.valensjewelry.com/` -> `530`, body `error code: 1033`.
+  - `GET https://api.valensjewelry.com/health` remained `200`.
+- Root cause evidence:
+  - `~/.cloudflared/config.yml` maps `dev.valensjewelry.com` -> `http://127.0.0.1:3000`.
+  - `cloudflared tunnel info 71b14aef-c5f7-4a83-bd93-9c04b4f025f4` showed no active connection before fix.
+  - local origin on `127.0.0.1:3000` was down before fix.
+- Applied fix:
+  - Created and bootstrapped launch agents `com.valens.frontend.dev` and `com.valens.cloudflared.dev`.
+  - Verified service state via `launchctl print` artifacts.
+- Post-fix validation:
+  - local origin listener present on `:3000`.
+  - tunnel connector active for `valens-dev`.
+  - repeated `GET https://dev.valensjewelry.com/` -> `200`.
+  - captured fresh screenshot and curl artifacts under run evidence.
+
+**Technical debt / gotchas:**
+- Frontend availability is currently dependent on this host running both launchd services (local origin + local tunnel connector).
+- `http://dev.valensjewelry.com/` still returns `200` and does not enforce HTTP->HTTPS redirect.
+
+**Open questions / TODOs:**
+- Decide long-term frontend hosting/routing strategy (durable hosted origin vs machine-local tunnel dependency).
+- Close remaining Test 05 doc prerequisite gap by adding explicit `TEST_ACCOUNT_ID`, `READ_ROLE_ARN`, and `WRITE_ROLE_ARN` labels in `docs/prod-readiness/08-deployment-report.md`.
+
+## Wave 3 Test 07 fixes and post-deploy live rerun (2026-02-28)
+
+**Task:** Fix Wave 3 Test 07 blockers from run `20260228T182055Z` using evidence-only verification: enforce auth on `POST /api/aws/accounts`, eliminate unauthenticated tenant enumeration behavior, implement deterministic duplicate-account conflict contract, add backend tests, redeploy, and rerun live Test 07 evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — `POST /api/aws/accounts` now hard-requires authenticated user (`401` when unauthenticated), and duplicate registrations now return deterministic `409` with explicit conflict payload (`detail.error`, `detail.detail`); added `IntegrityError` conflict handling on insert race.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_register_account.py** — Added/adjusted coverage for:
+  - no-auth register -> `401`,
+  - invalid-token register -> `401`,
+  - duplicate register -> `409`,
+  - valid first registration path still -> `201`.
+  Existing register tests were updated to run under authenticated dependency override where appropriate.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-07-rerun-postdeploy-*.{status,headers,json,request.txt}** (new) — Post-deploy live rerun artifacts for Test 07 checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-07.md** — Updated with final post-deploy rerun result and evidence mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 3/total quick-status counts, Section 3 row #14, Section 4 row #15, Section 8 checkbox `T07-14`, and Section 9 changelog entries.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry.
+
+**What was done (verified):**
+- Backend/unit tests:
+  - `./venv/bin/pytest -q tests/test_register_account.py` -> `14 passed in 0.09s`
+- Runtime deploy:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime updated with image tag `20260228T210148Z`.
+- Live Wave 3 Test 07 rerun evidence (post-deploy):
+  - `POST /api/aws/accounts` no auth + known tenant id -> `401`
+  - `POST /api/aws/accounts` no auth + random tenant id -> `401`
+  - `POST /api/aws/accounts` invalid bearer token -> `401`
+  - Authenticated duplicate register -> `409` with `{\"detail\":{\"error\":\"Account already connected\",...}}`
+  - Validation paths remained enforced (`422` for empty body / invalid account id / malformed ARN with auth).
+
+**Technical debt / gotchas:**
+- `POST /api/aws/accounts` still requires `tenant_id` in request body by schema, even though tenant is now auth-derived; this is backward-compatible but redundant.
+- Reconnect/update UX should prefer PATCH/validate flow for already-connected accounts because duplicate POST now intentionally returns `409`.
+
+**Open questions / TODOs:**
+- Optional follow-up: make `tenant_id` optional for authenticated `POST /api/aws/accounts` while retaining backward compatibility for existing clients that still send it.
+
+## Live E2E run execution: Wave 3 tests 05-08 (2026-02-28)
+
+**Task:** Execute Wave 3 live E2E tests (`05`, `06`, `07`, `08`) in run `20260228T182055Z` against `https://dev.valensjewelry.com` and `https://api.valensjewelry.com`, capture raw evidence (status/body/headers/request notes + UI/screenshot artifacts), fill per-test wave docs, and update the base tracker from observed behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-05-*.{status,headers,request.txt,json,html}** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-06-*.{status,headers,request.txt,json}** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-07-*.{status,headers,request.txt,json}** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-*.{status,headers,request.txt,json}** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/ui/test-05-ui-notes.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/ui/test-05-prereq-doc-check.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/ui/test-06-ui-notes.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/ui/test-07-ui-notes.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/ui/test-08-ui-notes.txt** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/screenshots/test-05-frontend-root.png** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-05.md** — Filled with executed steps, evidence table, assertions, tracker mapping, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-06.md** — Filled with executed steps, evidence table, assertions, tracker mapping, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-07.md** — Filled with executed steps, evidence table, assertions, tracker mapping, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-03/test-08.md** — Filled with executed steps, evidence table, assertions, tracker mapping, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 3 counts, Section 1/2/3/4/6/7 findings, Section 8 checklist, and Section 9 changelog entries from Wave 3 evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- **Test 05** result: **FAIL** (`🟠 HIGH`)
+  - Backend `/health` and auth/account preconditions passed (`200`/`200`), but frontend root returned Cloudflare `530` (`error code: 1033`) with screenshot evidence.
+  - Deployment report prerequisite check found raw account id but not explicit `TEST_ACCOUNT_ID` label/role-ARN references.
+- **Test 06** result: **PASS**
+  - `/service-readiness`, `/control-plane-readiness`, and `/onboarding-fast-path` all returned `200`.
+  - `/ingest-progress` returned `422` without `started_after` and `200` with `started_after`.
+  - Auth-boundary checks for readiness endpoint returned `401` for no-auth and invalid-token calls.
+- **Test 07** result: **FAIL** (`🔴 BLOCKING`)
+  - Critical security finding: `POST /api/aws/accounts` succeeded with **no auth** when valid `tenant_id` was supplied (`201`).
+  - Duplicate account registration with tenant_id returned `201` instead of conflict/idempotent duplicate response.
+  - Random tenant_id no-auth probe returned `404`, revealing tenant-existence behavior.
+- **Test 08** result: **PARTIAL** (`🟠 HIGH`)
+  - Invite create with auth returned `201`; without auth returned `401`.
+  - Invalid token format on `GET/POST /api/users/accept-invite` returned `400`.
+  - `GET /api/users/invite-info` returned `405` (legacy contract row remains open).
+  - Invite-token reuse check could not be executed with a valid token using exposed response artifacts.
+- Updated Wave 3 quick-status board to `Pass 1 / Fail 2 / Partial 1 / Blocked 0`.
+
+**Technical debt / gotchas:**
+- Account registration currently supports unauthenticated tenant-scoped operation if `tenant_id` is known, creating a critical auth boundary gap.
+- Frontend domain availability (`530`/Cloudflare 1033) blocks browser-driven E2E coverage even when backend API is healthy.
+- Invite-token reuse assertion remains unverified without a live retrievable invite token in current evidence flow.
+
+**Open questions / TODOs:**
+- Decide whether `/api/users/invite-info` should be restored as GET or removed from tracker/contract in favor of `/api/users/accept-invite`.
+- Define required account-registration behavior for duplicates (`409` conflict vs explicit idempotent contract) and remove no-auth tenant_id fallback.
+- Restore frontend route/DNS health for `https://dev.valensjewelry.com` before Wave 4 UI-dependent execution.
+
+## Live E2E rerun: Wave 2 tests 02-04 all-pass verification (2026-02-28)
+
+**Task:** Re-run Wave 2 (`Test 02`, `Test 03`, `Test 04`) again in run `20260228T182055Z`, overwrite all required evidence artifacts, refresh per-test result docs, and update the base tracker/history from proven live outputs only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-created-user.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.body** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-session-notes.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-security-notes.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-02.md** — Refreshed with new evidence timestamps and assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-03.md** — Refreshed with new evidence timestamps and assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-04.md** — Refreshed with new evidence timestamps and assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Wave 2 counts and marked fixed rows proven by this rerun.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- **Test 02** rerun: `422` (missing fields), `201` (valid signup), `409` (duplicate), `200` (post-signup `/api/auth/me`) => PASS.
+- **Test 03** rerun: `401` wrong login, `200` valid login, `200` `/api/auth/me`, `200` `/api/aws/accounts`, `200` `/api/auth/refresh`, `204` logout, `401` post-logout bearer `/api/auth/me` => PASS.
+- **Test 04** rerun: `200` profile load, `400` password change with wrong old password, `204` password change with correct old password, `200` login with new password, `204` password revert, `200` forgot-password with generic response (same body for existing/non-existing email) => PASS.
+- Wave 2 quick status updated to `Pass 3 / Fail 0 / Partial 0 / Blocked 0`.
+
+**Technical debt / gotchas:**
+- A cookie+CSRF refresh/logout attempt during this rerun returned `403`; evidence artifacts were finalized using bearer-auth context for Test 03, which satisfied the contract checks and produced definitive refresh/logout/invalidation results.
+
+**Open questions / TODOs:**
+- Optional follow-up: run an explicit browser-context cookie+CSRF validation pass to confirm frontend transport details in addition to bearer-auth contract validation.
+
+
+## Redeploy serverless runtime with existing AWS profile + Wave 2 auth smoke verification (2026-02-28)
+
+**Task:** Redeploy backend runtime with the existing local AWS profile (`default`) and verify live Wave 2 auth blockers are resolved without changing unrelated runtime toggles.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0033_user_auth_reset_fields.py** — Finalized migration revision id/filename to be compatible with Alembic version storage width in this environment.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this redeploy and verification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- Confirmed existing AWS profile and account context:
+  - `aws configure list-profiles` => `default`
+  - `aws sts get-caller-identity --profile default --region eu-north-1` => account `029037611564`.
+- Applied DB migration and migration gate checks:
+  - `alembic current` => `0032_findings_resolved_at`
+  - `alembic upgrade head` => `0033_user_auth_reset_fields`
+  - `python3 scripts/check_migration_gate.py` => passed (current=head).
+- Redeployed runtime with existing profile and preserved key toggles:
+  - Command: `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag updated to `20260228T200235Z`.
+  - Verified post-deploy params include `EnableWorker=true`, `WorkerReservedConcurrency=1`, `ControlPlaneShadowMode=true`, `TenantReconciliationEnabled=false`.
+- Live auth contract smoke checks on `https://api.valensjewelry.com`:
+  - `POST /api/auth/refresh` => `200`
+  - `POST /api/auth/logout` => `204`
+  - `GET /api/auth/me` with pre-logout token => `401` (`Invalid or expired token`)
+  - `PUT /api/auth/password` with valid token and wrong old password => `400` (`Old password is incorrect`)
+  - `POST /api/auth/forgot-password` => `200` generic message (same for existing/non-existing email)
+  - `POST /api/auth/reset-password` with invalid token => `400` (`Invalid or expired token`)
+
+**Technical debt / gotchas:**
+- Existing historical test artifacts under `docs/test-results/live-runs/20260228T182055Z/` still contain pre-fix failures until Wave 2 is rerun.
+
+**Open questions / TODOs:**
+- Rerun Wave 2 Test 03 and Test 04 artifacts/tracker to replace stale FAIL statuses with this redeployed behavior.
+
+
+## Live E2E rerun: Wave 2 tests 02-04 regression confirmation (2026-02-28)
+
+**Task:** Re-execute Wave 2 (`Test 02`, `Test 03`, `Test 04`) in run `20260228T182055Z` using the same evidence-first style, refresh per-test artifacts/results, and update the consolidated tracker from observed rerun outcomes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-02.md** — Refreshed Test 02 with rerun timestamps/identity and current evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-03.md** — Refreshed Test 03 with rerun timestamps and current evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-04.md** — Refreshed Test 04 with rerun timestamps and current evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-created-user.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.body** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-session-notes.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.status** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.json** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-security-notes.txt** (overwritten)
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated` and reconfirmed open Wave 2 issue statuses from rerun evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this rerun task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this rerun task.
+
+**What was done (verified):**
+- **Test 02** rerun: `422` (missing fields), `201` (valid signup), `409` (duplicate), `200` (post-signup `/api/auth/me`) => PASS.
+- **Test 03** rerun: `401` wrong login, `200` valid login, `200` `/api/auth/me`, `200` `/api/aws/accounts`, `404` `/api/auth/refresh`, `204` logout, `200` post-logout bearer `/api/auth/me` => FAIL.
+- **Test 04** rerun: `200` profile load, `404` on both password-change attempts, `401` new-password login, `SKIPPED_PRECONDITION_NOT_MET` revert, `404` forgot-password => FAIL.
+
+**Technical debt / gotchas:**
+- Wave 2 rerun reconfirms live backend still missing `/api/auth/refresh`, `/api/auth/password`, and `/api/auth/forgot-password`.
+- Logout continues clearing cookie session but does not invalidate already-issued bearer token server-side in live environment.
+- Non-existing vs existing forgot-password requests are both `404` due missing endpoint; meaningful enumeration-behavior validation remains blocked until implementation is live.
+
+**Open questions / TODOs:**
+- None.
+
+## Wave 2 blocking auth fixes implementation (Tests 03 + 04) (2026-02-28)
+
+**Task:** Implement the Wave 2 blocking auth fixes from live tracker Tests 03/04: add refresh/password/forgot/reset auth endpoints, enforce server-side token invalidation on logout/password/reset, add user reset/session fields with migration, and add focused backend tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** — Added `POST /api/auth/refresh`, `PUT /api/auth/password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`; updated `POST /api/auth/logout` to invalidate token lineage server-side; wired signup/login token issuance to user token version.
+- **/Users/marcomaher/AWS Security Autopilot/backend/auth.py** — Added token-version JWT claim handling and enforcement in auth dependencies; added password-reset token helpers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/user.py** — Added `token_version`, `password_reset_token_hash`, `password_reset_expires_at`, and `password_reset_requested_at`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/email.py** — Added transactional password-reset email sender (`/reset-password?token=...` link).
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** — Updated invite-accept auth token issuance to include user token version.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0033_user_token_version_and_password_reset.py** — Added migration for new user auth/session reset fields and reset-token-hash index.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_wave2_blocking_fixes.py** — Added focused backend tests for refresh, logout invalidation, password change, forgot-password generic response, and reset-password success/failure.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- `POST /api/auth/refresh` now returns `200` with `access_token` + `token_type="bearer"` and re-sets auth cookies.
+- `POST /api/auth/logout` still returns `204` and now invalidates existing bearer tokens via per-user `token_version` bump.
+- `PUT /api/auth/password` now enforces old-password check (`400` on mismatch), updates password hash, invalidates old tokens, and issues fresh auth cookie token for continued session.
+- `POST /api/auth/forgot-password` now always returns `200` with generic message and, for existing users only, persists hashed one-time reset token + expiry/request timestamps and sends reset email link.
+- `POST /api/auth/reset-password` now returns `400` for invalid/expired token and `200` for valid reset, with password update + reset-field cleanup + token invalidation.
+- Added targeted tests and ran required pytest commands successfully.
+
+**Technical debt / gotchas:**
+- Token invalidation is currently per-user global (`token_version`), which intentionally revokes all prior tokens for that user on logout/password/reset.
+- Forgot-password/reset behavior is implemented in backend; live SaaS environment still requires deploy + re-run of Wave 2 tests to close tracker rows.
+- Local/dev email mode logs reset links unless SMTP is configured, so end-to-end mail delivery validation depends on env configuration.
+
+**Open questions / TODOs:**
+- Optional hardening follow-up: add rate limiting/cooldown for repeated forgot-password requests and audit log events for reset flows.
+
+## Live E2E run execution: Wave 2 Test 04 password management and settings-security behavior (2026-02-28)
+
+**Task:** Execute Wave 2 Test 04 in run `20260228T182055Z`, capture required password/security evidence artifacts, fully populate the per-test result file, and update tracker sections based on observed endpoint behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-04.md** — Filled Test 04 with concrete preconditions, steps, evidence, assertions, tracker mapping, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.status** — Captured profile-load HTTP status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-profile-load.json** — Captured profile-load response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.status** — Captured wrong-current-password change status (`404`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-wrong.json** — Captured wrong-current-password change response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.status** — Captured correct-current-password change status (`404`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-change-correct.json** — Captured correct-current-password change response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.status** — Captured new-password login status (`401`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-login-new-password.json** — Captured new-password login response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.status** — Captured revert step outcome (`SKIPPED_PRECONDITION_NOT_MET`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-password-revert.json** — Captured revert skip reason payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.status** — Captured forgot-password status (`404`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-forgot-password.json** — Captured forgot-password response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-04-security-notes.txt** — Captured credential source, profile endpoint, and existing/non-existing forgot-password comparison notes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated`, Wave 2 quick-status counts, total counts, Section 1 missing endpoint statuses (password + forgot-password), and Section 4 Test 04 broken-flow statuses.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- Loaded profile endpoint used by auth context (`GET /api/auth/me`) and received `200`.
+- `PUT /api/auth/password` returned `404` for both wrong and correct current-password attempts.
+- Login with proposed new password returned `401` (`Invalid email or password`).
+- Revert step was skipped because password-change success precondition was not met.
+- `POST /api/auth/forgot-password` returned `404` for existing account.
+- Existing and non-existing forgot-password calls returned the same `404`/`{"detail":"Not Found"}` result in this missing-endpoint state.
+
+**Technical debt / gotchas:**
+- Password-management APIs expected by settings-security flow are missing in live backend (`/api/auth/password`, `/api/auth/forgot-password`).
+- Account-existence leakage cannot be meaningfully validated until forgot-password endpoint is implemented (current behavior is uniformly `404`).
+
+**Open questions / TODOs:**
+- None.
+
+## Live E2E run execution: Wave 2 Test 03 login/session lifecycle and logout invalidation (2026-02-28)
+
+**Task:** Execute Wave 2 Test 03 in run `20260228T182055Z`, capture all required login/session evidence artifacts, fully populate the per-test result file, and update the consolidated tracker strictly from observed behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-03.md** — Filled Test 03 with concrete preconditions, execution steps, API evidence, assertions, tracker mapping, and final result.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.status** — Captured wrong-password login HTTP status (`401`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-wrong.json** — Captured wrong-password login response body.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.status** — Captured valid login HTTP status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-login-valid.json** — Captured valid login response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.status** — Captured post-login `/api/auth/me` HTTP status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-auth-me-after-login.json** — Captured post-login `/api/auth/me` response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.status** — Captured post-login `/api/aws/accounts` HTTP status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-accounts-after-login.json** — Captured post-login `/api/aws/accounts` response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.status** — Captured refresh-check HTTP status (`404`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-refresh.json** — Captured refresh-check response body.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.status** — Captured logout HTTP status (`204`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-logout.body** — Captured logout response body artifact (empty body, no-content).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.status** — Captured post-logout bearer-token `/api/auth/me` status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-post-logout-auth-check.json** — Captured post-logout bearer-token `/api/auth/me` response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-03-session-notes.txt** — Captured short session behavior notes (credential source + bearer/cookie post-logout behavior).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated`, Wave 2 quick status row, total counts, Section 1 refresh status, Section 4 Test 03 status, and Section 3 auth-boundary security finding.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- `POST /api/auth/login` with wrong password returned `401` (`Invalid email or password`).
+- `POST /api/auth/login` with valid credentials returned `200` with top-level `access_token` and auth payload.
+- Post-login protected checks passed (`GET /api/auth/me` -> `200`, `GET /api/aws/accounts` -> `200`).
+- `POST /api/auth/refresh` returned `404` (`Not Found`).
+- `POST /api/auth/logout` returned `204`.
+- Post-logout bearer token remained valid (`GET /api/auth/me` with pre-logout bearer token -> `200`), while cookie-based check returned `401`.
+
+**Technical debt / gotchas:**
+- Logout currently clears cookie session but does not invalidate already-issued bearer token server-side.
+- Refresh endpoint remains absent from live backend response surface while frontend session lifecycle expects it.
+
+**Open questions / TODOs:**
+- None.
+
+## Live E2E run execution: Wave 2 Test 02 signup and tenant creation contract (2026-02-28)
+
+**Task:** Execute Wave 2 Test 02 in run `20260228T182055Z`, capture required signup/auth evidence artifacts, fully populate the per-test result file, and update the consolidated tracker from proven outcomes only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-02/test-02.md** — Filled Test 02 with concrete preconditions, execution steps, API evidence, assertions, tracker mapping, and final result.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.status** — Captured missing-fields signup HTTP status (`422`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-missing-fields.json** — Captured missing-fields validation response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.status** — Captured valid signup HTTP status (`201`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-valid.json** — Captured valid signup response payload (token/user/tenant contract).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.status** — Captured duplicate signup HTTP status (`409`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-signup-duplicate.json** — Captured duplicate signup response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.status** — Captured immediate authenticated `/api/auth/me` HTTP status (`200`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-post-signup-auth-check.json** — Captured immediate authenticated `/api/auth/me` response payload.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-02-created-user.txt** — Stored generated unique signup identity used in this run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated`, Wave 2 quick status row, total counts, Section 2 row #1 resolution, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- `POST /api/auth/signup` with `{}` returned `422` and required-field validation details.
+- `POST /api/auth/signup` with a unique email/company returned `201` with top-level `access_token`.
+- Replayed `POST /api/auth/signup` with same email returned `409` (`Email already registered`).
+- Immediate `GET /api/auth/me` with returned bearer token returned `200` and matched the created user/tenant.
+- Tracker Section 2 row #1 was marked `✅ FIXED` from live evidence; no new Section 4 duplicate-handling bug was observed.
+
+**Technical debt / gotchas:**
+- Execution was API-driven for this test; no browser screenshot artifacts were captured.
+- Generated test identity is stored in run evidence for traceability and should be treated as ephemeral test data.
+
+**Open questions / TODOs:**
+- None.
+
+## Live E2E run execution: Wave 1 Test 01 platform/API baseline (2026-02-28)
+
+**Task:** Execute Test 01 from run `20260228T182055Z`, capture evidence artifacts, fill the per-test result file, and map findings into the consolidated base issue tracker.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/wave-01/test-01.md** — Filled Test 01 with concrete execution steps, evidence references, assertions, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-api-health.json** — Captured `/health` response body.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-api-ready.json** — Captured `/ready` response body (`503 degraded` details).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-api-docs.html** — Captured `/docs` response artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-cors-preflight.txt** — Captured CORS preflight response headers.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-login-invalid.status** — Captured invalid login HTTP status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-login-invalid.json** — Captured invalid login response body.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-frontend-https-headers.txt** — Captured frontend HTTPS headers.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-api-health-headers.txt** — Captured API health headers.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-frontend-http-check.txt** — Captured frontend HTTP behavior (`200`, no redirect).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-01-api-http-check.txt** — Captured API HTTP port-80 connectivity check.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated`, Wave 1 status row, and Section 7 Test 01 environment note/action/status.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- Frontend HTTPS root responded `200`.
+- API `/health` responded `200` with expected JSON health shape.
+- API `/ready` responded `503` with degraded readiness and SQS AccessDenied details.
+- API `/docs` responded `200` (Swagger UI page available).
+- CORS preflight for `/api/auth/login` from `https://dev.valensjewelry.com` responded `200` with expected allow-origin and allow-method headers.
+- Invalid login attempt returned `401` with `{\"detail\":\"Invalid email or password\"}`.
+- Frontend HTTP endpoint responded `200` without redirect; API HTTP port 80 was unreachable.
+
+**Technical debt / gotchas:**
+- Test 01 evidence is command-line/API focused; no browser screenshot artifacts were collected in this pass.
+- `/ready` degraded state indicates environment/permissions issues that must be resolved before strict go-live readiness.
+- Frontend HTTP non-redirect behavior may conflict with strict HTTPS-only expectations.
+
+**Open questions / TODOs:**
+- Confirm whether Test 01 policy requires browser screenshot evidence in addition to API/header artifacts.
+- Confirm whether non-prod frontend domains should enforce HTTP->HTTPS redirect before release gate.
+
+## Documentation cleanup and deconfliction (balanced prune) (2026-02-28)
+
+**Task:** Clean `docs/` by removing noise/duplicates, archiving stale feature/implementation snapshots, correcting active docs to current API reality, repairing broken links, and aligning endpoint path references to `/api/aws/accounts`.
+
+**Files moved/archived:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/implementation-plan.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/implementation-plan.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/complete-feature-inventory.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/complete-feature-inventory.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task1-surface-map.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task1-surface-map.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task2-frontend-features.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task2-frontend-features.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task3-backend-features.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task3-backend-features.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task4-worker-features.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task4-worker-features.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task5-aws-integration-features.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task5-aws-integration-features.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task6-infrastructure-features.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task6-infrastructure-features.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task7-implementation-status.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task7-implementation-status.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task8-feature-dependencies.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task8-feature-dependencies.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feature-inventory-summary.md** -> **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feature-inventory-summary.md**
+
+**Files deleted (noise/duplicate only):**
+- **/Users/marcomaher/AWS Security Autopilot/docs/.DS_Store**
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/.DS_Store**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/08-task8-coverage-matrix.md** (duplicate of `08-coverage-matrix.md`)
+
+**Files created/updated (active docs):**
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/README.md** (archive index/rationale)
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** (active feature-doc entrypoint)
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/README.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/frontend.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/worker.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/tests.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/README.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/account-creation.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/connecting-aws.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/troubleshooting.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/README.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/prerequisites.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/infrastructure-ecs.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/monitoring-alerting.md**
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md** (dead-link repair)
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** (rewritten current template)
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** (`/api/aws-accounts` -> `/api/aws/accounts`)
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md** (implementation-plan link moved to archive)
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md** (implementation-plan link moved to archive)
+
+**What was done (verified):**
+- Active docs now use `/api/aws/accounts` route naming (legacy `/api/aws-accounts` removed from active docs).
+- Live E2E base tracker no longer contains stale hardcoded failure claims; it is now a per-run evidence template with gate categories.
+- Confirmed currently implemented internal/remediation/account endpoints are listed as available in active tracker guidance.
+- Relative-link scan across active docs (excluding archive/protected production docs) returned no broken links.
+- No files under `/docs/Production/` were edited.
+
+**Technical debt / gotchas:**
+- Worktree contained unrelated pre-existing file changes and deletions before this cleanup; they were left untouched per user direction.
+- Historical claims remain in archived docs by design and should not be treated as live contract.
+
+**Open questions / TODOs:**
+- Decide whether to retain or restore historical `docs/test-results/test-*.md` files currently deleted in worktree (outside this cleanup scope).
+- Optional follow-up: add an automated docs CI check for relative-link integrity and forbidden legacy endpoint strings.
+
+## Consolidate live E2E documentation into one folder (2026-02-28)
+
+**Task:** Organize all tracker-driven live E2E documentation into a single folder for cleaner PM/operator access and keep run tooling aligned to the new location.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** (new) — Added one-page index listing all docs used for live E2E testing.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** (moved from `docs/00-BASE-ISSUE-TRACKER.md`) — Kept as canonical issue tracker source of truth.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md** (moved from `docs/runbooks/`) — Canonical live E2E runbook now colocated with tracker.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/test-results-workspace.md** (moved/renamed from `docs/test-results/README.md`) — Workspace/evidence guidance colocated with tracker/runbook.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/test-case-template.md** (moved from `docs/test-results/templates/`) — Per-test template colocated with live E2E docs.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/wave-summary-template.md** (moved from `docs/test-results/templates/`) — Per-wave summary template colocated with live E2E docs.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/init_live_e2e_run.sh** — Updated tracker path references to the new consolidated folder.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/live-e2e-testing/` section and updated `/docs/test-results/` and runbook references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/README.md** — Updated links to point to consolidated live E2E docs.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this consolidation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this consolidation task.
+
+**What was done (verified):**
+- Consolidated the full live E2E documentation set into `docs/live-e2e-testing/`.
+- Kept `docs/test-results/live-runs/` as artifact output-only storage.
+- Verified `scripts/init_live_e2e_run.sh` syntax and execution after relocation; confirmed run scaffold still creates tracker snapshot correctly from new path.
+
+**Technical debt / gotchas:**
+- Existing `.cursor` historical entries still mention prior file locations; this is expected as historical record, but path references in those old entries are now stale.
+- Existing worktree still contains unrelated pending changes/deletions outside this task scope.
+
+**Open questions / TODOs:**
+- Decide whether to add a short redirect note file at old `docs/00-BASE-ISSUE-TRACKER.md` path for temporary transition support.
+
+## Live SaaS E2E tracker-driven runbook and artifact scaffolding (2026-02-28)
+
+**Task:** Implement the tracker-driven live SaaS E2E process as executable project artifacts so each test run (01-35) can be performed consistently and mapped directly into `docs/00-BASE-ISSUE-TRACKER.md`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/live-saas-e2e-tracker-runbook.md** (new) — Added the canonical live E2E execution runbook: setup, standard loop, evidence rules, wave order (01-35), severity discipline, tracker mapping rules, and completion criteria.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/README.md** (new) — Added the test-results workspace contract for live runs, required evidence fields, and run initialization command.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/templates/test-case-template.md** (new) — Added reusable per-test evidence template including API/UI evidence tables and tracker update fields.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/templates/wave-summary-template.md** (new) — Added reusable per-wave summary template for pass/fail/blocked and gate updates.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/init_live_e2e_run.sh** (new) — Added executable scaffold script that creates date-stamped run folders, wave folders, test-01..35 markdown stubs, evidence directories, and tracker snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/README.md** — Added discoverability link for the new live E2E runbook and related test-results workspace.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Updated `/docs/test-results/` and `/docs/runbooks/` sections to include the new tracker-driven runbook/workspace structure.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- Implemented a single runbook optimized for live SaaS test execution tied directly to the base issue tracker.
+- Implemented a repeatable script (`scripts/init_live_e2e_run.sh`) to generate full-run scaffolding, including:
+  - run metadata,
+  - wave-01 to wave-09 directories,
+  - test-01 to test-35 templates with wave assignment, test focus, and tracker section hints,
+  - evidence directories (`api`, `ui`, `screenshots`),
+  - tracker snapshot copy for run traceability.
+- Added reusable templates so every test and wave summary captures the same minimum evidence schema.
+- Updated docs indexes so operators can discover and use the new workflow without searching task history.
+
+**Technical debt / gotchas:**
+- Existing worktree currently contains unrelated modifications/deletions (including legacy `docs/test-results/test-*.md` files). The new runbook/workspace is additive and does not restore deleted historical artifacts.
+- Tests 34-35 do not have detailed scripted definitions in current repo documents; runbook marks this as a verification gap and treats them as regression/gate-closure sweeps.
+
+**Open questions / TODOs:**
+- Decide whether to restore and archive historical `docs/test-results/test-*.md` files in a dedicated archive path to reduce future discoverability drift.
+- Decide whether to add a non-interactive API harness (curl/jq batch runner) that auto-populates per-test evidence files from the scaffold.
+
+## Pre-live QA Test 03 (Scenario): returning-admin login journey validation (2026-02-28)
+
+**Task:** Simulate Marco returning in the morning, validate login error/success behavior, run post-login findings-mount API calls, verify token refresh/logout behavior, and publish results to `docs/test-results/test-03-login-scenario.md`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-03-login-scenario.md** — Added full Step 1-6 scenario output with frontend API-map reconciliation, response-shape checks, and final `ADMIN_TOKEN`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-03-login-scenario.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA scenario task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA scenario task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested source file `docs/test-results/test-01-api-map.md` is missing in repository state.
+  - Derived current API map from live source (`frontend/src/contexts/AuthContext.tsx`, `frontend/src/app/login/page.tsx`, `frontend/src/app/page.tsx`, `frontend/src/app/findings/page.tsx`, `frontend/src/lib/api.ts`).
+  - Executed live scenario against `https://api.valensjewelry.com` with `maromaher54@gmail.com`.
+- Scenario outcomes:
+  - Step 1 wrong password: `POST /api/auth/login` returned `401` with `{ \"detail\": \"Invalid email or password\" }`; shape matches inline error parsing (`detail`/`message`) used by login form.
+  - Step 2 correct password: `POST /api/auth/login` returned `200` with `access_token`, `user`, `tenant`, and onboarding/template metadata.
+  - Step 3 requested mount calls:
+    - `GET /api/users/me` with Bearer -> `405 Method Not Allowed`.
+    - `GET /api/aws/accounts` with Bearer -> `200` (accounts array).
+    - `GET /api/findings?limit=20&offset=0` with Bearer -> `200` (paginated object: `items`, `total`).
+  - Additional actual findings-page mount calls validated from source:
+    - `GET /api/meta/scope` -> `200`.
+    - `GET /api/findings/grouped?limit=20&offset=0` -> `200`.
+    - `GET /api/auth/me` with Bearer -> `200`.
+  - Step 4 refresh: `POST /api/auth/refresh` -> `404 Not Found` (no token returned).
+  - Step 5 logout: `POST /api/auth/logout` -> `204`; old bearer token still accepted on `GET /api/findings` (`200`, expected `401`).
+  - Step 6 final login: `POST /api/auth/login` -> `200`; fresh `ADMIN_TOKEN` captured for subsequent tests.
+- Frontend-read field checks:
+  - `/api/auth/login` and `/api/auth/me` did not include `user.phone_number`, `user.phone_verified`, or `user.email_verified` (fields read in `settings/ProfileTab` via auth user object).
+  - `/api/findings/grouped` payload did not include `risk_acknowledged` and `risk_acknowledged_count` (fields read in `FindingGroupCard`).
+
+**Technical debt / gotchas:**
+- `docs/test-results/test-01-api-map.md` remains missing, forcing source-driven contract reconstruction and making scripted QA steps drift-prone.
+- Current auth surface mismatch persists:
+  - `/api/auth/refresh` missing (`404`),
+  - bearer token remains valid after `/api/auth/logout` (`200` on protected endpoint post-logout),
+  - requested profile call `/api/users/me` is incompatible with current runtime (`405`) while frontend auth bootstrap uses `/api/auth/me`.
+
+**Open questions / TODOs:**
+- Decide whether to implement/restore `POST /api/auth/refresh` and/or include `access_token` in `/api/auth/me` for deterministic frontend token-expiry scheduling.
+- Decide whether logout should revoke/deny previously issued bearer tokens (server-side invalidation) or whether tests should be standardized as cookie-session logout checks only.
+- Decide whether `GET /api/users/me` should be added for compatibility with current scenario scripts, or standardize scripts on `GET /api/auth/me`.
+
+---
+
+## Pre-live QA Test 04: password management and settings-security validation (2026-02-28)
+
+**Task:** Execute password-management scenario after suspicious-login alert simulation (settings profile load, wrong/current password change attempts, post-change login verification, revert, forgot-password flow) and publish results to `docs/test-results/test-04-password-management.md`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-04-password-management.md** — Added strict run output for Step 1-6, endpoint availability findings, and API-map contract summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-04-password-management.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested source file `docs/test-results/test-01-api-map.md` is missing in repository state.
+  - Used source-of-truth fallback from live code paths: `frontend/src/lib/api.ts`, `frontend/src/app/settings/page.tsx`, `frontend/src/contexts/AuthContext.tsx`, `backend/routers/auth.py`, `backend/routers/users.py`.
+  - Minted fresh admin token via `POST /api/auth/login` with `maromaher54@gmail.com / Maher730`.
+- API-map findings:
+  - Frontend password function calls `PUT /api/auth/password` with `{ old_password, new_password }`.
+  - Frontend profile update function calls `PATCH /api/users/me` with `{ name?, phone_number? }`.
+  - Effective mount/auth bootstrap call is `GET /api/auth/me`; settings page additionally loads `GET /api/users` and notifications-tab settings from `/api/users/me/digest-settings` + `/api/users/me/slack-settings`.
+- Live scenario outcomes:
+  - Step 1 `GET /api/users/me` -> `405 Method Not Allowed`.
+  - Step 2 `PUT /api/auth/password` (wrong current password payload) -> `404 Not Found`.
+  - Step 3 `PUT /api/auth/password` (correct current password payload) -> `404 Not Found` (**MISSING**).
+  - Step 4 login with `Maher730New!` -> `401 Invalid email or password` (`token_present=false`).
+  - Step 5 revert skipped (no token from Step 4).
+  - Step 6 `POST /api/auth/forgot-password` -> `404 Not Found` (**MISSING**).
+- Additional live diagnostics:
+  - `GET /api/auth/me` -> `200` with `user.name`, `user.email`, `user.role` and tenant/launch metadata.
+  - `GET /api/users/me/digest-settings` -> `200`.
+  - `GET /api/users/me/slack-settings` -> `200`.
+
+**Technical debt / gotchas:**
+- Password-management API routes expected by frontend (`PUT /api/auth/password`, `POST /api/auth/forgot-password`) are absent in live backend response surface (`404`) and not found in `backend/routers/auth.py` / `backend/routers/users.py` route scan.
+- Test-plan source file `docs/test-results/test-01-api-map.md` is missing, which forces fallback to direct source inspection and may cause drift between scripted assumptions and actual runtime contracts.
+- `GET /api/users/me` is not available for profile hydration (`405`), so using it as the canonical settings-on-mount request is currently incompatible with live API behavior.
+
+**Open questions / TODOs:**
+- Decide whether to implement password routes at `PUT /api/auth/password` and `POST /api/auth/forgot-password` (preferred for frontend contract parity) or update frontend API map/contracts to match actual backend routes.
+- Decide whether settings profile hydration should be standardized on `GET /api/auth/me` (existing) or implement `GET /api/users/me` for parity with test-plan expectations.
+
+---
+
+## Pre-live QA Test 02 (Scenario): first-time signup customer journey validation (2026-02-28)
+
+**Task:** Simulate a brand-new customer signup journey (Sarah from FinTech Corp), verify signup request/response contract against frontend expectations, validate immediate post-signup API calls, and publish results for downstream tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-02-signup-scenario.md** — Added full scenario execution report (Step 1-4), API-map-derived contract checks, and downstream `SARAH_EMAIL` / `SARAH_TOKEN`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-02-signup-scenario.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA scenario task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA scenario task.
+
+**What was done (verified):**
+- Loaded required startup context (`.cursor/rules/*`, `.cursor/notes/project_status.md`, `.cursor/notes/task_index.md`, relevant `task_log` entry, and `docs/README.md`) before execution.
+- Requested source file `docs/test-results/test-01-api-map.md` was not present in repo; derived API map facts directly from current source:
+  - Signup call path: `signup/page.tsx` -> `useAuth().signup(...)` -> `AuthContext.signup()` -> `POST /api/auth/signup`.
+  - Frontend request body shape: `{ company_name, name, email, password }`.
+  - Redirect behavior: `/signup` pushes `/onboarding` after successful signup; onboarding completion routing is based on `user.onboarding_completed_at`.
+- Executed live scenario calls against `https://api.valensjewelry.com`:
+  - Step 1 (missing fields) -> `422` with `detail` array of missing-field errors.
+  - Step 2 using prompt payload (`full_name`) -> `422` (`name` missing).
+  - Corrective Step 2 using frontend-actual payload (`name`) -> `201`, created Sarah tenant/user and returned `access_token`.
+  - Step 3 token check -> `GET /api/aws/accounts` returned `200 []`.
+  - First-login calls -> `GET /api/auth/me` returned `200` with `user`/`tenant`, onboarding state in `user.onboarding_completed_at`.
+  - Step 4 duplicate using prompt payload (`full_name`) -> `422` validation; corrective duplicate using `name` -> `409` + `"Email already registered"`.
+- Persisted raw execution artifact:
+  - `docs/test-results/.tmp/test-02-signup-scenario-raw-1772245610.json`
+
+**Technical debt / gotchas:**
+- Requested API-map file (`docs/test-results/test-01-api-map.md`) is missing, forcing source-level reconstruction for this scenario.
+- Prompt payload key `full_name` is incompatible with runtime/frontend contract (`name`), causing false-negative `422` outcomes in "correct signup" and "duplicate signup" steps.
+- Frontend signup error parser cannot render field-level FastAPI validation arrays (`detail: [...]`); it falls back to generic `"Signup failed"`.
+- Requested `onboarding_complete` boolean is not part of current runtime contract; frontend uses `user.onboarding_completed_at`.
+
+**Open questions / TODOs:**
+- Decide whether API should accept `full_name` as backward-compatible alias for `name`, or lock all test plans to `name`.
+- Decide whether auth responses should include explicit `onboarding_complete` boolean alias, or keep `user.onboarding_completed_at` as sole onboarding-state signal.
+- Decide whether frontend signup should map FastAPI validation-array errors to user-friendly inline messages instead of generic fallback.
+
+---
+
+## QA review: Test 01 Frontend API Discovery and Session script suitability (2026-02-28)
+
+**Task:** Assess whether the proposed "Test 01 — Frontend API Discovery and Session" script is aligned with the current frontend/backend implementation, and identify irrelevant/outdated steps before execution.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added this review entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this review.
+
+**What was done (verified):**
+- Loaded required agent rules/status history and docs index before analysis.
+- Verified current frontend auth/session model from source:
+  - API base comes from `NEXT_PUBLIC_API_URL`.
+  - Requests use cookie session (`credentials: 'include'`) and CSRF header on unsafe methods.
+  - Auth bootstrap starts with `GET /api/auth/me`; login uses `POST /api/auth/login` and stores token expiry from `access_token`.
+- Verified current frontend runtime configuration:
+  - `frontend/.env` and `frontend/.env.local` set `NEXT_PUBLIC_API_URL=https://api.valensjewelry.com`.
+  - Frontend config file is `next.config.ts` (not `next.config.js`).
+- Verified requested context/page file relevance:
+  - `TenantContext.tsx` and `FindingsContext.tsx` are not present; only `AuthContext.tsx` and `BackgroundJobsContext.tsx` exist.
+  - `/actions` and `/actions/[id]` routes currently redirect to `/findings`; remediation interactions are handled via findings-side components (`ActionDetailDrawer`, `RemediationModal`).
+  - There is no dedicated `/team/users` page route; team/user APIs are wired under `settings` tabs.
+- Cross-checked recent QA artifacts and confirmed repeated command-contract drift risks:
+  - current API list responses are paginated objects (`items`, `total`),
+  - several strict `jq` patterns still assume top-level arrays and fail.
+
+**Technical debt / gotchas:**
+- Proposed script mixes frontend-domain endpoint assumptions (`https://dev.valensjewelry.com/api/...`) with current env-configured backend base (`https://api.valensjewelry.com`), causing likely false failures.
+- Proposed script uses Bearer-token flow as “exact frontend behavior”, but frontend is cookie/CSRF-first; this can diverge from real browser behavior.
+- Proposed script references non-existent frontend files/contexts/routes, which introduces irrelevant review work and brittle expectations.
+- Existing test artifacts persist full tokens in markdown; this is an operational secret-handling risk for shared repos.
+
+**Open questions / TODOs:**
+- Decide whether QA contract should be browser-auth fidelity (cookie jar + CSRF) or API-token compatibility checks; keep one canonical style to reduce drift.
+- Normalize strict test templates to paginated response contracts (`.items[]`) and current field names (`severity_label`, etc.) to avoid repeated false FAIL outcomes.
+
+---
+
 ## Pre-live QA Test 16: action detail and remediation endpoint validation (2026-02-28)
 
 **Task:** Execute pre-live Action API checks (16.1-16.7) to validate actions list payload contract, required action fields, action detail lookup, remediation endpoints, and direct-fix/PR action availability.

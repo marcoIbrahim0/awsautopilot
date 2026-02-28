@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -22,13 +22,16 @@ from backend.auth import (
     control_plane_token_response_fields,
     create_access_token,
     generate_control_plane_token,
+    generate_password_reset_token,
     get_current_user,
     get_optional_user,
     get_saas_and_launch_url,
     hash_control_plane_token,
+    hash_password_reset_token,
     hash_password,
     set_auth_cookies,
     tenant_to_response,
+    user_token_version,
     user_to_response,
     verify_password,
 )
@@ -37,10 +40,13 @@ from backend.models.audit_log import AuditLog
 from backend.models.enums import UserRole
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.email import email_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+RESET_PASSWORD_EXPIRY_MINUTES = 60
+FORGOT_PASSWORD_GENERIC_MESSAGE = "If an account exists, a reset link was sent."
 
 
 # ============================================
@@ -59,6 +65,33 @@ class LoginRequest(BaseModel):
     """Request body for login."""
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password")
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class PasswordChangeRequest(BaseModel):
+    old_password: str = Field(..., description="Current password")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password")
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., description="User email address")
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1, description="One-time reset token")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password")
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str
 
 
 class ControlPlaneTokenRotateResponse(BaseModel):
@@ -117,6 +150,18 @@ def _log_token_event(
     )
 
 
+def _issue_access_token(user: User) -> str:
+    return create_access_token(
+        user.id,
+        user.tenant_id,
+        token_version=user_token_version(user),
+    )
+
+
+def _invalidate_user_tokens(user: User) -> None:
+    user.token_version = user_token_version(user) + 1
+
+
 # ============================================
 # Endpoints
 # ============================================
@@ -171,7 +216,7 @@ async def signup(
         await db.refresh(tenant)
         
         # Create JWT
-        access_token = create_access_token(user.id, tenant.id)
+        access_token = _issue_access_token(user)
         set_auth_cookies(response, access_token)
         
         logger.info(f"New signup: tenant={tenant.id}, user={user.id}, email={user.email}")
@@ -248,7 +293,7 @@ async def login(
         )
     
     # Create JWT
-    access_token = create_access_token(user.id, user.tenant_id)
+    access_token = _issue_access_token(user)
     set_auth_cookies(response, access_token)
     
     logger.info(f"Login: user={user.id}, email={user.email}")
@@ -289,16 +334,116 @@ async def login(
     )
 
 
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh_auth(
+    response: Response,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> RefreshResponse:
+    """
+    Refresh authenticated session and issue a new access token.
+    """
+    access_token = _issue_access_token(current_user)
+    set_auth_cookies(response, access_token)
+    return RefreshResponse(access_token=access_token)
+
+
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     response: Response,
     current_user: Annotated[User | None, Depends(get_optional_user)] = None,
+    db: AsyncSession = Depends(get_db),
 ) -> None:
     """
-    Clear browser auth and CSRF cookies.
+    Clear browser auth/CSRF cookies and invalidate current server-side token lineage.
     """
-    del current_user
+    if current_user is not None:
+        _invalidate_user_tokens(current_user)
+        await db.commit()
     clear_auth_cookies(response)
+
+
+@router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    request: PasswordChangeRequest,
+    response: Response,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Change current user's password and invalidate previously issued tokens.
+    """
+    if not current_user.password_hash or not verify_password(request.old_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Old password is incorrect",
+        )
+    current_user.password_hash = hash_password(request.new_password)
+    current_user.password_reset_token_hash = None
+    current_user.password_reset_expires_at = None
+    current_user.password_reset_requested_at = None
+    _invalidate_user_tokens(current_user)
+    await db.commit()
+
+    access_token = _issue_access_token(current_user)
+    set_auth_cookies(response, access_token)
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ForgotPasswordResponse:
+    """
+    Request a password reset link. Always returns a generic success response.
+    """
+    generic = ForgotPasswordResponse(message=FORGOT_PASSWORD_GENERIC_MESSAGE)
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        return generic
+
+    reset_token = generate_password_reset_token()
+    now = datetime.now(timezone.utc)
+    user.password_reset_token_hash = hash_password_reset_token(reset_token)
+    user.password_reset_requested_at = now
+    user.password_reset_expires_at = now + timedelta(minutes=RESET_PASSWORD_EXPIRY_MINUTES)
+    await db.commit()
+
+    email_service.send_password_reset_email(
+        to_email=user.email,
+        reset_token=reset_token,
+    )
+    return generic
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ResetPasswordResponse:
+    """
+    Reset password using a one-time token.
+    """
+    token_hash = hash_password_reset_token(request.token)
+    result = await db.execute(
+        select(User).where(User.password_reset_token_hash == token_hash)
+    )
+    user = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    if user is None or user.password_reset_expires_at is None or user.password_reset_expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    user.password_hash = hash_password(request.new_password)
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+    user.password_reset_requested_at = None
+    _invalidate_user_tokens(user)
+    await db.commit()
+
+    return ResetPasswordResponse(message="Password reset successful.")
 
 
 @router.get("/me", response_model=MeResponse)

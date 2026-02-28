@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/users/invite
+No Authorization header
+{"email":"wave3inv+20260228T204153Z@example.com"}
