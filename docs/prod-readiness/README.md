@@ -35,6 +35,7 @@ Cross-reference:
 - [Compiled Teardown Scripts Bundle](08-teardown-scripts.md)
 - [Compiled Coverage Matrix](08-coverage-matrix.md)
 - [Compilation Summary](08-summary.md)
+- [Deployment Report](08-deployment-report.md)
 - [Root-Credentials-Required Runbook (`iam_root_access_key_absent`)](root-credentials-required-iam-root-access-key-absent.md)
 
 ## Supported Action Types (Terraform Artifact Baseline)

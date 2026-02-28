@@ -16,6 +16,7 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import get_optional_user
@@ -38,7 +39,9 @@ from backend.services.aws_account_orchestration import (
 )
 from backend.services.aws import assume_role
 from backend.services.cloudformation_templates import get_latest_template_version
+from backend.services.control_plane_intake import is_supported_control_plane_event
 from backend.utils.sqs import (
+    build_ingest_control_plane_events_job_payload,
     build_compute_actions_job_payload,
     build_ingest_access_analyzer_job_payload,
     build_ingest_inspector_job_payload,
@@ -293,6 +296,14 @@ class AccountControlPlaneReadinessResponse(BaseModel):
     overall_ready: bool = Field(..., description="True only when every configured region has recent events")
     missing_regions: list[str] = Field(default_factory=list, description="Regions with no recent events (never seen or stale)")
     regions: list[RegionControlPlaneReadiness] = Field(default_factory=list)
+
+
+class ControlPlaneSyntheticEventResponse(BaseModel):
+    """Synthetic control-plane intake trigger result."""
+
+    enqueued: int = Field(..., description="Number of events enqueued")
+    dropped: int = Field(..., description="Number of events dropped")
+    drop_reasons: dict[str, int] = Field(default_factory=dict, description="Drop reason counters")
 
 
 class ReadRoleUpdateRequest(BaseModel):
@@ -577,6 +588,81 @@ def _enqueue_compute_actions_job(tenant_id: uuid.UUID, account_id: str) -> str:
     return str(response["MessageId"])
 
 
+def _build_synthetic_control_plane_event(account_id: str, region: str, now: datetime) -> dict[str, object]:
+    event_id = f"synthetic-{uuid.uuid4()}"
+    event_time = now.isoformat()
+    return {
+        "id": event_id,
+        "time": event_time,
+        "account": account_id,
+        "region": region,
+        "source": "security.autopilot.synthetic",
+        "detail-type": "AWS API Call via CloudTrail",
+        "detail": {
+            "eventName": "AuthorizeSecurityGroupIngress",
+            "eventTime": event_time,
+            "eventID": f"synthetic-detail-{uuid.uuid4()}",
+            "userIdentity": {"accountId": account_id},
+            "awsRegion": region,
+            "eventCategory": "Management",
+        },
+    }
+
+
+def _enqueue_control_plane_event(
+    tenant_id: uuid.UUID,
+    account_id: str,
+    region: str,
+    event: dict[str, object],
+    event_id: str,
+    event_time: str,
+    intake_time: str,
+) -> None:
+    queue_url = (settings.SQS_EVENTS_FAST_LANE_QUEUE_URL or "").strip()
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    payload = build_ingest_control_plane_events_job_payload(
+        tenant_id=tenant_id,
+        account_id=account_id,
+        region=region,
+        event=event,
+        event_id=event_id,
+        event_time=event_time,
+        intake_time=intake_time,
+        created_at=intake_time,
+    )
+    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+
+
+async def _upsert_control_plane_status(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    account_id: str,
+    region: str,
+    event_time: datetime,
+    intake_time: datetime,
+) -> None:
+    upsert = (
+        insert(ControlPlaneEventIngestStatus)
+        .values(
+            tenant_id=tenant_id,
+            account_id=account_id,
+            region=region,
+            last_event_time=event_time,
+            last_intake_time=intake_time,
+        )
+        .on_conflict_do_update(
+            index_elements=["tenant_id", "account_id", "region"],
+            set_={
+                "last_event_time": event_time,
+                "last_intake_time": intake_time,
+                "updated_at": func.now(),
+            },
+        )
+    )
+    await db.execute(upsert)
+
+
 def _normalize_db_timestamp(value: datetime | None) -> datetime | None:
     """Ensure DB datetimes are timezone-aware for age comparisons."""
     if value is None:
@@ -841,6 +927,19 @@ async def delete_account(
     Remove an AWS account from the tenant. The account record and its association
     are deleted; existing findings for this account_id remain in the database.
     """
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
+    current_role = getattr(current_user.role, "value", current_user.role)
+    if current_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can delete AWS accounts",
+        )
+
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     tenant = await get_tenant(tenant_uuid, db)
     acc = await get_account_for_tenant(tenant_uuid, account_id, db)
@@ -1723,6 +1822,73 @@ async def check_account_control_plane_readiness(
         missing_regions=missing,
         regions=region_items,
     )
+
+
+@router.post(
+    "/{account_id}/control-plane-synthetic-event",
+    response_model=ControlPlaneSyntheticEventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Send synthetic allowlisted control-plane event",
+    description=(
+        "Queues a synthetic allowlisted management event for this account/region to validate "
+        "control-plane intake readiness during onboarding."
+    ),
+)
+async def send_control_plane_synthetic_event(
+    account_id: Annotated[
+        str,
+        Path(..., description="AWS account ID (12 digits)", pattern=r"^\d{12}$"),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    region: Annotated[
+        Optional[str],
+        Query(description="Target monitored region. Defaults to first account region."),
+    ] = None,
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> ControlPlaneSyntheticEventResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    acc = await get_account_for_tenant(tenant_uuid, account_id, db)
+    if not acc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"AWS account {account_id} not found for tenant")
+
+    configured_regions = [r for r in (acc.regions or []) if r]
+    fallback_region = settings.AWS_REGION or "eu-north-1"
+    target_region = (region or (configured_regions[0] if configured_regions else fallback_region)).strip()
+    if configured_regions and target_region not in configured_regions:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="region must be one of account configured regions")
+
+    queue_url = (settings.SQS_EVENTS_FAST_LANE_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Events fast-lane queue URL not configured. Set SQS_EVENTS_FAST_LANE_QUEUE_URL.",
+        )
+
+    now = datetime.now(timezone.utc)
+    event = _build_synthetic_control_plane_event(account_id, target_region, now)
+    supported, reason = is_supported_control_plane_event(event)
+    if not supported:
+        return ControlPlaneSyntheticEventResponse(enqueued=0, dropped=1, drop_reasons={reason or "unsupported": 1})
+
+    event_id = str(event.get("id") or "").strip() or f"synthetic-{uuid.uuid4()}"
+    event_time = str(event.get("time") or "").strip() or now.isoformat()
+    intake_time = now.isoformat()
+    try:
+        _enqueue_control_plane_event(tenant_uuid, account_id, target_region, event, event_id, event_time, intake_time)
+        await _upsert_control_plane_status(db, tenant_uuid, account_id, target_region, now, now)
+        await db.commit()
+    except Exception as exc:
+        logger.exception("Failed to enqueue synthetic control-plane event: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to enqueue synthetic control-plane event.",
+        ) from exc
+
+    return ControlPlaneSyntheticEventResponse(enqueued=1, dropped=0, drop_reasons={})
 
 
 @router.post(

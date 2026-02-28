@@ -26,7 +26,7 @@ if ! command -v aws >/dev/null 2>&1; then
   exit 1
 fi
 
-AWS_PAGER=""
+export AWS_PAGER=""
 
 require_non_placeholder() {
   local var_name="$1"
@@ -188,6 +188,41 @@ aws s3api put-bucket-tagging \
   --bucket "$ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET" \
   --tagging "TagSet=[{Key=Name,Value=${ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_NAME}},{Key=Project,Value=${TAG_PROJECT_VALUE}},{Key=Environment,Value=${TAG_ENVIRONMENT_VALUE}},{Key=ManagedBy,Value=${TAG_MANAGED_BY_VALUE}},{Key=Architecture,Value=${TAG_ARCHITECTURE_VALUE}},{Key=Tier,Value=data-retention},{Key=ResourceGroup,Value=C}]"
 ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_ARN="arn:aws:s3:::${ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET}"
+ARCH2_CLOUDTRAIL_BUCKET_POLICY_FILE="$(mktemp)"
+cat >"$ARCH2_CLOUDTRAIL_BUCKET_POLICY_FILE" <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AWSCloudTrailAclCheck",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+      },
+      "Action": "s3:GetBucketAcl",
+      "Resource": "arn:aws:s3:::${ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET}"
+    },
+    {
+      "Sid": "AWSCloudTrailWrite",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::${ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET}/AWSLogs/${ACCOUNT_ID}/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-acl": "bucket-owner-full-control"
+        }
+      }
+    }
+  ]
+}
+EOF
+aws s3api put-bucket-policy \
+  --bucket "$ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET" \
+  --policy "file://${ARCH2_CLOUDTRAIL_BUCKET_POLICY_FILE}"
+rm -f "$ARCH2_CLOUDTRAIL_BUCKET_POLICY_FILE"
 echo "ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET=$ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_BUCKET"
 echo "ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_ARN=$ARCH2_CLOUDTRAIL_LOGS_BUCKET_C_ARN"
 
@@ -207,6 +242,47 @@ aws s3api put-bucket-tagging \
   --bucket "$ARCH2_CONFIG_BUCKET_C_BUCKET" \
   --tagging "TagSet=[{Key=Name,Value=${ARCH2_CONFIG_BUCKET_C_NAME}},{Key=Project,Value=${TAG_PROJECT_VALUE}},{Key=Environment,Value=${TAG_ENVIRONMENT_VALUE}},{Key=ManagedBy,Value=${TAG_MANAGED_BY_VALUE}},{Key=Architecture,Value=${TAG_ARCHITECTURE_VALUE}},{Key=Tier,Value=data-retention},{Key=ResourceGroup,Value=C}]"
 ARCH2_CONFIG_BUCKET_C_ARN="arn:aws:s3:::${ARCH2_CONFIG_BUCKET_C_BUCKET}"
+ARCH2_CONFIG_BUCKET_POLICY_FILE="$(mktemp)"
+cat >"$ARCH2_CONFIG_BUCKET_POLICY_FILE" <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AWSConfigBucketPermissionsCheck",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "config.amazonaws.com"
+      },
+      "Action": "s3:GetBucketAcl",
+      "Resource": "arn:aws:s3:::${ARCH2_CONFIG_BUCKET_C_BUCKET}",
+      "Condition": {
+        "StringEquals": {
+          "aws:SourceAccount": "${ACCOUNT_ID}"
+        }
+      }
+    },
+    {
+      "Sid": "AWSConfigBucketDelivery",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "config.amazonaws.com"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::${ARCH2_CONFIG_BUCKET_C_BUCKET}/AWSLogs/${ACCOUNT_ID}/Config/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-acl": "bucket-owner-full-control",
+          "aws:SourceAccount": "${ACCOUNT_ID}"
+        }
+      }
+    }
+  ]
+}
+EOF
+aws s3api put-bucket-policy \
+  --bucket "$ARCH2_CONFIG_BUCKET_C_BUCKET" \
+  --policy "file://${ARCH2_CONFIG_BUCKET_POLICY_FILE}"
+rm -f "$ARCH2_CONFIG_BUCKET_POLICY_FILE"
 echo "ARCH2_CONFIG_BUCKET_C_BUCKET=$ARCH2_CONFIG_BUCKET_C_BUCKET"
 echo "ARCH2_CONFIG_BUCKET_C_ARN=$ARCH2_CONFIG_BUCKET_C_ARN"
 
@@ -239,15 +315,29 @@ echo "ARCH2_GUARDDUTY_DETECTOR_C_ID=$ARCH2_GUARDDUTY_DETECTOR_C_ID"
 
 # 8) arch2_config_recorder_c — AWS::Config::ConfigurationRecorder
 log_step "08" "arch2_config_recorder_c" "AWS::Config::ConfigurationRecorder"
+ARCH2_EXISTING_CONFIG_RECORDER_C_NAME="$(aws configservice describe-configuration-recorders \
+  --region "$AWS_REGION" \
+  --query 'ConfigurationRecorders[0].name' \
+  --output text 2>/dev/null || true)"
+if [[ -n "$ARCH2_EXISTING_CONFIG_RECORDER_C_NAME" && "$ARCH2_EXISTING_CONFIG_RECORDER_C_NAME" != "None" ]]; then
+  ARCH2_CONFIG_RECORDER_C_NAME="$ARCH2_EXISTING_CONFIG_RECORDER_C_NAME"
+fi
 aws configservice put-configuration-recorder \
   --region "$AWS_REGION" \
-  --configuration-recorder "name=${ARCH2_CONFIG_RECORDER_C_NAME},roleARN=${ARCH2_CONFIG_SERVICE_ROLE_ARN},recordingGroup={allSupported=true,includeGlobalResourceTypes=true}"
+  --configuration-recorder "{\"name\":\"${ARCH2_CONFIG_RECORDER_C_NAME}\",\"roleARN\":\"${ARCH2_CONFIG_SERVICE_ROLE_ARN}\",\"recordingGroup\":{\"allSupported\":true,\"includeGlobalResourceTypes\":true}}"
 ARCH2_CONFIG_RECORDER_C_STATUS="configured"
 echo "ARCH2_CONFIG_RECORDER_C_NAME=$ARCH2_CONFIG_RECORDER_C_NAME"
 echo "ARCH2_CONFIG_RECORDER_C_STATUS=$ARCH2_CONFIG_RECORDER_C_STATUS"
 
 # 9) arch2_config_delivery_channel_c — AWS::Config::DeliveryChannel
 log_step "09" "arch2_config_delivery_channel_c" "AWS::Config::DeliveryChannel"
+ARCH2_EXISTING_CONFIG_DELIVERY_CHANNEL_C_NAME="$(aws configservice describe-delivery-channels \
+  --region "$AWS_REGION" \
+  --query 'DeliveryChannels[0].name' \
+  --output text 2>/dev/null || true)"
+if [[ -n "$ARCH2_EXISTING_CONFIG_DELIVERY_CHANNEL_C_NAME" && "$ARCH2_EXISTING_CONFIG_DELIVERY_CHANNEL_C_NAME" != "None" ]]; then
+  ARCH2_CONFIG_DELIVERY_CHANNEL_C_NAME="$ARCH2_EXISTING_CONFIG_DELIVERY_CHANNEL_C_NAME"
+fi
 aws configservice put-delivery-channel \
   --region "$AWS_REGION" \
   --delivery-channel "name=${ARCH2_CONFIG_DELIVERY_CHANNEL_C_NAME},s3BucketName=${ARCH2_CONFIG_BUCKET_C_BUCKET}"
@@ -495,6 +585,76 @@ echo "ARCH2_MIXED_POLICY_ROLE_B3_ARN=$ARCH2_MIXED_POLICY_ROLE_B3_ARN"
 
 # 17) arch2_rds_primary_c — AWS::RDS::DBInstance
 log_step "17" "arch2_rds_primary_c" "AWS::RDS::DBInstance"
+ARCH2_VPC_MAIN_IGW_ID="$(aws ec2 describe-internet-gateways \
+  --region "$AWS_REGION" \
+  --filters "Name=attachment.vpc-id,Values=${ARCH2_VPC_MAIN_ID}" \
+  --query 'InternetGateways[0].InternetGatewayId' \
+  --output text 2>/dev/null || true)"
+if [[ -z "$ARCH2_VPC_MAIN_IGW_ID" || "$ARCH2_VPC_MAIN_IGW_ID" == "None" ]]; then
+  ARCH2_VPC_MAIN_IGW_ID="$(aws ec2 create-internet-gateway \
+    --region "$AWS_REGION" \
+    --query 'InternetGateway.InternetGatewayId' \
+    --output text)"
+  aws ec2 create-tags \
+    --region "$AWS_REGION" \
+    --resources "$ARCH2_VPC_MAIN_IGW_ID" \
+    --tags \
+      "Key=Name,Value=${ARCH2_VPC_MAIN_NAME}-igw" \
+      "Key=Project,Value=${TAG_PROJECT_VALUE}" \
+      "Key=Environment,Value=${TAG_ENVIRONMENT_VALUE}" \
+      "Key=ManagedBy,Value=${TAG_MANAGED_BY_VALUE}" \
+      "Key=Architecture,Value=${TAG_ARCHITECTURE_VALUE}" \
+      "Key=Tier,Value=processing-orchestration" \
+      "Key=ResourceGroup,Value=C" >/dev/null
+  aws ec2 attach-internet-gateway \
+    --region "$AWS_REGION" \
+    --internet-gateway-id "$ARCH2_VPC_MAIN_IGW_ID" \
+    --vpc-id "$ARCH2_VPC_MAIN_ID"
+fi
+
+ARCH2_PUBLIC_ROUTE_TABLE_ID="$(aws ec2 describe-route-tables \
+  --region "$AWS_REGION" \
+  --filters "Name=vpc-id,Values=${ARCH2_VPC_MAIN_ID}" "Name=tag:Name,Values=${ARCH2_VPC_MAIN_NAME}-public-rt" \
+  --query 'RouteTables[0].RouteTableId' \
+  --output text 2>/dev/null || true)"
+if [[ -z "$ARCH2_PUBLIC_ROUTE_TABLE_ID" || "$ARCH2_PUBLIC_ROUTE_TABLE_ID" == "None" ]]; then
+  ARCH2_PUBLIC_ROUTE_TABLE_ID="$(aws ec2 create-route-table \
+    --region "$AWS_REGION" \
+    --vpc-id "$ARCH2_VPC_MAIN_ID" \
+    --query 'RouteTable.RouteTableId' \
+    --output text)"
+  aws ec2 create-tags \
+    --region "$AWS_REGION" \
+    --resources "$ARCH2_PUBLIC_ROUTE_TABLE_ID" \
+    --tags \
+      "Key=Name,Value=${ARCH2_VPC_MAIN_NAME}-public-rt" \
+      "Key=Project,Value=${TAG_PROJECT_VALUE}" \
+      "Key=Environment,Value=${TAG_ENVIRONMENT_VALUE}" \
+      "Key=ManagedBy,Value=${TAG_MANAGED_BY_VALUE}" \
+      "Key=Architecture,Value=${TAG_ARCHITECTURE_VALUE}" \
+      "Key=Tier,Value=processing-orchestration" \
+      "Key=ResourceGroup,Value=C" >/dev/null
+fi
+aws ec2 create-route \
+  --region "$AWS_REGION" \
+  --route-table-id "$ARCH2_PUBLIC_ROUTE_TABLE_ID" \
+  --destination-cidr-block "0.0.0.0/0" \
+  --gateway-id "$ARCH2_VPC_MAIN_IGW_ID" >/dev/null 2>&1 || true
+
+for ARCH2_SUBNET_ID in "$ARCH2_PRIVATE_SUBNET_A_ID" "$ARCH2_PRIVATE_SUBNET_B_ID"; do
+  ARCH2_ASSOCIATED_ROUTE_TABLE_ID="$(aws ec2 describe-route-tables \
+    --region "$AWS_REGION" \
+    --filters "Name=association.subnet-id,Values=${ARCH2_SUBNET_ID}" \
+    --query 'RouteTables[0].RouteTableId' \
+    --output text 2>/dev/null || true)"
+  if [[ "$ARCH2_ASSOCIATED_ROUTE_TABLE_ID" != "$ARCH2_PUBLIC_ROUTE_TABLE_ID" ]]; then
+    aws ec2 associate-route-table \
+      --region "$AWS_REGION" \
+      --subnet-id "$ARCH2_SUBNET_ID" \
+      --route-table-id "$ARCH2_PUBLIC_ROUTE_TABLE_ID" >/dev/null
+  fi
+done
+
 ARCH2_VPC_DEFAULT_SECURITY_GROUP_ID="$(aws ec2 describe-security-groups \
   --region "$AWS_REGION" \
   --filters "Name=vpc-id,Values=${ARCH2_VPC_MAIN_ID}" "Name=group-name,Values=default" \
@@ -535,7 +695,6 @@ if [[ -z "$ARCH2_RDS_PRIMARY_C_ARN" || "$ARCH2_RDS_PRIMARY_C_ARN" == "None" ]]; 
     --db-instance-identifier "$ARCH2_RDS_PRIMARY_C_DB_IDENTIFIER" \
     --db-instance-class "$ARCH2_RDS_INSTANCE_CLASS" \
     --engine "$ARCH2_RDS_ENGINE" \
-    --engine-version "$ARCH2_RDS_ENGINE_VERSION" \
     --allocated-storage "$ARCH2_RDS_ALLOCATED_STORAGE" \
     --master-username "$ARCH2_RDS_MASTER_USERNAME" \
     --master-user-password "$ARCH2_RDS_MASTER_PASSWORD" \
@@ -578,7 +737,7 @@ if [[ -z "$ARCH2_EKS_CLUSTER_C_ARN" || "$ARCH2_EKS_CLUSTER_C_ARN" == "None" ]]; 
   ARCH2_EKS_CLUSTER_C_ARN="$(aws eks create-cluster \
     --region "$AWS_REGION" \
     --name "$ARCH2_EKS_CLUSTER_C_CLUSTER_NAME" \
-    --version "$ARCH2_EKS_KUBERNETES_VERSION" \
+    --kubernetes-version "$ARCH2_EKS_KUBERNETES_VERSION" \
     --role-arn "$ARCH2_SHARED_COMPUTE_ROLE_A3_ARN" \
     --resources-vpc-config "subnetIds=${ARCH2_PRIVATE_SUBNET_A_ID},${ARCH2_PRIVATE_SUBNET_B_ID},endpointPublicAccess=true,endpointPrivateAccess=false" \
     --tags "Name=${ARCH2_EKS_CLUSTER_C_NAME},Project=${TAG_PROJECT_VALUE},Environment=${TAG_ENVIRONMENT_VALUE},ManagedBy=${TAG_MANAGED_BY_VALUE},Architecture=${TAG_ARCHITECTURE_VALUE},Tier=processing-orchestration,ResourceGroup=C" \

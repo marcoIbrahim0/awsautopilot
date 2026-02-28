@@ -1,5 +1,1136 @@
 # Task Log
 
+## Pre-live QA Test 16: action detail and remediation endpoint validation (2026-02-28)
+
+**Task:** Execute pre-live Action API checks (16.1-16.7) to validate actions list payload contract, required action fields, action detail lookup, remediation endpoints, and direct-fix/PR action availability.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-16-action-detail.md** — Added strict-format Test 16 results with exact-command outcomes and compatibility diagnostics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-16-action-detail.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; used deterministic fallback from `docs/test-results/test-01-api-health.md`.
+  - Minted a fresh admin token via `POST /api/auth/login`.
+- Test outcomes:
+  - 16.1 `GET /api/actions?limit=5` returned HTTP `200`, but payload shape is paginated object (`items`, `total`) rather than expected top-level array.
+  - 16.2 as-provided jq failed (`Cannot index object with number`); schema-aware check showed first action `severity` is `null`.
+  - 16.3/16.4/16.5 strict flow blocked because as-provided `ACTION_ID` extraction failed; diagnostic calls with normalized action ID returned HTTP `200` for detail, remediation-options, and remediation-preview.
+  - 16.6/16.7 as-provided direct-fix/PR queries failed on payload shape and strict `action_type` expectations did not match runtime action-type model.
+- Downstream IDs captured for subsequent tests:
+  - `DIRECT_ACTION_ID=a6e7ec82-3201-440b-9314-6255671439e2` (`action_type=enable_guardduty`, remediation mode supports `direct_fix`).
+  - `PR_ACTION_ID=9c31f438-1ade-4cc7-91c8-b959870a615b` (`action_type=sg_restrict_public_ports`, remediation mode supports `pr_only`).
+
+**Technical debt / gotchas:**
+- `/api/actions` contract is paginated object (`items`, `total`), while several QA commands assume top-level array (`.[0]`, `.[]`), causing strict command failures.
+- Current action list payload does not provide non-null literal `severity` for the sampled row in strict Test 16.2.
+- Runtime `action_type` values are action-specific (for example `enable_guardduty`, `sg_restrict_public_ports`) rather than generic `direct_fix` / `pr_bundle`.
+
+**Open questions / TODOs:**
+- Decide whether `/api/actions` should expose array-compat mode or whether QA scripts should be normalized to `.items[]`.
+- Decide whether list-level action payload should include normalized `severity` for strict contract checks.
+- Confirm whether downstream tests should select direct-fix/PR candidates by `action_type` or by remediation `mode_options`.
+
+---
+
+## Pre-live QA Test 15: findings filtering and pagination validation (2026-02-28)
+
+**Task:** Execute pre-live findings filtering checks (15.1-15.7) to validate severity/account/status filtering, pagination behavior, invalid-filter handling, grouped findings output, and combined filter responses.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-15-findings-filtering.md** (new) — Added strict-format Test 15 results for cases 15.1-15.7 plus command-compat diagnostics for current findings response shape.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-15-findings-filtering.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; reused `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - Read `docs/test-results/test-07-account-connection.md` as requested.
+  - Used `CONNECTED_ACCOUNT_ID=cdc6355d-2f56-4f19-b8de-a200ed521c07` exactly as provided from Test 07.
+- Test outcomes:
+  - 15.1 severity filter request returned HTTP `200`, but as-provided jq failed due response-shape/field mismatch (`severity` not present at the expected path in object-shaped payload) -> FAIL.
+  - 15.2 account filter request returned HTTP `200` with `{items:[], total:0}` for provided `CONNECTED_ACCOUNT_ID`; as-provided jq failed and no matching row found -> FAIL.
+  - 15.3 status=open request returned HTTP `200`; `.total // length` yielded numeric `0` -> PASS.
+  - 15.4 both pagination requests returned HTTP `200`, but as-provided ID extraction jq failed on object-shaped payload, preventing strict ID comparison -> FAIL.
+  - 15.5 invalid severity value returned HTTP `200` (expected `400/422`) -> FAIL.
+  - 15.6 grouped endpoint returned HTTP `200`; as-provided `jq 'length'` output `2` -> PASS.
+  - 15.7 combined filters returned HTTP `200` and valid JSON; as-provided `jq 'length'` output `2` -> PASS.
+- Diagnostics captured:
+  - `/api/findings` returns object shape (`items`, `total`) in this runtime.
+  - 15.1 compatibility query using `.items[].severity_label` produced only `["CRITICAL"]`.
+  - 15.4 compatibility query using `.items[0].id` showed different first IDs across offsets (`16c83cc5-...` vs `12863225-...`).
+  - 15.6 compatibility query `.items|length` yielded `33` resource groups.
+
+**Technical debt / gotchas:**
+- Multiple test-plan jq expressions still assume a top-level array response from `/api/findings`; current API contract is paginated object, which causes strict command failures.
+- Findings payload uses `severity_label`; strict references to `.severity` in test commands are incompatible with current response schema.
+- `CONNECTED_ACCOUNT_ID` in Test 07 is a DB row UUID and does not match findings `account_id` values (12-digit AWS account IDs), producing zero-result false negatives for account-filter tests.
+- Invalid `severity` filter currently returns HTTP `200` with empty results instead of validation rejection (`400/422`).
+
+**Open questions / TODOs:**
+- Decide whether QA test commands should be updated to object-shape-safe jq paths (`.items[]`) and `severity_label`, or whether API should add compatibility fields/shape.
+- Decide whether findings severity filter should reject invalid enum values with `400/422` to match test expectation.
+- Standardize account identifier naming in test artifacts (`CONNECTED_ACCOUNT_ROW_ID` vs AWS `account_id`) to avoid UUID/account-id confusion.
+
+---
+
+## Pre-live QA Test 14: Findings API contract validation (2026-02-28)
+
+**Task:** Execute pre-live Findings API checks (14.1-14.7) to validate list response shape, required field presence, severity value contract, title display safety, finding-detail retrieval, grouped endpoint behavior, and total-count consistency.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-14-findings-api.md** (new) — Added strict-format Test 14 results with strict-command outcomes and compatibility diagnostics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-14-findings-api.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present.
+  - Reused `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+- Test outcomes:
+  - 14.1 findings list shape -> PASS (`GET /api/findings?limit=5` returned paginated object with `items` array and `total`).
+  - 14.2 required fields -> FAIL (strict jq shape mismatch; compatibility check on `.items[0]` showed `severity` is null and runtime uses `severity_label`/`severity_normalized`).
+  - 14.3 severity values -> FAIL under strict command contract (as-provided jq failed due shape/expression mismatch; compatibility values were `severity_label=[\"INFORMATIONAL\"]`, `severity_normalized=[0]`).
+  - 14.4 display-value readability -> FAIL under strict command contract (as-provided jq failed due shape mismatch; compatibility title check returned human-readable non-UUID string).
+  - 14.5 single finding detail -> FAIL under strict command contract (as-provided `FINDING_ID` jq failed due shape mismatch); compatibility flow using `.items[0].id` returned HTTP `200` with full finding detail.
+  - 14.6 grouped findings endpoint -> PASS (`GET /api/findings/grouped` returned HTTP `200` with grouped object `{items,total}`).
+  - 14.7 total count -> PASS (`391`).
+
+**Technical debt / gotchas:**
+- Current findings-list response contract is paginated object (`items`, `total`), so test commands that assume top-level array (`.[0]`, `.[]`) fail.
+- Findings payload does not expose literal `severity`; it exposes `severity_label` and `severity_normalized`.
+- Missing canonical env handoff file (`test-01-environment.md`) continues to force fallback sourcing.
+
+**Open questions / TODOs:**
+- Decide whether to add response compatibility for top-level-array jq expectations or normalize all QA scripts to `.items[]`.
+- Decide whether findings API should expose alias `severity` in addition to `severity_label`/`severity_normalized`.
+- Add or regenerate `docs/test-results/test-01-environment.md` to keep downstream test setup deterministic.
+
+---
+
+## Pre-live QA Test 11: Security Hub ingestion against vulnerable architecture (2026-02-28)
+
+**Task:** Execute pre-live Security Hub ingestion checks (11.1-11.6) against the deployed vulnerable architecture and validate ingest completion plus findings contracts for Group A/Group B expectations.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-11-securityhub-ingestion.md** (new) — Added strict-format Test 11 results with ingest trigger/poll evidence, findings contract diagnostics, and Group A/Group B validation outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-11-securityhub-ingestion.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; reused `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - Read `docs/test-results/test-07-account-connection.md` and `docs/prod-readiness/07-architecture-design.md` as requested.
+  - Queried `/api/aws/accounts` and used path-safe connected account identifier `account_id=029037611564` (12-digit), because ingest/readiness paths validate AWS account IDs (not DB row UUIDs).
+- Test outcomes:
+  - 11.1 `POST /api/aws/accounts/029037611564/ingest` -> HTTP `202` (`jobs_queued=1`) (PASS).
+  - 11.2 `GET /api/aws/accounts/029037611564/ingest-progress?started_after=2020-01-01T00:00:00Z` -> HTTP `200` with `status=completed`, `progress=100`, `updated_findings_count=3199` (PASS with wording drift vs expected terminal-status list).
+  - 11.3 `GET /api/findings?account_id=029037611564` + `jq '.total // length'` -> `391` (PASS).
+  - 11.4/11.5 as-provided jq commands failed because `/api/findings` is paginated object (`items`, `total`) not top-level array; compatibility queries returned `0` for both `negative` and `detection` tags, and `resource_tags` field was absent on findings, so strict tag-based assertions were not verifiable (FAIL).
+  - 11.6 as-provided jq command failed due same response-shape mismatch; compatibility key check showed required fields except `severity` (runtime uses `severity_label` / `severity_normalized`) (FAIL).
+- Additional diagnostic:
+  - Architecture-name fallback scan across all `391` findings found resource-name matches for Group A (`18`) and Group B (`13`) by `resource_id`, but not through `resource_tags.TestGroup`.
+
+**Technical debt / gotchas:**
+- `/api/findings` response contract is object-shaped (`items`, `total`), so QA scripts that assume top-level array (`.[]`, `.[0]`) fail.
+- Findings records currently do not expose `resource_tags` and do not expose a literal `severity` key; this blocks strict Test 11.4/11.5/11.6 validation semantics.
+- `docs/test-results/test-07-account-connection.md` exports `CONNECTED_ACCOUNT_ID` as DB row UUID, which is incompatible with account-id path validation on ingest/readiness endpoints.
+- Canonical env handoff file `docs/test-results/test-01-environment.md` remains missing and continues to force fallback sourcing.
+
+**Open questions / TODOs:**
+- Decide whether `/api/findings` should support array-compat mode for legacy QA scripts, or whether all test suites should be normalized to `.items[]` payload shape.
+- Decide whether findings API should expose normalized `resource_tags.TestGroup` and alias `severity` (or update Test 11 contract to `severity_label`).
+- Standardize QA identifier naming (`CONNECTED_ACCOUNT_ROW_ID` vs `CONNECTED_ACCOUNT_ID`) to prevent UUID vs AWS-account-id path misuse.
+
+---
+
+## Pre-live QA Test 12: Access Analyzer ingestion validation (2026-02-28)
+
+**Task:** Execute pre-live Access Analyzer checks (12.1-12.4) to validate ingest trigger behavior, ingest-progress status handling, 500-error resilience, and findings `source=access_analyzer` query behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-12-access-analyzer.md** (new) — Added strict-format Test 12 results for cases 12.1-12.4 plus schema-aware diagnostics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-12-access-analyzer.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; reused values from `docs/test-results/test-01-api-health.md` and performed fresh login to mint a current admin token.
+  - Read `docs/test-results/test-07-account-connection.md` as requested.
+  - Resolved path-safe AWS account identifier from live `/api/aws/accounts`; used `account_id=029037611564` (12-digit), while row UUID observed was `851580aa-460c-4c44-8763-b4b6574229a3`.
+- Test outcomes:
+  - 12.1 `POST /api/aws/accounts/029037611564/ingest-access-analyzer` -> HTTP `202` (PASS).
+  - 12.2 after `sleep 60`, as-provided `GET /api/aws/accounts/029037611564/ingest-progress` returned validation error (`started_after` required) (FAIL vs expected complete/clean skip status payload).
+  - 12.3 second `POST /api/aws/accounts/029037611564/ingest-access-analyzer` returned normal queued-job JSON and jq check `OK` (PASS; no `.error` field).
+  - 12.4 as-provided query `jq '[.[] | select(.source == "access_analyzer")] | length'` failed because `/api/findings` returns paginated object shape (`items`, `total`) rather than top-level array (FAIL for strict command contract).
+  - Diagnostics:
+    - `GET /api/aws/accounts/029037611564/ingest-progress?started_after=1970-01-01T00:00:00Z` returned `status=completed`, `progress=100`, `updated_findings_count=3199`.
+    - Schema-aware findings count query (`.items[]`) returned `0` access-analyzer findings in current page.
+
+**Technical debt / gotchas:**
+- Ingest-progress endpoint currently requires `started_after`; the as-written Test 12.2 command shape returns request-validation error instead of job-state response.
+- Findings endpoint contract is paginated object (`items`, `total`), but Test 12.4 command assumes top-level array; strict command therefore errors despite endpoint availability.
+- `docs/test-results/test-07-account-connection.md` still exports `CONNECTED_ACCOUNT_ID` as DB row UUID, which is incompatible with account-id path validators on ingestion/readiness endpoints.
+
+**Open questions / TODOs:**
+- Decide whether `GET /api/aws/accounts/{account_id}/ingest-progress` should support a default window when `started_after` is omitted (compat mode), or update test scripts to include explicit `started_after`.
+- Decide whether `/api/findings` should expose array compatibility mode or whether QA command templates should be updated to query `.items[]`.
+- Add or regenerate `docs/test-results/test-01-environment.md` as canonical environment handoff for downstream pre-live suites.
+
+---
+
+## Pre-live QA Test 13: Inspector ingestion validation (2026-02-28)
+
+**Task:** Execute pre-live Inspector ingestion checks (13.1-13.3) to validate ingest trigger behavior, re-trigger stability after delay, and findings `source=inspector` count query behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-13-inspector.md** (new) — Added strict-format Test 13 results for cases 13.1-13.3 plus findings-query shape diagnostic.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-13-inspector.md` discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; reused `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - Read `docs/test-results/test-07-account-connection.md` as requested.
+  - Queried `/api/aws/accounts` to resolve path-safe connected account identifier; used `account_id=029037611564` (12-digit), because this endpoint validates AWS account IDs.
+- Test outcomes:
+  - 13.1 `POST /api/aws/accounts/029037611564/ingest-inspector` -> HTTP `202` with `jobs_queued=1` (PASS).
+  - 13.2 after `sleep 60`, second `POST /api/aws/accounts/029037611564/ingest-inspector` returned normal queued-job JSON and no unhandled exception text (PASS).
+  - 13.3 as-provided query `jq '[.[] | select(.source == "inspector")] | length'` failed because `/api/findings` currently returns paginated object shape (`items`, `total`) rather than a top-level array (FAIL for strict command contract).
+  - Diagnostic compatibility query `jq '[.items[] | select(.source == "inspector")] | length'` returned `0`.
+
+**Technical debt / gotchas:**
+- Test-plan command for 13.3 assumes `/api/findings` returns an array; runtime contract is currently paginated object, causing `jq` shape errors with the exact command.
+- `docs/test-results/test-07-account-connection.md` still exports `CONNECTED_ACCOUNT_ID` as DB row UUID, which is incompatible with account-id path validators on endpoint families like ingest/readiness.
+- Canonical env handoff file `docs/test-results/test-01-environment.md` remains missing and continues to force fallback to `test-01-api-health.md`.
+
+**Open questions / TODOs:**
+- Decide whether to restore top-level array shape on `/api/findings` (compat mode) or update QA scripts to use `.items[]` consistently.
+- Standardize account identifier naming in QA docs (`CONNECTED_ACCOUNT_ROW_ID` vs `CONNECTED_ACCOUNT_ID`) to prevent UUID/12-digit path confusion.
+- Add or regenerate `docs/test-results/test-01-environment.md` as canonical environment source for downstream suites.
+
+---
+
+## RBAC hotfix for AWS account delete + onboarding account/role restoration (2026-02-28)
+
+**Task:** Implement admin-only authorization for `DELETE /api/aws/accounts/{account_id}`, add regression tests for unauthorized/member denial, and restore the previously deleted onboarding account linkage and IAM roles.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Added explicit auth+role checks in `delete_account`:
+  - unauthenticated requests now return `401`,
+  - non-admin authenticated users now return `403`,
+  - only admin users can proceed to account deletion/cleanup.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_delete_account.py** — Updated delete-account tests to include auth dependency overrides and added regression tests:
+  - `test_delete_401_when_not_authenticated`,
+  - `test_delete_403_when_member_user`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**What was done (verified):**
+- Code hotfix:
+  - Patched `delete_account` endpoint to enforce admin-only access before tenant/account lookup and cleanup/deletion.
+- Regression verification:
+  - Ran `pytest -q tests/test_delete_account.py` -> `5 passed`.
+- Environment restoration:
+  - Recreated IAM roles via CloudFormation templates (`read-role v1.5.1`, `write-role v1.4.0`) in `eu-north-1`.
+  - Verified role presence:
+    - `arn:aws:iam::029037611564:role/SecurityAutopilotReadRole`
+    - `arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole`
+  - Restored tenant account linkage via API:
+    - `POST /api/aws/accounts` returned `201`,
+    - account `029037611564` restored with status `validated`.
+
+**Technical debt / gotchas:**
+- The RBAC fix is implemented and tested in code, but is not active in production until the backend runtime is redeployed.
+- `backend/routers/aws_accounts.py` already had unrelated in-progress local changes in this worktree; hotfix was scoped only to delete-account authorization logic.
+
+**Open questions / TODOs:**
+- Redeploy backend runtime to make this RBAC hotfix active on `https://api.valensjewelry.com`.
+- After deploy, re-run Test 10.4/10.5 live to confirm non-admin deletion now returns `403`.
+
+---
+
+## Pre-live QA Test 10: RBAC admin-boundary and unauthenticated-access validation (2026-02-28)
+
+**Task:** Execute pre-live RBAC checks (10.1-10.7) to verify unauthenticated rejection on protected endpoints, admin-only enforcement for destructive actions, and internal endpoint secret-guard behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-10-rbac.md** (new) — Added strict-format Test 10 results for cases 10.1-10.7 plus critical delete-account evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-10-rbac.md` entry for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup handling:
+  - Requested `docs/test-results/test-01-environment.md` was not present; reused `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - `docs/test-results/test-04-signup.md` user was validated as `role=admin`, so it was not suitable for non-admin RBAC checks.
+  - Created a true member user in the same tenant using `/api/users/invite` + `/api/users/accept-invite`, then used that member token for non-admin tests.
+- Test outcomes:
+  - 10.1 `GET /api/findings` without auth -> `401` (PASS).
+  - 10.2 `GET /api/aws/accounts` without auth -> `401` (PASS).
+  - 10.3 `GET /api/remediation-runs` without auth -> `401` (PASS).
+  - 10.4 `DELETE /api/users/{admin_user_id}` with member token -> `403` (PASS).
+  - 10.5 (as provided command path from `.[0].id`) returned `422` when account existed because route expects 12-digit `account_id`, not row UUID (`FAIL` vs expected `403`).
+  - 10.6 `POST /api/internal/weekly-digest` with Bearer user token returned `503` (`FAIL` vs expected `401/403`).
+  - 10.7 skipped because `INTERNAL_SECRET` was not present in `backend/.env*`.
+- Critical security validation:
+  - Using valid account-id path `DELETE /api/aws/accounts/029037611564` with member token returned `204` (successful deletion), demonstrating missing admin authorization on account deletion.
+  - Immediate AWS IAM post-check showed `SecurityAutopilotReadRole` and `SecurityAutopilotWriteRole` no longer existed (`NoSuchEntity`), confirming destructive cleanup executed through the non-admin path.
+
+**Technical debt / gotchas:**
+- RBAC test script drift: account-delete test uses row UUID (`id`) while API delete route requires 12-digit `account_id`, which can mask authorization bugs.
+- Internal endpoint test drift: implementation uses `X-Digest-Cron-Secret`/`DIGEST_CRON_SECRET`, not `X-Internal-Secret`/`INTERNAL_SECRET`.
+- Runtime gap: `DIGEST_CRON_SECRET` appears unset in the active environment, so internal weekly-digest endpoint returns `503`.
+- Destructive side effect occurred during critical validation: connected account was removed from tenant account list as part of successful non-admin delete call.
+
+**Open questions / TODOs:**
+- Enforce admin-only authorization on `DELETE /api/aws/accounts/{account_id}` and add regression tests for member-user denial.
+- Restore deleted onboarding account linkage and required `SecurityAutopilotReadRole`/`SecurityAutopilotWriteRole` resources for continued test coverage.
+- Align Test 10 documentation/scripts with current internal endpoint secret contract (`DIGEST_CRON_SECRET` header and expected status model).
+
+---
+
+## Pre-live QA Test 09: multi-tenant isolation validation (2026-02-28)
+
+**Task:** Execute pre-live multi-tenancy isolation tests (9.1-9.5) to verify Tenant B cannot read Tenant A data through findings/accounts endpoints or direct resource-ID lookups.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-09-multitenancy.md** (new) — Added strict-format Test 09 results for cases 9.1-9.5 and explicit critical-blocker check.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-09-multitenancy.md` entry for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup extraction:
+  - Requested `docs/test-results/test-01-environment.md` was not present; loaded `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - Read Tenant B email from `docs/test-results/test-04-signup.md`: `testuser+003422@valensjewelry.com`.
+  - Read `docs/test-results/test-07-account-connection.md` for connected-account context while keeping Test 09 auth/setup values from Test 01 + Test 04.
+  - Requested password `TestPass123!` returned HTTP `401`; fallback password from Test 04 (`TestPassword123!`) returned HTTP `200`, then used for Tenant B auth.
+- Test results:
+  - 9.1 findings isolation: Tenant A findings=`391`; Tenant B findings=`0` (PASS).
+  - 9.2 account isolation: Tenant B `/api/aws/accounts` count=`0` (PASS).
+  - 9.3 cross-tenant action-by-id access: Tenant A action ID `927ff0e3-ac27-49f2-aad1-0d057977f98c` returned HTTP `404` for Tenant B (PASS; not `200`).
+  - 9.4 cross-tenant remediation-run-by-id access: created Tenant A run ID `2a5eaf37-6f0a-404d-9a67-a8de9ef08b63`; Tenant B access returned HTTP `404` (PASS; not `200`).
+  - 9.5 cross-tenant export-by-id access: created Tenant A export ID `2d4c8b40-1535-4cb3-a06b-3ec7e1369e5d`; Tenant B access returned HTTP `404` (PASS; not `200`).
+- Critical-blocker check:
+  - No cross-tenant `200` response observed in executed ID-based checks.
+
+**Technical debt / gotchas:**
+- Tenant B credential mismatch between setup text (`TestPass123!`) and Test 04 recorded password (`TestPassword123!`) can cause false setup failures.
+- Required setup artifacts are inconsistent in repo state (`test-01-environment.md` missing), causing recurring fallback logic in pre-live tests.
+
+**Open questions / TODOs:**
+- Standardize one canonical Tenant B test password across setup text and `test-04-signup.md`.
+- Restore or regenerate `docs/test-results/test-01-environment.md` to keep downstream test setup deterministic.
+
+---
+
+## Pre-live QA Test 08: service readiness endpoints validation (2026-02-28)
+
+**Task:** Execute pre-live service-readiness tests (8.1-8.6) to validate per-region AWS service probing and readiness endpoint behavior for the connected account.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-08-service-readiness.md** (new) — Added strict-format Test 08 results for cases 8.1-8.6, including ingest-progress contract diagnostic.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-08-service-readiness.md` entry for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup extraction:
+  - Requested file `docs/test-results/test-01-environment.md` was not present.
+  - Read `docs/test-results/test-07-account-connection.md` as requested.
+  - Performed fresh runtime login (`POST /api/auth/login`) and used `GET /api/aws/accounts` to resolve connected AWS account ID `029037611564`.
+  - Noted identifier mismatch: Test 07 stores `CONNECTED_ACCOUNT_ID=cdc6355d-2f56-4f19-b8de-a200ed521c07` (DB row UUID), while Test 08 endpoints require 12-digit `account_id` path values.
+- Test results:
+  - 8.1 `POST /api/aws/accounts/029037611564/service-readiness` -> HTTP `200`; response includes per-region service booleans/errors for Security Hub, AWS Config, Access Analyzer, and Inspector.
+  - 8.2 response keys check -> FAIL for exact expected field names (`security_hub`, `config`, `access_analyzer`, `inspector`) because returned schema uses `all_*_enabled` and `regions[].*_enabled`.
+  - 8.3 `GET /api/aws/accounts/029037611564/control-plane-readiness` -> HTTP `200` with `overall_ready`.
+  - 8.4 `GET /api/aws/accounts/029037611564/ingest-progress` -> HTTP `422` (`started_after` query parameter required).
+  - 8.5 `POST /api/aws/accounts/029037611564/onboarding-fast-path` -> HTTP `200`.
+  - 8.6 `GET /api/aws/accounts/ping` -> HTTP `200`.
+  - Diagnostic: adding `started_after` to ingest-progress request returns HTTP `200` and valid progress payload.
+
+**Technical debt / gotchas:**
+- Test 07’s exported `CONNECTED_ACCOUNT_ID` is currently the DB row UUID, not the 12-digit AWS `account_id` required by Test 08 endpoint path validation.
+- Service-readiness schema naming differs from strict Test 08.2 expectation (`all_security_hub_enabled`/`all_aws_config_enabled`/etc. vs exact short service field names).
+- Ingest-progress endpoint contract now requires `started_after`; calling without it returns `422` instead of a default-window `200`.
+
+**Open questions / TODOs:**
+- Should `GET /api/aws/accounts/{account_id}/ingest-progress` provide a default time window when `started_after` is omitted to satisfy existing QA contract?
+- Should Test 08.2 expected field names be updated to match the current readiness schema, or should the API response be normalized to include canonical top-level service keys?
+- Should Test 07 output rename/split identifiers (for example `CONNECTED_ACCOUNT_ROW_ID` vs `CONNECTED_ACCOUNT_ID`) to prevent path-parameter misuse in downstream tests?
+
+---
+
+## Pre-live QA Test 07: AWS account connection API validation (2026-02-28)
+
+**Task:** Execute pre-live AWS account connection tests (7.1-7.7) to validate listing behavior, bad-input rejection, existing-account detection, conditional connect flow, and duplicate-account handling.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-07-account-connection.md** (new) — Added strict-format Test 07 results for cases 7.1-7.7.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-07-account-connection.md` for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source/setup extraction:
+  - Requested `docs/test-results/test-01-environment.md` was not present.
+  - Loaded `BACKEND_API_URL` and `ADMIN_TOKEN` from `docs/test-results/test-01-api-health.md`.
+  - Read `docs/prod-readiness/08-deployment-report.md`; extracted `TEST_ACCOUNT_ID=029037611564`.
+  - `READ_ROLE_ARN` and `WRITE_ROLE_ARN` were not explicitly listed in that report; resolved with standard role naming for the extracted account:
+    - `arn:aws:iam::029037611564:role/SecurityAutopilotReadRole`
+    - `arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole`
+- Test results:
+  - 7.1 `GET /api/aws/accounts` -> HTTP `200`, array returned with account `029037611564`.
+  - 7.2 empty POST body rejected -> HTTP `422` (PASS per expected `400/422`).
+  - 7.3 invalid account-id format rejected -> HTTP `422` (PASS per expected `400/422`).
+  - 7.4 malformed ARN rejected -> HTTP `422` (PASS per expected `400/422`).
+  - 7.5 existing account detection found `CONNECTED_ACCOUNT_ID=cdc6355d-2f56-4f19-b8de-a200ed521c07`.
+  - 7.6 skipped as designed because account already connected.
+  - 7.7 duplicate connection attempt returned HTTP `422` (expected `400` or `409`) -> FAIL.
+
+**Technical debt / gotchas:**
+- Duplicate-account path currently returns `422` for the tested payload shape instead of the expected `400/409` duplicate semantic response.
+- `08-deployment-report.md` does not currently include explicit read/write role ARNs required by this test setup; QA had to derive role ARNs.
+- Canonical environment handoff file `test-01-environment.md` is still missing, forcing fallback to `test-01-api-health.md`.
+
+**Open questions / TODOs:**
+- Confirm whether duplicate-account rejection should be normalized to `409` (preferred) or `400`, and update API validation ordering accordingly.
+- Decide whether deployment reports should always publish explicit `READ_ROLE_ARN` and `WRITE_ROLE_ARN` to avoid setup ambiguity in pre-live tests.
+- Add/restore `docs/test-results/test-01-environment.md` to keep all downstream test suites aligned to one canonical env file.
+
+---
+
+## Pre-live QA Test 06: auth token expiry, refresh, and rejection validation (2026-02-28)
+
+**Task:** Execute pre-live auth token tests (6.1-6.7) to validate JWT expiry policy, JWT secret safety, refresh endpoint behavior, and rejection of invalid/missing/malformed auth tokens.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-06-auth-tokens.md** (new) — Added strict-format Test 06 results for cases 6.1-6.7.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-06-auth-tokens.md` entry for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Source input handling:
+  - Requested file `docs/test-results/test-01-environment.md` was not present.
+  - Reused Test 01 environment values from `docs/test-results/test-01-api-health.md` (`BACKEND_API_URL` and `ADMIN_TOKEN`).
+- Test 6.1 (token expiry <= 60 minutes):
+  - Decoded ADMIN token payload: `{"exp":1772837090,"iat":null}`.
+  - `iat` missing, so `TTL=exp-iat` could not be computed directly.
+  - Fresh live login token check confirmed current runtime token lifetime is long: `TTL_FROM_NOW_SECONDS=608400` (`10140` minutes), exceeding 60 minutes.
+- Test 6.2 (JWT secret safety):
+  - No runtime `.env` usage of `JWT_SECRET="secret"` or `JWT_SECRET="changeme"` found.
+  - Found hardcoded insecure fallback/default in code: `backend/config.py` sets `JWT_SECRET` default to `"change-me-in-production-do-not-use-in-prod"`.
+- Test 6.3 (refresh endpoint exists):
+  - `POST https://api.valensjewelry.com/api/auth/refresh` returned HTTP `404`.
+  - Marked as **MISSING — refresh not implemented**.
+- Test 6.4 (refresh returns new token):
+  - Response token extraction (`.token // .access_token`) returned empty value due missing refresh endpoint.
+- Test 6.5/6.6/6.7 (rejection paths):
+  - Invalid token on `/api/findings` -> HTTP `401`.
+  - Missing token on `/api/findings` -> HTTP `401`.
+  - Malformed `Authorization` scheme (`NotBearer`) on `/api/findings` -> HTTP `401`.
+
+**Technical debt / gotchas:**
+- Auth tokens currently omit `iat`; this blocks strict `exp-iat` TTL verification without additional inference.
+- `ACCESS_TOKEN_EXPIRE_MINUTES` default in code is effectively 7 days + 1 hour, which conflicts with the <=60 minute requirement.
+- Refresh endpoint (`/api/auth/refresh`) is not implemented, causing downstream refresh-token validation to fail.
+
+**Open questions / TODOs:**
+- Decide and enforce target JWT access-token lifetime for pre-live policy (<=60 minutes).
+- Add `iat` claim in issued JWTs if strict TTL policy checks must be computed from token claims alone.
+- Implement `POST /api/auth/refresh` and define refresh token contract (input, rotation, expiry, revoke behavior).
+
+---
+
+## Pre-live QA Test 02: database connectivity and migration validation (2026-02-27)
+
+**Task:** Execute Test 02 against the live environment by reusing Test 01 environment values/token and verify API database health signals, migration state, migration history integrity, core table presence, and stale pending remediation runs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-02-database.md** (new) — Added full Test 02 results in required format with all Test 01 environment values reused.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/test-02-database.md` entry for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Confirmed API is reachable during test window:
+  - `GET https://api.valensjewelry.com/health` -> HTTP `200`.
+- Checked API startup/runtime logs for DB errors:
+  - CloudWatch logs (`/aws/lambda/security-autopilot-dev-api`, last 24h) showed no DB connection/migration-guard crash strings (`database`, `psycopg`, `sqlalchemy`, `alembic`, `Refusing to start api`).
+  - Observed non-DB warnings/errors: repeated S3 template `AccessDenied` and `INIT_REPORT ... timeout` entries.
+- Verified migration state:
+  - `alembic -c alembic.ini current` -> `0032_findings_resolved_at (head)`.
+  - `alembic -c alembic.ini heads` -> `0032_findings_resolved_at (head)`.
+  - No upgrade required.
+- Verified migration history integrity:
+  - `alembic -c alembic.ini history --verbose` reported a clean linear chain from `0001_initial_models` to `0032_findings_resolved_at` with no broken parent links/failures.
+- Verified core tables from configured DB (`settings.database_url_sync`):
+  - Present: `users`, `tenants`, `aws_accounts`, `findings`, `actions`, `remediation_runs`, `audit_log`, `evidence_exports`.
+  - Note: table name is `evidence_exports` (no literal `exports` table).
+- Verified no stale pending remediation jobs:
+  - `select count(*) from remediation_runs where status='pending' and created_at < now() - interval '1 hour';` -> `0`.
+
+**Technical debt / gotchas:**
+- API log stream currently contains repeated non-DB startup issues (`S3 ListBucket AccessDenied` for template-version detection and intermittent Lambda `INIT_REPORT` timeouts); these did not surface as DB connectivity failures in this test.
+- Schema naming uses `evidence_exports` rather than `exports`; test expectations should reference canonical table names to avoid false negatives.
+
+**Open questions / TODOs:**
+- Confirm whether the pre-live checklist should standardize on `evidence_exports` as the canonical exports table name.
+- Investigate and resolve recurring template bucket `AccessDenied` and Lambda init-timeout events to reduce startup noise before go-live.
+
+---
+
+## Pre-live QA Test 01: API health and connectivity validation (2026-02-27)
+
+**Task:** Execute Test 01 against the live environment, discover backend API base URL from project configuration, and publish reusable environment values + token for downstream test suites.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/test-01-api-health.md** — Added full Test 01 results in required format with:
+  - `FRONTEND_URL=https://dev.valensjewelry.com`
+  - `BACKEND_API_URL=https://api.valensjewelry.com` (discovered from `frontend/.env`, `frontend/.env.local`, `config/.env.ops`, and deployment/runtime records)
+  - Test credentials and fresh `ADMIN_TOKEN` + JWT expiry timestamp.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/test-results/` section and linked `test-01-api-health.md` for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this QA validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this QA task.
+
+**What was done (verified):**
+- Confirmed live frontend is reachable:
+  - `GET https://dev.valensjewelry.com` -> HTTP `200`
+  - `GET -L https://dev.valensjewelry.com` -> HTTP `200` with `0` redirects.
+- Confirmed backend API responds at discovered base URL:
+  - `GET https://api.valensjewelry.com/` -> HTTP `200`
+  - `GET https://api.valensjewelry.com/health` -> HTTP `200` with `{\"status\":\"ok\",\"app\":\"AWS Security Autopilot\"}`
+  - `GET https://api.valensjewelry.com/docs` -> HTTP `200`
+- Confirmed CORS for frontend origin:
+  - `OPTIONS /api/auth/login` with `Origin: https://dev.valensjewelry.com` -> HTTP `200` and `access-control-allow-origin: https://dev.valensjewelry.com`.
+- Confirmed login with provided credentials:
+  - `POST /api/auth/login` -> HTTP `200` with bearer `access_token`.
+  - JWT payload `exp` resolves to `2026-03-06T22:44:50Z`.
+- Identified blocking failures:
+  - Security headers check failed (`X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security` absent on `HEAD /api/auth/login` response).
+  - HTTPS-enforcement check failed (`http://dev.valensjewelry.com` returned HTTP `200` instead of redirect).
+
+**Technical debt / gotchas:**
+- Test 01 is currently **FAIL** and marked **blocking for go-live** due missing security headers and lack of HTTP->HTTPS redirect behavior on the dev frontend domain.
+
+**Open questions / TODOs:**
+- Ensure edge/app-layer security headers are set on API responses (including non-200 method responses where policy requires).
+- Enforce HTTPS redirect for `http://dev.valensjewelry.com` at edge/proxy layer.
+
+---
+
+## Add security-standards readiness todo to final-to-do list (2026-02-27)
+
+**Task:** Append a new todo item to `docs/final-to-do/final-to-do` to track validating required Security Hub standards enablement.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/final-to-do/final-to-do** — Added todo item:
+  - `check for required security standards being enabled`
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- Todo text preserves user-provided phrasing so scope stays explicit and actionable.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Backend redeploy with current runtime settings (2026-02-27)
+
+**Task:** Redeploy backend using the currently active serverless runtime settings (no profile drift) after onboarding control-plane synthetic verify fixes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this deployment task.
+
+**What was done (verified):**
+- Confirmed active AWS identity:
+  - `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+- Read live runtime parameters before deploy and preserved these key settings:
+  - `EnableWorker=true`
+  - `WorkerReservedConcurrency=1`
+  - `TenantReconciliationEnabled=false`
+  - `ControlPlaneShadowMode=true`
+  - `ApiDomainName=api.valensjewelry.com`
+  - `ApiCertificateArn=arn:aws:acm:eu-north-1:029037611564:certificate/98319bc6-c7ae-4277-9786-3810aa2404a8`
+- Ran deployment script with same region/stacks/name-prefix/sqs-stack and current settings:
+  - Script: `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
+  - Region: `eu-north-1`
+  - Build stack: `security-autopilot-saas-serverless-build`
+  - Runtime stack: `security-autopilot-saas-serverless-runtime`
+  - Name prefix: `security-autopilot-dev`
+  - SQS stack: `security-autopilot-sqs-queues`
+  - Release tag: `20260227T211453Z`
+- Build/runtime deployment result:
+  - Build stack: no changes (up to date)
+  - CodeBuild image build: succeeded
+  - Runtime stack update: succeeded
+- Post-deploy parameter verification:
+  - `ApiImageUri=...:20260227T211453Z`
+  - `WorkerImageUri=...:20260227T211453Z`
+  - Runtime toggles remained unchanged (`EnableWorker=true`, `WorkerReservedConcurrency=1`, `TenantReconciliationEnabled=false`, `ControlPlaneShadowMode=true`)
+- Post-deploy health/CORS checks:
+  - `GET https://api.valensjewelry.com/health` -> HTTP `200`
+  - `OPTIONS https://api.valensjewelry.com/api/auth/login` from `Origin: https://dev.valensjewelry.com` -> HTTP `200` with expected CORS headers
+
+**Technical debt / gotchas:**
+- Deployment script rebuilds and deploys both API and worker images together; there is no API-only fast path in this script.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Onboarding control-plane synthetic verify default path (2026-02-27)
+
+**Task:** Remove the onboarding requirement to perform manual SG/S3 changes for control-plane intake verification by defaulting to a synthetic allowlisted event + bounded readiness polling, while retaining manual fallback guidance.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Added `POST /api/aws/accounts/{account_id}/control-plane-synthetic-event` to enqueue an allowlisted synthetic event server-side and upsert ingest freshness, used as a fallback path when browser/direct intake fails.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_synthetic_event.py** (new) — Added contract tests for synthetic event endpoint success, account-not-found, and invalid-region guard.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Added:
+  - `ControlPlaneIntakeResponse`,
+  - `sendSyntheticControlPlaneEvent(accountId, region, token)` for direct `POST /api/control-plane/events`,
+  - `sendSyntheticControlPlaneEventForAccount(accountId, region)` for account-scoped backend fallback.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx** — Updated control-plane onboarding verify flow to:
+  - attempt synthetic intake when token is available,
+  - poll control-plane readiness for up to ~90 seconds,
+  - mark onboarding step complete on readiness success,
+  - auto-retry synthetic injection via account API when direct browser fetch fails (`Failed to fetch`),
+  - show explicit manual fallback guidance only when synthetic paths are unavailable/fail and readiness is still stale,
+  - avoid false background-job failure banners by combining direct+fallback synthetic attempts into a single tracked operation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Validation performed:**
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run lint -- src/app/onboarding/page.tsx src/lib/api.ts` — passed.
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run lint -- src/app/onboarding/page.tsx` — passed (post-fix for false synthetic-failure banner).
+- `cd /Users/marcomaher/AWS Security Autopilot && ./venv/bin/pytest -q tests/test_control_plane_synthetic_event.py tests/test_control_plane_public_intake.py` — passed (`10 passed`).
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run typecheck` — failed due pre-existing unrelated error:
+  - `src/components/RemediationModal.tsx(341,25): error TS2345: Argument of type 'RemediationOption | null' is not assignable to parameter of type 'RemediationOption'.`
+
+**Technical debt / gotchas:**
+- Synthetic onboarding verification now has two paths:
+  - direct public intake (`POST /api/control-plane/events`) when browser/network path permits custom-header calls,
+  - account-scoped backend enqueue fallback (`POST /api/aws/accounts/{account_id}/control-plane-synthetic-event`) when direct fetch is blocked in-browser.
+- Both synthetic paths validate SaaS intake/readiness freshness but do not independently prove external EventBridge API-destination wiring unless forwarder-chain validation is also exercised.
+- Global frontend typecheck has an unrelated pre-existing failure in `RemediationModal.tsx`; touched files lint clean.
+
+**Open questions / TODOs:**
+- Decide whether onboarding should include an explicit optional end-to-end forwarder chain test mode (AWS-side injection) in addition to direct synthetic intake.
+- Resolve the pre-existing `RemediationModal.tsx` type error so repo-wide frontend typecheck can pass cleanly.
+
+---
+
+## Add write-role CloudFormation removal todo to final-to-do list (2026-02-27)
+
+**Task:** Append a new todo item to `docs/final-to-do/final-to-do` to remove write-role usage from CloudFormation and remove optional WriteRole behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/final-to-do/final-to-do** — Added todo item:
+  - `remove write role from cloudformation and remove optional writerole`
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- Todo text preserves user-provided wording verbatim (including casing/spelling) so intent is not altered.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Add onboarding hardcoded-account todo to final-to-do list (2026-02-27)
+
+**Task:** Append a new todo item to `docs/final-to-do/final-to-do` for onboarding step 2 (Core Integration Role) to remove a hardcoded AWS account ID.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/final-to-do/final-to-do** — Added todo item:
+  - `in the onboarding in 2. Connect Core Integration Role remove the hardcoded 029037611564`
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Updated `/docs/final-to-do/` description to remain accurate with multiple todo items.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- Todo text preserves user-provided phrasing verbatim to avoid changing intended scope.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Add final-to-do docs folder and initial signup requirement todo (2026-02-27)
+
+**Task:** Create a new `docs/final-to-do` folder with a `final-to-do` file and add the first todo item requested.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/final-to-do/final-to-do** (new) — Added initial checklist with first todo:
+  - `sign up requires phone number and email verification`
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/final-to-do/` section and file description for discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- The file name is intentionally extensionless (`docs/final-to-do/final-to-do`) to match the explicit request.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Onboarding CloudFormation teardown for account 029037611564 (2026-02-27)
+
+**Task:** Delete onboarding CloudFormation resources tied to SaaS account wiring for AWS account `029037611564` before test execution.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this teardown task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this teardown task.
+
+**What was done (verified):**
+- Confirmed active AWS identity before deletion:
+  - `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+  - Account `029037611564`, default region `eu-north-1`
+- Deleted onboarding stacks and waited for completion:
+  - `SecurityAutopilotControlPlaneForwarder` (`eu-north-1`)
+  - `SecurityAutopilotReadRole1` (`eu-north-1`)
+- Verified post-delete state:
+  - No remaining CloudFormation stacks matching `SecurityAutopilotReadRole*`, `SecurityAutopilotWriteRole*`, or `SecurityAutopilotControlPlaneForwarder*` in `eu-north-1`.
+  - No remaining stacks matching those prefixes across all AWS regions.
+  - No remaining IAM roles with prefixes `SecurityAutopilotReadRole` or `SecurityAutopilotWriteRole`.
+  - No remaining local IAM managed policies named `SecurityAutopilotReadRolePolicy*` or `SecurityAutopilotWriteRolePolicy*`.
+
+**Technical debt / gotchas:**
+- Teardown was intentionally scoped to onboarding-linked CloudFormation resources only; SaaS infrastructure stacks (for example `security-autopilot-saas-*`) were not modified.
+- Reconnecting this account to SaaS onboarding will require redeploying the onboarding templates.
+
+**Open questions / TODOs:**
+- Confirm whether you also want the non-CloudFormation adversarial architecture resources (`arch1_*` / `arch2_*`) torn down before testing.
+
+---
+
+## Complete feature inventory compilation for Wave 2 Tasks 1-9 (2026-02-27)
+
+**Task:** Compile a single complete feature inventory document from `feat-task1` through `feat-task9` inputs with strict section structure, preserve all source table rows, emit a strict-format summary file, and complete required project bookkeeping updates.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/complete-feature-inventory.md** (new) — Added:
+  - Required 10-section structure (`Executive Summary` through `GA Readiness Assessment`).
+  - Full source-table inclusion for Task 1-8 source files (no table row dropping), plus explicit Task 9 missing-source blocker handling.
+  - Feature count summary, Top 10 GA blockers, GA readiness scorecard, and verdict backed by Task 7/8 evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feature-inventory-summary.md** (new) — Added strict-template summary with totals, category counts, top blockers, and remaining risk lines.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability links for:
+  - `docs/features/complete-feature-inventory.md`
+  - `docs/features/feature-inventory-summary.md`
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- Required input `docs/features/feat-task9-performance-characteristics.md` is missing; the compiled inventory explicitly flags this blocker and uses `unknown (source file missing)` for Task-9-derived values.
+- Task 7 includes only nine explicit GA blockers; the compiled Top 10 blocker list includes the missing Task 9 source artifact as the tenth blocker to preserve a full ten-item GA blocker section without inventing implementation-status rows.
+- Missing prod-readiness audit files (`docs/prod-readiness/02-05`) continue to constrain BROKEN/audit-linked evidence precision in upstream source docs.
+
+**Open questions / TODOs:**
+- Decide whether to create `docs/features/feat-task9-performance-characteristics.md` as a first-class source artifact so Section 9 can move from blocker state to full source-backed coverage.
+- Confirm whether API-MISSING dependencies from Task 8 should be closed by backend implementation or by frontend feature-flag/removal before GA.
+
+---
+
+## Implementation status master classification for Wave 2 Task 7 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task7-implementation-status.md` by reclassifying every Task 2-6 feature into standardized implementation statuses (`COMPLETE` / `PARTIAL` / `STUB` / `MISSING` / `BROKEN`), with evidence references, GA blocker flags, category summary counts, and quick wins.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task7-implementation-status.md** (new) — Added:
+  - `FEATURE IMPLEMENTATION STATUS MASTER TABLE` covering all 301 feature IDs from Task 2-6 (`FE-001..092`, `API-001..115`, `JOB-001..018`, `AWS-001..052`, `INF-001..024`).
+  - `STATUS SUMMARY BY CATEGORY` count matrix.
+  - `GA BLOCKERS LIST` grouped by category.
+  - `QUICK WINS` table for small-effort partial gaps.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task7-implementation-status.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- Required audit files are missing (`docs/prod-readiness/02-audit-security-backend.md`, `03-audit-reliability-observability.md`, `04-audit-deployment-frontend-compliance.md`), so audit-dependent broken-state judgments remain `unknown (audit source missing)`.
+- Cross-checking frontend API calls against backend routers found multiple missing contract endpoints (for example: auth password/reset/verification flows, audit-log endpoint, manual-workflow evidence endpoints), so several frontend features were reclassified from complete to missing/partial based on code evidence.
+
+**Open questions / TODOs:**
+- Confirm whether missing frontend-called endpoints should be implemented in backend (recommended) or removed/feature-flagged in frontend to avoid dead paths.
+- Provide the missing prod-readiness audit documents if BROKEN-state classification must be evidence-linked to formal audit finding IDs.
+
+---
+
+## Cross-category feature dependency mapping for Wave 2 Task 8 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task8-feature-dependencies.md` by mapping feature dependencies across frontend/API/job/AWS inventories, then build end-to-end journey mapping, feature usage frequency, and orphaned-feature detection.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task8-feature-dependencies.md** (new) — Added:
+  - `FEATURE DEPENDENCY MAP` with cross-category dependency rows (frontend->API, API->job, API->AWS operation, job->AWS operation), including dependency type and failure impact.
+  - `USER JOURNEY MAP` with 8 required journeys (inferred due missing scenario source file) plus additional journeys.
+  - `FEATURE USAGE FREQUENCY` table showing journey coverage and critical-path status per feature ID.
+  - `ORPHANED FEATURES` table for features not present in dependency edges and not used in any mapped journey.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task8-feature-dependencies.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+
+**Technical debt / gotchas:**
+- Required source `docs/prod-readiness/05-e2e-test-scenarios.md` is missing, so the eight journey definitions were inferred from `feat-task2`-`feat-task5` instead of being sourced from the requested scenario file.
+- `feat-task2` references several frontend-called endpoints that have no corresponding `API-` row in `feat-task3`; these were retained as explicit missing API dependencies (`API-MISSING-*`) in the dependency map.
+
+**Open questions / TODOs:**
+- Provide `docs/prod-readiness/05-e2e-test-scenarios.md` (or canonical replacement) to replace inferred journeys with source-backed journey names/steps.
+
+---
+
+## Worker feature inventory extraction for Wave 2 Task 4 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task4-worker-features.md` by extracting worker/process behavior from Task 4 scope, including queue poller + Lambda worker entrypoints, all job handlers, trigger mappings, dependency map, scheduler/queue architecture, and performance characteristics.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task4-worker-features.md** (new) — Added:
+  - `BACKGROUND JOB FEATURE INVENTORY` table (`JOB-001` to `JOB-018`) covering all worker entrypoints and job handlers with trigger source, payload contract, side effects, AWS services, retry/idempotency/failure behavior, queue/scheduler mechanism, status, and known-issues field.
+  - `JOB DEPENDENCY MAP` for ingest/reconcile/remediation/export/digest/backfill ordering and concurrency expectations.
+  - `SCHEDULER AND QUEUE ARCHITECTURE` section with queue types, scheduler pattern, worker process types, DLQ behavior, visibility/heartbeat handling, and Mermaid flow.
+  - `PERFORMANCE CHARACTERISTICS` table with scaling dimensions, bottleneck risks, and concurrency guardrails.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task4-worker-features.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+
+**Technical debt / gotchas:**
+- Audit source files used for findings linkage are still missing (`docs/prod-readiness/02-audit-security-backend.md`, `03-audit-reliability-observability.md`, `04-audit-deployment-frontend-compliance.md`, `05-e2e-test-scenarios.md`), so known-issue mapping in this worker inventory is recorded as `unknown (audit source missing)`.
+- Queue failure semantics are split across worker code and infrastructure templates (`maxReceiveCount=3`, queue visibility defaults, in-handler visibility heartbeat), so operational tuning must keep both in sync.
+
+**Open questions / TODOs:**
+- Confirm canonical replacement sources for the missing `docs/prod-readiness/02-05` audit files so future worker inventories can map concrete finding IDs.
+
+---
+
+## Infrastructure feature inventory extraction for Wave 2 Task 6 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task6-infrastructure-features.md` from Task 6 infrastructure scope by reading `feat-task1-surface-map.md` in full, extracting Priority 1 infrastructure evidence, handling missing audit source fallback, and generating the required infra/platform/operations analysis sections.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task6-infrastructure-features.md** (new) — Added:
+  - `INFRASTRUCTURE FEATURE INVENTORY` (`INF-001` to `INF-024`) across database/deployment/env/network/storage/queue/logging/monitoring/alerting/health/auth/multi-tenancy/email/scheduler categories.
+  - `PERFORMANCE AND SCALING CHARACTERISTICS` table with component scaling paths, present bottlenecks, and horizontal readiness.
+  - `OPERATIONAL RUNBOOK COVERAGE` matrix for deploy/rollback/restore/rotation/remediation/export/onboarding/offboarding operations.
+  - `MULTI-TENANCY ISOLATION MECHANISM` section with exact DB/API/worker/storage/queue isolation implementation.
+  - `DEPENDENCY VERSION AND SECURITY POSTURE` table using manifest/lockfile current versions plus registry/audit evidence for latest/CVEs.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task6-infrastructure-features.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+
+**Technical debt / gotchas:**
+- Requested source `docs/prod-readiness/04-audit-deployment-frontend-compliance.md` is missing; all audit-linked issue fields were set to `unknown (audit source missing)` per instructions.
+- Python and Terraform dependencies are policy-bounded but not lock-pinned to exact runtime versions; posture table reflects constraints rather than exact deployed patch versions for those rows.
+
+**Open questions / TODOs:**
+- Add/restore `docs/prod-readiness/04-audit-deployment-frontend-compliance.md` if audit findings must be linked to concrete finding IDs in Task 6 outputs.
+- Decide whether to add a dedicated operator runbook for tenant offboarding (tenant/data deletion), which is currently not documented in runbooks.
+
+---
+
+## AWS integration feature inventory extraction for Wave 2 Task 5 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task5-aws-integration-features.md` by extracting AWS integrations at boto3 API-operation level from Task 5 scope files, including Priority 1 files and Priority 2 files needed for completeness.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task5-aws-integration-features.md** (new) — Added:
+  - `AWS INTEGRATION FEATURE INVENTORY` with one row per distinct AWS API operation (`AWS-001` to `AWS-052`) covering service/operation/call purpose/direction/call context/IAM action/role requirement/response fields/failure behavior/rate-limit/region behavior/source lines.
+  - `IAM PERMISSION SUMMARY` with `READ ROLE REQUIRED PERMISSIONS` and `WRITE ROLE REQUIRED PERMISSIONS`.
+  - `AWS SERVICE DEPENDENCY MAP`, `MULTI-REGION BEHAVIOR`, and `COST IMPLICATIONS` sections.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task5-aws-integration-features.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+
+**Technical debt / gotchas:**
+- `HeadBucket` IAM mapping is policy-dependent in practice (`s3:ListBucket` is common) and is not explicitly listed in the current ReadRole template; inventory marks this action as `unknown` in the per-feature IAM column.
+- Some operations are used by SaaS runtime credentials (for example SQS enqueue and S3 export upload) rather than customer ReadRole/WriteRole; those rows are marked `unknown — SaaS runtime role`.
+
+**Open questions / TODOs:**
+- Confirm whether runtime IAM policies for SaaS-owned AWS calls (SQS enqueue, S3 export upload, template-bucket listing, readiness queue-attribute checks) should be documented in a separate operator-facing IAM policy doc.
+
+---
+
+## Backend API feature inventory extraction for Wave 2 Task 3 (2026-02-27)
+
+**Task:** Produce `docs/features/feat-task3-backend-features.md` by extracting backend API endpoint features from `docs/features/feat-task1-surface-map.md` Task 3 scope, scanning all `backend/routers/*.py`, and applying required preflight/doc wrap-up steps.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task3-backend-features.md** (new) — Added:
+  - `BACKEND API FEATURE INVENTORY` table covering all router endpoints (`API-001` to `API-115`) with method/path/router/request/response/auth/tenant scope/side effects/rate-limit/job/status/known-issues columns.
+  - `ENDPOINT GROUPINGS` section across authentication, user/team, AWS account, findings, actions/remediation, PR bundles, exports/reports, notifications/digest, and internal/scheduler domains.
+  - `MISSING ENDPOINTS` section explicitly blocked because `docs/prod-readiness/05-e2e-test-scenarios.md` is missing.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task3-backend-features.md` under `/docs/features/`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+
+**Technical debt / gotchas:**
+- `docs/prod-readiness/05-e2e-test-scenarios.md` is absent, so frontend-UNVERIFIED endpoint comparison cannot be completed from source data.
+- Several backend routes intentionally support local-mode fallback (`get_optional_user` + `tenant_id`) while requiring auth in non-local mode; these were marked as `unknown` in the auth column where guard behavior is environment-dependent.
+
+**Open questions / TODOs:**
+- Provide `docs/prod-readiness/05-e2e-test-scenarios.md` (or replacement source) to unblock the `MISSING ENDPOINTS` comparison table with concrete frontend callsites.
+
+---
+
+## Live AWS test-account deployment of Architecture 1 and 2 with adversarial verification (2026-02-27)
+
+**Task:** Execute `docs/prod-readiness/08-task2-deploy-arch1.sh` and `docs/prod-readiness/08-task3-deploy-arch2.sh` in a live AWS test account using strict stop-on-failure controls, run full/adversarial verification sweeps, and publish a deployment report.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/08-task2-deploy-arch1.sh** — Updated variable handling so `ACCOUNT_ID`, `AWS_REGION`, and RDS credentials can be provided via environment variables with explicit required-value validation; replaced invalid B1 principal defaults with account-derived valid principals.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/08-task3-deploy-arch2.sh** — Applied live-deploy hardening fixes discovered during execution:
+  - exported `AWS_PAGER=""` to suppress interactive pager prompts,
+  - fixed Config recorder payload boolean typing,
+  - reused existing AWS Config recorder/delivery channel names when account limits are reached,
+  - added required S3 service-delivery policies for Config and CloudTrail buckets,
+  - added IGW + route-table setup before creating publicly accessible RDS,
+  - removed pinned unsupported Postgres engine version for `eu-north-1`,
+  - corrected EKS create flag from global `--version` to `--kubernetes-version`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/08-deployment-report.md** (new) — Added final deployment report with architecture totals, adversarial PASS/FAIL status, deployment issues, and teardown command references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md** — Added cross-link to `08-deployment-report.md`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/prod-readiness/08-deployment-report.md` index entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this deployment task.
+
+**What was done (verified):**
+- Step 1/2 pre-flight checks completed in account `029037611564`, region `eu-north-1`.
+- Architecture 1 deployment completed after resolving account/public-access and invalid-principal blockers.
+- Architecture 2 deployment completed after resolving Config, delivery-policy, VPC networking, engine-version, and EKS flag blockers.
+- Full resource sweep confirms inventory resources present across Architecture 1 + Architecture 2.
+- Adversarial verification status:
+  - `A1` PASS
+  - `A2` PASS
+  - `A3` PASS (added expected inline policy name `wildcard-policy` with `Action:* Resource:*`)
+  - `B1` PASS
+  - `B2` PASS (`4` rules total including `22/0.0.0.0/0`)
+  - `B3` PASS (attached second managed policy `SecurityAudit` to reach expected `2 managed + 1 inline`)
+
+**Technical debt / gotchas:**
+- Account-level S3 Block Public Access had to be temporarily relaxed to permit intentional public bucket-policy deployment for adversarial tests.
+- `arch1_web_ingest_service` is `ACTIVE` with `desiredCount=1` but `runningCount=0`; service exists but task placement/networking needs manual console follow-up.
+- Architecture 2 script remains account-mutating (Security Hub, GuardDuty, Config, SSM setting, EBS default encryption, snapshot block), so reruns should stay limited to isolated test accounts.
+
+**Open questions / TODOs:**
+- Decide whether to restore account-level S3 Block Public Access strict defaults immediately after test validation cycles.
+- Decide whether `08-deployment-scripts.md` should be regenerated to reflect the live hotfixes now present in `08-task2-deploy-arch1.sh` and `08-task3-deploy-arch2.sh`.
+
+---
+
+## Frontend feature inventory extraction for Wave 2 Task 2 (2026-02-27)
+
+**Task:** Produce a frontend-only user-facing feature inventory from `docs/features/feat-task1-surface-map.md` (Task 2 scope), including route/component feature mapping, navigation/layout features, loading/empty/error-state matrix, and forms/input matrix.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task2-frontend-features.md** (new) — Added:
+  - `USER-FACING FEATURE INVENTORY` table (`FE-001` onward) with route/component mapping, trigger/success/failure behavior, endpoint mapping, user-visible data, access level, and implementation status.
+  - `NAVIGATION AND LAYOUT FEATURES` section covering global shell and marketing navigation surfaces.
+  - `EMPTY AND LOADING STATES` matrix for frontend routes.
+  - `FORMS AND INPUTS` matrix with fields/validation/submit actions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added docs discoverability link for `docs/features/feat-task2-frontend-features.md`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- A few frontend surfaces are intentionally non-integrated placeholders (for example, landing contact popover submit and locale switch are UI-only), so they are marked `stub` in the inventory.
+- Several failure messages are backend-detail driven (`getErrorMessage`), so exact final text varies by API response; inventory documents observable UI error containers and endpoint sources.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Surface map generation for feature-analysis Wave 1 (2026-02-27)
+
+**Task:** Read the specified prod-readiness inputs and produce a mapping-only surface inventory document at `docs/features/feat-task1-surface-map.md` (no feature extraction yet).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/feat-task1-surface-map.md** (new) — Added six required sections:
+  - Frontend route/page surface map.
+  - Backend router/prefix/endpoint-count surface map.
+  - Worker/job/scheduled-task surface map.
+  - AWS integration surface map with implementation file pointers.
+  - Infrastructure component surface map.
+  - Wave 2 prioritized reading lists for tasks 2-6.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added `/docs/features/` section and cross-link for `feat-task1-surface-map.md`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry for this task.
+
+**Technical debt / gotchas:**
+- The requested source files `docs/prod-readiness/02-audit-security-backend.md`, `03-audit-reliability-observability.md`, `04-audit-deployment-frontend-compliance.md`, and `05-e2e-test-scenarios.md` were not present in the repository at task time; mapping coverage was completed from the available docs plus codebase surfaces.
+
+**Open questions / TODOs:**
+- Confirm whether the missing `02-05` prod-readiness audit files should be added or whether their content has been superseded by other documents.
+
+---
+
+## Worker-enabled redeploy after Lambda quota approval (2026-02-27)
+
+**Task:** After Lambda concurrency quota approval, redeploy serverless runtime so worker runs with reserved concurrency `1`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added this redeploy record.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- Verified quota update became active in `eu-north-1`:
+  - `ConcurrentExecutions=1000`
+  - `UnreservedConcurrentExecutions=1000`
+  - Previous quota request (`8aeb788fe6e04139a8b37e6d517ba4f3mJUyDLnN`) now shows `CASE_CLOSED`.
+- Executed serverless deploy command with worker enabled and reserved concurrency `1`:
+  - Script: `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
+  - Region: `eu-north-1`
+  - Build stack: `security-autopilot-saas-serverless-build`
+  - Runtime stack: `security-autopilot-saas-serverless-runtime`
+  - Name prefix: `security-autopilot-dev`
+  - SQS stack: `security-autopilot-sqs-queues`
+  - Image tag: `20260227T111651Z`
+  - Effective toggles:
+    - `EnableWorker=true`
+    - `WorkerReservedConcurrency=1`
+    - `TenantReconciliationEnabled=false`
+    - `ControlPlaneShadowMode=true`
+- Post-deploy verification:
+  - CloudFormation parameters confirm worker reserved concurrency `1`.
+  - `aws lambda get-function-concurrency --function-name security-autopilot-dev-worker` returns `ReservedConcurrentExecutions: 1`.
+  - Worker SQS event-source mappings remain `Enabled` for ingest/events/inventory/export queues.
+  - `GET https://api.valensjewelry.com/health` returns HTTP `200`.
+  - `OPTIONS /api/auth/login` from `https://dev.valensjewelry.com` returns HTTP `200` with expected CORS headers.
+
+**Technical debt / gotchas:**
+- With reserved concurrency pinned to `1`, background throughput is intentionally constrained for cost control. If queue lag rises, increase reserved concurrency in controlled steps.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
+## Lambda concurrency quota increase request submitted via CLI (2026-02-25)
+
+**Task:** Execute the command-based quota-increase path for AWS Lambda concurrent executions in `eu-north-1`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added this operational quota-request record.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- Verified caller/account context:
+  - Account: `029037611564`
+  - Caller: `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+- Verified current applied Lambda concurrency in `eu-north-1`:
+  - `ConcurrentExecutions=10`
+  - `UnreservedConcurrentExecutions=10`
+- Verified quota metadata:
+  - Quota code: `L-B99A9384` (`Concurrent executions`)
+  - Applied quota value: `10`
+  - AWS default quota value: `1000`
+- Submitted Service Quotas request via CLI:
+  - Command used: `aws service-quotas request-service-quota-increase --service-code lambda --quota-code L-B99A9384 --desired-value 1001 --region eu-north-1`
+  - Request ID: `8aeb788fe6e04139a8b37e6d517ba4f3mJUyDLnN`
+  - Status at submission/check: `PENDING`
+- Retrieved change history and confirmed the same request appears with `PENDING` status.
+
+**Technical debt / gotchas:**
+- Service Quotas API for this quota rejects requests below AWS default (`1000`), so practical requests from this account state must use `>1000` through this API path.
+- Approval timing is controlled by AWS and may require additional review/justification.
+
+**Open questions / TODOs:**
+- Wait for AWS review outcome; after approval, re-run low-cost deploy with worker reserved concurrency (`1`) if desired.
+
+---
+
+## Worker performance test under current Lambda concurrency cap (2026-02-25)
+
+**Task:** Run a live performance test with worker mappings enabled under the current AWS Lambda account limit (no quota increase), and verify practical throughput/concurrency behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added this performance-test execution record.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- Confirmed worker remained enabled in serverless runtime (`EnableWorker=true`) with account-safe shared-pool mode (`WorkerReservedConcurrency=0`).
+- Executed synthetic queue load test in `eu-north-1` against:
+  - Worker Lambda: `security-autopilot-dev-worker`
+  - Queue: `security-autopilot-ingest-queue`
+- Test method:
+  - Enqueued `2000` `compute_actions` jobs via SQS batch API (200 batches x 10 messages).
+  - Waited for queue drain.
+  - Collected CloudWatch metrics for the exact test window.
+- Measured results:
+  - Test window: `2026-02-25T23:43:23Z` -> `2026-02-25T23:46:38Z`
+  - Drain time: `196s`
+  - Lambda invocations (sum): `1224`
+  - Lambda errors (sum): `0`
+  - Lambda throttles (sum): `29`
+  - Lambda max concurrent executions: `10`
+  - Lambda average duration: `~181.99 ms`
+  - SQS max oldest-message age: `0s`
+
+**Technical debt / gotchas:**
+- The test reached the account concurrency ceiling (`10`) and recorded throttling; this confirms real throughput is constrained by account-level Lambda concurrency until quota is increased.
+- With `WorkerReservedConcurrency=0`, worker and API share the same unreserved concurrency pool, so concurrent API bursts can reduce worker headroom.
+
+**Open questions / TODOs:**
+- If higher sustained worker throughput is needed, submit Lambda concurrency increase for `eu-north-1` and re-test with reserved worker concurrency enabled.
+
+---
+
+## SaaS factory reset + low-cost redeploy (2026-02-25)
+
+**Task:** Delete all SaaS user/tenant operational data and redeploy the serverless stack on the low-cost profile.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Added this operational reset + redeploy record.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry for this task.
+
+**What was done (verified):**
+- Captured rollback snapshot before changes:
+  - Previous API image tag: `20260224T162601Z`
+  - Previous worker image tag: `20260224T162601Z`
+- Reset SaaS database state to fresh deployment baseline:
+  - Dropped and recreated `public` schema in live Postgres.
+  - Re-ran `alembic upgrade head` to rebuild schema.
+  - Confirmed Alembic current revision: `0032_findings_resolved_at (head)`.
+- Deleted persisted SaaS data from storage/queues:
+  - Emptied `security-autopilot-exports` (all object versions/delete markers).
+  - Emptied `autopilot-s3-support-bucket` (all object versions/delete markers).
+  - Purged all SaaS queues (ingest/events/inventory/export + DLQs + quarantine).
+- Redeployed runtime on low-cost settings using `/scripts/deploy_saas_serverless.sh`:
+  - First attempt with `WorkerReservedConcurrency=1` failed due AWS Lambda account guard: unreserved concurrency minimum `10`.
+  - Second attempt succeeded with account-safe low-cost profile:
+    - `EnableWorker=true`
+    - `WorkerReservedConcurrency=0`
+    - `TenantReconciliationEnabled=false`
+    - `ControlPlaneShadowMode=true`
+  - New deployed image tag for both API/worker: `20260225T231929Z`.
+- Post-deploy verification:
+  - `GET /health` -> HTTP `200`.
+  - `OPTIONS /api/auth/login` from `https://dev.valensjewelry.com` -> HTTP `200` with expected CORS headers.
+  - `POST /api/auth/login` (invalid creds) -> HTTP `401` with CORS headers (no 500).
+  - Core data tables are empty (`tenants/users/aws_accounts/findings/actions/exceptions/remediation_runs/evidence_exports/baseline_reports` all `0`).
+  - All target SQS queues report `ApproximateNumberOfMessages=0`.
+
+**Technical debt / gotchas:**
+- This AWS account currently cannot reserve even `1` worker concurrency because it must retain at least `10` unreserved concurrency. Low-cost deploy therefore uses `WorkerReservedConcurrency=0` in this environment.
+- If strict worker concurrency capping is required, request a Lambda concurrency quota adjustment, then redeploy with reserved concurrency `1`.
+
+**Open questions / TODOs:**
+- None.
+
+---
+
 ## Production docs guardrail + deployment baseline (low-cost default, scale-up, rollout, rollback) (2026-02-25)
 
 **Task:** Add a high-importance `/docs/Production/` area, make it explicitly non-routine to edit unless commanded, add rules-folder references, and publish first production deployment file with low-cost default plus scale-up/rollout/rollback commands.

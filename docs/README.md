@@ -190,7 +190,41 @@ Production-readiness implementation notes and validation records:
 - `08-teardown-scripts.md` — Compiled teardown script bundle with Group A/B and full teardown variants for both architectures
 - `08-coverage-matrix.md` — Published coverage matrix and PR proof checklist copied from Task 8 output
 - `08-summary.md` — Final compilation summary with architecture resource counts, coverage counts, and residual risk list
+- `08-deployment-report.md` — Live test-account deployment execution report with verification outcomes, adversarial PASS/FAIL results, and teardown references
 - `root-credentials-required-iam-root-access-key-absent.md` — Manual/high-risk runbook for `iam_root_access_key_absent` with root-credential approvals, execution, rollback, and audit evidence capture
+
+### `/docs/features/`
+Feature-analysis and surface-mapping outputs:
+- `feat-task1-surface-map.md` — Wave 1 surface map covering frontend routes, backend routers, worker/jobs, AWS integrations, infrastructure components, and Wave 2 prioritized reading list
+- `feat-task2-frontend-features.md` — Wave 2 Task 2 frontend-only user-facing feature inventory (features table, navigation/layout, state matrix, and forms matrix)
+- `feat-task3-backend-features.md` — Wave 2 Task 3 backend API feature inventory across all router endpoints (request/response/auth/tenant scope/side effects/background jobs) plus endpoint groupings and missing-endpoint blocker note
+- `feat-task6-infrastructure-features.md` — Wave 2 Task 6 infrastructure feature inventory (database/deploy/env/network/storage/queue/logging/monitoring/alerting/health/auth/multi-tenancy/email/scheduler), scaling characteristics, runbook coverage, isolation model, and dependency security posture
+- `feat-task5-aws-integration-features.md` — Wave 2 Task 5 AWS integration inventory at boto3 API-operation level, including IAM action mapping, role requirement classification, dependency map, regional behavior, and cost/rate-limit considerations
+- `feat-task4-worker-features.md` — Wave 2 Task 4 worker/background-job feature inventory across queue workers, Lambda handler entrypoints, scheduled tasks, and all worker job handlers
+- `feat-task7-implementation-status.md` — Wave 2 Task 7 master implementation-status classification across Task 2-6 features using standardized COMPLETE/PARTIAL/STUB/MISSING/BROKEN criteria, GA blockers, and quick wins
+- `feat-task8-feature-dependencies.md` — Wave 2 Task 8 cross-category dependency graph (frontend/API/job/AWS), end-to-end journey mapping, feature usage frequency, and orphaned-feature analysis
+- `complete-feature-inventory.md` — Consolidated complete feature inventory that compiles Task 1-8 source tables plus GA readiness assessment and performance-evidence blocker handling for missing Task 9 source
+- `feature-inventory-summary.md` — Compact numeric summary of complete feature-inventory counts, GA verdict, top blockers, and remaining risks
+
+### `/docs/test-results/`
+QA validation output artifacts:
+- `test-01-api-health.md` — Pre-live API health/connectivity validation using live frontend/backend endpoints, including environment values and reusable admin token for subsequent tests.
+- `test-02-database.md` — Pre-live database connectivity/migration validation covering API DB-health signals, Alembic state/history, core table presence, and stale pending-remediation checks.
+- `test-06-auth-tokens.md` — Pre-live auth-token validation covering JWT expiry checks, JWT secret-default audit, refresh endpoint availability/token issuance, and unauthorized token handling (`401`) behavior.
+- `test-07-account-connection.md` — Pre-live AWS account-connection API validation covering account-listing, bad-input rejection, existing-account detection, optional connect flow, and duplicate-account rejection behavior.
+- `test-08-service-readiness.md` — Pre-live service-readiness validation covering service probes, control-plane readiness, ingest-progress contract behavior, onboarding fast-path endpoint, and account ping endpoint.
+- `test-09-multitenancy.md` — Pre-live tenant-isolation validation verifying Tenant B cannot read Tenant A findings/accounts or access Tenant A resource IDs across actions/remediation runs/exports.
+- `test-10-rbac.md` — Pre-live RBAC validation for unauthenticated endpoint rejection, admin-only boundary checks, and internal endpoint secret-guard behavior, including critical delete-account authorization findings.
+- `test-11-securityhub-ingestion.md` — Pre-live Security Hub ingestion validation covering ingest trigger, completion polling, findings-count checks, Group A/Group B tag expectations, and required finding-field contract checks.
+- `test-12-access-analyzer.md` — Pre-live Access Analyzer ingestion validation covering ingest trigger behavior, ingest-progress status behavior, and findings `source=access_analyzer` count query compatibility with current API response shape.
+- `test-13-inspector.md` — Pre-live Inspector-ingestion validation covering trigger behavior, repeat-trigger stability, and findings source-count query compatibility with current API response shape.
+- `test-16-action-detail.md` — Pre-live action-list/detail/remediation endpoint validation covering list payload shape, required action fields, detail/options/preview endpoint behavior, and direct-fix/PR action-ID discovery compatibility.
+- `test-15-findings-filtering.md` — Pre-live findings-filtering validation covering severity/account/status filters, pagination behavior, invalid-filter handling, grouped endpoint behavior, and combined-filter response validity.
+- `test-14-findings-api.md` — Pre-live Findings API contract validation covering list-shape behavior, required fields, severity values, display-value readability, single-finding detail retrieval, grouped endpoint shape, and total-count consistency.
+
+### `/docs/final-to-do/`
+Operational final checklist notes:
+- `final-to-do` — Current final to-do list for pending launch/onboarding requirements.
 
 ### `/docs/Production/`
 High-importance operator documentation:

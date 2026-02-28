@@ -4,6 +4,142 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-02
 
+- [Pre-live QA Test 16: action detail and remediation endpoint validation (2026-02-28)](task_log.md#pre-live-qa-test-16-action-detail-and-remediation-endpoint-validation-2026-02-28)
+  - Executed Action API checks (16.1-16.7) on `https://api.valensjewelry.com`, including list/field contract checks, action detail/options/preview behavior, and direct-fix/PR action discovery.
+  - Published strict-format output at `docs/test-results/test-16-action-detail.md` with downstream IDs `DIRECT_ACTION_ID` and `PR_ACTION_ID`.
+  - Result status: **FAIL** (strict jq/action-type assumptions mismatched current paginated actions contract and runtime action-type taxonomy).
+- [Pre-live QA Test 15: findings filtering and pagination validation (2026-02-28)](task_log.md#pre-live-qa-test-15-findings-filtering-and-pagination-validation-2026-02-28)
+  - Executed findings-filter checks (15.1-15.7) on `https://api.valensjewelry.com`, covering severity/account/status filters, pagination, invalid-filter behavior, grouped endpoint output, and combined-filter response validity.
+  - Published strict-format output at `docs/test-results/test-15-findings-filtering.md` using `CONNECTED_ACCOUNT_ID` from Test 07.
+  - Result status: **FAIL** (15.3/15.6/15.7 passed; 15.1/15.2/15.4 failed due strict jq contract mismatch with paginated object payload, and 15.5 failed because invalid severity returned `200` instead of `400/422`).
+- [Pre-live QA Test 14: Findings API contract validation (2026-02-28)](task_log.md#pre-live-qa-test-14-findings-api-contract-validation-2026-02-28)
+  - Executed Findings API checks (14.1-14.7) on `https://api.valensjewelry.com`, including list-shape validation, required-field/severity/title contract checks, finding-detail retrieval, grouped endpoint behavior, and total count.
+  - Published strict-format output at `docs/test-results/test-14-findings-api.md`.
+  - Result status: **FAIL** (14.1/14.6/14.7 passed; 14.2-14.5 failed under strict command contract due top-level-array jq assumptions and missing literal `severity` key in findings payload).
+- [Pre-live QA Test 11: Security Hub ingestion against vulnerable architecture (2026-02-28)](task_log.md#pre-live-qa-test-11-security-hub-ingestion-against-vulnerable-architecture-2026-02-28)
+  - Executed Security Hub ingest checks (11.1-11.6) on `https://api.valensjewelry.com`, including ingest trigger, progress polling, findings-count validation, and Group A/Group B expectation checks from architecture design.
+  - Published strict-format output at `docs/test-results/test-11-securityhub-ingestion.md` using connected account path id `029037611564`.
+  - Result status: **FAIL** (11.1-11.3 passed; 11.4-11.6 failed due `/api/findings` shape mismatch against as-provided jq commands plus missing `resource_tags` / `severity` fields for strict tag/field assertions).
+- [Pre-live QA Test 12: Access Analyzer ingestion validation (2026-02-28)](task_log.md#pre-live-qa-test-12-access-analyzer-ingestion-validation-2026-02-28)
+  - Executed Access Analyzer checks (12.1-12.4) on `https://api.valensjewelry.com`, including trigger behavior, delayed progress check, and findings source-count query.
+  - Published strict-format output at `docs/test-results/test-12-access-analyzer.md` using connected account path id `029037611564`.
+  - Result status: **FAIL** (as-provided ingest-progress request lacks required `started_after`, and as-provided findings jq assumes top-level array while API returns paginated object).
+- [Pre-live QA Test 13: Inspector ingestion validation (2026-02-28)](task_log.md#pre-live-qa-test-13-inspector-ingestion-validation-2026-02-28)
+  - Executed Inspector checks (13.1-13.3) on `https://api.valensjewelry.com`, including trigger/re-trigger behavior with `sleep 60` and findings source-count verification.
+  - Published strict-format output at `docs/test-results/test-13-inspector.md` using live connected account `029037611564`.
+  - Result status: **FAIL** (13.1/13.2 passed; 13.3 command-contract mismatch because `/api/findings` response is paginated object, not top-level array expected by the provided `jq` query).
+- [RBAC hotfix for AWS account delete + onboarding account/role restoration (2026-02-28)](task_log.md#rbac-hotfix-for-aws-account-delete--onboarding-accountrole-restoration-2026-02-28)
+  - Implemented admin-only authorization guard for `DELETE /api/aws/accounts/{account_id}` (unauthenticated `401`, member `403`) and added regression tests in `tests/test_delete_account.py`.
+  - Verified hotfix tests with `pytest -q tests/test_delete_account.py` (`5 passed`).
+  - Restored `SecurityAutopilotReadRole`/`SecurityAutopilotWriteRole` and re-linked account `029037611564` through `POST /api/aws/accounts` (`201`, `validated`).
+- [Pre-live QA Test 10: RBAC admin-boundary and unauthenticated-access validation (2026-02-28)](task_log.md#pre-live-qa-test-10-rbac-admin-boundary-and-unauthenticated-access-validation-2026-02-28)
+  - Executed protected-endpoint auth checks (10.1-10.7) using a true member token created via invite/accept flow because Test 04 signup user is admin.
+  - Published strict-format output at `docs/test-results/test-10-rbac.md` and documented setup drift (`test-01-environment.md` missing, internal-secret/header mismatch).
+  - Result status: **FAIL** with **CRITICAL SECURITY BLOCKER** (member user successfully deleted AWS account via `DELETE /api/aws/accounts/{account_id}` returning `204`, and onboarding IAM roles were removed by the same unauthorized flow).
+- [Pre-live QA Test 09: multi-tenant isolation validation (2026-02-28)](task_log.md#pre-live-qa-test-09-multi-tenant-isolation-validation-2026-02-28)
+  - Executed tenant-isolation checks (tests 9.1-9.5) on `https://api.valensjewelry.com` using Tenant B from signup and Tenant A admin token from Test 01.
+  - Published strict-format output at `docs/test-results/test-09-multitenancy.md`, including findings/accounts isolation (`Tenant A=391`, `Tenant B=0`, accounts=`0`) and cross-tenant ID checks for action/run/export (all `404`).
+  - Result status: **PASS** (**full 9.1-9.5 coverage complete; no cross-tenant `200` responses**).
+- [Pre-live QA Test 08: service readiness endpoints validation (2026-02-28)](task_log.md#pre-live-qa-test-08-service-readiness-endpoints-validation-2026-02-28)
+  - Executed readiness endpoint checks (tests 8.1-8.6) on `https://api.valensjewelry.com` for service-readiness, control-plane readiness, ingest-progress, onboarding fast-path, and ping.
+  - Published strict-format output at `docs/test-results/test-08-service-readiness.md` with live `CONNECTED_ACCOUNT_ID=029037611564` and per-service/per-region readiness outcomes.
+  - Result status: **FAIL** (schema expectation mismatch for 8.2 field names and `ingest-progress` contract requiring `started_after`, returning `422` for the requested call shape).
+- [Pre-live QA Test 07: AWS account connection API validation (2026-02-28)](task_log.md#pre-live-qa-test-07-aws-account-connection-api-validation-2026-02-28)
+  - Executed account-connection API checks (tests 7.1-7.7) on `https://api.valensjewelry.com`: listing, bad-input rejection, existing-account detection, conditional connect, and duplicate-account behavior.
+  - Published strict-format output at `docs/test-results/test-07-account-connection.md` with `CONNECTED_ACCOUNT_ID=cdc6355d-2f56-4f19-b8de-a200ed521c07`.
+  - Result status: **FAIL** (duplicate connection returned `422` instead of expected `400/409`; setup docs gaps: missing `test-01-environment.md` and missing explicit role ARNs in `08-deployment-report.md`).
+- [Pre-live QA Test 06: auth token expiry, refresh, and rejection validation (2026-02-28)](task_log.md#pre-live-qa-test-06-auth-token-expiry-refresh-and-rejection-validation-2026-02-28)
+  - Executed token-expiry, secret-default, refresh endpoint, and auth-rejection checks (tests 6.1-6.7) against `https://api.valensjewelry.com` using Test 01 environment values.
+  - Published strict-format output at `docs/test-results/test-06-auth-tokens.md` and recorded fallback to `test-01-api-health.md` because `test-01-environment.md` was missing.
+  - Result status: **FAIL** (blocking issues: long token lifetime policy mismatch, hardcoded JWT secret fallback in code, and missing `/api/auth/refresh` endpoint).
+- [Pre-live QA Test 02: database connectivity and migration validation (2026-02-27)](task_log.md#pre-live-qa-test-02-database-connectivity-and-migration-validation-2026-02-27)
+  - Executed API log validation, Alembic current/head/history checks, core-table presence verification, and pending-remediation queue-age check.
+  - Published strict-format output at `docs/test-results/test-02-database.md` using the Test 01 environment values/token.
+  - Result status: **PASS** (no DB connection errors found; migration state current; no stale pending remediation runs).
+- [Pre-live QA Test 01: API health and connectivity validation (2026-02-27)](task_log.md#pre-live-qa-test-01-api-health-and-connectivity-validation-2026-02-27)
+  - Executed live endpoint checks for frontend + backend health/docs/CORS/security headers/HTTPS enforcement/login and published strict-format output at `docs/test-results/test-01-api-health.md`.
+  - Discovered and recorded `BACKEND_API_URL=https://api.valensjewelry.com` plus a fresh `ADMIN_TOKEN` and JWT expiry for reuse by subsequent tests.
+  - Result status: **FAIL** (blocking issues: missing security headers and no HTTP->HTTPS redirect on dev frontend domain).
+- [Add security-standards readiness todo to final-to-do list (2026-02-27)](task_log.md#add-security-standards-readiness-todo-to-final-to-do-list-2026-02-27)
+  - Added a fourth todo in `docs/final-to-do/final-to-do`: `check for required security standards being enabled`.
+- [Backend redeploy with current runtime settings (2026-02-27)](task_log.md#backend-redeploy-with-current-runtime-settings-2026-02-27)
+  - Redeployed `security-autopilot-saas-serverless-runtime` in `eu-north-1` with the same active toggles (`EnableWorker=true`, `WorkerReservedConcurrency=1`, `TenantReconciliationEnabled=false`, `ControlPlaneShadowMode=true`).
+  - Published fresh API/worker images with tag `20260227T211453Z`.
+  - Verified post-deploy health and CORS checks on `https://api.valensjewelry.com`.
+- [Onboarding control-plane synthetic verify default path (2026-02-27)](task_log.md#onboarding-control-plane-synthetic-verify-default-path-2026-02-27)
+  - Switched onboarding control-plane verification to synthetic intake first (`POST /api/control-plane/events`) with bounded readiness polling (~90s max).
+  - Added account-scoped synthetic fallback endpoint (`POST /api/aws/accounts/{account_id}/control-plane-synthetic-event`) to handle browser/network failures (for example `Failed to fetch` on direct intake).
+  - Fixed false "Send synthetic control-plane event failed" notifications when direct intake fails but account-scoped fallback succeeds.
+  - Kept manual SG/S3 change instructions as fallback-only when token is unavailable/synthetic path fails and readiness remains stale.
+  - Added explicit user-facing error clarity for missing token vs stale readiness/forwarder delivery issues.
+- [Add write-role CloudFormation removal todo to final-to-do list (2026-02-27)](task_log.md#add-write-role-cloudformation-removal-todo-to-final-to-do-list-2026-02-27)
+  - Added a third todo in `docs/final-to-do/final-to-do`: `remove write role from cloudformation and remove optional writerole`.
+- [Add onboarding hardcoded-account todo to final-to-do list (2026-02-27)](task_log.md#add-onboarding-hardcoded-account-todo-to-final-to-do-list-2026-02-27)
+  - Added a second todo in `docs/final-to-do/final-to-do` for onboarding step 2 (`Connect Core Integration Role`) to remove hardcoded account `029037611564`.
+  - Updated `docs/README.md` `/docs/final-to-do/` description to remain accurate as the list grows.
+- [Add final-to-do docs folder and initial signup requirement todo (2026-02-27)](task_log.md#add-final-to-do-docs-folder-and-initial-signup-requirement-todo-2026-02-27)
+  - Created `docs/final-to-do/final-to-do` with the first todo item: `sign up requires phone number and email verification`.
+  - Updated `docs/README.md` to include a new `/docs/final-to-do/` section for discoverability.
+- [Onboarding CloudFormation teardown for account 029037611564 (2026-02-27)](task_log.md#onboarding-cloudformation-teardown-for-account-029037611564-2026-02-27)
+  - Deleted onboarding-linked CloudFormation stacks `SecurityAutopilotControlPlaneForwarder` and `SecurityAutopilotReadRole1` in `eu-north-1`.
+  - Verified no remaining onboarding stack prefixes (`SecurityAutopilotReadRole*`, `SecurityAutopilotWriteRole*`, `SecurityAutopilotControlPlaneForwarder*`) across all regions.
+  - Verified no remaining onboarding IAM role/policy remnants for `SecurityAutopilotReadRole*` / `SecurityAutopilotWriteRole*`.
+- [Complete feature inventory compilation for Wave 2 Tasks 1-9 (2026-02-27)](task_log.md#complete-feature-inventory-compilation-for-wave-2-tasks-1-9-2026-02-27)
+  - Produced `docs/features/complete-feature-inventory.md` with the required 10-section structure, preserved Task 1-8 source table rows, and explicit Task 9 missing-source blocker treatment.
+  - Produced strict-format `docs/features/feature-inventory-summary.md` with aggregate counts, GA verdict, top blockers, and remaining-risk notes.
+  - Updated docs discoverability in `docs/README.md` for both new feature-inventory outputs.
+- [Implementation status master classification for Wave 2 Task 7 (2026-02-27)](task_log.md#implementation-status-master-classification-for-wave-2-task-7-2026-02-27)
+  - Produced `docs/features/feat-task7-implementation-status.md` with standardized status reclassification for all Task 2-6 feature IDs and explicit evidence references.
+  - Added category-level status totals, GA blocker grouping, and quick-win extraction for small partial gaps.
+  - Recorded audit-file absence handling (`unknown (audit source missing)`) for audit-dependent broken-state judgments.
+- [Cross-category feature dependency mapping for Wave 2 Task 8 (2026-02-27)](task_log.md#cross-category-feature-dependency-mapping-for-wave-2-task-8-2026-02-27)
+  - Produced `docs/features/feat-task8-feature-dependencies.md` with cross-category feature dependency rows across frontend, API, job, and AWS integration inventories.
+  - Added user-journey mapping (8 required journeys inferred from available docs plus additional journeys), usage-frequency analysis, and orphaned-feature detection.
+  - Recorded explicit blocker note for missing `docs/prod-readiness/05-e2e-test-scenarios.md`.
+- [Worker feature inventory extraction for Wave 2 Task 4 (2026-02-27)](task_log.md#worker-feature-inventory-extraction-for-wave-2-task-4-2026-02-27)
+  - Produced `docs/features/feat-task4-worker-features.md` with complete background-job/process inventory (`JOB-001` to `JOB-018`) across queue poller, Lambda worker entrypoint, and all worker job handlers.
+  - Added dependency map, scheduler/queue architecture (including DLQ/visibility behavior), and performance characteristics sections scoped to worker/process behavior.
+  - Marked audit-linked known-issues as `unknown (audit source missing)` because `docs/prod-readiness/02-05` audit files are not present.
+- [Infrastructure feature inventory extraction for Wave 2 Task 6 (2026-02-27)](task_log.md#infrastructure-feature-inventory-extraction-for-wave-2-task-6-2026-02-27)
+  - Produced `docs/features/feat-task6-infrastructure-features.md` with infra/platform-only inventory (`INF-001` to `INF-024`) and explicit missing-audit fallback handling.
+  - Added scaling characteristics, operational runbook coverage matrix, multi-layer tenancy-isolation description, and dependency security posture section.
+  - Marked all audit-linked findings as `unknown (audit source missing)` because `docs/prod-readiness/04-audit-deployment-frontend-compliance.md` is not present.
+- [AWS integration feature inventory extraction for Wave 2 Task 5 (2026-02-27)](task_log.md#aws-integration-feature-inventory-extraction-for-wave-2-task-5-2026-02-27)
+  - Produced `docs/features/feat-task5-aws-integration-features.md` with one-row-per-operation AWS API inventory (`AWS-001` to `AWS-052`) across Task 5 scope files.
+  - Added read/write IAM action summaries, service dependency mapping, multi-region behavior notes, and cost/rate-limit implications.
+  - Captured exact implementation file/line references for each API operation and marked uncertainty as `unknown` where code did not provide deterministic evidence.
+- [Backend API feature inventory extraction for Wave 2 Task 3 (2026-02-27)](task_log.md#backend-api-feature-inventory-extraction-for-wave-2-task-3-2026-02-27)
+  - Produced `docs/features/feat-task3-backend-features.md` with full backend endpoint inventory (`API-001` to `API-115`) across all `backend/routers/*.py`.
+  - Captured per-endpoint method/path/request/response/auth/tenant scope/side effects/rate-limit/background-job/status fields plus endpoint groupings.
+  - Marked `MISSING ENDPOINTS` comparison as blocked due missing `docs/prod-readiness/05-e2e-test-scenarios.md`.
+- [Live AWS test-account deployment of Architecture 1 and 2 with adversarial verification (2026-02-27)](task_log.md#live-aws-test-account-deployment-of-architecture-1-and-2-with-adversarial-verification-2026-02-27)
+  - Executed full Step 1-7 deployment flow in live test account `029037611564` (`eu-north-1`) with strict stop-on-failure controls.
+  - Applied runtime script fixes required by live AWS constraints (Config recorder types/limits, delivery-bucket policies, VPC internet route prerequisites, EKS create flag, and valid adversarial principals).
+  - Published `docs/prod-readiness/08-deployment-report.md` with full verification results and teardown guidance.
+- [Frontend feature inventory extraction for Wave 2 Task 2 (2026-02-27)](task_log.md#frontend-feature-inventory-extraction-for-wave-2-task-2-2026-02-27)
+  - Produced `docs/features/feat-task2-frontend-features.md` with frontend-only feature inventory, navigation/layout coverage, loading/empty/error state matrix, and forms/input matrix.
+  - Mapped user-facing flows to concrete frontend endpoints from `frontend/src/lib/api.ts` and AuthContext fetch calls.
+  - Updated docs discoverability under `/docs/features/` in `docs/README.md`.
+- [Surface map generation for feature-analysis Wave 1 (2026-02-27)](task_log.md#surface-map-generation-for-feature-analysis-wave-1-2026-02-27)
+  - Produced `docs/features/feat-task1-surface-map.md` with frontend/backend/worker/AWS/infra surface maps and Wave 2 reading priorities.
+  - Added docs discoverability entry under `/docs/features/` in `docs/README.md`.
+  - Recorded missing `docs/prod-readiness/02-05` source files as an explicit mapping-input gap.
+- [Worker-enabled redeploy after Lambda quota approval (2026-02-27)](task_log.md#worker-enabled-redeploy-after-lambda-quota-approval-2026-02-27)
+  - Verified active account limit update in `eu-north-1` (`ConcurrentExecutions=1000`) and closed quota case.
+  - Redeployed serverless runtime with worker reserved concurrency set to `1` and worker mappings enabled.
+  - Confirmed live health/CORS checks and `security-autopilot-dev-worker` reserved concurrency state.
+- [Lambda concurrency quota increase request submitted via CLI (2026-02-25)](task_log.md#lambda-concurrency-quota-increase-request-submitted-via-cli-2026-02-25)
+  - Executed command-based request for `AWS Lambda` quota `L-B99A9384` in `eu-north-1` with desired value `1001`.
+  - Request ID `8aeb788fe6e04139a8b37e6d517ba4f3mJUyDLnN` recorded with status `PENDING`.
+  - Captured current account state (`ConcurrentExecutions=10`, `UnreservedConcurrentExecutions=10`) before submission.
+- [Worker performance test under current Lambda concurrency cap (2026-02-25)](task_log.md#worker-performance-test-under-current-lambda-concurrency-cap-2026-02-25)
+  - Ran live synthetic load with worker enabled (no quota change): 2000 queue jobs through `security-autopilot-dev-worker`.
+  - Observed max worker concurrency `10`, throttles `29`, errors `0`, and drain time `196s`.
+  - Confirmed throughput is currently bounded by account-level Lambda concurrency ceiling.
+- [SaaS factory reset + low-cost redeploy (2026-02-25)](task_log.md#saas-factory-reset--low-cost-redeploy-2026-02-25)
+  - Cleared SaaS state to fresh-deploy baseline: DB schema reset + migrations, S3 export/support bucket purge, and all SQS queue purges.
+  - Redeployed `security-autopilot-saas-serverless-runtime` with low-cost toggles (`EnableWorker=true`, `TenantReconciliationEnabled=false`, `ControlPlaneShadowMode=true`).
+  - Applied account-safe worker concurrency `0` after AWS rejected reserved concurrency `1` due unreserved concurrency minimum guard.
 - [Production docs guardrail + deployment baseline (low-cost default, scale-up, rollout, rollback) (2026-02-25)](task_log.md#production-docs-guardrail--deployment-baseline-low-cost-default-scale-up-rollout-rollback-2026-02-25)
   - Added protected `/docs/Production/` folder with first operator file: `deployment.md`.
   - Added rules-folder policy `production-docs-protection.mdc` and core-behavior reference so `/docs/Production/` is only edited via explicit command.

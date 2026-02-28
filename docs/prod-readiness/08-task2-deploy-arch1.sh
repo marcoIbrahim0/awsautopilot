@@ -4,8 +4,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Variables block (Architecture 1 variables from Section 3 that this script uses)
 # ---------------------------------------------------------------------------
-ACCOUNT_ID="<YOUR_ACCOUNT_ID_HERE>"
-AWS_REGION="<YOUR_AWS_REGION_HERE>"
+ACCOUNT_ID="${ACCOUNT_ID:-<YOUR_ACCOUNT_ID_HERE>}"
+AWS_REGION="${AWS_REGION:-<YOUR_AWS_REGION_HERE>}"
 
 ARCH1_VPC_MAIN_NAME="arch1_vpc_main"
 ARCH1_PUBLIC_SUBNET_A_NAME="arch1_public_subnet_a"
@@ -39,8 +39,8 @@ INTERNAL_VPC_CIDR="10.0.0.0/16"
 ADMIN_HOST_CIDR="203.0.113.10/32"
 
 B1_DATA_PIPELINE_ROLE_ARN_PATTERN="arn:aws:iam::<ACCOUNT_ID>:role/DataPipelineRole"
-B1_DATA_PIPELINE_ROLE_ARN_VALUE="arn:aws:iam::111122223333:role/DataPipelineRole"
-B1_CROSS_ACCOUNT_ID="123456789012"
+B1_DATA_PIPELINE_ROLE_ARN_VALUE="${B1_DATA_PIPELINE_ROLE_ARN_VALUE:-arn:aws:iam::${ACCOUNT_ID}:root}"
+B1_CROSS_ACCOUNT_ID="${B1_CROSS_ACCOUNT_ID:-${ACCOUNT_ID}}"
 
 TAG_PROJECT="Project=AWS-Security-Autopilot"
 TAG_ENVIRONMENT="Environment=security-test"
@@ -72,8 +72,18 @@ ARCH1_DB_SUBNET_GROUP_NAME="${ARCH1_CLAIMS_DB_A2_IDENTIFIER}-subnet-group"
 ARCH1_ECS_CLUSTER_NAME="${ARCH1_WEB_INGEST_SERVICE_NAME}-cluster"
 ARCH1_ECS_TASK_FAMILY_NAME="${ARCH1_WEB_INGEST_SERVICE_NAME}-taskdef"
 ARCH1_ECS_EXECUTION_ROLE_NAME="${ARCH1_WEB_INGEST_SERVICE_NAME}-exec-role"
-ARCH1_RDS_MASTER_USERNAME="<YOUR_RDS_MASTER_USERNAME_HERE>"
-ARCH1_RDS_MASTER_PASSWORD="<YOUR_RDS_MASTER_PASSWORD_HERE>"
+ARCH1_RDS_MASTER_USERNAME="${ARCH1_RDS_MASTER_USERNAME:-<YOUR_RDS_MASTER_USERNAME_HERE>}"
+ARCH1_RDS_MASTER_PASSWORD="${ARCH1_RDS_MASTER_PASSWORD:-<YOUR_RDS_MASTER_PASSWORD_HERE>}"
+
+if [ "$ACCOUNT_ID" = "<YOUR_ACCOUNT_ID_HERE>" ] || [ "$AWS_REGION" = "<YOUR_AWS_REGION_HERE>" ]; then
+  echo "Missing required ACCOUNT_ID or AWS_REGION. Export both and rerun." >&2
+  exit 1
+fi
+
+if [ "$ARCH1_RDS_MASTER_USERNAME" = "<YOUR_RDS_MASTER_USERNAME_HERE>" ] || [ "$ARCH1_RDS_MASTER_PASSWORD" = "<YOUR_RDS_MASTER_PASSWORD_HERE>" ]; then
+  echo "Missing required ARCH1_RDS_MASTER_USERNAME or ARCH1_RDS_MASTER_PASSWORD. Export both and rerun." >&2
+  exit 1
+fi
 
 # arch1_preflight_identity — confirms current caller/account context — clean safety check before deployment
 aws sts get-caller-identity --no-cli-pager
