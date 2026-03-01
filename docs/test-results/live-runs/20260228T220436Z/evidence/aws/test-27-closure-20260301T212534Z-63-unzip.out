@@ -1,0 +1,4 @@
+Archive:  /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-27-closure-20260301T212534Z-60-pr-bundle.zip
+  inflating: /tmp/test-27-closure-20260301T212534Z-GzYd/README.txt  
+  inflating: /tmp/test-27-closure-20260301T212534Z-GzYd/providers.tf  
+  inflating: /tmp/test-27-closure-20260301T212534Z-GzYd/sg_restrict_public_ports.tf  

@@ -273,3 +273,40 @@ def test_resolved_actions_with_open_linked_findings_are_reopened() -> None:
     reopened = _reopen_resolved_orphan_actions(session, tenant_id, None, None)
     assert action.status == ActionStatus.open.value
     assert reopened == 1
+
+
+def test_resolved_actions_with_shadow_reopened_findings_are_reopened() -> None:
+    """Resolved actions are reopened when linked findings are canonically resolved but shadow-open."""
+    import uuid as _uuid
+    from types import SimpleNamespace
+    from backend.services.action_engine import _reopen_resolved_orphan_actions
+    from backend.models.enums import ActionStatus
+
+    tenant_id = _uuid.uuid4()
+    reopened_finding = SimpleNamespace(status="RESOLVED", shadow_status_normalized="OPEN")
+    action = SimpleNamespace(
+        tenant_id=tenant_id,
+        status=ActionStatus.resolved.value,
+        account_id="029037611564",
+        region=None,
+        action_finding_links=[SimpleNamespace(finding=reopened_finding)],
+    )
+
+    class _ActionQuery:
+        def __init__(self, actions):
+            self._actions = actions
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return self._actions
+
+    class _Session:
+        def query(self, model):
+            return _ActionQuery([action])
+
+    session = _Session()
+    reopened = _reopen_resolved_orphan_actions(session, tenant_id, None, None)
+    assert action.status == ActionStatus.open.value
+    assert reopened == 1

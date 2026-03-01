@@ -28,3 +28,8 @@ def test_control_plane_allowlist_parity_across_intake_worker_and_template() -> N
     assert set(WORKER_EVENT_NAMES) == canonical
     assert _template_event_names() == canonical
 
+
+def test_s3_bucket_public_access_block_event_names_are_allowlisted() -> None:
+    canonical = set(SUPPORTED_CONTROL_PLANE_EVENT_NAMES)
+    assert "PutBucketPublicAccessBlock" in canonical
+    assert "DeleteBucketPublicAccessBlock" in canonical

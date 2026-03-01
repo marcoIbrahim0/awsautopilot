@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws ec2 describe-vpcs --region eu-north-1 --filters Name=tag:Name,Values=arch1_vpc_main --output json

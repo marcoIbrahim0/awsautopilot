@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws lambda get-function --function-name security-autopilot-saas-serverless-runtime-api --region eu-north-1 --query {FunctionName:Configuration.FunctionName,ImageUri:Code.ImageUri,LastModified:Configuration.LastModified} --output json

@@ -47,6 +47,8 @@ def test_control_plane_forwarder_template_has_dlq_retry_and_alarms() -> None:
         "MaximumRetryAttempts",
         "ControlPlaneRuleFailedInvocationsAlarm:",
         "ControlPlaneTargetDLQDepthAlarm:",
+        '"PutBucketPublicAccessBlock"',
+        '"DeleteBucketPublicAccessBlock"',
         '"PutAccountPublicAccessBlock"',
         '"DeleteAccountPublicAccessBlock"',
         '"PutBucketEncryption"',

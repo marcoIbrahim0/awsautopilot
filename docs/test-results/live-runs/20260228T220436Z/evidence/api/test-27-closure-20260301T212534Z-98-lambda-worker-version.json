@@ -1,0 +1,92 @@
+{
+    "Configuration": {
+        "FunctionName": "security-autopilot-dev-worker",
+        "FunctionArn": "arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-worker",
+        "Role": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker",
+        "CodeSize": 0,
+        "Description": "",
+        "Timeout": 900,
+        "MemorySize": 1024,
+        "LastModified": "2026-03-01T20:57:51.000+0000",
+        "CodeSha256": "5996320013385ab25c2ac0af6c45e2d9c80acb731ac177d5fab112cf62f515d7",
+        "Version": "$LATEST",
+        "VpcConfig": {
+            "SubnetIds": [],
+            "SecurityGroupIds": [],
+            "VpcId": "",
+            "Ipv6AllowedForDualStack": false
+        },
+        "Environment": {
+            "Variables": {
+                "SQS_CONTRACT_QUARANTINE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-contract-quarantine-queue",
+                "SQS_EVENTS_FAST_LANE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-queue",
+                "SQS_INVENTORY_RECONCILE_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-dlq",
+                "S3_SUPPORT_BUCKET_REGION": "eu-north-1",
+                "SQS_INVENTORY_RECONCILE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-queue",
+                "SAAS_BUNDLE_EXECUTOR_ENABLED": "true",
+                "APP_NAME": "AWS Security Autopilot",
+                "S3_EXPORT_BUCKET_REGION": "eu-north-1",
+                "SQS_EXPORT_REPORT_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-dlq",
+                "CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml",
+                "ENV": "local",
+                "CONTROL_PLANE_SHADOW_MODE": "false",
+                "S3_SUPPORT_BUCKET": "autopilot-s3-support-bucket",
+                "DATABASE_URL": "postgresql+asyncpg://autopilotadmin:AutopilotDb2026Fix@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot",
+                "API_PUBLIC_URL": "https://api.valensjewelry.com",
+                "JWT_SECRET": "HEnMzDQwgzRqwtYI-mp1OnG3vVHFLKidSlivMEszh7aBitluAlQnSO_EAnWZlcNBxNsK_-RclzP50HWCOGsw4w",
+                "ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED": "true",
+                "SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI": "s3://autopilot-prbundle-run/run_all.sh",
+                "LOG_LEVEL": "INFO",
+                "TENANT_RECONCILIATION_ENABLED": "true",
+                "SQS_EVENTS_FAST_LANE_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-dlq",
+                "TENANT_RECONCILIATION_PILOT_TENANTS": "",
+                "S3_EXPORT_BUCKET": "security-autopilot-exports",
+                "CORS_ORIGINS": "https://dev.valensjewelry.com,https://valensjewelry.com,http://localhost:3000,http://127.0.0.1:3000",
+                "SQS_INGEST_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-dlq",
+                "CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES": "60",
+                "FRONTEND_URL": "https://valensjewelry.com",
+                "SQS_INGEST_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-queue",
+                "CONTROL_PLANE_SOURCE": "event_monitor_shadow",
+                "SAAS_ADMIN_EMAILS": "marcoibrahim11@outlook.com,Messi3amak@gmail.com",
+                "ROLE_SESSION_NAME": "security-autopilot-session",
+                "SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS": "300",
+                "SQS_EXPORT_REPORT_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-queue",
+                "SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION": "v1.6.7",
+                "SAAS_AWS_ACCOUNT_ID": "029037611564",
+                "CONTROL_PLANE_EVENTS_SECRET": "raxC6h_UT6qTADqhu9LLebRjLwxLtF5yaT65y3J52B0A1F6qRrFg-jlgnzDe34CIzD1nuup9K4GW5_KpnjgMlbw",
+                "CONTROL_PLANE_AUTHORITATIVE_CONTROLS": "S3.1,SecurityHub.1,GuardDuty.1,S3.2,S3.4,EC2.53,CloudTrail.1,Config.1,SSM.7,EC2.182,EC2.7,S3.5,IAM.4,S3.9,S3.11,S3.15"
+            }
+        },
+        "TracingConfig": {
+            "Mode": "PassThrough"
+        },
+        "RevisionId": "cd1079b5-f97f-486b-8c1d-12178cb5724b",
+        "State": "Active",
+        "LastUpdateStatus": "Successful",
+        "PackageType": "Image",
+        "Architectures": [
+            "x86_64"
+        ],
+        "EphemeralStorage": {
+            "Size": 512
+        },
+        "SnapStart": {
+            "ApplyOn": "None",
+            "OptimizationStatus": "Off"
+        },
+        "LoggingConfig": {
+            "LogFormat": "Text",
+            "LogGroup": "/aws/lambda/security-autopilot-dev-worker"
+        }
+    },
+    "Code": {
+        "RepositoryType": "ECR",
+        "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260301T205539Z",
+        "ResolvedImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker@sha256:5996320013385ab25c2ac0af6c45e2d9c80acb731ac177d5fab112cf62f515d7"
+    },
+    "Tags": {
+        "aws:cloudformation:stack-name": "security-autopilot-saas-serverless-runtime",
+        "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-saas-serverless-runtime/64d30310-0f8a-11f1-9b3a-06ddb27d739b",
+        "aws:cloudformation:logical-id": "WorkerFunction"
+    }
+}

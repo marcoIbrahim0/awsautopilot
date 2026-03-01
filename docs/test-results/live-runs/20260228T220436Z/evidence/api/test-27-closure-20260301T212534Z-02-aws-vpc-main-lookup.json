@@ -1,0 +1,59 @@
+{
+    "Vpcs": [
+        {
+            "OwnerId": "029037611564",
+            "InstanceTenancy": "default",
+            "CidrBlockAssociationSet": [
+                {
+                    "AssociationId": "vpc-cidr-assoc-05dedc8d560101fad",
+                    "CidrBlock": "10.10.0.0/16",
+                    "CidrBlockState": {
+                        "State": "associated"
+                    }
+                }
+            ],
+            "IsDefault": false,
+            "Tags": [
+                {
+                    "Key": "TestGroup",
+                    "Value": "architecture-1"
+                },
+                {
+                    "Key": "Name",
+                    "Value": "arch1_vpc_main"
+                },
+                {
+                    "Key": "ResourceGroup",
+                    "Value": "C"
+                },
+                {
+                    "Key": "Project",
+                    "Value": "AWS-Security-Autopilot"
+                },
+                {
+                    "Key": "Environment",
+                    "Value": "security-test"
+                },
+                {
+                    "Key": "Architecture",
+                    "Value": "architecture-1"
+                },
+                {
+                    "Key": "ManagedBy",
+                    "Value": "test-script"
+                },
+                {
+                    "Key": "Tier",
+                    "Value": "workflow-processing"
+                }
+            ],
+            "BlockPublicAccessStates": {
+                "InternetGatewayBlockMode": "off"
+            },
+            "VpcId": "vpc-049294166c1c2fbd4",
+            "State": "available",
+            "CidrBlock": "10.10.0.0/16",
+            "DhcpOptionsId": "dopt-059b18c7457f8fb75"
+        }
+    ]
+}

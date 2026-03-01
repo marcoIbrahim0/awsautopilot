@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws cloudformation describe-stacks --region eu-north-1 --stack-name security-autopilot-saas-serverless-runtime --output json

@@ -1,0 +1,57 @@
+{
+    "Role": {
+        "Path": "/",
+        "RoleName": "arch2_mixed_policy_role_b3",
+        "RoleId": "AROAQNQWGZIWDHTFQ2EYR",
+        "Arn": "arn:aws:iam::029037611564:role/arch2_mixed_policy_role_b3",
+        "CreateDate": "2026-02-27T12:49:29+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        },
+        "MaxSessionDuration": 3600,
+        "Tags": [
+            {
+                "Key": "Name",
+                "Value": "arch2_mixed_policy_role_b3"
+            },
+            {
+                "Key": "Project",
+                "Value": "AWS-Security-Autopilot"
+            },
+            {
+                "Key": "Environment",
+                "Value": "prod-readiness"
+            },
+            {
+                "Key": "ManagedBy",
+                "Value": "aws-cli"
+            },
+            {
+                "Key": "Architecture",
+                "Value": "architecture-2"
+            },
+            {
+                "Key": "Tier",
+                "Value": "governance-admin"
+            },
+            {
+                "Key": "ResourceGroup",
+                "Value": "B"
+            },
+            {
+                "Key": "ContextTest",
+                "Value": "inline-plus-managed"
+            }
+        ],
+        "RoleLastUsed": {}
+    }
+}

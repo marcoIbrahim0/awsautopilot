@@ -1,5 +1,208 @@
 # Task Log
 
+## Wave 7 Test 28 full remediation closure validation: adversarial IAM inline + managed policy preservation (2026-03-01)
+
+**Task:** Execute Wave 7 Test 28 end-to-end with the mandatory closure flow (adversarial IAM inline+managed state confirm -> open/new verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> terminal poll), then update test/tracker artifacts from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-28-closure-20260301T215524Z-*** (new) — Full API evidence chain for IAM adversarial-state reset/confirm, auth, open/new verification, remediation run lifecycle, bundle access checks, refresh polling, runtime proof, and summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-28-closure-20260301T215524Z-*** (new) — PR bundle ZIP/extraction, Terraform init/plan/show/apply transcripts, and B3 inline+managed policy-preservation summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-28-closure-20260301T215524Z-ui-*** (new) — No-auth actions-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-28.md** — Filled end-to-end with mandatory closure flow evidence, assertions, and final BLOCKED outcome.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board counts, Section 5 Test 28 row, related Section 3/4/6 references, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed adversarial IAM inline+managed state for B3 role `arch2_mixed_policy_role_b3`:
+  - trust policy reset to EC2 assume-role,
+  - inline policy `arch2_mixed_policy_role_b3-inline-wildcard` present with wildcard statement,
+  - required managed policy `arn:aws:iam::aws:policy/ReadOnlyAccess` attached.
+- Verified live SaaS OPEN/NEW linkage for IAM.4 target:
+  - action `c8201c18-5054-42ee-99c6-815ea082f2c9` (`status=open`),
+  - finding `fe935ab6-1117-4475-a5fb-edbdf8cc8a4b` (`status=NEW`).
+- Created PR-mode remediation run (`run_id=5444d836-037c-40be-979e-d5f2d28d8689`) after required risk-acknowledgement and observed terminal run `success`.
+- Downloaded PR bundle (`200`) with deny-closed no-auth bundle probe (`401`).
+- Executed Terraform bundle in test AWS:
+  - `terraform init`: `0`
+  - `terraform plan`: `0`
+  - `terraform show`: `0`
+  - `terraform apply`: `1` (root-principal gate).
+- Triggered post-apply refresh (`ingest/compute/reconcile` all `202`) and polled status endpoints to terminal refresh completion:
+  - ingest reached `completed` (`poll-2`),
+  - target action remained `open`,
+  - target finding remained `NEW`.
+- Verified inline+managed policy preservation from observed AWS state:
+  - trust policy unchanged,
+  - inline policy name/document unchanged,
+  - managed policy set unchanged (required `ReadOnlyAccess` preserved),
+  - `required_safe_permissions_unchanged=true`.
+
+**Technical debt / gotchas:**
+- Runtime Lambda direct function-name lookup used in prior tests did not match current deployed naming for this run (`...-109-lambda-api-version` command failed); stack-level runtime proof plus function inventory fallback were captured and used.
+
+**Open questions / TODOs:**
+- None new beyond existing IAM.4 root-credential gate tracked in Section 3 #15 / Section 4 #22 / Section 6 #8.
+
+## Post-test logical-solutions backlog template for control-family planning (2026-03-01)
+
+**Task:** Create a PM/engineering-ready post-test backlog template so logical remediation solutions can be implemented per control family (not one finding at a time) after the full test cycle.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md** (new) — Added planned-state control-family backlog template with prioritization model, seeded rows for current high-impact families (EC2.53, IAM.4, S3.2), implementation packet structure, release gate, and Mermaid workflow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** — Added cross-link to the new backlog template.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added quick-navigation link to the new backlog template under Operators/SaaS owners.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Introduced one canonical planning document for the “finish tests first, then logical-solution batch” workflow.
+- Seeded the backlog with current control-family scope from existing live evidence and tracker context.
+- Linked the document from both parent doc indexes for immediate discoverability.
+
+**Technical debt / gotchas:**
+- This is a planning artifact only; no product behavior changed in this task.
+
+**Open questions / TODOs:**
+- Confirm final product default for EC2.53 optioning when no allowlisted CIDR is provided (default-close vs guided CIDR requirement).
+
+## Wave 7 Test 27 full remediation closure validation: adversarial mixed SG rule preservation (2026-03-01)
+
+**Task:** Execute Wave 7 Test 27 end-to-end with full remediation-closure flow (mixed-rule SG adversarial state confirmation, OPEN action/finding verification, PR run generation, bundle download, Terraform apply, ingest/compute/reconcile refresh, terminal status polling), then update test/tracker artifacts from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-27-closure-20260301T212534Z-*** (new) — Full API evidence chain for AWS precondition checks, auth, open/new verification, remediation run lifecycle, refresh polling, final status checks, runtime proof, and summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-27-closure-20260301T212534Z-ui-*** (new) — No-auth UI actions-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-27-closure-20260301T212534Z-*** (new) — PR bundle ZIP/extraction, Terraform init/plan/show/apply transcripts, and SG preservation summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-27.md** — Filled end-to-end with mandatory closure flow evidence, assertions, and final PASS outcome.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board counts, Section 5 Test 27 row, TOTAL counts, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed mixed SG adversarial state for B2 target `arch1_sg_app_b2` (`sg-0124289e9646c8683`) with:
+  - permissive SSH ingress (`22/tcp` from `0.0.0.0/0`),
+  - legitimate preserved rules (`443` from `10.0.0.0/16`, `8080` from `203.0.113.10/32`, `5432` from source SG `sg-02813afb4b1337ee4`).
+- Verified live SaaS OPEN/NEW linkage for EC2.53 target:
+  - action `9c31f438-1ade-4cc7-91c8-b959870a615b` (`status=open`),
+  - finding `ae59b887-2032-445a-a357-a5feeb25bca5` (`status=NEW`).
+- Created PR-mode remediation run (`run_id=cf13482a-b5f6-4a98-bf06-9cc455c01991`) and observed terminal `success`.
+- Downloaded PR bundle (`200`) with deny-closed no-auth probe (`401`).
+- Executed Terraform bundle in test AWS:
+  - `terraform init`: `0`
+  - `terraform plan`: `0`
+  - `terraform show`: `0`
+  - `terraform apply`: `0`
+- Triggered post-apply refresh (`ingest/compute/reconcile` all `202`) and polled status endpoints until terminal convergence:
+  - ingest reached `completed` (`100%`) by poll-2,
+  - target action became `resolved`,
+  - target finding became `RESOLVED` (`effective_status=RESOLVED`).
+- Verified SG mixed-rule preservation from observed AWS state:
+  - benign rules unchanged (`443` internal CIDR, `8080` admin CIDR, `5432` source-SG),
+  - permissive SSH rule removed,
+  - `preservation_pass=true`.
+
+**Technical debt / gotchas:**
+- Test harness noted: remediation-options contract for this EC2.53 path returned `mode_options=["pr_only"]` with `strategies=[]`; run creation must omit `strategy_id`.
+- Temporary runner script had a summary-write boolean formatting bug at the final step; execution evidence remained complete and the summary artifact was regenerated from captured artifacts.
+
+**Open questions / TODOs:**
+- None from this run; no new Section 3/4/6 defects were observed.
+
+## Wave 7 Test 26 closure fix: bucket-level PAB event parity + live rerun pass (2026-03-01)
+
+**Task:** Fully close Wave 7 Test 26 by fixing pre-run reopen visibility (Track 2) while preserving blocking remediation safety (Track 1), then redeploy, rerun live, and synchronize tracker/docs with fresh evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/control_plane_event_allowlist.py** — Added bucket-level CloudTrail API names `PutBucketPublicAccessBlock` and `DeleteBucketPublicAccessBlock` (kept legacy names for backward compatibility) so control-plane intake accepts real S3 bucket PAB reset events.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/control-plane-forwarder-template.yaml** — Added bucket-level PAB event names to EventBridge rule pattern so live forwarder emits the same events that CloudTrail actually produces.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/live_e2e/run_wave7_test26_closure.sh** — Added pre-run visibility diagnostics: per-poll target finding detail capture (`status/canonical/effective/shadow`), target action-ID set capture, reset-to-open latency checkpoints, and diagnostic fields in summary JSON.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_allowlist_parity.py** — Added regression asserting bucket-level PAB event names are allowlisted.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_cloudformation_phase2_reliability.py** — Added explicit template token checks for bucket-level PAB event names.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** — Updated canonical allowlist documentation to include bucket-level PAB event names.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Rewritten from fresh closure rerun evidence prefix `test-26-closure-20260301T210222Z-*` with final PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated stamp, Wave 7 and total counts, Section 4 row #26, Section 5 Test 26 row, Section 6 row #10, and Section 9 changelog with closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-119-cloudtrail-put-bucket-public-access-block-window.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-119b-cloudtrail-delete-bucket-public-access-block-window.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-120-db-control-plane-events-window.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-121-forwarder-rule-pattern.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-122-pre-run-visibility-timeline.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T210222Z-123-action-linkage-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Diagnosed root cause with live evidence:
+  - Prior failing run (`test-26-closure-20260301T202427Z`) had no ingested pre-run reset event for target bucket in `control_plane_events`; only post-apply `PutBucketPolicy` appeared.
+  - CloudTrail lookup proved reset operations were emitted as `PutBucketPublicAccessBlock` (not `PutPublicAccessBlock`).
+  - Deployed forwarder rule before fix matched only `PutPublicAccessBlock`/`DeletePublicAccessBlock`, so reset event was not forwarded and target never reopened in open-list SLA window.
+- Implemented parity fix across allowlist + forwarder template + tests.
+- Added deterministic pre-run visibility diagnostics to Test 26 runner to capture:
+  - target finding canonical/effective/shadow transitions per poll,
+  - target action ID continuity across open/resolved probes,
+  - reset-to-finding-open and reset-to-action-open latency.
+- Validation:
+  - `pytest -q tests/test_control_plane_allowlist_parity.py tests/test_cloudformation_phase2_reliability.py tests/test_actions_effective_visibility.py tests/test_action_engine_merge.py tests/test_test26_assertions.py` -> `25 passed`.
+- Deployments:
+  - Runtime redeploy succeeded with image tag `20260301T205539Z` and visibility flag preserved enabled.
+  - Live forwarder stack `SecurityAutopilotControlPlaneForwarder` updated and rule pattern verified to include bucket-level PAB event names.
+- Fresh live rerun:
+  - Prefix: `test-26-closure-20260301T210222Z`.
+  - **Track 1 (blocking): PASS** (`run success`, Terraform `0/0/0/0`, closure resolved, non-risk invariance pass).
+  - **Track 2 (visibility): PASS** (`target_visible_in_open=true`, `elapsed_seconds=17`, `sla_seconds=180`).
+  - Pre-run diagnostics show deterministic reopen path:
+    - Poll-1 finding `effective_status=RESOLVED`, `shadow=RESOLVED`,
+    - Poll-2 finding `effective_status=NEW`, `shadow=OPEN`, target action visible in open list with same action ID.
+
+**Technical debt / gotchas:**
+- Legacy forwarder rules deployed before this patch may still miss bucket-level PAB events until updated from the new template version.
+- Allowlist retains legacy `PutPublicAccessBlock` aliases to avoid breakage on mixed environments; future cleanup should happen only after fleet-wide stack parity verification.
+
+**Open questions / TODOs:**
+- Run a one-time audit across all tenant forwarder stacks to confirm bucket-level PAB event-name parity is deployed in every monitored region.
+- Consider adding an automated readiness check that explicitly validates `PutBucketPublicAccessBlock` appears in deployed EventBridge rule patterns.
+
+## Wave 7 Test 26 closure: reopen visibility rollout + two-track rerun (2026-03-01)
+
+**Task:** Implement Test 26 compromise strategy end-to-end: keep remediation/preservation blocking, add explicit non-blocking reopen-visibility tracking, patch action open-visibility path for effective/shadow truth with rollout guard, redeploy, rerun full closure flow, and sync docs/notes from fresh evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added `ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED` runtime flag (default `false`) for safe rollout.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** — Removed canonical-closed prefilter in compute path so effective-open logic can include shadow-reopened findings even when canonical status is resolved.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** — Added effective/shadow-aware open-visibility SQL path for `/api/actions` status filters with rollout guard; resolved actions with effective-open linked findings can surface in `status=open` queries when flag enabled.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/test26_assertions.py** (new) — Added deterministic helpers for adversarial precondition checks, policy-preservation delta evaluation, and Track 2 SLA visibility evaluation.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml** — Added `ActionsEffectiveOpenVisibilityEnabled` parameter and wired env var into API/worker Lambdas.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh** — Added deploy-time forwarding for `ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/live_e2e/run_wave7_test26_closure.sh** (new) — Added committed deterministic full-chain Test 26 runner with explicit precondition assertions + Track 1/Track 2 summary output.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py** — Added shadow-reopen regression for resolved action reopening behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_actions_effective_visibility.py** (new) — Added rollout-gated reopen visibility regressions for `/api/actions`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_test26_assertions.py** (new) — Added deterministic regressions for precondition verification, visibility SLA result, and policy-preservation invariance.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Rewritten from fresh evidence prefix `test-26-closure-20260301T202427Z-*` with two-track model.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Section 3 row #16, Section 4 rows #25/#26, Section 5 Test 26 row, Section 6 row #10, and Section 9 changelog for fresh two-track rerun.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T202427Z-*** (new) — Full API evidence chain for deterministic setup, run lifecycle, refresh, status polling, two-track summary, and runtime flag proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-*** (new) — Full AWS evidence chain for bundle execution, Terraform proofs, and policy delta checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-26-closure-20260301T202427Z-ui-*** (new) — UI no-auth boundary probe.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented rollout-gated effective/shadow reopen visibility logic in actions list path while keeping default-safe backward behavior.
+- Patched action recompute candidate selection so canonical-resolved findings are still considered when effective status is open.
+- Added deterministic regression coverage for reopen visibility, precondition assertions, closure reopen behavior, and policy-preservation invariance.
+- Deployed runtime image tag `20260301T201919Z` and enabled rollout flag (`ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED=true`) in live API runtime.
+- Executed full Test 26 closure chain with new canonical prefix `test-26-closure-20260301T202427Z`.
+- Fresh rerun outcomes:
+  - **Track 1 (blocking): PASS** (`run success`, Terraform `0/0/0/0`, final action/finding resolved, delta-aware non-risk preservation pass).
+  - **Track 2 (visibility): FAIL** (`target_visible_in_open=false`, `elapsed_seconds=187`, `sla_seconds=180`, reason `target_not_visible_in_open_list`).
+
+**Technical debt / gotchas:**
+- Visibility path fix is active and flag-enabled in runtime, but pre-run OPEN surfacing still depends on upstream finding-status refresh timing; deterministic AWS risk state alone did not guarantee target reappearance in OPEN within current SLA.
+- Legacy strict policy compare still produces false negatives when CloudFront statement identity rotates; delta-aware preservation summary remains the stable safety signal.
+
+**Open questions / TODOs:**
+- Determine upstream source-of-truth lag causing target to remain resolved during pre-run OPEN polling despite deterministic adversarial AWS state.
+- Decide promotion criteria for making Track 2 blocking (for example: N consecutive reruns meeting SLA with no resolved fallback).
+
 ## Wave 7 Test 26 rerun after effective-status deploy + pre-reconcile validation (2026-03-01)
 
 **Task:** Deploy latest effective-status findings contract, rerun full Wave 7 Test 26 closure chain with pre-run reconcile enabled, and refresh Test 26/tracker artifacts from the new evidence set.

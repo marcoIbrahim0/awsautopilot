@@ -1,0 +1,1 @@
+AWS_PROFILE=test28-root aws iam get-role --role-name arch2_mixed_policy_role_b3

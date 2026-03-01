@@ -1,0 +1,14 @@
+{
+  "prefix": "test-26-closure-20260301T210222Z",
+  "target_resource_id": "arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1",
+  "pre_open_ids": [
+    "26403d52-eff4-47ce-ab52-49bd237e72f5"
+  ],
+  "pre_resolved_fallback_ids": [],
+  "final_open_ids": [],
+  "final_resolved_ids": [
+    "26403d52-eff4-47ce-ab52-49bd237e72f5"
+  ],
+  "target_action_id": "26403d52-eff4-47ce-ab52-49bd237e72f5",
+  "single_action_id_consistent": true
+}

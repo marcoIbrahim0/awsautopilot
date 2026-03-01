@@ -1,0 +1,9 @@
+{
+    "Name": "SecurityAutopilotControlPlaneApiCallsRule-eu-north-1",
+    "Arn": "arn:aws:events:eu-north-1:029037611564:rule/SecurityAutopilotControlPlaneApiCallsRule-eu-north-1",
+    "EventPattern": "{\"detail-type\":[\"AWS API Call via CloudTrail\"],\"detail\":{\"eventName\":[\"AuthorizeSecurityGroupIngress\",\"RevokeSecurityGroupIngress\",\"ModifySecurityGroupRules\",\"UpdateSecurityGroupRuleDescriptionsIngress\",\"PutBucketPolicy\",\"DeleteBucketPolicy\",\"PutBucketAcl\",\"PutBucketPublicAccessBlock\",\"DeleteBucketPublicAccessBlock\",\"PutPublicAccessBlock\",\"DeletePublicAccessBlock\",\"PutAccountPublicAccessBlock\",\"DeleteAccountPublicAccessBlock\",\"PutBucketEncryption\",\"DeleteBucketEncryption\",\"EnableSecurityHub\",\"CreateDetector\",\"UpdateDetector\",\"CreateTrail\",\"UpdateTrail\",\"StartLogging\",\"StopLogging\",\"PutConfigurationRecorder\",\"PutDeliveryChannel\",\"StartConfigurationRecorder\"]}}",
+    "State": "ENABLED",
+    "Description": "Forward allowlisted CloudTrail management API calls to AWS Security Autopilot.",
+    "EventBusName": "default",
+    "CreatedBy": "029037611564"
+}

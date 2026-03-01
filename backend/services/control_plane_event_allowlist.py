@@ -27,6 +27,10 @@ S3_BUCKET_POSTURE_EVALUATION_EVENT_NAMES: frozenset[str] = frozenset(
         "PutBucketPolicy",
         "DeleteBucketPolicy",
         "PutBucketAcl",
+        # Bucket-level S3 public access block API names observed in CloudTrail.
+        "PutBucketPublicAccessBlock",
+        "DeleteBucketPublicAccessBlock",
+        # Keep legacy aliases for backward compatibility across mixed forwarder versions.
         "PutPublicAccessBlock",
         "DeletePublicAccessBlock",
     }

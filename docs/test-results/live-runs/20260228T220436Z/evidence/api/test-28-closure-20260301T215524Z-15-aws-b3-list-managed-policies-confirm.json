@@ -1,0 +1,12 @@
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "ReadOnlyAccess",
+            "PolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess"
+        },
+        {
+            "PolicyName": "SecurityAudit",
+            "PolicyArn": "arn:aws:iam::aws:policy/SecurityAudit"
+        }
+    ]
+}

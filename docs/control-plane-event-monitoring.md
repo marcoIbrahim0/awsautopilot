@@ -50,6 +50,8 @@ Allowlisted `detail.eventName` values:
 - `PutBucketPolicy`
 - `DeleteBucketPolicy`
 - `PutBucketAcl`
+- `PutBucketPublicAccessBlock`
+- `DeleteBucketPublicAccessBlock`
 - `PutPublicAccessBlock`
 - `DeletePublicAccessBlock`
 - `PutAccountPublicAccessBlock`

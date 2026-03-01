@@ -136,6 +136,8 @@ Resources:
             - "PutBucketPolicy"
             - "DeleteBucketPolicy"
             - "PutBucketAcl"
+            - "PutBucketPublicAccessBlock"
+            - "DeleteBucketPublicAccessBlock"
             - "PutPublicAccessBlock"
             - "DeletePublicAccessBlock"
             - "PutAccountPublicAccessBlock"

@@ -1,0 +1,20 @@
+{
+  "prefix": "test-28-closure-20260301T215524Z",
+  "run_id": "20260228T220436Z",
+  "account_id": "029037611564",
+  "region": "eu-north-1",
+  "target_action_id": "c8201c18-5054-42ee-99c6-815ea082f2c9",
+  "target_finding_id": "fe935ab6-1117-4475-a5fb-edbdf8cc8a4b",
+  "remediation_run_id": "5444d836-037c-40be-979e-d5f2d28d8689",
+  "run_final_status": "success",
+  "terraform_init_status": 0,
+  "terraform_plan_status": 0,
+  "terraform_show_status": 0,
+  "terraform_apply_status": 1,
+  "refresh_done": true,
+  "refresh_terminal_poll": 2,
+  "target_action_status_final": "open",
+  "target_finding_status_final": "NEW",
+  "closure_pass": false,
+  "required_safe_permissions_unchanged": true
+}

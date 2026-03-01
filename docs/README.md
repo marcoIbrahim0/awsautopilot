@@ -16,6 +16,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Production deployment profile](/Users/marcomaher/AWS%20Security%20Autopilot/docs/Production/deployment.md)
 - [Runbooks index](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/README.md)
 - [Live E2E testing docs](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md)
+- [Post-test logical-solutions backlog](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md)
 - [Control-plane event monitoring](/Users/marcomaher/AWS%20Security%20Autopilot/docs/control-plane-event-monitoring.md)
 
 ### Customers

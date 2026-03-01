@@ -109,6 +109,11 @@ Parameters:
     Default: "true"
     AllowedValues: ["true", "false"]
     Description: "When true, control-plane pipeline writes only to shadow state tables."
+  ActionsEffectiveOpenVisibilityEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Enable effective/shadow reopen visibility for /api/actions status=open|resolved filters."
   ControlPlaneSource:
     Type: String
     Default: event_monitor_shadow
@@ -453,6 +458,7 @@ Resources:
           TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
+          ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED: !Ref ActionsEffectiveOpenVisibilityEnabled
           CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
@@ -573,6 +579,7 @@ Resources:
           TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
+          ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED: !Ref ActionsEffectiveOpenVisibilityEnabled
           CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes

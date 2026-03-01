@@ -4,6 +4,26 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 7 Test 28 full remediation closure validation: adversarial IAM inline + managed policy preservation (2026-03-01)](task_log.md#wave-7-test-28-full-remediation-closure-validation-adversarial-iam-inline--managed-policy-preservation-2026-03-01)
+  - Executed the full mandatory Test 28 closure chain (B3 inline+managed adversarial state confirm -> open/new verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> terminal poll).
+  - Verified observed behavior: run/bundle path succeeded (`201`/`success`/`200`), Terraform apply failed at the explicit root-principal gate, refresh completed, and target IAM.4 action/finding remained `open/NEW`.
+  - Verified policy-preservation safety: B3 trust policy, inline policy name/document, and managed-policy attachments (including `ReadOnlyAccess`) remained unchanged (`required_safe_permissions_unchanged=true`).
+- [Post-test logical-solutions backlog template for control-family planning (2026-03-01)](task_log.md#post-test-logical-solutions-backlog-template-for-control-family-planning-2026-03-01)
+  - Added `docs/live-e2e-testing/post-test-logical-solutions-backlog.md` as the canonical post-test planning template for control-family logical solutions.
+  - Seeded current high-impact families (EC2.53, IAM.4, S3.2) with prioritization, acceptance checks, and rerun test mapping.
+  - Linked the new template from both `docs/live-e2e-testing/README.md` and `docs/README.md` for discoverability.
+- [Wave 7 Test 27 full remediation closure validation: adversarial mixed SG rule preservation (2026-03-01)](task_log.md#wave-7-test-27-full-remediation-closure-validation-adversarial-mixed-sg-rule-preservation-2026-03-01)
+  - Executed the full mandatory Test 27 closure chain (adversarial mixed-SG state confirm -> open/new verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> terminal poll).
+  - Verified end-state closure from observed behavior: run `success`, Terraform `0/0/0/0`, refresh `completed`, target action `resolved`, and target finding `RESOLVED`.
+  - Verified mixed-rule preservation safety: legitimate SG rules (`443`/`8080`/`5432`) remained unchanged and only permissive public SSH (`22` from `0.0.0.0/0`) was removed.
+- [Wave 7 Test 26 closure fix: bucket-level PAB event parity + live rerun pass (2026-03-01)](task_log.md#wave-7-test-26-closure-fix-bucket-level-pab-event-parity--live-rerun-pass-2026-03-01)
+  - Identified concrete Track 2 root cause from live evidence: CloudTrail emits `PutBucketPublicAccessBlock`, while forwarder/allowlist matched `PutPublicAccessBlock`, so pre-run reset events were not ingested.
+  - Added bucket-level PAB event names to control-plane allowlist and forwarder template, redeployed runtime + forwarder stack, and added deterministic pre-run visibility diagnostics in Test 26 runner.
+  - Fresh full rerun (`test-26-closure-20260301T210222Z-*`) closed Test 26 with **Track 1 PASS / Track 2 PASS (17s within 180s SLA)** and no policy-preservation regression.
+- [Wave 7 Test 26 closure: reopen visibility rollout + two-track rerun (2026-03-01)](task_log.md#wave-7-test-26-closure-reopen-visibility-rollout--two-track-rerun-2026-03-01)
+  - Added rollout-gated effective/shadow reopen visibility path for `/api/actions` and patched action recompute candidate selection for shadow-reopen inclusion.
+  - Added deterministic regression coverage plus a committed full-chain Test 26 runner script with explicit Track 1/Track 2 outputs.
+  - Deployed runtime image `20260301T201919Z`, reran Test 26 with prefix `test-26-closure-20260301T202427Z-*`, and recorded **Track 1 PASS / Track 2 FAIL (SLA)**.
 - [Wave 7 Test 26 rerun after effective-status deploy + pre-reconcile validation (2026-03-01)](task_log.md#wave-7-test-26-rerun-after-effective-status-deploy--pre-reconcile-validation-2026-03-01)
   - Deployed runtime image `20260301T193511Z` and executed a fresh full Test 26 closure chain with canonical prefix `test-26-closure-20260301T193804Z-*`.
   - Revalidated execution path and preservation in one run (`run success`, Terraform `0/0/0/0`, non-risk statements unchanged, CloudFront statement rotation only, PAB hardened).

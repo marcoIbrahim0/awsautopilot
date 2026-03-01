@@ -1,0 +1,14 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # null_resource.iam_root_access_key_absent is tainted, so must be replaced
+-/+ resource "null_resource" "iam_root_access_key_absent" {
+      ~ id       = "3715256373388543262" -> (known after apply)
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 1 to add, 0 to change, 1 to destroy.

@@ -1,0 +1,10 @@
+{
+  "removed_non_risk_statement_count": 0,
+  "added_non_risk_statement_count": 0,
+  "removed_cloudfront_statement_count": 1,
+  "added_cloudfront_statement_count": 1,
+  "non_risk_invariance_pass": true,
+  "pab_hardened_post_apply": true,
+  "pre_statement_count": 4,
+  "post_statement_count": 4
+}

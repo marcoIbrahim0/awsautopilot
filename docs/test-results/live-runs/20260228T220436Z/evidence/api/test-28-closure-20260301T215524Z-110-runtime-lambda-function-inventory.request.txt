@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws lambda list-functions --region eu-north-1 --query Functions[?contains(FunctionName, 'security-autopilot-saas-serverless-runtime')].{FunctionName:FunctionName,LastModified:LastModified,Runtime:Runtime} --output json

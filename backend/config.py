@@ -223,6 +223,13 @@ class Settings(BaseSettings):
         default=True,
         description="When true, control-plane pipeline writes only to shadow state tables.",
     )
+    ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "When true, /api/actions status=open|resolved filters include effective/shadow reopen visibility "
+            "for resolved actions without changing stored action status values."
+        ),
+    )
     CONTROL_PLANE_SOURCE: str = Field(
         default="event_monitor_shadow",
         description="Source label for control-plane shadow pipeline outputs.",

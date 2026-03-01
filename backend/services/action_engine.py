@@ -311,10 +311,7 @@ def compute_actions_for_tenant(
     Returns:
         dict with keys: actions_created, actions_updated, actions_resolved, action_findings_linked.
     """
-    q = (
-        session.query(Finding)
-        .filter(Finding.tenant_id == tenant_id, ~Finding.status.in_(_CLOSED_STATUSES))
-    )
+    q = session.query(Finding).filter(Finding.tenant_id == tenant_id)
     if account_id is not None:
         q = q.filter(Finding.account_id == account_id)
     if region is not None:
@@ -322,6 +319,8 @@ def compute_actions_for_tenant(
 
     if settings.ONLY_IN_SCOPE_CONTROLS:
         q = q.filter(Finding.in_scope.is_(True))
+    # Evaluate effective open/closed state in Python so shadow OPEN findings are
+    # still considered even when canonical status is RESOLVED.
     findings = [finding for finding in q.all() if _is_effectively_open_finding(finding)]
 
     groups: defaultdict[tuple[Any, ...], list[Finding]] = defaultdict(list)

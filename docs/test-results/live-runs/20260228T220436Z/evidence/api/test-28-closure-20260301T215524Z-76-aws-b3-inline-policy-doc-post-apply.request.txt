@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws iam get-role-policy --role-name arch2_mixed_policy_role_b3 --policy-name arch2_mixed_policy_role_b3-inline-wildcard

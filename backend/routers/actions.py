@@ -15,7 +15,7 @@ import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, case, cast, func, select
+from sqlalchemy import String, and_, case, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 
@@ -296,6 +296,7 @@ def _action_to_list_item(
     action: Action,
     exception_state: dict | None = None,
     finding_count: int | None = None,
+    status_override: str | None = None,
 ) -> ActionListItem:
     """Build list item from Action; finding_count may be supplied from SQL aggregation."""
     state = exception_state or {}
@@ -309,7 +310,7 @@ def _action_to_list_item(
         account_id=action.account_id,
         region=action.region,
         priority=action.priority,
-        status=action.status,
+        status=status_override or action.status,
         title=action.title,
         control_id=action.control_id,
         resource_id=action.resource_id,
@@ -318,6 +319,29 @@ def _action_to_list_item(
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
+    )
+
+
+def _finding_effective_status_sql_expr() -> object:
+    """SQL expression for user-facing finding status (shadow-aware)."""
+    shadow_status = func.upper(func.coalesce(Finding.shadow_status_normalized, ""))
+    canonical_status = func.upper(func.coalesce(Finding.status, ""))
+    return case(
+        (shadow_status == "RESOLVED", "RESOLVED"),
+        ((shadow_status == "OPEN") & (canonical_status == "RESOLVED"), "NEW"),
+        else_=canonical_status,
+    )
+
+
+def _action_has_effective_open_finding_expr(tenant_uuid: Any) -> object:
+    """Correlated SQL expression: action has at least one effective-open linked finding."""
+    return exists(
+        select(1)
+        .select_from(ActionFinding)
+        .join(Finding, Finding.id == ActionFinding.finding_id)
+        .where(ActionFinding.action_id == Action.id)
+        .where(Finding.tenant_id == tenant_uuid)
+        .where(_finding_effective_status_sql_expr() != "RESOLVED")
     )
 
 
@@ -520,6 +544,9 @@ async def list_actions(
         .subquery()
     )
     finding_count_expr = func.coalesce(finding_counts.c.finding_count, 0)
+    use_effective_visibility = settings.ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED
+    effective_open_expr = _action_has_effective_open_finding_expr(tenant_uuid)
+    normalized_status_filter = status_filter.strip().lower() if status_filter is not None else None
 
     filters = [Action.tenant_id == tenant_uuid]
     if settings.ONLY_IN_SCOPE_CONTROLS:
@@ -534,8 +561,18 @@ async def list_actions(
         filters.append(Action.resource_id == resource_id.strip())
     if action_type is not None:
         filters.append(Action.action_type == action_type.strip())
-    if status_filter is not None:
-        filters.append(Action.status == status_filter.strip().lower())
+    if normalized_status_filter is not None:
+        if use_effective_visibility and normalized_status_filter == "open":
+            filters.append(
+                or_(
+                    Action.status == "open",
+                    and_(Action.status == "resolved", effective_open_expr),
+                )
+            )
+        elif use_effective_visibility and normalized_status_filter == "resolved":
+            filters.append(and_(Action.status == "resolved", ~effective_open_expr))
+        else:
+            filters.append(Action.status == normalized_status_filter)
     if not include_orphans:
         filters.append(finding_count_expr > 0)
 
@@ -550,9 +587,29 @@ async def list_actions(
         if action_type is not None:
             group_filters.append(ActionGroup.action_type == action_type.strip())
 
-        open_count_expr = func.sum(case((Action.status == "open", 1), else_=0))
+        if use_effective_visibility:
+            open_count_expr = func.sum(
+                case(
+                    (
+                        or_(
+                            Action.status == "open",
+                            and_(Action.status == "resolved", effective_open_expr),
+                        ),
+                        1,
+                    ),
+                    else_=0,
+                )
+            )
+            resolved_count_expr = func.sum(
+                case(
+                    (and_(Action.status == "resolved", ~effective_open_expr), 1),
+                    else_=0,
+                )
+            )
+        else:
+            open_count_expr = func.sum(case((Action.status == "open", 1), else_=0))
+            resolved_count_expr = func.sum(case((Action.status == "resolved", 1), else_=0))
         in_progress_count_expr = func.sum(case((Action.status == "in_progress", 1), else_=0))
-        resolved_count_expr = func.sum(case((Action.status == "resolved", 1), else_=0))
         suppressed_count_expr = func.sum(case((Action.status == "suppressed", 1), else_=0))
 
         grouped_query = (
@@ -587,8 +644,8 @@ async def list_actions(
             .group_by(ActionGroup.id, ActionGroup.action_type, ActionGroup.account_id, ActionGroup.region)
         )
 
-        if status_filter is not None:
-            status_value = status_filter.strip().lower()
+        if normalized_status_filter is not None:
+            status_value = normalized_status_filter
             if status_value == "open":
                 grouped_query = grouped_query.having(func.coalesce(open_count_expr, 0) > 0)
             elif status_value == "in_progress":
@@ -628,8 +685,8 @@ async def list_actions(
             suppressed_count = int(row.suppressed_count or 0)
             total_actions = int(row.action_count or 0)
             derived_status = "open"
-            if status_filter is not None:
-                derived_status = status_filter.strip().lower()
+            if normalized_status_filter is not None:
+                derived_status = normalized_status_filter
             elif open_count > 0:
                 derived_status = "open"
             elif in_progress_count > 0:
@@ -671,14 +728,25 @@ async def list_actions(
         )
         return ActionsListResponse(items=paged_items, total=total)
 
-    query = (
-        select(
-            Action,
-            finding_count_expr.label("finding_count"),
+    if use_effective_visibility:
+        query = (
+            select(
+                Action,
+                finding_count_expr.label("finding_count"),
+                effective_open_expr.label("has_effective_open_findings"),
+            )
+            .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
+            .where(*filters)
         )
-        .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
-        .where(*filters)
-    )
+    else:
+        query = (
+            select(
+                Action,
+                finding_count_expr.label("finding_count"),
+            )
+            .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
+            .where(*filters)
+        )
     count_query = select(func.count()).select_from(query.order_by(None).subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -687,7 +755,10 @@ async def list_actions(
     result = await db.execute(query)
     rows = result.all()
     actions = [row[0] for row in rows]
-    finding_counts_by_action = {action.id: int(finding_count or 0) for action, finding_count in rows}
+    finding_counts_by_action = {row[0].id: int(row[1] or 0) for row in rows}
+    effective_open_by_action: dict[uuid.UUID, bool] = {}
+    if use_effective_visibility:
+        effective_open_by_action = {row[0].id: bool(row[2]) for row in rows}
     exception_state_by_action = await get_exception_states_for_entities(
         db,
         tenant_id=tenant_uuid,
@@ -700,6 +771,13 @@ async def list_actions(
             action,
             exception_state=exception_state_by_action.get(action.id),
             finding_count=finding_counts_by_action.get(action.id, 0),
+            status_override=(
+                "open"
+                if use_effective_visibility
+                and action.status == "resolved"
+                and effective_open_by_action.get(action.id, False)
+                else None
+            ),
         )
         for action in actions
     ]
