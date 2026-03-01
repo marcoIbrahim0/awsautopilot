@@ -69,8 +69,8 @@ Use these signals in your CRM or marketing automation to prioritize “report re
 | **Rate limit** | One report per tenant per 24 hours (429 + `Retry-After`). |
 | **Delivery** | HTML report in S3; presigned download URL (e.g. 1 hour expiry). Optional email when ready. |
 | **UI** | **Settings → Baseline report**: request, status, download, recent reports list. |
-| **API** | `POST /api/baseline-report`, `GET /api/baseline-report`, `GET /api/baseline-report/{id}`. |
+| **API** | `POST /api/baseline-report`, `GET /api/baseline-report`, `GET /api/baseline-report/{id}`, `GET /api/baseline-report/{id}/data` (in-app viewer payload). |
 
 ---
 
-*Last updated: 2026-02-03 (Step 13.4 UI and GTM playbook).*
+*Last updated: 2026-03-01 (added in-app viewer API contract endpoint).*

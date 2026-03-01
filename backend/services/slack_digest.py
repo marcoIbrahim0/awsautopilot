@@ -10,6 +10,7 @@ import json
 import logging
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 from typing import Any
 
 from backend.services.digest_content import (
@@ -22,6 +23,33 @@ logger = logging.getLogger(__name__)
 
 # Redacted label for logs (security: do not log full webhook URL)
 WEBHOOK_LOG_LABEL = "slack_webhook"
+SLACK_WEBHOOK_HOST = "hooks.slack.com"
+
+
+def is_valid_slack_webhook_url(url: str) -> bool:
+    """Return True only for strict Slack incoming webhook URLs."""
+    raw = (url or "").strip()
+    if not raw:
+        return False
+
+    parsed = urlparse(raw)
+    if parsed.scheme.lower() != "https":
+        return False
+    if parsed.username or parsed.password:
+        return False
+    if parsed.hostname != SLACK_WEBHOOK_HOST:
+        return False
+    if parsed.port not in (None, 443):
+        return False
+    if parsed.query or parsed.fragment:
+        return False
+
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) != 4:
+        return False
+    if parts[0] != "services":
+        return False
+    return all(parts[1:])
 
 
 def _mask_webhook_url(url: str) -> str:
@@ -59,6 +87,13 @@ def send_slack_digest(
     url = (webhook_url or "").strip()
     if not url:
         logger.warning("send_slack_digest: webhook URL empty, skipping")
+        return False
+    if not is_valid_slack_webhook_url(url):
+        logger.warning(
+            "send_slack_digest: invalid webhook URL tenant=%s %s",
+            (tenant_name or "?").strip()[:32],
+            _mask_webhook_url(url),
+        )
         return False
 
     view_url = get_view_in_app_url(frontend_url or "http://localhost:3000")

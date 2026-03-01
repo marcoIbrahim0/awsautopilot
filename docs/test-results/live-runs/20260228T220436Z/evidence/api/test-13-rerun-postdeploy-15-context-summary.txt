@@ -1,0 +1,11 @@
+run_dir=docs/test-results/live-runs/20260228T220436Z
+tenant_name=Valens
+tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837
+admin_user_id=57e658d9-d5c1-478a-81f8-8cf0400d001e
+account_id=029037611564
+account_regions=eu-north-1
+action_id_1=9c31f438-1ade-4cc7-91c8-b959870a615b
+action_id_2=f1e6ea20-740e-4ffc-9f1b-24b2e37502db
+tenant_b_email=wave5.test13.rerun.20260228T224926Z.26785@example.com
+tenant_b_tenant_name=Wave5 Test13 Rerun TenantB 20260228T224926Z 26785
+tenant_b_tenant_id=3e0f7573-58e9-465c-86cf-129b63932d72

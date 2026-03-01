@@ -1,0 +1,26 @@
+{
+  "top_level_is_object": true,
+  "has_items_array": true,
+  "has_total_number": true,
+  "first_item_required_fields": {
+    "id": true,
+    "finding_id": true,
+    "tenant_id": true,
+    "account_id": true,
+    "region": true,
+    "severity_label": true,
+    "severity_normalized": true,
+    "status": true,
+    "title": true,
+    "created_at": true,
+    "updated_at_db": true
+  },
+  "first_item_core_values": {
+    "id": "16c83cc5-4c33-4f8b-ab10-4508aa3c77c5",
+    "finding_id": "arn:aws:securityhub:eu-north-1:029037611564:security-control/Config.1/finding/44125833-4dca-4d83-80c5-3ad26137a7c4",
+    "severity_label": "INFORMATIONAL",
+    "severity_normalized": 0,
+    "status": "RESOLVED",
+    "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+  }
+}

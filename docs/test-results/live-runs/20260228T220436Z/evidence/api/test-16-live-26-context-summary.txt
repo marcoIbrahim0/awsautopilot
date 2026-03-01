@@ -1,0 +1,11 @@
+action_primary=9c31f438-1ade-4cc7-91c8-b959870a615b
+action_primary_type=sg_restrict_public_ports
+actions_total=158
+mode_selected=pr_only
+strategy_selected=
+account_id=029037611564
+region=eu-north-1
+non_existent_action_id=c7e038f0-aad7-4765-8f28-1c140bfece35
+tenant_b_email=wave5.test16.20260228T234325Z.8939@example.com
+admin_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-00-login-admin.json
+member_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-accept-invite-valid-token.json

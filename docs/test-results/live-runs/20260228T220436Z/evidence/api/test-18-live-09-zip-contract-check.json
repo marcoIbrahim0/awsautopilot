@@ -1,0 +1,60 @@
+{
+  "run_id": "ae4ab0db-3c6a-4f74-879f-7ee64013aef6",
+  "zip_http": "200",
+  "zip_repeat_http": "200",
+  "content_type": "application/zip",
+  "content_disposition": "attachment; filename=\"pr-bundle-ae4ab0db-3c6a-4f74-879f-7ee64013aef6.zip\"",
+  "zip_size_bytes": 49990,
+  "zip_sha256": "f6aed1c49dc32b600a5760a5b7e51578b4bbe67883f57cb711f992c91edb9a4f",
+  "zip_repeat_sha256": "e1effff246993cd9c97b376edcc7c2502c60382141f3fa7e155a87429ecc1d57",
+  "zip_hashes_match": false,
+  "zip_file_count": 80,
+  "zip_paths_sample": [
+    "README_GROUP.txt",
+    "run_all.sh",
+    "actions/01-arn-aws-s3-arch1-bucket-website-a1-029037611564--867b92ae/providers.tf",
+    "actions/01-arn-aws-s3-arch1-bucket-website-a1-029037611564--867b92ae/s3_bucket_encryption_kms.tf",
+    "actions/01-arn-aws-s3-arch1-bucket-website-a1-029037611564--867b92ae/README.txt",
+    "actions/02-arn-aws-s3-arch2-cloudtrail-logs-bucket-c-029037-1bdc6a2b/providers.tf",
+    "actions/02-arn-aws-s3-arch2-cloudtrail-logs-bucket-c-029037-1bdc6a2b/s3_bucket_encryption_kms.tf",
+    "actions/02-arn-aws-s3-arch2-cloudtrail-logs-bucket-c-029037-1bdc6a2b/README.txt",
+    "actions/03-arn-aws-s3-arch1-bucket-evidence-b1-029037611564-72bbfde1/providers.tf",
+    "actions/03-arn-aws-s3-arch1-bucket-evidence-b1-029037611564-72bbfde1/s3_bucket_encryption_kms.tf",
+    "actions/03-arn-aws-s3-arch1-bucket-evidence-b1-029037611564-72bbfde1/README.txt",
+    "actions/04-arn-aws-s3-arch1-bucket-ingest-c-029037611564-eu-1df0679d/providers.tf",
+    "actions/04-arn-aws-s3-arch1-bucket-ingest-c-029037611564-eu-1df0679d/s3_bucket_encryption_kms.tf",
+    "actions/04-arn-aws-s3-arch1-bucket-ingest-c-029037611564-eu-1df0679d/README.txt",
+    "actions/05-arn-aws-s3-arch1-bucket-logging-target-c-0290376-73521dc5/providers.tf",
+    "actions/05-arn-aws-s3-arch1-bucket-logging-target-c-0290376-73521dc5/s3_bucket_encryption_kms.tf",
+    "actions/05-arn-aws-s3-arch1-bucket-logging-target-c-0290376-73521dc5/README.txt",
+    "actions/06-arn-aws-s3-arch2-config-bucket-c-029037611564-eu-a63c9217/providers.tf",
+    "actions/06-arn-aws-s3-arch2-config-bucket-c-029037611564-eu-a63c9217/s3_bucket_encryption_kms.tf",
+    "actions/06-arn-aws-s3-arch2-config-bucket-c-029037611564-eu-a63c9217/README.txt"
+  ],
+  "expected_file_count": 80,
+  "missing_from_zip": [],
+  "unexpected_in_zip": [],
+  "contains_run_all_sh": true,
+  "contains_group_readme": true,
+  "placeholder_hits_in_terraform_files": [
+    "actions/26-aws-account-029037611564-ebbb26b3/s3_bucket_encryption_kms.tf"
+  ],
+  "placeholder_hit_count": 1,
+  "checks": {
+    "http_200": true,
+    "content_type_zip": true,
+    "content_disposition_filename_present": true,
+    "files_match_run_artifacts": true,
+    "has_group_runner_files": true,
+    "no_placeholder_in_terraform_files": false,
+    "repeat_download_byte_stable": false,
+    "all_pass": false,
+    "repeat_download_semantic_match": true
+  },
+  "retry_semantic": {
+    "zip_bytes_identical": false,
+    "file_sets_identical": true,
+    "file_contents_identical": true,
+    "semantic_match": true
+  }
+}

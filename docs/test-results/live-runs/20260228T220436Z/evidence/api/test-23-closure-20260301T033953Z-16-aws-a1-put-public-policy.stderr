@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the PutBucketPolicy operation: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: s3:PutBucketPolicy on resource: "arn:aws:s3:::arch1-bucket-website-a1-029037611564-eu-north-1" because public policies are prevented by the BlockPublicPolicy setting in S3 Block Public Access.

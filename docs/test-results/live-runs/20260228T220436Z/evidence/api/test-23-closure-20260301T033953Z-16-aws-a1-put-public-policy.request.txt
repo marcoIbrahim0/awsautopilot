@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws s3api put-bucket-policy --bucket arch1-bucket-website-a1-029037611564-eu-north-1 --policy {"Version":"2012-10-17","Statement":[{"Sid":"PublicReadWebsiteObjects","Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::arch1-bucket-website-a1-029037611564-eu-north-1/*"]}]}

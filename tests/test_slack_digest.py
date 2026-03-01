@@ -9,7 +9,11 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from backend.services.slack_digest import send_slack_digest, _mask_webhook_url
+from backend.services.slack_digest import (
+    _mask_webhook_url,
+    is_valid_slack_webhook_url,
+    send_slack_digest,
+)
 
 
 def test_mask_webhook_url_hooks_slack() -> None:
@@ -25,6 +29,25 @@ def test_mask_webhook_url_short() -> None:
     assert _mask_webhook_url("x") == "..."
 
 
+def test_is_valid_slack_webhook_url_accepts_expected_shape() -> None:
+    """Valid hooks.slack.com incoming webhook URL shape is accepted."""
+    assert is_valid_slack_webhook_url("https://hooks.slack.com/services/T00/B00/XXX")
+
+
+def test_is_valid_slack_webhook_url_rejects_non_slack_or_ssrf_targets() -> None:
+    """Invalid webhook URL targets are rejected."""
+    bad_urls = [
+        "",
+        "https://example.com/webhook",
+        "http://hooks.slack.com/services/T00/B00/XXX",
+        "https://hooks.slack.com.evil.example/services/T00/B00/XXX",
+        "http://169.254.169.254/latest/meta-data/",
+        "https://hooks.slack.com/services/T00/B00/XXX?x=1",
+    ]
+    for url in bad_urls:
+        assert is_valid_slack_webhook_url(url) is False
+
+
 def test_send_slack_digest_empty_webhook_returns_false() -> None:
     """Empty webhook URL returns False without making request."""
     ok = send_slack_digest(
@@ -33,6 +56,18 @@ def test_send_slack_digest_empty_webhook_returns_false() -> None:
         payload={"open_action_count": 0, "new_findings_count_7d": 0, "exceptions_expiring_14d_count": 0},
     )
     assert ok is False
+
+
+def test_send_slack_digest_invalid_webhook_returns_false_without_network() -> None:
+    """Invalid webhook URLs are blocked before urlopen is called."""
+    with patch("backend.services.slack_digest.urllib.request.urlopen") as mock_urlopen:
+        ok = send_slack_digest(
+            webhook_url="https://example.com/webhook",
+            tenant_name="Acme",
+            payload={"open_action_count": 0, "new_findings_count_7d": 0, "exceptions_expiring_14d_count": 0},
+        )
+    assert ok is False
+    mock_urlopen.assert_not_called()
 
 
 def test_send_slack_digest_posts_blocks_and_returns_true() -> None:

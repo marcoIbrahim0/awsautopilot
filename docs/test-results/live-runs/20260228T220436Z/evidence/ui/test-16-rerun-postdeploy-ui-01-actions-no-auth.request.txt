@@ -1,0 +1,2 @@
+GET https://dev.valensjewelry.com/actions
+Authorization: <none>

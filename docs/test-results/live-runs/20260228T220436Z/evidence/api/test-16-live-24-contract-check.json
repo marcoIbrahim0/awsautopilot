@@ -1,0 +1,8 @@
+{
+  "detail_keyset_stable": true,
+  "detail_required_fields_present": true,
+  "remediation_options_required_fields_present": true,
+  "remediation_preview_required_fields_present": true,
+  "compute_required_fields_present": true,
+  "compute_retry_body_stable": true
+}

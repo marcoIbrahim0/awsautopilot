@@ -1,0 +1,3 @@
+PATCH https://api.valensjewelry.com/api/users/me/digest-settings
+Authorization: Bearer <REDACTED_TENANTB_TOKEN>
+{"digest_enabled":false,"digest_recipients":"maromaher54@gmail.com,wave3acc+20260228T213251Z@example.com"}

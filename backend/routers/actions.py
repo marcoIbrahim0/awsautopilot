@@ -38,6 +38,7 @@ from backend.services.direct_fix_bridge import (
     run_remediation_preview_bridge,
 )
 from backend.services.remediation_risk import evaluate_strategy_impact
+from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
 from backend.services.remediation_strategy import (
     list_mode_options_for_action_type,
     list_strategies_for_action_type,
@@ -48,11 +49,22 @@ from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
     is_root_credentials_required_action,
 )
-from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
+from backend.utils.sqs import (
+    build_compute_actions_job_payload,
+    build_reconcile_inventory_shard_job_payload,
+    parse_queue_region,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/actions", tags=["actions"])
+
+_RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
+    {
+        "s3_bucket_block_public_access_standard",
+        "s3_migrate_cloudfront_oac_private",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +84,25 @@ class ComputeActionsResponse(BaseModel):
     message: str = "Action computation job queued"
     tenant_id: str = Field(..., description="Tenant UUID")
     scope: dict = Field(default_factory=dict, description="Scope used: account_id and/or region if provided")
+
+
+class ReconcileActionsRequest(BaseModel):
+    """Scope for action reconciliation enqueue."""
+
+    account_id: str = Field(..., description="AWS account ID (12 digits).")
+    region: Optional[str] = Field(
+        default=None,
+        description="AWS region. If omitted, all configured regions for the account are reconciled.",
+    )
+
+
+class ReconcileActionsResponse(BaseModel):
+    """Response for successful reconcile enqueue (202 Accepted)."""
+
+    message: str = "Action reconciliation jobs queued"
+    tenant_id: str = Field(..., description="Tenant UUID")
+    scope: dict = Field(default_factory=dict, description="Scope used: account_id and/or region if provided")
+    enqueued_jobs: int = Field(..., description="Number of reconcile shard jobs enqueued")
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +169,8 @@ class ActionDetailResponse(BaseModel):
     status: str
     title: str
     description: str | None
+    what_is_wrong: str
+    what_the_fix_does: str
     control_id: str | None
     resource_id: str | None
     resource_type: str | None
@@ -148,6 +181,53 @@ class ActionDetailResponse(BaseModel):
     exception_id: str | None = None
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
+
+
+_ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
+    "s3_block_public_access": "Enables account-level S3 Block Public Access to stop broad public exposure.",
+    "enable_security_hub": "Enables Security Hub and default standards to restore security visibility.",
+    "enable_guardduty": "Enables GuardDuty detector coverage in the target region.",
+    "s3_bucket_block_public_access": "Adds bucket-level public access blocks to prevent public ACL/policy exposure.",
+    "s3_bucket_encryption": "Enforces default server-side encryption on the affected S3 bucket.",
+    "sg_restrict_public_ports": "Restricts risky inbound security-group rules on unauthorized public ports.",
+    "cloudtrail_enabled": "Enables CloudTrail so account activity is logged for audit and detection.",
+    "aws_config_enabled": "Enables AWS Config recorder and delivery channel for continuous config tracking.",
+    "ssm_block_public_sharing": "Disables public sharing for SSM documents to reduce unauthorized exposure.",
+    "ebs_snapshot_block_public_access": "Blocks public sharing of EBS snapshots for this account and region.",
+    "ebs_default_encryption": "Enables EBS default encryption for newly created volumes.",
+    "s3_bucket_require_ssl": "Adds policy enforcement so bucket access requires TLS/SSL.",
+    "iam_root_access_key_absent": "Guides removal of root user access keys and restoration of safer IAM access.",
+    "s3_bucket_access_logging": "Configures server access logging to improve traceability of bucket access.",
+    "s3_bucket_lifecycle_configuration": "Applies lifecycle rules to enforce retention and cost-control posture.",
+    "s3_bucket_encryption_kms": "Enforces SSE-KMS encryption policy for the affected S3 bucket.",
+}
+
+
+def _action_target_label(action: Action) -> str:
+    if action.resource_id:
+        return action.resource_id
+    if action.target_id:
+        return action.target_id
+    return "the affected resource"
+
+
+def _build_what_is_wrong(action: Action) -> str:
+    description = (action.description or "").strip()
+    if description:
+        return description
+    title = (action.title or "").strip()
+    if title:
+        return title
+    control = (action.control_id or "Unknown control").strip()
+    return f"{control} is failing for {_action_target_label(action)}."
+
+
+def _build_what_the_fix_does(action: Action) -> str:
+    known = _ACTION_FIX_SUMMARY_BY_TYPE.get((action.action_type or "").strip())
+    if known:
+        return known
+    control = (action.control_id or "the failing control").strip()
+    return f"Applies the configured remediation workflow to address {control} findings."
 
 
 class PatchActionRequest(BaseModel):
@@ -198,6 +278,18 @@ class RemediationOptionsResponse(BaseModel):
     manual_high_risk: bool = False
     pre_execution_notice: str | None = None
     runbook_url: str | None = None
+
+
+def _mode_options_for_action(action_type: str) -> list[Literal["pr_only", "direct_fix"]]:
+    strategies = list_strategies_for_action_type(action_type)
+    if strategies:
+        return list_mode_options_for_action_type(action_type)
+
+    # Backward-compatible behavior for action types not yet migrated to strategy catalog.
+    mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
+    if action_type in get_supported_direct_fix_action_types():
+        mode_options.append("direct_fix")
+    return mode_options
 
 
 def _action_to_list_item(
@@ -370,6 +462,8 @@ def _action_to_detail_response(
         status=action.status,
         title=action.title,
         description=action.description,
+        what_is_wrong=_build_what_is_wrong(action),
+        what_the_fix_does=_build_what_the_fix_does(action),
         control_id=action.control_id,
         resource_id=action.resource_id,
         resource_type=action.resource_type,
@@ -726,12 +820,8 @@ async def get_remediation_options(
     root_required = is_root_credentials_required_action(action.action_type)
     pre_execution_notice = ROOT_CREDENTIALS_REQUIRED_MESSAGE if root_required else None
     runbook_url = ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH if root_required else None
+    mode_options = _mode_options_for_action(action.action_type)
     if not strategies:
-        # Backward-compatible behavior for action types not yet migrated to strategy catalog.
-        mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
-        supported_direct_fix_action_types = get_supported_direct_fix_action_types()
-        if action.action_type in supported_direct_fix_action_types:
-            mode_options.append("direct_fix")
         return RemediationOptionsResponse(
             action_id=str(action.id),
             action_type=action.action_type,
@@ -746,7 +836,21 @@ async def get_remediation_options(
     for strategy in strategies:
         # Defensive validation: ensures registry entries stay internally consistent.
         validate_strategy(action.action_type, strategy["strategy_id"], strategy["mode"])
-        risk_snapshot = evaluate_strategy_impact(action, strategy, {}, account=account)
+        runtime_signals: dict[str, Any] = {}
+        if strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES:
+            runtime_signals = collect_runtime_risk_signals(
+                action=action,
+                strategy=strategy,
+                strategy_inputs={},
+                account=account,
+            )
+        risk_snapshot = evaluate_strategy_impact(
+            action,
+            strategy,
+            {},
+            account=account,
+            runtime_signals=runtime_signals,
+        )
         checks: list[DependencyCheckResponse] = [
             DependencyCheckResponse(
                 code=check["code"],
@@ -771,7 +875,6 @@ async def get_remediation_options(
             )
         )
 
-    mode_options = list_mode_options_for_action_type(action.action_type)
     return RemediationOptionsResponse(
         action_id=str(action.id),
         action_type=action.action_type,
@@ -800,8 +903,8 @@ async def get_remediation_options(
 async def get_remediation_preview(
     action_id: Annotated[str, Path(description="Action UUID")],
     mode: Annotated[
-        Literal["direct_fix"],
-        Query(description="Remediation mode; only direct_fix supported for preview"),
+        Literal["direct_fix", "pr_only"],
+        Query(description="Remediation mode. Accepts values advertised in remediation-options mode_options."),
     ] = "direct_fix",
     strategy_id: Annotated[
         str | None,
@@ -838,6 +941,13 @@ async def get_remediation_preview(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
+        )
+
+    if mode == "pr_only":
+        return RemediationPreviewResponse(
+            compliant=False,
+            message="Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
+            will_apply=False,
         )
 
     supported_direct_fix_action_types = get_supported_direct_fix_action_types()
@@ -1113,4 +1223,111 @@ async def trigger_compute_actions(
         message="Action computation job queued",
         tenant_id=str(tenant_uuid),
         scope=scope,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /actions/reconcile
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/reconcile",
+    response_model=ReconcileActionsResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger action reconciliation",
+    description=(
+        "Enqueue inventory reconciliation shard jobs for the current tenant and account. "
+        "If region is omitted, all configured account regions are enqueued."
+    ),
+    responses={
+        404: {"description": "Tenant or account not found"},
+        400: {"description": "Invalid scope (e.g. unknown region for account)"},
+        503: {"description": "Queue unavailable or SQS send failed"},
+    },
+)
+async def trigger_action_reconcile(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+    body: ReconcileActionsRequest = Body(...),
+) -> ReconcileActionsResponse:
+    """Enqueue one reconciliation sweep per (region, service) for an account in the current tenant."""
+    if not settings.has_inventory_reconcile_queue:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Action reconciliation unavailable",
+                "detail": "Queue URL not configured. Set SQS_INVENTORY_RECONCILE_QUEUE_URL.",
+            },
+        )
+
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+
+    account = await get_account_for_tenant(tenant_uuid, body.account_id, db)
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Account not found",
+                "detail": "No AWS account found with the given ID for this tenant.",
+            },
+        )
+
+    account_regions = list(account.regions or [])
+    if body.region is not None and body.region not in set(account_regions):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Bad request",
+                "detail": "region must be one of the account's configured regions.",
+            },
+        )
+
+    target_regions = [body.region] if body.region else (account_regions or [settings.AWS_REGION])
+    services = settings.control_plane_inventory_services_list
+    max_resources = int(settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD or 500)
+
+    queue_url = settings.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    now = datetime.now(timezone.utc).isoformat()
+    enqueued_jobs = 0
+
+    try:
+        for region in target_regions:
+            for service in services:
+                payload = build_reconcile_inventory_shard_job_payload(
+                    tenant_id=tenant_uuid,
+                    account_id=body.account_id,
+                    region=region,
+                    service=service,
+                    created_at=now,
+                    sweep_mode="global",
+                    max_resources=max_resources,
+                )
+                sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+                enqueued_jobs += 1
+    except ClientError as e:
+        logger.exception("SQS send_message failed for action_reconcile: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Action reconciliation unavailable",
+                "detail": "Could not enqueue reconcile jobs. Please try again later.",
+            },
+        ) from e
+
+    scope: dict[str, str] = {"account_id": body.account_id}
+    if body.region:
+        scope["region"] = body.region
+
+    return ReconcileActionsResponse(
+        message="Action reconciliation jobs queued",
+        tenant_id=str(tenant_uuid),
+        scope=scope,
+        enqueued_jobs=enqueued_jobs,
     )

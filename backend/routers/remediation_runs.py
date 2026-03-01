@@ -11,7 +11,7 @@ import json
 import logging
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Literal, NoReturn, Optional
 
 import boto3
@@ -19,7 +19,8 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -76,6 +77,93 @@ ACTIVE_EXECUTION_STATUSES = {
     RemediationRunExecutionStatus.queued,
     RemediationRunExecutionStatus.running,
 }
+ACTIVE_RUN_DUPLICATE_STATUSES = (
+    RemediationRunStatus.pending,
+    RemediationRunStatus.running,
+    RemediationRunStatus.awaiting_approval,
+)
+ACTIVE_RUN_DUPLICATE_STATUS_VALUES = {status.value for status in ACTIVE_RUN_DUPLICATE_STATUSES}
+RECENT_DUPLICATE_WINDOW_SECONDS = 30
+EXECUTION_TOTAL_STEPS = 3
+EXECUTION_STATUS_PROGRESS = {
+    RemediationRunExecutionStatus.queued.value: (0, 10),
+    RemediationRunExecutionStatus.running.value: (1, 60),
+    RemediationRunExecutionStatus.awaiting_approval.value: (2, 80),
+    RemediationRunExecutionStatus.success.value: (3, 100),
+    RemediationRunExecutionStatus.failed.value: (3, 100),
+    RemediationRunExecutionStatus.cancelled.value: (3, 100),
+}
+
+
+def _as_mode_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, RemediationRunMode):
+        return value.value
+    return str(value)
+
+
+def _as_status_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, RemediationRunStatus):
+        return value.value
+    return str(value)
+
+
+def _extract_artifacts(run: RemediationRun | None) -> dict[str, Any]:
+    if run is None:
+        return {}
+    if isinstance(run.artifacts, dict):
+        return run.artifacts
+    return {}
+
+
+def _normalize_strategy_inputs(value: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not value:
+        return None
+    return value
+
+
+def _run_matches_request_signature(
+    run: RemediationRun,
+    *,
+    mode: str,
+    strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    pr_bundle_variant: str | None,
+) -> bool:
+    if _as_mode_value(run.mode) != mode:
+        return False
+
+    artifacts = _extract_artifacts(run)
+    run_strategy_id = artifacts.get("selected_strategy")
+    if run_strategy_id != strategy_id:
+        return False
+
+    run_strategy_inputs = _normalize_strategy_inputs(artifacts.get("strategy_inputs"))
+    request_strategy_inputs = _normalize_strategy_inputs(strategy_inputs)
+    if run_strategy_inputs != request_strategy_inputs:
+        return False
+
+    run_variant = artifacts.get("pr_bundle_variant")
+    if run_variant != pr_bundle_variant:
+        return False
+
+    return True
+
+
+def _raise_duplicate_run_conflict(existing_run: RemediationRun, *, reason: str, detail: str) -> NoReturn:
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "error": "Duplicate pending run",
+            "detail": detail,
+            "reason": reason,
+            "existing_run_id": str(existing_run.id),
+            "existing_run_status": _as_status_value(existing_run.status),
+        },
+    )
 
 
 def _root_notice(action_type: str | None) -> tuple[bool, str | None, str | None]:
@@ -264,6 +352,11 @@ class RemediationRunExecutionResponse(BaseModel):
     completed_at: str | None
     created_at: str
     updated_at: str
+    source: Literal["execution", "run_fallback"] = "execution"
+    current_step: str
+    progress_percent: int = Field(..., ge=0, le=100)
+    completed_steps: int = Field(..., ge=0)
+    total_steps: int = Field(..., ge=1)
 
 
 class StartPrBundleExecutionResponse(BaseModel):
@@ -496,12 +589,37 @@ def _run_to_detail_response(run: RemediationRun, action: Action | None = None) -
     )
 
 
+def _progress_for_execution_status(status_value: str) -> tuple[int, int]:
+    return EXECUTION_STATUS_PROGRESS.get(status_value, (0, 0))
+
+
+def _step_name_for_execution(*, phase: str, status_value: str) -> str:
+    if status_value == RemediationRunExecutionStatus.awaiting_approval.value:
+        return "awaiting_approval"
+    if status_value == RemediationRunExecutionStatus.success.value:
+        return "completed"
+    if status_value == RemediationRunExecutionStatus.failed.value:
+        return "failed"
+    if status_value == RemediationRunExecutionStatus.cancelled.value:
+        return "cancelled"
+    return f"{phase}_{status_value}"
+
+
+def _map_run_status_to_execution_status(run_status: RemediationRunStatus) -> str:
+    if run_status == RemediationRunStatus.pending:
+        return RemediationRunExecutionStatus.queued.value
+    return run_status.value
+
+
 def _execution_to_response(execution: RemediationRunExecution) -> RemediationRunExecutionResponse:
+    status_value = execution.status.value
+    completed_steps, progress_percent = _progress_for_execution_status(status_value)
+    phase_value = execution.phase.value
     return RemediationRunExecutionResponse(
         id=str(execution.id),
         run_id=str(execution.run_id),
-        phase=execution.phase.value,
-        status=execution.status.value,
+        phase=phase_value,
+        status=status_value,
         workspace_manifest=execution.workspace_manifest if isinstance(execution.workspace_manifest, dict) else None,
         results=execution.results if isinstance(execution.results, dict) else None,
         logs_ref=execution.logs_ref,
@@ -510,6 +628,39 @@ def _execution_to_response(execution: RemediationRunExecution) -> RemediationRun
         completed_at=execution.completed_at.isoformat() if execution.completed_at else None,
         created_at=execution.created_at.isoformat(),
         updated_at=execution.updated_at.isoformat(),
+        source="execution",
+        current_step=_step_name_for_execution(phase=phase_value, status_value=status_value),
+        progress_percent=progress_percent,
+        completed_steps=completed_steps,
+        total_steps=EXECUTION_TOTAL_STEPS,
+    )
+
+
+def _run_to_execution_fallback(run: RemediationRun) -> RemediationRunExecutionResponse:
+    status_value = _map_run_status_to_execution_status(run.status)
+    completed_steps, progress_percent = _progress_for_execution_status(status_value)
+    phase_value = RemediationRunExecutionPhase.apply.value
+    results: dict[str, Any] | None = None
+    if run.outcome:
+        results = {"run_outcome": run.outcome}
+    return RemediationRunExecutionResponse(
+        id=str(run.id),
+        run_id=str(run.id),
+        phase=phase_value,
+        status=status_value,
+        workspace_manifest=None,
+        results=results,
+        logs_ref=None,
+        error_summary=None,
+        started_at=run.started_at.isoformat() if run.started_at else None,
+        completed_at=run.completed_at.isoformat() if run.completed_at else None,
+        created_at=run.created_at.isoformat(),
+        updated_at=run.updated_at.isoformat(),
+        source="run_fallback",
+        current_step=_step_name_for_execution(phase=phase_value, status_value=status_value),
+        progress_percent=progress_percent,
+        completed_steps=completed_steps,
+        total_steps=EXECUTION_TOTAL_STEPS,
     )
 
 
@@ -909,30 +1060,72 @@ async def create_remediation_run(
                 probe_detail,
             )
 
-    from backend.models.enums import RemediationRunMode, RemediationRunStatus
-
-    existing = await db.execute(
-        select(RemediationRun).where(
+    recent_cutoff = datetime.now(timezone.utc) - timedelta(seconds=RECENT_DUPLICATE_WINDOW_SECONDS)
+    duplicate_candidate_result = await db.execute(
+        select(RemediationRun)
+        .where(
             RemediationRun.tenant_id == tenant_uuid,
             RemediationRun.action_id == action_uuid,
-            RemediationRun.status == RemediationRunStatus.pending,
+            (
+                RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES)
+                | (RemediationRun.created_at >= recent_cutoff)
+            ),
         )
+        .order_by(
+            case(
+                (RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES), 0),
+                else_=1,
+            ),
+            RemediationRun.created_at.desc(),
+        )
+        .limit(1)
     )
-    if existing.scalar_one_or_none():
-        emit_validation_failure(
-            logger,
-            reason="duplicate_pending_run",
-            action_type=action.action_type,
-            strategy_id=selected_strategy_id,
-            mode=body.mode,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "Duplicate pending run",
-                "detail": "A pending remediation run already exists for this action. Wait for it to complete or use the existing run.",
-            },
-        )
+    duplicate_candidate = duplicate_candidate_result.scalar_one_or_none()
+    if duplicate_candidate is not None:
+        existing_status = _as_status_value(duplicate_candidate.status)
+        if existing_status in ACTIVE_RUN_DUPLICATE_STATUS_VALUES:
+            emit_validation_failure(
+                logger,
+                reason="duplicate_active_run",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            _raise_duplicate_run_conflict(
+                duplicate_candidate,
+                reason="duplicate_active_run",
+                detail=(
+                    "An active remediation run already exists for this action. "
+                    "Wait for it to complete or use the existing run."
+                ),
+            )
+
+        if (
+            duplicate_candidate.created_at is not None
+            and duplicate_candidate.created_at >= recent_cutoff
+            and _run_matches_request_signature(
+                duplicate_candidate,
+                mode=body.mode,
+                strategy_id=selected_strategy_id,
+                strategy_inputs=selected_strategy_inputs,
+                pr_bundle_variant=normalized_variant,
+            )
+        ):
+            emit_validation_failure(
+                logger,
+                reason="duplicate_recent_request",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            _raise_duplicate_run_conflict(
+                duplicate_candidate,
+                reason="duplicate_recent_request",
+                detail=(
+                    "An identical remediation run was created recently for this action. "
+                    "Use the existing run instead of creating a duplicate."
+                ),
+            )
 
     artifacts: dict[str, Any] = {}
     if selected_strategy_id:
@@ -965,7 +1158,38 @@ async def create_remediation_run(
         artifacts=artifacts or None,
     )
     db.add(run)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        race_duplicate_result = await db.execute(
+            select(RemediationRun)
+            .where(
+                RemediationRun.tenant_id == tenant_uuid,
+                RemediationRun.action_id == action_uuid,
+                RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES),
+            )
+            .order_by(RemediationRun.created_at.desc())
+            .limit(1)
+        )
+        race_duplicate = race_duplicate_result.scalar_one_or_none()
+        if race_duplicate is not None:
+            emit_validation_failure(
+                logger,
+                reason="duplicate_active_run_race",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            _raise_duplicate_run_conflict(
+                race_duplicate,
+                reason="duplicate_active_run_race",
+                detail=(
+                    "An active remediation run already exists for this action. "
+                    "Wait for it to complete or use the existing run."
+                ),
+            )
+        raise
     await db.refresh(run)
 
     now = datetime.now(timezone.utc).isoformat()
@@ -2413,10 +2637,13 @@ async def approve_apply_pr_bundle(
     "/{run_id}/execution",
     response_model=RemediationRunExecutionResponse,
     summary="Get latest SaaS bundle execution",
-    description="Returns the latest plan/apply execution details for a remediation run.",
+    description=(
+        "Returns execution details for a remediation run. "
+        "When no SaaS execution row exists yet, returns a run-level fallback progress snapshot."
+    ),
     responses={
         401: {"description": "Not authenticated"},
-        404: {"description": "Remediation run or execution not found"},
+        404: {"description": "Remediation run not found"},
     },
 )
 async def get_remediation_run_execution(
@@ -2433,10 +2660,10 @@ async def get_remediation_run_execution(
         )
     tenant_uuid = current_user.tenant_id
     run_result = await db.execute(
-        select(RemediationRun.id).where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
+        select(RemediationRun).where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
     )
-    run_exists = run_result.scalar_one_or_none()
-    if run_exists is None:
+    run = run_result.scalar_one_or_none()
+    if run is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Remediation run not found", "detail": f"No run found with ID {run_id}"},
@@ -2448,10 +2675,7 @@ async def get_remediation_run_execution(
     )
     execution = exec_result.scalars().first()
     if execution is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "Execution not found", "detail": "No SaaS bundle execution found for this run."},
-        )
+        return _run_to_execution_fallback(run)
     return _execution_to_response(execution)
 
 
@@ -2653,18 +2877,29 @@ async def get_remediation_run_pr_bundle_zip(
             detail={"error": "No PR bundle files", "detail": "PR bundle has no files to download."},
         )
 
+    normalized_files: list[tuple[str, str]] = []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "file")
+        content = item.get("content")
+        if content is None:
+            content_str = ""
+        elif isinstance(content, str):
+            content_str = content
+        else:
+            content_str = str(content)
+        normalized_files.append((path, content_str))
+
+    zip_epoch = (1980, 1, 1, 0, 0, 0)
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for item in files:
-            if not isinstance(item, dict):
-                continue
-            path = item.get("path") or "file"
-            content = item.get("content")
-            if content is None:
-                content = ""
-            elif not isinstance(content, str):
-                content = str(content)
-            zf.writestr(path, content)
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for path, content in sorted(normalized_files, key=lambda item: item[0]):
+            info = zipfile.ZipInfo(filename=path, date_time=zip_epoch)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            zf.writestr(info, content.encode("utf-8"))
 
     buffer.seek(0)
     filename = f"pr-bundle-{run_id}.zip"

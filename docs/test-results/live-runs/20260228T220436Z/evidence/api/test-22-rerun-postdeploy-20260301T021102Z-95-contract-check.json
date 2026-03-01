@@ -1,0 +1,28 @@
+{
+  "prefix": "test-22-rerun-postdeploy-20260301T021102Z",
+  "tenant": {
+    "id": "265f39f3-a5cc-4f24-8485-61dce510309d",
+    "name": "Wave6 Test22 20260301T021102Z"
+  },
+  "report_id": "c9c47df8-5688-48ba-bf19-1a498466920e",
+  "checks": {
+    "create_status": "201",
+    "repeat_statuses": [
+      "429",
+      "429"
+    ],
+    "detail_final_http": "200",
+    "detail_final_status": "success",
+    "detail_no_auth_status": "401",
+    "data_auth_status": "200",
+    "data_no_auth_status": "401",
+    "download_url_present": true,
+    "top_risks_count": 0,
+    "recommendations_count": 0,
+    "create_pass": true,
+    "throttle_pass": true,
+    "detail_pass": true,
+    "data_auth_pass": true,
+    "data_no_auth_pass": true
+  }
+}

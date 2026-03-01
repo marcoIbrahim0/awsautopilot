@@ -1,0 +1,2 @@
+PATCH https://api.valensjewelry.com/api/users/me/digest-settings
+{"digest_enabled":false}

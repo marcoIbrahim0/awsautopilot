@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +37,7 @@ from backend.auth import (
     user_to_response,
     verify_password,
 )
+from backend.config import settings
 from backend.database import get_db
 from backend.models.audit_log import AuditLog
 from backend.models.enums import UserRole
@@ -47,6 +50,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 RESET_PASSWORD_EXPIRY_MINUTES = 60
 FORGOT_PASSWORD_GENERIC_MESSAGE = "If an account exists, a reset link was sent."
+_LOGIN_FAILURES: dict[str, list[datetime]] = defaultdict(list)
+_LOGIN_FAILURES_LOCK = Lock()
 
 
 # ============================================
@@ -162,6 +167,51 @@ def _invalidate_user_tokens(user: User) -> None:
     user.token_version = user_token_version(user) + 1
 
 
+def _login_rate_limit_key(email: str, client_host: str | None) -> str:
+    normalized_email = (email or "").strip().lower()
+    normalized_host = (client_host or "unknown").strip().lower()
+    return f"{normalized_email}|{normalized_host}"
+
+
+def _trim_login_failures(attempts: list[datetime], now: datetime, window_seconds: int) -> None:
+    cutoff = now - timedelta(seconds=window_seconds)
+    while attempts and attempts[0] < cutoff:
+        attempts.pop(0)
+
+
+def _login_retry_after_seconds(rate_limit_key: str) -> int | None:
+    if not settings.AUTH_LOGIN_RATE_LIMIT_ENABLED:
+        return None
+    max_attempts = max(1, int(settings.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS or 1))
+    window_seconds = max(1, int(settings.AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS or 1))
+    now = datetime.now(timezone.utc)
+    with _LOGIN_FAILURES_LOCK:
+        attempts = _LOGIN_FAILURES.get(rate_limit_key, [])
+        _trim_login_failures(attempts, now, window_seconds)
+        if len(attempts) < max_attempts:
+            if not attempts and rate_limit_key in _LOGIN_FAILURES:
+                _LOGIN_FAILURES.pop(rate_limit_key, None)
+            return None
+        retry_at = attempts[0] + timedelta(seconds=window_seconds)
+    return max(1, int((retry_at - now).total_seconds()))
+
+
+def _record_login_failure(rate_limit_key: str) -> None:
+    if not settings.AUTH_LOGIN_RATE_LIMIT_ENABLED:
+        return
+    window_seconds = max(1, int(settings.AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS or 1))
+    now = datetime.now(timezone.utc)
+    with _LOGIN_FAILURES_LOCK:
+        attempts = _LOGIN_FAILURES.setdefault(rate_limit_key, [])
+        _trim_login_failures(attempts, now, window_seconds)
+        attempts.append(now)
+
+
+def _clear_login_failures(rate_limit_key: str) -> None:
+    with _LOGIN_FAILURES_LOCK:
+        _LOGIN_FAILURES.pop(rate_limit_key, None)
+
+
 # ============================================
 # Endpoints
 # ============================================
@@ -265,12 +315,25 @@ async def signup(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     request: LoginRequest,
+    http_request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> AuthResponse:
     """
     Authenticate user and return a JWT token.
     """
+    rate_limit_key = _login_rate_limit_key(
+        request.email,
+        http_request.client.host if http_request.client is not None else None,
+    )
+    retry_after = _login_retry_after_seconds(rate_limit_key)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     # Find user by email with tenant loaded
     result = await db.execute(
         select(User)
@@ -280,6 +343,7 @@ async def login(
     user = result.scalar_one_or_none()
     
     if user is None:
+        _record_login_failure(rate_limit_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -287,10 +351,13 @@ async def login(
     
     # Check password
     if not user.password_hash or not verify_password(request.password, user.password_hash):
+        _record_login_failure(rate_limit_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+
+    _clear_login_failures(rate_limit_key)
     
     # Create JWT
     access_token = _issue_access_token(user)

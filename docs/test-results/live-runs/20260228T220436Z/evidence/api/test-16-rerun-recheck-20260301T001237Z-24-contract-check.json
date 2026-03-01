@@ -1,0 +1,12 @@
+{
+  "detail_keys_stable": true,
+  "detail_required_fields_present": true,
+  "options_required_fields_present": true,
+  "preview_default_required_fields_present": true,
+  "preview_realistic_required_fields_present": true,
+  "preview_mode_pr_only_accepted": true,
+  "compute_required_fields_present": true,
+  "compute_retry_body_stable": true,
+  "reconcile_required_fields_present": true,
+  "reconcile_retry_body_stable": true
+}

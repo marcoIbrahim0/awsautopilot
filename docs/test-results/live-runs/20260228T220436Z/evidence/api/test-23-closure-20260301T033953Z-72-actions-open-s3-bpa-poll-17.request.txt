@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/actions?action_type=s3_bucket_block_public_access&status=open&account_id=029037611564&region=eu-north-1&limit=200
+Authorization: Bearer <valens_admin_token>

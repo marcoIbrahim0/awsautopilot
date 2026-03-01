@@ -1,0 +1,1 @@
+{"detail":[{"type":"literal_error","loc":["query","mode"],"msg":"Input should be 'direct_fix'","input":"pr_only","ctx":{"expected":"'direct_fix'"}}]}

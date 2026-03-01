@@ -1,0 +1,6 @@
+target_action_id=26403d52-eff4-47ce-ab52-49bd237e72f5
+target_bucket=arch1-bucket-evidence-b1-029037611564-eu-north-1
+unaffected_action_id=232870db-8f7d-49ee-8361-8ad1bd79eff2
+unaffected_bucket=arch1-bucket-website-a1-029037611564-eu-north-1
+strategy_id=s3_bucket_block_public_access_standard
+risk_acknowledged=false

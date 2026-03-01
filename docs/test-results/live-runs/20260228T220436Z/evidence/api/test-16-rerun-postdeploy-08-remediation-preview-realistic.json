@@ -1,0 +1,5 @@
+{
+  "compliant": false,
+  "message": "Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
+  "will_apply": false
+}

@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/actions/compute
+Authorization: Bearer <tenant_admin_token>
+{"account_id":"029037611564","region":"eu-north-1"}

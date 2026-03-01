@@ -32,6 +32,7 @@ from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.models.user_invite import UserInvite
 from backend.services.email import email_service
+from backend.services.slack_digest import is_valid_slack_webhook_url
 
 logger = logging.getLogger(__name__)
 
@@ -586,7 +587,13 @@ async def update_slack_settings(
             detail="Tenant not found",
         )
     if request.slack_webhook_url is not None:
-        tenant.slack_webhook_url = request.slack_webhook_url.strip() or None
+        webhook_url = request.slack_webhook_url.strip()
+        if webhook_url and not is_valid_slack_webhook_url(webhook_url):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Slack webhook URL. Expected https://hooks.slack.com/services/...",
+            )
+        tenant.slack_webhook_url = webhook_url or None
     if request.slack_digest_enabled is not None:
         tenant.slack_digest_enabled = request.slack_digest_enabled
     await db.commit()

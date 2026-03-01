@@ -1,0 +1,13 @@
+{
+  "first_http": "200",
+  "repeat_http": "200",
+  "first_zip_sha256": "f6aed1c49dc32b600a5760a5b7e51578b4bbe67883f57cb711f992c91edb9a4f",
+  "repeat_zip_sha256": "e1effff246993cd9c97b376edcc7c2502c60382141f3fa7e155a87429ecc1d57",
+  "zip_bytes_identical": false,
+  "file_count_first": 80,
+  "file_count_repeat": 80,
+  "file_sets_identical": true,
+  "file_contents_identical": true,
+  "differing_files": [],
+  "semantic_match": true
+}

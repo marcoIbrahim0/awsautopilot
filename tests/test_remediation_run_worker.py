@@ -503,17 +503,108 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert runner_template_source.startswith(("embedded", "s3://"))
     runner_template_version = str(metadata.get("runner_template_version") or "")
     assert runner_template_version
+    assert metadata.get("requested_action_count") == 2
+    assert metadata.get("generated_action_count") == 2
+    assert metadata.get("skipped_action_count") == 0
+    assert metadata.get("skipped_actions") == []
     group_bundle = run.artifacts.get("group_bundle")
     assert isinstance(group_bundle, dict)
     group_runner_template_source = str(group_bundle.get("runner_template_source") or "")
     assert group_runner_template_source.startswith(("embedded", "s3://"))
     assert group_bundle.get("runner_template_version") == runner_template_version
+    assert group_bundle.get("generated_action_count") == 2
+    assert group_bundle.get("skipped_action_count") == 0
     readme_group = next(
         f for f in files if isinstance(f, dict) and f.get("path") == "README_GROUP.txt"
     )
     readme_content = str(readme_group.get("content") or "")
     assert "chmod +x ./run_all.sh" in readme_content
     assert "./run_all.sh" in readme_content
+
+
+def test_pr_only_group_bundle_skips_generation_errors_and_keeps_valid_actions() -> None:
+    """Group bundle skips action-level generation failures and records explicit metadata."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_encryption_kms")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    run.action.control_id = "S3.15"
+    run.action.title = "Bucket one SSE-KMS"
+
+    second_action = MagicMock()
+    second_action.id = uuid.uuid4()
+    second_action.action_type = "s3_bucket_encryption_kms"
+    second_action.account_id = "123456789012"
+    second_action.region = "us-east-1"
+    second_action.title = "Account-scoped S3.15"
+    second_action.control_id = "S3.15"
+    second_action.target_id = "123456789012|us-east-1|AWS::::Account:123456789012|S3.15"
+    second_action.resource_id = "AWS::::Account:123456789012"
+
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+    result_actions = MagicMock()
+    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run, result_actions]
+    mock_session.flush = MagicMock()
+
+    bundle_one = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider one"},
+            {"path": "s3_bucket_encryption_kms.tf", "content": "# bucket one"},
+        ],
+        "steps": ["step one"],
+    }
+    error = PRBundleGenerationError(
+        {
+            "code": "unresolved_placeholder_token",
+            "detail": "Generated bundle contains unresolved placeholder token 'REPLACE_BUCKET_NAME'.",
+            "action_type": "s3_bucket_encryption_kms",
+            "format": "terraform",
+            "strategy_id": "",
+            "variant": "",
+        }
+    )
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, error]):
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "Group PR bundle generated (1 actions; 1 skipped)"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle = run.artifacts.get("pr_bundle")
+    assert isinstance(pr_bundle, dict)
+    metadata = pr_bundle.get("metadata")
+    assert isinstance(metadata, dict)
+    assert metadata.get("requested_action_count") == 2
+    assert metadata.get("generated_action_count") == 1
+    assert metadata.get("skipped_action_count") == 1
+    skipped_actions = metadata.get("skipped_actions")
+    assert isinstance(skipped_actions, list) and len(skipped_actions) == 1
+    assert skipped_actions[0].get("code") == "unresolved_placeholder_token"
+    group_bundle = run.artifacts.get("group_bundle")
+    assert isinstance(group_bundle, dict)
+    assert group_bundle.get("generated_action_count") == 1
+    assert group_bundle.get("skipped_action_count") == 1
+    files = pr_bundle.get("files")
+    assert isinstance(files, list)
+    paths = [f.get("path") for f in files if isinstance(f, dict)]
+    assert any(isinstance(path, str) and path.startswith("actions/") for path in paths)
+    assert any(isinstance(path, str) and path.startswith("errors/") for path in paths)
+    readme_group = next(f for f in files if isinstance(f, dict) and f.get("path") == "README_GROUP.txt")
+    readme = str(readme_group.get("content") or "")
+    assert "SKIPPED (unresolved_placeholder_token)" in readme
+    assert "errors/*.txt" in readme
 
 
 def test_group_bundle_runner_template_uses_s3_when_configured() -> None:

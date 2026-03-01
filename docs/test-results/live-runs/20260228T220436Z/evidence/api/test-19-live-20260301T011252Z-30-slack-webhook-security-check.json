@@ -1,0 +1,36 @@
+{
+  "valid_hooks_patch_status": 200,
+  "non_slack_domain_patch_status": 200,
+  "metadata_ip_patch_status": 200,
+  "lookalike_domain_patch_status": 200,
+  "valid_hooks_patch_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "valid_hooks_get_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "non_slack_domain_patch_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "metadata_ip_patch_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "lookalike_domain_patch_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "get_after_ssrf_probes_response": {
+    "slack_webhook_configured": true,
+    "slack_digest_enabled": true
+  },
+  "checks": {
+    "valid_hooks_accept_expected": true,
+    "non_slack_domain_rejected_expected_400": false,
+    "metadata_ip_rejected_expected_400": false,
+    "lookalike_domain_rejected_expected_400": false
+  }
+}

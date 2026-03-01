@@ -1,0 +1,1 @@
+No diff; action detail responses are byte-identical.

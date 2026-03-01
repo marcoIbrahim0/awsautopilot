@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/auth/signup
+Authorization: <none>
+{"company_name":"Wave5 Test13 Recheck 20260301T011119Z-10740","email":"wave5.test13.recheck.20260301T011119Z.10740@example.com","name":"Wave5 Test13 Recheck","password":"Wave5Test13!Pass123"}

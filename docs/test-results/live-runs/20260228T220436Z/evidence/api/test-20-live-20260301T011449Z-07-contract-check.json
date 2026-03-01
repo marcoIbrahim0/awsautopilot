@@ -1,0 +1,38 @@
+{
+  "endpoint": "https://api.valensjewelry.com/api/internal/reconciliation/schedule-tick",
+  "expected": {
+    "no_secret_status": 403,
+    "wrong_secret_status": 403,
+    "user_token_only_status": 403,
+    "correct_secret_status": 200,
+    "error_detail": "Invalid or missing X-Reconciliation-Scheduler-Secret."
+  },
+  "observed": {
+    "no_secret_status": 403,
+    "wrong_secret_status": 403,
+    "user_token_only_status": 403,
+    "correct_secret_status": 200,
+    "no_secret_detail": "Invalid or missing X-Reconciliation-Scheduler-Secret.",
+    "wrong_secret_detail": "Invalid or missing X-Reconciliation-Scheduler-Secret.",
+    "user_token_detail": "Invalid or missing X-Reconciliation-Scheduler-Secret.",
+    "correct_secret_response_keys": [
+      "dry_run",
+      "enqueued",
+      "evaluated",
+      "failed",
+      "failures",
+      "skipped_cooldown",
+      "skipped_feature_disabled",
+      "skipped_not_due",
+      "skipped_status",
+      "would_enqueue"
+    ]
+  },
+  "checks": {
+    "no_secret_guard_ok": true,
+    "wrong_secret_guard_ok": true,
+    "user_token_only_guard_ok": true,
+    "correct_secret_ok": true,
+    "all_pass": true
+  }
+}

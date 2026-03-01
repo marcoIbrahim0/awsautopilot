@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,6 +26,13 @@ class RemediationRun(Base):
         Index("idx_remediation_runs_action", "action_id"),
         Index("idx_remediation_runs_tenant_created", "tenant_id", "created_at", postgresql_ops={"created_at": "DESC"}),
         Index("idx_remediation_runs_status", "tenant_id", "status"),
+        Index(
+            "uq_remediation_runs_action_active",
+            "tenant_id",
+            "action_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending','running','awaiting_approval')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

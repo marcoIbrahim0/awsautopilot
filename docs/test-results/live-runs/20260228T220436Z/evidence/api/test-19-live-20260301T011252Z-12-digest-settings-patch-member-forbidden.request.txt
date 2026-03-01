@@ -1,0 +1,3 @@
+PATCH https://api.valensjewelry.com/api/users/me/digest-settings
+Authorization: Bearer <REDACTED_MEMBER_TOKEN>
+{"digest_enabled":false}

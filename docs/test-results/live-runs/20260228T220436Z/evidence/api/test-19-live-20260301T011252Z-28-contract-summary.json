@@ -1,0 +1,33 @@
+{
+  "prefix": "test-19-live-20260301T011252Z",
+  "tenant_b": {
+    "email": "wave6.test19.20260301T011253Z.14827@example.com",
+    "name": "Wave6 Test19 TenantB 20260301T011253Z"
+  },
+  "auth_preconditions": {
+    "admin_auth_me_status": 200,
+    "member_auth_me_status": 200
+  },
+  "digest_flow": {
+    "get_initial_status": 200,
+    "patch_disable_custom_recipients_status": 200,
+    "get_after_disable_status": 200,
+    "patch_enable_clear_status": 200,
+    "get_after_enable_clear_status": 200,
+    "patch_repeat_status": 200,
+    "member_patch_status": 403,
+    "no_auth_patch_status": 401,
+    "no_auth_get_status": 401
+  },
+  "slack_flow": {
+    "get_initial_status": 200,
+    "patch_valid_hooks_status": 200,
+    "patch_non_slack_domain_status": 200,
+    "patch_metadata_ip_status": 200,
+    "patch_lookalike_domain_status": 200,
+    "get_after_ssrf_status": 200,
+    "member_patch_status": 403,
+    "no_auth_patch_status": 401,
+    "no_auth_get_status": 401
+  }
+}

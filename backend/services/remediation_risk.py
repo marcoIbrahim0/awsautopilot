@@ -382,17 +382,32 @@ def evaluate_strategy_impact(
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
     ):
+        policy_public = runtime_signals.get("s3_bucket_policy_public")
+        website_configured = runtime_signals.get("s3_bucket_website_configured")
+        dependency_status: CheckStatus = "warn"
+        dependency_message = (
+            "Validate direct bucket access dependencies before applying this strategy. "
+            "Analyze the affected S3 bucket policy/ACL/public-access-block settings, "
+            "the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, "
+            "and any VPC endpoint or cross-account IAM principals that access the bucket. "
+            "If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        )
+        if policy_public is False and website_configured is False:
+            dependency_status = "pass"
+            dependency_message = (
+                "Bucket policy is not public and website hosting is disabled; no direct-public-access "
+                "dependency was detected from runtime probes."
+            )
+        elif policy_public is not True and website_configured is not True:
+            dependency_message = (
+                "Runtime probes could not fully determine bucket public-access posture. "
+                + dependency_message
+            )
         checks.append(
             _build_check(
                 "s3_public_access_dependency",
-                "warn",
-                (
-                    "Validate direct bucket access dependencies before applying this strategy. "
-                    "Analyze the affected S3 bucket policy/ACL/public-access-block settings, "
-                    "the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, "
-                    "and any VPC endpoint or cross-account IAM principals that access the bucket. "
-                    "If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
-                ),
+                dependency_status,
+                dependency_message,
             )
         )
     elif strategy_id == "s3_keep_public_exception":

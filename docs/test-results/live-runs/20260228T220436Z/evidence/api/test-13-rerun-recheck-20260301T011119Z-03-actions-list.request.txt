@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/actions?limit=10&offset=0
+Authorization: Bearer <REDACTED>

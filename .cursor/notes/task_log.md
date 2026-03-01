@@ -1,5 +1,996 @@
 # Task Log
 
+## Wave 7 Test 23 full remediation closure validation: adversarial S3 blast-radius (2026-03-01)
+
+**Task:** Execute Wave 7 Test 23 end-to-end with full remediation-closure flow (misconfiguration state confirm, open action verification, PR run creation, bundle download, Terraform apply, ingest/compute/reconcile refresh, 15-minute terminal polling), then update test/tracker artifacts from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-23-closure-20260301T033953Z-*** (new) — Full API evidence chain including AWS pre/post state, runtime-risk differentiation checks, remediation run lifecycle, refresh calls, terminal poll loop, corrected final findings calls, and runtime stack version proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-23-closure-20260301T033953Z-ui-*** (new) — No-auth UI actions-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-23-closure-20260301T033953Z-*** (new) — PR bundle ZIP, extraction inventory, Terraform init/plan/apply transcripts, and apply status artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-23.md** — Rewritten with mandatory full-closure flow evidence and updated assertions/outcome.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Section 4 rows (`#19` fixed + new `#20`), Section 5 Test 23 row, Section 6 new row `#7`, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed and re-applied adversarial S3 state for Test 23 resources:
+  - A1 website bucket remains website-enabled/public (`IsPublic=true`) with bucket-level PAB disabled.
+  - B1 evidence bucket remains non-website/non-public (`IsPublic=false`) with bucket-level PAB disabled pre-remediation.
+- Patched test-account ReadRole policy to include `s3:GetBucketWebsite` in `S3AccessPathReadChecks`, then revalidated policy version evidence.
+- Verified open S3.2 actions for A1/B1 and observed blast-radius differentiation restored:
+  - A1 strategies: dependency `warn`
+  - B1 standard/migrate strategies: dependency `pass` (no `access_path_evidence_unavailable` failure)
+- Created B1 PR-only remediation run (`201`), run reached `success`, downloaded authorized PR bundle (`200`), and executed bundle Terraform locally against test AWS:
+  - `terraform init`: `0`
+  - `terraform plan`: `0`
+  - `terraform apply`: `0` (created `aws_s3_bucket_public_access_block.security_autopilot`)
+- Verified post-apply blast-radius safety at AWS layer:
+  - Target B1: PAB all `true`, `IsPublic=false`
+  - Unaffected A1: PAB all `false`, `IsPublic=true`, website configuration preserved
+- Triggered refresh via live APIs (`ingest`, `compute`, `reconcile` all `202`) and polled near-real-time for 15 minutes (30 polls).
+- Closure did not propagate in-window:
+  - Target B1 action remained `open`
+  - Target B1 S3.2 finding remained `NEW`
+  - Resolved action list for S3.2 remained empty
+
+**Technical debt / gotchas:**
+- Test 23 blast-radius differentiation depends on ReadRole permission coverage for website probe (`s3:GetBucketWebsite`); without it, runtime checks fall back to blocking `access_path_evidence_unavailable`.
+- Successful apply + accepted refresh calls did not produce target closure in the expected near-real-time window, indicating a remaining closure-propagation gap.
+- Initial final findings calls used `limit=500` and returned `422`; corrected evidence was captured with `limit=200` (`...-83/84-...-fixed.*`).
+
+**Open questions / TODOs:**
+- Investigate why B1 S3.2 finding/action did not transition to resolved within 15 minutes after successful IaC apply and refresh triggers.
+- Decide whether ReadRole website-read permission should be formalized in the canonical role template/policy so Test 23 differentiation remains stable without ad-hoc IAM patching.
+
+## Wave 7 Test 23 post-redeploy live rerun: adversarial S3 blast-radius revalidation (2026-03-01)
+
+**Task:** Redeploy live SaaS runtime and rerun Wave 7 Test 23 end-to-end with fresh evidence, then update test/tracker artifacts from observed behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-23-rerun-postdeploy-20260301T032419Z-*** (new) — Full post-redeploy Test 23 API artifact set (`00..26`, `98`, `99`) including AWS preconditions, auth/compute/options/run-create probes, findings mapping, and runtime stack/image evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-23-rerun-postdeploy-20260301T032419Z-ui-*** (new) — Fresh no-auth UI route probe artifact for `/actions`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-23.md** — Rewritten with post-redeploy canonical evidence, assertions, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Section 5 Test 23 row, Section 4 row #19 status text, and Section 9 changelog with post-redeploy rerun evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Redeployed live runtime with the standard profile/toggles:
+  - `SAAS_ENV_FILE=config/.env.ops AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --region eu-north-1 --build-stack security-autopilot-saas-serverless-build --runtime-stack security-autopilot-saas-serverless-runtime --name-prefix security-autopilot-dev --sqs-stack security-autopilot-sqs-queues --enable-worker true --worker-reserved-concurrency 1`
+  - Deploy completed successfully with runtime image tag `20260301T031756Z` and API base URL `https://api.valensjewelry.com`.
+- Executed full Test 23 rerun under canonical prefix `test-23-rerun-postdeploy-20260301T032419Z-*`:
+  - AWS preconditions reconfirmed: A1 website configured + public policy (`IsPublic=true`), B1 no website config (`NoSuchWebsiteConfiguration`) + non-public policy (`IsPublic=false`).
+  - Auth/context and workload triggers passed: login `200`, auth-me `200`, ingest `202`, actions-compute `202`, actions list `200`.
+  - A1/B1 remediation-options both returned `200` and both carried `s3_public_access_dependency=warn` plus `access_path_evidence_unavailable=fail` (`Unable to inspect bucket website configuration (AccessDenied)`).
+  - A1 standard repeat, A1 migrate, and B1 standard run-create calls (without risk ack) all returned `400` with dependency-check blocked payloads.
+  - Auth boundaries remained closed (`401` no-auth options/run-create; UI `/actions` no-auth probe `307` redirect).
+  - Runtime version evidence captured in `...-99-runtime-stack-version.*` linking rerun to runtime images `20260301T031756Z`.
+- Final Test 23 result remains **PARTIAL (🟡 MEDIUM)**.
+
+**Technical debt / gotchas:**
+- DNS resolution to `api.valensjewelry.com` intermittently fails in sandboxed command execution (`curl: (6)`); canonical rerun and runtime-version capture were executed in escalated mode.
+- Runtime probes in remediation-options currently report website-config evidence unavailable (`AccessDenied`) for both A1 and B1, preventing observed blast-radius differentiation despite opposite AWS bucket preconditions.
+
+**Open questions / TODOs:**
+- Confirm and adjust the SaaS ReadRole permissions/path needed for bucket website-configuration visibility in the runtime probe path, then rerun Test 23 to verify B1 can become false-positive-free when evidence is available.
+
+## Wave 7-9 blocker fixes implementation: S3 blast-radius differentiation + Wave 8 contract hardening (2026-03-01)
+
+**Task:** Implement the planned product fixes needed to close the open Wave 7/8 blockers and prepare Wave 8/9 for green reruns (no live-run doc status changes without new evidence).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - Added S3 website-configuration runtime probe and explicit `NoSuchBucketPolicy -> s3_bucket_policy_public=false` handling for S3.2 strategies.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py** - Made S3.2 dependency check status runtime-aware (`pass` when policy is non-public and website hosting is disabled; warn otherwise).
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Wired remediation-options to include runtime risk signals for S3.2 strategy options.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - Added login rate-limit settings (`AUTH_LOGIN_RATE_LIMIT_*`).
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** - Implemented failed-login sliding-window throttling with `429` + `Retry-After`, plus failure-window reset on successful login.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** - Added `last_synced_at` to account list response (derived from max findings `updated_at` per account); changed `/api/aws/accounts/{id}/ingest-sync` to queue async ingest in non-local envs instead of returning `404`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/audit_log.py** (new) - Implemented `GET /api/audit-log` with admin-only access, tenant scoping, filters, pagination, and no secret-bearing payload fields.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py** - Added scheduler-facing `POST /api/internal/compute` protected by `X-Reconciliation-Scheduler-Secret`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/main.py** - Mounted new audit-log router.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Added Terraform README proof fields for Test 33 (`terraform_plan_timestamp_utc`, `preserved_configuration_statement`).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py** - Added S3.2 risk-differentiation regressions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added remediation-options runtime-signal regression for S3.2.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Added README C2/C5 proof-field regression.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_login_rate_limit.py** (new) - Added login throttling contract tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_audit_log_api.py** (new) - Added audit-log admin/member/no-auth contract tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_compute_endpoint.py** (new) - Added internal compute secret-guard and enqueue tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave8_ingest_sync_freshness.py** (new) - Added ingest-sync non-local and account-freshness field tests.
+
+**What was done (verified):**
+- Implemented code-level fixes for the open tracker themes: Test 23 S3 blast-radius differentiation, Test 29 ingest-sync/freshness contract, Test 30 login throttling + `Retry-After`, Test 32 audit-log endpoint and RBAC, Test 33 README C2/C5 fields, and missing scheduler compute endpoint.
+- Local targeted verification passed:
+  - `pytest -q tests/test_remediation_risk.py tests/test_remediation_runs_api.py tests/test_auth_login_rate_limit.py tests/test_wave8_ingest_sync_freshness.py tests/test_audit_log_api.py tests/test_internal_compute_endpoint.py tests/test_step7_components.py` -> **125 passed**
+  - `pytest -q tests/test_internal_weekly_digest.py tests/test_delete_account.py tests/test_wave4_contract_fixes.py` -> **13 passed**
+- Syntax verification passed:
+  - `python3 -m py_compile backend/routers/auth.py backend/routers/actions.py backend/services/remediation_risk.py backend/services/remediation_runtime_checks.py backend/routers/aws_accounts.py backend/routers/audit_log.py backend/routers/internal.py backend/services/pr_bundle.py`
+
+**Technical debt / gotchas:**
+- Login throttling is currently in-memory per API process; it protects single-instance burst attempts but is not distributed across multiple runtime instances.
+- `/api/audit-log` currently returns `payload=null` for tenant endpoint safety; deeper event payload surfacing will need explicit field-level redaction policy if expanded.
+
+**Open questions / TODOs:**
+- Re-run live Wave 7 Test 23 and Wave 8 Tests 29-33 to convert code-level fixes into evidence-backed tracker closures.
+- Execute Wave 9 Tests 34-35 full regression sweep after Wave 8 reruns.
+
+## Live E2E run execution: Wave 7 Test 23 adversarial S3 blast-radius validation (2026-03-01)
+
+**Task:** Execute Wave 7 Test 23 on live SaaS from captured evidence, fill the per-test output file completely, and update the base tracker adversarial matrix and issue sections using observed behavior only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-23.md** — Replaced the Test 23 stub with full preconditions, executed steps, API/UI evidence matrix, assertions, tracker mapping, and final PARTIAL outcome.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board (Wave 7 + TOTAL counts), Section 5 Test 23 matrix row, Section 4 new row #19, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Used canonical live evidence prefix `test-23-live-20260301T023337Z-*` and ignored setup-incomplete non-canonical attempt `test-23-live-20260301T022821Z-*` for final assertions.
+- Recorded preconditions from AWS/API artifacts:
+  - A1 bucket has website config (`index.html`) and public policy (`IsPublic=true`).
+  - B1 bucket has no website config (`NoSuchWebsiteConfiguration`) and non-public policy (`IsPublic=false`).
+  - Both A1/B1 were detected as open S3.2 actions with IDs `232870db-...` and `26403d52-...`.
+- Captured and documented adversarial behavior:
+  - `GET remediation-options` for A1/B1 both returned `200` with identical strategy sets and warning check families.
+  - `POST /api/remediation-runs` without `risk_acknowledged` returned `400` for A1 standard, A1 migrate, and B1 standard strategies.
+  - Auth-boundary probes returned `401` for no-auth options/run-create and UI route probe returned `307` redirect on `/actions`.
+- Finalized Test 23 as **PARTIAL** with **🟡 MEDIUM** severity and mapped tracker impact:
+  - Section 5 row for Test 23 filled.
+  - Section 4 row #19 added for observed A1/B1 blast-radius differentiation gap.
+
+**Technical debt / gotchas:**
+- Canonical Test 23 run reused an existing Valens admin token from prior run artifacts instead of minting a fresh login token in the same prefix.
+- A setup attempt with fresh signup failed account registration preconditions (`400`) and was excluded from final assertions to keep evidence authoritative.
+
+**Open questions / TODOs:**
+- Validate whether B1 should bypass or downgrade the `s3_public_access_dependency` risk gate when website/public-policy signals are absent; re-run Test 23 after any remediation-logic update.
+
+## Wave 6 Test 22 post-deploy live rerun closure: baseline viewer endpoint + throttling revalidation (2026-03-01)
+
+**Task:** Redeploy live serverless runtime with the Test 22 `/data` endpoint fix, rerun Wave 6 Test 22 on live SaaS with fresh evidence, and close tracker/test artifacts from observed behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-22-rerun-postdeploy-20260301T021102Z-*** (new) — Full post-deploy Test 22 API artifact set (signup/auth context, list pre/post, create+repeats, detail polls/final, detail/data auth boundaries, contract and throttle summaries).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-22-rerun-postdeploy-20260301T021102Z-ui-*** (new) — No-auth baseline-report UI route probe artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-22.md** — Rewritten to PASS with full post-deploy rerun evidence mapping and updated assertions/tracker impact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board counts, Section 1 row #7 status, Section 6 row #4 status, Section 9 changelog, and removed resolved Section 10 viewer-gap deferment row.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Redeployed live runtime:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag observed during deploy: `20260301T020503Z`.
+- Executed Test 22 rerun (`test-22-rerun-postdeploy-20260301T021102Z-*`) against live API/frontend:
+  - Signup (fresh tenant): `201`
+  - `GET /api/auth/me`: `200`
+  - Baseline create: `201` (`pending`)
+  - Immediate create repeats: `429`, `429` with `Retry-After: 86399`
+  - Detail progression: `pending -> success` with `download_url` present
+  - Detail no-auth: `401`
+  - Data endpoint auth: `200` (viewer payload present)
+  - Data endpoint no-auth: `401`
+  - Baseline list post-state: `200`, includes created `success` report
+- Contract/throttle summaries both report pass (`create_pass=true`, `throttle_pass=true`, `data_auth_pass=true`, `data_no_auth_pass=true`).
+- Final Test 22 outcome updated to **PASS**.
+
+**Technical debt / gotchas:**
+- Signup contract now requires `company_name`; an initial rerun attempt with legacy `tenant_name` payload returned `422` and was superseded by the successful rerun.
+
+**Open questions / TODOs:**
+- None for Test 22 closure.
+
+## Wave 6 Test 19 post-deploy live rerun closure (2026-03-01)
+
+**Task:** Redeploy live SaaS with the current deployment profile and rerun Wave 6 Test 19 end-to-end to validate digest/slack settings behavior plus webhook SSRF defenses from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-19-rerun-20260301T015756Z-*** (new) — Fresh Test 19 rerun API artifacts (`01..30,99`) for auth preconditions, digest/slack GET/PATCH flows, unsafe webhook probes, and derived contract/persistence/security summaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-19-rerun-20260301T015756Z-ui-*** (new) — Fresh no-auth notifications-route UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-19.md** — Updated final status/assertions/tracker mapping to PASS with explicit post-deploy rerun evidence row.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 6/TOTAL board counts, Section 3 row #4, Section 4 row #18, Section 8 `T19-4`, and Section 9 changelog entry to reflect closure.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Redeployed runtime with current profile/toggles:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Deploy completed successfully; runtime image tag reported as `20260301T014806Z`.
+- Executed full Test 19 rerun matrix under prefix `test-19-rerun-20260301T015756Z-*`:
+  - Auth preconditions: admin/member `GET /api/auth/me` -> `200/200`.
+  - Digest flow: all positive/persistence checks `200`, member patch `403`, no-auth `401`.
+  - Slack flow: valid hooks URL accepted (`200`), unsafe webhook probes rejected (`400`) for:
+    - `https://example.com/webhook`
+    - `http://169.254.169.254/latest/meta-data/`
+    - `https://hooks.slack.com.evil.example/services/...`
+  - Auth boundaries remained deny-closed (`403` member PATCH, `401` no-auth GET/PATCH).
+  - Derived security summary confirms all expected webhook checks now `true` in `...-30-slack-webhook-security-check.json`.
+- Updated test/tracker docs from rerun evidence; final Test 19 outcome is now **PASS** and blocker `T19-4` is closed.
+
+**Technical debt / gotchas:**
+- Two script attempts failed due shell-specific issues (`zsh` reserved vars / argument splitting on paths with spaces), producing incomplete non-canonical rerun prefixes before final successful capture; authoritative evidence for this task is `test-19-rerun-20260301T015756Z-*`.
+
+**Open questions / TODOs:**
+- None for Test 19 closure.
+
+## Wave 6 Test 22 fix implementation: baseline report viewer data endpoint (2026-03-01)
+
+**Task:** Implement the open Test 22 product fix by shipping `GET /api/baseline-report/{id}/data` for the in-app baseline report viewer, while preserving existing baseline creation and throttling behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/baseline_report.py** — Added new authenticated tenant-scoped endpoint `GET /api/baseline-report/{id}/data`; added shared helpers for report UUID parsing and tenant-scoped report loading; endpoint returns structured viewer payload for `success` reports, returns `409` with status metadata for non-terminal reports, and preserves `Cache-Control: no-store`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_baseline_report_api.py** — Added `/data` endpoint regressions for auth boundary (`401`), tenant/not-found (`404`), not-ready contract (`409`), and success payload (`200` + expected JSON shape + cache header).
+- **/Users/marcomaher/AWS Security Autopilot/docs/gtm-baseline-report-playbook.md** — Updated technical API reference to include `GET /api/baseline-report/{id}/data` and refreshed last-updated note.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented `GET /api/baseline-report/{id}/data` in baseline-report router:
+  - Requires auth (`get_current_user` dependency).
+  - Enforces tenant scoping (`404` when report is absent/out-of-tenant).
+  - Returns `409` when report status is not `success` (viewer data not ready).
+  - Builds viewer payload using existing baseline builder contract and report-scoped `account_ids`.
+- Kept existing create/list/detail and throttle paths unchanged.
+- Local verification:
+  - `pytest -q tests/test_baseline_report_api.py` -> `13 passed`
+  - `pytest -q tests/test_baseline_report_builder.py tests/test_baseline_report_renderer.py tests/test_baseline_report_spec.py tests/test_baseline_report_service.py tests/test_generate_baseline_report_worker.py tests/test_s3_presigned.py tests/test_evidence_export_s3.py` -> `32 passed`
+
+**Technical debt / gotchas:**
+- `/data` payload is generated from current in-tenant findings using the existing builder contract; it is not a persisted immutable snapshot tied to generation timestamp.
+
+**Open questions / TODOs:**
+- Re-deploy runtime and rerun live Wave 6 Test 22 to confirm observed behavior transition from `404` to expected `/data` contract (`200` auth success, `401` no-auth, and non-success report status handling).
+
+## Wave 6 Test 19 fix implementation: strict Slack webhook validation + runtime cleanup hardening (2026-03-01)
+
+**Task:** Implement the Test 19 security remediation so Slack webhook settings reject unsafe URLs (SSRF-safe allowlist), enforce the same validation at send time, add runtime cleanup for previously persisted invalid webhooks, and add focused regression tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/slack_digest.py** — Added strict webhook validator (`is_valid_slack_webhook_url`) requiring HTTPS + exact `hooks.slack.com` host + `/services/{a}/{b}/{c}` path; integrated send-time fail-closed validation before outbound requests.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** — Hardened `PATCH /api/users/me/slack-settings` to reject invalid webhook URLs with `400` (while preserving empty-string clear behavior).
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/weekly_digest.py** — Added defense-in-depth runtime validation for stored webhook URLs; invalid stored values are skipped and neutralized (`slack_webhook_url=None`, `slack_digest_enabled=False`) instead of being used.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_slack_settings_api.py** — Added API regressions for non-Slack domain and SSRF-style webhook URL rejection; asserted no persistence/commit on invalid input.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_slack_digest.py** — Added validator unit tests and send-time guard test proving invalid URLs are blocked before any network call.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_weekly_digest_job_slack_validation.py** (new) — Added worker-level tests for invalid stored webhook cleanup and valid webhook send path.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented strict webhook validation contract:
+  - Accept only `https://hooks.slack.com/services/<segment>/<segment>/<segment>` shape.
+  - Reject non-HTTPS, non-Slack hosts, hooks-lookalike domains, metadata/IP targets, credentialed URLs, explicit non-443 ports, and query/fragment variants.
+- Enforced validation in both persistence path and runtime send path (defense in depth).
+- Added runtime cleanup behavior for previously persisted invalid webhook values in weekly digest processing.
+- Ran focused regression tests:
+  - `./venv/bin/pytest -q tests/test_slack_settings_api.py tests/test_slack_digest.py tests/test_weekly_digest_job_slack_validation.py` -> `18 passed`
+  - `./venv/bin/pytest -q tests/test_internal_weekly_digest.py` -> `5 passed`
+
+**Technical debt / gotchas:**
+- Existing invalid webhook values are only self-healed when the weekly digest job processes that tenant; cleanup is runtime-driven, not a global one-shot migration.
+
+**Open questions / TODOs:**
+- Re-run live Wave 6 Test 19 to confirm tracker item `T19-4` transitions from open to fixed with observed `400` rejects on unsafe webhook probes.
+
+## Wave 6 Test 20 live rerun: internal scheduler auth and secret-guard revalidation (2026-03-01)
+
+**Task:** Redo Wave 6 Test 20 on live SaaS and reconfirm the internal scheduler endpoint auth/secret-guard matrix with fresh timestamped evidence, then sync test/tracker docs from observed behavior only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-20-rerun-20260301T014248Z-*** (new) — Fresh Test 20 rerun API artifacts (runtime secret-source precheck, login/auth context, no-secret/wrong-secret/user-token-only/correct-secret probes, contract summary, context summary).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-20.md** — Added rerun evidence row and rerun note while retaining original live evidence matrix.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, strengthened Section 4 row #9 status text with rerun evidence prefix, and added Section 9 rerun changelog entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-ran live Test 20 matrix against `POST /api/internal/reconciliation/schedule-tick` with payload `{\"dry_run\":true,\"limit\":1}`.
+- Runtime precondition check (Lambda env) reconfirmed:
+  - `RECONCILIATION_SCHEDULER_SECRET`: absent
+  - `CONTROL_PLANE_EVENTS_SECRET`: present (fallback secret source)
+  - `DIGEST_CRON_SECRET`: absent
+- Observed auth/secret matrix from fresh rerun `test-20-rerun-20260301T014248Z-*`:
+  - no secret -> `403`
+  - wrong secret -> `403`
+  - user token only -> `403`
+  - correct scheduler secret -> `200`
+- Error contract remained stable on deny paths:
+  - `{\"detail\":\"Invalid or missing X-Reconciliation-Scheduler-Secret.\"}`
+- Contract summary artifact reports `all_pass=true`.
+
+**Technical debt / gotchas:**
+- Live runtime still relies on scheduler-secret fallback to `CONTROL_PLANE_EVENTS_SECRET` because `RECONCILIATION_SCHEDULER_SECRET` is currently unset.
+
+**Open questions / TODOs:**
+- None for Test 20; rerun reconfirmed full PASS behavior.
+
+## Wave 5 Test 14 post-deploy live closure rerun (2026-03-01)
+
+**Task:** Complete the pending implementation plan by applying the duplicate-run guard migration/deploy to live SaaS, rerunning Test 14 end-to-end with fresh evidence, and updating tracker/docs from observed results only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0034_remediation_runs_active_unique_guard.py** — Shortened Alembic revision ID to fit the `alembic_version.version_num` DB limit (`0034_remrun_active_unique_guard`) after live migration failure on the initial longer ID.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-rerun-postdeploy-20260301T013443Z-*** (new) — Fresh Test 14 API evidence set for auth/context, findings matrix, wrong-tenant probe, duplicate-create flow, and contract summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-14-rerun-postdeploy-20260301T013443Z-ui-*** (new) — Fresh no-auth UI route probe artifacts for findings pages.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-14.md** — Updated final Test 14 status/assertions/notes to PASS using post-deploy rerun evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 5/TOTAL counts, Section 4 row #5 status, Section 8 checkbox `T14-5`, and Section 9 changelog closure entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry and corrected migration revision ID reference.
+
+**What was done (verified):**
+- Migration/deploy execution:
+  - `./venv/bin/alembic current` showed pre-state `0033_user_auth_reset_fields`.
+  - Initial `./venv/bin/alembic upgrade head` failed due revision ID length overflow in `alembic_version.version_num (varchar(32))`.
+  - After revision ID fix, migration succeeded to head `0034_remrun_active_unique_guard`.
+  - `./venv/bin/python scripts/check_migration_gate.py` passed.
+  - Live deploy succeeded with `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`.
+- Test 14 post-deploy rerun (`test-14-rerun-postdeploy-20260301T013443Z-*`) outcomes:
+  - Auth/context and findings matrix remained stable (`200/404/401/404` expected contracts).
+  - Duplicate-run guard contract now passes on live:
+    - first create: `201` (`run_id=e9287ff2-f260-472b-a547-0cd5895744dc`)
+    - immediate retry: `409`
+    - third immediate retry: `409`
+  - Conflict payload included structured duplicate metadata (`reason=duplicate_active_run`, stable `existing_run_id`).
+- Final Test 14 outcome updated to **PASS**; tracker item Section 4 #5 and checklist `T14-5` closed.
+
+**Technical debt / gotchas:**
+- Alembic revision IDs must stay within 32 characters in this environment due `alembic_version.version_num` schema constraints.
+
+**Open questions / TODOs:**
+- None for Test 14 closure; remaining open blockers are outside this test scope (e.g., Test 19 SSRF validation and Test 22 `/data` viewer endpoint gap).
+
+## Wave 5 Test 14 duplicate-run guard hardening implementation (2026-03-01)
+
+**Task:** Implement the requested fix plan for Wave 5 Test 14 duplicate-run regression by hardening API idempotency semantics for `POST /api/remediation-runs`, adding DB-level active-run uniqueness, and adding regression coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** — Replaced pending-only duplicate check with active-run guard (`pending/running/awaiting_approval`), recent-identical-request dedupe window (30s), deterministic `409` payload (`reason`, `existing_run_id`, `existing_run_status`), and `IntegrityError` race handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/remediation_run.py** — Added partial unique index metadata `uq_remediation_runs_action_active` on `(tenant_id, action_id)` for active statuses.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0034_remediation_runs_active_unique_guard.py** — Added migration to create/drop the active-run partial unique index.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** — Added regression tests for active duplicate blocking, recent identical retry dedupe, and non-identical recent retry allowance.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Duplicate guard now blocks:
+  - concurrent/active duplicates, and
+  - rapid identical retries after fast status transitions.
+- Added DB-backed uniqueness for active runs to close race-condition windows.
+- Test execution:
+  - `./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "duplicate_active_status or recent_identical_retry or recent_different_signature"` -> `3 passed`
+  - `./venv/bin/pytest -q tests/test_remediation_runs_api.py` -> `35 passed`
+  - `./venv/bin/pytest -q tests/test_wave5_action_detail_contract.py tests/test_wave5_run_progress_contract.py tests/test_wave5_test16_preview_reconcile.py` -> `13 passed`
+  - `./venv/bin/python -m py_compile backend/routers/remediation_runs.py backend/models/remediation_run.py` -> success
+
+**Technical debt / gotchas:**
+- The recent-request dedupe window is currently hard-coded to 30 seconds in router constants; move to config if environment-specific tuning is needed.
+
+**Open questions / TODOs:**
+- Deploy runtime + migration `0034` to live environment, then rerun Wave 5 Test 14 live to confirm behavior is back to `201` then `409`.
+
+## Live E2E run execution: Wave 6 Test 22 baseline report generation, viewer endpoint, and throttling validation (2026-03-01)
+
+**Task:** Execute Wave 6 Test 22 on live SaaS, validate baseline report generation/status progression, verify viewer endpoint behavior, verify repeated-request throttling/rate-limit contract, and update test/tracker docs from observed evidence only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-22-live-*** (new) — Full Test 22 API artifacts (auth context, list pre/post state, create/retry matrix, report polls/detail probes, `/data` probes, contract and throttle summaries).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-22-live-ui-*** (new) — No-auth baseline-report route probe artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-22.md** — Filled complete Test 22 output (preconditions, executed steps, evidence table, assertions, tracker mapping, final status).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL quick-status counts, Section 1 row #7 status, Section 4 row #10 status, Section 6 row #4 status, Section 8 `T22`, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Revalidated admin tenant context:
+  - `GET /api/auth/me` -> `200`.
+- Baseline report creation and status progression:
+  - `GET /api/baseline-report?limit=20&offset=0` pre-state -> `200`, `items=[]`, `total=0`.
+  - `POST /api/baseline-report` -> `201`, `status=pending`, `id=8e10ccb0-0785-455c-9b51-10611359642d`.
+  - Poll `GET /api/baseline-report/{id}` -> `200`, terminal `status=success`, `download_url` present, `file_size_bytes=9208`.
+  - Post-state list -> `200`, `total=1`, created report listed as `success`.
+- Throttling/rate-limit contract:
+  - Immediate repeated `POST /api/baseline-report` calls returned `429` and `429`.
+  - Both responses included `Retry-After: 86399`.
+- Viewer/data endpoint behavior:
+  - `GET /api/baseline-report/{id}` no auth -> `401`.
+  - `GET /api/baseline-report/{id}/data` with auth -> `404` (`{"detail":"Not Found"}`).
+  - `GET /api/baseline-report/{id}/data` no auth -> `404` (`{"detail":"Not Found"}`).
+- Contract summaries captured:
+  - `test-22-live-95-contract-check.json`
+  - `test-22-live-96-throttle-check.json`
+  - `test-22-live-99-context-summary.txt`
+- Final Test 22 outcome: **PARTIAL** with **🔵 LOW** severity (baseline creation + throttling passed; viewer/data sub-endpoint remains missing).
+
+**Technical debt / gotchas:**
+- `/api/baseline-report/{id}/data` is still unimplemented in live SaaS and returns `404` regardless of auth state, so full in-app viewer contract cannot pass yet.
+
+**Open questions / TODOs:**
+- Implement/ship `GET /api/baseline-report/{id}/data` and rerun Wave 6 Test 22 to attempt full PASS closure while keeping existing throttle behavior (`429` + `Retry-After`) intact.
+
+## Live E2E run execution: Wave 6 Test 19 settings contract and Slack webhook security (2026-03-01)
+
+**Task:** Execute Wave 6 Test 19 on live SaaS, validate digest/slack settings GET/PATCH persistence behavior, probe webhook URL security checks, capture full evidence artifacts, and update the test doc + base tracker from observed behavior only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-19-live-20260301T011252Z-*** (new) — Full Test 19 API evidence set (admin/member auth preconditions, Tenant B signup, digest/slack GET/PATCH matrix, auth boundaries, webhook SSRF probes, and derived summaries).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-19-live-20260301T011252Z-ui-*** (new) — No-auth UI route probe artifact for settings notifications page.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-19.md** — Filled complete Test 19 output (preconditions, steps, API/UI evidence table, assertions, tracker mapping, final FAIL/🔴 BLOCKING result).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL counts, Section 1 rows #4/#5, Section 3 row #4, Section 4 row #18, Section 8 checklist (`T19-4` remains open; `T19` persistence checked), and Section 9 changelog entries for Test 19.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Revalidated reusable tokens:
+  - `GET /api/auth/me` with Tenant A admin token -> `200`
+  - `GET /api/auth/me` with same-tenant member token -> `200`
+- Created isolated Tenant B for mutable settings probes:
+  - `POST /api/auth/signup` -> `201` (Tenant B admin token minted)
+- Digest settings contract and persistence:
+  - `GET /api/users/me/digest-settings` -> `200` (initial `digest_enabled=true`, `digest_recipients=null`)
+  - `PATCH` disable + custom recipients -> `200`
+  - reload `GET` -> persisted values (`digest_enabled=false`, recipients present)
+  - `PATCH` enable + clear recipients -> `200`
+  - reload `GET` -> persisted clear (`digest_enabled=true`, `digest_recipients=null`)
+  - repeat identical `PATCH` -> `200` with stable response body (idempotent retry evidence)
+  - member `PATCH` -> `403`; no-auth `GET/PATCH` -> `401/401`
+- Slack settings contract and security probes:
+  - `GET /api/users/me/slack-settings` -> `200` (initial `configured=false`, `digest_enabled=false`)
+  - `PATCH` valid `https://hooks.slack.com/services/...` -> `200`; reload `GET` showed `configured=true`
+  - **Security issue reproduced:** non-Slack and SSRF-style URLs accepted with `200`:
+    - `https://example.com/webhook`
+    - `http://169.254.169.254/latest/meta-data/`
+    - `https://hooks.slack.com.evil.example/services/...`
+  - cleanup `PATCH` clear webhook + disable digest -> `200`; reload `GET` -> `configured=false`, `digest_enabled=false`
+  - member `PATCH` -> `403`; no-auth `GET/PATCH` -> `401/401`
+- Final Test 19 status: **FAIL** with **🔴 BLOCKING** severity due webhook URL validation bypass (SSRF risk).
+
+**Technical debt / gotchas:**
+- `PATCH /api/users/me/slack-settings` currently persists arbitrary webhook URLs without host/scheme allowlist enforcement, while `GET` only exposes a boolean configured flag, making unsafe URL acceptance non-visible in standard UI settings state.
+
+**Open questions / TODOs:**
+- Implement and verify strict Slack webhook URL validation (at minimum: HTTPS-only + exact `hooks.slack.com` host/path contract, with reject-on-failure `400`) and rerun Wave 6 Test 19 to attempt closure of Section 3 row #4 and checklist item `T19-4`.
+
+## Live E2E rerun completion: Wave 5 Tests 13–16 recheck (2026-03-01)
+
+**Task:** Complete the user-requested rerun cycle for Wave 5 Tests 13–16 on live SaaS, capture fresh evidence for Tests 13 and 14 (Tests 15 and 16 were already rechecked in this cycle), and sync test docs/tracker from observed behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-13-rerun-recheck-20260301T011119Z-*** (new) — Fresh Test 13 recheck API evidence (auth/context, action detail matrix, negative/auth probes, contract check, consistency check, context summary).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-13-rerun-recheck-20260301T011119Z-ui-*** (new) — Fresh Test 13 no-auth UI route probes (`/actions`, `/actions/{id}`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-rerun-recheck-20260301T011119Z-*** (new) — Fresh Test 14 recheck API evidence (findings matrix, duplicate-create retries, extra duplicate probe, pending snapshot, context summary).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-14-rerun-recheck-20260301T011119Z-ui-*** (new) — Fresh Test 14 no-auth UI route probes (`/findings`, `/findings/{id}`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-13.md** — Added new recheck note confirming Test 13 remains PASS.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-14.md** — Updated to `PARTIAL`/`🟠 HIGH` with reopened duplicate-run guard issue from latest evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL quick-status counts, Section 4 row #5 (reopened), Section 8 `T14-5` unchecked, Section 9 regression log entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Test 13 recheck (`test-13-rerun-recheck-20260301T011119Z-*`) stayed stable:
+  - `GET /api/actions/{id}` valid -> `200`
+  - invalid/non-existent action -> `404`
+  - no-auth -> `401`
+  - wrong-tenant -> `404`
+  - same-tenant member read -> `200`
+  - UI no-auth probes `/actions*` -> `307`
+  - explanation fields (`what_is_wrong`, `what_the_fix_does`) confirmed present/non-empty.
+- Test 14 recheck (`test-14-rerun-recheck-20260301T011119Z-*`) reopened duplicate-run-guard bug:
+  - findings positive/negative/auth checks remained stable (`200/404/401/404`)
+  - duplicate create behavior regressed: first create `201`, immediate retry `201`, third immediate retry `201` on identical payload for same action (`9c31f438-1ade-4cc7-91c8-b959870a615b`) with distinct run IDs.
+  - supporting artifact: `test-14-rerun-recheck-20260301T011119Z-16-duplicate-guard-recheck.json`.
+- Wave 5 Tests 15 and 16 remained PASS from prior recheck artifacts in this cycle (`test-15-rerun-recheck-20260301T001237Z-*`, `test-16-rerun-recheck-20260301T001237Z-*`).
+
+**Technical debt / gotchas:**
+- During the duplicate-run regression probe, create responses returned `status=pending`, but a near-immediate pending-list snapshot returned `total=0`; runs transitioned to `success` quickly. This timing behavior makes duplicate-guard contract enforcement non-deterministic without stricter idempotency locking.
+
+**Open questions / TODOs:**
+- Re-fix `POST /api/remediation-runs` duplicate-run idempotency contract for immediate identical retries and rerun Wave 5 Test 14 to confirm `201` then `409`.
+
+## Live E2E run execution: Wave 6 Test 21 export creation-to-download contract (2026-03-01)
+
+**Task:** Execute Wave 6 Test 21 on live SaaS, validate the export creation-to-download contract with evidence-only outcomes (especially `download_url` population), and update test/tracker docs accordingly (no product code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-21-live-20260301T011127Z-*** (new) — Full Test 21 API evidence for login/context, export create, polling states, no-auth detail probe, presigned download/retry, ZIP integrity, and contract summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-21-live-20260301T011127Z-ui-*** (new) — UI route probe evidence for `/exports` (no-auth session).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-21.md** — Filled complete Test 21 output with preconditions, execution steps, API/UI evidence matrix, assertions, and tracker mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL quick-status counts, Section 6 row #3 status, Section 8 `T21`, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Minted fresh admin token and revalidated tenant context:
+  - `POST /api/auth/login` -> `200`
+  - `GET /api/auth/me` -> `200` (`tenant=Valens`, `saas_account_id=029037611564`)
+- Created evidence export:
+  - `POST /api/exports` with `{"pack_type":"evidence"}` -> `202` (`id=9fd34942-be37-4149-be00-d80d7e9f2f27`, `status=pending`)
+- Polled export detail to terminal state:
+  - Poll 1: `GET /api/exports/{id}` -> `200`, `status=pending`, `download_url=null`
+  - Poll 2: `GET /api/exports/{id}` -> `200`, `status=success`, `download_url` present, `file_size_bytes=522980`
+- Auth boundary + download behavior:
+  - `GET /api/exports/{id}` no auth -> `401`
+  - `GET <download_url>` first -> `200` (`Content-Type: application/zip`, `Content-Length: 522980`)
+  - `GET <download_url>` repeat -> `200`
+- Contract check artifact (`...-09-contract-check.json`) confirms:
+  - `download_url_absent_before_terminal_success=true`
+  - `download_url_present_on_success=true`
+  - `detail_no_auth_blocked=true`
+  - `zip_integrity=pass`
+  - `retry_raw_bytes_match=true` (SHA-256 match across repeated downloads)
+- Final Test 21 outcome: **PASS**.
+
+**Technical debt / gotchas:**
+- Export completed quickly (`pending -> success` across 2 polls); maintaining immediate first poll capture is important to preserve pre-success evidence for `download_url` absence checks.
+
+**Open questions / TODOs:**
+- None for Test 21; tracker item `T21` is now evidence-backed complete.
+
+## Wave 6 post-deploy live rerun: Tests 17 and 18 closure verification (2026-03-01)
+
+**Task:** Deploy the Test 18 artifact/auth fixes to live SaaS, rerun Wave 6 Test 17 to generate a fresh grouped PR bundle, rerun Wave 6 Test 18 against that new run artifact, and update live-run docs/tracker from observed behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-17-rerun-postdeploy-20260301T010114Z-*** (new) — Full post-deploy Test 17 evidence (auth/actions/group create/retry/invalid/no-auth/polls/final contract/context).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-18-rerun-postdeploy-20260301T010114Z-*** (new) — Full post-deploy Test 18 evidence (auth matrix, ZIP downloads, contract check, deterministic retry check, context).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-18-rerun-postdeploy-20260301T010114Z-ui-*** (new) — Post-deploy UI route probe evidence for `/pr-bundles`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-17.md** — Updated with post-deploy rerun run ID, evidence matrix, and PASS assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-18.md** — Updated from PARTIAL to PASS with post-deploy evidence matrix and contract assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL quick-status counts, Section 4 row #8 status, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Deployed runtime with latest fixes:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Deployment completed successfully in `eu-north-1`.
+- Test 17 post-deploy rerun (`test-17-rerun-postdeploy-20260301T010114Z-*`):
+  - Group create `201`, immediate retry `409`, invalid filter `400`, no-auth `401`.
+  - New run: `0b91ccbd-1c39-4cb3-8791-4e3a363c0fcb`.
+  - Final run/execution polls: `200/200`, run reached `success` with `outcome=\"Group PR bundle generated (25 actions; 1 skipped)\"`.
+  - Contract summary: `contract_ok=true`.
+- Test 18 post-deploy rerun (`test-18-rerun-postdeploy-20260301T010114Z-*`):
+  - Download auth matrix remained correct: authorized `200`, no-auth `401`, invalid-token `401`, wrong-tenant `404`, repeat authorized `200`.
+  - ZIP contract now passes: `expected_file_count=78`, `actual_file_count=78`, `missing=[]`, `unexpected=[]`, `placeholder_hits=[]`, `all_pass=true`.
+  - ZIP retry determinism now passes: `raw_zip_bytes_match=true`, `semantic_match=true`.
+- Final statuses after rerun:
+  - Test 17: **PASS**
+  - Test 18: **PASS**
+
+**Technical debt / gotchas:**
+- Fresh grouped run metadata still records one skipped action (`generated_action_count=25`, `skipped_action_count=1`), but downloadable artifact contract remains internally consistent and free of unresolved IaC placeholders.
+
+**Open questions / TODOs:**
+- None for Wave 6 Test 18 closure; ready to proceed to next test wave.
+
+## Wave 6 Test 18 issue fix implementation: placeholder-safe grouped bundles + deterministic ZIP download (2026-03-01)
+
+**Task:** Implement the remediation plan for Wave 6 Test 18 findings by preventing unresolved placeholder leakage in PR bundle artifacts, handling per-action generation failures in grouped bundles, and making repeated PR bundle ZIP downloads deterministic for unchanged artifacts.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Added blocked-placeholder guard (`REPLACE_BUCKET_NAME`, `REPLACE_SECURITY_GROUP_ID`) that raises structured `PRBundleGenerationError` instead of shipping invalid IaC; hardened S3 bucket parsing for composite target IDs and account-scope rejection.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** — Updated grouped PR bundle generation to continue when individual actions fail generation, persist per-action skip diagnostics (`errors/*.txt` + metadata), and reflect generated/skipped counts in run outcome/logs/artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** — Made `GET /api/remediation-runs/{run_id}/pr-bundle.zip` byte-deterministic by normalizing file order and ZIP metadata/timestamps.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Updated target-id parsing assertions and added regression that bucket-scoped PR bundles fail on unresolved bucket placeholders.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** — Added regression for grouped bundle partial-generation behavior with explicit skipped-action metadata and artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** — Added regression confirming repeated ZIP downloads are byte-identical for unchanged artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added generation-time placeholder enforcement so blocked unresolved tokens cannot be emitted in downloadable PR bundles.
+- Confirmed S3 target parsing now handles composite IDs with plain bucket resource segment while rejecting account-scope resource tokens (`AWS::::Account:*`).
+- Implemented grouped-bundle action-level failure capture: valid actions are still bundled; failed actions are explicitly recorded in metadata and `errors/*.txt`.
+- Updated grouped run outcome semantics to include skipped generation count when present.
+- Implemented deterministic ZIP generation in remediation-run download endpoint.
+- Ran targeted and full regression suites:
+  - `./venv/bin/pytest -q tests/test_step7_components.py tests/test_remediation_run_worker.py tests/test_remediation_runs_api.py -k 's3_bucket_name_from_target_id or unresolved_bucket_placeholder or group_bundle or pr_bundle_zip'` -> `8 passed`
+  - `./venv/bin/pytest -q tests/test_step7_components.py tests/test_remediation_run_worker.py tests/test_remediation_runs_api.py` -> `122 passed`
+
+**Technical debt / gotchas:**
+- `s3_bucket_encryption_kms` actions can still be created from account-scoped `S3.15` findings (`AWS::::Account:*`) upstream; this fix prevents invalid artifact leakage but does not yet eliminate those upstream action candidates.
+
+**Open questions / TODOs:**
+- Rerun live Wave 6 Tests 17 and 18 after deploy to verify real SaaS behavior transitions from `PARTIAL` to `PASS` with fresh evidence.
+
+## Live E2E run execution: Wave 6 Test 18 PR bundle download auth and artifact correctness (2026-03-01)
+
+**Task:** Execute live Wave 6 Test 18 using the grouped run created in Test 17, validate ZIP download auth boundaries and bundle artifact correctness, capture full evidence (`request`, `status`, `headers`, `body`, `timestamp`), and update test/tracker docs from observed behavior only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-18-live-*** (new) — Full Test 18 API artifacts for auth context, source run lookup, Tenant B signup, authorized/unauthorized download probes, ZIP contract checks, retry consistency, and context summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-18-live-ui-*** (new) — No-auth UI route probe artifacts for `/pr-bundles`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-18.md** — Filled complete Test 18 output (preconditions, steps, API/UI evidence, assertions, tracker mapping, final PARTIAL status).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL quick-status counts, Section 3 row #9 (fixed), Section 4 row #8 (partial/open), Section 8 `T18-8`, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reused Test 17 run artifact: `run_id=ae4ab0db-3c6a-4f74-879f-7ee64013aef6`.
+- Confirmed source run has downloadable PR bundle payload (`GET /api/remediation-runs/{id}` -> `200`, `artifacts.pr_bundle.files=80`).
+- Auth/download matrix on `GET /api/remediation-runs/{id}/pr-bundle.zip`:
+  - Admin token -> `200` (`content-type=application/zip`, attachment filename present).
+  - No auth -> `401`.
+  - Invalid token -> `401`.
+  - Wrong-tenant token (fresh Tenant B signup) -> `404`.
+- Artifact correctness checks:
+  - ZIP entries matched run artifacts exactly (`80` expected, `80` actual; no missing/unexpected files).
+  - Group runner files present (`README_GROUP.txt`, `run_all.sh`).
+  - Unresolved Terraform token detected: `REPLACE_BUCKET_NAME` in `actions/26-aws-account-029037611564-ebbb26b3/s3_bucket_encryption_kms.tf`.
+- Retry/download consistency:
+  - Repeat authorized download returned `200`.
+  - ZIP byte hashes differ between first/repeat downloads.
+  - File sets and per-file contents are identical (semantic match true).
+- Final Test 18 outcome: **PARTIAL** with **🟠 HIGH** severity due unresolved placeholder token.
+
+**Technical debt / gotchas:**
+- Live signup contract now requires `company_name`; initial Tenant B signup without this field returned `422` before corrected rerun.
+- ZIP bytes are non-deterministic across repeated downloads (metadata/order/timestamp effects), even when file contents are identical.
+
+**Open questions / TODOs:**
+- Confirm whether download ZIP byte-level determinism is required by downstream consumers, or semantic file-content stability is sufficient.
+- Fix unresolved bundle placeholder in grouped S3.15 account-scope artifact path: `actions/26-aws-account-029037611564-ebbb26b3/s3_bucket_encryption_kms.tf`.
+
+## Live E2E run execution: Wave 6 Test 17 grouped PR bundle creation and execution flow (2026-03-01)
+
+**Task:** Execute live Wave 6 Test 17 end-to-end against `https://api.valensjewelry.com` and `https://dev.valensjewelry.com`, capture full grouped PR bundle evidence (`request`, `status`, `headers`, `body`, `timestamp`), and update test artifacts/tracker from observed behavior only (no product-code changes).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-17-live-*** (new) — Full Test 17 API artifacts for auth context, group selection, create/retry/negative/auth probes, run detail/execution polls, and contract/context summaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-17-live-ui-*** (new) — No-auth UI route probe artifacts for `/pr-bundles/create/summary`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-06/test-17.md** — Filled complete Test 17 output (preconditions, steps, evidence matrix, assertions, tracker mapping, final PASS).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Wave 6/TOTAL quick-status counts, Section 1 row #11, Section 4 row #7, Section 8 `T17-7`, and Section 9 changelog with Test 17 closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reused valid admin token and confirmed tenant context via `GET /api/auth/me` (`200`).
+- Queried live actions inventory (`GET /api/actions?limit=200&offset=0` -> `200`, `total=158`) and selected execution group:
+  - `group_key=s3_bucket_encryption_kms|029037611564|eu-north-1|open`
+  - `action_count=26`
+- Group create flow:
+  - `POST /api/remediation-runs/group-pr-bundle` -> `201` (`run_id=ae4ab0db-3c6a-4f74-879f-7ee64013aef6`, `status=pending`)
+  - Immediate identical retry -> `409` (`Duplicate pending run`)
+  - Invalid region filter probe (no `region`, no `region_is_null`) -> `400`
+  - No-auth probe -> `401`
+- Execution flow checks for created run:
+  - `GET /api/remediation-runs/{id}` polls -> `200/200/200` (`pending` -> `success`)
+  - `GET /api/remediation-runs/{id}/execution` polls -> `200/200/200` with stable progress fields (`source=run_fallback`, `current_step=completed`, `progress_percent=100`)
+  - Final run detail contained `artifacts.group_bundle` and `artifacts.pr_bundle`; outcome `Group PR bundle generated (26 actions)`.
+- UI no-auth route probe:
+  - `GET https://dev.valensjewelry.com/pr-bundles/create/summary` -> `200` HTML shell (no UI-visible defect in route probe).
+- Final Test 17 outcome: **PASS**.
+
+**Technical debt / gotchas:**
+- `GET /api/actions` enforces `limit<=200`; initial discovery call with `limit=500` returned `422` and was corrected before final evidence capture.
+
+**Open questions / TODOs:**
+- None from Test 17 execution; grouped PR bundle endpoint and run-execution flow matched expected contracts.
+
+## Live E2E rerun recheck: Wave 5 Tests 15 and 16 stability confirmation (2026-03-01)
+
+**Task:** Rerun live Wave 5 Tests `15` and `16` end-to-end (no product-code changes), capture a fresh evidence set, and update test artifacts/tracker from observed rerun behavior only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-15-rerun-recheck-20260301T001237Z-*** (new) — Fresh Test 15 rerun API artifacts (`request`, `status`, `headers`, `json`, `timestamp`) plus contract/duplicate/context summaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-15-rerun-recheck-20260301T001237Z-*** (new) — Fresh Test 15 rerun UI route-probe artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-16-rerun-recheck-20260301T001237Z-*** (new) — Fresh Test 16 rerun API artifacts (`request`, `status`, `headers`, `json`, `timestamp`) plus contract/retry/context summaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-16-rerun-recheck-20260301T001237Z-*** (new) — Fresh Test 16 rerun UI route-probe artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-15.md** — Added rerun recheck note with new evidence prefix and reconfirmed PASS behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-16.md** — Added rerun recheck note with new evidence prefix and reconfirmed PASS behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp and corrected Wave 5/TOTAL quick-status counts to reflect all Wave 5 tests passing.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this rerun task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Resolved latest run folder: `docs/test-results/live-runs/20260228T220436Z`.
+- Test 15 rerun (`test-15-rerun-recheck-20260301T001237Z-*`):
+  - Run detail polls: `200/200/200`.
+  - Run execution polls: `200/200/200` with stable progress fields.
+  - Findings filters: valid filters `200`, invalid severity `400`, no-auth/invalid-token `401`, pagination duplicate IDs `0`.
+  - UI probes (`/findings`, `/remediation-runs/{id}` no-auth): `200/200`.
+- Test 16 rerun (`test-16-rerun-recheck-20260301T001237Z-*`):
+  - Detail/options/preview: `200/200/200` and realistic preview mode (`mode=pr_only`) `200`.
+  - Negative probes: invalid format `400`, non-existent action `404`.
+  - Boundary probes: no-auth detail/options/preview `401/401/401`; wrong-tenant detail `404`.
+  - Compute/reconcile: first + immediate retry `202/202` for both; no-auth `401/401`.
+  - UI probes (`/actions`, `/actions/{id}` no-auth): `307/307` redirects to `/findings`.
+- Final rerun outcomes remained **PASS** for both Test 15 and Test 16.
+
+**Technical debt / gotchas:**
+- Shell `jq` in this environment does not support `--argfile`; rerun summaries were generated with `jq -s` instead.
+- Sandbox DNS resolution for one UI probe intermittently failed during the first attempt; rerun probes completed successfully afterward and artifacts were finalized.
+
+**Open questions / TODOs:**
+- None from this rerun; behavior matched currently fixed contracts.
+
+## Wave 5 Test 16 targeted fix implementation + post-deploy live rerun closure (2026-03-01)
+
+**Task:** Implement targeted backend fixes for Wave 5 Test 16 gaps (preview mode mismatch + missing reconcile POST write path), add focused contract/auth tests, deploy, rerun Test 16 live, and close tracker/docs based on observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** — Added shared mode-option resolver for action types; updated remediation preview to accept `mode=pr_only`; implemented `POST /api/actions/reconcile` write path with tenant/account scoping, auth enforcement via existing tenant resolution, and SQS enqueue of reconciliation shard jobs.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_test16_preview_reconcile.py** (new) — Added focused Wave 5 Test 16 regression coverage for preview mode compatibility, reconcile POST contract, compute/reconcile immediate-retry idempotency behavior, no-auth boundary, and tenant account-boundary rejection.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-16-rerun-postdeploy-*** (new) — Captured full post-deploy Test 16 API rerun artifacts (`request`, `status`, `headers`, `json`, `timestamp`) plus contract/retry/consistency/context summaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-16-rerun-postdeploy-ui-*** (new) — Captured post-deploy no-auth UI route probe artifacts for `/actions` and `/actions/{id}`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-16.md** — Updated Test 16 from PARTIAL to PASS with full post-deploy evidence tables, assertions, and tracker mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp plus closure status/checklist/changelog for Section 1 row #10, Section 4 rows #16/#17, and Section 8 `T16-preview`/`T16-reconcile`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented preview/options compatibility fix:
+  - `GET /api/actions/{id}/remediation-preview` now accepts `mode=pr_only` (in addition to `direct_fix`).
+  - For `pr_only`, endpoint returns a stable informational preview payload (`200`) instead of validation `422`.
+- Implemented reconcile write-path fix:
+  - Added `POST /api/actions/reconcile` with request body `{"account_id","region?"}`.
+  - Enforces tenant/account isolation through tenant-scoped account lookup.
+  - Requires auth in live mode (no-auth now returns `401`).
+  - Enqueues one reconciliation shard job per configured service for the scoped region(s); response includes `message`, `tenant_id`, `scope`, and `enqueued_jobs`.
+- Added and passed focused backend tests:
+  - `./venv/bin/pytest -q tests/test_wave5_test16_preview_reconcile.py tests/test_remediation_runs_api.py -k 'remediation_preview or remediation_options or reconcile or compute'`
+  - Result: `10 passed`.
+- Deployed runtime:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag: `20260228T235900Z`.
+- Post-deploy Test 16 live rerun (`docs/test-results/live-runs/20260228T220436Z`) key outcomes:
+  - `GET /api/actions/{id}/remediation-options` -> `200`, `mode_options=["pr_only"]`.
+  - `GET /api/actions/{id}/remediation-preview?mode=pr_only` -> `200`.
+  - `POST /api/actions/compute` first/retry -> `202/202`.
+  - `POST /api/actions/reconcile` first/retry -> `202/202`; no-auth reconcile -> `401`.
+  - Contract summary artifact: `mode_compatibility_ok=true`, `compute_contract_ok=true`, `reconcile_contract_ok=true`.
+- Final Test 16 status moved to **PASS**; tracker rows/checklist/changelog updated accordingly.
+
+**Technical debt / gotchas:**
+- `POST /api/actions/reconcile` currently enqueues per-service global sweeps for the scoped region(s); this is safe and idempotent but can fan out to multiple shard jobs (`enqueued_jobs=10` in current config).
+- Preview `mode=pr_only` response is intentionally informational (no direct pre-check execution); if UI later needs PR-diff simulation, a richer preview contract may be needed.
+
+**Open questions / TODOs:**
+- Decide whether `POST /api/actions/reconcile` should expose optional service filtering in the public contract to reduce fan-out for narrow use cases.
+
+## Wave 5 Test 15 fix implementation + post-deploy live rerun closure (2026-03-01)
+
+**Task:** Implement a targeted backend fix so `GET /api/remediation-runs/{id}/execution` returns a stable `200` progress payload for valid in-tenant runs (including completed runs with no execution row), add contract/auth tests, deploy, rerun Wave 5 Test 15 live, and sync tracker/docs from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** — Added run-execution progress contract fields (`source`, `current_step`, `progress_percent`, `completed_steps`, `total_steps`); implemented run-status mapping + deterministic fallback payload for runs without `remediation_run_executions`; kept auth + tenant scoping unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_run_progress_contract.py** (new) — Added focused tests for fallback `200` payload, execution-row progress fields, tenant-boundary `404`, and no-auth `401`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-15-rerun-postdeploy-*** (new) — Captured full post-deploy Test 15 API rerun artifacts and derived contract checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-15-rerun-postdeploy-ui-*** (new) — Captured post-deploy unauthenticated UI route probes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-15.md** — Updated Test 15 from PARTIAL to PASS using post-deploy evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL counts, Section 2 row #10, Section 6 row #5, Section 8 `T15`, and Section 9 changelog with Test 15 closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented `/execution` fallback behavior:
+  - Endpoint now looks up run by `run_id` + `tenant_id`.
+  - If no execution row exists, returns run-level fallback payload (`200`) with progress fields instead of `404`.
+  - Progress fields are stable and pollable (`current_step`, `progress_percent`, `completed_steps`, `total_steps`).
+- Added and passed targeted backend tests:
+  - `./venv/bin/pytest -q tests/test_wave5_run_progress_contract.py tests/test_wave5_action_detail_contract.py`
+  - Result: `8 passed`.
+- Deployed runtime:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag: `20260228T235701Z`.
+- Post-deploy Wave 5 Test 15 rerun (`docs/test-results/live-runs/20260228T220436Z`):
+  - `GET /api/remediation-runs/{id}` polls: `200/200/200` with stable `status=success`.
+  - `GET /api/remediation-runs/{id}/execution` polls: `200/200/200` with stable payload:
+    - `source=run_fallback`
+    - `current_step=completed`
+    - `progress_percent=100`
+    - `completed_steps=3`
+    - `total_steps=3`
+  - Findings filter/auth matrix remained passing (`200` valid filters, `400` invalid severity, `401` no-auth/invalid-token, pagination duplicate IDs `0`).
+- Final Test 15 status updated to **PASS**; tracker rows/checklist/changelog synced to fixed state.
+
+**Technical debt / gotchas:**
+- Fallback payload uses run-level status mapping (`pending` -> `queued`) and fixed 3-step progress semantics; if future UI needs phase-specific granularity for direct-fix vs PR-only flows, this mapping may need expansion.
+- Existing completed runs now surface fallback progress even without historical execution rows; no backfill migration was required.
+
+**Open questions / TODOs:**
+- Decide whether to expose richer per-phase step definitions for direct-fix runs via the same `/execution` contract, or keep the current unified progress model.
+
+## Live E2E run execution: Wave 5 Test 16 action detail options preview and recompute reconcile behavior (2026-03-01)
+
+**Task:** Execute live Wave 5 Test 16 end-to-end against `https://api.valensjewelry.com` and `https://dev.valensjewelry.com`, capture API/UI evidence for action detail/options/preview and recompute/reconcile behavior, and update `wave-05/test-16.md` + base tracker strictly from observed evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-16.md** — Filled full Test 16 execution output (preconditions, steps, API/UI evidence tables, assertions, tracker mapping, final PARTIAL status/severity).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL board counts, Section 1 row #10 status note, Section 4 rows (#6 fixed + #16/#17 added), Section 8 checklist impacts (`T16-6` checked; Test 16 preview/reconcile items added), and Section 9 changelog entry for recompute fix.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-16-live-*** (new) — Captured full Test 16 API evidence set (`request`, `status`, `headers`, `json`, `timestamp`) plus contract/retry/context summary artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-16-live-ui-*** (new) — Captured no-auth UI route probes for `/actions` and `/actions/{id}`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Resolved latest run folder `docs/test-results/live-runs/20260228T220436Z`.
+- Preconditions and selection:
+  - Reused valid admin token source from `test-14-00-login-admin.json` (`GET /api/auth/me` -> `200`).
+  - Reused valid same-tenant member token source from `test-08-rerun-postdeploy-accept-invite-valid-token.json` (`GET /api/auth/me` -> `200`, `role=member`).
+  - Selected live action `9c31f438-1ade-4cc7-91c8-b959870a615b` from `GET /api/actions` (`200`, `total=158`).
+- Action detail/options/preview checks:
+  - `GET /api/actions/{id}` -> `200` (repeat call also `200`; stable keys/content observed).
+  - `GET /api/actions/{id}/remediation-options` -> `200` with `mode_options=["pr_only"]`.
+  - `GET /api/actions/{id}/remediation-preview` -> `200` (default path).
+  - `GET /api/actions/{id}/remediation-preview?mode=pr_only` -> `422` (`Input should be 'direct_fix'`), showing options/preview mode mismatch.
+- Recompute/reconcile checks:
+  - `POST /api/actions/compute` first call -> `202`; immediate retry -> `202` with matching body (`message`, `tenant_id`, `scope`).
+  - `POST /api/actions/compute` member-role call -> `202`; no-auth -> `401`.
+  - `POST /api/actions/reconcile` first call -> `405`; immediate retry -> `405`; no-auth -> `405` (`Allow: GET` header).
+- Negative and boundary probes:
+  - Invalid action ID format -> `400`.
+  - Non-existent action ID -> `404`.
+  - No-auth detail/options/preview -> `401` each.
+  - Fresh Tenant B wrong-tenant action detail probe -> `404`.
+- UI probes:
+  - No-auth `/actions` and `/actions/{id}` both returned deterministic `307` redirect to `/findings`.
+- Final Test 16 status: **PARTIAL** with **🟡 MEDIUM** severity.
+
+**Technical debt / gotchas:**
+- Reconcile write-path validation is blocked by method behavior (`POST /api/actions/reconcile` returns `405` before any auth-specific branch).
+- Preview compatibility contract is inconsistent for sampled action (`mode_options=["pr_only"]` but preview validator accepts only `direct_fix` when `mode` is supplied).
+
+**Open questions / TODOs:**
+- Should remediation preview accept `pr_only` when remediation-options advertises `pr_only` as the only mode?
+- Is the intended reconcile contract `POST /api/actions/reconcile`, or should client/docs be updated to a different method/path?
+
+## Live E2E run execution: Wave 5 Test 15 run-progress and findings-filter contract behavior (2026-03-01)
+
+**Task:** Execute live Wave 5 Test 15 end-to-end against `https://api.valensjewelry.com` and `https://dev.valensjewelry.com`, capture raw API/UI evidence for run-progress and findings-filter contracts, update `wave-05/test-15.md`, and sync tracker status strictly from observed behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-15.md** — Filled full Test 15 output (preconditions, steps, API/UI evidence tables, assertions, tracker mapping, final status/severity).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL board counts, Section 2 row #10 status detail, Section 6 row #5 status detail, and Section 8 medium checklist with `T15`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-15-*** (new) — Captured full Test 15 API evidence set (`request`, `status`, `headers`, `json`, `timestamp`) plus contract-check artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-15-ui-*** (new) — Captured unauthenticated UI route probe artifacts for findings and remediation-run pages.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Resolved run folder `docs/test-results/live-runs/20260228T220436Z` and executed the full Test 15 flow with live artifact capture.
+- Preconditions and ID/token sourcing:
+  - Reused admin token from `test-14-00-login-admin.json`, validated via `GET /api/auth/me` (`200`).
+  - Reused Test 14 run id `216b042f-ee97-4dd4-aeaf-51880e2260df`.
+- Run-progress contract checks:
+  - `GET /api/remediation-runs/{id}` polled three times -> `200` each time with stable keys and stable terminal `status=success`.
+  - `GET /api/remediation-runs/{id}/execution` polled three times -> `404` each time with `{"error":"Execution not found"}`.
+  - Run detail audit fields present (`approved_by_user_id`, timestamps, logs, outcome, nested action metadata).
+- Findings filter contract checks:
+  - Baseline list -> `200` with paginated shape `{items,total}` (`total=391`).
+  - Single filters (`severity=INFORMATIONAL`, `account_id=029037611564`, `status=RESOLVED`, `source=security_hub`) -> `200` each; mismatch checks `0`.
+  - Combined filter with all four fields -> `200`; mismatch check `0`.
+  - Invalid filter (`severity=NOPE`) -> `400` with explicit validation payload.
+  - Pagination (`limit=20` offset `0` vs `20`) -> `200`/`200`; duplicate IDs across pages = `0`.
+  - Auth boundary: no-auth and invalid-token findings calls -> `401`/`401`.
+- UI route probes:
+  - `/findings` and `/remediation-runs/{id}` no-auth route probes both returned deterministic `200` HTML shell; no UI-visible defect observed.
+- Final Test 15 status: **PARTIAL** with **🟡 MEDIUM** severity due execution endpoint behavior (`404` on all polls) despite passing findings filter contract checks.
+
+**Technical debt / gotchas:**
+- Test 15 currently depends on run-detail polling for progress state because `/api/remediation-runs/{id}/execution` did not provide pollable execution/step-log payload for the sampled completed run.
+- Run-progress UI contract item (`current_step`) remains unverified/unavailable from observed API payloads in this run.
+
+**Open questions / TODOs:**
+- Confirm intended contract for `/api/remediation-runs/{id}/execution` on completed PR-only runs: expected `200` execution payload vs `404 Execution not found`.
+
+## Live E2E run execution: Wave 5 Test 14 findings contract and duplicate-run guard (2026-03-01)
+
+**Task:** Execute live Wave 5 Test 14 end-to-end against `https://api.valensjewelry.com` and `https://dev.valensjewelry.com`, capture API/UI artifacts, validate findings contract behavior plus duplicate-run guard behavior, and update `wave-05/test-14.md` + base tracker strictly from observed evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-14.md** — Filled full Test 14 execution output (preconditions, steps, API/UI evidence tables, assertions, tracker mapping, final PASS status).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL counts, Section 4 row #5 to ✅ FIXED, Section 8 `T14-5` checkbox to checked, and Section 9 changelog entry.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-*** (new) — Captured login/context, findings list/detail/auth-boundary checks, action/options checks, first-create + immediate duplicate-create responses, run-detail readback, contract checks, and context summary artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-14-ui-*** (new) — Captured findings route/list route UI probe responses (status/headers/body/timestamp) for no-auth shell behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Resolved run folder `docs/test-results/live-runs/20260228T220436Z` and executed the full Test 14 API flow with fresh live artifacts.
+- Findings API contract checks:
+  - `GET /api/findings?limit=10&offset=0` -> `200` with paginated shape `{items,total}` (`total=391`).
+  - Required frontend fields confirmed present on sampled finding (`id`, `finding_id`, `tenant_id`, `account_id`, `region`, `severity_label`, `severity_normalized`, `status`, `title`, `created_at`, `updated_at_db`).
+  - `GET /api/findings/{valid_id}` -> `200`.
+  - `GET /api/findings/{invalid_id}` -> `404` (`Finding not found`).
+  - `GET /api/findings` with no token -> `401`.
+  - Cross-tenant `GET /api/findings/{tenantA_id}` with fresh Tenant B token -> `404`.
+- Duplicate-run guard checks:
+  - Selected action `9c31f438-1ade-4cc7-91c8-b959870a615b` from `GET /api/actions` (`200`, `total=158`).
+  - Confirmed no prior pending runs via `GET /api/remediation-runs?status=pending` (`200`, `total=0`).
+  - `GET /api/actions/{id}/remediation-options` -> `200`, `mode_options=["pr_only"]`, `strategies=[]`.
+  - First `POST /api/remediation-runs` -> `201` (`run_id=216b042f-ee97-4dd4-aeaf-51880e2260df`, `status=pending`).
+  - Immediate identical second `POST /api/remediation-runs` -> `409` with `Duplicate pending run` contract.
+  - `GET /api/remediation-runs/{run_id}` -> `200`, confirming audit fields (`approved_by_user_id`, timestamps, action summary).
+- UI route probes:
+  - `GET /findings/{id}` and `GET /findings` both returned `200` HTML shell in no-auth context; no UI-visible breakage observed.
+
+**Technical debt / gotchas:**
+- Findings UI routes currently render a tenant-id gate shell in unauthenticated context (`200`) rather than strict redirect/block behavior; this may be intentional dev behavior but remains worth clarifying in auth-boundary expectations.
+- Accounts endpoint response is a top-level array (`[]`), while many other list endpoints are paginated objects (`{items,total}`); artifact scripts must handle this contract difference explicitly.
+
+**Open questions / TODOs:**
+- Confirm whether unauthenticated `GET /findings*` returning an interactive shell (`200`) is intended behavior for dev SaaS or should be treated as an auth-boundary hardening item.
+
+## Wave 5 Test 13 fix implementation + post-deploy live closure rerun (2026-03-01)
+
+**Task:** Implement product fixes for missing Action Detail explanation fields (`what_is_wrong`, `what_the_fix_does`), deploy to dev SaaS, rerun live Test 13 end-to-end, and close tracker/test artifacts with observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** — Extended `ActionDetailResponse` with `what_is_wrong` and `what_the_fix_does`; added deterministic explanation builders and action-type remediation summaries; wired both fields into detail serialization.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Extended `ActionDetail` TypeScript contract to include `what_is_wrong` and `what_the_fix_does`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** — Added explicit “What is wrong” and “What the fix does” UI sections bound to new action-detail fields.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** (new) — Added focused regression coverage for new explanation fields and existing auth/not-found behavior on `GET /api/actions/{id}`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-13-rerun-postdeploy-*** (new) — Added full post-deploy rerun API evidence set.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-13-rerun-postdeploy-ui-*** (new) — Added post-deploy UI route evidence for unauthenticated action routes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-13.md** — Updated from FAIL to PASS using post-deploy evidence (full tables/assertions/tracker mapping refreshed).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Wave 5/TOTAL counts, Section 2 rows #8/#9 to ✅ FIXED, Section 8 `T13` checkbox to checked, and Section 9 changelog entry for closure.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added backend action-detail contract fields:
+  - `what_is_wrong` (description/title/fallback-driven explanation)
+  - `what_the_fix_does` (action_type summary with safe generic fallback)
+- Ran focused backend tests:
+  - `./venv/bin/pytest -q tests/test_wave5_action_detail_contract.py tests/test_wave4_contract_fixes.py`
+  - Result: `7 passed`.
+- Deployed runtime with existing profile/toggles:
+  - `AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1`
+  - Runtime image tag: `20260228T224546Z`.
+- Post-deploy live Test 13 rerun (`docs/test-results/live-runs/20260228T220436Z`):
+  - `GET /api/actions/{valid_id}` -> `200` with non-empty `what_is_wrong` + `what_the_fix_does`
+  - invalid id -> `404`
+  - no auth -> `401`
+  - wrong tenant -> `404`
+  - same-tenant member token -> `200`
+  - repeat detail request -> byte-identical response
+  - contract check artifact: `what_is_wrong_present=true`, `what_the_fix_does_present=true`
+- Final Test 13 status updated to **PASS**; tracker rows/checklist/changelog updated accordingly.
+
+**Technical debt / gotchas:**
+- Frontend global typecheck still reports an unrelated pre-existing nullability error in `frontend/src/components/RemediationModal.tsx` (`RemediationOption | null` argument mismatch). Not introduced by this task.
+- Member-role probe still depends on previously captured invite-accept token artifact during live runs.
+
+**Open questions / TODOs:**
+- Optional follow-up: add a deterministic same-tenant member creation helper for live RBAC probes to reduce dependence on historical token artifacts.
+
+## Live E2E run execution: Wave 5 Test 13 action detail contract and auth boundary (2026-03-01)
+
+**Task:** Execute live Wave 5 Test 13 end-to-end against `https://api.valensjewelry.com` and `https://dev.valensjewelry.com`, capture raw evidence artifacts, fully populate `wave-05/test-13.md`, and update the base tracker strictly from observed behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-05/test-13.md** — Filled full Test 13 execution output (preconditions, steps, API/UI evidence tables, assertions, tracker mapping, final status/severity).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated `Last updated`, Wave 5/total board counts, Section 2 rows #8/#9 status text, and Section 8 medium checklist with Test 13 gate item.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-13-*** (new) — Captured login/auth context, action list/detail positive and repeat checks, invalid-id probe, no-auth probe, wrong-tenant probe, member-role probe, contract check, and consistency diff artifacts (`request`, `status`, `headers`, `json`, `timestamp`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-13-ui-*** (new) — Captured unauthenticated UI route behavior for `/actions/{id}` and `/actions`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Resolved run folder `docs/test-results/live-runs/20260228T220436Z` and executed Test 13 using live tenant/account context:
+  - Tenant A: `Valens` (`19b8d7c6-0100-421a-a084-c8b06d466837`)
+  - Account: `029037611564`
+  - Action IDs: `9c31f438-1ade-4cc7-91c8-b959870a615b`, `f1e6ea20-740e-4ffc-9f1b-24b2e37502db`
+- Observed API outcomes:
+  - `GET /api/actions?limit=10&offset=0` -> `200` (paginated list with `total=158`)
+  - `GET /api/actions/{valid_id}` -> `200` (core detail fields present)
+  - Repeat `GET /api/actions/{same_valid_id}` -> `200` and byte-identical body
+  - `GET /api/actions/{invalid_uuid}` -> `404` (`Action not found`)
+  - `GET /api/actions/{valid_id}` without auth -> `401`
+  - `GET /api/actions/{tenantA_id}` with fresh Tenant B token -> `404`
+  - Same-tenant member token probe -> `/api/auth/me` `200` (`role=member`) and `/api/actions/{id}` `200`
+- Contract-check artifact confirms the Test 13 gap remains open:
+  - `what_is_wrong_present=false`
+  - `what_the_fix_does_present=false`
+- UI route probes (no auth) observed deterministic `307` redirects to `/findings` for both `/actions/{id}` and `/actions`.
+
+**Technical debt / gotchas:**
+- Same-tenant member-role probe still depends on a previously captured invite-accept token artifact; this flow is sensitive to token expiry and should eventually use a deterministic member setup helper.
+- Action detail contract exposes `action_type` (not literal `type`); frontend/backend contract naming should remain explicit in test docs to avoid false negatives.
+
+**Open questions / TODOs:**
+- Decide whether backend should add `what_is_wrong` and `what_the_fix_does` to action detail payload, or frontend should remove/replace dependence on those fields.
+- Confirm intended unauthenticated frontend behavior for `/actions*` routing (`307` to `/findings`) and whether this should be documented as expected.
+
 ## Wave 4 fixes (Tests 09-12): contract/security rerun and tracker sync (2026-03-01)
 
 **Task:** Execute Wave 4 (`09-12`) from live evidence in a fresh run folder, fix only observed failures, add regression tests, redeploy runtime, rerun Wave 4, and synchronize tracker/docs.

@@ -4,6 +4,114 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 7 Test 23 full remediation closure validation: adversarial S3 blast-radius (2026-03-01)](task_log.md#wave-7-test-23-full-remediation-closure-validation-adversarial-s3-blast-radius-2026-03-01)
+  - Executed full mandatory Test 23 chain (state confirm -> open verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> 15-minute poll).
+  - Restored blast-radius differentiation by validating runtime website evidence path (A1 `warn`, B1 `pass`) and successfully remediated B1 bundle in AWS (`terraform init/plan/apply` all successful).
+  - Closure remained partial from observed behavior: B1 action/finding stayed `open/NEW` through the full poll window despite successful apply and accepted refresh triggers.
+- [Wave 7 Test 23 post-redeploy live rerun: adversarial S3 blast-radius revalidation (2026-03-01)](task_log.md#wave-7-test-23-post-redeploy-live-rerun-adversarial-s3-blast-radius-revalidation-2026-03-01)
+  - Redeployed live runtime and re-executed Test 23 with canonical prefix `test-23-rerun-postdeploy-20260301T032419Z-*`.
+  - Captured explicit runtime-stack/image evidence (`ApiImageUri`/`WorkerImageUri` tag `20260301T031756Z`) proving the rerun executed post-deploy.
+  - Test 23 remains `PARTIAL` from observed behavior: B1 still receives warn+block dependency treatment due `access_path_evidence_unavailable (AccessDenied)` in runtime checks.
+- [Wave 7-9 blocker fixes implementation: S3 blast-radius differentiation + Wave 8 contract hardening (2026-03-01)](task_log.md#wave-7-9-blocker-fixes-implementation-s3-blast-radius-differentiation--wave-8-contract-hardening-2026-03-01)
+  - Implemented S3.2 risk differentiation and remediation-options runtime-signal wiring so non-public/non-website buckets can avoid false-positive risk-ack gates.
+  - Implemented Wave 8 contract fixes: login rate limiting (`429` + `Retry-After`), non-local ingest-sync async fallback (no `404`), account `last_synced_at`, new `/api/audit-log`, and scheduler `/api/internal/compute`.
+  - Added PR-bundle README C2/C5 proof fields and new targeted regression coverage; local verification passed (`125` + `13` tests).
+- [Live E2E run execution: Wave 7 Test 23 adversarial S3 blast-radius validation (2026-03-01)](task_log.md#live-e2e-run-execution-wave-7-test-23-adversarial-s3-blast-radius-validation-2026-03-01)
+  - Filled `wave-07/test-23.md` end-to-end from canonical evidence prefix `test-23-live-20260301T023337Z-*`, including AWS preconditions, API/UI matrices, assertions, and final status.
+  - Updated tracker Wave 7 matrix and counts from observed behavior: Test 23 now `PARTIAL` with `🟡 MEDIUM` severity; TOTAL partial count incremented.
+  - Logged new Section 4 row #19 for observed A1/B1 blast-radius differentiation gap (B1 no-website/non-public bucket received same dependency warning/risk-ack gate as A1).
+- [Wave 6 Test 22 post-deploy live rerun closure: baseline viewer endpoint + throttling revalidation (2026-03-01)](task_log.md#wave-6-test-22-post-deploy-live-rerun-closure-baseline-viewer-endpoint--throttling-revalidation-2026-03-01)
+  - Redeployed serverless runtime with image tag `20260301T020503Z` and reran full Test 22 matrix using fresh evidence prefix `test-22-rerun-postdeploy-20260301T021102Z-*`.
+  - Revalidated baseline contracts from observed behavior: create `201`, immediate repeats `429/429` with `Retry-After: 86399`, detail `pending -> success`, and `download_url` present.
+  - Confirmed viewer endpoint closure on live SaaS: `GET /api/baseline-report/{id}/data` returned `200` with payload for auth and `401` for no-auth; tracker Section 1 #7 and Section 6 #4 moved to ✅ FIXED.
+- [Wave 6 Test 19 post-deploy live rerun closure (2026-03-01)](task_log.md#wave-6-test-19-post-deploy-live-rerun-closure-2026-03-01)
+  - Redeployed live runtime with the current profile (`AWS_PROFILE=default`, reconciliation disabled, shadow mode enabled) and confirmed successful rollout (`image tag 20260301T014806Z`).
+  - Re-executed full Test 19 matrix with fresh evidence prefix `test-19-rerun-20260301T015756Z-*`; digest/slack persistence and auth-boundary contracts remained stable.
+  - Verified webhook SSRF defenses now enforce expected rejects (`400`) for non-Slack/metadata/lookalike URLs, then closed tracker Section 3 #4, Section 4 #18, and checklist `T19-4`.
+- [Wave 6 Test 22 fix implementation: baseline report viewer data endpoint (2026-03-01)](task_log.md#wave-6-test-22-fix-implementation-baseline-report-viewer-data-endpoint-2026-03-01)
+  - Implemented `GET /api/baseline-report/{id}/data` as an authenticated tenant-scoped viewer endpoint for successful baseline reports.
+  - Added `/data` API regressions covering `401`, `404`, `409`, and `200` contracts in `tests/test_baseline_report_api.py`.
+  - Verified baseline-report suites locally (`13 passed` + `32 passed`) and documented live rerun as the remaining closure step.
+- [Wave 6 Test 19 fix implementation: strict Slack webhook validation + runtime cleanup hardening (2026-03-01)](task_log.md#wave-6-test-19-fix-implementation-strict-slack-webhook-validation--runtime-cleanup-hardening-2026-03-01)
+  - Implemented strict Slack webhook URL validation in both settings write path and send path (HTTPS + exact `hooks.slack.com` host + `/services/...` contract).
+  - Added runtime cleanup hardening in weekly digest processing to neutralize previously persisted invalid webhook URLs before send attempts.
+  - Added focused regression coverage (`tests/test_slack_settings_api.py`, `tests/test_slack_digest.py`, `tests/test_weekly_digest_job_slack_validation.py`) and verified with targeted pytest (`18 passed` + weekly digest internal suite `5 passed`).
+- [Wave 6 Test 20 live rerun: internal scheduler auth and secret-guard revalidation (2026-03-01)](task_log.md#wave-6-test-20-live-rerun-internal-scheduler-auth-and-secret-guard-revalidation-2026-03-01)
+  - Re-executed the full Test 20 matrix with fresh prefix `test-20-rerun-20260301T014248Z-*` against `/api/internal/reconciliation/schedule-tick`.
+  - Reconfirmed deny-path and positive-path contracts from observed behavior: no secret `403`, wrong secret `403`, user-token-only `403`, correct scheduler secret `200`, `all_pass=true`.
+  - Updated `wave-06/test-20.md`, tracker Section 4 row #9 + Section 9 changelog, and recorded runtime secret-source preconditions from live Lambda env.
+- [Wave 5 Test 14 post-deploy live closure rerun (2026-03-01)](task_log.md#wave-5-test-14-post-deploy-live-closure-rerun-2026-03-01)
+  - Applied migration/deploy to live runtime (after fixing Alembic revision ID length constraint), then reran Test 14 with fresh evidence prefix `test-14-rerun-postdeploy-20260301T013443Z-*`.
+  - Verified duplicate-run guard closure from observed live behavior: first `POST /api/remediation-runs` returned `201`, immediate and third identical retries returned `409` with `reason=duplicate_active_run`.
+  - Updated `wave-05/test-14.md` to PASS and synced tracker Section 4 row #5, Section 8 `T14-5`, Last updated timestamp, and Section 9 changelog closure entry.
+- [Wave 5 Test 14 duplicate-run guard hardening implementation (2026-03-01)](task_log.md#wave-5-test-14-duplicate-run-guard-hardening-implementation-2026-03-01)
+  - Implemented API-side duplicate guard hardening for `POST /api/remediation-runs` using active-run detection (`pending/running/awaiting_approval`) plus recent-identical-request dedupe.
+  - Added DB-level race protection via partial unique index `uq_remediation_runs_action_active` on `(tenant_id, action_id)` for active statuses (migration head `0034_remrun_active_unique_guard`).
+  - Added regression coverage in `tests/test_remediation_runs_api.py`; verification passed (`35 passed` full suite, plus targeted Wave 5 suites).
+- [Live E2E run execution: Wave 6 Test 22 baseline report generation, viewer endpoint, and throttling validation (2026-03-01)](task_log.md#live-e2e-run-execution-wave-6-test-22-baseline-report-generation-viewer-endpoint-and-throttling-validation-2026-03-01)
+  - Executed full Test 22 live matrix in run `20260228T220436Z` and captured evidence under `evidence/api/test-22-live-*` and `evidence/ui/test-22-live-ui-*`.
+  - Verified baseline-report generation contract from observed behavior: create `201` (`pending`) progressed to `success` with `download_url` present; detail no-auth probe returned `401`.
+  - Verified throttling contract from repeated creates (`429` with `Retry-After: 86399`) and confirmed viewer sub-endpoint gap persists (`GET /api/baseline-report/{id}/data` returned `404` for auth/no-auth); updated `wave-06/test-22.md` and tracker rows/checklist/changelog accordingly.
+- [Live E2E run execution: Wave 6 Test 19 settings contract and Slack webhook security (2026-03-01)](task_log.md#live-e2e-run-execution-wave-6-test-19-settings-contract-and-slack-webhook-security-2026-03-01)
+  - Executed full Test 19 live matrix with fresh evidence prefix `test-19-live-20260301T011252Z-*` covering digest/slack GET/PATCH behavior, persistence/reload checks, and auth-boundary probes.
+  - Confirmed `/api/users/me/digest-settings` and `/api/users/me/slack-settings` are present (`GET/PATCH` non-404) and observed persistence contract stability (including idempotent digest PATCH retry and Slack clear/reload behavior).
+  - Reproduced blocking security issue from observed behavior: Slack settings PATCH accepted non-Slack and SSRF-style webhook URLs (`200` for `example.com`, metadata IP, and hooks-lookalike domain), leaving Section 3 row #4 and checklist `T19-4` open.
+- [Live E2E rerun completion: Wave 5 Tests 13–16 recheck (2026-03-01)](task_log.md#live-e2e-rerun-completion-wave-5-tests-1316-recheck-2026-03-01)
+  - Completed requested Wave 5 rerun cycle with fresh Test 13/14 evidence (`test-13-rerun-recheck-20260301T011119Z-*`, `test-14-rerun-recheck-20260301T011119Z-*`) and prior in-cycle Test 15/16 rechecks.
+  - Reconfirmed Test 13 remains stable (detail/explanation/auth-boundary contracts unchanged) and Test 15/16 remain PASS from fresh recheck artifacts.
+  - Reopened Test 14 duplicate-run guard from observed live behavior: identical immediate retries returned `201/201/201` with unique run IDs (no `409` conflict), and tracker Section 4 row #5 + Section 8 `T14-5` were updated accordingly.
+- [Live E2E run execution: Wave 6 Test 21 export creation-to-download contract (2026-03-01)](task_log.md#live-e2e-run-execution-wave-6-test-21-export-creation-to-download-contract-2026-03-01)
+  - Executed full Test 21 export contract flow in run `20260228T220436Z` and captured evidence under `evidence/api/test-21-live-20260301T011127Z-*` and `evidence/ui/test-21-live-20260301T011127Z-ui-*`.
+  - Verified creation-to-download behavior from observed payloads: create `202`, detail `pending -> success`, `download_url` observed `null -> present`, no-auth detail probe `401`, and presigned download `200` on first/repeat.
+  - Closed tracker export partial-implementation item (Section 6 row #3) and go-live medium checkbox `T21` with ZIP integrity and byte-consistency evidence.
+- [Wave 6 post-deploy live rerun: Tests 17 and 18 closure verification (2026-03-01)](task_log.md#wave-6-post-deploy-live-rerun-tests-17-and-18-closure-verification-2026-03-01)
+  - Deployed live runtime with the Test 18 fixes, reran Test 17 to generate fresh run `0b91ccbd-1c39-4cb3-8791-4e3a363c0fcb`, and reran Test 18 against that exact artifact chain.
+  - Confirmed grouped flow contract remained valid (`201/409/400/401`) and run reached success with `pr_bundle` artifacts.
+  - Closed Test 18 artifact correctness from observed evidence: ZIP contract matched expected files (`78/78`, no missing/unexpected), unresolved IaC placeholders were absent, and repeated downloads were byte-deterministic.
+- [Wave 6 Test 18 issue fix implementation: placeholder-safe grouped bundles + deterministic ZIP download (2026-03-01)](task_log.md#wave-6-test-18-issue-fix-implementation-placeholder-safe-grouped-bundles--deterministic-zip-download-2026-03-01)
+  - Implemented generation-time placeholder blocking so blocked unresolved tokens (`REPLACE_BUCKET_NAME`, `REPLACE_SECURITY_GROUP_ID`) fail PR bundle creation with structured errors instead of leaking to downloadable artifacts.
+  - Updated grouped PR bundle assembly to preserve valid actions while recording per-action generation skips (`errors/*.txt`, metadata counts/details) and to surface generated/skipped counts in run outcome/artifacts.
+  - Made `GET /api/remediation-runs/{run_id}/pr-bundle.zip` deterministic across repeated downloads for unchanged artifact content; added/updated regressions (`122 passed` across touched test suites).
+- [Live E2E run execution: Wave 6 Test 18 PR bundle download auth and artifact correctness (2026-03-01)](task_log.md#live-e2e-run-execution-wave-6-test-18-pr-bundle-download-auth-and-artifact-correctness-2026-03-01)
+  - Executed full Test 18 live matrix in run `20260228T220436Z` using the grouped run created by Test 17 and captured evidence under `evidence/api/test-18-live-*` and `evidence/ui/test-18-live-ui-*`.
+  - Verified download auth boundaries from observed behavior: authorized `200`, no-auth `401`, invalid-token `401`, and wrong-tenant `404` on `GET /api/remediation-runs/{id}/pr-bundle.zip`.
+  - Validated ZIP contract against run artifacts and found open artifact-correctness defect: unresolved `REPLACE_BUCKET_NAME` token in `actions/26-aws-account-029037611564-ebbb26b3/s3_bucket_encryption_kms.tf`; updated `wave-06/test-18.md` and tracker sections/checklist/changelog accordingly.
+- [Live E2E run execution: Wave 6 Test 17 grouped PR bundle creation and execution flow (2026-03-01)](task_log.md#live-e2e-run-execution-wave-6-test-17-grouped-pr-bundle-creation-and-execution-flow-2026-03-01)
+  - Executed full Test 17 live matrix in run `20260228T220436Z` and captured fresh grouped-bundle artifacts under `evidence/api/test-17-live-*` and `evidence/ui/test-17-live-ui-*`.
+  - Verified grouped endpoint and execution contracts from live behavior: create `201`, immediate retry `409`, invalid-region validation `400`, no-auth `401`, and created run progressed to `success` with `group_bundle` + `pr_bundle` artifacts.
+  - Updated `wave-06/test-17.md` and base tracker (timestamp, Wave 6/TOTAL counts, Section 1 row #11, Section 4 row #7, Section 8 `T17-7`, Section 9 changelog) from observed evidence only.
+- [Live E2E rerun recheck: Wave 5 Tests 15 and 16 stability confirmation (2026-03-01)](task_log.md#live-e2e-rerun-recheck-wave-5-tests-15-and-16-stability-confirmation-2026-03-01)
+  - Re-executed full live Test 15 and Test 16 matrices in run `20260228T220436Z` and captured fresh recheck artifacts under `evidence/api/test-15-rerun-recheck-20260301T001237Z-*` and `evidence/api/test-16-rerun-recheck-20260301T001237Z-*`.
+  - Reconfirmed fixed behavior contracts: Test 15 run-execution polling remained `200` with stable progress fields; Test 16 realistic preview mode stayed `200` and reconcile POST remained `202` with stable immediate-retry behavior.
+  - Updated `wave-05/test-15.md`, `wave-05/test-16.md`, and base tracker timestamp/counts from observed recheck evidence only.
+- [Wave 5 Test 16 targeted fix implementation + post-deploy live rerun closure (2026-03-01)](task_log.md#wave-5-test-16-targeted-fix-implementation--post-deploy-live-rerun-closure-2026-03-01)
+  - Fixed mode compatibility contract by accepting `mode=pr_only` in remediation preview so advertised options are now callable (`200`, not `422`).
+  - Restored `POST /api/actions/reconcile` write behavior with tenant/account scoping and auth-boundary enforcement (`202` admin, `401` no-auth).
+  - Added focused regression coverage in `tests/test_wave5_test16_preview_reconcile.py`, deployed runtime image `20260228T235900Z`, reran live Test 16, and closed tracker rows/checklist/changelog to PASS from observed evidence.
+- [Wave 5 Test 15 fix implementation + post-deploy live rerun closure (2026-03-01)](task_log.md#wave-5-test-15-fix-implementation--post-deploy-live-rerun-closure-2026-03-01)
+  - Implemented `/api/remediation-runs/{id}/execution` fallback contract so valid in-tenant runs without execution rows now return stable `200` payloads with pollable progress fields (`current_step`, `progress_percent`, `completed_steps`, `total_steps`).
+  - Added focused regression/auth coverage in `tests/test_wave5_run_progress_contract.py` and verified with targeted pytest (`8 passed`).
+  - Deployed runtime image `20260228T235701Z`, reran live Test 15 with fresh `test-15-rerun-postdeploy-*` evidence, and updated test doc + base tracker rows/checklist/changelog to PASS.
+- [Live E2E run execution: Wave 5 Test 16 action detail options preview and recompute reconcile behavior (2026-03-01)](task_log.md#live-e2e-run-execution-wave-5-test-16-action-detail-options-preview-and-recompute-reconcile-behavior-2026-03-01)
+  - Executed full Test 16 in run `20260228T220436Z`, capturing action detail/options/preview, recompute/reconcile retries, negative probes, and auth-boundary evidence under `evidence/api/test-16-live-*` and `evidence/ui/test-16-live-ui-*`.
+  - Verified recompute contract behavior (`POST /api/actions/compute` -> `202` on first + immediate retry with stable payload) and observed reconcile POST behavior (`405`, `Allow: GET`) across admin/no-auth probes.
+  - Updated `wave-05/test-16.md` and base tracker (timestamp, Wave 5/TOTAL counts, Section 4 rows #6/#16/#17, Section 8 `T16-6` + Test 16 checklist items, Section 9 changelog) from observed evidence only.
+- [Live E2E run execution: Wave 5 Test 15 run-progress and findings-filter contract behavior (2026-03-01)](task_log.md#live-e2e-run-execution-wave-5-test-15-run-progress-and-findings-filter-contract-behavior-2026-03-01)
+  - Executed Test 15 in run `20260228T220436Z` with full run-progress polling, findings filter matrix (single/combined/invalid/pagination), and auth-boundary evidence capture under `evidence/api/test-15-*`.
+  - Verified findings filter contract behavior from live data (`200` on valid filters, `400` invalid severity, pagination duplicate IDs `0`, and findings auth boundary `401/401` for no-auth/invalid-token).
+  - Updated `wave-05/test-15.md` and base tracker (timestamp, Wave 5/TOTAL partial counts, Section 2 row #10, Section 6 row #5, and Section 8 `T15` checklist) from observed evidence only.
+- [Live E2E run execution: Wave 5 Test 14 findings contract and duplicate-run guard (2026-03-01)](task_log.md#live-e2e-run-execution-wave-5-test-14-findings-contract-and-duplicate-run-guard-2026-03-01)
+  - Executed full findings API contract matrix in run `20260228T220436Z` (`/api/findings` list/detail, invalid-id, no-auth, and wrong-tenant probes) and captured complete API/UI artifacts.
+  - Verified duplicate-run guard behavior end-to-end: first `POST /api/remediation-runs` returned `201` (`pending`), immediate identical second call returned `409` (`Duplicate pending run`).
+  - Updated `wave-05/test-14.md` and base tracker (timestamp, Wave 5/TOTAL counts, Section 4 row #5 status, Section 8 `T14-5` checkbox, Section 9 changelog) from observed evidence only.
+- [Wave 5 Test 13 fix implementation + post-deploy live closure rerun (2026-03-01)](task_log.md#wave-5-test-13-fix-implementation--post-deploy-live-closure-rerun-2026-03-01)
+  - Implemented Action Detail contract additions (`what_is_wrong`, `what_the_fix_does`) in backend and wired frontend drawer rendering/type contracts.
+  - Added focused regression tests in `tests/test_wave5_action_detail_contract.py` and verified with `7 passed` (alongside Wave 4 contract tests).
+  - Deployed runtime image `20260228T224546Z`, reran live Test 13, and closed tracker rows/checklist/changelog with evidence-backed PASS.
+- [Live E2E run execution: Wave 5 Test 13 action detail contract and auth boundary (2026-03-01)](task_log.md#live-e2e-run-execution-wave-5-test-13-action-detail-contract-and-auth-boundary-2026-03-01)
+  - Executed full Test 13 matrix in run `20260228T220436Z` with live evidence capture for valid action detail, invalid-id behavior, no-auth/wrong-tenant/member-role auth boundaries, and response consistency.
+  - Confirmed core action-detail fields are present while `what_is_wrong` and `what_the_fix_does` remain absent in `/api/actions/{id}` detail payload.
+  - Updated `wave-05/test-13.md` and base tracker (timestamp, Wave 5 board counts, Section 2 rows #8/#9 status, and Section 8 Test 13 checklist item) from observed artifacts only.
 - [Wave 4 fixes (Tests 09-12): contract/security rerun and tracker sync (2026-03-01)](task_log.md#wave-4-fixes-tests-09-12-contractsecurity-rerun-and-tracker-sync-2026-03-01)
   - Executed full Wave 4 baseline + post-deploy rerun in run `20260228T220436Z`, then populated `wave-04/test-09.md` through `test-12.md` with evidence-backed final PASS outcomes.
   - Fixed observed Wave 4 issues: ingest-progress compatibility fields (`percent_complete`, `estimated_time_remaining`), invalid findings severity validation (`400`), and internal weekly-digest auth guard deny-closed behavior (`403`).

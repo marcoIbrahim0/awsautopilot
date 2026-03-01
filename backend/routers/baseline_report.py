@@ -25,7 +25,10 @@ from backend.config import settings
 from backend.database import get_db
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import BaselineReportStatus
+from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.baseline_report_builder import build_baseline_report_data
+from backend.services.baseline_report_spec import BaselineReportData
 from backend.services.s3_presigned import generate_presigned_url
 from backend.utils.sqs import (
     build_generate_baseline_report_job_payload,
@@ -118,6 +121,73 @@ def _report_to_detail(report: BaselineReport) -> BaselineReportDetailResponse:
         file_size_bytes=report.file_size_bytes,
         download_url=download_url,
         outcome=report.outcome,
+    )
+
+
+def _parse_report_uuid(report_id: str) -> uuid.UUID:
+    """Parse report_id UUID or raise 404."""
+    try:
+        return uuid.UUID(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Report not found", "detail": "Invalid report ID"},
+        ) from None
+
+
+async def _load_report_for_tenant(
+    db: AsyncSession,
+    *,
+    report_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    report_id_raw: str,
+) -> BaselineReport:
+    """Load tenant-scoped report row or raise 404."""
+    result = await db.execute(
+        select(BaselineReport).where(
+            BaselineReport.id == report_id,
+            BaselineReport.tenant_id == tenant_id,
+        )
+    )
+    report = result.scalar_one_or_none()
+    if report:
+        return report
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"error": "Report not found", "detail": f"No report found with ID {report_id_raw}"},
+    )
+
+
+def _normalize_account_ids(account_ids: object) -> list[str] | None:
+    """Normalize stored account_ids JSON value to optional list[str]."""
+    if not isinstance(account_ids, list):
+        return None
+    normalized = [str(account_id) for account_id in account_ids if isinstance(account_id, str)]
+    return normalized or None
+
+
+async def _load_tenant_name(db: AsyncSession, tenant_id: uuid.UUID) -> str | None:
+    """Return tenant display name when present."""
+    result = await db.execute(select(Tenant.name).where(Tenant.id == tenant_id))
+    return result.scalar_one_or_none()
+
+
+async def _build_report_view_data(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    account_ids_raw: object,
+) -> BaselineReportData:
+    """Build in-app viewer payload from current tenant findings."""
+    tenant_name = await _load_tenant_name(db, tenant_id)
+    account_ids = _normalize_account_ids(account_ids_raw)
+    return await db.run_sync(
+        lambda session: build_baseline_report_data(
+            session,
+            tenant_id=str(tenant_id),
+            account_ids=account_ids,
+            tenant_name=tenant_name,
+        )
     )
 
 
@@ -323,29 +393,66 @@ async def get_baseline_report(
 ):
     """Get a single baseline report by id. Returns download_url when status is success. Cache-Control: no-store."""
     tenant_uuid = current_user.tenant_id
-    try:
-        report_uuid = uuid.UUID(report_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "Report not found", "detail": "Invalid report ID"},
-        ) from None
-
-    result = await db.execute(
-        select(BaselineReport).where(
-            BaselineReport.id == report_uuid,
-            BaselineReport.tenant_id == tenant_uuid,
-        )
+    report_uuid = _parse_report_uuid(report_id)
+    report = await _load_report_for_tenant(
+        db,
+        report_id=report_uuid,
+        tenant_id=tenant_uuid,
+        report_id_raw=report_id,
     )
-    report = result.scalar_one_or_none()
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "Report not found", "detail": f"No report found with ID {report_id}"},
-        )
 
     body = _report_to_detail(report)
     return JSONResponse(
         content=body.model_dump(),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /baseline-report/{id}/data — In-app report viewer payload
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{report_id}/data",
+    response_model=BaselineReportData,
+    summary="Get baseline report data by ID",
+    description="Return structured report payload for in-app viewer. Report must exist in tenant scope and be in success status.",
+    responses={
+        404: {"description": "Report not found"},
+        409: {"description": "Report is not ready yet"},
+    },
+)
+async def get_baseline_report_data(
+    report_id: Annotated[str, Path(description="Report ID (UUID)")],
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+    current_user: Annotated[User, Depends(get_current_user)] = None,
+):
+    """Return structured baseline report payload for the in-app viewer."""
+    tenant_uuid = current_user.tenant_id
+    report_uuid = _parse_report_uuid(report_id)
+    report = await _load_report_for_tenant(
+        db,
+        report_id=report_uuid,
+        tenant_id=tenant_uuid,
+        report_id_raw=report_id,
+    )
+    if report.status != BaselineReportStatus.success:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Report not ready",
+                "detail": "Baseline report is not yet available for viewer data.",
+                "status": report.status.value,
+            },
+        )
+
+    view_data = await _build_report_view_data(
+        db,
+        tenant_id=tenant_uuid,
+        account_ids_raw=report.account_ids,
+    )
+    return JSONResponse(
+        content=view_data.model_dump(mode="json"),
         headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
     )

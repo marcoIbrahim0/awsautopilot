@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/findings?account_id=029037611564&region=eu-north-1&control_id=S3.2&status=NEW&limit=200&offset=0
+Authorization: Bearer <tenant_admin_token>

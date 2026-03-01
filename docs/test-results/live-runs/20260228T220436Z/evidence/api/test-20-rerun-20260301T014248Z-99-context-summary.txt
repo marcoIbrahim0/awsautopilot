@@ -1,0 +1,13 @@
+endpoint=/api/internal/reconciliation/schedule-tick
+dry_run=true
+limit=1
+tenant_name=Valens
+tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837
+aws_account_id=029037611564
+no_secret_status=403
+wrong_secret_status=403
+user_token_only_status=403
+correct_secret_status=200
+runtime_has_digest_secret=false
+runtime_has_reconciliation_scheduler_secret=false
+runtime_has_control_plane_events_secret=true

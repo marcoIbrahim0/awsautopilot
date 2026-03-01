@@ -1,0 +1,17 @@
+{
+  "duplicate_create_statuses": {
+    "first": "201",
+    "immediate_retry": "201",
+    "third_immediate": "201"
+  },
+  "duplicate_create_run_ids": {
+    "first": "4916da70-8c66-4cde-873a-fb08a16f11be",
+    "immediate_retry": "2bbcbd12-10e9-479e-a379-5da31b50e790",
+    "third_immediate": "4a108d82-bfa0-4797-a324-4dfb7ad589be"
+  },
+  "pending_snapshot_after_retries": {
+    "http": "200",
+    "total": "0",
+    "matching_action_pending": "0"
+  }
+}

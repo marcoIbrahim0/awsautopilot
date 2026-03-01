@@ -5,6 +5,7 @@ Covers: POST create run (approval, direct_fix validation), GET remediation-previ
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import uuid
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -52,6 +53,24 @@ def _mock_tenant() -> MagicMock:
     t = MagicMock()
     t.id = uuid.uuid4()
     return t
+
+
+def _mock_existing_run(
+    action: MagicMock,
+    *,
+    status: RemediationRunStatus,
+    mode: RemediationRunMode = RemediationRunMode.pr_only,
+    artifacts: dict | None = None,
+) -> MagicMock:
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = action.tenant_id
+    run.action_id = action.id
+    run.status = status
+    run.mode = mode
+    run.artifacts = artifacts
+    run.created_at = datetime.now(timezone.utc)
+    return run
 
 
 def _mock_async_session(*scalar_results: object) -> MagicMock:
@@ -314,6 +333,133 @@ def test_create_group_pr_bundle_run_pr_only_rejected_400(client: TestClient) -> 
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
         assert detail.get("error") == "PR bundle unsupported"
+
+
+def test_create_run_duplicate_active_status_returns_409_with_existing_run_id(client: TestClient) -> None:
+    """Active runs (pending/running/awaiting_approval) must block duplicate create requests."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing = _mock_existing_run(action, status=RemediationRunStatus.running)
+
+    session = _mock_async_session(action, None, existing)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(
+                "/api/remediation-runs",
+                json={"action_id": str(action.id), "mode": "pr_only"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Duplicate pending run"
+        assert detail.get("reason") == "duplicate_active_run"
+        assert detail.get("existing_run_id") == str(existing.id)
+        assert detail.get("existing_run_status") == "running"
+    assert session.commit.await_count == 0
+
+
+def test_create_run_recent_identical_retry_returns_409(client: TestClient) -> None:
+    """Recent identical requests are deduplicated even if prior run already completed."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing = _mock_existing_run(action, status=RemediationRunStatus.success)
+
+    session = _mock_async_session(action, None, existing)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(
+                "/api/remediation-runs",
+                json={"action_id": str(action.id), "mode": "pr_only"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Duplicate pending run"
+        assert detail.get("reason") == "duplicate_recent_request"
+        assert detail.get("existing_run_id") == str(existing.id)
+        assert detail.get("existing_run_status") == "success"
+    assert session.commit.await_count == 0
+
+
+def test_create_run_recent_different_signature_allows_new_run(client: TestClient) -> None:
+    """Recent run with different request signature should not block a new run."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing = _mock_existing_run(
+        action,
+        status=RemediationRunStatus.success,
+        mode=RemediationRunMode.direct_fix,
+    )
+
+    session = _mock_async_session(action, None, existing)
+
+    async def _refresh(run_obj: MagicMock) -> None:
+        run_obj.created_at = datetime.now(timezone.utc)
+        run_obj.updated_at = datetime.now(timezone.utc)
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-non-duplicate"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(
+                    "/api/remediation-runs",
+                    json={"action_id": str(action.id), "mode": "pr_only"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert session.commit.await_count == 1
+    assert mock_sqs.send_message.call_count == 1
 
 
 def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
@@ -805,6 +951,47 @@ def test_remediation_options_root_action_exposes_runbook_notice(client: TestClie
     assert body.get("runbook_url") == "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md"
 
 
+def test_remediation_options_s3_dependency_pass_when_runtime_indicates_no_public_dependency(client: TestClient) -> None:
+    """S3 remediation options should surface runtime-based pass when bucket is non-public and no website is configured."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    action.target_id = "arn:aws:s3:::b1-private-bucket"
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account.role_read_arn = "arn:aws:iam::123456789012:role/ReadRole"
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+        },
+    ) as mock_collect:
+        try:
+            r = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = {item["strategy_id"]: item for item in r.json().get("strategies", [])}
+    standard = strategies["s3_bucket_block_public_access_standard"]
+    checks = {item["code"]: item for item in standard["dependency_checks"]}
+    assert checks["s3_public_access_dependency"]["status"] == "pass"
+    assert mock_collect.call_count >= 1
+
+
 # ---------------------------------------------------------------------------
 # GET remediation-preview (8.4)
 # ---------------------------------------------------------------------------
@@ -1040,6 +1227,46 @@ def test_get_pr_bundle_zip_200(client: TestClient) -> None:
     zf.close()
     assert "providers.tf" in names
     assert "s3_block_public_access.tf" in names
+
+
+def test_get_pr_bundle_zip_is_deterministic_for_same_artifacts(client: TestClient) -> None:
+    """Repeated downloads for unchanged artifacts should return byte-identical ZIP payloads."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    run_id = str(uuid.uuid4())
+    run = MagicMock()
+    run.id = uuid.UUID(run_id)
+    run.tenant_id = tenant.id
+    run.artifacts = {
+        "pr_bundle": {
+            "files": [
+                {"path": "z.tf", "content": "z"},
+                {"path": "a.tf", "content": "a"},
+            ],
+        },
+    }
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        session = _mock_async_session(tenant, run)
+        yield session
+
+    from backend.auth import get_optional_user
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        first = client.get(f"/api/remediation-runs/{run_id}/pr-bundle.zip")
+        second = client.get(f"/api/remediation-runs/{run_id}/pr-bundle.zip")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.content == second.content
 
 
 def test_get_pr_bundle_zip_404_no_artifacts(client: TestClient) -> None:

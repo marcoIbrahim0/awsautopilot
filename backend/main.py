@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from backend.config import settings
 from backend.routers.actions import router as actions_router
 from backend.routers.action_groups import router as action_groups_router
+from backend.routers.audit_log import router as audit_log_router
 from backend.routers.auth import router as auth_router
 from backend.routers.aws_accounts import router as aws_accounts_router
 from backend.routers.baseline_report import router as baseline_report_router
@@ -50,6 +51,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(actions_router, prefix="/api")
 app.include_router(action_groups_router, prefix="/api")
+app.include_router(audit_log_router, prefix="/api")
 app.include_router(aws_accounts_router, prefix="/api")
 app.include_router(baseline_report_router, prefix="/api")
 app.include_router(control_mappings_router, prefix="/api")

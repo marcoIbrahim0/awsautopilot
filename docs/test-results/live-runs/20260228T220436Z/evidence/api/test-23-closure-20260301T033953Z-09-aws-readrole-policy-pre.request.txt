@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws iam get-policy-version --policy-arn arn:aws:iam::029037611564:policy/SecurityAutopilotReadRolePolicy --version-id v2

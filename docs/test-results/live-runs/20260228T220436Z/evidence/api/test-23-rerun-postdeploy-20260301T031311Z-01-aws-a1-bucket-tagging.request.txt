@@ -1,0 +1,1 @@
+aws s3api get-bucket-tagging --bucket arch1-bucket-website-a1-029037611564-eu-north-1

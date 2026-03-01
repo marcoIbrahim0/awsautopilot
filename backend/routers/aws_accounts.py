@@ -776,6 +776,7 @@ class AccountListItem(BaseModel):
     regions: list[str]
     status: str
     last_validated_at: datetime | None
+    last_synced_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -815,6 +816,21 @@ async def list_accounts(
         .order_by(AwsAccount.created_at.desc())
     )
     accounts = result.scalars().all()
+    account_ids = [acc.account_id for acc in accounts]
+    last_synced_at_by_account: dict[str, datetime | None] = {}
+    if account_ids:
+        freshness_result = await db.execute(
+            select(Finding.account_id, func.max(Finding.updated_at))
+            .where(
+                Finding.tenant_id == tenant.id,
+                Finding.account_id.in_(account_ids),
+            )
+            .group_by(Finding.account_id)
+        )
+        last_synced_at_by_account = {
+            str(account_id): last_synced_at
+            for account_id, last_synced_at in freshness_result.all()
+        }
 
     # Convert to response
     return [
@@ -826,6 +842,7 @@ async def list_accounts(
             regions=acc.regions or [],
             status=acc.status.value if hasattr(acc.status, "value") else str(acc.status),
             last_validated_at=acc.last_validated_at,
+            last_synced_at=last_synced_at_by_account.get(acc.account_id),
             created_at=acc.created_at,
             updated_at=acc.updated_at,
         )
@@ -904,6 +921,7 @@ async def update_account(
         regions=acc.regions or [],
         status=acc.status.value if hasattr(acc.status, "value") else str(acc.status),
         last_validated_at=acc.last_validated_at,
+        last_synced_at=None,
         created_at=acc.created_at,
         updated_at=acc.updated_at,
     )
@@ -2258,7 +2276,7 @@ class IngestSyncResponse(BaseModel):
     "/{account_id}/ingest-sync",
     response_model=IngestSyncResponse,
     status_code=status.HTTP_200_OK,
-    summary="Run ingestion synchronously (local only)",
+    summary="Run ingestion synchronously (local) with async fallback elsewhere",
 )
 async def trigger_ingest_sync(
     account_id: Annotated[str, Path(description="AWS account ID (12 digits)")],
@@ -2271,16 +2289,9 @@ async def trigger_ingest_sync(
     body: IngestTriggerRequest | None = Body(default=None),
 ) -> IngestSyncResponse:
     """
-    Run Security Hub ingestion **synchronously** in the API process (no SQS/worker).
-
-    **Only available when ENV=local.** Use this when the worker is not running and you want
-    to populate findings for testing. Resolves tenant and regions the same way as POST .../ingest.
+    Run Security Hub ingestion synchronously in local development, or queue
+    asynchronous ingest jobs in non-local environments.
     """
-    if not settings.is_local:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="ingest-sync is only available when ENV=local",
-        )
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     try:
         await get_tenant(tenant_uuid, db)
@@ -2303,16 +2314,36 @@ async def trigger_ingest_sync(
             detail={"error": "Account not validated", "detail": "Validate the account first."},
         )
     regions = _resolve_sync_ingest_regions(acc.regions, body)
-    now = datetime.now(timezone.utc).isoformat()
-    from backend.workers.jobs.ingest_findings import execute_ingest_job
+    if settings.is_local:
+        now = datetime.now(timezone.utc).isoformat()
+        from backend.workers.jobs.ingest_findings import execute_ingest_job
 
-    for r in regions:
-        job = build_ingest_job_payload(tenant_uuid, account_id, r, now)
-        await asyncio.to_thread(execute_ingest_job, job)
+        for r in regions:
+            job = build_ingest_job_payload(tenant_uuid, account_id, r, now)
+            await asyncio.to_thread(execute_ingest_job, job)
+        return IngestSyncResponse(
+            account_id=account_id,
+            regions=regions,
+            message="Ingestion completed. Refresh GET /api/findings to see results.",
+        )
+
+    if not settings.has_ingest_queue:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Ingestion service unavailable", "detail": "Ingest queue URL not configured."},
+        )
+    try:
+        _enqueue_ingest_jobs(tenant_uuid, account_id, regions)
+    except ClientError as exc:
+        logger.exception("SQS send_message failed for ingest-sync fallback enqueue: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Ingestion service unavailable", "detail": "Could not enqueue ingest jobs."},
+        ) from exc
     return IngestSyncResponse(
         account_id=account_id,
         regions=regions,
-        message="Ingestion completed. Refresh GET /api/findings to see results.",
+        message="Synchronous ingest is local-only; asynchronous ingest jobs were queued.",
     )
 
 

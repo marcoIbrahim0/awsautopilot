@@ -1,0 +1,8 @@
+run_id=ae4ab0db-3c6a-4f74-879f-7ee64013aef6
+admin_token_source=test-13-rerun-postdeploy-00-login-admin.json
+tenant_b_email=wave6.test18.20260301T003820Z.6010@example.com
+authorized_download_status=200
+no_auth_download_status=401
+invalid_token_download_status=401
+wrong_tenant_download_status=404
+repeat_download_status=200

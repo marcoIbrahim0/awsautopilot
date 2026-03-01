@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import boto3
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,6 +59,7 @@ from backend.services.tenant_reconciliation import (
 from backend.utils.sqs import (
     build_backfill_action_groups_job_payload,
     build_backfill_finding_keys_job_payload,
+    build_compute_actions_job_payload,
     build_ingest_control_plane_events_job_payload,
     build_reconcile_inventory_global_orchestration_job_payload,
     build_reconcile_inventory_shard_job_payload,
@@ -153,6 +154,12 @@ class ReconciliationScheduleTickRequest(BaseModel):
     account_ids: list[str] | None = None
     limit: int = Field(default=200, ge=1, le=1000)
     dry_run: bool = False
+
+
+class InternalComputeRequest(BaseModel):
+    tenant_id: uuid.UUID | None = None
+    account_id: str | None = Field(default=None, pattern=r"^\d{12}$")
+    region: str | None = Field(default=None, min_length=1, max_length=32)
 
 
 class GroupRunActionResult(BaseModel):
@@ -359,6 +366,64 @@ async def trigger_weekly_digest(
 
     logger.info("weekly_digest trigger enqueued %s jobs for %s tenants", enqueued, len(tenants))
     return {"enqueued": enqueued, "tenants": len(tenants)}
+
+
+@router.post(
+    "/compute",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue compute-actions jobs",
+    description=(
+        "Scheduler-facing compute-actions trigger. "
+        "Protected by X-Reconciliation-Scheduler-Secret."
+    ),
+)
+async def trigger_internal_compute(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    body: InternalComputeRequest = Body(default_factory=InternalComputeRequest),
+    x_reconciliation_scheduler_secret: Annotated[str | None, Header(alias="X-Reconciliation-Scheduler-Secret")] = None,
+) -> dict:
+    _verify_reconciliation_scheduler_secret(x_reconciliation_scheduler_secret)
+
+    queue_url = (settings.SQS_INGEST_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
+        )
+    if body.account_id and body.tenant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant_id is required when account_id is provided.",
+        )
+
+    if body.tenant_id is not None:
+        tenant_ids = [body.tenant_id]
+    else:
+        tenant_ids = [row[0] for row in (await db.execute(select(Tenant.id))).all()]
+
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    message_ids: list[str] = []
+    for tenant_id in tenant_ids:
+        payload = build_compute_actions_job_payload(
+            tenant_id=tenant_id,
+            created_at=now_iso,
+            account_id=body.account_id,
+            region=body.region,
+        )
+        response = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+        message_ids.append(str(response.get("MessageId") or ""))
+
+    return {
+        "enqueued": len(message_ids),
+        "tenant_ids": [str(value) for value in tenant_ids],
+        "scope": {
+            "account_id": body.account_id,
+            "region": body.region,
+        },
+        "message_ids": message_ids,
+    }
 
 
 @router.post(

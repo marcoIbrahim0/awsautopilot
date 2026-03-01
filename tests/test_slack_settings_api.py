@@ -219,3 +219,89 @@ def test_patch_slack_settings_clear_webhook() -> None:
     assert r.status_code == 200
     assert tenant.slack_webhook_url is None
     assert r.json()["slack_webhook_configured"] is False
+
+
+def test_patch_slack_settings_rejects_non_slack_domain() -> None:
+    """PATCH rejects webhook URLs outside hooks.slack.com."""
+    tenant_id = "123e4567-e89b-12d3-a456-426614174000"
+    user = _mock_user(tenant_id, role="admin")
+    tenant = _mock_tenant(
+        tenant_id,
+        slack_webhook_url="https://hooks.slack.com/services/T/B/OLD",
+        slack_digest_enabled=True,
+    )
+
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = tenant
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=result)
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    try:
+        client = TestClient(app)
+        r = client.patch(
+            "/api/users/me/slack-settings",
+            json={"slack_webhook_url": "https://example.com/webhook"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    assert "Invalid Slack webhook URL" in (r.json().get("detail") or "")
+    assert tenant.slack_webhook_url == "https://hooks.slack.com/services/T/B/OLD"
+    assert session.commit.await_count == 0
+
+
+def test_patch_slack_settings_rejects_ssrf_style_urls() -> None:
+    """PATCH rejects metadata IP and hooks-lookalike webhook URLs."""
+    tenant_id = "123e4567-e89b-12d3-a456-426614174000"
+    user = _mock_user(tenant_id, role="admin")
+
+    bad_urls = [
+        "http://169.254.169.254/latest/meta-data/",
+        "https://hooks.slack.com.evil.example/services/T/B/X",
+    ]
+    for bad_url in bad_urls:
+        tenant = _mock_tenant(
+            tenant_id,
+            slack_webhook_url="https://hooks.slack.com/services/T/B/OLD",
+            slack_digest_enabled=True,
+        )
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = tenant
+        session = MagicMock()
+        session.execute = AsyncMock(return_value=result)
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+
+        async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+            yield session
+
+        async def mock_get_current_user() -> MagicMock:
+            return user
+
+        app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_current_user] = mock_get_current_user
+        try:
+            client = TestClient(app)
+            r = client.patch(
+                "/api/users/me/slack-settings",
+                json={"slack_webhook_url": bad_url},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+        assert r.status_code == 400
+        assert tenant.slack_webhook_url == "https://hooks.slack.com/services/T/B/OLD"
+        assert session.commit.await_count == 0

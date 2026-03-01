@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/auth/me
+Authorization: Bearer <tenant_admin_token>

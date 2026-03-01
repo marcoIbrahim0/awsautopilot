@@ -426,6 +426,20 @@ def test_pr_bundle_non_s3_terraform_readme_excludes_s3_guardrails() -> None:
     assert "S3.2 guardrail (read before apply)" not in readme
 
 
+def test_pr_bundle_terraform_readme_includes_c2_c5_proof_fields() -> None:
+    """Terraform README includes plan timestamp metadata and preservation statement."""
+    action = _make_action(
+        action_type=ACTION_TYPE_ENABLE_SECURITY_HUB,
+        target_id="target-1",
+        region="us-east-1",
+        control_id="SecurityHub.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    assert "terraform_plan_timestamp_utc:" in readme
+    assert "preserved_configuration_statement:" in readme
+
+
 def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> None:
     """S3.2 variant cloudfront_oac_private_s3 returns runnable CloudFront+OAC+private S3 Terraform."""
     action = _make_action(
@@ -496,7 +510,26 @@ def test_s3_bucket_name_from_target_id() -> None:
     assert _s3_bucket_name_from_target_id("arn:aws:s3:::demomarcoss") == "demomarcoss"
     composite = "029037611564|eu-north-1|arn:aws:s3:::demomarcoss|S3.2"
     assert _s3_bucket_name_from_target_id(composite) == "demomarcoss"
-    assert _s3_bucket_name_from_target_id("029037611564|eu-north-1|no-arn-here|S3.2") == "REPLACE_BUCKET_NAME"
+    assert _s3_bucket_name_from_target_id("029037611564|eu-north-1|no-arn-here|S3.2") == "no-arn-here"
+    assert (
+        _s3_bucket_name_from_target_id("029037611564|eu-north-1|AWS::::Account:029037611564|S3.15")
+        == "REPLACE_BUCKET_NAME"
+    )
+
+
+def test_pr_bundle_bucket_actions_fail_on_unresolved_bucket_placeholder() -> None:
+    """Bucket-scoped bundles must fail instead of shipping REPLACE_BUCKET_NAME placeholders."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="029037611564|eu-north-1|AWS::::Account:029037611564|S3.15",
+        region="eu-north-1",
+        control_id="S3.15",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(action, "terraform")
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "unresolved_placeholder_token"
+    assert "REPLACE_BUCKET_NAME" in payload["detail"]
 
 
 def test_pr_bundle_s3_bucket_block_cloudformation_step_9_9() -> None:

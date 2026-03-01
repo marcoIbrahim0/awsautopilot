@@ -1,0 +1,7 @@
+group_key=s3_bucket_encryption_kms|029037611564|eu-north-1|open
+action_type=s3_bucket_encryption_kms
+account_id=029037611564
+status=open
+region=eu-north-1
+action_count=26
+run_id=ae4ab0db-3c6a-4f74-879f-7ee64013aef6

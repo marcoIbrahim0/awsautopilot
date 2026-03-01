@@ -1,0 +1,1 @@
+GET https://api.valensjewelry.com/api/findings/c15f405b-e8dc-42fd-b9d9-1e1181af7c38 

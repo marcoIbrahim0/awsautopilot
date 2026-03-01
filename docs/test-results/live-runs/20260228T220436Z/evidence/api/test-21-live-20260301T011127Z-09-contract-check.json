@@ -1,0 +1,28 @@
+{
+  "prefix": "test-21-live-20260301T011127Z",
+  "export_id": "9fd34942-be37-4149-be00-d80d7e9f2f27",
+  "create_http": 202,
+  "first_poll": {
+    "status": "pending",
+    "download_url_present": false
+  },
+  "terminal": {
+    "status": "success",
+    "http": 200,
+    "download_url_present": true
+  },
+  "checks": {
+    "download_url_absent_before_terminal_success": true,
+    "download_url_present_on_success": true,
+    "detail_no_auth_blocked": true,
+    "presigned_download_first_http": 200,
+    "presigned_download_repeat_http": 200,
+    "zip_integrity": "pass",
+    "retry_raw_bytes_match": true
+  },
+  "download_sha256": {
+    "first": "c811eb1241b95de6b95057bdcdb58b207b3df7bdfd7209c3feac50edda4511d9",
+    "repeat": "c811eb1241b95de6b95057bdcdb58b207b3df7bdfd7209c3feac50edda4511d9"
+  },
+  "poll_count": 2
+}

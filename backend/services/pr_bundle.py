@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Literal, NoReturn, Protocol, TypedDict
 
 from backend.services.root_credentials_workflow import (
@@ -131,6 +132,17 @@ SUPPORTED_ACTION_TYPES = frozenset({
     ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
     ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT,
 })
+
+_BLOCKED_PLACEHOLDER_TOKENS = frozenset(
+    {
+        "REPLACE_BUCKET_NAME",
+        "REPLACE_SECURITY_GROUP_ID",
+    }
+)
+_PLACEHOLDER_TOKEN_PATTERN = re.compile(r"\b(REPLACE_[A-Z0-9_]+)\b")
+_S3_BUCKET_NAME_PATTERN = re.compile(
+    r"^(?!\d{1,3}(?:\.\d{1,3}){3}$)(?!xn--)(?!sthree-)(?!amzn-s3-demo-)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+)
 
 
 def _raise_pr_bundle_error(
@@ -286,10 +298,66 @@ def generate_pr_bundle(
     else:
         result = _generate_unsupported(action, normalized_format)
 
-    return _maybe_append_terraform_readme(
+    result = _maybe_append_terraform_readme(
         result,
         risk_snapshot=risk_snapshot,
         strategy_id=effective_strategy_id,
+    )
+    _ensure_no_blocked_placeholders(
+        result,
+        action_type=action_type,
+        format=normalized_format,
+        strategy_id=effective_strategy_id,
+        variant=normalized_variant or None,
+    )
+    return result
+
+
+def _blocked_placeholder_hits(result: PRBundleResult) -> list[tuple[str, str]]:
+    """Return file/token hits for blocked unresolved placeholders."""
+    hits: list[tuple[str, str]] = []
+    for item in result.get("files", []):
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "file")
+        content = item.get("content")
+        if content is None:
+            continue
+        text = content if isinstance(content, str) else str(content)
+        for token in set(_PLACEHOLDER_TOKEN_PATTERN.findall(text)):
+            if token in _BLOCKED_PLACEHOLDER_TOKENS:
+                hits.append((path, token))
+    return hits
+
+
+def _ensure_no_blocked_placeholders(
+    result: PRBundleResult,
+    *,
+    action_type: str,
+    format: str,
+    strategy_id: str | None,
+    variant: str | None,
+) -> None:
+    """
+    Fail PR bundle generation when blocked unresolved placeholders remain.
+
+    This prevents account-/resource-scoped parsing gaps from leaking invalid IaC
+    into downloadable artifacts.
+    """
+    hits = _blocked_placeholder_hits(result)
+    if not hits:
+        return
+    path, token = hits[0]
+    _raise_pr_bundle_error(
+        code="unresolved_placeholder_token",
+        detail=(
+            f"Generated bundle contains unresolved placeholder token '{token}' in file '{path}'. "
+            "Refresh findings/action targets and retry remediation bundle generation."
+        ),
+        action_type=action_type,
+        format=format,
+        strategy_id=strategy_id,
+        variant=variant,
     )
 
 
@@ -394,6 +462,13 @@ def _maybe_append_terraform_readme(
         return result
     files = list(result["files"])
     readme = _terraform_readme_content()
+    plan_timestamp_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    readme += "\nTerraform proof metadata (C2/C5)\n-------------------------------\n"
+    readme += f"- terraform_plan_timestamp_utc: {plan_timestamp_utc}\n"
+    readme += (
+        "- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to "
+        "preserve unrelated existing configuration unless a generated diff explicitly changes it.\n"
+    )
     if any(f.get("path") == "s3_bucket_block_public_access.tf" for f in files):
         readme += _terraform_s3_bucket_block_guardrails_content()
     if any(f.get("path") == "s3_cloudfront_oac_private_s3.tf" for f in files):
@@ -453,22 +528,65 @@ def _s3_bucket_name_from_target_id(target_id: str) -> str:
     if not (target_id or "").strip():
         return "REPLACE_BUCKET_NAME"
     tid = (target_id or "").strip()
+
+    # Prefer explicit S3 ARN extraction across composite target IDs.
     if "arn:aws:s3:::" in tid:
-        # Take the segment that contains the ARN (e.g. from composite or standalone)
         for part in tid.split("|"):
-            part = part.strip()
-            if "arn:aws:s3:::" in part:
-                rest = part.split("arn:aws:s3:::")[-1]
-                bucket = rest.split("/")[0].strip()
-                if bucket:
-                    return bucket
-        rest = tid.split("arn:aws:s3:::")[-1]
-        bucket = rest.split("/")[0].split("|")[0].strip()
-        if bucket:
-            return bucket
+            if "arn:aws:s3:::" not in part:
+                continue
+            candidate = _bucket_name_candidate(part)
+            if candidate:
+                return candidate
+        candidate = _bucket_name_candidate(tid)
+        if candidate:
+            return candidate
+
+    # For normalized target IDs (account|region|resource|control), use resource slot.
     if "|" in tid:
+        segments = [segment.strip() for segment in tid.split("|")]
+        if len(segments) >= 3:
+            candidate = _bucket_name_candidate(segments[2])
+            if candidate:
+                return candidate
         return "REPLACE_BUCKET_NAME"
-    return tid[:512] or "REPLACE_BUCKET_NAME"
+
+    candidate = _bucket_name_candidate(tid)
+    return candidate or "REPLACE_BUCKET_NAME"
+
+
+def _bucket_name_candidate(raw: str) -> str | None:
+    """Extract normalized bucket name candidate from ARN/plain/kv forms."""
+    value = (raw or "").strip().strip("'\"")
+    if not value:
+        return None
+
+    if "arn:aws:s3:::" in value:
+        value = value.split("arn:aws:s3:::")[-1]
+    elif value.lower().startswith("arn:"):
+        return None
+
+    if value.startswith("AWS::::Account:") or value.lower().startswith("account:"):
+        return None
+    if value.lower().startswith("aws-account-"):
+        return None
+    if re.fullmatch(r"\d{12}", value):
+        return None
+
+    kv_match = re.search(
+        r"(?:bucket(?:_name)?|bucketname)\s*[:=]\s*([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])",
+        value,
+        flags=re.IGNORECASE,
+    )
+    if kv_match:
+        value = kv_match.group(1)
+
+    value = value.split("/", 1)[0].strip()
+    if not value:
+        return None
+
+    if not _S3_BUCKET_NAME_PATTERN.fullmatch(value):
+        return None
+    return value
 
 
 def _security_group_id_from_target_id(target_id: str) -> str:

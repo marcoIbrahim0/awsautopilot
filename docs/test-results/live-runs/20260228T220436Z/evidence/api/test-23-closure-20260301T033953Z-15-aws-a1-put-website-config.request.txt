@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws s3api put-bucket-website --bucket arch1-bucket-website-a1-029037611564-eu-north-1 --website-configuration IndexDocument={Suffix=index.html},ErrorDocument={Key=error.html}

@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/auth/signup
+{"email":"<unique>","name":"Wave7 Test23 Admin","company_name":"<unique>","password":"***REDACTED***"}

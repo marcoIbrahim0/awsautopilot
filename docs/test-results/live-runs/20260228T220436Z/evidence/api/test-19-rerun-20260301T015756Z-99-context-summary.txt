@@ -1,0 +1,11 @@
+prefix=test-19-rerun-20260301T015756Z
+ui_prefix=test-19-rerun-20260301T015756Z-ui
+run_dir=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z
+deployment_image_tag=20260301T014806Z
+deployment_command=AWS_PROFILE=default TENANT_RECONCILIATION_ENABLED=false CONTROL_PLANE_SHADOW_MODE=true ./scripts/deploy_saas_serverless.sh --enable-worker true --worker-reserved-concurrency 1
+tenant_a_admin_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-00-login-admin.json
+tenant_a_member_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-accept-invite-valid-token.json
+tenant_b_signup_email=wave6.test19.rerun.20260301T015756Z.9592@example.com
+tenant_b_signup_name=Wave6 Test19 Rerun 20260301T015756Z
+tenant_b_signup_artifact=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-19-rerun-20260301T015756Z-03-signup-tenantb.json
+notes=Tenant B was used for mutable digest/slack setting and webhook security probes to avoid overwriting unknown existing webhook secrets in Tenant A.

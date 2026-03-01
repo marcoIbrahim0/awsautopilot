@@ -1,0 +1,1 @@
+GET https://api.valensjewelry.com/api/findings?limit=5&offset=0 

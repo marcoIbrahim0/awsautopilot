@@ -1,0 +1,9 @@
+prefix=test-19-live-20260301T011252Z
+ui_prefix=test-19-live-20260301T011252Z-ui
+run_dir=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z
+tenant_a_admin_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-00-login-admin.json
+tenant_a_member_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-accept-invite-valid-token.json
+tenant_b_signup_email=wave6.test19.20260301T011253Z.14827@example.com
+tenant_b_signup_name=Wave6 Test19 TenantB 20260301T011253Z
+tenant_b_signup_artifact=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-19-live-20260301T011252Z-03-signup-tenantb.json
+notes=Tenant B was used for mutable digest/slack setting and webhook security probes to avoid overwriting unknown existing webhook secrets in Tenant A.

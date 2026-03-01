@@ -1,0 +1,24 @@
+{
+  "patch_disable_status": 200,
+  "get_after_disable_status": 200,
+  "patch_enable_clear_status": 200,
+  "get_after_enable_clear_status": 200,
+  "patch_repeat_status": 200,
+  "get_after_disable_response": {
+    "digest_enabled": false,
+    "digest_recipients": "maromaher54@gmail.com,wave3acc+20260228T213251Z@example.com"
+  },
+  "get_after_enable_clear_response": {
+    "digest_enabled": true,
+    "digest_recipients": null
+  },
+  "repeat_patch_response": {
+    "digest_enabled": true,
+    "digest_recipients": null
+  },
+  "checks": {
+    "disable_and_custom_recipients_persisted": true,
+    "enable_and_clear_persisted": true,
+    "repeat_patch_response_stable": true
+  }
+}

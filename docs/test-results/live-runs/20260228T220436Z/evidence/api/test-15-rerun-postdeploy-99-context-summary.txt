@@ -1,0 +1,6 @@
+Wave 5 Test 15 post-deploy rerun summary
+Timestamp: 2026-03-01T00:03:20Z
+Run ID: 216b042f-ee97-4dd4-aeaf-51880e2260df
+API base: https://api.valensjewelry.com
+Web base: https://dev.valensjewelry.com
+Key check: /api/remediation-runs/{id}/execution now returns HTTP 200 with current_step/progress fields.

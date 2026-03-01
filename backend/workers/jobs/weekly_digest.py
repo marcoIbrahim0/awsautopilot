@@ -22,7 +22,7 @@ from backend.models.finding import Finding
 from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.email import email_service
-from backend.services.slack_digest import send_slack_digest
+from backend.services.slack_digest import is_valid_slack_webhook_url, send_slack_digest
 from backend.workers.database import session_scope
 
 logger = logging.getLogger("worker.jobs.weekly_digest")
@@ -227,12 +227,19 @@ def execute_weekly_digest_job(job: dict) -> None:
             )
 
         # Step 11.4: send digest to Slack when webhook configured and enabled
-        webhook_url = getattr(tenant, "slack_webhook_url", None) or ""
+        webhook_url = (getattr(tenant, "slack_webhook_url", None) or "").strip()
         slack_enabled = getattr(tenant, "slack_digest_enabled", False)
-        if webhook_url.strip() and slack_enabled:
+        if webhook_url and not is_valid_slack_webhook_url(webhook_url):
+            logger.warning(
+                "weekly_digest slack invalid webhook skipped tenant_id=%s",
+                tenant_id_str,
+            )
+            tenant.slack_webhook_url = None
+            tenant.slack_digest_enabled = False
+        elif webhook_url and slack_enabled:
             tenant_name = getattr(tenant, "name", "") or "Your organization"
             ok = send_slack_digest(
-                webhook_url=webhook_url.strip(),
+                webhook_url=webhook_url,
                 tenant_name=tenant_name,
                 payload=payload,
                 frontend_url=getattr(settings, "FRONTEND_URL", None),
@@ -242,7 +249,7 @@ def execute_weekly_digest_job(job: dict) -> None:
                 tenant_id_str,
                 ok,
             )
-        elif webhook_url.strip() and not slack_enabled:
+        elif webhook_url and not slack_enabled:
             logger.info(
                 "weekly_digest slack skipped tenant_id=%s (Slack digest disabled)",
                 tenant_id_str,

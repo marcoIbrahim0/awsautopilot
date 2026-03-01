@@ -1,0 +1,9 @@
+{
+  "baseline_total": 391,
+  "observed_filter_inputs": {
+    "severity": "INFORMATIONAL",
+    "account_id": "029037611564",
+    "status": "RESOLVED",
+    "source": "security_hub"
+  }
+}

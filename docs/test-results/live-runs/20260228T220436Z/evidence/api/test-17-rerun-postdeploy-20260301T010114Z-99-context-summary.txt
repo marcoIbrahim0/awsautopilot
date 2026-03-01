@@ -1,0 +1,5 @@
+run_id=0b91ccbd-1c39-4cb3-8791-4e3a363c0fcb
+status=success
+outcome=Group PR bundle generated (25 actions; 1 skipped)
+generated_action_count=25
+skipped_action_count=1

@@ -1,0 +1,12 @@
+timestamp_utc=20260301T013443Z
+admin_token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-20-live-20260301T011449Z-01-login-admin.json
+selected_action_id=9c31f438-1ade-4cc7-91c8-b959870a615b
+selected_finding_id=16c83cc5-4c33-4f8b-ab10-4508aa3c77c5
+mode_option=pr_only
+strategy_option=<none>
+first_create_status=201
+second_create_status=409
+third_create_status=409
+first_run_id=e9287ff2-f260-472b-a547-0cd5895744dc
+second_run_id=
+third_run_id=

@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+x-amz-id-2: CYpHkodI25MuGrEF4eosPfOt3NAmGbPm2LDP1eubiFt8SA82SIjzfpYH3zWzSoQTSII2jkT36mpWyf8iy2/grrv4TeX8ORUM
+x-amz-request-id: 22VZ2RJ4KCPMQX8F
+Date: Sun, 01 Mar 2026 01:11:39 GMT
+Last-Modified: Sun, 01 Mar 2026 01:11:34 GMT
+ETag: "b6aa63e17d51c26deab3d2e9a9ead8ab"
+x-amz-server-side-encryption: AES256
+Accept-Ranges: bytes
+Content-Type: application/zip
+Content-Length: 522980
+Server: AmazonS3
+

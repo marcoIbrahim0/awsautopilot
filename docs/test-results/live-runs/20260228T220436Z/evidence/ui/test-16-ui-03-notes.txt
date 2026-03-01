@@ -1,0 +1,2 @@
+Test 16 is API-contract focused. UI probes were limited to unauthenticated route stability checks for /actions and /actions/{id}.
+No UI-visible rendering defect was observed from route probe responses in this run.

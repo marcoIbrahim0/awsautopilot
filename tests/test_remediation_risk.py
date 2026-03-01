@@ -137,3 +137,35 @@ def test_snapshot_public_shares_inventory_adds_warn() -> None:
 
     status_map = _code_status(snapshot)
     assert status_map["snapshot_public_shares_present"] == "warn"
+
+
+def test_s3_public_access_dependency_passes_when_bucket_not_public_and_website_disabled() -> None:
+    action = SimpleNamespace(action_type="s3_bucket_block_public_access")
+    strategy = _fake_strategy(
+        "s3_bucket_block_public_access_standard",
+        action_type="s3_bucket_block_public_access",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_public_access_dependency"] == "pass"
+    assert snapshot["recommendation"] == "safe_to_proceed"
+
+
+def test_s3_public_access_dependency_warns_when_probe_data_is_incomplete() -> None:
+    action = SimpleNamespace(action_type="s3_bucket_block_public_access")
+    strategy = _fake_strategy(
+        "s3_bucket_block_public_access_standard",
+        action_type="s3_bucket_block_public_access",
+    )
+    snapshot = evaluate_strategy_impact(action, strategy, runtime_signals={})
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_public_access_dependency"] == "warn"

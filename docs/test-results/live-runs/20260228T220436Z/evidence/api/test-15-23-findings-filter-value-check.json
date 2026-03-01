@@ -1,0 +1,36 @@
+{
+  "baseline_shape": {
+    "has_items_array": true,
+    "has_total_number": true
+  },
+  "severity_filter_check": {
+    "expected": "INFORMATIONAL",
+    "item_count": 20,
+    "mismatch_count": 0
+  },
+  "account_filter_check": {
+    "expected": "029037611564",
+    "item_count": 20,
+    "mismatch_count": 0
+  },
+  "status_filter_check": {
+    "expected": "RESOLVED",
+    "item_count": 20,
+    "mismatch_count": 0
+  },
+  "source_filter_check": {
+    "expected": "security_hub",
+    "item_count": 20,
+    "mismatch_count": 0
+  },
+  "combined_filter_check": {
+    "expected": {
+      "severity": "INFORMATIONAL",
+      "account_id": "029037611564",
+      "status": "RESOLVED",
+      "source": "security_hub"
+    },
+    "item_count": 20,
+    "mismatch_count": 0
+  }
+}

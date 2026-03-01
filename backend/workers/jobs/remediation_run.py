@@ -333,6 +333,10 @@ def _generate_group_pr_bundle(
     Files are namespaced into per-action folders to avoid Terraform resource-name collisions.
     """
     files: list[dict[str, str]] = []
+    generated_action_ids: list[uuid.UUID] = []
+    generated_action_count = 0
+    skipped_actions: list[dict[str, str]] = []
+    first_generation_error: PRBundleGenerationError | None = None
     run_all_script = """#!/usr/bin/env bash
 set -euo pipefail
 
@@ -643,17 +647,46 @@ echo "All action folders completed successfully."
     ]
 
     for index, action in enumerate(actions):
-        per_action_bundle = generate_pr_bundle(
-            action,
-            format="terraform",
-            strategy_id=strategy_id,
-            strategy_inputs=strategy_inputs,
-            variant=variant,
-        )
         folder = _safe_group_folder_name(action, index)
-        manifest_lines.append(
-            f"- {index + 1}. {action.title} | {action.control_id or 'n/a'} | {action.target_id}"
-        )
+        action_line = f"- {index + 1}. {action.title} | {action.control_id or 'n/a'} | {action.target_id}"
+        try:
+            per_action_bundle = generate_pr_bundle(
+                action,
+                format="terraform",
+                strategy_id=strategy_id,
+                strategy_inputs=strategy_inputs,
+                variant=variant,
+            )
+        except PRBundleGenerationError as error:
+            if first_generation_error is None:
+                first_generation_error = error
+            payload = error.as_dict()
+            code = str(payload.get("code") or "pr_bundle_generation_error")
+            detail = str(payload.get("detail") or "PR bundle generation failed for this action.")
+            skipped_actions.append(
+                {
+                    "action_id": str(action.id),
+                    "code": code,
+                    "detail": detail,
+                    "target_id": str(action.target_id or ""),
+                }
+            )
+            manifest_lines.append(f"{action_line} | SKIPPED ({code})")
+            files.append(
+                {
+                    "path": f"errors/{index + 1:02d}-{str(action.id)[:8]}.txt",
+                    "content": (
+                        f"Action {action.id} was skipped during bundle generation.\n"
+                        f"Code: {code}\n"
+                        f"Detail: {detail}\n"
+                    ),
+                }
+            )
+            continue
+
+        generated_action_count += 1
+        generated_action_ids.append(action.id)
+        manifest_lines.append(action_line)
         for file_item in per_action_bundle.get("files", []):
             if not isinstance(file_item, dict):
                 continue
@@ -670,6 +703,17 @@ echo "All action folders completed successfully."
                 }
             )
 
+    if generated_action_count == 0 and first_generation_error is not None:
+        raise first_generation_error
+    if skipped_actions:
+        manifest_lines.extend(
+            [
+                "",
+                f"Skipped actions: {len(skipped_actions)}",
+                "See errors/*.txt for per-action generation failures.",
+            ]
+        )
+
     if callback_url and report_token:
         files.insert(
             0,
@@ -685,7 +729,7 @@ echo "All action folders completed successfully."
                 "content": _build_reporting_wrapper_script(
                     callback_url=callback_url,
                     report_token=report_token,
-                    action_ids=[action.id for action in actions],
+                    action_ids=generated_action_ids,
                 ),
             },
         )
@@ -716,6 +760,10 @@ echo "All action folders completed successfully."
         "metadata": {
             "runner_template_source": template_source,
             "runner_template_version": template_version,
+            "requested_action_count": len(actions),
+            "generated_action_count": generated_action_count,
+            "skipped_action_count": len(skipped_actions),
+            "skipped_actions": skipped_actions,
         },
     }
 
@@ -1130,28 +1178,58 @@ def execute_remediation_run_job(job: dict) -> None:
                                         group_bundle["runner_template_source"] = source
                                     if isinstance(version, str) and version:
                                         group_bundle["runner_template_version"] = version
+                                    generated_count = metadata.get("generated_action_count")
+                                    skipped_count = metadata.get("skipped_action_count")
+                                    skipped_actions = metadata.get("skipped_actions")
+                                    if isinstance(generated_count, int):
+                                        group_bundle["generated_action_count"] = generated_count
+                                    if isinstance(skipped_count, int):
+                                        group_bundle["skipped_action_count"] = skipped_count
+                                    if isinstance(skipped_actions, list):
+                                        group_bundle["skipped_actions"] = skipped_actions
                             artifacts["pr_bundle"] = pr_bundle
                             run.artifacts = artifacts
-                            run.outcome = f"Group PR bundle generated ({len(ordered_actions)} actions)"
+                            generated_count = len(ordered_actions)
+                            skipped_generation_count = 0
+                            if isinstance(pr_bundle, dict):
+                                metadata = pr_bundle.get("metadata")
+                                if isinstance(metadata, dict):
+                                    generated_value = metadata.get("generated_action_count")
+                                    skipped_value = metadata.get("skipped_action_count")
+                                    if isinstance(generated_value, int):
+                                        generated_count = generated_value
+                                    if isinstance(skipped_value, int):
+                                        skipped_generation_count = skipped_value
+                            if skipped_generation_count > 0:
+                                run.outcome = (
+                                    "Group PR bundle generated "
+                                    f"({generated_count} actions; {skipped_generation_count} skipped)"
+                                )
+                            else:
+                                run.outcome = f"Group PR bundle generated ({generated_count} actions)"
                             run.status = RemediationRunStatus.success
                             if effective_variant:
                                 log_lines.append(
                                     "Group PR bundle generated "
-                                    f"(actions={len(ordered_actions)}, variant={effective_variant})."
+                                    f"(actions={generated_count}, variant={effective_variant})."
                                 )
                             elif selected_strategy_id:
                                 log_lines.append(
                                     "Group PR bundle generated "
-                                    f"(actions={len(ordered_actions)}, strategy={selected_strategy_id})."
+                                    f"(actions={generated_count}, strategy={selected_strategy_id})."
                                 )
                             else:
                                 log_lines.append(
-                                    f"Group PR bundle generated (actions={len(ordered_actions)})."
+                                    f"Group PR bundle generated (actions={generated_count})."
                                 )
                             missing_count = max(0, len(group_action_ids) - len(ordered_actions))
                             if missing_count:
                                 log_lines.append(
                                     f"Skipped {missing_count} action(s) missing at generation time."
+                                )
+                            if skipped_generation_count:
+                                log_lines.append(
+                                    f"Skipped {skipped_generation_count} action(s) with generation errors."
                                 )
                     else:
                         pr_bundle = generate_pr_bundle(

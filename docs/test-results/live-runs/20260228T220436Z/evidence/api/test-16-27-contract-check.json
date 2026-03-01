@@ -1,0 +1,7 @@
+{
+  "detail_required_fields_present": true,
+  "remediation_options_required_fields_present": true,
+  "remediation_preview_required_fields_present": true,
+  "compute_contract_first_present": true,
+  "compute_contract_retry_present": true
+}

@@ -1,0 +1,5 @@
+timestamp_utc=2026-02-28T23:17:26Z
+run_folder=20260228T220436Z
+token_source=/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-14-00-login-admin.json
+token_source_strategy=reuse-existing-artifact-token-and-verify-via-auth-me
+token_prefix=eyJhbGciOiJIUzI1NiIs...

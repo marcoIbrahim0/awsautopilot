@@ -1,0 +1,26 @@
+{
+  "prefix": "test-23-closure-20260301T033953Z",
+  "run_id": "335f0b32-772a-4cf1-a9e6-cc3c2ecefe67",
+  "target_action_id": "26403d52-eff4-47ce-ab52-49bd237e72f5",
+  "target_bucket": "arch1-bucket-evidence-b1-029037611564-eu-north-1",
+  "unaffected_action_id": "232870db-8f7d-49ee-8361-8ad1bd79eff2",
+  "unaffected_bucket": "arch1-bucket-website-a1-029037611564-eu-north-1",
+  "run_create_http": 201,
+  "run_final_status": "success",
+  "bundle_download_http": 200,
+  "terraform": {
+    "init_rc": 0,
+    "plan_rc": 0,
+    "apply_rc": 0
+  },
+  "closure": {
+    "target_closed": "false",
+    "target_action_status_last": "open",
+    "unaffected_still_open": "true",
+    "unaffected_action_status_last": "open"
+  },
+  "blast_radius": {
+    "target_policy_public_post": "",
+    "unaffected_policy_public_post": "true"
+  }
+}

@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/auth/signup
+{"email":"wave6test18.postdeploy.20260301t010114z@example.com","password":"Passw0rd!Wave6","name":"Wave6 Test18 Postdeploy","company_name":"Wave6 Test18 Co"}

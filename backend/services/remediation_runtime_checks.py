@@ -392,10 +392,24 @@ def collect_runtime_risk_signals(
                     signals["s3_bucket_policy_public"] = bool(policy_status.get("IsPublic"))
                 except ClientError as exc:
                     code = _error_code(exc)
-                    if code not in {"NoSuchBucketPolicy", "NoSuchBucket"}:
+                    if code == "NoSuchBucketPolicy":
+                        signals["s3_bucket_policy_public"] = False
+                    elif code not in {"NoSuchBucket"}:
                         if account is not None:
                             _mark_access_path_unavailable(
                                 f"Unable to inspect bucket policy status ({code or 'GetBucketPolicyStatusFailed'})."
+                            )
+                try:
+                    s3.get_bucket_website(Bucket=bucket)
+                    signals["s3_bucket_website_configured"] = True
+                except ClientError as exc:
+                    code = _error_code(exc)
+                    if code == "NoSuchWebsiteConfiguration":
+                        signals["s3_bucket_website_configured"] = False
+                    elif code not in {"NoSuchBucket"}:
+                        if account is not None:
+                            _mark_access_path_unavailable(
+                                f"Unable to inspect bucket website configuration ({code or 'GetBucketWebsiteFailed'})."
                             )
         else:
             if account is not None:

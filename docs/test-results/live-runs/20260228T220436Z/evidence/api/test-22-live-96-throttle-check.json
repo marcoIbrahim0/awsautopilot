@@ -1,0 +1,9 @@
+{
+  "repeated_create_requests": {
+    "first_repeat_http": 429,
+    "second_repeat_http": 429,
+    "first_retry_after_seconds": 86399,
+    "second_retry_after_seconds": 86399,
+    "rate_limit_enforced": true
+  }
+}

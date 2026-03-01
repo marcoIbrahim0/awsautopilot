@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/actions/b82ae49a-6016-4887-a530-5fc3305bb27f
+Authorization: Bearer <REDACTED>

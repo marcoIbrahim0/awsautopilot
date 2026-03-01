@@ -142,6 +142,18 @@ class Settings(BaseSettings):
         default=(60 * 24 * 7) + 60,  # 7 days + 1 hour
         description="JWT access token expiry in minutes",
     )
+    AUTH_LOGIN_RATE_LIMIT_ENABLED: bool = Field(
+        default=True,
+        description="Enable login failure rate limiting for POST /api/auth/login.",
+    )
+    AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = Field(
+        default=5,
+        description="Maximum failed login attempts allowed within AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS.",
+    )
+    AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        default=900,
+        description="Sliding window (seconds) used for failed login rate limiting.",
+    )
     SAAS_BUNDLE_EXECUTOR_ENABLED: bool = Field(
         default=False,
         description="Enable SaaS-managed Terraform runner for PR bundles.",

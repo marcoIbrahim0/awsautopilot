@@ -1,0 +1,2 @@
+GET https://api.valensjewelry.com/api/actions/not-a-uuid
+Authorization: Bearer <REDACTED>

@@ -1,0 +1,31 @@
+{
+  "user": {
+    "id": "b635dc78-de65-497f-8c8e-9cdc6c80b5bd",
+    "email": "wave3acc+20260228T213251Z@example.com",
+    "name": "Wave3 Accept User",
+    "role": "member",
+    "onboarding_completed_at": null,
+    "is_saas_admin": false
+  },
+  "tenant": {
+    "id": "19b8d7c6-0100-421a-a084-c8b06d466837",
+    "name": "Valens",
+    "external_id": "ext-b89d4dcfce0d495a"
+  },
+  "saas_account_id": "029037611564",
+  "read_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.eu-north-1.amazonaws.com%2Fcloudformation%2Fread-role%2Fv1.5.1.yaml&stackName=SecurityAutopilotReadRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b89d4dcfce0d495a",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.1.yaml",
+  "read_role_region": "eu-north-1",
+  "read_role_default_stack_name": "SecurityAutopilotReadRole",
+  "write_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.eu-north-1.amazonaws.com%2Fcloudformation%2Fwrite-role%2Fv1.4.0.yaml&stackName=SecurityAutopilotWriteRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b89d4dcfce0d495a",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.0.yaml",
+  "write_role_default_stack_name": "SecurityAutopilotWriteRole",
+  "control_plane_token": null,
+  "control_plane_token_fingerprint": null,
+  "control_plane_token_created_at": null,
+  "control_plane_token_revoked_at": null,
+  "control_plane_token_active": false,
+  "control_plane_forwarder_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml",
+  "control_plane_ingest_url": "https://api.valensjewelry.com/api/control-plane/events",
+  "control_plane_forwarder_default_stack_name": "SecurityAutopilotControlPlaneForwarder"
+}

@@ -1,0 +1,40 @@
+{
+    "TagSet": [
+        {
+            "Key": "Project",
+            "Value": "AWS-Security-Autopilot"
+        },
+        {
+            "Key": "ManagedBy",
+            "Value": "test-script"
+        },
+        {
+            "Key": "Architecture",
+            "Value": "architecture-1"
+        },
+        {
+            "Key": "Tier",
+            "Value": "external-intake"
+        },
+        {
+            "Key": "Environment",
+            "Value": "security-test"
+        },
+        {
+            "Key": "TestGroup",
+            "Value": "architecture-1"
+        },
+        {
+            "Key": "BlastRadiusTest",
+            "Value": "website-hosting"
+        },
+        {
+            "Key": "ResourceGroup",
+            "Value": "A"
+        },
+        {
+            "Key": "Name",
+            "Value": "arch1_bucket_website_a1"
+        }
+    ]
+}

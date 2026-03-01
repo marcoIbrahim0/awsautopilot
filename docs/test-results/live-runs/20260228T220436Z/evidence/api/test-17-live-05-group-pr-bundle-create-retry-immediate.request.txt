@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/remediation-runs/group-pr-bundle
+Authorization: Bearer <REDACTED>
+{"action_type":"s3_bucket_encryption_kms","account_id":"029037611564","status":"open","region":"eu-north-1"}
