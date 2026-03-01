@@ -1,0 +1,63 @@
+{
+    "Role": {
+        "Path": "/",
+        "RoleName": "arch2_shared_compute_role_a3",
+        "RoleId": "AROAQNQWGZIWNZUMJJ7YJ",
+        "Arn": "arn:aws:iam::029037611564:role/arch2_shared_compute_role_a3",
+        "CreateDate": "2026-02-27T12:49:24+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": [
+                            "eks.amazonaws.com",
+                            "ec2.amazonaws.com"
+                        ]
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        },
+        "MaxSessionDuration": 3600,
+        "Tags": [
+            {
+                "Key": "Name",
+                "Value": "arch2_shared_compute_role_a3"
+            },
+            {
+                "Key": "Project",
+                "Value": "AWS-Security-Autopilot"
+            },
+            {
+                "Key": "Environment",
+                "Value": "prod-readiness"
+            },
+            {
+                "Key": "ManagedBy",
+                "Value": "aws-cli"
+            },
+            {
+                "Key": "Architecture",
+                "Value": "architecture-2"
+            },
+            {
+                "Key": "Tier",
+                "Value": "processing-orchestration"
+            },
+            {
+                "Key": "ResourceGroup",
+                "Value": "A"
+            },
+            {
+                "Key": "BlastRadiusTest",
+                "Value": "iam-multi-principal"
+            }
+        ],
+        "RoleLastUsed": {
+            "LastUsedDate": "2026-03-01T15:13:48+00:00",
+            "Region": "eu-north-1"
+        }
+    }
+}

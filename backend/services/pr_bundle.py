@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import uuid
+import json
 from datetime import datetime, timezone
 from typing import Any, Literal, NoReturn, Protocol, TypedDict
 
@@ -143,6 +144,126 @@ _PLACEHOLDER_TOKEN_PATTERN = re.compile(r"\b(REPLACE_[A-Z0-9_]+)\b")
 _S3_BUCKET_NAME_PATTERN = re.compile(
     r"^(?!\d{1,3}(?:\.\d{1,3}){3}$)(?!xn--)(?!sthree-)(?!amzn-s3-demo-)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
 )
+_S3_MIGRATE_POLICY_JSON_KEY = "existing_bucket_policy_json"
+_S3_MIGRATE_POLICY_STATEMENT_COUNT_KEY = "existing_bucket_policy_statement_count"
+
+
+def _normalize_policy_json_document(policy_json: object) -> str | None:
+    """Normalize policy JSON into a canonical string."""
+    if not isinstance(policy_json, str):
+        return None
+    raw = policy_json.strip()
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+
+    statements = parsed.get("Statement")
+    if statements is None:
+        parsed["Statement"] = []
+    elif isinstance(statements, dict):
+        parsed["Statement"] = [statements]
+    elif not isinstance(statements, list):
+        return None
+
+    return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
+
+
+def _policy_statement_count(policy_json: str | None) -> int:
+    """Return number of statements in a policy document."""
+    normalized = _normalize_policy_json_document(policy_json)
+    if not normalized:
+        return 0
+    parsed = json.loads(normalized)
+    statements = parsed.get("Statement")
+    if isinstance(statements, list):
+        return len(statements)
+    if isinstance(statements, dict):
+        return 1
+    return 0
+
+
+def _coerce_non_negative_int(value: object) -> int | None:
+    """Parse non-negative integer values from risk evidence."""
+    try:
+        candidate = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if candidate < 0:
+        return None
+    return candidate
+
+
+def _strategy_risk_evidence(risk_snapshot: dict[str, Any] | None) -> dict[str, Any]:
+    """Extract evidence object from risk snapshot."""
+    if not isinstance(risk_snapshot, dict):
+        return {}
+    evidence = risk_snapshot.get("evidence")
+    if not isinstance(evidence, dict):
+        return {}
+    return evidence
+
+
+def _resolve_s3_migrate_policy_preservation(
+    *,
+    strategy_inputs: dict[str, Any] | None,
+    risk_snapshot: dict[str, Any] | None,
+    action_type: str,
+    format: str,
+    strategy_id: str | None,
+    variant: str | None,
+) -> str | None:
+    """
+    Resolve policy-preservation input for CloudFront+OAC migration bundles.
+
+    Priority:
+      1) explicit strategy_inputs.existing_bucket_policy_json
+      2) runtime risk evidence capture
+      3) fail closed when policy statements exist or evidence is missing
+    """
+    inputs = strategy_inputs or {}
+    explicit_policy = _normalize_policy_json_document(inputs.get(_S3_MIGRATE_POLICY_JSON_KEY))
+    if explicit_policy is not None:
+        return explicit_policy
+
+    evidence = _strategy_risk_evidence(risk_snapshot)
+    evidence_policy = _normalize_policy_json_document(evidence.get(_S3_MIGRATE_POLICY_JSON_KEY))
+    if evidence_policy is not None:
+        return evidence_policy
+
+    evidence_statement_count = _coerce_non_negative_int(evidence.get(_S3_MIGRATE_POLICY_STATEMENT_COUNT_KEY))
+    if isinstance(evidence_statement_count, int):
+        if evidence_statement_count == 0:
+            return None
+        _raise_pr_bundle_error(
+            code="existing_bucket_policy_preservation_required",
+            detail=(
+                "Existing bucket policy contains non-empty statements, but no preservation input "
+                "was provided. Provide strategy_inputs.existing_bucket_policy_json or recreate the "
+                "run after refreshing remediation options so policy preservation evidence is captured."
+            ),
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+            variant=variant,
+        )
+
+    _raise_pr_bundle_error(
+        code="bucket_policy_preservation_evidence_missing",
+        detail=(
+            "Unable to guarantee existing bucket policy preservation for CloudFront+OAC migration "
+            "because policy evidence is missing. Recreate the run after refreshing remediation options "
+            "or provide strategy_inputs.existing_bucket_policy_json explicitly."
+        ),
+        action_type=action_type,
+        format=format,
+        strategy_id=strategy_id,
+        variant=variant,
+    )
 
 
 def _raise_pr_bundle_error(
@@ -247,6 +368,9 @@ def generate_pr_bundle(
             action,
             normalized_format,
             strategy_id=effective_strategy_id,
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            variant=normalized_variant or None,
         )
     elif action_type == ACTION_TYPE_S3_BUCKET_ENCRYPTION:
         result = _generate_for_s3_bucket_encryption(action, normalized_format)
@@ -441,7 +565,8 @@ S3.2 migration variant (CloudFront + OAC + private S3)
 
 Before apply
 ------------
-- If this bucket already has required policy statements, set variable existing_bucket_policy_json so they are preserved.
+- Existing bucket policy statements are preloaded into `terraform.auto.tfvars.json` when runtime evidence is available.
+- If your environment requires a different baseline, set variable existing_bucket_policy_json explicitly.
 - If additional internal/cross-account roles need read access, set additional_read_principal_arns.
 - If objects use SSE-KMS, confirm KMS key policy allows required principals.
 
@@ -508,6 +633,7 @@ def _action_meta(action: ActionLike | None) -> dict[str, str]:
             "region": "N/A",
             "control_id": "",
             "target_id": "",
+            "bundle_nonce": datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f"),
         }
     return {
         "action_id": str(action.id),
@@ -516,6 +642,7 @@ def _action_meta(action: ActionLike | None) -> dict[str, str]:
         "region": action.region or "N/A",
         "control_id": action.control_id or "",
         "target_id": (action.target_id or "").strip()[:512],
+        "bundle_nonce": datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f"),
     }
 
 
@@ -1020,7 +1147,15 @@ def _generate_for_s3_bucket_block_public_access(action: ActionLike, format: PRBu
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _generate_for_s3_cloudfront_oac_private(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
+def _generate_for_s3_cloudfront_oac_private(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    risk_snapshot: dict[str, Any] | None,
+    variant: str | None,
+) -> PRBundleResult:
     """
     Generate IaC for real migration path: CloudFront + OAC + private S3 (S3.2).
 
@@ -1050,10 +1185,40 @@ def _generate_for_s3_cloudfront_oac_private(action: ActionLike, format: PRBundle
             content=_terraform_s3_cloudfront_oac_private_content(meta),
         ),
     ]
+    preservation_policy = _resolve_s3_migrate_policy_preservation(
+        strategy_inputs=strategy_inputs,
+        risk_snapshot=risk_snapshot,
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        format=format,
+        strategy_id=strategy_id,
+        variant=variant,
+    )
+    if preservation_policy is not None:
+        files.append(
+            PRBundleFile(
+                path="terraform.auto.tfvars.json",
+                content=(
+                    json.dumps(
+                        {
+                            _S3_MIGRATE_POLICY_JSON_KEY: preservation_policy,
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ),
+            )
+        )
     steps = [
         f"Configure AWS provider for account {meta['account_id']} and region {region}.",
         f"Review variables in s3_cloudfront_oac_private_s3.tf (target bucket: {bucket_name}).",
-        "If needed, set existing_bucket_policy_json and additional_read_principal_arns before apply.",
+        (
+            "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
+            "for safe preservation."
+            if preservation_policy is not None
+            else "No existing bucket policy statements were detected; existing_bucket_policy_json remains empty."
+        ),
+        "If needed, set additional_read_principal_arns before apply.",
         "Run `terraform init` and `terraform plan`.",
         "Run `terraform apply` to create CloudFront+OAC and enforce private S3 access.",
         "Switch clients/apps to CloudFront domain output and validate traffic.",
@@ -1086,6 +1251,8 @@ resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
 def _terraform_s3_cloudfront_oac_private_content(meta: dict[str, str]) -> str:
     """Terraform for S3.2 migration variant: CloudFront + OAC + private S3."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    action_id_seed = (meta.get("action_id") or "").replace("-", "")
+    bundle_nonce = meta.get("bundle_nonce", "")
     return f"""# S3.2 migration variant (CloudFront + OAC + private S3) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -1093,7 +1260,9 @@ def _terraform_s3_cloudfront_oac_private_content(meta: dict[str, str]) -> str:
 
 locals {{
   bucket_name = "{bucket}"
-  oac_name    = substr("security-autopilot-oac-${{substr(md5(local.bucket_name), 0, 8)}}", 0, 64)
+  # Include action/run-level entropy to avoid account-wide OAC name collisions on reruns.
+  oac_name_seed = "${{local.bucket_name}}-{action_id_seed}-{bundle_nonce}"
+  oac_name      = substr("security-autopilot-oac-${{substr(md5(local.oac_name_seed), 0, 12)}}", 0, 64)
 }}
 
 variable "default_root_object" {{
@@ -2067,11 +2236,21 @@ def _generate_for_s3_bucket_strategy(
     action: ActionLike,
     format: PRBundleFormat,
     strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    risk_snapshot: dict[str, Any] | None,
+    variant: str | None,
 ) -> PRBundleResult:
     """Generate S3 bucket public-access remediation according to selected strategy."""
     normalized_strategy = (strategy_id or "").strip().lower()
     if normalized_strategy == "s3_migrate_cloudfront_oac_private":
-        return _generate_for_s3_cloudfront_oac_private(action, format)
+        return _generate_for_s3_cloudfront_oac_private(
+            action,
+            format,
+            strategy_id=normalized_strategy,
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            variant=variant,
+        )
     if normalized_strategy == "s3_keep_public_exception":
         return _generate_for_exception_guidance(action, format, "Keep public S3 access (exception path)")
     return _generate_for_s3_bucket_block_public_access(action, format)

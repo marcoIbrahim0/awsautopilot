@@ -1,0 +1,1 @@
+aws ec2 describe-network-interfaces --filters Name=group-id\,Values=sg-0e5bea6687c7063c1 --region eu-north-1 --output json --no-cli-pager 

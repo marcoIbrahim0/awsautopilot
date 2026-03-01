@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws iam get-role-policy --role-name arch2_shared_compute_role_a3 --policy-name wildcard-policy

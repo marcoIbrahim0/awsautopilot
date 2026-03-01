@@ -373,6 +373,49 @@ def test_pr_only_generation_structured_error_persists_error_artifact() -> None:
     assert pr_bundle_error.get("action_type") == "iam_root_access_key_absent"
 
 
+def test_pr_only_s3_policy_preservation_guard_error_is_visible_in_outcome_and_artifacts() -> None:
+    """S3 migration preservation guard failures must surface in run outcome/log artifacts."""
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    error = PRBundleGenerationError(
+        {
+            "code": "existing_bucket_policy_preservation_required",
+            "detail": (
+                "Existing bucket policy contains non-empty statements, but no preservation input was provided."
+            ),
+            "action_type": "s3_bucket_block_public_access",
+            "format": "terraform",
+            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "variant": "cloudfront_oac_private_s3",
+        }
+    )
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=error):
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.failed
+    assert run.outcome == "PR bundle generation failed: existing_bucket_policy_preservation_required"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle_error = run.artifacts.get("pr_bundle_error")
+    assert isinstance(pr_bundle_error, dict)
+    assert pr_bundle_error.get("code") == "existing_bucket_policy_preservation_required"
+    assert "non-empty statements" in str(pr_bundle_error.get("detail", ""))
+    assert "existing_bucket_policy_preservation_required" in (run.logs or "")
+
+
 def test_pr_only_root_run_persists_manual_high_risk_marker_in_artifacts_and_logs() -> None:
     """Root-key PR runs persist manual/high-risk markers in artifacts and worker logs."""
     job = _make_job(mode="pr_only")

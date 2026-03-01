@@ -1,5 +1,348 @@
 # Task Log
 
+## Wave 7 Test 26 rerun after effective-status deploy + pre-reconcile validation (2026-03-01)
+
+**Task:** Deploy latest effective-status findings contract, rerun full Wave 7 Test 26 closure chain with pre-run reconcile enabled, and refresh Test 26/tracker artifacts from the new evidence set.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Rewritten from new rerun evidence prefix `test-26-closure-20260301T193804Z-*`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Section 3 row #16 evidence pointer, Section 4 rows #25/#26, Section 5 Test 26 row, Section 6 row #10, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T193804Z-116-target-finding-detail-final.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T193804Z-117-linked-findings-shadow-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T193804Z-78-policy-preservation-delta-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Deployed live runtime image tag `20260301T193511Z` to `security-autopilot-saas-serverless-runtime`.
+- Executed full Test 26 closure chain with updated script pre-step (`ingest + compute + reconcile`) under canonical prefix `test-26-closure-20260301T193804Z`.
+- Verified end-to-end remediation execution success:
+  - run `0bd646aa-911c-4acd-b898-012d76e03ec8` reached `success`,
+  - Terraform `init/plan/show/apply = 0/0/0/0`,
+  - refresh completed before timeout,
+  - final action/finding status filters show resolved target.
+- Recomputed delta-aware policy artifact for this run:
+  - `removed_non_risk_statement_count=0`,
+  - `added_non_risk_statement_count=0`,
+  - CloudFront statement rotated only (`removed_cloudfront=1`, `added_cloudfront=1`),
+  - `pab_hardened_post_apply=true`.
+- Confirmed effective-status rollout behavior on live detail endpoint:
+  - `status=RESOLVED` (user-facing),
+  - `effective_status=RESOLVED`,
+  - `canonical_status=NEW` (debug/source-of-record split preserved).
+
+**Technical debt / gotchas:**
+- Pre-run reopen detection still did not return the target in `status=open` even after pre-run reconcile trigger; target remained discoverable only via `status=resolved` fallback.
+- Legacy strict policy compare (`...-77-policy-preservation-summary.json`) still reports `false` because CloudFront `SourceArn` rotates; delta-aware compare is the reliable preservation signal.
+
+**Open questions / TODOs:**
+- Decide contract truth for pre-run visibility in shadow mode:
+  - either require target to reappear in `status=open` (then adjust control evaluation/adversarial setup), or
+  - accept resolved-fallback discovery as non-blocking when closure/preservation assertions pass.
+
+## Effective-status canonicalization: findings `status` now product-effective (2026-03-01)
+
+**Task:** Complete effective-status rollout so API/UI product behavior uses one status truth and preserves canonical status as audit metadata.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py** — Added `canonical_status`; changed response `status` to effective status while keeping explicit `effective_status`; preserved canonical source in `canonical_status`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py** — Updated regression expectations for `canonical_status` + effective `status` behavior.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Added optional `canonical_status` to `Finding` type contract.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Findings API now returns:
+  - `status` => effective user-facing status
+  - `effective_status` => same effective value (explicit)
+  - `canonical_status` => canonical/raw finding status for diagnostics.
+- This removes UI/reporting conflict where detail/list behavior could diverge by status source.
+- Verification:
+  - `pytest -q tests/test_wave4_contract_fixes.py tests/test_action_engine_merge.py` -> `19 passed`
+  - `npm --prefix frontend run typecheck` -> pass
+
+**Technical debt / gotchas:**
+- Runtime/live verification for this exact API contract change is still pending deploy + rerun; current evidence set `test-26-closure-20260301T191101Z` predates this last API status-field remap.
+
+**Open questions / TODOs:**
+- Decide whether to deprecate `effective_status` later (keeping only `status` + `canonical_status`) after client migration window.
+- Re-run Test 26 after deploy to confirm row #25 (status drift) can be closed in tracker with live evidence.
+
+## Wave 7 Test 26 post-deploy rerun after effective-status alignment (2026-03-01)
+
+**Task:** Deploy the latest runtime and execute a fresh full Wave 7 Test 26 closure chain with new evidence, then update Test 26/tracker artifacts from observed results.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Rewritten from new post-deploy evidence prefix `test-26-closure-20260301T191101Z-*`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Section 3 row #16, Section 4 rows #25/#26, Section 5 Test 26 row, Section 6 row #10, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T191101Z-116-target-finding-detail-final.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T191101Z-117-linked-findings-shadow-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T191101Z-78-policy-preservation-delta-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Deployed live runtime with image tag `20260301T190243Z` (`security-autopilot-saas-serverless-runtime`, worker enabled, concurrency settings retained).
+- Executed Test 26 full-chain script twice:
+  - First attempt `test-26-closure-20260301T190536Z` stopped at precondition discovery (`Failed to locate open B1 S3.2 action for Test 26`).
+  - Second attempt `test-26-closure-20260301T191101Z` completed full chain with target fallback selection from resolved set.
+- Final run outcomes (`test-26-closure-20260301T191101Z`):
+  - remediation run: `b18ebd59-5b00-47cc-bf74-202fd23fbc67` (`success`)
+  - terraform: `init/plan/show/apply = 0/0/0/0`
+  - final status filters: target action resolved and target finding resolved (`status=RESOLVED` query includes target)
+  - delta-aware preservation: non-risk statements preserved (`removed_non_risk=0`, `added_non_risk=0`), CloudFront statement rotated only (`removed_cf=1`, `added_cf=1`), PAB hardened `true`.
+
+**Technical debt / gotchas:**
+- In adversarial pre-state, target B1 action did not reappear in `status=open` query and was only discoverable via `status=resolved`, so closure transition (`open -> resolved`) could not be observed in this rerun.
+- Finding detail payload still carries canonical `status=NEW` while `effective_status`/shadow status are `RESOLVED`; list/status filter behavior now follows effective status.
+
+**Open questions / TODOs:**
+- Investigate why adversarial-state restoration did not reopen target B1 S3.2 action under shadow-mode authority in pre-run polling.
+- Decide whether finding detail should present canonical status, effective status, or both as first-class fields in UI/reporting contracts.
+
+## Effective-status alignment for findings truth and UI consistency (2026-03-01)
+
+**Task:** Implement the plan to remove finding/action truth drift in shadow mode by introducing effective finding status in API responses and using it in findings UX paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py** — Added `effective_status` to `FindingResponse`; implemented effective-status helpers; switched findings status filters and list sorting to use effective status expression rather than canonical status only.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py** — Added focused regressions for effective-status resolution and response badge behavior when shadow state resolves canonically-open findings.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Extended `Finding` type with `effective_status`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx** — Switched resolved/open CTA logic to `effective_status` fallbacking to `status`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx** — Switched finding header status display to effective status.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.tsx** — Included `effective_status` in local search index text.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented a single effective-status rule in findings router:
+  - `shadow=RESOLVED` => `effective_status=RESOLVED`
+  - `shadow=OPEN` + canonical `RESOLVED` => `effective_status=NEW`
+  - otherwise fallback to canonical status.
+- Preserved backward compatibility by keeping canonical `status` unchanged in response payloads.
+- Updated `/api/findings` and `/api/findings/grouped` status filter behavior to evaluate against effective status.
+- Updated findings list ordering (`resolved first`) to use effective status, aligning list behavior with action closure semantics.
+- Updated findings UI surfaces to render resolved/open state from effective status.
+- Verification:
+  - `pytest -q tests/test_wave4_contract_fixes.py` => `6 passed`
+  - `pytest -q tests/test_action_engine_merge.py` => `13 passed`
+  - `npm --prefix frontend run typecheck` => pass
+
+**Technical debt / gotchas:**
+- Frontend repository is a nested repo/worktree with substantial pre-existing divergence/untracked files; this task only touched targeted findings files.
+- Canonical `status` remains present and may still diverge from `effective_status` by design; consumers should migrate to `effective_status` when showing operational state.
+
+**Open questions / TODOs:**
+- Decide whether actions API and top-risks API contracts should explicitly expose “effective” status fields for complete cross-surface consistency.
+- Consider introducing a dedicated finding-status badge variant helper (current badge variant helper is oriented to account statuses).
+
+## Wave 7 Test 26 fixes: policy preservation + action closure + live rerun (2026-03-01)
+
+**Task:** Fix Wave 7 Test 26 failures (complex S3 policy preservation overwrite and action-closure inconsistency), redeploy, rerun full closure chain, and update docs/tracker from fresh evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** — Added S3 strategy runtime evidence capture for existing bucket policy count/json so bundle generation can preserve policy safely.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Added fail-closed preservation guardrails + policy auto-preload for `s3_migrate_cloudfront_oac_private`; added run-unique OAC naming seed to avoid CloudFront OAC name collisions on reruns.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** — Updated closure logic to compute effective unresolved findings using shadow overlay statuses; action recompute now resolves actions when effective unresolved linked findings are zero in shadow mode.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Added/updated S3 migration regression tests for preservation guard, auto-preservation, and OAC-name collision avoidance.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py** — Added regressions for shadow-aware effective open/closed finding state and action-resolution behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** — Added regression confirming preservation-guard error is surfaced in remediation run outcome/artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Rewritten from fresh closure rerun evidence (`test-26-closure-20260301T181657Z-*`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Section 5 Test 26 row, related Section 3/4/6 rows, quick-status counts, timestamp, and Section 9 changelog with new rerun evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T181657Z-116-target-finding-detail-final.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-26-closure-20260301T181657Z-117-linked-findings-shadow-summary.json** (new)
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T181657Z-78-policy-preservation-delta-summary.json** (new)
+
+**What was done (verified):**
+- Implemented Task A/B safety + preservation fixes:
+  - PR bundle generation now fails closed when existing bucket policy statements exist but preservation input is absent.
+  - Runtime checks now capture existing policy JSON/count; migration bundles auto-populate `terraform.auto.tfvars.json` with `existing_bucket_policy_json` when available.
+  - Added structured preservation error propagation to remediation run outcomes/artifacts.
+- Implemented closure fix (Task C):
+  - Action recompute now uses effective finding state from shadow overlays (`shadow_status_normalized`) so linked effective unresolved count is accurate under shadow mode.
+- Added focused regressions (Task D) and validated:
+  - `pytest -q tests/test_step7_components.py tests/test_action_engine_merge.py tests/test_remediation_run_worker.py` -> `108 passed`.
+- Deployed runtime twice for the two code batches; final runtime image tag in evidence is `20260301T181435Z`.
+- Ran full mandatory Test 26 chain with fresh prefix `test-26-closure-20260301T181657Z`:
+  - remediation run: `6dd774ec-7460-41b1-8d0c-6212785800a8` (`success`)
+  - terraform: `init/plan/show/apply = 0/0/0/0`
+  - closure: target action transitioned to `resolved`
+  - policy preservation (delta-aware): pre-policy statements preserved (`removed=0`) with one expected CloudFront statement added.
+
+**Technical debt / gotchas:**
+- Existing Test 26 script summary (`...-77-policy-preservation-summary.json`) uses strict pre/post equality and reports false negatives when remediation intentionally adds one statement; delta-aware summary (`...-78-policy-preservation-delta-summary.json`) is now captured separately.
+- Canonical finding statuses in API can remain `NEW` while shadow overlay is `RESOLVED` in this shadow-mode deployment, producing mixed closure signals in findings endpoints.
+
+**Open questions / TODOs:**
+- Decide whether finding-list/status APIs should expose effective status (or promote canonical status) when shadow overlay is authoritative, to remove `NEW` vs `shadow=RESOLVED` drift.
+- Decide whether Test 26 harness should replace strict policy-set equality with delta-aware preservation checks as the canonical pass condition.
+
+## Worker throughput tuning + Wave 7 Test 26 rerun (2026-03-01)
+
+**Task:** Increase worker throughput, redeploy runtime, rerun Wave 7 Test 26 end-to-end, and update evidence/docs/tracker from observed results only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml** — Added per-queue Lambda SQS mapping `ScalingConfig.MaximumConcurrency` parameters (`Ingest/Events/Inventory/Export`) and wired them into event-source mappings.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh** — Added deploy-time knobs for queue max concurrency (`--ingest-maximum-concurrency`, `--events-maximum-concurrency`, `--inventory-maximum-concurrency`, `--export-maximum-concurrency`) and parameter forwarding to runtime stack deploy.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-26.md** — Replaced prior blocked result with fresh rerun evidence (`test-26-closure-20260301T171651Z-*`) and updated closure/preservation assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board counts, Section 3 (new row #16), Section 4 (row #23 fixed + new row #24), Section 5 Test 26 row, Section 6 (row #9 fixed + new row #10), and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Deployed runtime with higher worker throughput settings:
+  - `WorkerReservedConcurrency=8`.
+  - Event-source mapping caps: ingest `8`, events `2`, inventory `2`, export `2`.
+  - Verified via live AWS:
+    - `get-function-concurrency` -> `ReservedConcurrentExecutions: 8`.
+    - `list-event-source-mappings` -> expected `MaximumConcurrency` values applied on all four queues.
+    - Runtime image tags updated to `20260301T171324Z`.
+- Reran Wave 7 Test 26 with full mandatory chain using script `/tmp/test26_full_closure.sh`:
+  - New canonical evidence prefix: `test-26-closure-20260301T171651Z-*`.
+  - Run creation succeeded (`201`), run transitioned to `success` quickly (`run_id=86cce0ae-2f95-479b-be26-7b24e7d98312`), bundle download authorized `200`.
+  - Terraform execution succeeded (`init/plan/show/apply = 0/0/0/0`).
+  - Post-apply refresh triggers all returned `202` and refresh polling completed.
+- Final Test 26 outcomes from observed evidence:
+  - Closure: **partial** — target finding resolved, but target action remained `open`.
+  - Policy preservation: **failed** — bucket policy changed from 3 statements to 1 (non-risk statements not preserved).
+  - PAB hardening: **passed** — all four PAB flags `true` post-apply.
+
+**Technical debt / gotchas:**
+- Selected strategy in rerun (`s3_migrate_cloudfront_oac_private`) generated `aws_s3_bucket_policy` with no preservation source (`source_policy_documents=[]` unless operator passes `existing_bucket_policy_json`), which can overwrite existing non-risk statements.
+- Action closure behavior remained open even when target finding moved to resolved, so action/finding closure semantics need follow-up.
+
+**Open questions / TODOs:**
+- Decide whether S3.2 complex-policy flows should default to a preservation-safe strategy or auto-populate existing policy preservation inputs.
+- Clarify expected action-status transition behavior when linked finding closure succeeds in the same refresh cycle.
+
+## UI remediation warning for IAM root-key issue: require root account messaging (2026-03-01)
+
+**Task:** Add explicit user-facing messaging that IAM root access-key remediation can only be completed with AWS root-user credentials.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** — Added high-visibility warning banner on action detail cards when action type is `iam_root_access_key_absent`; clarified that admin IAM users/roles cannot execute this remediation.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** — Added modal-level root-account-required notice with account context and runbook path; tightened exception-flow null-guard for type safety.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented explicit “AWS root account required” messaging in both the action detail and remediation modal flows for IAM root-key remediation.
+- Message text now states that remediation must be performed as the AWS root user for the target account and that IAM users/roles cannot disable/delete root keys.
+- Preserved existing remediation flow behavior; only user guidance and guards were adjusted.
+
+**Technical debt / gotchas:**
+- `frontend` is a nested Git worktree/repo (`git status` in root shows `m frontend`), so frontend code diffs are tracked from within that subtree rather than as root-level file entries.
+
+**Open questions / TODOs:**
+- Consider propagating the same root-account-required cue into any list/table-level action cards if PM wants the warning visible before opening Action Detail.
+
+## Wave 7 Test 25 full remediation closure validation: adversarial IAM multi-principal (2026-03-01)
+
+**Task:** Execute Wave 7 Test 25 end-to-end with full remediation closure flow (adversarial IAM state confirm, open action verification, PR run creation, bundle download, Terraform apply, ingest/compute/reconcile refresh, 15-minute polling), then update test/tracker artifacts from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-25-closure-20260301T154046Z-*** (new) — Full API evidence chain for A3/B3 adversarial state confirmation, IAM.4 action/finding mapping, remediation run lifecycle, refresh triggers, 30-poll terminal checks, and runtime version proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-25-closure-20260301T154046Z-ui-*** (new) — No-auth UI actions-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-25-closure-20260301T154046Z-*** (new) — PR bundle ZIP/extraction, Terraform init/plan/show/apply transcripts, and principal-preservation summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-25.md** — Filled end-to-end with mandatory closure flow evidence, assertions, and final blocked outcome.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Quick Status Board counts, Section 3 (new row #15), Section 4 (new row #22), Section 5 Test 25 row, Section 6 (new row #8), and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed Test 25 adversarial IAM state in AWS:
+  - A3 (`arch2_shared_compute_role_a3`) has multi-principal trust (`ec2.amazonaws.com`, `eks.amazonaws.com`) and wildcard inline policies.
+  - B3 (`arch2_mixed_policy_role_b3`) retains wildcard inline policy plus managed attachments (`ReadOnlyAccess`, `SecurityAudit`).
+- Verified related IAM.4 target appeared OPEN/NEW in live SaaS (`action_id=c8201c18-5054-42ee-99c6-815ea082f2c9`, findings `fe935ab6-...`, `9a553808-...`).
+- Created PR-mode remediation run for IAM.4:
+  - No-ack create returned `400` (`Risk acknowledgement required`).
+  - Acked create returned `201` (`run_id=d7325d69-35ec-4d2b-8042-72d5b36f35ad`).
+  - Run reached `success` and bundle download returned `200`.
+- Executed downloaded Terraform bundle in test AWS:
+  - `terraform init`: `0`
+  - `terraform plan`: `0`
+  - `terraform show`: `0`
+  - `terraform apply`: `1` with explicit gate `ERROR: root credentials are required to disable root access keys.`
+- Triggered post-apply refresh (`ingest`, `compute`, `reconcile` all `202`) and polled 30 cycles (~15 minutes):
+  - Ingest progressed `queued (9%) -> completed (100%)`.
+  - Target action remained `open`; target findings remained `NEW`.
+- Verified preservation safety from observed AWS state:
+  - A3 principals unchanged.
+  - A3 inline policy names unchanged.
+  - B3 principals and managed policy attachments unchanged.
+  - `principal_preservation_pass=true`.
+
+**Technical debt / gotchas:**
+- IAM.4 PR bundle execution is intentionally root-gated via Terraform `null_resource` local-exec; non-root operator sessions can generate bundles but cannot complete apply.
+- Remediation run `status=success` reflects bundle generation success, not downstream IaC apply success, so closure validation must always include apply evidence.
+
+**Open questions / TODOs:**
+- Define expected Test 25 pass criteria for environments where root credentials are not available to the test operator.
+- Decide whether IAM.4 flows need a first-class “manual root action pending” closure state to avoid ambiguous open/blocked outcomes in automated test runs.
+
+## Wave 7 Test 24 full remediation closure validation: adversarial SG dependency-chain (2026-03-01)
+
+**Task:** Execute Wave 7 Test 24 end-to-end with full remediation closure flow (adversarial state confirm, open action verification, PR run creation, bundle download, Terraform apply, ingest/compute/reconcile refresh, 15-minute polling), then update test/tracker artifacts from observed evidence only and apply shadow-mode pass criteria.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-24-closure-20260301T134354Z-*** (new) — Full API evidence chain for SG dependency baseline, auth/remediation flow, refresh polling, final action/finding state, and runtime version proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-24-closure-20260301T134354Z-ui-*** (new) — No-auth UI actions-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-24-closure-20260301T134354Z-*** (new) — PR bundle ZIP/extraction, Terraform init/plan/apply transcripts, and SG dependency-safety summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-24.md** — Filled end-to-end with mandatory closure flow evidence, assertions, and final status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated timestamp, Quick Status Board counts, Section 4 (new row #21), Section 5 Test 24 row, Section 6 row #7 scope, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed/restored adversarial SG dependency-chain baseline:
+  - SG-A (`arch1_sg_dependency_a2`, `sg-0e5bea6687c7063c1`) had public SSH (`22/tcp` from `0.0.0.0/0`).
+  - SG-B (`arch1_sg_reference_a2`, `sg-02813afb4b1337ee4`) and dependent resources remained attached (`EC2 i-0f773def2fade3d15`, `RDS arch1-claims-db-a2`).
+- Verified target finding/action appeared OPEN in live SaaS for EC2.53 (`action_id=f1e6ea20-740e-4ffc-9f1b-24b2e37502db`, `finding_id=24518595-8687-48e7-b5c9-df9418e349ae`).
+- Created PR-mode remediation run (`run_id=624a06e3-f27e-4bbb-98cb-93235173fff9`) and reached `success`.
+- Downloaded bundle (`200`) and executed Terraform against test AWS:
+  - `terraform init`: `0`
+  - `terraform plan`: `0`
+  - `terraform apply`: `0`
+- Verified dependency safety after apply:
+  - SG-A public SSH removed; restricted SSH/RDP rules present.
+  - SG-B ingress/source-group refs unchanged.
+  - ENI attachment count unchanged (`2 -> 2`) and RDS dependency preserved (`arch1-claims-db-a2`).
+- Triggered refresh (`ingest`, `compute`, `reconcile` all `202`) and polled for 15 minutes.
+  - Ingest progress reached `status=completed` (`100%`), while target action/finding remained `open/NEW` (expected in shadow mode).
+- Marked Test 24 as **PASS** using shadow-mode acceptance criteria: remediation execution success + dependency safety preservation + refresh completion.
+
+**Technical debt / gotchas:**
+- `GET /api/actions/{id}/remediation-options` for this EC2.53 action returned `mode_options=[\"pr_only\"]` with `strategies=[]`; run creation required omitting `strategy_id`.
+- In shadow mode, immediate action/finding status transition is not a reliable closure signal; execution and safety evidence must be used as the primary acceptance criteria.
+- Terraform provider install for `hashicorp/aws v6.34.0` was unusually slow during init; command segmentation was required to avoid stalled long-run orchestration.
+
+**Open questions / TODOs:**
+- Re-validate status-transition timing criteria when shadow mode is disabled to avoid false negatives in future closure tests.
+- Decide whether remediation-options contract should always emit at least one strategy object when `mode_options` includes `pr_only`.
+
+## Prod-readiness important-to-do update: confidence-tier live status and coverage expansion (2026-03-01)
+
+**Task:** Update the important-to-do checklist with two separate action points: (1) live status updates for high-confidence controls, and (2) expanded rule-pattern/test-scenario coverage for medium/low-confidence controls.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Added item `16` for high-confidence live updates and item `17` for medium/low coverage + scenario expansion.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added two separate checklist points (not merged) in `important-to-do.md`:
+  - `16) Enable live status updates for high-confidence controls`
+  - `17) Expand medium/low-confidence rule-pattern coverage and test scenarios`
+- Kept wording PM-friendly and aligned with confidence-tier safety direction already discussed in this thread.
+
+**Technical debt / gotchas:**
+- The checklist now captures strategy direction, but the exact promotion gate metrics/thresholds for medium/low controls are still to be explicitly defined.
+
+**Open questions / TODOs:**
+- Define and document concrete promotion criteria (coverage %, precision target, and rollback trigger) for medium/low-confidence live-status enablement.
+
 ## Wave 7 Test 23 full remediation closure validation: adversarial S3 blast-radius (2026-03-01)
 
 **Task:** Execute Wave 7 Test 23 end-to-end with full remediation-closure flow (misconfiguration state confirm, open action verification, PR run creation, bundle download, Terraform apply, ingest/compute/reconcile refresh, 15-minute terminal polling), then update test/tracker artifacts from observed evidence only.

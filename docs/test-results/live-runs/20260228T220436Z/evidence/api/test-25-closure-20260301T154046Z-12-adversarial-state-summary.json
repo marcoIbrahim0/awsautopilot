@@ -1,0 +1,23 @@
+{
+  "a3_role": "arch2_shared_compute_role_a3",
+  "b3_role": "arch2_mixed_policy_role_b3",
+  "a3_principals": [
+    "ec2.amazonaws.com",
+    "eks.amazonaws.com"
+  ],
+  "b3_principals": [
+    "ec2.amazonaws.com"
+  ],
+  "b3_attached_policy_arns": [
+    "arn:aws:iam::aws:policy/ReadOnlyAccess",
+    "arn:aws:iam::aws:policy/SecurityAudit"
+  ],
+  "adversarial_state_checks": {
+    "a3_multi_principal": true,
+    "a3_inline_wildcard_present": true,
+    "b3_inline_wildcard_present": true,
+    "b3_managed_readonly_present": true,
+    "b3_managed_security_audit_present": true
+  },
+  "adversarial_state_confirmed": true
+}

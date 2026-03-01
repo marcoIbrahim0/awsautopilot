@@ -1,0 +1,37 @@
+{
+  "a3_principals_pre": [
+    "ec2.amazonaws.com",
+    "eks.amazonaws.com"
+  ],
+  "a3_principals_post": [
+    "ec2.amazonaws.com",
+    "eks.amazonaws.com"
+  ],
+  "a3_principals_unchanged": true,
+  "a3_inline_policy_names_pre": [
+    "arch2_shared_compute_role_a3-inline-wildcard",
+    "wildcard-policy"
+  ],
+  "a3_inline_policy_names_post": [
+    "arch2_shared_compute_role_a3-inline-wildcard",
+    "wildcard-policy"
+  ],
+  "a3_inline_policies_unchanged": true,
+  "b3_principals_pre": [
+    "ec2.amazonaws.com"
+  ],
+  "b3_principals_post": [
+    "ec2.amazonaws.com"
+  ],
+  "b3_principals_unchanged": true,
+  "b3_attached_policy_arns_pre": [
+    "arn:aws:iam::aws:policy/ReadOnlyAccess",
+    "arn:aws:iam::aws:policy/SecurityAudit"
+  ],
+  "b3_attached_policy_arns_post": [
+    "arn:aws:iam::aws:policy/ReadOnlyAccess",
+    "arn:aws:iam::aws:policy/SecurityAudit"
+  ],
+  "b3_attached_policies_unchanged": true,
+  "principal_preservation_pass": true
+}

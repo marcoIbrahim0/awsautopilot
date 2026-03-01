@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws s3api delete-bucket-website --bucket arch1-bucket-evidence-b1-029037611564-eu-north-1

@@ -119,6 +119,45 @@ def _estimate_ssl_policy_size_bytes(bucket: str, exempt_principals: list[str]) -
     return len(json.dumps(doc, separators=(",", ":")))
 
 
+def _normalize_bucket_policy_document(policy_json: str | None) -> str | None:
+    """Return canonical bucket-policy JSON string or None when invalid."""
+    if not isinstance(policy_json, str):
+        return None
+    raw = policy_json.strip()
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+
+    statements = parsed.get("Statement")
+    if statements is None:
+        parsed["Statement"] = []
+    elif isinstance(statements, dict):
+        parsed["Statement"] = [statements]
+    elif not isinstance(statements, list):
+        return None
+
+    return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
+
+
+def _policy_statement_count(policy_json: str | None) -> int:
+    """Count policy statements from normalized/raw policy JSON."""
+    normalized = _normalize_bucket_policy_document(policy_json)
+    if not normalized:
+        return 0
+    parsed = json.loads(normalized)
+    statements = parsed.get("Statement")
+    if isinstance(statements, list):
+        return len(statements)
+    if isinstance(statements, dict):
+        return 1
+    return 0
+
+
 def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[bool | None, str | None]:
     """
     Non-mutating direct-fix permission probe.
@@ -398,6 +437,35 @@ def collect_runtime_risk_signals(
                         if account is not None:
                             _mark_access_path_unavailable(
                                 f"Unable to inspect bucket policy status ({code or 'GetBucketPolicyStatusFailed'})."
+                            )
+                if strategy_id == "s3_migrate_cloudfront_oac_private":
+                    try:
+                        raw_policy = s3.get_bucket_policy(Bucket=bucket).get("Policy")
+                        normalized_policy = _normalize_bucket_policy_document(raw_policy)
+                        if normalized_policy is not None:
+                            statement_count = _policy_statement_count(normalized_policy)
+                            evidence_payload = signals.setdefault("evidence", {})
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload["existing_bucket_policy_statement_count"] = statement_count
+                                if statement_count > 0:
+                                    evidence_payload["existing_bucket_policy_json"] = normalized_policy
+                        else:
+                            evidence_payload = signals.setdefault("evidence", {})
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload["existing_bucket_policy_parse_error"] = (
+                                    "GetBucketPolicy returned invalid JSON."
+                                )
+                    except ClientError as exc:
+                        code = _error_code(exc)
+                        evidence_payload = signals.setdefault("evidence", {})
+                        if isinstance(evidence_payload, dict):
+                            if code == "NoSuchBucketPolicy":
+                                evidence_payload["existing_bucket_policy_statement_count"] = 0
+                            else:
+                                evidence_payload["existing_bucket_policy_capture_error"] = code or "GetBucketPolicyFailed"
+                        if code not in {"NoSuchBucketPolicy", "NoSuchBucket"} and account is not None:
+                            _mark_access_path_unavailable(
+                                f"Unable to capture existing bucket policy ({code or 'GetBucketPolicyFailed'})."
                             )
                 try:
                     s3.get_bucket_website(Bucket=bucket)

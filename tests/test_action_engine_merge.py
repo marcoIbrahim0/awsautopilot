@@ -8,6 +8,7 @@ from backend.services.action_engine import (
     _action_type_from_control,
     _build_target_id,
     _grouping_key,
+    _is_effectively_open_finding,
     _is_open_finding_status,
 )
 from backend.services.control_scope import canonical_control_id_for_action_type
@@ -126,8 +127,20 @@ def test_open_status_helper_treats_only_resolved_as_closed() -> None:
     assert _is_open_finding_status("RESOLVED") is False
 
 
-def test_orphan_actions_are_not_auto_resolved() -> None:
-    """Orphan actions (zero linked findings) should remain open after recompute."""
+def test_effective_open_helper_prefers_shadow_resolved_status() -> None:
+    """Shadow RESOLVED should close findings even when canonical status is NEW."""
+    finding = SimpleNamespace(status="NEW", shadow_status_normalized="RESOLVED")
+    assert _is_effectively_open_finding(finding) is False
+
+
+def test_effective_open_helper_prefers_shadow_open_status() -> None:
+    """Shadow OPEN should reopen findings even when canonical status is RESOLVED."""
+    finding = SimpleNamespace(status="RESOLVED", shadow_status_normalized="OPEN")
+    assert _is_effectively_open_finding(finding) is True
+
+
+def test_orphan_open_actions_are_resolved_when_no_unresolved_links() -> None:
+    """Open actions should resolve when linked unresolved findings count is zero."""
     import uuid as _uuid
     from types import SimpleNamespace
     from backend.services.action_engine import _mark_resolved_actions_with_no_open_findings
@@ -136,7 +149,7 @@ def test_orphan_actions_are_not_auto_resolved() -> None:
     tenant_id = _uuid.uuid4()
     action = SimpleNamespace(
         tenant_id=tenant_id,
-        status=ActionStatus.resolved.value,
+        status=ActionStatus.open.value,
         action_finding_links=[],
     )
 
@@ -153,12 +166,44 @@ def test_orphan_actions_are_not_auto_resolved() -> None:
 
     session = _Session()
     updated = _mark_resolved_actions_with_no_open_findings(session, tenant_id, None, None)
-    assert action.status == ActionStatus.open.value
-    assert updated == 0
+    assert action.status == ActionStatus.resolved.value
+    assert updated == 1
 
 
-def test_resolved_orphan_actions_are_reopened() -> None:
-    """Resolved orphan actions should be reopened to avoid false 'resolved' state."""
+def test_open_actions_resolve_when_only_shadow_resolved_links_exist() -> None:
+    """Open actions resolve when linked findings are canonically NEW but shadow-resolved."""
+    import uuid as _uuid
+    from types import SimpleNamespace
+    from backend.services.action_engine import _mark_resolved_actions_with_no_open_findings
+    from backend.models.enums import ActionStatus
+
+    tenant_id = _uuid.uuid4()
+    shadow_resolved_finding = SimpleNamespace(status="NEW", shadow_status_normalized="RESOLVED")
+    action = SimpleNamespace(
+        tenant_id=tenant_id,
+        status=ActionStatus.open.value,
+        action_finding_links=[SimpleNamespace(finding=shadow_resolved_finding)],
+    )
+
+    class _Session:
+        def query(self, model):  # noqa: D401 - simple stub
+            class _Q:
+                def __init__(self, actions):
+                    self._actions = actions
+                def filter(self, *args, **kwargs):
+                    return self
+                def all(self):
+                    return self._actions
+            return _Q([action])
+
+    session = _Session()
+    updated = _mark_resolved_actions_with_no_open_findings(session, tenant_id, None, None)
+    assert action.status == ActionStatus.resolved.value
+    assert updated == 1
+
+
+def test_resolved_orphan_actions_stay_resolved_when_no_unresolved_links() -> None:
+    """Resolved orphan actions should stay resolved when no unresolved links exist."""
     import uuid as _uuid
     from types import SimpleNamespace
     from backend.services.action_engine import _reopen_resolved_orphan_actions
@@ -170,14 +215,8 @@ def test_resolved_orphan_actions_are_reopened() -> None:
         status=ActionStatus.resolved.value,
         account_id="029037611564",
         region=None,
+        action_finding_links=[],
     )
-
-    class _FindingQuery:
-        def filter(self, *args, **kwargs):
-            return self
-
-        def exists(self):
-            return False
 
     class _ActionQuery:
         def __init__(self, actions):
@@ -190,14 +229,45 @@ def test_resolved_orphan_actions_are_reopened() -> None:
             return self._actions
 
     class _Session:
-        def __init__(self):
-            self._calls = 0
-
         def query(self, model):
-            self._calls += 1
-            if self._calls == 1:
-                return _ActionQuery([action])
-            return _FindingQuery()
+            return _ActionQuery([action])
+
+    session = _Session()
+    reopened = _reopen_resolved_orphan_actions(session, tenant_id, None, None)
+    assert action.status == ActionStatus.resolved.value
+    assert reopened == 0
+
+
+def test_resolved_actions_with_open_linked_findings_are_reopened() -> None:
+    """Resolved actions are reopened when linked findings are still open."""
+    import uuid as _uuid
+    from types import SimpleNamespace
+    from backend.services.action_engine import _reopen_resolved_orphan_actions
+    from backend.models.enums import ActionStatus
+
+    tenant_id = _uuid.uuid4()
+    open_finding = SimpleNamespace(status="NEW")
+    action = SimpleNamespace(
+        tenant_id=tenant_id,
+        status=ActionStatus.resolved.value,
+        account_id="029037611564",
+        region=None,
+        action_finding_links=[SimpleNamespace(finding=open_finding)],
+    )
+
+    class _ActionQuery:
+        def __init__(self, actions):
+            self._actions = actions
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return self._actions
+
+    class _Session:
+        def query(self, model):
+            return _ActionQuery([action])
 
     session = _Session()
     reopened = _reopen_resolved_orphan_actions(session, tenant_id, None, None)

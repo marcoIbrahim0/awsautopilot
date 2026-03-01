@@ -173,6 +173,31 @@ Parameters:
     MinValue: 1
     MaxValue: 10
 
+  IngestMaximumConcurrency:
+    Type: Number
+    Default: 8
+    MinValue: 2
+    MaxValue: 1000
+    Description: Max concurrent worker invokes from ingest queue mapping.
+  EventsMaximumConcurrency:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    MaxValue: 1000
+    Description: Max concurrent worker invokes from events queue mapping.
+  InventoryMaximumConcurrency:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    MaxValue: 1000
+    Description: Max concurrent worker invokes from inventory queue mapping.
+  ExportMaximumConcurrency:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    MaxValue: 1000
+    Description: Max concurrent worker invokes from export queue mapping.
+
   # --- Optional custom domain (recommended for same-site cookies) ---
   ApiDomainName:
     Type: String
@@ -581,6 +606,8 @@ Resources:
         "Fn::Sub": "${SqsStackName}-IngestQueueArn"
       FunctionName: !Ref WorkerFunction
       BatchSize: !Ref IngestBatchSize
+      ScalingConfig:
+        MaximumConcurrency: !Ref IngestMaximumConcurrency
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
@@ -592,6 +619,8 @@ Resources:
         "Fn::Sub": "${SqsStackName}-EventsFastLaneQueueArn"
       FunctionName: !Ref WorkerFunction
       BatchSize: !Ref EventsBatchSize
+      ScalingConfig:
+        MaximumConcurrency: !Ref EventsMaximumConcurrency
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
@@ -603,6 +632,8 @@ Resources:
         "Fn::Sub": "${SqsStackName}-InventoryReconcileQueueArn"
       FunctionName: !Ref WorkerFunction
       BatchSize: !Ref InventoryBatchSize
+      ScalingConfig:
+        MaximumConcurrency: !Ref InventoryMaximumConcurrency
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
@@ -614,6 +645,8 @@ Resources:
         "Fn::Sub": "${SqsStackName}-ExportReportQueueArn"
       FunctionName: !Ref WorkerFunction
       BatchSize: !Ref ExportBatchSize
+      ScalingConfig:
+        MaximumConcurrency: !Ref ExportMaximumConcurrency
       FunctionResponseTypes:
         - ReportBatchItemFailures
 

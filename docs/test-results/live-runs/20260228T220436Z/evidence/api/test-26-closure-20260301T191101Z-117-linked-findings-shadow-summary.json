@@ -1,0 +1,40 @@
+{
+  "total": 4,
+  "resolved_by_effective_status": 4,
+  "resolved_by_canonical_status": 0,
+  "resolved_by_shadow_status": 4,
+  "items": [
+    {
+      "id": "280fd5e2-6075-490f-913d-0ef52315a518",
+      "status": "NEW",
+      "effective_status": "RESOLVED",
+      "shadow_status_normalized": "RESOLVED",
+      "shadow_status_raw": "RESOLVED",
+      "shadow_status_reason": "enrichment_confirmed_compliant"
+    },
+    {
+      "id": "ffd0591c-f597-486b-84ce-23bc799c813a",
+      "status": "NEW",
+      "effective_status": "RESOLVED",
+      "shadow_status_normalized": "RESOLVED",
+      "shadow_status_raw": "RESOLVED",
+      "shadow_status_reason": "enrichment_confirmed_compliant"
+    },
+    {
+      "id": "4271ef09-f871-488a-852d-0d67c7f83017",
+      "status": "NEW",
+      "effective_status": "RESOLVED",
+      "shadow_status_normalized": "RESOLVED",
+      "shadow_status_raw": "RESOLVED",
+      "shadow_status_reason": "enrichment_confirmed_compliant"
+    },
+    {
+      "id": "4e6ce3b7-82ec-4d58-b91f-f7c4f2d6db10",
+      "status": "NEW",
+      "effective_status": "RESOLVED",
+      "shadow_status_normalized": "RESOLVED",
+      "shadow_status_raw": "RESOLVED",
+      "shadow_status_reason": "enrichment_confirmed_compliant"
+    }
+  ]
+}

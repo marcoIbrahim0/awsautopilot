@@ -1,0 +1,14 @@
+{
+  "pre_statement_count": 4,
+  "post_statement_count": 4,
+  "removed_non_risk_statement_count": 0,
+  "added_non_risk_statement_count": 0,
+  "removed_non_risk_statements": [],
+  "added_non_risk_statements": [],
+  "removed_cloudfront_statement_count": 1,
+  "added_cloudfront_statement_count": 1,
+  "cloudfront_statement_changed": true,
+  "non_risk_statements_preserved": true,
+  "expected_cloudfront_delta_only": true,
+  "pab_hardened_post_apply": true
+}

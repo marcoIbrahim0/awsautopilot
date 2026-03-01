@@ -4,6 +4,45 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 7 Test 26 rerun after effective-status deploy + pre-reconcile validation (2026-03-01)](task_log.md#wave-7-test-26-rerun-after-effective-status-deploy--pre-reconcile-validation-2026-03-01)
+  - Deployed runtime image `20260301T193511Z` and executed a fresh full Test 26 closure chain with canonical prefix `test-26-closure-20260301T193804Z-*`.
+  - Revalidated execution path and preservation in one run (`run success`, Terraform `0/0/0/0`, non-risk statements unchanged, CloudFront statement rotation only, PAB hardened).
+  - Confirmed live effective-status contract alignment (`status=RESOLVED`, `effective_status=RESOLVED`, `canonical_status=NEW`) while pre-run OPEN detection remains unresolved (target still requires resolved fallback).
+- [Effective-status canonicalization: findings `status` now product-effective (2026-03-01)](task_log.md#effective-status-canonicalization-findings-status-now-product-effective-2026-03-01)
+  - Findings API now exposes `status` as effective user-facing state and `canonical_status` as audit/debug state.
+  - Updated regressions and frontend type contract to align with the single-truth status policy.
+  - Verified locally (`19` backend tests passed + frontend typecheck pass); live rerun still pending for final tracker closure.
+- [Wave 7 Test 26 post-deploy rerun after effective-status alignment (2026-03-01)](task_log.md#wave-7-test-26-post-deploy-rerun-after-effective-status-alignment-2026-03-01)
+  - Deployed runtime image `20260301T190243Z` and executed fresh full Test 26 closure chain with canonical prefix `test-26-closure-20260301T191101Z-*`.
+  - Verified run/bundle/apply/refresh success (`0/0/0/0` Terraform), end-state resolved action/finding in status-filter results, and delta-aware policy preservation (`non-risk unchanged`, CloudFront statement rotation only).
+  - Logged residual gap: target action did not reappear in OPEN pre-run polling after adversarial-state reset; finding detail still reports canonical `NEW` while effective/shadow are resolved.
+- [Effective-status alignment for findings truth and UI consistency (2026-03-01)](task_log.md#effective-status-alignment-for-findings-truth-and-ui-consistency-2026-03-01)
+  - Added `effective_status` to findings API responses while preserving canonical `status` for backward compatibility.
+  - Switched findings status filtering/sorting to effective status and updated findings UI surfaces to use effective status for open/resolved behavior.
+  - Added targeted regressions and verified with focused backend tests plus frontend typecheck.
+- [Wave 7 Test 26 fixes: policy preservation + action closure + live rerun (2026-03-01)](task_log.md#wave-7-test-26-fixes-policy-preservation--action-closure--live-rerun-2026-03-01)
+  - Implemented fail-closed S3 policy-preservation guardrails, runtime policy evidence capture/auto-preload, and rerun-safe CloudFront OAC naming for `s3_migrate_cloudfront_oac_private`.
+  - Patched action recompute to use effective shadow status for linked findings, enabling resolved-action transitions under shadow mode when effective unresolved count is zero.
+  - Executed fresh full Test 26 closure chain (`test-26-closure-20260301T181657Z-*`) with `terraform apply=0`, action resolved, and delta-aware preservation pass (`pre=3`, `post=4`, `removed=0`, `added=1`).
+- [Worker throughput tuning + Wave 7 Test 26 rerun (2026-03-01)](task_log.md#worker-throughput-tuning--wave-7-test-26-rerun-2026-03-01)
+  - Implemented worker throughput controls (Lambda reserved concurrency + per-queue event-source max concurrency parameters) and deployed runtime image `20260301T171324Z`.
+  - Re-ran full Test 26 closure chain with canonical prefix `test-26-closure-20260301T171651Z-*`; run/bundle/apply/refresh path succeeded end-to-end.
+  - Test 26 moved from blocked-queue symptom to functional/preservation findings: target finding resolved but action stayed open, and complex-policy statement preservation failed (`3 -> 1` statements).
+- [UI remediation warning for IAM root-key issue: require root account messaging (2026-03-01)](task_log.md#ui-remediation-warning-for-iam-root-key-issue-require-root-account-messaging-2026-03-01)
+  - Added explicit “AWS root account required” messaging in Action Detail and Remediation Modal for `iam_root_access_key_absent`.
+  - Clarifies that IAM users/roles (including admin users) cannot execute root key disable/delete remediation.
+  - Included a small type-safety guard in exception flow handling while keeping remediation behavior unchanged.
+- [Wave 7 Test 25 full remediation closure validation: adversarial IAM multi-principal (2026-03-01)](task_log.md#wave-7-test-25-full-remediation-closure-validation-adversarial-iam-multi-principal-2026-03-01)
+  - Executed full mandatory Test 25 closure chain (IAM adversarial state confirm -> open action verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> 15-minute poll).
+  - Verified safety-preservation from observed AWS state: A3 trust principals and inline policy set remained intact; B3 trust principal and managed attachments remained unchanged.
+  - Result is `BLOCKED` from observed behavior: run/bundle succeeded, but IAM.4 apply requires root credentials and target action/finding stayed `open/NEW` after completed refresh.
+- [Wave 7 Test 24 full remediation closure validation: adversarial SG dependency-chain (2026-03-01)](task_log.md#wave-7-test-24-full-remediation-closure-validation-adversarial-sg-dependency-chain-2026-03-01)
+  - Executed the full mandatory Test 24 closure chain (state confirm -> open verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> 15-minute poll).
+  - Verified SG dependency safety from observed AWS state: SG-A public SSH removed, SG-B refs preserved, ENI counts unchanged, and RDS dependency (`arch1-claims-db-a2`) preserved.
+  - Marked PASS under shadow-mode criteria: remediation execution, dependency safety, and refresh completion passed even though action/finding status stayed `open/NEW` during the poll window.
+- [Prod-readiness important-to-do update: confidence-tier live status and coverage expansion (2026-03-01)](task_log.md#prod-readiness-important-to-do-update-confidence-tier-live-status-and-coverage-expansion-2026-03-01)
+  - Added two separate checklist points in `docs/prod-readiness/important-to-do.md` for confidence-tier status strategy.
+  - Item 16 captures high-confidence live-status enablement; item 17 captures medium/low rule-pattern + scenario coverage expansion requirements.
 - [Wave 7 Test 23 full remediation closure validation: adversarial S3 blast-radius (2026-03-01)](task_log.md#wave-7-test-23-full-remediation-closure-validation-adversarial-s3-blast-radius-2026-03-01)
   - Executed full mandatory Test 23 chain (state confirm -> open verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> 15-minute poll).
   - Restored blast-radius differentiation by validating runtime website evidence path (A1 `warn`, B1 `pass`) and successfully remediated B1 bundle in AWS (`terraform init/plan/apply` all successful).

@@ -1,0 +1,1 @@
+GET /api/findings/{id} for linked finding IDs and summarize status vs shadow status

@@ -1,0 +1,9 @@
+{
+  "remediation_run_id": "ff18f638-1806-45f8-9abd-bafb9e42c758",
+  "refresh_done_before_timeout": true,
+  "final_action_status": "open",
+  "action_in_open_list": true,
+  "action_in_resolved_list": false,
+  "target_finding_in_new": true,
+  "target_finding_in_resolved": false
+}

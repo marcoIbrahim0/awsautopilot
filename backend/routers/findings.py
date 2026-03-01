@@ -70,7 +70,9 @@ class FindingResponse(BaseModel):
     source: str = "security_hub"  # Step 2B.1: security_hub | access_analyzer
     severity_label: str
     severity_normalized: int
+    canonical_status: str
     status: str
+    effective_status: str
     display_badge: str
     in_scope: bool = True
     is_shared_resource: bool = False  # A3: future detection logic; defaults False
@@ -165,6 +167,11 @@ def finding_to_response(
                 else None
             ),
         )
+    effective_status = _effective_status_from_values(
+        canonical_status=str(getattr(finding, "status", "") or ""),
+        shadow_status_normalized=str(getattr(finding, "shadow_status_normalized", "") or ""),
+    )
+
     return FindingResponse(
         id=str(finding.id),
         finding_id=finding.finding_id,
@@ -174,8 +181,10 @@ def finding_to_response(
         source=getattr(finding, "source", "security_hub"),
         severity_label=finding.severity_label,
         severity_normalized=finding.severity_normalized,
-        status=finding.status,
-        display_badge="resolved" if str(finding.status or "").upper() == "RESOLVED" else "open",
+        canonical_status=finding.status,
+        status=effective_status,
+        effective_status=effective_status,
+        display_badge="resolved" if effective_status == "RESOLVED" else "open",
         in_scope=bool(getattr(finding, "in_scope", True)),
         is_shared_resource=False,  # A3: real detection is a future task
         title=finding.title,
@@ -367,6 +376,38 @@ def _parse_severity_filter_values(raw_value: str) -> list[str]:
     return values
 
 
+def _parse_status_filter_values(raw_value: str) -> list[str]:
+    return [part.strip().upper() for part in raw_value.split(",") if part.strip()]
+
+
+def _effective_status_from_values(canonical_status: str | None, shadow_status_normalized: str | None) -> str:
+    """
+    Resolve the effective status shown to users and used for findings filters.
+
+    Canonical status remains the source-of-record in `status`. Shadow status is used
+    as an overlay for behavior/UX consistency:
+    - shadow RESOLVED always presents as RESOLVED
+    - shadow OPEN reopens canonically RESOLVED findings
+    """
+    canonical = str(canonical_status or "").strip().upper()
+    shadow = _normalize_shadow_status(shadow_status_normalized)
+    if shadow == "RESOLVED":
+        return "RESOLVED"
+    if shadow == "OPEN" and canonical == "RESOLVED":
+        return "NEW"
+    return canonical
+
+
+def _effective_status_sql_expr() -> object:
+    shadow_status = func.upper(func.coalesce(Finding.shadow_status_normalized, ""))
+    canonical_status = func.upper(func.coalesce(Finding.status, ""))
+    return case(
+        (shadow_status == "RESOLVED", "RESOLVED"),
+        ((shadow_status == "OPEN") & (canonical_status == "RESOLVED"), "NEW"),
+        else_=canonical_status,
+    )
+
+
 def _apply_finding_filters(
     query: object,
     account_id: str | None,
@@ -387,8 +428,9 @@ def _apply_finding_filters(
         sources = [s.strip().lower() for s in source.split(",")]
         query = query.where(Finding.source.in_(sources))
     if status_filter:
-        statuses = [s.strip().upper() for s in status_filter.split(",")]
-        query = query.where(Finding.status.in_(statuses))
+        statuses = _parse_status_filter_values(status_filter)
+        if statuses:
+            query = query.where(_effective_status_sql_expr().in_(statuses))
     return query
 
 
@@ -641,8 +683,9 @@ async def list_findings(
         query = query.where(Finding.severity_label.in_(severities))
     if status_filter:
         # Support comma-separated statuses (e.g., "NEW,NOTIFIED")
-        statuses = [s.strip().upper() for s in status_filter.split(",")]
-        query = query.where(Finding.status.in_(statuses))
+        statuses = _parse_status_filter_values(status_filter)
+        if statuses:
+            query = query.where(_effective_status_sql_expr().in_(statuses))
     if source:
         # Step 2B.1: filter by source (security_hub, access_analyzer)
         sources = [s.strip().lower() for s in source.split(",")]
@@ -662,7 +705,8 @@ async def list_findings(
     total = total_result.scalar() or 0
 
     # Apply ordering and pagination
-    resolved_first = case((Finding.status == "RESOLVED", 0), else_=1)
+    effective_status_expr = _effective_status_sql_expr()
+    resolved_first = case((effective_status_expr == "RESOLVED", 0), else_=1)
     query = query.order_by(
         resolved_first.asc(),  # Resolved findings first for explicit visual confirmation.
         Finding.resolved_at.desc().nullslast(),  # Most recently resolved first within resolved.

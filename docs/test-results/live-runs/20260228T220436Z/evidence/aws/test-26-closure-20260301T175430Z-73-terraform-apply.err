@@ -1,0 +1,7 @@
+
+Error: creating CloudFront Origin Access Control (security-autopilot-oac-f94b7123): operation error CloudFront: CreateOriginAccessControl, https response error StatusCode: 409, RequestID: 9a5a7970-e2f3-4511-a288-d1c05be28381, OriginAccessControlAlreadyExists: An origin access control with the same name already exists.
+
+  with aws_cloudfront_origin_access_control.security_autopilot,
+  on s3_cloudfront_oac_private_s3.tf line 51, in resource "aws_cloudfront_origin_access_control" "security_autopilot":
+  51: resource "aws_cloudfront_origin_access_control" "security_autopilot" {
+

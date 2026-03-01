@@ -1,0 +1,1 @@
+aws ec2 describe-security-groups --group-ids sg-02813afb4b1337ee4 --region eu-north-1 --output json --no-cli-pager 

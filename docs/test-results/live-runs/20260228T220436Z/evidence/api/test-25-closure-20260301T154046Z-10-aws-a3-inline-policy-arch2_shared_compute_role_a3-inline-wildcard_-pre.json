@@ -1,0 +1,15 @@
+{
+    "RoleName": "arch2_shared_compute_role_a3",
+    "PolicyName": "arch2_shared_compute_role_a3-inline-wildcard",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "A3AdversarialWildcard",
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*"
+            }
+        ]
+    }
+}

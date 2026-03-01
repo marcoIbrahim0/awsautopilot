@@ -1,0 +1,1 @@
+AWS_PROFILE=default aws iam list-instance-profiles-for-role --role-name arch2_shared_compute_role_a3

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,7 +16,11 @@ from fastapi.testclient import TestClient
 from backend.auth import get_optional_user
 from backend.database import get_db
 from backend.main import app
-from backend.routers.findings import _parse_severity_filter_values
+from backend.routers.findings import (
+    _effective_status_from_values,
+    _parse_severity_filter_values,
+    finding_to_response,
+)
 
 
 def test_parse_severity_filter_values_rejects_invalid_labels() -> None:
@@ -28,6 +34,57 @@ def test_parse_severity_filter_values_rejects_invalid_labels() -> None:
 def test_parse_severity_filter_values_accepts_multi_value() -> None:
     values = _parse_severity_filter_values("critical,high")
     assert values == ["CRITICAL", "HIGH"]
+
+
+def test_effective_status_prefers_shadow_resolved() -> None:
+    assert _effective_status_from_values("NEW", "RESOLVED") == "RESOLVED"
+
+
+def test_effective_status_reopens_shadow_open_canonical_resolved() -> None:
+    assert _effective_status_from_values("RESOLVED", "OPEN") == "NEW"
+
+
+def test_finding_response_uses_effective_status_for_badge() -> None:
+    now = datetime.now(timezone.utc)
+    finding = SimpleNamespace(
+        id=uuid.uuid4(),
+        finding_id="finding-123",
+        tenant_id=uuid.uuid4(),
+        account_id="123456789012",
+        region="eu-north-1",
+        source="security_hub",
+        severity_label="HIGH",
+        severity_normalized=75,
+        status="NEW",
+        in_scope=True,
+        title="Example finding",
+        description="Example description",
+        resource_id="arn:aws:s3:::example-bucket",
+        resource_type="AwsS3Bucket",
+        control_id="S3.2",
+        standard_name="AWS Foundational Security Best Practices v1.0.0",
+        first_observed_at=now,
+        last_observed_at=now,
+        resolved_at=None,
+        sh_updated_at=now,
+        created_at=now,
+        updated_at=now,
+        raw_json={},
+        shadow_status_raw="RESOLVED",
+        shadow_status_normalized="RESOLVED",
+        shadow_status_reason="shadow signal",
+        shadow_last_observed_event_time=now,
+        shadow_last_evaluated_at=now,
+        shadow_fingerprint="fp-1",
+        shadow_source="event_monitor_shadow",
+    )
+
+    response = finding_to_response(finding)
+
+    assert response.canonical_status == "NEW"
+    assert response.status == "RESOLVED"
+    assert response.effective_status == "RESOLVED"
+    assert response.display_badge == "resolved"
 
 
 def test_ingest_progress_includes_compatibility_fields(client: TestClient) -> None:

@@ -1,0 +1,22 @@
+{
+  "prefix": "test-25-closure-20260301T154046Z",
+  "target_action_id": "c8201c18-5054-42ee-99c6-815ea082f2c9",
+  "target_finding_primary_id": "fe935ab6-1117-4475-a5fb-edbdf8cc8a4b",
+  "target_finding_ids_csv": "fe935ab6-1117-4475-a5fb-edbdf8cc8a4b,9a553808-2729-49af-9b92-118a618162f2",
+  "remediation_run_id": "d7325d69-35ec-4d2b-8042-72d5b36f35ad",
+  "remediation_run_final_status": "success",
+  "final_action_status": "open",
+  "target_in_open_list": true,
+  "target_in_resolved_list": false,
+  "target_primary_finding_in_new": true,
+  "target_primary_finding_in_resolved": false,
+  "refresh_done_before_timeout": true,
+  "target_resolved_before_timeout": false,
+  "principal_preservation_pass": true,
+  "terraform_exit_codes": {
+    "init": 0,
+    "plan": 0,
+    "show": 0,
+    "apply": 1
+  }
+}

@@ -1,0 +1,79 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0e5bea6687c7063c1",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+                    "Key": "TestGroup",
+                    "Value": "architecture-1"
+                },
+                {
+                    "Key": "Tier",
+                    "Value": "workflow-processing"
+                },
+                {
+                    "Key": "BlastRadiusTest",
+                    "Value": "sg-dependency-chain"
+                },
+                {
+                    "Key": "ResourceGroup",
+                    "Value": "A"
+                },
+                {
+                    "Key": "Project",
+                    "Value": "AWS-Security-Autopilot"
+                },
+                {
+                    "Key": "Environment",
+                    "Value": "security-test"
+                },
+                {
+                    "Key": "Name",
+                    "Value": "arch1_sg_dependency_a2"
+                },
+                {
+                    "Key": "ManagedBy",
+                    "Value": "test-script"
+                },
+                {
+                    "Key": "Architecture",
+                    "Value": "architecture-1"
+                }
+            ],
+            "VpcId": "vpc-049294166c1c2fbd4",
+            "SecurityGroupArn": "arn:aws:ec2:eu-north-1:029037611564:security-group/sg-0e5bea6687c7063c1",
+            "OwnerId": "029037611564",
+            "GroupName": "arch1_sg_dependency_a2",
+            "Description": "A2 SG-A dependency chain group",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "intentional-a2-public-ssh",
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}

@@ -154,3 +154,27 @@ This checklist tracks the top follow-up actions after enforcing explicit PR-bund
 - **References:**
   - [`docs/prod-readiness/07-architecture-design.md`](07-architecture-design.md)
   - [`docs/prod-readiness/08-task1-resource-inventory.md`](08-task1-resource-inventory.md)
+
+### 16) Enable live status updates for high-confidence controls
+- **Severity:** High
+- **Why this is important:** High-confidence controls have clearer signal quality and can support faster status updates with lower false-resolved risk.
+- **What to do now:**
+  1. Enable SaaS live status updates for high-confidence controls.
+  2. Define rollout guardrails (pilot scope, metrics, rollback trigger) before global enablement.
+  3. Keep explicit fallback for uncertain reads so findings are not incorrectly marked as solved.
+- **References:**
+  - [`docs/reconciliation_quality_review.md`](../reconciliation_quality_review.md)
+  - [`backend/workers/services/shadow_state.py`](../../backend/workers/services/shadow_state.py)
+  - [`docs/control-plane-event-monitoring.md`](../control-plane-event-monitoring.md)
+
+### 17) Expand medium/low-confidence rule-pattern coverage and test scenarios
+- **Severity:** High
+- **Why this is important:** Medium and low-confidence controls need broader pattern handling and stronger test depth before they can be trusted for live status promotion.
+- **What to do now:**
+  1. Add more rule-pattern coverage for medium and low-confidence controls (normal and edge-case variants).
+  2. Add more test scenarios for these controls in reconciliation/unit/integration test suites.
+  3. Gate live-status promotion for medium/low controls on measurable coverage and observed precision targets.
+- **References:**
+  - [`docs/reconciliation_quality_review.md`](../reconciliation_quality_review.md)
+  - [`backend/workers/services/inventory_reconcile.py`](../../backend/workers/services/inventory_reconcile.py)
+  - [`tests/test_inventory_reconcile.py`](../../tests/test_inventory_reconcile.py)

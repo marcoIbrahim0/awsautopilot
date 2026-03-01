@@ -1,0 +1,1 @@
+GET https://api.valensjewelry.com/api/actions?account_id=029037611564&region=eu-north-1&control_id=EC2.53&action_type=sg_restrict_public_ports&status=open&limit=200

@@ -1,0 +1,32 @@
+{
+  "pre_statement_count": 4,
+  "post_statement_count": 4,
+  "pre_statement_set": [
+    "{\"Sid\":\"AllowCloudFrontReadOnly\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cloudfront.amazonaws.com\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\",\"Condition\":{\"StringEquals\":{\"AWS:SourceArn\":\"arn:aws:cloudfront::029037611564:distribution/E15FEFESCALXCF\"}}}",
+    "{\"Sid\":\"AllowCrossAccountRead\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::029037611564:root\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\"}",
+    "{\"Sid\":\"AllowDataPipelinePutObject\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::029037611564:root\"},\"Action\":\"s3:PutObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\"}",
+    "{\"Sid\":\"AllowVpcScopedReadPath\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\",\"Condition\":{\"StringEquals\":{\"aws:SourceVpc\":\"vpc-049294166c1c2fbd4\"}}}"
+  ],
+  "post_statement_set": [
+    "{\"Sid\":\"AllowCloudFrontReadOnly\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cloudfront.amazonaws.com\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\",\"Condition\":{\"StringEquals\":{\"AWS:SourceArn\":\"arn:aws:cloudfront::029037611564:distribution/E1AIXA4UZHMWQJ\"}}}",
+    "{\"Sid\":\"AllowCrossAccountRead\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::029037611564:root\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\"}",
+    "{\"Sid\":\"AllowDataPipelinePutObject\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::029037611564:root\"},\"Action\":\"s3:PutObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\"}",
+    "{\"Sid\":\"AllowVpcScopedReadPath\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::arch1-bucket-evidence-b1-029037611564-eu-north-1/*\",\"Condition\":{\"StringEquals\":{\"aws:SourceVpc\":\"vpc-049294166c1c2fbd4\"}}}"
+  ],
+  "non_risk_statements_unchanged": false,
+  "policy_json_unchanged": false,
+  "pab_pre": {
+    "BlockPublicAcls": false,
+    "IgnorePublicAcls": false,
+    "BlockPublicPolicy": false,
+    "RestrictPublicBuckets": false
+  },
+  "pab_post": {
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  },
+  "pab_hardened_post_apply": true,
+  "policy_preservation_pass": false
+}

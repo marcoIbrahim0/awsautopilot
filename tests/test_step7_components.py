@@ -6,6 +6,7 @@ worker handler registration. Does not require DB or SQS.
 """
 from __future__ import annotations
 
+import json
 import uuid
 
 import pytest
@@ -452,6 +453,7 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> Non
         action,
         "terraform",
         variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+        risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 0}},
     )
     assert r["format"] == "terraform"
     paths = [f["path"] for f in r["files"]]
@@ -467,6 +469,26 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> Non
     assert 'bucket_name = "my-bucket"' in content
 
 
+def test_pr_bundle_s3_cloudfront_oac_private_variant_uses_unique_oac_name_seed() -> None:
+    """CloudFront+OAC variant should avoid static bucket-only OAC names that collide on reruns."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+        risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 0}},
+    )
+    content = next(f for f in result["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
+    assert "oac_name_seed" in content
+    assert "security-autopilot-oac-${substr(md5(local.oac_name_seed)" in content
+    assert "substr(md5(local.bucket_name), 0, 8)" not in content
+
+
 def test_pr_bundle_s3_cloudfront_oac_private_variant_has_specific_readme_section() -> None:
     """Variant README includes migration-specific section."""
     action = _make_action(
@@ -479,6 +501,7 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_has_specific_readme_section
         action,
         "terraform",
         variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
+        risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 0}},
     )
     readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
     assert "S3.2 migration variant (CloudFront + OAC + private S3)" in readme
@@ -501,6 +524,76 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_cloudformation_raises_error
         )
     payload = exc_info.value.as_dict()
     assert payload["code"] == "unsupported_variant_format"
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_auto_preserves_existing_policy_from_risk_evidence() -> None:
+    """CloudFront+OAC variant should preload existing non-risk bucket policy statements."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    existing_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowCrossAccountRead",
+                "Effect": "Allow",
+                "Principal": {"AWS": "arn:aws:iam::123456789012:root"},
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::my-bucket/*",
+            },
+            {
+                "Sid": "AllowVpcScopedReadPath",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::my-bucket/*",
+                "Condition": {"StringEquals": {"aws:SourceVpc": "vpc-0123456789abcdef0"}},
+            },
+        ],
+    }
+    risk_snapshot = {
+        "evidence": {
+            "existing_bucket_policy_statement_count": 2,
+            "existing_bucket_policy_json": json.dumps(existing_policy),
+        }
+    }
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_cloudfront_oac_private",
+        risk_snapshot=risk_snapshot,
+    )
+    tfvars = next(f for f in result["files"] if f["path"] == "terraform.auto.tfvars.json")
+    parsed_tfvars = json.loads(tfvars["content"])
+    preserved_policy = json.loads(parsed_tfvars["existing_bucket_policy_json"])
+    preserved_sids = sorted(stmt.get("Sid") for stmt in preserved_policy.get("Statement", []))
+    assert preserved_sids == ["AllowCrossAccountRead", "AllowVpcScopedReadPath"]
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_fails_when_policy_exists_but_preservation_input_missing() -> None:
+    """CloudFront+OAC variant fails closed when policy exists but preservation cannot be guaranteed."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    risk_snapshot = {"evidence": {"existing_bucket_policy_statement_count": 3}}
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "terraform",
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            risk_snapshot=risk_snapshot,
+        )
+
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "existing_bucket_policy_preservation_required"
 
 
 def test_s3_bucket_name_from_target_id() -> None:

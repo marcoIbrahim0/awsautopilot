@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 # Closed finding statuses; every other status is treated as open for action computation.
 # Resolved matching is intentionally strict: only RESOLVED (driven by Security Hub PASSED).
 _CLOSED_STATUSES = (FindingStatus.RESOLVED.value,)
+_SHADOW_CLOSED_STATUSES = frozenset({"RESOLVED", "SOFT_RESOLVED"})
+_SHADOW_OPEN_STATUSES = frozenset({"OPEN"})
 
 
 def _is_open_finding_status(status: str | None) -> bool:
@@ -36,6 +38,21 @@ def _is_open_finding_status(status: str | None) -> bool:
     if status is None:
         return True
     return status not in _CLOSED_STATUSES
+
+
+def _is_effectively_open_finding(finding: Finding) -> bool:
+    """
+    Resolve effective open/closed state using shadow overlays when present.
+
+    In CONTROL_PLANE_SHADOW_MODE deployments, canonical finding.status may lag while
+    shadow status reflects the latest control-plane truth.
+    """
+    shadow_normalized = str(getattr(finding, "shadow_status_normalized", "") or "").strip().upper()
+    if shadow_normalized in _SHADOW_CLOSED_STATUSES:
+        return False
+    if shadow_normalized in _SHADOW_OPEN_STATUSES:
+        return True
+    return _is_open_finding_status(getattr(finding, "status", None))
 
 
 def _grouping_key(finding: Finding) -> tuple[Any, ...]:
@@ -94,7 +111,7 @@ def _action_status_from_findings(findings: list[Finding]) -> str:
     if not findings:
         return ActionStatus.resolved.value
     for f in findings:
-        if _is_open_finding_status(f.status):
+        if _is_effectively_open_finding(f):
             return ActionStatus.open.value
     return ActionStatus.resolved.value
 
@@ -226,20 +243,29 @@ def _mark_resolved_actions_with_no_open_findings(
     open_actions = q.all()
     resolved_count = 0
     for action in open_actions:
-        links = action.action_finding_links or []
-        if not links:
-            # Orphan actions (no linked findings) should not be auto-resolved.
-            # This can happen after control/action remapping or finding relinks.
-            # Keep them open so they don't appear falsely resolved.
-            action.status = ActionStatus.open.value
-            continue
-        if all(
-            link.finding.status == FindingStatus.RESOLVED.value
-            for link in links
-        ):
+        unresolved_count = _linked_unresolved_finding_count(action)
+        if unresolved_count == 0:
             action.status = ActionStatus.resolved.value
             resolved_count += 1
     return resolved_count
+
+
+def _linked_unresolved_finding_count(action: Action) -> int:
+    """
+    Count unresolved findings linked to an action.
+
+    A missing linked finding object is treated as unresolved to fail safe.
+    """
+    unresolved = 0
+    links = action.action_finding_links or []
+    for link in links:
+        finding = getattr(link, "finding", None)
+        if finding is None:
+            unresolved += 1
+            continue
+        if _is_effectively_open_finding(finding):
+            unresolved += 1
+    return unresolved
 
 
 def _reopen_resolved_orphan_actions(
@@ -249,10 +275,7 @@ def _reopen_resolved_orphan_actions(
     region: str | None,
 ) -> int:
     """
-    Reopen actions that are marked resolved but have no linked findings.
-
-    Orphans can appear after remapping or finding cleanup; they should not be
-    marked resolved because no compliance signal remains.
+    Reopen actions marked resolved when linked unresolved findings still exist.
     """
     q = session.query(Action).filter(
         Action.tenant_id == tenant_id,
@@ -262,16 +285,14 @@ def _reopen_resolved_orphan_actions(
         q = q.filter(Action.account_id == account_id)
     if region is not None:
         q = q.filter(Action.region == region)
-    q = q.filter(
-        ~session.query(ActionFinding.action_id)
-        .filter(ActionFinding.action_id == Action.id)
-        .exists()
-    )
 
-    orphan_actions = q.all()
-    for action in orphan_actions:
-        action.status = ActionStatus.open.value
-    return len(orphan_actions)
+    resolved_actions = q.all()
+    reopened = 0
+    for action in resolved_actions:
+        if _linked_unresolved_finding_count(action) > 0:
+            action.status = ActionStatus.open.value
+            reopened += 1
+    return reopened
 
 
 def compute_actions_for_tenant(
@@ -301,7 +322,7 @@ def compute_actions_for_tenant(
 
     if settings.ONLY_IN_SCOPE_CONTROLS:
         q = q.filter(Finding.in_scope.is_(True))
-    findings = q.all()
+    findings = [finding for finding in q.all() if _is_effectively_open_finding(finding)]
 
     groups: defaultdict[tuple[Any, ...], list[Finding]] = defaultdict(list)
     for f in findings:
@@ -337,10 +358,10 @@ def compute_actions_for_tenant(
         ensure_membership_for_actions(session, actions_touched, source="recompute")
 
     resolved = _mark_resolved_actions_with_no_open_findings(session, tenant_id, account_id, region)
-    reopened_orphans = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)
+    reopened_with_open_findings = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)
 
     logger.info(
-        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_orphans=%d links=%d removed_links=%d",
+        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d",
         tenant_id,
         account_id,
         region,
@@ -348,7 +369,7 @@ def compute_actions_for_tenant(
         created,
         updated,
         resolved,
-        reopened_orphans,
+        reopened_with_open_findings,
         links_count,
         removed_conflicting_links,
     )
@@ -356,6 +377,7 @@ def compute_actions_for_tenant(
         "actions_created": created,
         "actions_updated": updated,
         "actions_resolved": resolved,
-        "actions_reopened_orphaned": reopened_orphans,
+        "actions_reopened_orphaned": reopened_with_open_findings,
+        "actions_reopened_with_open_findings": reopened_with_open_findings,
         "action_findings_linked": links_count,
     }

@@ -1,0 +1,16 @@
+{
+  "bucket": "arch1-bucket-evidence-b1-029037611564-eu-north-1",
+  "tag_context_test": "existing-complex-policy",
+  "pab_confirm": {
+    "BlockPublicAcls": false,
+    "IgnorePublicAcls": false,
+    "BlockPublicPolicy": false,
+    "RestrictPublicBuckets": false
+  },
+  "pab_all_false_confirmed": true,
+  "statement_count": 1,
+  "has_root_principal_statement": false,
+  "has_putobject_statement": false,
+  "has_source_vpc_condition": false,
+  "adversarial_state_confirmed": false
+}
