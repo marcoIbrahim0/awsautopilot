@@ -98,3 +98,19 @@ def test_send_weekly_digest_strips_empty_recipients() -> None:
     assert failed == 0
     mock_send.assert_called_once()
     assert mock_send.call_args[0][0] == "valid@acme.com"
+
+
+def test_send_smtp_returns_false_when_host_is_missing() -> None:
+    service = EmailService(
+        smtp_host="",
+        smtp_port=587,
+        smtp_user="",
+        smtp_password="",
+    )
+    delivered = service._send_smtp(
+        "admin@example.com",
+        "Subject",
+        "<p>Body</p>",
+        "Body",
+    )
+    assert delivered is False

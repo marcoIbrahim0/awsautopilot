@@ -399,9 +399,13 @@ def test_get_baseline_report_data_200_when_success(client: TestClient) -> None:
     report_lookup_result.scalar_one_or_none.return_value = report
     tenant_lookup_result = MagicMock()
     tenant_lookup_result.scalar_one_or_none.return_value = "Valens"
+    previous_report_lookup_result = MagicMock()
+    previous_report_lookup_result.all.return_value = []
 
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[report_lookup_result, tenant_lookup_result])
+    session.execute = AsyncMock(
+        side_effect=[report_lookup_result, previous_report_lookup_result, tenant_lookup_result]
+    )
     session.run_sync = AsyncMock(
         return_value=MagicMock(
             model_dump=MagicMock(

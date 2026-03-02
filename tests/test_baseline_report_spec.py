@@ -13,12 +13,19 @@ from pydantic import ValidationError
 
 from backend.services.baseline_report_spec import (
     APPENDIX_FINDINGS_MAX,
+    CLOSURE_PROOF_MAX,
+    CONFIDENCE_GAPS_MAX,
+    NEXT_ACTIONS_MAX,
     RECOMMENDATIONS_MAX,
     SEVERITY_ORDER,
     TOP_RISKS_FIELDS,
     TOP_RISKS_MAX,
     BaselineReportData,
     BaselineSummary,
+    ChangeDelta,
+    ClosureProofItem,
+    ConfidenceGapItem,
+    NextActionItem,
     RecommendationItem,
     TopRiskItem,
     build_narrative,
@@ -31,6 +38,9 @@ def test_constants() -> None:
     assert TOP_RISKS_MAX == 20
     assert RECOMMENDATIONS_MAX == 10
     assert APPENDIX_FINDINGS_MAX == 100
+    assert NEXT_ACTIONS_MAX == 3
+    assert CONFIDENCE_GAPS_MAX == 8
+    assert CLOSURE_PROOF_MAX == 10
     assert SEVERITY_ORDER == (
         "CRITICAL",
         "HIGH",
@@ -40,6 +50,8 @@ def test_constants() -> None:
     )
     assert "title" in TOP_RISKS_FIELDS
     assert "severity" in TOP_RISKS_FIELDS
+    assert "business_impact" in TOP_RISKS_FIELDS
+    assert "recommended_mode" in TOP_RISKS_FIELDS
     assert "link_to_app" in TOP_RISKS_FIELDS
 
 
@@ -54,6 +66,13 @@ def test_top_risks_fields_order() -> None:
         "region",
         "status",
         "recommendation_text",
+        "business_impact",
+        "action_id",
+        "action_status",
+        "action_type",
+        "recommended_mode",
+        "remediation_readiness",
+        "why_now",
         "link_to_app",
     )
 
@@ -167,6 +186,69 @@ def test_recommendation_item_empty_text_rejected() -> None:
         RecommendationItem(text="", control_id=None)
 
 
+def test_next_action_item_valid() -> None:
+    item = NextActionItem(
+        action_id="5d4b7904-1b14-4fd1-b538-f3dfc2d10210",
+        title="Restrict SG public ports",
+        control_id="EC2.53",
+        severity="HIGH",
+        account_id="123456789012",
+        region="us-east-1",
+        action_status="open",
+        why_now="High risk remains open.",
+        recommended_mode="pr_only",
+        blast_radius="Affects 2 linked findings.",
+        fix_path="Generate PR bundle and merge.",
+        owner=None,
+        due_by=date(2026, 2, 10),
+        readiness="ready",
+        cta_label="Open PR bundle",
+        cta_href="/actions/5d4b7904-1b14-4fd1-b538-f3dfc2d10210",
+    )
+    assert item.severity == "HIGH"
+    assert item.recommended_mode == "pr_only"
+
+
+def test_change_delta_valid() -> None:
+    delta = ChangeDelta(
+        compared_to_report_at=datetime(2026, 2, 2, 12, 0, 0, tzinfo=timezone.utc),
+        new_open_count=4,
+        regressed_count=1,
+        stale_open_count=6,
+        closed_count=3,
+        summary="Since 2026-02-02: 4 new open.",
+    )
+    assert delta.new_open_count == 4
+    assert delta.closed_count == 3
+
+
+def test_confidence_gap_item_valid() -> None:
+    gap = ConfidenceGapItem(
+        category="access_denied",
+        count=5,
+        detail="ReadRole scope is incomplete.",
+        affected_control_ids=["S3.1", "CloudTrail.1"],
+    )
+    assert gap.category == "access_denied"
+    assert gap.count == 5
+
+
+def test_closure_proof_item_valid() -> None:
+    item = ClosureProofItem(
+        finding_id="arn:aws:securityhub:...",
+        title="GuardDuty disabled",
+        control_id="GuardDuty.1",
+        account_id="123456789012",
+        region="us-east-1",
+        resolved_at=datetime(2026, 2, 3, 13, 0, 0, tzinfo=timezone.utc),
+        action_id="a6202c7b-31f5-4f68-8e38-1ecf9f373cb7",
+        remediation_run_id="1618eca4-e845-4bcf-9d4a-a958fceda2c0",
+        evidence_note="Remediation run succeeded.",
+    )
+    assert item.finding_id
+    assert item.evidence_note
+
+
 def test_baseline_report_data_valid() -> None:
     """BaselineReportData accepts summary, top_risks, recommendations; optional tenant_name, appendix."""
     summary = BaselineSummary(
@@ -197,6 +279,9 @@ def test_baseline_report_data_valid() -> None:
         summary=summary,
         top_risks=top_risks,
         recommendations=recommendations,
+        next_actions=[],
+        confidence_gaps=[],
+        closure_proof=[],
         tenant_name="Acme Corp",
         appendix_findings=None,
     )
@@ -227,6 +312,9 @@ def test_baseline_report_data_json_serialization() -> None:
         summary=summary,
         top_risks=[],
         recommendations=[],
+        next_actions=[],
+        confidence_gaps=[],
+        closure_proof=[],
     )
     dumped = data.model_dump()
     assert "summary" in dumped
@@ -266,4 +354,50 @@ def test_baseline_report_data_top_risks_max_length_enforced() -> None:
             summary=summary,
             top_risks=[item] * (TOP_RISKS_MAX + 1),
             recommendations=[],
+            next_actions=[],
+            confidence_gaps=[],
+            closure_proof=[],
+        )
+
+
+def test_baseline_report_data_next_actions_max_length_enforced() -> None:
+    summary = BaselineSummary(
+        total_finding_count=0,
+        critical_count=0,
+        high_count=0,
+        medium_count=0,
+        low_count=0,
+        informational_count=0,
+        open_count=0,
+        resolved_count=0,
+        narrative="x",
+        report_date=date(2026, 2, 3),
+        generated_at=datetime(2026, 2, 3, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    action = NextActionItem(
+        action_id=None,
+        title="x",
+        control_id=None,
+        severity="LOW",
+        account_id=None,
+        region=None,
+        action_status=None,
+        why_now="x",
+        recommended_mode="pr_only",
+        blast_radius="x",
+        fix_path="x",
+        owner=None,
+        due_by=None,
+        readiness="ready",
+        cta_label="x",
+        cta_href=None,
+    )
+    with pytest.raises(ValidationError):
+        BaselineReportData(
+            summary=summary,
+            top_risks=[],
+            recommendations=[],
+            next_actions=[action] * (NEXT_ACTIONS_MAX + 1),
+            confidence_gaps=[],
+            closure_proof=[],
         )

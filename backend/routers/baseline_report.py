@@ -177,6 +177,8 @@ async def _build_report_view_data(
     *,
     tenant_id: uuid.UUID,
     account_ids_raw: object,
+    current_report_requested_at: datetime | None,
+    previous_report_requested_at: datetime | None,
 ) -> BaselineReportData:
     """Build in-app viewer payload from current tenant findings."""
     tenant_name = await _load_tenant_name(db, tenant_id)
@@ -187,8 +189,47 @@ async def _build_report_view_data(
             tenant_id=str(tenant_id),
             account_ids=account_ids,
             tenant_name=tenant_name,
+            current_report_requested_at=current_report_requested_at,
+            previous_report_requested_at=previous_report_requested_at,
         )
     )
+
+
+async def _load_previous_successful_report_requested_at(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    current_report_requested_at: datetime | None,
+    account_ids_raw: object,
+) -> datetime | None:
+    """Find the previous successful report timestamp, preferring matching account scope."""
+    if not current_report_requested_at:
+        return None
+
+    result = await db.execute(
+        select(BaselineReport.requested_at, BaselineReport.account_ids)
+        .where(
+            BaselineReport.tenant_id == tenant_id,
+            BaselineReport.status == BaselineReportStatus.success,
+            BaselineReport.requested_at < current_report_requested_at,
+        )
+        .order_by(BaselineReport.requested_at.desc())
+        .limit(20)
+    )
+    rows = list(result.all())
+    if not rows:
+        return None
+
+    current_scope = sorted(_normalize_account_ids(account_ids_raw) or [])
+    if not current_scope:
+        return rows[0][0]
+
+    for row in rows:
+        requested_at = row[0]
+        candidate_scope = sorted(_normalize_account_ids(row[1]) or [])
+        if candidate_scope == current_scope:
+            return requested_at
+    return rows[0][0]
 
 
 # ---------------------------------------------------------------------------
@@ -447,10 +488,19 @@ async def get_baseline_report_data(
             },
         )
 
+    previous_report_requested_at = await _load_previous_successful_report_requested_at(
+        db,
+        tenant_id=tenant_uuid,
+        current_report_requested_at=report.requested_at,
+        account_ids_raw=report.account_ids,
+    )
+
     view_data = await _build_report_view_data(
         db,
         tenant_id=tenant_uuid,
         account_ids_raw=report.account_ids,
+        current_report_requested_at=report.requested_at,
+        previous_report_requested_at=previous_report_requested_at,
     )
     return JSONResponse(
         content=view_data.model_dump(mode="json"),

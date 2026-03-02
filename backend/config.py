@@ -211,6 +211,26 @@ class Settings(BaseSettings):
         default="noreply@example.com",
         description="From address for outgoing emails (invites, etc.)",
     )
+    EMAIL_SMTP_HOST: str = Field(
+        default="",
+        description="SMTP host for transactional email delivery. If empty, SMTP delivery is disabled.",
+    )
+    EMAIL_SMTP_PORT: int = Field(
+        default=587,
+        description="SMTP port for transactional email delivery.",
+    )
+    EMAIL_SMTP_USER: str = Field(
+        default="",
+        description="Optional SMTP username.",
+    )
+    EMAIL_SMTP_PASSWORD: str = Field(
+        default="",
+        description="Optional SMTP password.",
+    )
+    EMAIL_SMTP_STARTTLS: bool = Field(
+        default=True,
+        description="Use STARTTLS for SMTP connections.",
+    )
     DIGEST_CRON_SECRET: str = Field(
         default="",
         description="Shared secret for POST /api/internal/weekly-digest (EventBridge/cron). If unset, endpoint returns 403.",

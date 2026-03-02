@@ -1,6 +1,6 @@
 # Baseline Security Report — Content and Format Specification
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Step:** Implementation Plan 13.1 — Report content and format  
 **Purpose:** Single source of truth for the 48h baseline report structure so the generator (Step 13.2) and templates produce a consistent, professional deliverable. This report is the Alpha lead magnet: prospects connect read-only → ingest → request report → receive within 48 hours → propose onboarding.
 
@@ -24,6 +24,15 @@ The report has four sections. Sections 1–3 are mandatory; Section 4 (Appendix)
 | 2 | Top risks | Top 10–20 findings or aggregated actions, ordered by severity then priority | Section 2 |
 | 3 | Recommendations | 5–10 bullet recommendations derived from the scan | Section 3 |
 | 4 | Appendix (optional) | Full finding list (truncated, e.g. first 100) or “Available in app after sign-up” | End of report |
+
+### 2.1 Decision-oriented extensions (v1.1)
+
+To make the report operational (not just informational), the in-app payload and HTML renderer also include:
+
+- **Next actions (top 3):** concrete “what to do now” items with severity, readiness, recommended mode (`direct_fix` / `pr_only`), blast radius, and fix path.
+- **Change delta:** counts vs the previous successful baseline (`new_open`, `regressed`, `stale_open`, `closed`) plus narrative summary.
+- **Confidence gaps:** explicit signal-quality caveats (`access_denied`, `partial_data`, `api_error`, `telemetry_gap`) and affected controls.
+- **Closure proof:** recently resolved findings with timestamps and evidence notes (including remediation-run linkage when available).
 
 ---
 
@@ -157,6 +166,10 @@ The generator (Step 13.2) must produce a **BaselineReportData** structure that m
 - **Summary:** Object with fields from Section 3.2 (counts, narrative, report_date, generated_at).
 - **Top risks:** Array of objects with fields from Section 4.2; length ≤ 20 (configurable).
 - **Recommendations:** Array of objects with fields from Section 5.2; length ≤ 10 (configurable).
+- **Next actions:** Array of up to 3 decision-ready actions (`next_actions`).
+- **Change delta:** Optional object (`change_delta`) comparing the current report to the previous successful report.
+- **Confidence gaps:** Array (`confidence_gaps`) describing certainty limits and impacted controls.
+- **Closure proof:** Array (`closure_proof`) for recently closed findings and evidence notes.
 - **Metadata:** `report_date`, `generated_at`, `tenant_name` (optional).
 
 See `backend/services/baseline_report_spec.py` for Pydantic models and constants (TOP_RISKS_MAX, RECOMMENDATIONS_MAX, severity order, field names).
@@ -203,4 +216,5 @@ See `backend/services/baseline_report_spec.py` for Pydantic models and constants
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1 | 2026-03-02 | Added decision-oriented sections: next_actions, change_delta, confidence_gaps, closure_proof; updated data contract for actionable baseline reports. |
 | 1.0 | 2026-02-03 | Initial spec: sections 1–4, field lists, format/layout, sample outline, code contract reference. |

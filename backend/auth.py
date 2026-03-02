@@ -64,6 +64,11 @@ class UserResponse(BaseModel):
     name: str
     role: str
     onboarding_completed_at: str | None
+    phone_number: str | None = None
+    phone_verified: bool = False
+    email_verified: bool = False
+    mfa_enabled: bool = False
+    mfa_method: str | None = None
     is_saas_admin: bool = False
 
 
@@ -471,6 +476,11 @@ def user_to_response(user: User) -> UserResponse:
         name=user.name,
         role=role,
         onboarding_completed_at=user.onboarding_completed_at.isoformat() if user.onboarding_completed_at else None,
+        phone_number=getattr(user, "phone_number", None),
+        phone_verified=bool(getattr(user, "phone_verified", False)),
+        email_verified=bool(getattr(user, "email_verified", False)),
+        mfa_enabled=bool(getattr(user, "mfa_enabled", False)),
+        mfa_method=getattr(user, "mfa_method", None),
         is_saas_admin=is_saas_admin_email(user.email),
     )
 

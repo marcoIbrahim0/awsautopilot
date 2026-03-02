@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/auth/signup
+Body: {"email":"wave8.test33.20260302T214046Z@example.com","password":"Wave8Test33!123","name":"Wave8 Test33 Wrong Tenant","company_name":"Wave8 Test33 Wrong Tenant Co"}

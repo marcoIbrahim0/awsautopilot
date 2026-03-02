@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/auth/login
+{"email":"wave8.test30.20260302T211901Z@example.com","password":"Wave8Test30!202603"}

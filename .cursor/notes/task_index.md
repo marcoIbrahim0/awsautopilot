@@ -4,6 +4,46 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Root-route behavior update: domain default now lands on /landing (2026-03-03)](task_log.md#root-route-behavior-update-domain-default-now-lands-on-landing-2026-03-03)
+  - Updated root page unauthenticated redirect behavior from `/login` to `/landing`.
+  - Preserved authenticated routing (`/onboarding` or `/findings`) and only changed guest default entrypoint.
+  - Verified with frontend typecheck and targeted lint.
+- [Email verification delivery hardening: no false-success + local-mode clarity (2026-03-03)](task_log.md#email-verification-delivery-hardening-no-false-success--local-mode-clarity-2026-03-03)
+  - Hardened email delivery behavior so SMTP-missing paths fail closed instead of pretending success.
+  - Updated `/api/auth/verify/send` local-mode response text to explicitly state no email/SMS is sent and to use the debug code.
+  - Deployed runtime (`20260302T222707Z`) and revalidated live `/health` plus verification-send contract output.
+- [Baseline report IA update: left navigation + right content pane (2026-03-03)](task_log.md#baseline-report-ia-update-left-navigation--right-content-pane-2026-03-03)
+  - Replaced dual-content columns with left navigation + single right-pane section display for baseline report content.
+  - Kept top KPI cards unchanged while introducing section-aware navigation (`Overview`, `Next Actions`, `Top Risks`, `Change`, `Confidence`, `Closure`, `Recommendations`).
+  - Verified with frontend typecheck and targeted lint.
+- [Baseline report layout follow-up: strict 2-column content and top KPI row restoration (2026-03-03)](task_log.md#baseline-report-layout-follow-up-strict-2-column-content-and-top-kpi-row-restoration-2026-03-03)
+  - Restored baseline KPI cards to the top of the report (`Total/Open/Critical/High/Medium/Low/Resolved`) as requested.
+  - Simplified report view to strict two-column content layout on desktop and removed the history side rail that introduced a third-column feel.
+  - Verified with frontend typecheck and targeted lint.
+- [Baseline report UI density update: two-column layout like Settings Organization tab (2026-03-03)](task_log.md#baseline-report-ui-density-update-two-column-layout-like-settings-organization-tab-2026-03-03)
+  - Refactored baseline-report viewer into desktop two-column mode to reduce vertical scrolling while keeping mobile single-column behavior.
+  - Rebalanced section placement (summary/delta/confidence vs next-actions/top-risks/closure/recommendations) and added a report-history side rail when viewing a report.
+  - Verified with frontend typecheck and targeted lint for the updated panel file.
+- [Deployment: settings-auth fixes + migration chain repair (2026-03-02)](task_log.md#deployment-settings-auth-fixes--migration-chain-repair-2026-03-02)
+  - Deployed serverless runtime for Settings auth hardening and corrected Alembic `0038` parent revision mapping to the shortened `0037` chain.
+  - Re-deployed with fresh artifact validation after first-tag packaging/import failures and applied DB migration to head (`0038_user_verification_mfa`).
+  - Verified API process health is back (`/health 200`) while `/ready` remains degraded (`503`) due API-role SQS `GetQueueAttributes` permission gaps.
+- [Baseline report usefulness upgrade: action-first sections with delta, confidence, and closure proof (2026-03-02)](task_log.md#baseline-report-usefulness-upgrade-action-first-sections-with-delta-confidence-and-closure-proof-2026-03-02)
+  - Upgraded baseline report payload from summary/top-risks only to decision-oriented sections: `next_actions`, `change_delta`, `confidence_gaps`, and `closure_proof`.
+  - Added backend joins across findings/actions/runs/exceptions and scope-aware previous-report comparison wiring in `/api/baseline-report/{id}/data`.
+  - Updated Settings baseline report UI to prioritize actionable decisions and validated with backend tests (`37 passed`) plus frontend typecheck/lint pass.
+- [Wave 8 revalidation: tests 29-33 live rerun (Wave 6-aware) (2026-03-02)](task_log.md#wave-8-revalidation-tests-29-33-live-rerun-wave-6-aware-2026-03-02)
+  - Executed fresh live reruns in required order: Test 29 -> Test 30/31 (separate identities) -> Test 32 -> Test 33.
+  - Revalidated all Wave 8 contracts as PASS with new canonical evidence prefixes (`test-29/30/31/32/33-live-20260302T*`).
+  - Updated wave test docs, base tracker Last updated + impacted sections, Section 8 checkboxes, and Section 9 rerun changelog entries without product code changes.
+- [Baseline report UX unification: remove sidebar Report and move full viewer into Settings (2026-03-02)](task_log.md#baseline-report-ux-unification-remove-sidebar-report-and-move-full-viewer-into-settings-2026-03-02)
+  - Removed the duplicate sidebar `Report` nav destination and consolidated the full baseline-report experience into Settings.
+  - Added a shared baseline report panel so Settings and `/baseline-report` render the same request/poll/view/history SOC2-rich content.
+  - Added Settings deep-link support (`/settings?tab=baseline-report`) and repointed exports-page “View report” to that tab.
+- [Settings auth hardening: email/phone verification + MFA enablement fix (2026-03-02)](task_log.md#settings-auth-hardening-emailphone-verification--mfa-enablement-fix-2026-03-02)
+  - Fixed the broken Settings `Verify Now` path by implementing missing backend verification endpoints and wiring the frontend response flow.
+  - Fixed `phone_number` persistence by extending `PATCH /api/users/me` and resetting verification state safely on phone changes.
+  - Added end-to-end MFA settings + login challenge flow (`/api/auth/mfa/settings`, `/api/auth/login/mfa`) with targeted backend tests (`20 passed`) and frontend lint/typecheck pass.
 - [Item 17 finalization: merge audit + full regression validation for production readiness (2026-03-02)](task_log.md#item-17-finalization-merge-audit--full-regression-validation-for-production-readiness-2026-03-02)
   - Audited all available git refs and found no local Item `17` branches left to merge; remote fetch was attempted but blocked by DNS resolution to GitHub in this environment.
   - Re-ran Item `16/17` targeted validation suites (`131 passed`) and full backend regression suite (`914 passed`) with no failures.

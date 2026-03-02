@@ -230,6 +230,13 @@ WORKER_QUEUE_METRICS_LOG_INTERVAL_SECONDS="60"
 # From address for outgoing emails
 EMAIL_FROM="noreply@example.com"
 
+# SMTP settings (required for real email delivery in non-local env)
+EMAIL_SMTP_HOST="<YOUR_VALUE_HERE>"
+EMAIL_SMTP_PORT="587"
+EMAIL_SMTP_USER="<YOUR_VALUE_HERE>"
+EMAIL_SMTP_PASSWORD="<YOUR_VALUE_HERE>"
+EMAIL_SMTP_STARTTLS="true"
+
 # Enable/disable weekly digest emails
 DIGEST_ENABLED="true"
 ```

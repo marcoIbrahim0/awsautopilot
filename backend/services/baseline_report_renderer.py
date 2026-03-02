@@ -1,8 +1,9 @@
 """
-Baseline report HTML renderer (Step 13.2).
+Baseline report HTML renderer.
 
-Renders BaselineReportData to HTML for in-app preview and download.
-Primary artifact is HTML; PDF can be added later (e.g. WeasyPrint).
+Renders BaselineReportData to downloadable HTML with decision-oriented
+sections: summary, next actions, top risks, change delta, confidence gaps,
+closure proof, and recommendations.
 """
 from __future__ import annotations
 
@@ -12,30 +13,34 @@ from datetime import date, datetime
 from backend.services.baseline_report_spec import (
     BaselineReportData,
     BaselineSummary,
+    ChangeDelta,
+    ClosureProofItem,
+    ConfidenceGapItem,
+    NextActionItem,
     RecommendationItem,
     TopRiskItem,
 )
 
 
 def _escape(s: str | None) -> str:
-    """Escape for HTML text content."""
     if s is None:
         return ""
     return html.escape(str(s), quote=True)
 
 
-def _format_datetime(dt: datetime) -> str:
-    """Format datetime for display (ISO date/time)."""
-    return dt.strftime("%Y-%m-%d %H:%M UTC") if dt else ""
+def _format_datetime(dt: datetime | None) -> str:
+    if not dt:
+        return ""
+    return dt.strftime("%Y-%m-%d %H:%M UTC")
 
 
-def _format_date(d: date) -> str:
-    """Format date for display."""
-    return d.strftime("%Y-%m-%d") if d else ""
+def _format_date(d: date | None) -> str:
+    if not d:
+        return ""
+    return d.strftime("%Y-%m-%d")
 
 
 def _render_summary(s: BaselineSummary) -> str:
-    """Render executive summary section."""
     return f"""
 <section class="baseline-summary">
   <h2>1. Executive summary</h2>
@@ -49,36 +54,163 @@ def _render_summary(s: BaselineSummary) -> str:
 """
 
 
-def _render_top_risks(items: list[TopRiskItem]) -> str:
-    """Render top risks table."""
+def _render_next_actions(items: list[NextActionItem]) -> str:
+    if not items:
+        return "<section><h2>2. Next actions</h2><p>No immediate actions identified.</p></section>"
     rows = "".join(
         f"""
     <tr>
       <td>{_escape(item.title)}</td>
-      <td>{_escape(item.resource_id)}</td>
-      <td>{_escape(item.control_id)}</td>
+      <td>{_escape(item.severity)}</td>
+      <td>{_escape(item.readiness)}</td>
+      <td>{_escape(item.recommended_mode)}</td>
+      <td>{_escape(item.why_now)}</td>
+      <td>{_escape(item.fix_path)}</td>
+      <td>{_escape(_format_date(item.due_by))}</td>
+    </tr>"""
+        for item in items
+    )
+    return f"""
+<section class="baseline-next-actions">
+  <h2>2. Next actions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Severity</th>
+        <th>Readiness</th>
+        <th>Mode</th>
+        <th>Why now</th>
+        <th>Fix path</th>
+        <th>Due by</th>
+      </tr>
+    </thead>
+    <tbody>
+{rows}
+    </tbody>
+  </table>
+</section>
+"""
+
+
+def _render_top_risks(items: list[TopRiskItem]) -> str:
+    if not items:
+        return "<section><h2>3. Top risks</h2><p>No findings in scope.</p></section>"
+    rows = "".join(
+        f"""
+    <tr>
+      <td>{_escape(item.title)}</td>
       <td>{_escape(item.severity)}</td>
       <td>{_escape(item.account_id)}</td>
       <td>{_escape(item.region)}</td>
       <td>{_escape(item.status)}</td>
-      <td>{_escape(item.recommendation_text)}</td>
+      <td>{_escape(item.business_impact)}</td>
+      <td>{_escape(item.recommended_mode)}</td>
+      <td>{_escape(item.remediation_readiness)}</td>
     </tr>"""
         for item in items
     )
     return f"""
 <section class="baseline-top-risks">
-  <h2>2. Top risks</h2>
+  <h2>3. Top risks</h2>
   <table>
     <thead>
       <tr>
         <th>Title</th>
-        <th>Resource</th>
-        <th>Control</th>
         <th>Severity</th>
         <th>Account</th>
         <th>Region</th>
         <th>Status</th>
-        <th>Recommendation</th>
+        <th>Business impact</th>
+        <th>Mode</th>
+        <th>Readiness</th>
+      </tr>
+    </thead>
+    <tbody>
+{rows}
+    </tbody>
+  </table>
+</section>
+"""
+
+
+def _render_change_delta(change: ChangeDelta | None) -> str:
+    if not change:
+        return "<section><h2>4. Change since last baseline</h2><p>No comparison baseline available.</p></section>"
+    compared = _format_datetime(change.compared_to_report_at) if change.compared_to_report_at else "N/A"
+    return f"""
+<section class="baseline-delta">
+  <h2>4. Change since last baseline</h2>
+  <p><strong>Compared to:</strong> {compared}</p>
+  <p><strong>New open:</strong> {change.new_open_count} &nbsp; <strong>Regressed:</strong> {change.regressed_count}</p>
+  <p><strong>Stale open:</strong> {change.stale_open_count} &nbsp; <strong>Closed:</strong> {change.closed_count}</p>
+  <p>{_escape(change.summary)}</p>
+</section>
+"""
+
+
+def _render_confidence_gaps(items: list[ConfidenceGapItem]) -> str:
+    if not items:
+        return "<section><h2>5. Confidence gaps</h2><p>No confidence gaps detected in this snapshot.</p></section>"
+    rows = "".join(
+        f"""
+    <tr>
+      <td>{_escape(item.category)}</td>
+      <td>{item.count}</td>
+      <td>{_escape(item.detail)}</td>
+      <td>{_escape(', '.join(item.affected_control_ids or []))}</td>
+    </tr>"""
+        for item in items
+    )
+    return f"""
+<section class="baseline-confidence-gaps">
+  <h2>5. Confidence gaps</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Count</th>
+        <th>Detail</th>
+        <th>Affected controls</th>
+      </tr>
+    </thead>
+    <tbody>
+{rows}
+    </tbody>
+  </table>
+</section>
+"""
+
+
+def _render_closure_proof(items: list[ClosureProofItem]) -> str:
+    if not items:
+        return "<section><h2>6. Closure proof</h2><p>No recently closed findings.</p></section>"
+    rows = "".join(
+        f"""
+    <tr>
+      <td>{_escape(item.finding_id)}</td>
+      <td>{_escape(item.title)}</td>
+      <td>{_escape(item.control_id)}</td>
+      <td>{_escape(item.account_id)}</td>
+      <td>{_escape(item.region)}</td>
+      <td>{_escape(_format_datetime(item.resolved_at))}</td>
+      <td>{_escape(item.evidence_note)}</td>
+    </tr>"""
+        for item in items
+    )
+    return f"""
+<section class="baseline-closure-proof">
+  <h2>6. Closure proof</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Finding ID</th>
+        <th>Title</th>
+        <th>Control</th>
+        <th>Account</th>
+        <th>Region</th>
+        <th>Resolved at</th>
+        <th>Evidence</th>
       </tr>
     </thead>
     <tbody>
@@ -90,11 +222,12 @@ def _render_top_risks(items: list[TopRiskItem]) -> str:
 
 
 def _render_recommendations(items: list[RecommendationItem]) -> str:
-    """Render recommendations list."""
-    bullets = "".join(f"  <li>{_escape(r.text)}</li>\n" for r in items)
+    if not items:
+        return "<section><h2>7. Recommendations</h2><p>No recommendations.</p></section>"
+    bullets = "".join(f"  <li>{_escape(item.text)}</li>\n" for item in items)
     return f"""
 <section class="baseline-recommendations">
-  <h2>3. Recommendations</h2>
+  <h2>7. Recommendations</h2>
   <ul>
 {bullets}
   </ul>
@@ -103,21 +236,10 @@ def _render_recommendations(items: list[RecommendationItem]) -> str:
 
 
 def render_baseline_report_html(data: BaselineReportData) -> str:
-    """
-    Render BaselineReportData to HTML (Step 13.2).
-
-    Produces a self-contained HTML document with summary, top risks table,
-    and recommendations list. Safe for download and in-app preview.
-
-    Args:
-        data: BaselineReportData from build_baseline_report_data.
-
-    Returns:
-        HTML string (UTF-8).
-    """
+    """Render BaselineReportData to a self-contained HTML document."""
     title = "Baseline Security Report"
     if data.tenant_name:
-        title = f"{_escape(data.tenant_name)} — Baseline Security Report"
+        title = f"{_escape(data.tenant_name)} - Baseline Security Report"
 
     head = f"""
 <!DOCTYPE html>
@@ -127,15 +249,15 @@ def render_baseline_report_html(data: BaselineReportData) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{_escape(title)}</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }}
-    h1 {{ font-size: 1.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.5rem; }}
-    h2 {{ font-size: 1.2rem; margin-top: 1.5rem; }}
-    table {{ border-collapse: collapse; width: 100%; font-size: 0.9rem; }}
-    th, td {{ border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; }}
+    body {{ font-family: system-ui, sans-serif; max-width: 980px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }}
+    h1 {{ font-size: 1.6rem; border-bottom: 1px solid #ccc; padding-bottom: 0.5rem; }}
+    h2 {{ font-size: 1.1rem; margin-top: 1.5rem; }}
+    table {{ border-collapse: collapse; width: 100%; font-size: 0.88rem; }}
+    th, td {{ border: 1px solid #ddd; padding: 0.4rem 0.55rem; text-align: left; vertical-align: top; }}
     th {{ background: #f5f5f5; }}
-    ul {{ padding-left: 1.5rem; }}
-    section {{ margin-bottom: 2rem; }}
-    .meta {{ color: #666; font-size: 0.9rem; margin-bottom: 2rem; }}
+    ul {{ padding-left: 1.35rem; }}
+    section {{ margin-bottom: 1.6rem; }}
+    .meta {{ color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }}
   </style>
 </head>
 <body>
@@ -145,15 +267,24 @@ def render_baseline_report_html(data: BaselineReportData) -> str:
   </header>
 """
 
-    summary_html = _render_summary(data.summary)
-    top_risks_html = _render_top_risks(data.top_risks) if data.top_risks else "<section><h2>2. Top risks</h2><p>No findings in scope.</p></section>"
-    rec_html = _render_recommendations(data.recommendations) if data.recommendations else "<section><h2>3. Recommendations</h2><p>No recommendations.</p></section>"
+    sections = "".join(
+        [
+            _render_summary(data.summary),
+            _render_next_actions(data.next_actions),
+            _render_top_risks(data.top_risks),
+            _render_change_delta(data.change_delta),
+            _render_confidence_gaps(data.confidence_gaps),
+            _render_closure_proof(data.closure_proof),
+            _render_recommendations(data.recommendations),
+        ]
+    )
 
     tail = """
   <footer style="margin-top: 2rem; font-size: 0.85rem; color: #666;">
-    <p>Generated by AWS Security Autopilot. This report reflects a point-in-time baseline. Full list and ongoing monitoring available in the app.</p>
+    <p>Generated by AWS Security Autopilot. This is a point-in-time baseline; use the app for continuous monitoring and remediation workflows.</p>
   </footer>
 </body>
 </html>
 """
-    return head + summary_html + top_risks_html + rec_html + tail
+    return head + sections + tail
+

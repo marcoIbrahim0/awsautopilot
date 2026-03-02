@@ -1,0 +1,1 @@
+action_id=232870db-8f7d-49ee-8361-8ad1bd79eff2 control_id=S3.2 resource_id=arn:aws:s3:::arch1-bucket-website-a1-029037611564-eu-north-1 strategy_id=s3_bucket_block_public_access_standard selected_options_json=test-33-live-20260302T214032Z-10-remediation-options-232870db-8f7d-49ee-8361-8ad1bd79eff2.json

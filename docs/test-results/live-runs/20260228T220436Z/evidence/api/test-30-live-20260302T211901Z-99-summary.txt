@@ -1,0 +1,13 @@
+prefix=test-30-live-20260302T211901Z
+timestamp_utc=20260302T211901Z
+dedicated_email=wave8.test30.20260302T211901Z@example.com
+dedicated_tenant_id=3d35464b-76ec-44a8-9e15-6e0f860bc5ce
+first_429_attempt=6
+first_429_retry_after=
+status_correct_while_blocked=429
+status_admin_control_repeat=200
+status_alt_email_wrong_first_try=401
+status_spoofed_xff=429
+status_invalid_payload=422
+status_correct_after_window=429
+ui_login_route_status=200

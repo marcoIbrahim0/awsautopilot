@@ -36,22 +36,38 @@ class EmailService:
     def __init__(
         self,
         smtp_host: Optional[str] = None,
-        smtp_port: int = 587,
+        smtp_port: Optional[int] = None,
         smtp_user: Optional[str] = None,
         smtp_password: Optional[str] = None,
+        smtp_starttls: Optional[bool] = None,
     ):
-        self.smtp_host = smtp_host
-        self.smtp_port = smtp_port
-        self.smtp_user = smtp_user
-        self.smtp_password = smtp_password
+        host = smtp_host if smtp_host is not None else settings.EMAIL_SMTP_HOST
+        user = smtp_user if smtp_user is not None else settings.EMAIL_SMTP_USER
+        password = smtp_password if smtp_password is not None else settings.EMAIL_SMTP_PASSWORD
+        self.smtp_host = (host or "").strip() or None
+        self.smtp_port = int(smtp_port if smtp_port is not None else settings.EMAIL_SMTP_PORT)
+        self.smtp_user = (user or "").strip() or None
+        self.smtp_password = (password or "").strip() or None
+        self.smtp_starttls = bool(
+            settings.EMAIL_SMTP_STARTTLS if smtp_starttls is None else smtp_starttls
+        )
         self.from_address = settings.EMAIL_FROM
         self.frontend_url = settings.FRONTEND_URL
+
+    def _log_only_local(self) -> bool:
+        """
+        Local mode helper.
+
+        When running local without SMTP configured, keep historical behavior by
+        logging email intent and returning success for developer workflows.
+        """
+        return settings.is_local and not self.smtp_host
     
     def _send_smtp(self, to: str, subject: str, html_body: str, text_body: str) -> bool:
         """Send email via SMTP."""
         if not self.smtp_host:
-            logger.warning(f"SMTP not configured. Would send email to {to}: {subject}")
-            return True  # Pretend success in dev
+            logger.error("SMTP not configured. Cannot deliver email to %s: %s", to, subject)
+            return False
         
         try:
             msg = MIMEMultipart("alternative")
@@ -63,7 +79,8 @@ class EmailService:
             msg.attach(MIMEText(html_body, "html"))
             
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
+                if self.smtp_starttls:
+                    server.starttls()
                 if self.smtp_user and self.smtp_password:
                     server.login(self.smtp_user, self.smtp_password)
                 server.sendmail(self.from_address, to, msg.as_string())
@@ -142,7 +159,7 @@ If you didn't expect this email, you can safely ignore it.
         """
         
         # In local mode, just log the invite URL
-        if settings.is_local:
+        if self._log_only_local():
             logger.info(f"[LOCAL MODE] Invite email for {to_email}:")
             logger.info(f"  Tenant: {tenant_name}")
             logger.info(f"  Inviter: {inviter_name}")
@@ -198,12 +215,83 @@ If you did not request this change, you can ignore this email.
 This reset link expires in 1 hour.
         """.strip()
 
-        if settings.is_local:
+        if self._log_only_local():
             logger.info("[LOCAL MODE] Password reset email for %s", to_email)
             logger.info("  Reset URL: %s", reset_url)
             return True
 
         return self._send_smtp(to_email, subject, html_body, text_body)
+
+    def send_security_code_email(
+        self,
+        *,
+        to_email: str,
+        code: str,
+        purpose: str,
+    ) -> bool:
+        """
+        Send a 6-digit security code for account verification or MFA.
+        """
+        purpose_text = purpose.strip() or "security verification"
+        subject = f"Your AWS Security Autopilot {purpose_text} code"
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
+                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
+                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
+                .code {{ font-size: 32px; letter-spacing: 8px; font-weight: 700; color: #C7D0D8; background-color: #070B10; padding: 16px; border-radius: 8px; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Security code</h1>
+                <p>Use this one-time code to complete your {purpose_text} step.</p>
+                <div class="code">{code}</div>
+                <p>This code expires in 10 minutes.</p>
+            </div>
+        </body>
+        </html>
+        """
+        text_body = (
+            f"Your AWS Security Autopilot {purpose_text} code is: {code}\n\n"
+            "This code expires in 10 minutes."
+        )
+
+        if self._log_only_local():
+            logger.info("[LOCAL MODE] Security code email for %s", to_email)
+            logger.info("  Purpose: %s", purpose_text)
+            logger.info("  Code: %s", code)
+            return True
+
+        return self._send_smtp(to_email, subject, html_body, text_body)
+
+    def send_phone_security_code(
+        self,
+        *,
+        to_phone: str,
+        code: str,
+        purpose: str,
+        fallback_email: str | None = None,
+    ) -> bool:
+        """
+        Send a phone security code.
+
+        SMS provider integration is not available yet, so this logs in all
+        environments and optionally sends a fallback email for deliverability.
+        """
+        purpose_text = purpose.strip() or "security verification"
+        logger.info("Phone security code [%s] to %s: %s", purpose_text, to_phone, code)
+        if fallback_email:
+            return self.send_security_code_email(
+                to_email=fallback_email,
+                code=code,
+                purpose=f"{purpose_text} (phone {to_phone})",
+            )
+        return True
 
     def send_weekly_digest(
         self,
@@ -238,7 +326,7 @@ This reset link expires in 1 hour.
         text_body = build_email_body_plain(tenant_name, payload, view_url, app_name)
         html_body = build_email_body_html(tenant_name, payload, view_url, app_name)
 
-        if settings.is_local:
+        if self._log_only_local():
             logger.info(
                 "[LOCAL MODE] Weekly digest for %s: would send to %s recipients",
                 tenant_name,
@@ -355,7 +443,7 @@ Download your report (link valid for 1 hour):
 This report was generated by {app_name}. If you didn't request this report, you can safely ignore this email.
         """.strip()
 
-        if settings.is_local:
+        if self._log_only_local():
             logger.info(
                 "[LOCAL MODE] Baseline report ready email for %s (tenant: %s)",
                 to_email,

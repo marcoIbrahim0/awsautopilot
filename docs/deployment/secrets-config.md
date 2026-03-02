@@ -68,6 +68,19 @@ AWS Security Autopilot uses environment variables for configuration. In producti
 | `API_PUBLIC_URL` | Public API base URL | `https://api.yourcompany.com` | CloudFormation parameter (derived from ALB/API Gateway) |
 | `WORKER_POOL` | Worker queue pool selector | `all` | CloudFormation parameter |
 
+#### Email Delivery (Optional, required for real verification emails)
+
+| Variable | Description | Example | Where Set |
+|----------|-------------|---------|-----------|
+| `EMAIL_FROM` | From address for outgoing transactional email | `noreply@yourcompany.com` | Runtime environment variable |
+| `EMAIL_SMTP_HOST` | SMTP host for delivery | `smtp.mailgun.org` | Runtime environment variable / Secrets Manager |
+| `EMAIL_SMTP_PORT` | SMTP port | `587` | Runtime environment variable |
+| `EMAIL_SMTP_USER` | SMTP username | `<YOUR_VALUE_HERE>` | Runtime environment variable / Secrets Manager |
+| `EMAIL_SMTP_PASSWORD` | SMTP password | `<YOUR_VALUE_HERE>` | Runtime environment variable / Secrets Manager |
+| `EMAIL_SMTP_STARTTLS` | Use STARTTLS | `true` | Runtime environment variable |
+
+> ❓ Needs verification: Which SMTP provider and verified sender identity should be used for `api.valensjewelry.com` production traffic?
+
 #### S3 Storage
 
 | Variable | Description | Example | Where Set |

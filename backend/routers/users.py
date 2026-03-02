@@ -88,6 +88,12 @@ class UpdateMeRequest(BaseModel):
     """Request body for updating current user."""
     onboarding_completed: bool | None = Field(None, description="Mark onboarding as completed")
     name: str | None = Field(None, min_length=1, max_length=255, description="Update user name")
+    phone_number: str | None = Field(
+        None,
+        min_length=1,
+        max_length=32,
+        description="Phone number in E.164-like format (e.g., +15551234567)",
+    )
 
 
 class UpdateMeResponse(BaseModel):
@@ -478,6 +484,17 @@ async def update_me(
     
     if request.name is not None:
         current_user.name = request.name
+    if request.phone_number is not None:
+        normalized_phone = request.phone_number.strip()
+        previous_phone = (current_user.phone_number or "").strip()
+        current_user.phone_number = normalized_phone
+        if normalized_phone != previous_phone:
+            current_user.phone_verified = False
+            current_user.phone_verification_code_hash = None
+            current_user.phone_verification_expires_at = None
+            if bool(getattr(current_user, "mfa_enabled", False)) and (current_user.mfa_method or "") == "phone":
+                current_user.mfa_enabled = False
+                current_user.mfa_method = None
     
     await db.commit()
     await db.refresh(current_user)
@@ -492,6 +509,11 @@ async def update_me(
             "name": current_user.name,
             "role": role_str if isinstance(role_str, str) else str(role_str),
             "onboarding_completed_at": current_user.onboarding_completed_at.isoformat() if current_user.onboarding_completed_at else None,
+            "phone_number": current_user.phone_number,
+            "phone_verified": bool(getattr(current_user, "phone_verified", False)),
+            "email_verified": bool(getattr(current_user, "email_verified", False)),
+            "mfa_enabled": bool(getattr(current_user, "mfa_enabled", False)),
+            "mfa_method": current_user.mfa_method,
         }
     )
 

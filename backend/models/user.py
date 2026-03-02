@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,39 @@ class User(Base):
         server_default="member",
     )
     onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    phone_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    phone_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    mfa_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    mfa_method: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    email_verification_code_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    email_verification_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    phone_verification_code_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    phone_verification_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    mfa_challenge_code_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    mfa_challenge_token_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    mfa_challenge_expires_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     token_version: Mapped[int] = mapped_column(

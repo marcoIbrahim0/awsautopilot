@@ -1,5 +1,344 @@
 # Task Log
 
+## Root-route behavior update: domain default now lands on /landing (2026-03-03)
+
+**Task:** Change default root-page behavior so visiting the domain (`/`) sends unauthenticated users to the landing page instead of login.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/page.tsx** — Updated unauthenticated root-route redirect from `/login` to `/landing` and refreshed route-behavior comment block.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Root page now routes as:
+  - authenticated + onboarding incomplete -> `/onboarding`
+  - authenticated + onboarding complete -> `/findings`
+  - unauthenticated -> `/landing`
+- Validation:
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/app/page.tsx` -> pass
+
+**Technical debt / gotchas:**
+- Root route still uses client-side auth-context redirect logic, so users briefly see the loading state before redirect resolution; server-side redirect optimization can be a follow-up.
+
+**Open questions / TODOs:**
+- None.
+
+## Email verification delivery hardening: no false-success + local-mode clarity (2026-03-03)
+
+**Task:** Fix the Settings email verification experience where users were told to check email even when no email was actually sent, by hardening delivery semantics and clarifying local-mode behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added SMTP configuration settings (`EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_SMTP_STARTTLS`).
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/email.py** — Wired `EmailService` to settings-based SMTP config, changed missing-SMTP behavior to fail closed (`False`) instead of pretending success, added STARTTLS toggle, and scoped local log-only behavior to local mode without SMTP.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** — Updated `/api/auth/verify/send` success message in local mode to explicitly state that email/SMS delivery is disabled and the debug code should be used.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_verification_mfa.py** — Added regression test asserting `503` when verification email delivery fails.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_digest_email.py** — Added test asserting `_send_smtp` returns `False` when SMTP host is missing.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md** — Documented SMTP env variables under email configuration.
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md** — Added email delivery variable table and explicit verification note for SMTP provider identity.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Root cause identified:
+  - Runtime runs with `ENV=local`, so verification intentionally logs instead of sending.
+  - Email service `_send_smtp` returned success when SMTP host was missing, causing false-positive “check your email” behavior in non-local modes.
+  - No SMTP env vars were exposed in current runtime config.
+- Implemented hardening:
+  - Missing SMTP host now returns delivery failure (`False`) for SMTP paths.
+  - `/api/auth/verify/send` local-mode message now explicitly states no email/SMS is sent and to use the debug code.
+  - SMTP configuration keys are now available in app settings for future real delivery enablement.
+- Validation:
+  - `./venv/bin/pytest -q tests/test_auth_verification_mfa.py` -> `5 passed`
+  - `./venv/bin/pytest -q tests/test_digest_email.py` -> `5 passed`
+  - `./venv/bin/python -m py_compile backend/config.py backend/services/email.py backend/routers/auth.py tests/test_auth_verification_mfa.py tests/test_digest_email.py` -> pass
+- Deployment:
+  - Deployed serverless runtime with image tag `20260302T222707Z`.
+  - Live checks post-deploy:
+    - `GET https://api.valensjewelry.com/health` -> `200`
+    - `GET https://api.valensjewelry.com/ready` -> `503` (existing SQS IAM `GetQueueAttributes` gap; unchanged)
+  - Live verification contract check:
+    - `POST /api/auth/verify/send` now returns message:
+      - `"Local mode: email/SMS delivery is disabled. Use the 6-digit debug code shown below."`
+      - plus `debug_code`.
+
+**Technical debt / gotchas:**
+- Real email delivery still requires SMTP provider configuration and runtime env injection; current deployed runtime is `ENV=local`, so verification uses debug-code flow by design.
+- Lambda API role remains missing SQS `GetQueueAttributes` permission, keeping `/ready` degraded (`503`).
+
+**Open questions / TODOs:**
+- Decide and configure production email provider (SMTP/SES relay), verified sender identity, and secret injection path for SMTP credentials.
+- Decide whether deployed runtime should remain `ENV=local` or move to `dev`/`prod` with explicit non-local behavior.
+
+## Baseline report IA update: left navigation + right content pane (2026-03-03)
+
+**Task:** Replace side-by-side dual-content columns with information architecture where the left column is a section navigation and the right column shows the selected report section content.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/baseline-report/BaselineReportPanel.tsx** — Added report section navigation model (`overview`, `next-actions`, `top-risks`, `change-delta`, `confidence-gaps`, `closure-proof`, `recommendations`), left-column nav UI, and single right-pane conditional content rendering while keeping KPI strip at top.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Kept top KPI cards in place (`Total/Open/Critical/High/Medium/Low/Resolved`).
+- Converted report body to:
+  - left: sticky navigation buttons for available sections only,
+  - right: one selected section rendered at a time.
+- Preserved existing report request/poll/history behavior and all existing section components.
+- Validation:
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/components/baseline-report/BaselineReportPanel.tsx` -> pass
+
+**Technical debt / gotchas:**
+- Active section is held in component state and resolved against currently available sections; if data shape changes between reports, UI falls back to the first available section.
+
+**Open questions / TODOs:**
+- Decide whether left-nav section changes should also update URL hash/query for deep linking to specific report sections.
+
+## Baseline report layout follow-up: strict 2-column content and top KPI row restoration (2026-03-03)
+
+**Task:** Apply user-requested refinement after the prior density update: remove the effective 3-column feel, keep only a two-column report content layout, and restore KPI cards (`Total/Open/Critical/High/Medium/Low/Resolved`) at the top as before.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/baseline-report/BaselineReportPanel.tsx** — Restored top KPI strip above content; changed report body to strict `lg:grid-cols-2`; removed in-view history side rail and returned history to standard full-width section below report content.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this follow-up task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- KPI cards are back on top in one wrap row (same placement behavior as before).
+- Report content now renders in two columns only (desktop), with mobile single-column fallback.
+- Eliminated third-column perception by removing report-history side rail while viewing; history is rendered below report again.
+- Validation:
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/components/baseline-report/BaselineReportPanel.tsx` -> pass
+
+**Technical debt / gotchas:**
+- KPI cards use wrap behavior and can still create multiple visual rows on smaller desktop widths; this is intentional to preserve readability without shrinking card content.
+
+**Open questions / TODOs:**
+- If desired, we can pin KPI cards to a fixed desktop row/column matrix (for example 4 + 3) instead of wrap behavior.
+
+## Baseline report UI density update: two-column layout like Settings Organization tab (2026-03-03)
+
+**Task:** Reduce excessive vertical scrolling in the Settings baseline-report tab by converting the report viewer to a two-column desktop layout aligned with the Organization tab structure.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/baseline-report/BaselineReportPanel.tsx** — Refactored report rendering into a desktop two-column mode (summary/metadata vs action-heavy content), added reusable `ReportHistoryList`, and moved history into a right-side rail while viewing a report.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Applied a two-column baseline report presentation on desktop:
+  - Summary context, narrative, SOC2 snapshot, delta, and confidence gaps grouped in one column.
+  - Next actions, top risks, closure proof, and recommendations grouped in the other column.
+- Added report-history rail behavior when a report is open; fallback full-width history list remains when no report payload is loaded.
+- Kept existing request/poll/error/no-report states unchanged (layout-only refactor for density).
+- Validation:
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/components/baseline-report/BaselineReportPanel.tsx` -> pass
+
+**Technical debt / gotchas:**
+- Report content now uses nested responsive grids (viewer split + history rail), which may benefit from UX tuning after visual QA on narrower laptop widths.
+
+**Open questions / TODOs:**
+- Confirm preferred desktop breakpoint behavior (`lg`) for two-column mode and whether history rail should collapse behind a toggle on medium-width screens.
+
+## Deployment: settings-auth fixes + migration chain repair (2026-03-02)
+
+**Task:** Deploy the Settings auth hardening changes to SaaS serverless runtime, resolve deployment/runtime blockers, and verify live health endpoints.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0038_user_verification_mfa.py** — Corrected migration lineage to existing shortened chain (`Revises` and `down_revision` now point to `0037_comm_governance_layer`).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Ran deployment script: `./scripts/deploy_saas_serverless.sh` (runtime stack `security-autopilot-saas-serverless-runtime`, region `eu-north-1`).
+- First deploy (`image tag 20260302T220108Z`) surfaced runtime init failures:
+  - Alembic graph error from `0038` referencing missing revision key `0037_communication_governance_layer`.
+  - Import error on `backend.services.baseline_report_builder` due incomplete source artifact for that specific deploy tag.
+- Patched migration metadata in `0038_user_verification_mfa.py` to the correct parent revision ID.
+- Re-deployed (`image tag 20260302T220608Z`) and validated uploaded source artifact includes:
+  - `alembic/versions/0038_user_verification_mfa.py`
+  - `backend/services/baseline_report_builder.py`
+- API startup then fail-closed on migration guard (`current=0037_comm_governance_layer`, `expected_head=0038_user_verification_mfa`); ran:
+  - `set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade head`
+  - Upgrade succeeded (`0037_comm_governance_layer -> 0038_user_verification_mfa`).
+- Live verification after migration:
+  - `GET https://api.valensjewelry.com/health` -> `200` (`{"status":"ok","app":"AWS Security Autopilot"}`)
+  - `GET https://api.valensjewelry.com/ready` -> `503` (`ready=false`) with SQS `AccessDenied` on queue attribute checks.
+
+**Technical debt / gotchas:**
+- Runtime readiness is currently degraded because API Lambda role lacks `sqs:GetQueueAttributes` on required queues (`ingest`, `events_fast_lane`, `inventory_reconcile`, `export_report`), even though app process health is up.
+
+**Open questions / TODOs:**
+- Decide whether to update API Lambda IAM policy to allow readiness SQS checks (`sqs:GetQueueAttributes`) or to adjust readiness dependency expectations for this environment.
+
+## Baseline report usefulness upgrade: action-first sections with delta, confidence, and closure proof (2026-03-02)
+
+**Task:** Implement a materially more useful baseline report by shifting from mostly descriptive metrics to decision-oriented output: top next actions, trend delta since previous baseline, confidence caveats, and closure proof, while preserving the existing Settings-based report entry point and report history flow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/baseline_report_spec.py** — Expanded baseline report schema with actionable/decision sections (`next_actions`, `change_delta`, `confidence_gaps`, `closure_proof`) and richer top-risk/action metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/baseline_report_builder.py** — Rebuilt report synthesis logic to join findings with action/action_finding/remediation_run/exception context; added recommended mode/readiness/blast-radius/fix-path generation; added previous-baseline delta computation; added confidence-gap inference heuristics; added closure-proof extraction.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/baseline_report.py** — Added previous-successful-report timestamp lookup (scope-aware by `account_ids` when possible) and passed current/previous report timestamps into builder for `/api/baseline-report/{id}/data`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/baseline_report_renderer.py** — Updated downloadable HTML renderer to include new sections (next actions, delta, confidence gaps, closure proof) in addition to summary/top-risks/recommendations.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Extended baseline report viewer types for new report payload fields and enriched top-risk contract.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/baseline-report/BaselineReportPanel.tsx** — Added UI sections and components for Next Actions, Change Since Last Baseline, Confidence Gaps, and Closure Proof; enriched top-risks table with mode/readiness context.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_baseline_report_spec.py** — Updated schema/constant tests and added coverage for new report models and max-length constraints.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_baseline_report_builder.py** — Reworked builder tests for new multi-query decision-oriented output (actions + runs + delta + confidence + closure proof).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_baseline_report_renderer.py** — Kept renderer assertions valid under expanded section output.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_baseline_report_api.py** — Updated `/data` success test mocking for additional previous-report query.
+- **/Users/marcomaher/AWS Security Autopilot/docs/baseline-report-spec.md** — Bumped to v1.1 and documented decision-oriented report extensions and updated data contract keys.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added a true “what should I do next?” layer:
+  - top 3 actionable next actions with severity, readiness, recommended mode (`direct_fix`/`pr_only`), blast radius, due date, and fix path.
+- Added trend awareness:
+  - report delta against previous successful baseline (`new_open`, `regressed`, `stale_open`, `closed`) with summary text.
+- Added trust/uncertainty transparency:
+  - confidence-gap categorization from runtime signal hints (`access_denied`, `partial_data`, `api_error`, `telemetry_gap`) and impacted controls.
+- Added closure evidence:
+  - recent resolved findings with resolution timestamp + evidence note and remediation run linkage where present.
+- Kept existing baseline report request/poll/history flow intact and backward compatible.
+- Validation:
+  - `./venv/bin/pytest -q tests/test_baseline_report_spec.py tests/test_baseline_report_builder.py tests/test_baseline_report_renderer.py tests/test_baseline_report_api.py tests/test_baseline_report_service.py` -> `37 passed`
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/components/baseline-report/BaselineReportPanel.tsx src/lib/api.ts` -> pass
+
+**Technical debt / gotchas:**
+- Confidence-gap detection is heuristic (`shadow_status_reason` + `raw_json` token inference) and should be replaced with explicit persisted certainty flags once a canonical signal model is exposed by reconciliation.
+- `change_delta` regressions are inferred from available timestamps/status snapshots (no full historical status timeline table yet), so edge-case reopen classification can be improved later with event history.
+
+**Open questions / TODOs:**
+- Consider exposing action-owner display names/emails (instead of user IDs) in `next_actions` once a safe owner-identity projection contract is agreed.
+- Consider filtering previous-baseline delta strictly to matching account scope + region scope when report scoping becomes region-aware.
+
+## Wave 8 revalidation: tests 29-33 live rerun (Wave 6-aware) (2026-03-02)
+
+**Task:** Execute the Wave 8 live test plan in required order (29 -> 30/31 with separate identities -> 32 -> 33), collect fresh evidence-only artifacts, and synchronize wave test docs + base tracker without product code changes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-29.md** — Replaced canonical prefix/details with fresh PASS rerun evidence (`test-29-live-20260302T211811Z-*`) and updated assertions/tracker mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-30.md** — Replaced canonical prefix/details with fresh PASS rerun evidence (`test-30-live-20260302T211956Z-*`), including full lockout wait/recovery proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-31.md** — Replaced canonical prefix/details with fresh PASS rerun evidence (`test-31-live-20260302T213603Z-*`) for member/admin/no-auth/wrong-tenant auth boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-32.md** — Replaced canonical prefix/details with fresh PASS rerun evidence (`test-32-live-20260302T213947Z-*`) for audit-log contract, RBAC, and leakage scans.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-33.md** — Replaced canonical prefix/details with fresh PASS rerun evidence (`test-33-live-20260302T214032Z-*`) for C2/C5 proof completeness and auth boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, refreshed Wave 8 row references to latest prefixes/values, and appended Section 9 changelog rerun entries for Tests 29-33.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-29-live-20260302T211811Z-*** — Added fresh Test 29 API evidence artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-30-live-20260302T211956Z-*** — Added fresh canonical Test 30 API evidence artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-31-live-20260302T213603Z-*** — Added fresh Test 31 API evidence artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-32-live-20260302T213947Z-*** — Added fresh Test 32 API evidence artifacts plus contract/leakage summaries (`90/91/92/93/99`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-33-live-20260302T214032Z-*** — Added fresh Test 33 API evidence artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T214032Z-*** — Added fresh Test 33 bundle extraction + C2/C5 + consistency artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-29-live-20260302T211811Z-ui-01-accounts-route-no-auth.*** — Added fresh Test 29 UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-30-live-20260302T211956Z-ui-01-login-route-no-auth.*** — Added fresh Test 30 UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-33-live-20260302T214032Z-ui-01-pr-bundles-route-no-auth.*** — Added fresh Test 33 UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Executed tests in required order and scope:
+  - Test 29 first: canonical prefix `test-29-live-20260302T211811Z`; ingest-sync trigger `200`, terminal progress `completed` at poll `7` with `updated_findings_count=438`, freshness advanced (`last_synced_at` `18:55:05.887601Z` -> `21:18:17.101603Z`), boundaries `422/404/401/404`.
+  - Test 30 next (dedicated identity): canonical prefix `test-30-live-20260302T211956Z`; deterministic lockout `401 x5 -> 429` on attempt `#6`, `retry-after=895`, post-window recovery `200` login + `200` `/api/auth/me`.
+  - Test 31 next (separate identity path): canonical prefix `test-31-live-20260302T213603Z`; member invite/delete blocked (`403`), no-auth blocked (`401`), wrong-tenant delete blocked (`404`), admin control invite `201`, account state unchanged.
+  - Test 32 after Test 31: canonical prefix `test-32-live-20260302T213947Z`; admin audit-log contract `200` with pagination/filter checks, member `403`, no-auth `401`, invalid actor filter `400`, leakage scans baseline/date/full all `0` hits.
+  - Test 33 last: canonical prefix `test-33-live-20260302T214032Z`; fresh run `4361b8d2-5600-48ad-b2b4-2cac683f721a` reached `success`, ZIP boundaries `200/401/404`, README includes C2/C5, consistency checks all true.
+- Updated all five wave-08 test docs and base tracker to reflect fresh canonical rerun evidence.
+- Confirmed no product code files were modified in this task scope.
+
+**Technical debt / gotchas:**
+- Local helper scripts used for evidence capture required non-product fixes during execution (`retry-after` lowercase header parsing and portable `jq` slurpfile handling). These changes were outside repository source and did not alter product runtime behavior.
+- Focused Wave 7 keyword subset in `/api/audit-log` remained empty in this tenant dataset (`0` matching actions), so leakage verification relied on full baseline/date/full scans.
+
+**Open questions / TODOs:**
+- None for Wave 8 tests 29-33 rerun scope.
+
+## Baseline report UX unification: remove sidebar Report and move full viewer into Settings (2026-03-02)
+
+**Task:** Resolve the duplicate baseline-report entry points by removing the sidebar `Report` nav item and making the Settings `Baseline Report` tab contain the full in-app report experience that previously lived on `/baseline-report`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/baseline-report/BaselineReportPanel.tsx** (new) — Added reusable full baseline-report panel (request flow, polling, history, SOC2 snapshot, top-risks table, recommendations).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/baseline-report/page.tsx** — Converted route page to a thin wrapper that renders the shared `BaselineReportPanel`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.tsx** — Removed legacy lightweight baseline-report tab logic/state and replaced tab content with the shared full panel; added `?tab=` deep-link handling (including `baseline-report`).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/Sidebar.tsx** — Removed sidebar nav item `Report` (`/baseline-report`).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/exports/page.tsx** — Updated baseline history “View report” link to `/settings?tab=baseline-report`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Consolidated full baseline-report UI into one reusable component and rendered it in Settings so users can request, poll, and view full report content in the Settings tab.
+- Removed duplicate sidebar `Report` destination to eliminate conflicting entry points.
+- Preserved `/baseline-report` route functionality by wrapping the same shared panel (no behavior drift between route and Settings tab).
+- Added deep-link support in Settings (`/settings?tab=baseline-report`) and redirected exports-page “View report” action to that tab.
+- Validation:
+  - `cd frontend && npm run typecheck` -> pass
+  - `cd frontend && npm run lint -- src/app/settings/page.tsx src/components/layout/Sidebar.tsx src/components/baseline-report/BaselineReportPanel.tsx src/app/baseline-report/page.tsx src/app/exports/page.tsx` -> pass (warnings only, no errors)
+
+**Technical debt / gotchas:**
+- Existing frontend lint warnings unrelated to this task remain (`digestSettings` unused in settings page, existing sidebar `img` optimization warnings, existing exhaustive-deps warning on export polling effect).
+
+**Open questions / TODOs:**
+- Decide whether the legacy `/baseline-report` route should remain as a direct URL or be hard-redirected to `/settings?tab=baseline-report` in a follow-up cleanup.
+
+## Settings auth hardening: email/phone verification + MFA enablement fix (2026-03-02)
+
+**Task:** Fix Settings account-security regressions where `Verify Now` did not work, `phone_number` was not persisted on profile save, and no MFA path existed, by adding end-to-end backend + frontend support for verification and login MFA challenge flow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/user.py** — Added user contact-verification + MFA state/challenge columns (`phone_number`, verification flags, MFA method/state, verification/MFA challenge hashes and expiries).
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0038_user_verification_mfa.py** (new) — Added additive migration for new user verification/MFA columns and index on `mfa_challenge_token_hash`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/auth.py** — Extended `UserResponse` and `user_to_response()` to include `phone_number`, `phone_verified`, `email_verified`, `mfa_enabled`, `mfa_method`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** — Extended `PATCH /api/users/me` to persist `phone_number`, reset phone verification when phone changes, and fail-safe disable phone-based MFA if phone changes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** — Added verification + MFA APIs:
+  - `POST /api/auth/verify/send`
+  - `POST /api/auth/verify/confirm`
+  - `GET /api/auth/mfa/settings`
+  - `PATCH /api/auth/mfa/settings`
+  - `POST /api/auth/login/mfa`
+  and updated `POST /api/auth/login` to return MFA challenge payload when MFA is enabled.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/email.py** — Added security-code delivery helpers for email and phone verification/MFA (phone path currently uses logged + fallback-email delivery pattern).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Updated verification API contracts to parse response payloads; added MFA settings client functions and profile response typing for MFA fields.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/contexts/AuthContext.tsx** — Updated login contract to support MFA challenge response and added `completeMfaLogin()` flow.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/login/page.tsx** — Added MFA modal challenge UX (verify + resend code) on sign-in.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/ProfileTab.tsx** — Fixed verification send UX, wired debug-code display in local mode, and added MFA enable/disable controls with verified-channel gating.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_verification_mfa.py** (new) — Added coverage for phone persistence/reset behavior, verification send/confirm, MFA enable validation, and login MFA challenge completion.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Root cause confirmed from code:
+  - `frontend` called `/api/auth/verify/send` and `/api/auth/verify/confirm`, but backend did not implement these endpoints.
+  - `PATCH /api/users/me` did not accept/store `phone_number`, so profile phone updates were dropped.
+  - No backend/frontend MFA settings/challenge flow existed.
+- Implemented verification lifecycle:
+  - send 6-digit code for email/phone;
+  - confirm code and update `email_verified` / `phone_verified`;
+  - reset phone verification automatically when number changes.
+- Implemented MFA lifecycle:
+  - MFA settings endpoints with verified-channel prerequisites;
+  - login challenge path for MFA-enabled users;
+  - second-step `/api/auth/login/mfa` token issuance after code verification.
+- Implemented frontend UX:
+  - Settings profile now has MFA controls;
+  - login now handles MFA challenge modal.
+- Validation runs:
+  - `./venv/bin/pytest -q tests/test_auth_verification_mfa.py tests/test_auth_wave2_blocking_fixes.py tests/test_auth_login_rate_limit.py tests/test_control_plane_token_lifecycle.py` -> `20 passed`
+  - `./venv/bin/pytest -q tests/test_digest_settings_api.py tests/test_slack_settings_api.py tests/test_governance_settings_api.py` -> `19 passed`
+  - `cd frontend && npm run lint -- src/app/login/page.tsx src/app/settings/ProfileTab.tsx src/contexts/AuthContext.tsx src/lib/api.ts` -> pass
+  - `cd frontend && npm run typecheck` -> pass
+
+**Technical debt / gotchas:**
+- No real SMS provider is integrated yet; phone code delivery currently logs and uses fallback email delivery path for practical usability.
+- Existing signup still does not require phone input; this task fixed settings verification + MFA flow, not enforced phone-required signup policy.
+
+**Open questions / TODOs:**
+- Decide whether to integrate a production SMS provider (SNS/Twilio) and gate phone verification/MFA enablement on confirmed SMS delivery only.
+- Decide whether signup should now hard-require phone number (remaining todo item in `docs/final-to-do/final-to-do`).
+
 ## Item 17 finalization: merge audit + full regression validation for production readiness (2026-03-02)
 
 **Task:** Finalize Item `17` end-to-end by merging all available Item `17` branches, running targeted + full backend suites, and verifying medium/low promotion guardrails without regressing the Item `16` high-confidence promotion path.
