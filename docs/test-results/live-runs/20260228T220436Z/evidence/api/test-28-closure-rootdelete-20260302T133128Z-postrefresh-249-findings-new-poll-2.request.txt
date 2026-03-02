@@ -1,0 +1,1 @@
+GET https://api.valensjewelry.com/api/findings?control_id=IAM.4&status=NEW&account_id=029037611564&region=eu-north-1&limit=200\nAuthorization: Bearer <redacted>

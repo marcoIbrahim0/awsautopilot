@@ -4,6 +4,81 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
 
 ## [Unreleased]
 
+### Added
+- **Root-key remediation orchestration persistence foundation**
+  - Additive Alembic migration `0035_root_key_remediation_orchestration` introducing:
+    - `root_key_remediation_runs`
+    - `root_key_remediation_events`
+    - `root_key_dependency_fingerprints`
+    - `root_key_remediation_artifacts`
+    - `root_key_external_tasks`
+  - New root-key enums in `backend/models/enums.py` for state/status/mode and related sub-statuses.
+  - New ORM models:
+    - `backend/models/root_key_remediation_run.py`
+    - `backend/models/root_key_remediation_event.py`
+    - `backend/models/root_key_dependency_fingerprint.py`
+    - `backend/models/root_key_remediation_artifact.py`
+    - `backend/models/root_key_external_task.py`
+  - New repository/service access layer `backend/services/root_key_remediation_store.py` with tenant-scoped reads/writes, idempotent create semantics, optimistic-lock state transitions, and metadata redaction for secret-like keys.
+  - New root-key transition orchestration service `backend/services/root_key_remediation_state_machine.py` with strict transition guards, idempotent transitions, event+evidence emission on every transition, retryable-vs-terminal error classification, capped backoff retry policy, and cancellation-hook support.
+  - Hardened root-key run creation to fail closed when `action_id` or `finding_id` are outside tenant scope before insert (`backend/services/root_key_remediation_store.py`).
+  - New root-key usage discovery and dependency classification service `backend/services/root_key_usage_discovery.py`:
+    - CloudTrail lookback query (`LookupEvents`) with pagination.
+    - Transient failure retry support and partial-data resilience.
+    - Deterministic fingerprint ordering (`service`, `api_action`, `source_ip`, `user_agent`, `time`) for testability.
+    - Managed-vs-unknown classification via explicit dependency registry and fail-closed auto-eligibility calculation.
+    - Tenant-scoped persistence to `root_key_dependency_fingerprints` via idempotent upsert.
+  - New root-key orchestration API router `backend/routers/root_key_remediation_runs.py` with tenant-scoped endpoints:
+    - `POST /api/root-key-remediation-runs`
+    - `GET /api/root-key-remediation-runs/{id}`
+    - `POST /api/root-key-remediation-runs/{id}/validate`
+    - `POST /api/root-key-remediation-runs/{id}/disable`
+    - `POST /api/root-key-remediation-runs/{id}/rollback`
+    - `POST /api/root-key-remediation-runs/{id}/delete`
+    - `POST /api/root-key-remediation-runs/{id}/external-tasks/{task_id}/complete`
+  - Root-key API contract behavior:
+    - Auth + tenant boundary enforcement on all reads/writes.
+    - Required `Idempotency-Key` for all mutating root-key endpoints.
+    - Version-safe contract header support via `X-Root-Key-Contract-Version`.
+    - `correlation_id` and `contract_version` returned on success and error payloads.
+    - Consistent fail-closed error envelope.
+    - `GET /api/root-key-remediation-runs/{id}` now includes timeline-ready details (`events`, `dependencies`, `artifacts`) plus explicit counts (`event_count`, `dependency_count`, `artifact_count`).
+  - New guarded executor-worker service `backend/services/root_key_remediation_executor_worker.py` for root-key `disable` / `rollback` / `delete` operations:
+    - self-cutoff safety guard with fail-closed `needs_attention` fallback when separate observer context cannot be guaranteed,
+    - disable monitor-window evidence capture (health + usage signals),
+    - breakage-triggered rollback with rollback alert task generation,
+    - strict delete gates (`validation passed`, `disable window clean`, `delete flag enabled`, `no unknown active dependencies`).
+  - Root-key disable/rollback/delete API paths can route through the new executor-worker behavior when enabled.
+  - Added frontend root-key remediation lifecycle UX (default-off via `NEXT_PUBLIC_ROOT_KEY_REMEDIATION_UI_ENABLED`):
+    - New route `/root-key-remediation-runs/{id}`.
+    - Timeline UI with state/timestamp/evidence links.
+    - Dependency table (managed/unknown), unknown-dependency wizard, external-task completion flow, rollback guidance, and final completion summary.
+    - Role-based action controls (admin mutate, member read-only) and polling with retry backoff.
+  - Added root-key lifecycle frontend component tests:
+    - `frontend/src/components/root-key/RootKeyRemediationLifecycle.test.tsx` covering timeline states, unknown-dependency wizard flow, and API error rendering.
+  - Added explicit default-off root-key orchestration feature flags in `backend/config.py`:
+    - `ROOT_KEY_SAFE_REMEDIATION_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_API_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_AUTO_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS`
+    - `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED`
+    - `ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES`
+  - New targeted test coverage:
+    - `tests/test_root_key_remediation_migration.py`
+    - `tests/test_root_key_remediation_models.py`
+    - `tests/test_root_key_remediation_store.py`
+    - `tests/test_root_key_remediation_state_machine.py`
+    - `tests/test_root_key_usage_discovery.py`
+    - `tests/test_root_key_remediation_runs_api.py`
+    - `tests/test_root_key_remediation_executor_worker.py`
+  - Expanded root-key store/state-machine tests for create-run auth-scope rejection and create-run retry handling on idempotency write conflicts.
+  - New root-key remediation docs:
+    - `docs/live-e2e-testing/root-key-safe-remediation-spec.md`
+    - `docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md`
+
 ### Planned
 - Step 10: Evidence Export v1 (CSV/JSON zip to S3)
 - Phase 4: Evidence pack + Billing (Stripe integration, plan gates)

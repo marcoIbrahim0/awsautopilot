@@ -1,0 +1,4 @@
+POST https://api.valensjewelry.com/api/auth/login\nAuthorization: Bearer <redacted>\nBody: {
+  "email": "maromaher54@gmail.com",
+  "password": "Maher730"
+}

@@ -1,5 +1,413 @@
 # Task Log
 
+## Root-key executor workers for disable/rollback/delete with self-cutoff safety guard (2026-03-02)
+
+**Task:** Implement guarded executor workers for root-key `disable` / `rollback` / `delete` operations with strict tenant isolation, idempotent retry safety, fail-closed behavior, and delete gate enforcement while preserving default behavior behind feature flags.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_executor_worker.py** (new) — Added root-key executor worker service with:
+  - disable-window execution (`disable root key(s)` + monitor signals + evidence),
+  - immediate rollback-on-breakage path with rollback alert task generation,
+  - strict delete gate checks and fail-closed `needs_attention` fallback,
+  - self-cutoff safety guard requiring safe observer context before mutating target keys.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** — Wired `disable` / `rollback` / `delete` endpoints to optionally execute through `RootKeyRemediationExecutorWorker` when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=true`, preserving existing state-machine-only behavior by default.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added default-off/root-safe config:
+  - `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=false`
+  - `ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES=15`
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_executor_worker.py** (new) — Added required worker coverage:
+  - self-cutoff regression guard,
+  - disable clean-window success,
+  - rollback on breakage signal,
+  - delete gating fail-closed matrix,
+  - tenant-scope fail-closed auth path,
+  - replay-safe retry behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** — Added API coverage verifying disable endpoint routes through executor-worker path when flag-enabled.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implementation status, API transition contract notes, feature-flag table, and test-plan coverage for executor-worker behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Updated slice status/checkpoints for implemented root-delete safety guard + executor-worker tests + new config flags.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for executor-worker safety behavior, new flags, and tests.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented `RootKeyRemediationExecutorWorker` with strict tenant-scoped run loads and no cross-tenant mutation paths.
+- Implemented self-cutoff critical guard:
+  - rejects unsafe execution when observer context cannot be guaranteed to remain valid while target keys are mutated,
+  - fail-closed transition to `needs_attention` when safety cannot be guaranteed.
+- Implemented disable logic:
+  - disables root keys in idempotent-safe order,
+  - starts disable window via state-machine transition,
+  - collects monitor signals (IAM health + CloudTrail usage discovery),
+  - records disable evidence artifact,
+  - triggers immediate rollback + rollback alert task on breakage signals.
+- Implemented rollback logic:
+  - reactivates inactive root keys (idempotent-safe),
+  - records rollback evidence + reason,
+  - generates rollback alert task.
+- Implemented delete logic with strict gates:
+  1. validation state prerequisite,
+  2. disable-window clean evidence prerequisite,
+  3. delete feature flag enabled,
+  4. no unknown active dependencies,
+  - and fail-closed `needs_attention` fallback if any gate fails.
+- Kept current behavior preserved by default (`ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=false`).
+
+**Tests run:**
+- `./venv/bin/ruff check backend/services/root_key_remediation_executor_worker.py backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_runs_api.py` (pass)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_state_machine.py` (pass: `50 passed`)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/services/root_key_remediation_executor_worker.py backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_runs_api.py` (pass: `Success: no issues found in 4 source files`)
+- `./venv/bin/python -m py_compile backend/services/root_key_remediation_executor_worker.py backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_runs_api.py` (pass)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_usage_discovery.py tests/test_root_key_remediation_store.py` (pass: `16 passed`)
+
+**Technical debt / gotchas:**
+- Executor-worker path currently runs inline in API process (feature-flagged) rather than SQS-backed worker queue orchestration; long-running closure orchestration remains pending slice work.
+- `blocked_operator_error` terminal mapping is still pending; fail-closed errors currently transition to `needs_attention` with reason codes.
+
+**Open questions / TODOs:**
+- Decide whether to promote executor path to dedicated queue workers before enabling for broad tenant rollout.
+- Confirm desired terminal semantics for irreversible delete-time failures (`needs_attention` vs dedicated `blocked_operator_error` state).
+
+## Root-key remediation lifecycle UI + timeline/dependency API contract (2026-03-02)
+
+**Task:** Implement production frontend UX for root-key remediation run lifecycle and unseen dependency tasks, including timeline/evidence rendering, dependency management, external-task completion, rollback guidance, completion summary, polling/backoff resilience, role-based UI controls, and required contract/test/docs updates.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** — Extended tenant-scoped `GET /api/root-key-remediation-runs/{id}` response to include explicit `dependencies`, `events`, and `artifacts` arrays (plus `dependency_count`) for timeline/dependency/evidence UI.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** — Added run-detail contract coverage for timeline/dependency/artifact payload shape and updated fixtures for new response fields.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Added typed root-key orchestration client methods (`create/get/validate/disable/rollback/delete/external-task-complete`), contract-version/idempotency headers, and root-key error parsing normalization.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/root-key/RootKeyRemediationLifecycle.tsx** (new) — Added feature-flag-safe lifecycle UI with run timeline, evidence links, dependency table, unknown-dependency wizard, external-task completion flow, rollback guidance, completion summary, polling with backoff, and role-based mutation gating.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/root-key-remediation-runs/[id]/page.tsx** (new) — Added route-level container for root-key lifecycle UI, tenant/auth handling, and default-off frontend flag guard.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** — Added root-key lifecycle entry action from root-account-required warning panel (admin-only mutation path, feature-flag gated).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/root-key/RootKeyRemediationLifecycle.test.tsx** (new) — Added component tests for timeline states, unknown-dependency wizard flow, and API error rendering/retry path.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/root-key-remediation-lifecycle-ui.md** (new) — Added feature documentation with flow diagram, API contract dependencies, and role/flag behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** — Added cross-link to the new root-key lifecycle UI doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated status + API read contract + frontend UX implementation details.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Added completed Slice 3.6 frontend lifecycle UX checklist.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md** — Added `RK-FE-*` safe-rollout UI acceptance cases.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added root-key lifecycle UI quick-navigation link.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for root-key run-detail contract expansion and frontend lifecycle UI delivery.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Extended root-key run detail API response to include full timeline/dependency/evidence payload required by frontend lifecycle UX (tenant-scoped, fail-closed unchanged).
+- Implemented frontend root-key lifecycle route and component behind `NEXT_PUBLIC_ROOT_KEY_REMEDIATION_UI_ENABLED` (default-off behavior preserved).
+- Implemented required lifecycle UX elements:
+  - timeline with state/timestamp/evidence links,
+  - dependency table (managed/unknown),
+  - action-required unknown-dependency wizard,
+  - complete-task flow for external migration steps,
+  - rollback guidance,
+  - final completion summary.
+- Added resilient polling with retry backoff and stale-error handling; no fail-open UI mutation behavior.
+- Enforced role-based UI controls: admins can mutate transitions/tasks; non-admins are read-only.
+- Added backend and frontend tests covering positive, negative/error, auth/role, and retry-safe interaction paths for touched contracts/components.
+
+**Tests run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_runs_api.py` (pass: `10 passed`)
+- `./venv/bin/ruff check backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py` (pass)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py` (pass)
+- `./venv/bin/python -m py_compile backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py` (pass)
+- `cd frontend && npm run test:ui -- src/components/root-key/RootKeyRemediationLifecycle.test.tsx` (pass: `4 passed`)
+- `cd frontend && npx eslint src/components/root-key/RootKeyRemediationLifecycle.tsx src/components/root-key/RootKeyRemediationLifecycle.test.tsx src/components/ActionDetailDrawer.tsx src/lib/api.ts 'src/app/root-key-remediation-runs/[id]/page.tsx'` (pass)
+- `cd frontend && npm run typecheck` (pass)
+
+**Technical debt / gotchas:**
+- Frontend lifecycle polling currently performs route-level polling only; global background job rail integration is not yet wired for root-key run transitions.
+- Unknown-dependency wizard transition choices are state-gated in UI and still rely on backend transition guards for final fail-closed enforcement.
+
+**Open questions / TODOs:**
+- Confirm whether root-key lifecycle route should be linked from additional surfaces (for example, remediation run cards) beyond Action Detail warning panel.
+- Decide whether artifact references should always be presigned HTTP links for direct click-through (currently non-HTTP refs render as plain text evidence pointers).
+
+## Tenant-scoped root-key remediation orchestration APIs (2026-03-02)
+
+**Task:** Implement production tenant-scoped root-key remediation orchestration APIs with idempotency, fail-closed auth/state handling, explicit response schemas, consistent error envelope, and correlation-id contract coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** (new) — Added feature-flag-gated `/api/root-key-remediation-runs` endpoints (`create/get/validate/disable/rollback/delete/external-task-complete`) with strict tenant scoping, idempotency-key handling, contract-version checks, consistent typed errors, and correlation-id response metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/main.py** — Mounted the new root-key remediation runs router under `/api`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** (new) — Added auth/no-auth/wrong-tenant, happy path, idempotent replay, invalid transition, and external-task completion API coverage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implementation status and API contract section to reflect shipped endpoint family and response/error invariants.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Marked Slice 3 API contract items complete and aligned checklist scope with implemented endpoint set.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for the new root-key API endpoints and associated contract/test coverage.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added tenant-scoped root-key orchestration APIs:
+  - `POST /api/root-key-remediation-runs`
+  - `GET /api/root-key-remediation-runs/{id}`
+  - `POST /api/root-key-remediation-runs/{id}/validate`
+  - `POST /api/root-key-remediation-runs/{id}/disable`
+  - `POST /api/root-key-remediation-runs/{id}/rollback`
+  - `POST /api/root-key-remediation-runs/{id}/delete`
+  - `POST /api/root-key-remediation-runs/{id}/external-tasks/{task_id}/complete`
+- Enforced auth + tenant boundary isolation and fail-closed behavior on all root-key read/write paths.
+- Enforced `Idempotency-Key` support on all mutating endpoints and replay-safe behavior in create/action/task-complete paths.
+- Added explicit API response models and one consistent error envelope shape with non-secret details only.
+- Returned `correlation_id` and `contract_version` in success and error payloads and response headers.
+- Kept new behavior dark by default behind existing root-key feature flags.
+
+**Tests run:**
+- `./venv/bin/python -m py_compile backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py backend/main.py` (pass)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_runs_api.py` (pass: `8 passed`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py` (pass: `36 passed`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_state_machine.py tests/test_root_key_remediation_store.py` (pass: `41 passed`)
+- `./venv/bin/ruff check backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py backend/main.py` (pass)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/routers/root_key_remediation_runs.py tests/test_root_key_remediation_runs_api.py backend/main.py` (pass: `Success: no issues found in 3 source files`)
+
+**Technical debt / gotchas:**
+- Worker-side closure orchestration (`ingest/compute/reconcile` automation and terminal convergence policy) is still pending; APIs currently expose orchestration transition controls and task completion only.
+- Endpoint-level manual validation is typed but not fully normalized to a shared global API error middleware; framework-level `422` behavior outside modeled paths remains unchanged.
+
+**Open questions / TODOs:**
+- Confirm whether contract-version header should become mandatory (currently optional, mismatch rejected with `400`).
+
+## Root-key state machine create-run tenant-scope hardening (2026-03-02)
+
+**Task:** Harden root-key remediation run creation to fail closed on cross-tenant references and extend service/store test coverage for auth + retry paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_store.py** — Added tenant-scoped `action_id` and `finding_id` ownership checks before new run inserts in `create_root_key_remediation_run_idempotent`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_store.py** — Updated create-run happy-path fixtures for new scope checks; added fail-closed tests for out-of-tenant action/finding references; tightened coroutine typing for mypy.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_state_machine.py** — Added `create_run` auth-scope rejection test (`tenant_scope_violation`) and create-run retry test for retryable `IntegrityError` path.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implemented-status line to include tenant-scoped create-run ownership checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Marked create-run tenant-scope guard as complete in Slice 2 and updated done criteria wording.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for create-run tenant-scope hardening and expanded auth/retry test coverage.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Enforced tenant isolation on root-key run creation writes by requiring action/finding ownership in tenant scope before insert.
+- Preserved idempotent replay behavior for existing `(tenant_id, idempotency_key)` runs.
+- Added explicit fail-closed coverage for create-run auth boundary violations and retry-safe handling for create-run conflict retries.
+- Re-ran touched-module test/lint/type/syntax gates and confirmed pass.
+
+**Tests run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py` (pass: `41 passed`)
+- `./venv/bin/ruff check backend/services/root_key_remediation_store.py backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `./venv/bin/mypy --follow-imports=skip --ignore-missing-imports backend/services/root_key_remediation_store.py backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `./venv/bin/python -m py_compile backend/services/root_key_remediation_store.py backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py` (pass)
+
+**Technical debt / gotchas:**
+- Runtime API/worker integration for this state-machine path remains pending and feature-flag gated; this change hardens persistence/service boundaries only.
+
+**Open questions / TODOs:**
+- Confirm whether API-layer root-key run creation should also enforce action-type constraints (`iam_root_access_key_absent`) in the same rollout slice.
+
+## Root-key usage discovery and dependency classification service (2026-03-02)
+
+**Task:** Implement root-key usage discovery and dependency classification with CloudTrail lookback querying, run-associated fingerprint persistence, managed/unknown dependency output, auto-flow eligibility calculation, and retry/pagination safety.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_usage_discovery.py** (new) — Added feature-flag-gated discovery/classification service with CloudTrail pagination, transient retry handling, deterministic fingerprint ordering, managed dependency registry matching, run-scoped fingerprint persistence, and fail-closed eligibility output.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_usage_discovery.py** (new) — Added required tests for no-usage, all-managed, mixed managed+unknown, transient CloudTrail retry behavior, auth-scope fail-closed handling, and retry-safe replay hash stability.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED` flag (default `false`) so behavior remains unchanged until explicitly enabled.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implementation status, service references, safety properties, flags table, and test-plan coverage for discovery/classification.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Added completed Slice `3.5` items for discovery/classification.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for the new discovery/classification service, new flag, and test coverage.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented CloudTrail root-usage discovery using `LookupEvents` with a configurable lookback window.
+- Added pagination support (`NextToken`) and transient error retries for CloudTrail fetches.
+- Normalized and sorted fingerprints deterministically (`event_time`, `service`, `api_action`, `source_ip`, `user_agent`).
+- Classified each fingerprint via explicit managed dependency registry and emitted `managed` or `unknown`.
+- Persisted classifications to `root_key_dependency_fingerprints` with strict tenant/run scope via existing idempotent upsert store API.
+- Added auth-scope fail-closed behavior when the run is not found in tenant scope.
+- Added replay-stability coverage ensuring repeated discovery over identical usage emits stable fingerprint hashes (idempotent-upsert safe).
+- Computed fail-closed auto-flow eligibility:
+  - `true` only when no unknown dependencies and no partial CloudTrail data.
+  - `false` on unknown dependencies or partial CloudTrail fetch failures.
+- Kept behavior dark by default behind feature flags.
+
+**Tests run:**
+- `./venv/bin/pytest -q tests/test_root_key_usage_discovery.py` (pass: `6 passed`)
+- `./venv/bin/pytest -q tests/test_root_key_usage_discovery.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py` (pass: `47 passed`)
+- `./venv/bin/ruff check backend/services/root_key_usage_discovery.py tests/test_root_key_usage_discovery.py backend/config.py` (pass)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/services/root_key_usage_discovery.py` (pass: `Success: no issues found in 1 source file`)
+- `./venv/bin/python -m py_compile backend/services/root_key_usage_discovery.py tests/test_root_key_usage_discovery.py backend/config.py` (pass)
+
+**Technical debt / gotchas:**
+- Discovery currently uses a static managed dependency registry; expect periodic updates as more root-safe automation patterns are validated.
+- Partial CloudTrail-data handling is fail-closed for eligibility, but does not yet persist an explicit synthetic “partial-data marker” row.
+
+**Open questions / TODOs:**
+- Confirm whether product requirements want a persisted marker/event when discovery ends with partial CloudTrail data.
+- Decide whether to make managed dependency registry tenant-configurable or remain centrally curated.
+
+## Root-key remediation run state machine service implementation (2026-03-02)
+
+**Task:** Implement the root-key remediation run state machine service with strict legal transitions, idempotent transition guards, fail-closed behavior, retry classification/backoff, and transition-level event/evidence emission.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_state_machine.py** (new) — Added production state-machine service with required methods: `create_run`, `advance_to_migration`, `advance_to_validation`, `start_disable_window`, `finalize_delete`, `mark_needs_attention`, `rollback`, `fail_run`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_state_machine.py** (new) — Added transition-matrix, illegal-transition, auth-scope, retry-idempotency, capped-backoff, and cancellation-hook tests.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implementation status and test coverage to include the new state-machine service.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Marked Slice 2 state-machine items complete.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased note for state-machine service and tests.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented legal transition enforcement against the root-key state matrix with terminal-state lock behavior.
+- Added idempotent transition handling with optimistic-lock conflict guards and safe replay semantics.
+- Emitted an immutable transition event plus transition evidence artifact for each transition operation.
+- Added retry-safe failure handling with retryable-vs-terminal classification and capped exponential backoff.
+- Added optional cancellation-hook support that fail-closes transitions when cancellation is requested.
+- Kept behavior dark by default through existing `ROOT_KEY_SAFE_REMEDIATION_*` feature flags.
+
+**Tests run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_state_machine.py` (pass: `29 passed`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_state_machine.py tests/test_root_key_remediation_store.py` (pass: `37 passed`)
+- `./venv/bin/ruff check backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `./venv/bin/mypy --follow-imports=skip --ignore-missing-imports backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `./venv/bin/python -m py_compile backend/services/root_key_remediation_state_machine.py tests/test_root_key_remediation_state_machine.py` (pass)
+
+**Technical debt / gotchas:**
+- Service is implemented but not yet wired into API/worker runtime paths; integration remains feature-flag gated work in later slices.
+- Full-repo mypy still has pre-existing unrelated errors; this task used module-scoped mypy for touched files.
+
+**Open questions / TODOs:**
+- Confirm final API wiring sequence for invoking this state-machine service from remediation run endpoints/workers.
+
+## Root-key remediation schema quality-gate closure verification (2026-03-02)
+
+**Task:** Close remaining quality-gate ambiguity for root-key remediation schema changes by rerunning available backend quality checks in the project venv and confirming pass/fail status.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this verification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-ran backend syntax gate on all touched root-key schema/model/service/test modules with `./venv/bin/python -m py_compile`.
+- Re-ran targeted root-key and migration tests with project venv pytest.
+- Ran dependency-integrity check (`./venv/bin/python -m pip check`) to confirm no broken requirements in the venv.
+- Installed `mypy` and `ruff` into the project venv and executed strict lint/type checks for touched schema/model/service modules.
+
+**Tests run:**
+- `./venv/bin/python -m py_compile alembic/versions/0035_root_key_remediation_orchestration.py backend/models/enums.py backend/models/__init__.py backend/models/root_key_remediation_run.py backend/models/root_key_remediation_event.py backend/models/root_key_dependency_fingerprint.py backend/models/root_key_remediation_artifact.py backend/models/root_key_external_task.py backend/services/root_key_remediation_store.py tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py` (pass)
+- `./venv/bin/pytest -q tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py tests/test_action_groups_migration.py` (pass: `17 passed`)
+- `./venv/bin/python -m pip check` (pass: `No broken requirements found`)
+- `./venv/bin/ruff check alembic/versions/0035_root_key_remediation_orchestration.py backend/models/enums.py backend/models/__init__.py backend/models/root_key_remediation_run.py backend/models/root_key_remediation_event.py backend/models/root_key_dependency_fingerprint.py backend/models/root_key_remediation_artifact.py backend/models/root_key_external_task.py backend/services/root_key_remediation_store.py tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py` (pass)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages alembic/versions/0035_root_key_remediation_orchestration.py backend/models/enums.py backend/models/__init__.py backend/models/root_key_remediation_run.py backend/models/root_key_remediation_event.py backend/models/root_key_dependency_fingerprint.py backend/models/root_key_remediation_artifact.py backend/models/root_key_external_task.py backend/services/root_key_remediation_store.py` (pass: `Success: no issues found in 9 source files`)
+
+**Technical debt / gotchas:**
+- `mypy` is currently scoped to touched backend schema/model/service modules with `--follow-imports=skip`; full-repo mypy still reports pre-existing model typing issues unrelated to this task.
+
+**Open questions / TODOs:**
+- Decide whether to enforce full-repo mypy cleanup or keep module-scoped mypy gate for incremental adoption.
+
+## Root-key safe remediation orchestration schema + acceptance matrix (2026-03-02)
+
+**Task:** Implement root-key remediation orchestration data schema (migration + ORM + service/repository layer) with tenant isolation, idempotent retry safety, fail-closed behavior, and publish updated technical spec + acceptance matrix.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0035_root_key_remediation_orchestration.py** (new) — Added additive schema migration for root-key orchestration runs/events/dependencies/artifacts/external tasks with enums, constraints, and indexes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/enums.py** — Added root-key remediation enums for state/mode/status/dependency/artifact/external task lifecycles.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/root_key_remediation_run.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/root_key_remediation_event.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/root_key_dependency_fingerprint.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/root_key_remediation_artifact.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/root_key_external_task.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** — Registered new enums/models for Alembic/model discovery.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added explicit default-off root-key feature flags to preserve current behavior unless enabled.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_store.py** (new) — Added tenant-scoped, idempotent repository operations with optimistic-lock transitions and secret-like field redaction.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_migration.py** (new) — Migration upgrade/downgrade contract tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_models.py** (new) — Model constraint and tenant-scope checks.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_store.py** (new) — Positive/negative/auth/retry tests for repository/service semantics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Rewritten production-oriented spec with required state machine, actor model, zero-interaction eligibility, unknown dependency handling, disable/delete policy, rollback/SLA, closure protocol, policy checks, flags, and error taxonomy.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md** (new) — Added MVP/Safe Rollout/GA acceptance matrix with pass/fail criteria and evidence requirements.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** — Added acceptance-matrix cross-link.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added acceptance-matrix quick-navigation link.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased entry for root-key orchestration schema/docs/tests.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented additive persistence layer for root-key remediation orchestration with required entities and fields.
+- Enforced tenant-scoped repository access and fail-closed child-write checks (`run_id` must belong to tenant).
+- Added idempotency handling with conflict-safe retries and optimistic-lock state transitions.
+- Added metadata redaction for secret-like keys before persistence to reduce plaintext secret risk.
+- Added explicit root-key feature flags (`ROOT_KEY_SAFE_REMEDIATION_*`) in backend config with default `false`.
+- Added targeted migration/model/store tests covering positive, negative, auth, and retry paths.
+- Updated root-key spec and added acceptance matrix aligned with MVP/Safe Rollout/GA gates.
+
+**Tests run:**
+- `pytest -q tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py tests/test_action_groups_migration.py` (pass: `17 passed`)
+- `python3 -m py_compile alembic/versions/0035_root_key_remediation_orchestration.py backend/config.py backend/models/enums.py backend/models/__init__.py backend/models/root_key_remediation_run.py backend/models/root_key_remediation_event.py backend/models/root_key_dependency_fingerprint.py backend/models/root_key_remediation_artifact.py backend/models/root_key_external_task.py backend/services/root_key_remediation_store.py tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py` (pass)
+
+**Technical debt / gotchas:**
+- Runtime API/worker orchestration for root-key state-machine execution is still planned and remains feature-flag gated by default.
+- Current local pytest environment lacks async plugin support (`pytest-asyncio`), so new async store tests use `asyncio.run` wrappers.
+
+**Open questions / TODOs:**
+- Confirm final SLA values for region/account tiers beyond the current 15-minute closure target.
+- Wire runtime flag evaluation into root-key API/worker execution paths when orchestration endpoints/workers are implemented.
+
+## Root-key safe remediation technical spec and serial implementation checklist (2026-03-02)
+
+**Task:** Produce a concise technical spec for root-key safe remediation (`iam_root_access_key_absent`) with explicit state machine, transition rules, API contracts, data model, feature flags, and acceptance tests, plus a serial implementation checklist.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** (new) — Added planned technical spec with current-state problem framing, root-safe state machine, transition rules, additive API contract proposal, data model proposal, feature flags, and acceptance test matrix.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** (new) — Added serial task slicing checklist from schema/config through live rerun and docs handover gates.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** — Added cross-links for the new root-key spec and checklist.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added operator navigation links for the new root-key spec and checklist.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Captured current observed IAM.4 gaps from live evidence and tracker rows (non-root gate, root-disable unresolved closure, root-delete `InvalidClientTokenId` path).
+- Defined a planned root-safe lifecycle with explicit terminal states (`resolved`, `unresolved_after_verification`, `blocked_operator_error`, `cancelled`) to remove ambiguous closure outcomes.
+- Specified additive API and data model contracts behind feature flags so rollout can remain dark by default.
+- Added an implementation checklist with ordered slices and done criteria for engineering execution.
+- Kept scope documentation-only; no product behavior change in this task.
+
+**Technical debt / gotchas:**
+- The proposed API/data-model/state-machine contracts are design artifacts only and require implementation plus migration planning before use.
+
+**Open questions / TODOs:**
+- Confirm whether `iam_root_key_disable` should ever be closure-eligible for IAM.4 or always mitigation-only.
+- Confirm target verification timeout SLA for root-safe convergence (current live closure polling uses 15-minute windows).
+
+## Wave 7 Test 28 continuation: root-credential reruns and closure revalidation (2026-03-02)
+
+**Task:** Continue Test 28 after root credential setup; execute root-path remediation attempts, complete post-apply refresh polling, revalidate closure and policy-preservation outcomes from evidence only, and synchronize Wave 7 docs/tracker.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-28-closure-rootdelete-20260302T133128Z-*** (new) — Root-delete remediation run lifecycle, strategy selection, bundle access, run terminal state, preservation probes, and manual summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-28-closure-rootdelete-20260302T133128Z-*** (new) — Bundle extraction and Terraform init/plan/show/apply outputs for root-delete strategy attempt.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-28-closure-rootdelete-20260302T133128Z-postrefresh-*** (new) — Post-failure ingest/compute/reconcile triggers, terminal polling, final action/finding status, and preservation summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-07/test-28.md** — Rewritten with full Attempt A/B/C chronology and final blocked diagnosis.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated stamp, Wave 7/TOTAL last-run dates, Section 3 #15, Section 4 #22, Section 5 Test 28 row, Section 6 #8, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this continuation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-ran root-delete strategy flow with valid root identity (`arn:aws:iam::029037611564:root`) and confirmed remediation run succeeded (`run status=success`) with downloadable PR bundle (`200`, no-auth `401`).
+- Observed root-delete Terraform execution outcome:
+  - `terraform init/plan/show = 0/0/0`
+  - `terraform apply = 1` due generated local-exec failure:
+    - `InvalidClientTokenId` at `aws iam update-access-key`.
+- Executed post-failure refresh chain (`ingest/compute/reconcile` all `202`) and terminal polling; final target remained unresolved:
+  - action `c8201c18-5054-42ee-99c6-815ea082f2c9` -> `open`
+  - finding `fe935ab6-1117-4475-a5fb-edbdf8cc8a4b` -> `NEW`.
+- Captured post-run policy-preservation validation from observed AWS state:
+  - B3 inline policy present/retrievable,
+  - required managed policy `ReadOnlyAccess` attached,
+  - `required_safe_permissions_unchanged=true`.
+- Captured post-run diagnostic evidence:
+  - `test28-root` profile became invalid (`InvalidClientTokenId`),
+  - account summary still reports root access keys present (`RootKeys=1`).
+
+**Technical debt / gotchas:**
+- IAM.4 root-delete generated script is not reliably executable to completion with the same long-term root key context used for apply; execution can fail mid-flow with `InvalidClientTokenId` while root keys remain present.
+
+**Open questions / TODOs:**
+- Product-side remediation logic needs a safe root-key handling path that both executes reliably and closes IAM.4 (currently unresolved in Section 3 #15 / Section 4 #22 / Section 6 #8).
+
 ## Wave 7 Test 28 full remediation closure validation: adversarial IAM inline + managed policy preservation (2026-03-01)
 
 **Task:** Execute Wave 7 Test 28 end-to-end with the mandatory closure flow (adversarial IAM inline+managed state confirm -> open/new verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> terminal poll), then update test/tracker artifacts from observed evidence only.

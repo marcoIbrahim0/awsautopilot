@@ -4,6 +4,46 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Root-key executor workers for disable/rollback/delete with self-cutoff safety guard (2026-03-02)](task_log.md#root-key-executor-workers-for-disablerollbackdelete-with-self-cutoff-safety-guard-2026-03-02)
+  - Added `RootKeyRemediationExecutorWorker` for guarded disable/rollback/delete execution with strict fail-closed behavior and tenant-scoped isolation.
+  - Added self-cutoff protection, disable monitor-window signal collection, rollback alert generation, and strict delete gating checks.
+  - Added worker/API integration tests for self-cutoff regression, clean disable success, rollback on breakage, delete gate failures, auth-scope denial, and replay-safe retries.
+- [Root-key remediation lifecycle UI + timeline/dependency API contract (2026-03-02)](task_log.md#root-key-remediation-lifecycle-ui--timelinedependency-api-contract-2026-03-02)
+  - Expanded `GET /api/root-key-remediation-runs/{id}` to include tenant-scoped timeline events, dependency fingerprints, and artifact evidence summaries for lifecycle UX.
+  - Added feature-flagged frontend root-key lifecycle route/component with timeline, dependency table, unknown-dependency wizard, external-task completion flow, rollback guidance, completion summary, polling backoff, and role-based controls.
+  - Added backend/frontend test coverage for run-detail contract shape, timeline state rendering, wizard flow, and API error rendering; updated root-key spec/checklist/acceptance docs and changelog.
+- [Tenant-scoped root-key remediation orchestration APIs (2026-03-02)](task_log.md#tenant-scoped-root-key-remediation-orchestration-apis-2026-03-02)
+  - Implemented new `/api/root-key-remediation-runs` endpoint family (create/get/validate/disable/rollback/delete/external-task-complete) with explicit response schemas and consistent error envelope.
+  - Enforced auth + tenant boundary isolation, fail-closed transition handling, and `Idempotency-Key` support on all mutating endpoints.
+  - Added root-key API coverage for auth/no-auth/wrong-tenant, happy path, idempotent replay, invalid transition responses, and external-task completion retries.
+- [Root-key state machine create-run tenant-scope hardening (2026-03-02)](task_log.md#root-key-state-machine-create-run-tenant-scope-hardening-2026-03-02)
+  - Hardened `create_root_key_remediation_run_idempotent` to fail closed when `action_id`/`finding_id` are not owned by the tenant before insert.
+  - Expanded root-key auth/retry coverage with new create-run tenant-scope rejection and retryable create-run conflict tests.
+  - Updated root-key spec/checklist and changelog to reflect the additional Slice 2 hardening.
+- [Root-key usage discovery and dependency classification service (2026-03-02)](task_log.md#root-key-usage-discovery-and-dependency-classification-service-2026-03-02)
+  - Implemented CloudTrail lookback discovery with pagination and transient retry support for root-key usage.
+  - Added deterministic fingerprint normalization/sorting and managed-vs-unknown dependency classification with fail-closed auto-flow eligibility.
+  - Added tenant-scoped persistence plus focused tests for no-usage, all-managed, mixed managed+unknown, transient retry recovery, auth-scope fail-closed behavior, and replay hash stability.
+- [Root-key remediation run state machine service implementation (2026-03-02)](task_log.md#root-key-remediation-run-state-machine-service-implementation-2026-03-02)
+  - Implemented `backend/services/root_key_remediation_state_machine.py` with legal transition guards, idempotent transitions, fail-closed semantics, retry classification/backoff, and transition-level event/evidence emission.
+  - Added `tests/test_root_key_remediation_state_machine.py` covering transition matrix, illegal transitions, auth scope, retry idempotency, capped backoff, and cancellation hook behavior.
+  - Updated root-key spec/checklist docs and changelog to reflect Slice 2 implementation status.
+- [Root-key remediation schema quality-gate closure verification (2026-03-02)](task_log.md#root-key-remediation-schema-quality-gate-closure-verification-2026-03-02)
+  - Installed and ran `ruff` + `mypy` in the project venv for touched schema/model/service modules and confirmed pass.
+  - Re-ran `py_compile`, targeted pytest, and `pip check`; all checks passed for the root-key schema scope.
+- [Root-key safe remediation orchestration schema + acceptance matrix (2026-03-02)](task_log.md#root-key-safe-remediation-orchestration-schema--acceptance-matrix-2026-03-02)
+  - Implemented additive root-key orchestration persistence schema (`0035`) with five tenant-scoped entities, enums, constraints, and indexes.
+  - Added default-off `ROOT_KEY_SAFE_REMEDIATION_*` backend feature flags to keep existing behavior unchanged until rollout.
+  - Added ORM and repository/service layer with idempotent create semantics, optimistic-lock transitions, fail-closed tenant-run guards, and secret-like metadata redaction.
+  - Added migration/model/store tests plus new root-key spec and MVP/Safe Rollout/GA acceptance matrix docs with cross-links and changelog updates.
+- [Root-key safe remediation technical spec and serial implementation checklist (2026-03-02)](task_log.md#root-key-safe-remediation-technical-spec-and-serial-implementation-checklist-2026-03-02)
+  - Added a planned technical spec for `iam_root_access_key_absent` root-safe remediation covering state machine states, transition guards, API contract additions, data model, feature flags, and acceptance tests.
+  - Added a separate serial implementation checklist with slice-by-slice done criteria from migration/service/API through live Wave 7 revalidation.
+  - Linked both new docs from `docs/live-e2e-testing/README.md` and `docs/README.md` for discoverability.
+- [Wave 7 Test 28 continuation: root-credential reruns and closure revalidation (2026-03-02)](task_log.md#wave-7-test-28-continuation-root-credential-reruns-and-closure-revalidation-2026-03-02)
+  - Continued Test 28 with root-path execution attempts and fresh evidence capture for `iam_root_key_delete`.
+  - Revalidated closure after post-failure refresh: target IAM.4 action/finding remained `open/NEW`.
+  - Revalidated policy-preservation invariants remained intact (`required_safe_permissions_unchanged=true`) and synchronized tracker Section 3/4/5/6 + Section 9.
 - [Wave 7 Test 28 full remediation closure validation: adversarial IAM inline + managed policy preservation (2026-03-01)](task_log.md#wave-7-test-28-full-remediation-closure-validation-adversarial-iam-inline--managed-policy-preservation-2026-03-01)
   - Executed the full mandatory Test 28 closure chain (B3 inline+managed adversarial state confirm -> open/new verify -> PR run -> bundle download -> Terraform apply -> ingest/compute/reconcile refresh -> terminal poll).
   - Verified observed behavior: run/bundle path succeeded (`201`/`success`/`200`), Terraform apply failed at the explicit root-principal gate, refresh completed, and target IAM.4 action/finding remained `open/NEW`.

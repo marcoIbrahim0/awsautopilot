@@ -26,6 +26,12 @@ from backend.models.enums import (
     BaselineReportStatus,
     EntityType,
     EvidenceExportStatus,
+    RootKeyArtifactStatus,
+    RootKeyDependencyStatus,
+    RootKeyExternalTaskStatus,
+    RootKeyRemediationMode,
+    RootKeyRemediationRunStatus,
+    RootKeyRemediationState,
     RemediationRunExecutionPhase,
     RemediationRunExecutionStatus,
     RemediationRunMode,
@@ -36,6 +42,11 @@ from backend.models.evidence_export import EvidenceExport
 from backend.models.exception import Exception
 from backend.models.finding import Finding
 from backend.models.finding_shadow_state import FindingShadowState
+from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
+from backend.models.root_key_external_task import RootKeyExternalTask
+from backend.models.root_key_remediation_artifact import RootKeyRemediationArtifact
+from backend.models.root_key_remediation_event import RootKeyRemediationEvent
+from backend.models.root_key_remediation_run import RootKeyRemediationRun
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
 from backend.models.support_file import SupportFile
@@ -58,6 +69,7 @@ __all__ = [
     "ActionGroupRunResult",
     "ActionGroupRunStatus",
     "ActionGroupStatusBucket",
+    "ActionStatus",
     "AuditLog",
     "AwsAccountReconcileSettings",
     "AwsAccount",
@@ -75,6 +87,17 @@ __all__ = [
     "Exception",
     "Finding",
     "FindingShadowState",
+    "RootKeyArtifactStatus",
+    "RootKeyDependencyFingerprint",
+    "RootKeyDependencyStatus",
+    "RootKeyExternalTask",
+    "RootKeyExternalTaskStatus",
+    "RootKeyRemediationArtifact",
+    "RootKeyRemediationEvent",
+    "RootKeyRemediationMode",
+    "RootKeyRemediationRun",
+    "RootKeyRemediationRunStatus",
+    "RootKeyRemediationState",
     "RemediationRun",
     "RemediationRunExecution",
     "RemediationRunExecutionPhase",

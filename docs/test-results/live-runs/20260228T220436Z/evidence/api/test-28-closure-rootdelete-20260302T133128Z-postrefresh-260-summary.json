@@ -1,0 +1,9 @@
+{
+  "base_prefix": "test-28-closure-rootdelete-20260302T133128Z",
+  "prefix": "test-28-closure-rootdelete-20260302T133128Z-postrefresh",
+  "refresh_completed_or_failed": true,
+  "terminal_poll": 2,
+  "action_status_final": "open",
+  "finding_status_final": "NEW",
+  "closure_pass": false
+}

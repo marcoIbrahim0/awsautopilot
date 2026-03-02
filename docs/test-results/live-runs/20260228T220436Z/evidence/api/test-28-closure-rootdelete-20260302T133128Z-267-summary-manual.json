@@ -1,0 +1,15 @@
+{
+  "base_prefix": "test-28-closure-rootdelete-20260302T133128Z",
+  "strategy_id": "iam_root_key_delete",
+  "run_final_status": "success",
+  "terraform_init_status": 0,
+  "terraform_plan_status": 0,
+  "terraform_show_status": 0,
+  "terraform_apply_status": 1,
+  "apply_error": "InvalidClientTokenId during UpdateAccessKey in generated local-exec",
+  "post_refresh_prefix": "test-28-closure-rootdelete-20260302T133128Z-postrefresh",
+  "target_action_status_final": "open",
+  "target_finding_status_final": "NEW",
+  "closure_pass": false,
+  "required_safe_permissions_unchanged": true
+}

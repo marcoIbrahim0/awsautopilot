@@ -21,6 +21,7 @@ from backend.routers.internal import router as internal_router
 from backend.routers.meta import router as meta_router
 from backend.routers.reconciliation import router as reconciliation_router
 from backend.routers.remediation_runs import router as remediation_runs_router
+from backend.routers.root_key_remediation_runs import router as root_key_remediation_runs_router
 from backend.routers.saas_admin import router as saas_admin_router
 from backend.routers.support_files import router as support_files_router
 from backend.routers.users import router as users_router
@@ -63,6 +64,7 @@ app.include_router(internal_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
 app.include_router(reconciliation_router, prefix="/api")
 app.include_router(remediation_runs_router, prefix="/api")
+app.include_router(root_key_remediation_runs_router, prefix="/api")
 app.include_router(saas_admin_router, prefix="/api")
 app.include_router(support_files_router, prefix="/api")
 app.include_router(users_router, prefix="/api")

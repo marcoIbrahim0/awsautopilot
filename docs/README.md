@@ -9,6 +9,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Prod-readiness package](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/README.md)
 - [Reconciliation quality review](/Users/marcomaher/AWS%20Security%20Autopilot/docs/reconciliation_quality_review.md)
 - [Remediation safety model](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-safety-model.md)
+- [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
 - [Queue contract quarantine runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/queue-contract-quarantine-runbook.md)
 
 ### Operators / SaaS owners
@@ -17,6 +18,9 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Runbooks index](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/README.md)
 - [Live E2E testing docs](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md)
 - [Post-test logical-solutions backlog](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md)
+- [Root-key safe remediation technical spec (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
+- [Root-key safe remediation acceptance matrix (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md)
+- [Root-key safe remediation implementation checklist (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md)
 - [Control-plane event monitoring](/Users/marcomaher/AWS%20Security%20Autopilot/docs/control-plane-event-monitoring.md)
 
 ### Customers

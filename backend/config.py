@@ -230,6 +230,46 @@ class Settings(BaseSettings):
             "for resolved actions without changing stored action status values."
         ),
     )
+    ROOT_KEY_SAFE_REMEDIATION_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Master gate for root-key remediation orchestration persistence and runtime paths."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_API_ENABLED: bool = Field(
+        default=False,
+        description="Enables root-key orchestration API handlers.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_AUTO_ENABLED: bool = Field(
+        default=False,
+        description="Allows zero-interaction root-key orchestration mode when all safety checks pass.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED: bool = Field(
+        default=False,
+        description="Enables delete-window transitions after disable-window validation passes.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED: bool = Field(
+        default=False,
+        description="Enables automated ingest/compute/reconcile closure cycle for root-key runs.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS: bool = Field(
+        default=False,
+        description="Enforces strict runtime transition-guard checks in root-key orchestration.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED: bool = Field(
+        default=False,
+        description="Enables CloudTrail usage discovery and dependency classification for root-key runs.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Enables guarded executor-worker behavior for root-key disable/rollback/delete operations."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES: int = Field(
+        default=15,
+        description="CloudTrail lookback window for root-key disable monitor signals.",
+    )
     CONTROL_PLANE_SOURCE: str = Field(
         default="event_monitor_shadow",
         description="Source label for control-plane shadow pipeline outputs.",

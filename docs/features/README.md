@@ -22,6 +22,10 @@ For live implementation behavior, use:
   - [`docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md)
   - [`docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md)
 
+## Feature docs
+
+- [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
+
 ## Notes
 
 If a new feature inventory snapshot is generated later, place it in a dated archive folder and add a short index note rather than treating it as evergreen API contract documentation.

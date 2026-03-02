@@ -125,3 +125,63 @@ class BaselineReportStatus(str, Enum):
     running = "running"
     success = "success"
     failed = "failed"
+
+
+class RootKeyRemediationState(str, Enum):
+    """Lifecycle state for root-key remediation orchestration."""
+
+    discovery = "discovery"
+    migration = "migration"
+    validation = "validation"
+    disable_window = "disable_window"
+    delete_window = "delete_window"
+    completed = "completed"
+    needs_attention = "needs_attention"
+    rolled_back = "rolled_back"
+    failed = "failed"
+
+
+class RootKeyRemediationMode(str, Enum):
+    """Execution mode for root-key remediation orchestration."""
+
+    auto = "auto"
+    manual = "manual"
+
+
+class RootKeyRemediationRunStatus(str, Enum):
+    """Operational status for root-key remediation run rows."""
+
+    queued = "queued"
+    running = "running"
+    waiting_for_user = "waiting_for_user"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class RootKeyDependencyStatus(str, Enum):
+    """Dependency evaluation status for root-key remediation."""
+
+    pass_ = "pass"
+    warn = "warn"
+    unknown = "unknown"
+    fail = "fail"
+
+
+class RootKeyArtifactStatus(str, Enum):
+    """Artifact lifecycle status for root-key remediation."""
+
+    pending = "pending"
+    available = "available"
+    redacted = "redacted"
+    failed = "failed"
+
+
+class RootKeyExternalTaskStatus(str, Enum):
+    """User-attention task status for root-key remediation."""
+
+    open = "open"
+    in_progress = "in_progress"
+    completed = "completed"
+    cancelled = "cancelled"
+    failed = "failed"
