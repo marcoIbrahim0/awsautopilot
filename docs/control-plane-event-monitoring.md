@@ -116,6 +116,7 @@ Per-event telemetry is persisted in `control_plane_events`:
 
 Admin endpoint:
 - `GET /api/saas/control-plane/slo`
+- `GET /api/saas/control-plane/promotion-guardrail-health` (tenant or global rollout guardrail health)
 - `GET /api/saas/control-plane/shadow-summary` (shadow-state comparison helper)
 - `GET /api/saas/system-health` (queue lag + worker failure-rate rollup for operations)
 
@@ -153,8 +154,21 @@ Phase-2 defaults are configurable via:
 2. Compare shadow metrics/state against legacy findings for pilot controls.
 3. Flip selected controls to authoritative mode only after precision/freshness targets are met.
    - Set `CONTROL_PLANE_SHADOW_MODE=false`
-   - Set `CONTROL_PLANE_AUTHORITATIVE_CONTROLS=EC2.53,S3.1,...` (comma-separated canonical control IDs)
-   - When enabled, shadow state will auto-resolve and reopen canonical `security_hub` findings for promoted controls.
+   - Set `CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED=true`
+   - Set `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS=EC2.53,S3.1,...` (comma-separated canonical control IDs)
+   - Set `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE=95` (or your approved confidence floor)
+   - Keep `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED=false` unless explicitly approved
+   - Optionally set `CONTROL_PLANE_PROMOTION_PILOT_TENANTS=<tenant_uuid_1>,<tenant_uuid_2>` for tenant-scoped rollout
+   - When enabled, shadow state will auto-resolve and reopen canonical `security_hub` findings only for evaluations that pass all promotion guardrails.
+4. Keep medium/low controls fail-closed until Item 17 quality gates are explicitly satisfied:
+   - Keep `CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS=""` by default
+   - Set `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_COVERAGE` and `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_PRECISION`
+   - Publish measured values into `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE` and `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION`
+   - Keep `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_ROLLBACK_TRIGGERED=false`; set to `true` to immediately block all medium/low promotion on rollback
+
+PM/ops rollout policy, rollback triggers, and go/no-go checklist are documented in:
+- [Item 16 High-Confidence Live Status Rollout Policy](./prod-readiness/16-high-confidence-live-status-rollout.md)
+- [Item 17 Medium/Low-Confidence Control Coverage Plan](./prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 
 ## Deployment Safety (No Schema Drift)
 - API and worker now run a hard startup guard: DB revision must equal Alembic head or process exits.
@@ -297,7 +311,14 @@ After a successful PR-bundle `apply` execution:
   - shadow freshness lag < 6h
 - SaaS admin endpoints:
   - `GET /api/saas/control-plane/slo`
+  - `GET /api/saas/control-plane/promotion-guardrail-health`
   - `GET /api/saas/control-plane/unmatched-report`
+
+`GET /api/saas/control-plane/promotion-guardrail-health` response includes rollout decision metrics:
+- promotion attempts/successes/blocked counts (blocked split by stable reason codes)
+- shadow-vs-canonical mismatch rate for configured high-confidence controls
+- soft-resolved frequency for configured high-confidence controls
+- stale shadow freshness indicators (threshold, stale count/rate, oldest/latest evaluation times)
 
 ## Standard Verification SQL
 ```sql

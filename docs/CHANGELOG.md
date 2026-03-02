@@ -5,6 +5,32 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
 ## [Unreleased]
 
 ### Added
+- **Communication + governance layer (feature-flagged, default-off)**
+  - Additive migration `0037_communication_governance_layer`:
+    - new `governance_notifications` table with tenant-scoped idempotency keys and delivery state,
+    - new exception-governance fields (`owner_user_id`, approval metadata, reminder/revalidation schedule fields),
+    - new tenant governance settings (`governance_notifications_enabled`, `governance_webhook_url`).
+  - New governance service modules:
+    - `backend/services/governance_templates.py` (stage templates for pre-change, in-progress, action-required, completion),
+    - `backend/services/exception_governance.py` (lifecycle + reminder/revalidation scheduling),
+    - `backend/services/governance_notifications.py` (idempotent channel dispatch with fail-closed behavior).
+  - New governance API router `backend/routers/governance.py`:
+    - `POST /api/governance/remediation-runs/{run_id}/notifications`
+    - `PATCH /api/governance/exceptions/{exception_id}`
+    - `POST /api/governance/exceptions/{exception_id}/revalidate`
+    - `POST /api/governance/exceptions/reminders/dispatch`
+    - `GET /api/governance/notifications`
+    - `GET /api/governance/dashboard`
+  - User governance settings endpoints:
+    - `GET /api/users/me/governance-settings`
+    - `PATCH /api/users/me/governance-settings`
+  - Extended exceptions API model fields for owner/governance metadata and lifecycle visibility.
+  - New targeted tests:
+    - `tests/test_governance_templates.py`
+    - `tests/test_exception_governance.py`
+    - `tests/test_governance_api.py`
+    - `tests/test_governance_settings_api.py`
+
 - **Root-key remediation orchestration persistence foundation**
   - Additive Alembic migration `0035_root_key_remediation_orchestration` introducing:
     - `root_key_remediation_runs`
@@ -43,12 +69,46 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
     - `correlation_id` and `contract_version` returned on success and error payloads.
     - Consistent fail-closed error envelope.
     - `GET /api/root-key-remediation-runs/{id}` now includes timeline-ready details (`events`, `dependencies`, `artifacts`) plus explicit counts (`event_count`, `dependency_count`, `artifact_count`).
+    - Create-run auto-forward now applies discovery/classification gating (`ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED`):
+      - safe managed discovery routes to `migration`,
+      - unknown/partial/error discovery fails closed to `needs_attention`.
+    - `/api/root-key-remediation-runs/{id}/delete` now routes through executor-worker orchestration whenever either executor mode or closure mode is enabled, preventing closure-enabled direct-completion bypass.
+  - Added root-key rollout and operator controls:
+    - Deterministic canary tenant/account gating by percent on run creation with allowlist bypass support.
+    - Global root-key kill switch (`ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED`) fail-closing all mutating root-key endpoints.
+    - Per-run pause/resume endpoints (`POST /api/root-key-remediation-runs/{id}/pause`, `POST /api/root-key-remediation-runs/{id}/resume`) with paused-run transition blocking.
+    - Sanitized operator override reason capture via `X-Operator-Override-Reason` and immutable `operator_override` event logging.
+    - Tenant-scoped ops metrics endpoint (`GET /api/root-key-remediation-runs/ops/metrics`) exposing:
+      - auto success rate,
+      - rollback rate,
+      - needs_attention rate,
+      - closure pass rate,
+      - mean time to detect unknown dependency.
+  - Added root-key rollout controls helper service (`backend/services/root_key_rollout_controls.py`) and root-key ops metrics service (`backend/services/root_key_remediation_ops_metrics.py`).
+  - Added focused root-key rollout/ops tests:
+    - `tests/test_root_key_rollout_controls.py`
+    - extended coverage in `tests/test_root_key_remediation_runs_api.py` and `tests/test_root_key_remediation_state_machine.py` for canary gating, kill-switch behavior, and pause/resume correctness.
   - New guarded executor-worker service `backend/services/root_key_remediation_executor_worker.py` for root-key `disable` / `rollback` / `delete` operations:
     - self-cutoff safety guard with fail-closed `needs_attention` fallback when separate observer context cannot be guaranteed,
     - disable monitor-window evidence capture (health + usage signals),
     - breakage-triggered rollback with rollback alert task generation,
     - strict delete gates (`validation passed`, `disable window clean`, `delete flag enabled`, `no unknown active dependencies`).
   - Root-key disable/rollback/delete API paths can route through the new executor-worker behavior when enabled.
+  - New closure-cycle orchestration service `backend/services/root_key_remediation_closure.py`:
+    - tenant-scoped, fail-closed `ingest -> compute -> reconcile -> polling` execution model,
+    - policy-preservation fail-closed handling (`needs_attention`) and timeout terminal handling (`failed`),
+    - closure summary artifact persistence with redacted metadata and idempotent keys.
+  - Runtime closure wiring improvements for live root-key delete path:
+    - worker delete flow now persists delete-window evidence before terminal transition,
+    - closure-enabled delete flow executes closure service dispatch + poll cycle instead of direct completion,
+    - closure poll checks enforce disable/delete evidence presence plus `required_safe_permissions_unchanged=true` before completion.
+  - Added root-key closure tuning flags in `backend/config.py`:
+    - `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_MAX_POLLS` (default `30`)
+    - `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_POLL_INTERVAL_SECONDS` (default `5.0`)
+  - Added deterministic integration/e2e matrix coverage for full root-key plan paths:
+    - `tests/test_root_key_remediation_plan_e2e.py`
+    - fixtures: `tests/fixtures/root_key_safe_remediation_plan_scenarios.json`
+    - expected run-summary artifact: `tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json`
   - Added frontend root-key remediation lifecycle UX (default-off via `NEXT_PUBLIC_ROOT_KEY_REMEDIATION_UI_ENABLED`):
     - New route `/root-key-remediation-runs/{id}`.
     - Timeline UI with state/timestamp/evidence links.
@@ -78,6 +138,26 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
   - New root-key remediation docs:
     - `docs/live-e2e-testing/root-key-safe-remediation-spec.md`
     - `docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md`
+  - Added tenant-scoped secret migration connectors feature (default-off behind `SECRET_MIGRATION_CONNECTORS_ENABLED`):
+    - Additive migration `0036_secret_migration_connectors` with `secret_migration_runs` and `secret_migration_transactions`.
+    - New connector service + orchestration:
+      - `backend/services/secret_migration_connectors.py`
+      - `backend/services/secret_migration_service.py`
+    - New API router `backend/routers/secret_migrations.py`:
+      - `POST /api/secret-migrations/runs`
+      - `GET /api/secret-migrations/runs/{run_id}`
+      - `POST /api/secret-migrations/runs/{run_id}/retry`
+    - Supported connectors:
+      - source: `aws_secrets_manager`, `aws_ssm_parameter_store`
+      - target: `aws_secrets_manager`, `aws_ssm_parameter_store`, approved CI backends (`github_actions`).
+    - Includes dry-run mode, per-target transaction logs, partial-failure + retry path, and rollback support with fail-closed behavior.
+    - Added focused test coverage:
+      - `tests/test_secret_migration_connectors.py`
+      - `tests/test_secret_migration_service.py`
+      - `tests/test_secret_migrations_api.py`
+      - `tests/test_secret_migration_migration.py`
+    - Added feature doc:
+      - `docs/features/secret-migration-connectors.md`
 
 ### Planned
 - Step 10: Evidence Export v1 (CSV/JSON zip to S3)

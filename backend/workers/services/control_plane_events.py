@@ -281,6 +281,8 @@ def evaluate_security_group_control(
                     "resource_id": group_id,
                     "region": region,
                     "control_id": "EC2.53",
+                    "event_name": event_name,
+                    "enrichment_branch": "access_denied",
                 },
             )
         if _is_not_found_error(exc):
@@ -294,11 +296,50 @@ def evaluate_security_group_control(
                 status=SHADOW_STATUS_RESOLVED,
                 status_reason="resource_not_found_after_change",
                 state_confidence=90,
-                evidence_ref={"event_name": event_name, "resource_state": "not_found"},
+                evidence_ref={
+                    "event_name": event_name,
+                    "resource_state": "not_found",
+                    "enrichment_branch": "resource_not_found",
+                },
             )
-        raise
+        return ControlEvaluation(
+            control_id="EC2.53",
+            resource_id=group_id,
+            resource_type="AwsEc2SecurityGroup",
+            severity_label="HIGH",
+            title="Security group allows public admin access",
+            description="Could not complete security group enrichment due to API error; mark as soft-resolved until reconciliation.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="api_error_enrichment_ec2_describe_security_groups",
+            state_confidence=30,
+            evidence_ref={
+                "event_name": event_name,
+                "resource_id": group_id,
+                "region": region,
+                "error_code": _extract_error_code(exc),
+                "enrichment_branch": "api_error",
+            },
+        )
 
-    groups = response.get("SecurityGroups") or []
+    groups = response.get("SecurityGroups") if isinstance(response, dict) else None
+    if not isinstance(groups, list):
+        return ControlEvaluation(
+            control_id="EC2.53",
+            resource_id=group_id,
+            resource_type="AwsEc2SecurityGroup",
+            severity_label="HIGH",
+            title="Security group allows public admin access",
+            description="Security group enrichment returned partial data; mark as soft-resolved until reconciliation.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="partial_data_enrichment_ec2_describe_security_groups",
+            state_confidence=50,
+            evidence_ref={
+                "event_name": event_name,
+                "resource_state": "partial_data",
+                "security_groups_shape": type(groups).__name__,
+                "enrichment_branch": "partial_data",
+            },
+        )
     if not groups:
         return ControlEvaluation(
             control_id="EC2.53",
@@ -310,7 +351,30 @@ def evaluate_security_group_control(
             status=SHADOW_STATUS_SOFT_RESOLVED,
             status_reason="empty_enrichment_result",
             state_confidence=50,
-            evidence_ref={"event_name": event_name, "resource_state": "empty"},
+            evidence_ref={
+                "event_name": event_name,
+                "resource_state": "empty",
+                "enrichment_branch": "partial_data",
+            },
+        )
+
+    if not isinstance(groups[0], dict):
+        return ControlEvaluation(
+            control_id="EC2.53",
+            resource_id=group_id,
+            resource_type="AwsEc2SecurityGroup",
+            severity_label="HIGH",
+            title="Security group allows public admin access",
+            description="Security group enrichment returned an invalid group payload; mark as soft-resolved until reconciliation.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="partial_data_enrichment_ec2_group_payload_invalid",
+            state_confidence=50,
+            evidence_ref={
+                "event_name": event_name,
+                "resource_state": "partial_data",
+                "group_payload_type": type(groups[0]).__name__,
+                "enrichment_branch": "partial_data",
+            },
         )
 
     non_compliant, violations = evaluate_security_group_public_admin_ports(groups[0])
@@ -325,7 +389,11 @@ def evaluate_security_group_control(
             status=SHADOW_STATUS_OPEN,
             status_reason="enrichment_confirmed_non_compliant",
             state_confidence=95,
-            evidence_ref={"event_name": event_name, "violations": violations},
+            evidence_ref={
+                "event_name": event_name,
+                "violations": violations,
+                "enrichment_branch": "normal_non_compliant",
+            },
         )
 
     return ControlEvaluation(
@@ -338,34 +406,50 @@ def evaluate_security_group_control(
         status=SHADOW_STATUS_RESOLVED,
         status_reason="enrichment_confirmed_compliant",
         state_confidence=95,
-        evidence_ref={"event_name": event_name, "violations": []},
+        evidence_ref={
+            "event_name": event_name,
+            "violations": [],
+            "enrichment_branch": "normal_compliant",
+        },
     )
 
 
-def _get_bucket_policy_is_public(s3_client: Any, bucket_name: str) -> bool:
+def _get_bucket_policy_is_public(s3_client: Any, bucket_name: str) -> tuple[bool, str, str | None]:
     try:
         resp = s3_client.get_bucket_policy_status(Bucket=bucket_name)
-        return bool((resp.get("PolicyStatus") or {}).get("IsPublic"))
+        policy_status = (resp.get("PolicyStatus") if isinstance(resp, dict) else None)
+        if not isinstance(policy_status, dict):
+            return (False, "partial_data", None)
+        return (bool(policy_status.get("IsPublic")), "ok", None)
     except ClientError as exc:
         code = _extract_error_code(exc)
         if _is_access_denied_error(exc):
-            raise
-        if code in {"NoSuchBucketPolicy", "NoSuchBucket"}:
-            return False
-        raise
+            return (False, "access_denied", code)
+        if code == "NoSuchBucketPolicy":
+            return (False, "missing_bucket_policy", code)
+        if code == "NoSuchBucket":
+            return (False, "resource_not_found", code)
+        return (False, "api_error", code)
 
 
-def _get_bucket_public_access_block(s3_client: Any, bucket_name: str) -> dict[str, Any]:
+def _get_bucket_public_access_block(s3_client: Any, bucket_name: str) -> tuple[dict[str, Any], str, str | None]:
     try:
         resp = s3_client.get_public_access_block(Bucket=bucket_name)
-        return resp.get("PublicAccessBlockConfiguration") or {}
+        config = resp.get("PublicAccessBlockConfiguration") if isinstance(resp, dict) else None
+        if config is None:
+            return ({}, "missing_configuration", None)
+        if not isinstance(config, dict):
+            return ({}, "partial_data", None)
+        return (config, "ok", None)
     except ClientError as exc:
         code = _extract_error_code(exc)
         if _is_access_denied_error(exc):
-            raise
-        if code in {"NoSuchPublicAccessBlockConfiguration", "NoSuchBucket"}:
-            return {}
-        raise
+            return ({}, "access_denied", code)
+        if code == "NoSuchPublicAccessBlockConfiguration":
+            return ({}, "missing_configuration", code)
+        if code == "NoSuchBucket":
+            return ({}, "resource_not_found", code)
+        return ({}, "api_error", code)
 
 
 def evaluate_s3_control(
@@ -375,37 +459,109 @@ def evaluate_s3_control(
     event_name: str,
 ) -> ControlEvaluation:
     s3 = session_boto.client("s3", region_name=region)
-    try:
-        policy_public = _get_bucket_policy_is_public(s3, bucket_name)
-        pab = _get_bucket_public_access_block(s3, bucket_name)
-    except ClientError as exc:
-        if _is_access_denied_error(exc):
-            resource_id = f"arn:aws:s3:::{bucket_name}"
-            return ControlEvaluation(
-                control_id="S3.2",
-                resource_id=resource_id,
-                resource_type="AwsS3Bucket",
-                severity_label="HIGH",
-                title="S3 bucket public access block is incomplete or bucket policy is public",
-                description="Could not read bucket posture due to missing ReadRole permissions; mark as soft-resolved until permissions are fixed and reconciliation runs.",
-                status=SHADOW_STATUS_SOFT_RESOLVED,
-                status_reason="access_denied_enrichment_s3_get_bucket_state",
-                state_confidence=30,
-                evidence_ref={
-                    "error_code": _extract_error_code(exc),
-                    "missing_permissions": [
-                        "s3:GetBucketPublicAccessBlock",
-                        "s3:GetBucketPolicyStatus",
-                    ],
-                    "bucket": bucket_name,
-                    "region": region,
-                    "control_id": "S3.2",
-                    "event_name": event_name,
-                },
-            )
-        raise
-    non_compliant, evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
+    policy_public, policy_state, policy_error_code = _get_bucket_policy_is_public(s3, bucket_name)
+    pab, pab_state, pab_error_code = _get_bucket_public_access_block(s3, bucket_name)
     resource_id = f"arn:aws:s3:::{bucket_name}"
+
+    if "access_denied" in {policy_state, pab_state}:
+        return ControlEvaluation(
+            control_id="S3.2",
+            resource_id=resource_id,
+            resource_type="AwsS3Bucket",
+            severity_label="HIGH",
+            title="S3 bucket public access block is incomplete or bucket policy is public",
+            description="Could not read bucket posture due to missing ReadRole permissions; mark as soft-resolved until permissions are fixed and reconciliation runs.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="access_denied_enrichment_s3_get_bucket_state",
+            state_confidence=30,
+            evidence_ref={
+                "event_name": event_name,
+                "bucket": bucket_name,
+                "region": region,
+                "control_id": "S3.2",
+                "policy_probe_state": policy_state,
+                "policy_error_code": policy_error_code,
+                "pab_probe_state": pab_state,
+                "pab_error_code": pab_error_code,
+                "missing_permissions": [
+                    "s3:GetBucketPublicAccessBlock",
+                    "s3:GetBucketPolicyStatus",
+                ],
+                "enrichment_branch": "access_denied",
+            },
+        )
+
+    if "api_error" in {policy_state, pab_state}:
+        return ControlEvaluation(
+            control_id="S3.2",
+            resource_id=resource_id,
+            resource_type="AwsS3Bucket",
+            severity_label="HIGH",
+            title="S3 bucket public access block is incomplete or bucket policy is public",
+            description="Could not complete bucket posture enrichment due to API errors; mark as soft-resolved until reconciliation.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="api_error_enrichment_s3_get_bucket_state",
+            state_confidence=30,
+            evidence_ref={
+                "event_name": event_name,
+                "bucket": bucket_name,
+                "region": region,
+                "policy_probe_state": policy_state,
+                "policy_error_code": policy_error_code,
+                "pab_probe_state": pab_state,
+                "pab_error_code": pab_error_code,
+                "enrichment_branch": "api_error",
+            },
+        )
+
+    if "partial_data" in {policy_state, pab_state}:
+        return ControlEvaluation(
+            control_id="S3.2",
+            resource_id=resource_id,
+            resource_type="AwsS3Bucket",
+            severity_label="HIGH",
+            title="S3 bucket public access block is incomplete or bucket policy is public",
+            description="Bucket posture enrichment returned partial data; mark as soft-resolved until reconciliation confirms state.",
+            status=SHADOW_STATUS_SOFT_RESOLVED,
+            status_reason="partial_data_enrichment_s3_get_bucket_state",
+            state_confidence=50,
+            evidence_ref={
+                "event_name": event_name,
+                "bucket": bucket_name,
+                "region": region,
+                "policy_probe_state": policy_state,
+                "policy_error_code": policy_error_code,
+                "pab_probe_state": pab_state,
+                "pab_error_code": pab_error_code,
+                "enrichment_branch": "partial_data",
+            },
+        )
+
+    if "resource_not_found" in {policy_state, pab_state}:
+        return ControlEvaluation(
+            control_id="S3.2",
+            resource_id=resource_id,
+            resource_type="AwsS3Bucket",
+            severity_label="HIGH",
+            title="S3 bucket public access block is incomplete or bucket policy is public",
+            description="Bucket is absent; treat control as resolved for this fingerprint.",
+            status=SHADOW_STATUS_RESOLVED,
+            status_reason="resource_not_found_after_change",
+            state_confidence=90,
+            evidence_ref={
+                "event_name": event_name,
+                "bucket": bucket_name,
+                "region": region,
+                "policy_probe_state": policy_state,
+                "policy_error_code": policy_error_code,
+                "pab_probe_state": pab_state,
+                "pab_error_code": pab_error_code,
+                "resource_state": "not_found",
+                "enrichment_branch": "resource_not_found",
+            },
+        )
+
+    non_compliant, evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
 
     if non_compliant:
         return ControlEvaluation(
@@ -418,7 +574,15 @@ def evaluate_s3_control(
             status=SHADOW_STATUS_OPEN,
             status_reason="enrichment_confirmed_non_compliant",
             state_confidence=95,
-            evidence_ref={"event_name": event_name, **evidence},
+            evidence_ref={
+                "event_name": event_name,
+                "policy_probe_state": policy_state,
+                "policy_error_code": policy_error_code,
+                "pab_probe_state": pab_state,
+                "pab_error_code": pab_error_code,
+                "enrichment_branch": "normal_non_compliant",
+                **evidence,
+            },
         )
 
     return ControlEvaluation(
@@ -431,7 +595,15 @@ def evaluate_s3_control(
         status=SHADOW_STATUS_RESOLVED,
         status_reason="enrichment_confirmed_compliant",
         state_confidence=95,
-        evidence_ref={"event_name": event_name, **evidence},
+        evidence_ref={
+            "event_name": event_name,
+            "policy_probe_state": policy_state,
+            "policy_error_code": policy_error_code,
+            "pab_probe_state": pab_state,
+            "pab_error_code": pab_error_code,
+            "enrichment_branch": "normal_compliant",
+            **evidence,
+        },
     )
 
 

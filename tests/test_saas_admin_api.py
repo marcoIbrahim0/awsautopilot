@@ -353,3 +353,142 @@ def test_control_plane_reconcile_global_enqueues_shards(client: TestClient) -> N
     assert body["status"] == "ok"
     assert body["enqueued"] == 4
     assert mock_sqs.send_message.call_count == 4
+
+
+def test_control_plane_promotion_guardrail_health_requires_auth_401(client: TestClient) -> None:
+    response = client.get("/api/saas/control-plane/promotion-guardrail-health")
+    assert response.status_code == 401
+
+
+def test_control_plane_promotion_guardrail_health_returns_shape_and_metrics(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+    candidate_rows = [
+        (tenant_id, "EC2.53", "RESOLVED", 99, now, "RESOLVED"),      # success
+        (tenant_id, "EC2.53", "OPEN", 99, now, "RESOLVED"),          # mismatch
+        (tenant_id, "EC2.53", "SOFT_RESOLVED", 99, now, "RESOLVED"), # blocked: soft-resolved
+        (tenant_id, "S3.1", "OPEN", 99, now, "OPEN"),                # blocked: not high-confidence
+        (tenant_id, "EC2.53", "OPEN", 80, now, "OPEN"),              # blocked: low confidence
+    ]
+
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _result(all_rows=candidate_rows),
+            _result(scalar=10),  # total shadow rows
+            _result(scalar=2),   # stale shadow rows
+            _result(scalar=now),  # latest evaluated
+            _result(scalar=now),  # oldest evaluated
+        ]
+    )
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_require_saas_admin():
+        return SimpleNamespace(id=uuid.uuid4(), email="admin@example.com")
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[require_saas_admin] = mock_require_saas_admin
+    with patch("backend.routers.saas_admin.settings") as mock_settings:
+        mock_settings.CONTROL_PLANE_SOURCE = "event_monitor_shadow"
+        mock_settings.CONTROL_PLANE_SHADOW_MODE = False
+        mock_settings.CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED = True
+        mock_settings.control_plane_high_confidence_controls_set = {"EC2.53"}
+        mock_settings.control_plane_promotion_min_confidence = 95
+        mock_settings.CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED = False
+        mock_settings.control_plane_promotion_pilot_tenants_set = set()
+        mock_settings.CONTROL_PLANE_PREREQ_MAX_STALENESS_MINUTES = 30
+        try:
+            response = client.get("/api/saas/control-plane/promotion-guardrail-health?hours=24")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(require_saas_admin, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body.keys()) == {
+        "generated_at",
+        "scope",
+        "tenant_id",
+        "window_hours",
+        "guardrails",
+        "promotion",
+        "mismatch",
+        "soft_resolved",
+        "shadow_freshness",
+    }
+    assert body["scope"] == "global"
+    assert body["tenant_id"] is None
+    assert body["window_hours"] == 24
+    assert body["guardrails"]["high_confidence_controls_count"] == 1
+
+    assert body["promotion"]["attempts"] == 5
+    assert body["promotion"]["successes"] == 1
+    assert body["promotion"]["blocked"] == 3
+    assert body["promotion"]["success_rate"] == 0.2
+    assert body["promotion"]["blocked_rate"] == 0.6
+    assert body["promotion"]["blocked_by_reason"]["soft_resolved_not_allowed"] == 1
+    assert body["promotion"]["blocked_by_reason"]["control_not_high_confidence"] == 1
+    assert body["promotion"]["blocked_by_reason"]["confidence_below_threshold"] == 1
+
+    assert body["mismatch"]["comparable_rows"] == 4
+    assert body["mismatch"]["mismatches"] == 1
+    assert body["mismatch"]["mismatch_rate"] == 0.25
+
+    assert body["soft_resolved"]["promoted_controls_rows"] == 4
+    assert body["soft_resolved"]["soft_resolved_rows"] == 1
+    assert body["soft_resolved"]["soft_resolved_rate"] == 0.25
+
+    assert body["shadow_freshness"]["stale_threshold_minutes"] == 30
+    assert body["shadow_freshness"]["total_rows"] == 10
+    assert body["shadow_freshness"]["stale_rows"] == 2
+    assert body["shadow_freshness"]["stale_rate"] == 0.2
+    assert body["shadow_freshness"]["latest_evaluated_at"] is not None
+    assert body["shadow_freshness"]["oldest_evaluated_at"] is not None
+
+
+def test_control_plane_promotion_guardrail_health_supports_tenant_scope(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _result(scalar_one_or_none=SimpleNamespace(id=tenant_id)),  # tenant exists
+            _result(all_rows=[]),  # candidate rows
+            _result(scalar=0),  # total shadow rows
+            _result(scalar=0),  # stale rows
+            _result(scalar=now),  # latest evaluated
+            _result(scalar=now),  # oldest evaluated
+        ]
+    )
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_require_saas_admin():
+        return SimpleNamespace(id=uuid.uuid4(), email="admin@example.com")
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[require_saas_admin] = mock_require_saas_admin
+    with patch("backend.routers.saas_admin.settings") as mock_settings:
+        mock_settings.CONTROL_PLANE_SOURCE = "event_monitor_shadow"
+        mock_settings.CONTROL_PLANE_SHADOW_MODE = False
+        mock_settings.CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED = True
+        mock_settings.control_plane_high_confidence_controls_set = {"EC2.53"}
+        mock_settings.control_plane_promotion_min_confidence = 95
+        mock_settings.CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED = False
+        mock_settings.control_plane_promotion_pilot_tenants_set = set()
+        mock_settings.CONTROL_PLANE_PREREQ_MAX_STALENESS_MINUTES = 30
+        try:
+            response = client.get(
+                f"/api/saas/control-plane/promotion-guardrail-health?tenant_id={tenant_id}"
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(require_saas_admin, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["scope"] == "tenant"
+    assert body["tenant_id"] == str(tenant_id)

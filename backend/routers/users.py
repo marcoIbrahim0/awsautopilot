@@ -32,6 +32,7 @@ from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.models.user_invite import UserInvite
 from backend.services.email import email_service
+from backend.services.governance_notifications import is_valid_governance_webhook_url
 from backend.services.slack_digest import is_valid_slack_webhook_url
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,31 @@ class SlackSettingsUpdateRequest(BaseModel):
     slack_digest_enabled: bool | None = Field(
         None,
         description="Enable or disable posting weekly digest to Slack.",
+    )
+
+
+class GovernanceSettingsResponse(BaseModel):
+    """Response for GET governance settings. Webhook URL is never returned."""
+    governance_notifications_enabled: bool = Field(
+        ...,
+        description="True when governance communication dispatch is enabled for this tenant.",
+    )
+    governance_webhook_configured: bool = Field(
+        ...,
+        description="True when a governance webhook URL is configured.",
+    )
+
+
+class GovernanceSettingsUpdateRequest(BaseModel):
+    """Request body for PATCH governance settings."""
+    governance_notifications_enabled: bool | None = Field(
+        None,
+        description="Enable or disable governance communication dispatch.",
+    )
+    governance_webhook_url: str | None = Field(
+        None,
+        max_length=2000,
+        description="Optional HTTPS webhook endpoint; set to empty string to clear.",
     )
 
 
@@ -602,6 +628,70 @@ async def update_slack_settings(
     return SlackSettingsResponse(
         slack_webhook_configured=bool(webhook.strip()),
         slack_digest_enabled=tenant.slack_digest_enabled,
+    )
+
+
+@router.get("/me/governance-settings", response_model=GovernanceSettingsResponse)
+async def get_governance_settings(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> GovernanceSettingsResponse:
+    """
+    Get tenant governance communication settings.
+
+    Requires authentication. Webhook URL is never returned.
+    """
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+
+    webhook = (getattr(tenant, "governance_webhook_url", None) or "").strip()
+    return GovernanceSettingsResponse(
+        governance_notifications_enabled=bool(getattr(tenant, "governance_notifications_enabled", False)),
+        governance_webhook_configured=bool(webhook),
+    )
+
+
+@router.patch("/me/governance-settings", response_model=GovernanceSettingsResponse)
+async def update_governance_settings(
+    request: GovernanceSettingsUpdateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> GovernanceSettingsResponse:
+    """
+    Update tenant governance communication settings.
+
+    Requires authentication and admin role. webhook URL is set/cleared only.
+    """
+    if getattr(current_user.role, "value", current_user.role) != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can update governance settings",
+        )
+
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+
+    if request.governance_notifications_enabled is not None:
+        tenant.governance_notifications_enabled = request.governance_notifications_enabled
+    if request.governance_webhook_url is not None:
+        webhook_url = request.governance_webhook_url.strip()
+        if webhook_url and not is_valid_governance_webhook_url(webhook_url):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid governance webhook URL. Expected an HTTPS URL with no query/fragment.",
+            )
+        tenant.governance_webhook_url = webhook_url or None
+
+    await db.commit()
+    await db.refresh(tenant)
+    webhook = (getattr(tenant, "governance_webhook_url", None) or "").strip()
+    return GovernanceSettingsResponse(
+        governance_notifications_enabled=bool(getattr(tenant, "governance_notifications_enabled", False)),
+        governance_webhook_configured=bool(webhook),
     )
 
 

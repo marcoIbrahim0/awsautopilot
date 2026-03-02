@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/aws/accounts/029037611564/ingest-sync
+Authorization: Bearer <redacted>
+Body: {"regions":["eu-north-1"]}

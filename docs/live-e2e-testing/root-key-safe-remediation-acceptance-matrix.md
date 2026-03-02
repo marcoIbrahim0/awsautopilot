@@ -4,7 +4,7 @@
 >
 > Source spec: [root-key-safe-remediation-spec.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
 >
-> ⚠️ Status: Planned — rollout gates define go/no-go criteria; full runtime orchestration is not yet implemented.
+> ⚠️ Status: In progress — rollout gates define go/no-go criteria; deterministic integration/e2e coverage and runtime closure wiring for delete orchestration are implemented behind feature flags.
 
 ## 1) Gate Model
 
@@ -45,9 +45,22 @@
 | `RK-FE-001` | Safe Rollout | Positive | Root-key lifecycle UI timeline render | Run timeline shows transition states, timestamps, and evidence links | Frontend component test output + screenshot |
 | `RK-FE-002` | Safe Rollout | Negative | Unknown dependency wizard fail-closed behavior | Wizard blocks continuation without explicit acknowledgement and supports rollback path | Frontend component test output |
 | `RK-FE-003` | Safe Rollout | Auth | Role-based UI action controls | Non-admin users cannot trigger mutating transitions/task completion | Frontend component test output + UI capture |
+| `RK-E2E-001` | Safe Rollout | Integration/E2E | Managed-only zero-interaction path | Validation -> disable -> delete reaches `completed` with no user task gate | `tests/test_root_key_remediation_plan_e2e.py` matrix output + deterministic fixture row |
+| `RK-E2E-002` | Safe Rollout | Integration/E2E | Unknown dependency path | Delete path fails closed to `needs_attention` | Matrix output + run summary artifact row |
+| `RK-E2E-003` | Safe Rollout | Integration/E2E | User completes external task then continue | External task completion + validation -> disable -> delete reaches `completed` | Matrix output + run summary artifact row |
+| `RK-E2E-004` | Safe Rollout | Integration/E2E | Post-disable breakage signal | Automatic rollback + rollback alert task created | Matrix output + run summary artifact row |
+| `RK-E2E-005` | Safe Rollout | Integration/E2E | Closure cycle (`ingest`/`compute`/`reconcile` + polling) | Poll converges and run transitions to `completed` | Matrix output + closure summary artifact row |
+| `RK-E2E-006` | Safe Rollout | Integration/E2E | Policy-preservation assertion failure | Closure fails closed to `needs_attention` | Matrix output + closure summary artifact row |
+| `RK-E2E-007` | Safe Rollout | Integration/E2E | Self-cutoff prevention | Disable path blocks unsafe credential overlap and avoids key mutation | Matrix output + run summary artifact row |
 | `RK-GA-001` | GA | Positive | Live production canary across multiple tenants | No cross-tenant leak; no duplicate side effects | Canary report + audit logs |
 | `RK-GA-002` | GA | Positive | SLA conformance on closure cycles | >= 99% meet configured closure SLA | Metrics report + dashboards |
 | `RK-GA-003` | GA | Negative | Operator escalation path | Manual task flow closes or fails with explicit reason | External task logs + runbook evidence |
+
+## 2.1) Deterministic Matrix Artifacts
+
+- Scenario fixture: [root_key_safe_remediation_plan_scenarios.json](/Users/marcomaher/AWS%20Security%20Autopilot/tests/fixtures/root_key_safe_remediation_plan_scenarios.json)
+- Expected pass/fail matrix artifact: [root_key_safe_remediation_plan_expected_matrix.json](/Users/marcomaher/AWS%20Security%20Autopilot/tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json)
+- Integration/e2e executor test: [test_root_key_remediation_plan_e2e.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_root_key_remediation_plan_e2e.py)
 
 ## 3) Pass/Fail Criteria
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,13 +13,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
+from backend.models.action import Action
 from backend.models.enums import (
     RootKeyArtifactStatus,
     RootKeyDependencyStatus,
     RootKeyExternalTaskStatus,
 )
+from backend.models.finding import Finding
 from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
+from backend.models.root_key_external_task import RootKeyExternalTask
 from backend.models.root_key_remediation_artifact import RootKeyRemediationArtifact
+from backend.services.root_key_remediation_closure import (
+    RootKeyClosureSnapshot,
+    RootKeyRemediationClosureService,
+)
 from backend.services.root_key_remediation_state_machine import (
     RootKeyErrorClassification,
     RootKeyErrorDisposition,
@@ -32,6 +40,12 @@ from backend.services.root_key_remediation_store import (
     get_root_key_remediation_run,
 )
 from backend.services.root_key_usage_discovery import RootKeyUsageDiscoveryService
+from backend.utils.sqs import (
+    build_compute_actions_job_payload,
+    build_ingest_job_payload,
+    build_reconcile_inventory_shard_job_payload,
+    parse_queue_region,
+)
 
 _SELF_CUTOFF_GUARD_CODE = "self_cutoff_guard_not_guaranteed"
 _DELETE_GATING_VALIDATION_CODE = "delete_validation_not_passed"
@@ -44,6 +58,7 @@ _MASKED_EMPTY_KEY = "<EMPTY>"
 
 _CredentialSessionFactory = Callable[[str, str | None], Any]
 _UsageDiscoveryFactory = Callable[[], RootKeyUsageDiscoveryService]
+_ClosureServiceFactory = Callable[[], RootKeyRemediationClosureService]
 
 
 @dataclass(frozen=True)
@@ -120,12 +135,14 @@ class RootKeyRemediationExecutorWorker:
         mutation_session_factory: _CredentialSessionFactory = _default_session_factory,
         observer_session_factory: _CredentialSessionFactory | None = None,
         usage_discovery_factory: _UsageDiscoveryFactory = _default_usage_discovery_factory,
+        closure_service_factory: _ClosureServiceFactory | None = None,
         now_fn: Callable[[], datetime] = _utc_now,
         monitor_lookback_minutes: int | None = None,
     ) -> None:
         self._mutation_session_factory = mutation_session_factory
         self._observer_session_factory = observer_session_factory or mutation_session_factory
         self._usage_discovery_factory = usage_discovery_factory
+        self._closure_service_factory = closure_service_factory or self._default_closure_service_factory
         self._now = now_fn
         default_lookback = getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES", 15)
         configured_lookback = monitor_lookback_minutes if monitor_lookback_minutes is not None else default_lookback
@@ -340,7 +357,30 @@ class RootKeyRemediationExecutorWorker:
                 reason=reason,
                 actor_metadata=actor_metadata,
             )
-        delete_result = await state_machine.finalize_delete(
+        post_delete_states = self._list_root_key_states(sessions.mutation_session, run.region)
+        required_safe_permissions_unchanged = len(post_delete_states) == 0
+        await self._record_delete_evidence(
+            db=db,
+            run=run,
+            transition_id=transition_id,
+            delete_summary=delete_summary,
+            remaining_root_keys=len(post_delete_states),
+            required_safe_permissions_unchanged=required_safe_permissions_unchanged,
+            actor_metadata=actor_metadata,
+        )
+        if self._closure_enabled():
+            closure = self._closure_service_factory()
+            closure_result = await closure.execute_closure_cycle(
+                db,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                transition_id=f"{transition_id}:closure",
+                state_machine=state_machine,
+                actor_metadata=actor_metadata,
+            )
+            return closure_result.transition_result
+
+        return await state_machine.finalize_delete(
             db,
             tenant_id=tenant_id,
             run_id=run_id,
@@ -352,14 +392,6 @@ class RootKeyRemediationExecutorWorker:
                 "skipped_key_count": delete_summary["skipped_count"],
             },
         )
-        await self._record_delete_evidence(
-            db=db,
-            run=delete_result.run,
-            transition_id=transition_id,
-            delete_summary=delete_summary,
-            actor_metadata=actor_metadata,
-        )
-        return delete_result
 
     async def _require_run(
         self,
@@ -614,6 +646,239 @@ class RootKeyRemediationExecutorWorker:
         )
         return result.scalar_one_or_none() is not None
 
+    def _closure_enabled(self) -> bool:
+        return bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED", False))
+
+    def _default_closure_service_factory(self) -> RootKeyRemediationClosureService:
+        return RootKeyRemediationClosureService(
+            enabled=True,
+            ingest_trigger=self._closure_trigger_ingest,
+            compute_trigger=self._closure_trigger_compute,
+            reconcile_trigger=self._closure_trigger_reconcile,
+            poller=self._closure_poller,
+        )
+
+    async def _closure_trigger_ingest(self, *, tenant_id: uuid.UUID, run: Any, **_: Any) -> dict[str, Any]:
+        if not settings.has_ingest_queue:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": "ingest_queue_unavailable",
+            }
+        payload = build_ingest_job_payload(
+            tenant_id=tenant_id,
+            account_id=run.account_id,
+            region=run.region or settings.AWS_REGION,
+            created_at=self._now().isoformat(),
+        )
+        return self._send_queue_message(
+            queue_url=settings.SQS_INGEST_QUEUE_URL,
+            payload=payload,
+        )
+
+    async def _closure_trigger_compute(self, *, tenant_id: uuid.UUID, run: Any, **_: Any) -> dict[str, Any]:
+        if not settings.has_ingest_queue:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": "compute_queue_unavailable",
+            }
+        payload = build_compute_actions_job_payload(
+            tenant_id=tenant_id,
+            created_at=self._now().isoformat(),
+            account_id=run.account_id,
+            region=run.region,
+        )
+        return self._send_queue_message(
+            queue_url=settings.SQS_INGEST_QUEUE_URL,
+            payload=payload,
+        )
+
+    async def _closure_trigger_reconcile(self, *, tenant_id: uuid.UUID, run: Any, **_: Any) -> dict[str, Any]:
+        if not settings.has_inventory_reconcile_queue:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": "reconcile_queue_unavailable",
+            }
+        services = list(settings.control_plane_inventory_services_list)
+        if not services:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": "reconcile_services_unconfigured",
+            }
+        max_resources = int(settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD or 500)
+        queue_url = settings.SQS_INVENTORY_RECONCILE_QUEUE_URL
+        enqueued = 0
+        for service in services:
+            payload = build_reconcile_inventory_shard_job_payload(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                region=run.region or settings.AWS_REGION,
+                service=service,
+                created_at=self._now().isoformat(),
+                sweep_mode="global",
+                max_resources=max_resources,
+            )
+            response = self._send_queue_message(queue_url=queue_url, payload=payload)
+            if not response.get("accepted", False):
+                response["enqueued_jobs"] = enqueued
+                return response
+            enqueued += 1
+        return {
+            "accepted": True,
+            "status_code": 202,
+            "enqueued_jobs": enqueued,
+        }
+
+    def _send_queue_message(self, *, queue_url: str, payload: dict[str, Any]) -> dict[str, Any]:
+        queue_url_normalized = (queue_url or "").strip()
+        if not queue_url_normalized:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": "queue_url_unconfigured",
+            }
+        try:
+            queue_region = parse_queue_region(queue_url_normalized)
+            sqs = boto3.client("sqs", region_name=queue_region)
+            response = sqs.send_message(
+                QueueUrl=queue_url_normalized,
+                MessageBody=json.dumps(payload),
+            )
+        except Exception as exc:
+            return {
+                "accepted": False,
+                "status_code": 503,
+                "reason": f"queue_send_failed:{type(exc).__name__}",
+            }
+        return {
+            "accepted": True,
+            "status_code": 202,
+            "message_id": str(response.get("MessageId") or ""),
+        }
+
+    async def _closure_poller(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        poll_attempt: int,
+        **_: Any,
+    ) -> RootKeyClosureSnapshot:
+        action_status = await self._action_status(db=db, run=run)
+        finding_status = await self._finding_effective_status(db=db, run=run)
+        unresolved_external_tasks = await self._count_unresolved_external_tasks(db=db, run=run)
+        policy_snapshot = await self._policy_preservation_snapshot(db=db, run=run)
+        return RootKeyClosureSnapshot(
+            action_resolved=action_status == "resolved",
+            finding_resolved=finding_status == "RESOLVED",
+            policy_preservation_passed=policy_snapshot["passed"],
+            unresolved_external_tasks=unresolved_external_tasks,
+            payload={
+                "poll_attempt": poll_attempt,
+                "action_status": action_status,
+                "finding_status": finding_status,
+                "unresolved_external_tasks": unresolved_external_tasks,
+                "policy_preservation": policy_snapshot,
+            },
+        )
+
+    async def _action_status(self, *, db: AsyncSession, run: Any) -> str:
+        result = await db.execute(
+            select(Action.status).where(
+                Action.tenant_id == run.tenant_id,
+                Action.id == run.action_id,
+            )
+        )
+        status_value = result.scalar_one_or_none()
+        return str(status_value or "").strip().lower()
+
+    async def _finding_effective_status(self, *, db: AsyncSession, run: Any) -> str:
+        if run.finding_id is None:
+            return "NEW"
+        result = await db.execute(
+            select(Finding.status, Finding.shadow_status_normalized).where(
+                Finding.tenant_id == run.tenant_id,
+                Finding.id == run.finding_id,
+            )
+        )
+        row = result.first()
+        if row is None:
+            return "NEW"
+        canonical = str(row[0] or "").strip().upper()
+        shadow = str(row[1] or "").strip().upper()
+        if shadow == "RESOLVED":
+            return "RESOLVED"
+        if shadow == "OPEN" and canonical == "RESOLVED":
+            return "NEW"
+        return canonical
+
+    async def _count_unresolved_external_tasks(self, *, db: AsyncSession, run: Any) -> int:
+        result = await db.execute(
+            select(RootKeyExternalTask.id).where(
+                RootKeyExternalTask.tenant_id == run.tenant_id,
+                RootKeyExternalTask.run_id == run.id,
+                RootKeyExternalTask.status.notin_(
+                    (
+                        RootKeyExternalTaskStatus.completed,
+                        RootKeyExternalTaskStatus.cancelled,
+                    )
+                ),
+            )
+        )
+        rows = result.scalars().all()
+        return len(rows)
+
+    async def _policy_preservation_snapshot(self, *, db: AsyncSession, run: Any) -> dict[str, Any]:
+        disable_metadata = await self._latest_artifact_metadata(
+            db=db,
+            run=run,
+            artifact_type="disable_window_evidence",
+        )
+        delete_metadata = await self._latest_artifact_metadata(
+            db=db,
+            run=run,
+            artifact_type="delete_window_evidence",
+        )
+        disable_window_clean = bool(disable_metadata.get("window_clean") is True)
+        delete_summary = delete_metadata.get("delete_summary")
+        delete_summary_available = isinstance(delete_summary, dict)
+        required_safe_permissions_unchanged = delete_metadata.get("required_safe_permissions_unchanged")
+        if required_safe_permissions_unchanged is None:
+            required_safe_permissions_unchanged = disable_metadata.get("required_safe_permissions_unchanged")
+        policy_flag = required_safe_permissions_unchanged is True
+        passed = disable_window_clean and delete_summary_available and policy_flag
+        return {
+            "passed": passed,
+            "disable_window_clean": disable_window_clean,
+            "delete_summary_available": delete_summary_available,
+            "required_safe_permissions_unchanged": bool(policy_flag),
+        }
+
+    async def _latest_artifact_metadata(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        artifact_type: str,
+    ) -> dict[str, Any]:
+        result = await db.execute(
+            select(RootKeyRemediationArtifact.metadata_json)
+            .where(
+                RootKeyRemediationArtifact.tenant_id == run.tenant_id,
+                RootKeyRemediationArtifact.run_id == run.id,
+                RootKeyRemediationArtifact.artifact_type == artifact_type,
+            )
+            .order_by(RootKeyRemediationArtifact.created_at.desc())
+            .limit(1)
+        )
+        metadata = result.scalar_one_or_none()
+        if isinstance(metadata, dict):
+            return metadata
+        return {}
+
     async def _record_disable_evidence(
         self,
         *,
@@ -642,6 +907,7 @@ class RootKeyRemediationExecutorWorker:
             metadata_json={
                 "disabled_summary": disable_summary,
                 **self._signals_payload(signals),
+                "required_safe_permissions_unchanged": bool(signals.window_clean),
                 "window_started_at": self._now().isoformat(),
             },
             idempotency_key=f"{transition_id}:disable_window_evidence",
@@ -689,6 +955,8 @@ class RootKeyRemediationExecutorWorker:
         run: Any,
         transition_id: str,
         delete_summary: dict[str, Any],
+        remaining_root_keys: int,
+        required_safe_permissions_unchanged: bool,
         actor_metadata: dict[str, Any] | None,
     ) -> None:
         await create_root_key_remediation_artifact_idempotent(
@@ -708,6 +976,8 @@ class RootKeyRemediationExecutorWorker:
             artifact_type="delete_window_evidence",
             metadata_json={
                 "delete_summary": delete_summary,
+                "remaining_root_keys": int(remaining_root_keys),
+                "required_safe_permissions_unchanged": bool(required_safe_permissions_unchanged),
                 "recorded_at": self._now().isoformat(),
             },
             idempotency_key=f"{transition_id}:delete_window_evidence",

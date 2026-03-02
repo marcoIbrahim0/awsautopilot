@@ -1,6 +1,6 @@
 # Root-Key Safe Remediation Implementation Checklist (Serial)
 
-> ⚠️ Status: In progress — Slice 2, Slice 3 (API contracts), Slice 3.5 (discovery/classification persistence path), and Slice 5 guardrails (executor-worker safety path) are implemented behind feature flags; worker-side verification/closure slices remain pending.
+> ⚠️ Status: In progress — Slice 2, Slice 3 (API contracts), Slice 3.5 (discovery/classification persistence path), Slice 4 closure orchestration with runtime wiring, Slice 5 guardrails (executor-worker safety path), and Slice 6 rollout/ops controls are implemented behind feature flags.
 >
 > Source spec: `docs/live-e2e-testing/root-key-safe-remediation-spec.md`
 >
@@ -58,8 +58,13 @@ Done when:
   - `POST /api/root-key-remediation-runs/{id}/delete`
 - [x] Add external task completion endpoint:
   - `POST /api/root-key-remediation-runs/{id}/external-tasks/{task_id}/complete`
+- [x] Add rollout/ops control endpoints:
+  - `POST /api/root-key-remediation-runs/{id}/pause`
+  - `POST /api/root-key-remediation-runs/{id}/resume`
+  - `GET /api/root-key-remediation-runs/ops/metrics`
 - [x] Enforce auth + tenant scope + action-type guard + fail-closed transition/state handling.
 - [x] Enforce consistent error envelope + `correlation_id` + contract-version handling.
+- [x] Enforce pause-state mutation blocking (`run_paused`) and resume-target replay semantics.
 
 Done when:
 
@@ -95,14 +100,16 @@ Done when:
 
 ## Slice 4: Verification Orchestration
 
-- [ ] Add verification enqueue path after `root-safe-report result=success`.
-- [ ] Reuse existing `ingest`, `compute`, and `reconcile` trigger flow.
-- [ ] Add polling job or task that writes `resolved` or `unresolved_after_verification`.
-- [ ] Persist verification timestamps and final snapshot fields.
+- [x] Add closure orchestration service:
+  - `backend/services/root_key_remediation_closure.py`
+- [x] Reuse `ingest`, `compute`, and `reconcile` trigger flow through injectable idempotent trigger callables.
+- [x] Add closure polling path with explicit terminal outcomes (`completed`, `needs_attention`, `failed`).
+- [x] Persist closure-cycle summary artifact with dispatch + polling + final snapshot metadata.
+- [x] Wire closure service into API/worker runtime path behind `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED`.
 
 Done when:
 
-- Worker/integration tests prove both converged and timeout terminal states.
+- Integration/e2e tests prove converged, policy-fail, timeout, auth-scope, and retry-safe terminal paths.
 
 ## Slice 5: Root Delete Safety Guard
 
@@ -121,23 +128,38 @@ Done when:
 
 - Regression tests prevent uncontrolled self-cutoff behavior and unsafe delete progression.
 
-## Slice 6: Feature Flags and Config Wiring
+## Slice 6: Feature Flags, Rollout, and Ops Wiring
 
 - [x] Add config flags for executor-worker path:
   - `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED`
   - `ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES`
+- [x] Add rollout flags:
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_ACCOUNT_ALLOWLIST`
+- [x] Add ops control flags:
+  - `ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED`
+  - `ROOT_KEY_SAFE_REMEDIATION_OPS_METRICS_ENABLED`
 - [x] Wire defaults to behavior-preserving values and document runtime behavior.
+- [x] Add immutable operator override reason logging on create/transition/task-complete operations.
+- [x] Add tenant-scoped ops metrics calculations:
+  - auto success rate
+  - rollback rate
+  - needs_attention rate
+  - closure pass rate
+  - mean time to detect unknown dependency
 
 Done when:
 
-- Startup config tests pass and flagged code paths are fully dark by default.
+- Startup config tests pass, flagged code paths are fully dark by default, and rollout controls can be enabled incrementally without cross-tenant leakage.
 
 ## Slice 7: Acceptance and Live Validation
 
-- [ ] Add/extend automated tests:
-  - `tests/test_root_safe_state_machine.py`
-  - `tests/test_remediation_runs_api.py`
-  - `tests/test_remediation_run_worker.py`
+- [x] Add deterministic integration/e2e matrix tests:
+  - `tests/test_root_key_remediation_plan_e2e.py`
+  - fixture: `tests/fixtures/root_key_safe_remediation_plan_scenarios.json`
+  - expected matrix artifact: `tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json`
 - [ ] Re-run Wave 7 Test 25 and Test 28 with evidence capture.
 - [ ] Update tracker rows:
   - `docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md` Section 3 #15, Section 4 #22, Section 6 #8

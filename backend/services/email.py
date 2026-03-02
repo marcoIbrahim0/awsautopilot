@@ -260,6 +260,42 @@ This reset link expires in 1 hour.
                 failed += 1
         return sent, failed
 
+    def send_governance_notification(
+        self,
+        *,
+        tenant_name: str,
+        to_emails: list[str],
+        subject: str,
+        text_body: str,
+        html_body: str,
+    ) -> tuple[int, int]:
+        """
+        Send one governance notification email body to a list of recipients.
+
+        Idempotency and dedupe are handled by governance_notifications service.
+        """
+        recipients = [(email or "").strip() for email in to_emails if (email or "").strip()]
+        if not recipients:
+            return 0, 0
+
+        if settings.is_local:
+            logger.info(
+                "[LOCAL MODE] Governance email for %s: recipients=%s subject=%s",
+                tenant_name,
+                len(recipients),
+                (subject or "").strip()[:120],
+            )
+            return len(recipients), 0
+
+        sent = 0
+        failed = 0
+        for recipient in recipients:
+            if self._send_smtp(recipient, subject, html_body, text_body):
+                sent += 1
+            else:
+                failed += 1
+        return sent, failed
+
     def send_baseline_report_ready(
         self,
         to_email: str,

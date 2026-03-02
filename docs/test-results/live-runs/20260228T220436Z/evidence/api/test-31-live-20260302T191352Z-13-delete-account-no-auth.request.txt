@@ -1,0 +1,1 @@
+DELETE https://api.valensjewelry.com/api/aws/accounts/029037611564?cleanup_resources=false

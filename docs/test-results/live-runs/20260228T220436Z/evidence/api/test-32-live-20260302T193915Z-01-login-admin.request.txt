@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/auth/login
+Body: {"email":"maromaher54@gmail.com","password":"***REDACTED***"}

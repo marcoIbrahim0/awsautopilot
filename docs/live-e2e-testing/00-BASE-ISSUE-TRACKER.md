@@ -2,7 +2,7 @@
 **Base file for all test run outputs**
 Environment: https://dev.valensjewelry.com
 Test account: maromaher54@gmail.com
-Last updated: 2026-03-02T13:42:41Z (Wave 7 Test 28 continuation: root-delete strategy still blocked, target unresolved, preservation pass)
+Last updated: 2026-03-02T19:40:52Z (Wave 8 Test 32 PASS: admin audit-log contract validated, member/no-auth blocked, and no secret leakage detected in full-record scan)
 
 ---
 
@@ -27,9 +27,9 @@ This file is the curated list of what actually needs to be fixed.
 | Wave 5 | 13–16 | 2026-03-01 | 4 | 0 | 0 | 0 |
 | Wave 6 | 17–22 | 2026-03-01 | 6 | 0 | 0 | 0 |
 | Wave 7 | 23–28 | 2026-03-02 | 3 | 0 | 1 | 2 |
-| Wave 8 | 29–33 | — | — | — | — | — |
+| Wave 8 | 29–33 | 2026-03-02 | 5 | 0 | 0 | 0 |
 | Wave 9 | 34–35 | — | — | — | — | — |
-| **TOTAL** | **35** | **2026-03-02** | **24** | **1** | **1** | **2** |
+| **TOTAL** | **35** | **2026-03-02** | **29** | **1** | **1** | **2** |
 
 ---
 
@@ -51,7 +51,7 @@ This file is the curated list of what actually needs to be fixed.
 | 11 | `/api/remediation-runs/group-pr-bundle` | POST | PR bundle page | Test 17 | 🟠 HIGH | ✅ FIXED (Wave 6 Test 17 live execution, 2026-03-01: create returned `201`, immediate retry returned `409`, and no-auth probe returned `401`) |
 | 12 | `/api/aws/accounts/{id}/control-plane-readiness` | GET | Onboarding wizard | Test 06 | 🟡 MEDIUM | ✅ FIXED (Wave 3 Test 06, 2026-02-28: observed `200` response from account-scoped endpoint) |
 | 13 | `/api/aws/accounts/{id}/onboarding-fast-path` | POST | Onboarding wizard | Test 06 | 🟡 MEDIUM | ✅ FIXED (Wave 3 Test 06, 2026-02-28: observed `200` with fast-path trigger payload) |
-| 14 | `/api/aws/accounts/{id}/ingest-sync` | POST | Accounts page | Test 29 | 🟡 MEDIUM | — |
+| 14 | `/api/aws/accounts/{id}/ingest-sync` | POST | Accounts page | Test 29 | 🟡 MEDIUM | ✅ FIXED (Wave 8 Test 29 rerun, 2026-03-02: valid in-tenant admin/member probes returned `200`; invalid-account `404`; no-auth `401`; wrong-tenant `404`) |
 | 15 | `/api/auth/forgot-password` | POST | Login/Settings password recovery | Test 04 | 🟠 HIGH | ✅ FIXED (Wave 2 rerun, 2026-02-28: observed `200` generic response) |
 
 > **After each run:** Delete rows that now return non-404. Add new rows for newly discovered 404s.
@@ -74,7 +74,7 @@ This file is the curated list of what actually needs to be fixed.
 | 9 | Test 13 | Action drawer | `what_the_fix_does` | present in `/api/actions/{id}` detail payload | Fix description now populated | ✅ FIXED (Wave 5 Test 13 post-deploy rerun, 2026-02-28: observed non-empty `what_the_fix_does`) |
 | 10 | Test 15 | Run progress panel | `current_step` | present via `/api/remediation-runs/{id}/execution` fallback payload (`source=run_fallback`) | Step label now has stable API source on completed runs | ✅ FIXED (Wave 5 Test 15 post-deploy rerun, 2026-03-01: `/execution` returned `200` on all polls with `current_step=completed`) |
 | 11 | Test 22 | Reports page | `download_url` on report | absent until polled | Download button never appears | — |
-| 12 | Test 29 | Accounts page | `last_synced_at` | absent or null | Last-scanned date blank | — |
+| 12 | Test 29 | Accounts page | `last_synced_at` | present and non-null (`2026-03-02T13:40:11.914670Z` pre, `2026-03-02T18:54:10.536945Z` post) | Freshness field is present and advanced after completed ingest refresh | ✅ FIXED (Wave 8 Test 29 rerun, 2026-03-02: `test-29-live-20260302T185356Z`) |
 
 > **After each run:** Mark rows ✅ FIXED when confirmed. Add new rows for newly found mismatches.
 
@@ -89,14 +89,14 @@ This file is the curated list of what actually needs to be fixed.
 | 2 | Test 12 | 🔴 BLOCKING | Cross-tenant account access returns 200 | 403 or 404 | Post-deploy Wave 4 rerun observed isolated account list (`200` with empty array for Tenant B) and no Tenant A account read path exposure | ✅ FIXED (Wave 4 Test 12 rerun, 2026-02-28) |
 | 3 | Test 12 | 🔴 BLOCKING | Cross-tenant ingest trigger returns 200 | 403 or 404 | Post-deploy Wave 4 rerun observed `404` on cross-tenant ingest, ingest-access-analyzer, and ingest-inspector | ✅ FIXED (Wave 4 Test 12 rerun, 2026-02-28) |
 | 4 | Test 19 | 🔴 BLOCKING | SSRF via Slack webhook URL (non-hooks.slack.com accepted) | 400 | Post-deploy Wave 6 Test 19 rerun observed unsafe webhook probes rejected with `400` and stable validation error (`Invalid Slack webhook URL. Expected https://hooks.slack.com/services/...`) for `example.com`, metadata IP, and hooks-lookalike domain | ✅ FIXED (Wave 6 Test 19 rerun, 2026-03-01: `test-19-rerun-20260301T015756Z`) |
-| 5 | Test 30 | 🟠 HIGH | Login endpoint not rate-limited after N attempts | 429 after threshold | TBD | — |
-| 6 | Test 30 | 🟠 HIGH | No `Retry-After` header on 429 response | Header present | TBD | — |
-| 7 | Test 31 | 🟠 HIGH | Non-admin can invite users | 403 | TBD | — |
-| 8 | Test 31 | 🟠 HIGH | Non-admin can delete accounts | 403 | TBD | — |
+| 5 | Test 30 | 🟠 HIGH | Login endpoint not rate-limited after N attempts | 429 after threshold | Wave 8 Test 30 observed deterministic transition for dedicated identity: wrong-password attempts `#1-#5` -> `401`, attempt `#6` -> `429`; correct password while blocked also returned `429`; post-window correct login returned `200`. | ✅ FIXED (Wave 8 Test 30 live, 2026-03-02: `test-30-live-20260302T191232Z`) |
+| 6 | Test 30 | 🟠 HIGH | No `Retry-After` header on 429 response | Header present | Wave 8 Test 30 observed `retry-after` on all throttled responses (`896`, `895`, `894`, `893`) and successful recovery after waiting the observed window (`200` login + `200` `/api/auth/me`). | ✅ FIXED (Wave 8 Test 30 live, 2026-03-02: `test-30-live-20260302T191232Z`) |
+| 7 | Test 31 | 🟠 HIGH | Non-admin can invite users | 403 | Wave 8 Test 31 observed member invite probe `403` (`Only admins can invite users`), no-auth probe `401`, and admin control invite `201` on the same run. | ✅ FIXED (Wave 8 Test 31 live, 2026-03-02: `test-31-live-20260302T191352Z`) |
+| 8 | Test 31 | 🟠 HIGH | Non-admin can delete accounts | 403 | Wave 8 Test 31 observed member delete probe `403` (`Only admins can delete AWS accounts`), no-auth probe `401`, and corrected wrong-tenant probe `404` after successful Tenant-B signup/auth. | ✅ FIXED (Wave 8 Test 31 live, 2026-03-02: `test-31-live-20260302T191352Z`) |
 | 9 | Test 18 | 🟠 HIGH | PR bundle ZIP downloadable without auth token | 401 | Wave 6 Test 18 observed no-auth `401`, invalid-token `401`, and wrong-tenant token `404` on `GET /api/remediation-runs/{id}/pr-bundle.zip` | ✅ FIXED (Wave 6 Test 18, 2026-03-01) |
 | 10 | Test 08 | 🟠 HIGH | Invite token reuse not blocked | 404 or 410 (must reject reuse/expired token) | Post-deploy Wave 3 rerun observed consumed token rejection on replay: `GET /api/users/invite-info` -> `404`, `POST /api/users/accept-invite` -> `404` (`Invite not found or expired`) | ✅ FIXED (Wave 3 Test 08 rerun, 2026-02-28) |
-| 11 | Test 32 | 🟡 MEDIUM | Audit records contain secrets (token, role_arn, password) | No secrets in payload | TBD | — |
-| 12 | Test 32 | 🟡 MEDIUM | Non-admin user can read audit log | 403 | TBD | — |
+| 11 | Test 32 | 🟡 MEDIUM | Audit records contain secrets (token, role_arn, password) | No secrets in payload | Wave 8 Test 32 full scan across `31` records found no matches for JWT/access-token/password/role_arn/AWS-key/private-key/webhook leakage patterns; contract rows kept `payload=null`. | ✅ FIXED (Wave 8 Test 32 live, 2026-03-02: `test-32-live-20260302T193915Z`) |
+| 12 | Test 32 | 🟡 MEDIUM | Non-admin user can read audit log | 403 | Wave 8 Test 32 observed member access `403` (`Only tenant admins can view audit logs.`) and no-auth probes `401` (`Not authenticated`) on `/api/audit-log` (base and filtered requests). | ✅ FIXED (Wave 8 Test 32 live, 2026-03-02: `test-32-live-20260302T193915Z`) |
 | 13 | Test 03 | 🔴 BLOCKING | Bearer token remains valid after logout | 401 on post-logout `/api/auth/me` with pre-logout token | Observed `401` (`Invalid or expired token`) in Wave 2 rerun | ✅ FIXED (Wave 2 rerun, 2026-02-28) |
 | 14 | Test 07 | 🔴 BLOCKING | AWS account registration accepts no-auth requests when `tenant_id` is known | 401/403 for unauthenticated register calls | Post-deploy Wave 3 rerun observed `401` for no-auth with both known and random tenant ids, and `401` for invalid bearer token | ✅ FIXED (Wave 3 Test 07 rerun, 2026-02-28) |
 | 15 | Test 25 | 🟠 HIGH | IAM.4 root-key finding remained active after full closure flow | Target action/finding should resolve after successful root-key remediation apply and refresh | Wave 7 Test 25 failed apply under non-root credentials (`root credentials are required`). Test 28 continuation revalidated both root paths: root-disable apply succeeded but target still ended `open/NEW`, and root-delete apply failed with `InvalidClientTokenId` during generated `UpdateAccessKey`; post-failure refresh again ended `open/NEW`. | OPEN (Wave 7 Test 25 + Test 28 continuation, 2026-03-02: `test-25-closure-20260301T154046Z`, `test-28-closure-rootapply-20260301T221832Z`, `test-28-closure-rootdelete-20260302T133128Z`) |
@@ -122,8 +122,8 @@ This file is the curated list of what actually needs to be fixed.
 | 9 | Test 20 | Internal digest/scheduler auth guard | Correct user token gets 200 on internal endpoint | Missing auth guard on `/api/internal/*` | 🔴 BLOCKING | ✅ FIXED (Wave 6 Test 20 live + rerun, 2026-03-01: `/api/internal/reconciliation/schedule-tick` returned `403` for no-secret/wrong-secret/user-token-only calls and `200` only with correct scheduler secret in both `test-20-live-20260301T011449Z` and `test-20-rerun-20260301T014248Z`) |
 | 10 | Test 22 | Baseline report | Second report not rate-limited (no 429) | Rate-limit not implemented | 🟡 MEDIUM | ✅ FIXED (Wave 6 Test 22 live execution, 2026-03-01: first `POST /api/baseline-report` returned `201`; immediate repeats returned `429` with `Retry-After: 86399`) |
 | 11 | Test 06 | Invite DB query | DB model path wrong in Python helper | Model import path mismatch | 🔵 LOW | — |
-| 12 | Test 33 | PR proof C2 | No Terraform plan timestamp in README | Template doesn't include plan metadata | 🟠 HIGH | — |
-| 13 | Test 33 | PR proof C5 | No preserved-config statement in B-series README | README template missing preservation section | 🟠 HIGH | — |
+| 12 | Test 33 | PR proof C2 | No Terraform plan timestamp in README | Template doesn't include plan metadata | 🟠 HIGH | ✅ FIXED (Wave 8 Test 33 live execution, 2026-03-02: `test-33-live-20260302T191537Z`; README line includes `terraform_plan_timestamp_utc=2026-03-02T19:15:43+00:00` and consistency check confirms parseable + run-window alignment) |
+| 13 | Test 33 | PR proof C5 | No preserved-config statement in B-series README | README template missing preservation section | 🟠 HIGH | ✅ FIXED (Wave 8 Test 33 live execution, 2026-03-02: `test-33-live-20260302T191537Z`; README includes `preserved_configuration_statement` and consistency check confirms metadata/apply-context coherence) |
 | 14 | Test 04 | Forgot-password flow | 404 on POST /api/auth/forgot-password | Endpoint not built | 🟠 HIGH | ✅ FIXED (Wave 2 rerun, 2026-02-28: observed `200` generic response) |
 | 15 | Test 07 | Duplicate account registration | Re-registering an already connected account returns `201` instead of conflict/idempotent duplicate response | Duplicate path currently behaves like create/upsert | 🟠 HIGH | ✅ FIXED (Wave 3 Test 07 rerun, 2026-02-28: duplicate register now returns `409` with explicit conflict detail) |
 | 16 | Test 16 | Preview mode compatibility | `/api/actions/{id}/remediation-options` advertises `mode_options=[\"pr_only\"]`, but `/api/actions/{id}/remediation-preview?mode=pr_only` returns `422` expecting `direct_fix` | Preview validator only accepts `direct_fix`, causing options/preview contract mismatch | 🟡 MEDIUM | ✅ FIXED (Wave 5 Test 16 post-deploy rerun, 2026-03-01: options still advertise `pr_only` and realistic preview call returned `200`) |
@@ -137,6 +137,7 @@ This file is the curated list of what actually needs to be fixed.
 | 24 | Test 26 | Complex-policy preservation + closure semantics | Non-risk policy statements were dropped and target action stayed open in prior rerun | Generation path now fails closed when preservation input is missing, auto-preloads policy preservation evidence, and action recompute uses effective shadow status so target action moved to `resolved` after refresh | 🟠 HIGH | ✅ FIXED (Wave 7 Test 26 closure rerun, 2026-03-01: `test-26-closure-20260301T181657Z`) |
 | 25 | Test 26 | Canonical vs effective finding status drift | Finding detail payload can report canonical `status=NEW` while effective/shadow status is resolved | Latest rerun confirms status truth is aligned on detail payload (`status=RESOLVED`, `effective_status=RESOLVED`, `canonical_status=RESOLVED`, `shadow.status_normalized=RESOLVED`) | 🟡 MEDIUM | ✅ FIXED (Wave 7 Test 26 rerun, 2026-03-01: `test-26-closure-20260301T210222Z`) |
 | 26 | Test 26 | Pre-run adversarial reopen detection | After restoring adversarial state, target B1 S3.2 action should reappear in OPEN set before remediation run | Closure rerun passed after forwarder/event allowlist correction: target reappeared in OPEN within SLA (`target_visible_in_open=true`, `elapsed_seconds=17`, `sla_seconds=180`), with pre-run finding transition `RESOLVED -> NEW` and `shadow RESOLVED -> OPEN`; action ID remained stable | 🟡 MEDIUM | ✅ FIXED (Wave 7 Test 26 rerun, 2026-03-01: `test-26-closure-20260301T210222Z`) |
+| 27 | Test 29 | Ingest sync trigger contract | Historical valid-call `500` regression resolved; endpoint now returns success contract (`200`) for valid in-tenant admin/member calls | Root-cause trace linked old failures to local-sync worker import path (`ModuleNotFoundError: tenacity`) and runtime now uses async queue path with controlled errors | 🟠 HIGH | ✅ FIXED (Wave 8 Test 29 rerun, 2026-03-02: `test-29-live-20260302T185356Z`, root-cause trace `...-98-root-cause-log-trace.txt`) |
 
 ---
 
@@ -169,6 +170,7 @@ This file is the curated list of what actually needs to be fixed.
 | 8 | `/api/remediation-runs` IAM.4 PR-bundle execution path | Run create/detail/execution + bundle download contracts are healthy (`201`, `success`, zip `200`) with explicit `manual_high_risk` signaling | Execution/closure remains blocked across operator modes: non-root apply fails by root-principal guard, root-disable apply can succeed without closing target, and root-delete apply fails with `InvalidClientTokenId` at generated key-update step. Post-refresh state remains `action=open`, `finding=NEW`; B3 preservation checks remain pass. | Test 25, Test 28 | OPEN (Wave 7 Test 25 + Test 28 continuation, 2026-03-02: `test-25-closure-20260301T154046Z`, `test-28-closure-rootapply-20260301T221832Z`, `test-28-closure-rootdelete-20260302T133128Z`) |
 | 9 | `/api/remediation-runs` S3.2 PR-bundle execution path (B1 complex policy) | Run create/detail/execution/download contracts now complete (`201`, `success`, bundle `200`) | Prior stuck-pending behavior no longer reproduced in rerun (`pending` to `success` by poll-2) | Test 26 | ✅ FIXED (Wave 7 Test 26 rerun, 2026-03-01: `test-26-closure-20260301T171651Z`) |
 | 10 | `/api/remediation-runs` S3.2 complex-policy preservation behavior | Full closure flow remains stable (`run success`, Terraform `0/0/0/0`, closure resolved, delta-aware preservation pass) and pre-run visibility now reopens within SLA (`17s`) | No blocker observed in latest rerun evidence | Test 26 | ✅ FIXED (Wave 7 Test 26 rerun, 2026-03-01: `test-26-closure-20260301T210222Z`) |
+| 11 | `/api/aws/accounts/{id}/ingest-sync` | Endpoint path is live; trigger now returns `200` and `/ingest-progress` reached terminal `completed` (`progress=100`, `updated_findings_count=302`) | No missing contract observed in rerun evidence; `started_after` validation remains enforced (`422` when omitted) | Test 29 | ✅ FIXED (Wave 8 Test 29 rerun, 2026-03-02: `test-29-live-20260302T185356Z`) |
 
 ---
 
@@ -181,7 +183,8 @@ This file is the curated list of what actually needs to be fixed.
 | 2 | Test 05 | `08-deployment-report.md` now includes explicit `TEST_ACCOUNT_ID`, `READ_ROLE_ARN`, and `WRITE_ROLE_ARN` labels (rechecked in Wave 3 rerun evidence) | None | ✅ FIXED (Wave 3 Test 05 rerun, 2026-02-28) |
 | 3 | Test 07 | UserInvite DB model path may differ from example | Confirm Python import path | — |
 | 4 | Test 20 | Internal scheduler secret location | Runtime source confirmed on live API Lambda: `RECONCILIATION_SCHEDULER_SECRET` unset, fallback uses `CONTROL_PLANE_EVENTS_SECRET`; `DIGEST_CRON_SECRET` currently absent | None | ✅ FIXED (Wave 6 Test 20, 2026-03-01) |
-| 5 | Test 30 | Rate limit window duration unknown | Check middleware config | — |
+| 5 | Test 30 | Login throttle window duration now evidence-backed from live responses | None | ✅ FIXED (Wave 8 Test 30 live, 2026-03-02: first throttle response had `retry-after: 896`, then `895/894/893`, and post-window login recovered to `200`) |
+| 6 | Test 29 | Post-deploy runtime startup can fail closed when DB revision lags deployed Alembic head (`0034` vs `0037` observed during first rerun attempt) | Keep DB at Alembic head before runtime validation gates. In this rerun cycle: shortened overlong revision IDs (`0035`–`0037`) and applied `alembic upgrade head`, then reran Test 29 using canonical prefix | ✅ FIXED (Wave 8 Test 29 rerun cycle, 2026-03-02) |
 
 ---
 
@@ -203,9 +206,9 @@ This file is the curated list of what actually needs to be fixed.
 - [x] **T04-2** PUT `/api/auth/password` endpoint built and working
 - [x] **T16-6** POST `/api/actions/compute` endpoint built and working
 - [x] **T17-7** POST `/api/remediation-runs/group-pr-bundle` endpoint built and working
-- [ ] **T30-5** Login rate-limiting enforced (429 after threshold)
-- [ ] **T31-7** Non-admin invite blocked (403)
-- [ ] **T31-8** Non-admin account delete blocked (403)
+- [x] **T30-5** Login rate-limiting enforced (429 after threshold)
+- [x] **T31-7** Non-admin invite blocked (403)
+- [x] **T31-8** Non-admin account delete blocked (403)
 - [x] **T18-8** PR bundle ZIP requires auth to download
 - [x] **T08-10** Invite token reuse blocked after acceptance
 - [x] **T11-3** Multi-value severity filter works correctly
@@ -222,9 +225,9 @@ This file is the curated list of what actually needs to be fixed.
 - [x] **T16-reconcile** POST `/api/actions/reconcile` supports write contract (not `405 Allow: GET`)
 - [x] **T19** Slack webhook settings persist correctly
 - [x] **T22** Baseline report second-request rate-limited
-- [ ] **T32** Audit log inaccessible to non-admin roles
-- [ ] **T33** PR bundle README includes Terraform plan timestamp (C2)
-- [ ] **T33** PR bundle README includes preservation statement (C5)
+- [x] **T32** Audit log inaccessible to non-admin roles
+- [x] **T33** PR bundle README includes Terraform plan timestamp (C2)
+- [x] **T33** PR bundle README includes preservation statement (C5)
 
 ---
 
@@ -287,6 +290,12 @@ This file is the curated list of what actually needs to be fixed.
 | 2026-03-01 | Section 5 Test 27 | Full Test 27 closure validation passed for B2 mixed SG rules: adversarial state confirmed (`22` from `0.0.0.0/0` plus benign mixed rules), target action/finding observed `open/NEW`, PR run succeeded (`201` -> `success`), authorized bundle apply succeeded (`terraform init/plan/show/apply=0/0/0/0`), refresh completed (`ingest status=completed`), target action/finding resolved, and SG preservation checks passed (`443/8080/5432` unchanged; only public SSH removed). | Wave 7 Test 27 full closure validation (`test-27-closure-20260301T212534Z`) | PASS |
 | 2026-03-01 | Section 3 #15 / Section 4 #22 / Section 5 Test 28 / Section 6 #8 | Full Test 28 closure validation completed evidence chain for adversarial IAM inline+managed preservation: B3 role adversarial state confirmed, IAM.4 run/bundle succeeded (`201`/`success`/`200`), Terraform apply failed under non-root credentials (`root credentials are required`), refresh completed (`status=completed`), target action/finding remained `open/NEW`, and B3 inline+managed permissions were preserved unchanged (`required_safe_permissions_unchanged=true`). | Wave 7 Test 28 full closure validation (`test-28-closure-20260301T215524Z`) | BLOCKED |
 | 2026-03-02 | Section 3 #15 / Section 4 #22 / Section 5 Test 28 / Section 6 #8 | Test 28 continuation executed root paths end-to-end: root identity confirmed, root-disable apply succeeded but still ended `action=open`/`finding=NEW` after refresh, and root-delete apply failed with `InvalidClientTokenId` during generated `UpdateAccessKey`; post-failure refresh again ended `open/NEW`. B3 required-safe policy preservation remained unchanged. | Wave 7 Test 28 continuation (`test-28-closure-rootapply-20260301T221832Z`, `test-28-closure-rootdelete-20260302T133128Z`) | BLOCKED |
+| 2026-03-02 | Section 1 #14 / Section 2 #12 / Section 4 #27 / Section 6 #11 | Wave 8 Test 29 showed `/api/aws/accounts/{id}/ingest-sync` is no longer missing (`404`), and `/api/aws/accounts` now includes non-null `last_synced_at`. However, valid ingest-sync trigger calls returned `500` for both admin and member while ingest-progress still advanced (`queued -> running -> no_changes_detected`, `100%`) and wrong-tenant/no-auth/invalid-account boundaries remained closed (`404/401/404`). | Wave 8 Test 29 (`test-29-live-20260302T180910Z`) | PARTIAL |
+| 2026-03-02 | Section 1 #14 / Section 2 #12 / Section 4 #27 / Section 6 #11 | Wave 8 Test 29 post-fix rerun validated closure: in-tenant admin/member ingest-sync calls returned `200`, ingest-progress reached terminal `completed`, `last_synced_at` advanced, and boundary probes remained deny-closed (`invalid-account 404`, `no-auth 401`, `wrong-tenant 404`). | Wave 8 Test 29 rerun (`test-29-live-20260302T185356Z`) | ✅ FIXED |
+| 2026-03-02 | Section 3 #7 / Section 3 #8 / Section 8 T31-7,T31-8 | Wave 8 Test 31 revalidated non-admin authorization boundaries: member invite/delete probes both returned `403`, no-auth probes returned `401`, and corrected wrong-tenant delete probe returned `404`; admin invite control path returned `201` and account post-state remained unchanged (no destructive success). | Wave 8 Test 31 (`test-31-live-20260302T191352Z`) | ✅ FIXED |
+| 2026-03-02 | Section 4 #12 / Section 4 #13 / Section 8 T33 | Wave 8 Test 33 validated PR proof artifact completeness on fresh non-root run `b9e50351-02a0-4784-a2f1-473929da696e`: README now includes `terraform_plan_timestamp_utc` (C2) and `preserved_configuration_statement` (C5); consistency checks passed (`c2_within_run_window_5min=true`, `strategy_matches_create_payload=true`, `apply_context_has_init_plan_apply_steps=true`) and ZIP auth boundaries remained closed (`200/401/404`). | Wave 8 Test 33 (`test-33-live-20260302T191537Z`) | ✅ FIXED |
+| 2026-03-02 | Section 3 #5 / Section 3 #6 / Section 7 #5 / Section 8 T30-5 | Wave 8 Test 30 validated login throttle contract end-to-end: dedicated identity showed `401` on wrong attempts `1-5`, `429` on attempt `6` with `retry-after: 896`, blocked-correct retry remained `429`, and post-window validation succeeded (`200` login + `200` `/api/auth/me`). Different-email key probes remained independent (`200` control login, alternate wrong-email first try `401`). | Wave 8 Test 30 (`test-30-live-20260302T191232Z`) | ✅ FIXED |
+| 2026-03-02 | Section 3 #11 / Section 3 #12 / Section 8 T32 | Wave 8 Test 32 validated `/api/audit-log` contract with admin `200` (pagination + filters), deny-closed auth boundaries (`member=403`, `no-auth=401`), and no leakage hits across baseline/date/full scans (`31` records total, `payload` consistently `null`). Focused Wave-7 keyword slice (`root/governance/secret_migration/exception/notification`) returned no matching action names in the current tenant dataset. | Wave 8 Test 32 (`test-32-live-20260302T193915Z`) | ✅ FIXED |
 
 ---
 

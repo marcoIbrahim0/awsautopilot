@@ -171,7 +171,34 @@ CONTROL_PLANE_SHADOW_MODE="false"
 # Source label for control-plane pipeline outputs
 CONTROL_PLANE_SOURCE="event_monitor_shadow"
 
-# Authoritative controls (comma-separated control IDs promoted to live state)
+# Master switch for canonical status promotion/reopen from shadow evaluations
+CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED="true"
+
+# Only these controls are eligible for live canonical promotion/reopen
+CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS="S3.1,SecurityHub.1,GuardDuty.1"
+
+# Medium/low controls considered for Item 17 quality-gated promotion (blank keeps them non-promoting)
+CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS=""
+
+# Minimum state_confidence required for promotion/reopen
+CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE="95"
+
+# Optional tenant pilot allowlist (blank = all tenants)
+CONTROL_PLANE_PROMOTION_PILOT_TENANTS=""
+
+# Keep SOFT_RESOLVED from promoting unless explicitly enabled
+CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED="false"
+
+# Item 17 medium/low quality gates (0-100 percentages)
+CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_COVERAGE="95"
+CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_PRECISION="95"
+CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE="0"
+CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION="0"
+
+# Emergency fail-closed medium/low rollback switch
+CONTROL_PLANE_MEDIUM_LOW_PROMOTION_ROLLBACK_TRIGGERED="false"
+
+# Legacy authoritative control list (kept for backward compatibility references)
 CONTROL_PLANE_AUTHORITATIVE_CONTROLS="S3.1,SecurityHub.1,GuardDuty.1"
 
 # Recent touch lookback window (minutes)

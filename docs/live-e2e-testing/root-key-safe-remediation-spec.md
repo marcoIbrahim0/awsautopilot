@@ -4,9 +4,9 @@
 >
 > This spec defines the production contract for root-key safe remediation orchestration for `IAM.4` (`iam_root_access_key_absent`) with strict multi-tenant isolation, retry safety, and fail-closed behavior.
 >
-> ⚠️ Status: In progress — persistence, state-machine service, root-key usage discovery/dependency classification, tenant-scoped orchestration API endpoints, guarded executor-worker logic for disable/rollback/delete, and a feature-flagged frontend lifecycle UI are implemented; worker-side closure orchestration remains planned.
+> ⚠️ Status: In progress — persistence, state-machine service, root-key usage discovery/dependency classification, tenant-scoped orchestration API endpoints, guarded executor-worker logic for disable/rollback/delete, closure-cycle orchestration service with runtime delete-path wiring, rollout/ops controls (canary gating, kill switch, pause/resume, override logging, tenant metrics), and a feature-flagged frontend lifecycle UI are implemented.
 >
-> Implemented so far: additive persistence schema + ORM + repository/service access layer + transition-guarded state-machine service + tenant-scoped `create_run` action/finding ownership checks + CloudTrail usage discovery with managed/unknown dependency classification + root-key orchestration API contract at `/api/root-key-remediation-runs` + guarded executor-worker path for disable/rollback/delete transitions + feature-flagged frontend route `/root-key-remediation-runs/{id}` for lifecycle/timeline/dependency/task flows.
+> Implemented so far: additive persistence schema + ORM + repository/service access layer + transition-guarded state-machine service + tenant-scoped `create_run` action/finding ownership checks + CloudTrail usage discovery with managed/unknown dependency classification + root-key orchestration API contract at `/api/root-key-remediation-runs` + guarded executor-worker path for disable/rollback/delete transitions + closure-cycle orchestration service (`ingest`/`compute`/`reconcile` + polling) wired into the runtime delete path + deterministic integration/e2e matrix coverage + rollout/ops controls (`canary percent`, `kill switch`, `pause/resume`, `operator override reason` events, `ops metrics`) + feature-flagged frontend route `/root-key-remediation-runs/{id}` for lifecycle/timeline/dependency/task flows.
 
 ## 1) Scope and Constraints
 
@@ -221,17 +221,22 @@ Failure behavior:
 
 Implemented endpoint family:
 - `POST /api/root-key-remediation-runs`
+- `GET /api/root-key-remediation-runs/ops/metrics`
 - `GET /api/root-key-remediation-runs/{id}`
 - `POST /api/root-key-remediation-runs/{id}/validate`
 - `POST /api/root-key-remediation-runs/{id}/disable`
 - `POST /api/root-key-remediation-runs/{id}/rollback`
 - `POST /api/root-key-remediation-runs/{id}/delete`
+- `POST /api/root-key-remediation-runs/{id}/pause`
+- `POST /api/root-key-remediation-runs/{id}/resume`
 - `POST /api/root-key-remediation-runs/{id}/external-tasks/{task_id}/complete`
 
 Contract invariants:
 - Auth required (`get_optional_user` + fail-closed `401`), tenant boundary enforced on every read/write.
 - `Idempotency-Key` required on all mutating `POST` endpoints.
+- Optional `X-Operator-Override-Reason` header is sanitized and logged as immutable `operator_override` events.
 - Optional request header `X-Root-Key-Contract-Version`; mismatches are rejected with `400`.
+- Global kill switch (`ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED=true`) fail-closes mutating endpoints with `409`.
 - All success and error payloads include:
   - `correlation_id`
   - `contract_version` (`2026-03-02`)
@@ -246,6 +251,11 @@ Create contract:
 - `201` on first write, `200` on idempotent replay.
 - Validates action type is `iam_root_access_key_absent` in tenant scope.
 - Optionally validates `finding_id` in tenant/account scope.
+- Supports deterministic canary gating when enabled:
+  - scope key: `tenant_id + account_id`,
+  - percent selection: `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT`,
+  - allowlist bypass: tenant/account allowlists,
+  - fail-closed `409 canary_not_selected` without operator override reason.
 
 Read contract:
 - `GET /api/root-key-remediation-runs/{id}`
@@ -256,15 +266,31 @@ Read contract:
   - transition events,
   - artifact evidence summaries,
   - `event_count`, `dependency_count`, and `artifact_count`.
+- `GET /api/root-key-remediation-runs/ops/metrics` returns tenant-scoped:
+  - `auto_success_rate`,
+  - `rollback_rate`,
+  - `needs_attention_rate`,
+  - `closure_pass_rate`,
+  - `mean_time_to_detect_unknown_dependency_seconds`.
 
 State transition contracts:
-- `validate`, `disable`, `rollback`, `delete` are routed through `RootKeyRemediationStateMachineService`.
-- When `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=true`, `disable`/`rollback`/`delete` are executed through `RootKeyRemediationExecutorWorker` with:
+- `POST /api/root-key-remediation-runs` now gates auto-forward transitions through discovery/classification when `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED=true`:
+  - safe managed discovery (`unknown_count=0`, `partial_data=false`) -> transition to `migration`,
+  - unknown dependency, partial discovery data, or discovery execution failure -> fail-closed transition to `needs_attention`.
+- `validate` and `rollback` are routed through `RootKeyRemediationStateMachineService`.
+- `delete` requires executor-worker runtime path:
+  - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=false`, endpoint fails closed with `503 executor_unavailable`,
+  - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=true`, delete execution is routed through `RootKeyRemediationExecutorWorker`.
+- When executor-worker path is enabled, `disable`/`rollback`/`delete` are executed through `RootKeyRemediationExecutorWorker` with:
   - self-cutoff prevention guard requiring a safe observer context,
   - disable monitor-window evidence (`health + usage`) capture,
   - automatic rollback + rollback alert task creation on breakage signals,
   - fail-closed delete gating (`validation passed`, `disable window clean`, `delete flag enabled`, `no unknown active dependencies`).
 - Invalid transitions and lock/idempotency conflicts return fail-closed `409`.
+- Pause/resume contracts:
+  - `POST /api/root-key-remediation-runs/{id}/pause` transitions active runs to `needs_attention/waiting_for_user`.
+  - `POST /api/root-key-remediation-runs/{id}/resume` restores the prior active state from pause event context.
+  - While paused, transition endpoints and external-task completion fail closed with `409 run_paused`.
 
 External task completion contract:
 - `POST /api/root-key-remediation-runs/{id}/external-tasks/{task_id}/complete`
@@ -287,6 +313,7 @@ Repository/service layer:
 - [root_key_remediation_store.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/root_key_remediation_store.py)
 - [root_key_remediation_state_machine.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/root_key_remediation_state_machine.py)
 - [root_key_usage_discovery.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/root_key_usage_discovery.py)
+- [root_key_remediation_closure.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/root_key_remediation_closure.py)
 
 ### Entities
 
@@ -332,7 +359,15 @@ All defaults preserve current behavior:
 | `ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS` | `false` | Enforces transition guardrail checks in runtime path. |
 | `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED` | `false` | Enables root-key usage discovery and dependency classification path. |
 | `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED` | `false` | Enables guarded executor-worker behavior for disable/rollback/delete. |
+| `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED` | `false` | Enables deterministic percent-based canary rollout on create-run. |
+| `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT` | `100` | Canary selection percent when canary gating is enabled. |
+| `ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST` | `""` | Comma-separated tenant UUID bypass list for canary gating. |
+| `ROOT_KEY_SAFE_REMEDIATION_CANARY_ACCOUNT_ALLOWLIST` | `""` | Comma-separated account ID bypass list for canary gating. |
+| `ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED` | `false` | Fail-closed kill switch for all root-key mutating operations. |
+| `ROOT_KEY_SAFE_REMEDIATION_OPS_METRICS_ENABLED` | `false` | Enables tenant-scoped root-key ops metrics endpoint. |
 | `ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES` | `15` | CloudTrail lookback window for disable-window usage signals. |
+| `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_MAX_POLLS` | `30` | Maximum poll attempts for closure-cycle convergence checks. |
+| `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_POLL_INTERVAL_SECONDS` | `5.0` | Poll interval in seconds between closure status checks. |
 
 ## 13) Error Taxonomy and Operator Actions
 
@@ -356,6 +391,10 @@ Implemented tests in this task:
 - [test_root_key_remediation_state_machine.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_root_key_remediation_state_machine.py)
 - [test_root_key_remediation_runs_api.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_root_key_remediation_runs_api.py)
 - [test_root_key_remediation_executor_worker.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_root_key_remediation_executor_worker.py)
+- [test_root_key_remediation_plan_e2e.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_root_key_remediation_plan_e2e.py)
+- Deterministic fixtures:
+  - [root_key_safe_remediation_plan_scenarios.json](/Users/marcomaher/AWS%20Security%20Autopilot/tests/fixtures/root_key_safe_remediation_plan_scenarios.json)
+  - [root_key_safe_remediation_plan_expected_matrix.json](/Users/marcomaher/AWS%20Security%20Autopilot/tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json)
 
 Coverage provided:
 - migration upgrade/downgrade shape checks.
@@ -366,8 +405,14 @@ Coverage provided:
 - illegal transition rejection (fail closed).
 - retry/idempotency behavior for optimistic-lock conflicts with capped backoff.
 - root-key API auth/no-auth/wrong-tenant, happy paths, idempotent replay behavior, and invalid transition response contracts.
+- rollout/ops controls:
+  - canary percent gating (`allow`/`deny`/allowlist bypass),
+  - kill-switch fail-closed behavior,
+  - pause/resume correctness with run-paused mutation blocking,
+  - ops-metrics response contract.
 - executor-worker coverage for self-cutoff regression, disable clean-window success, rollback on failure signal, delete gating, auth-scope fail-closed behavior, and replay-safe disable retries.
 - root-key run detail contract coverage for timeline/dependency/artifact payload shape.
+- integration/e2e matrix coverage for managed-only completion, unknown dependency fail-closed path, user external-task continuation path, post-disable rollback, closure-cycle polling convergence, policy-preservation fail-closed assertions, and self-cutoff prevention.
 - frontend component coverage for timeline rendering, unknown-dependency wizard flow, and API error rendering.
 
 Execution checklist and rollout gates:

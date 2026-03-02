@@ -185,3 +185,25 @@ class RootKeyExternalTaskStatus(str, Enum):
     completed = "completed"
     cancelled = "cancelled"
     failed = "failed"
+
+
+class SecretMigrationRunStatus(str, Enum):
+    """Lifecycle status for tenant-scoped secret migration runs."""
+
+    queued = "queued"
+    running = "running"
+    success = "success"
+    partial_failed = "partial_failed"
+    failed = "failed"
+    rolled_back = "rolled_back"
+
+
+class SecretMigrationTransactionStatus(str, Enum):
+    """Per-target status for secret migration transaction entries."""
+
+    pending = "pending"
+    success = "success"
+    failed = "failed"
+    rolled_back = "rolled_back"
+    rollback_failed = "rollback_failed"
+    skipped = "skipped"

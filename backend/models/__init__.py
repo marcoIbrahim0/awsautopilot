@@ -15,6 +15,7 @@ from backend.models.control_mapping import ControlMapping
 from backend.models.control_plane_event import ControlPlaneEvent
 from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
 from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
+from backend.models.governance_notification import GovernanceNotification
 from backend.models.inventory_asset import InventoryAsset
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import (
@@ -32,6 +33,8 @@ from backend.models.enums import (
     RootKeyRemediationMode,
     RootKeyRemediationRunStatus,
     RootKeyRemediationState,
+    SecretMigrationRunStatus,
+    SecretMigrationTransactionStatus,
     RemediationRunExecutionPhase,
     RemediationRunExecutionStatus,
     RemediationRunMode,
@@ -49,6 +52,8 @@ from backend.models.root_key_remediation_event import RootKeyRemediationEvent
 from backend.models.root_key_remediation_run import RootKeyRemediationRun
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
+from backend.models.secret_migration_run import SecretMigrationRun
+from backend.models.secret_migration_transaction import SecretMigrationTransaction
 from backend.models.support_file import SupportFile
 from backend.models.support_note import SupportNote
 from backend.models.tenant import Tenant
@@ -79,6 +84,7 @@ __all__ = [
     "ControlPlaneEvent",
     "ControlPlaneEventIngestStatus",
     "ControlPlaneReconcileJob",
+    "GovernanceNotification",
     "InventoryAsset",
     "Base",
     "EntityType",
@@ -98,6 +104,10 @@ __all__ = [
     "RootKeyRemediationRun",
     "RootKeyRemediationRunStatus",
     "RootKeyRemediationState",
+    "SecretMigrationRun",
+    "SecretMigrationRunStatus",
+    "SecretMigrationTransaction",
+    "SecretMigrationTransactionStatus",
     "RemediationRun",
     "RemediationRunExecution",
     "RemediationRunExecutionPhase",

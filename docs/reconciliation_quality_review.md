@@ -1,14 +1,22 @@
 # Reconciliation Quality Review
 
-Cross-reference: [E2E no-UI agent debug reference](e2e_no_ui_agent_debug_reference.md).
+Cross-reference:
+- [E2E no-UI agent debug reference](e2e_no_ui_agent_debug_reference.md)
+- [Item 17 medium/low-confidence control coverage plan](prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 
 Scope audited:
 - `backend/workers/services/inventory_reconcile.py` (all collector functions currently present)
 - `backend/workers/services/shadow_state.py` (shadow overlay + promotion join behavior)
-- `backend/config.py` (`CONTROL_PLANE_AUTHORITATIVE_CONTROLS` setting definition)
+- `backend/config.py` (control-plane promotion guardrail settings)
 - Effective authoritative control list from `backend/.env` and `backend/workers/.env`
 - Collector naming note: S3 account-level logic (`S3.1`) is implemented inside `_collect_s3_buckets`; `_collect_s3_account` does not exist in current code.
-- Collector coverage note: `_collect_securityhub_account` does not exist in current code.
+- Collector coverage note: `_collect_securityhub_account` exists in current code and is routed by `collect_inventory_snapshots`.
+
+> ⚠️ Status: This document contains historical issue narratives plus closure updates.
+>
+> For current Item `17` execution planning and per-control done criteria, use [`docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md`](prod-readiness/17-medium-low-confidence-control-coverage-plan.md) as the authoritative checklist.
+>
+> ✅ Status update (2026-03-02): Item `17` core implementation now includes explicit medium/low branch handling in `inventory_reconcile` and `control_plane_events` for normal/access-denied/partial-data/API-error outcomes with stable `status_reason` and branch-tagged `evidence_ref`.
 
 Identity-shape observations are based on `artifacts/no-ui-agent/*/findings_pre_raw.json` (especially `artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json`).
 

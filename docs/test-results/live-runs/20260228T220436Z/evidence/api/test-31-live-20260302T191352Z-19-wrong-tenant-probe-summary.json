@@ -1,0 +1,5 @@
+{
+  "signup_with_company": "201",
+  "wrong_tenant_auth_me": "200",
+  "wrong_tenant_delete": "404"
+}

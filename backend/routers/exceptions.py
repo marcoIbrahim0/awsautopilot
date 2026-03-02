@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,6 +24,11 @@ from backend.models.exception import Exception
 from backend.models.finding import Finding
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
+from backend.services.exception_governance import (
+    get_exception_lifecycle_status,
+    schedule_next_revalidation_at,
+    schedule_next_reminder_at,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +47,20 @@ class CreateExceptionRequest(BaseModel):
     reason: str = Field(..., min_length=10, description="Reason for suppression (min 10 characters)")
     expires_at: str = Field(..., description="ISO8601 datetime when exception expires")
     ticket_link: Optional[str] = Field(default=None, max_length=500, description="Optional link to ticket/issue")
+    owner_user_id: str | None = Field(default=None, description="Optional owner user UUID (same tenant)")
+    approval_metadata: dict[str, Any] | None = Field(default=None, description="Optional approval metadata")
+    reminder_interval_days: int | None = Field(
+        default=None,
+        ge=1,
+        le=365,
+        description="Optional reminder interval in days",
+    )
+    revalidation_interval_days: int | None = Field(
+        default=None,
+        ge=1,
+        le=365,
+        description="Optional revalidation cycle interval in days",
+    )
 
 
 class ExceptionResponse(BaseModel):
@@ -56,8 +75,16 @@ class ExceptionResponse(BaseModel):
     reason: str
     approved_by_user_id: str
     approved_by_email: str | None
+    owner_user_id: str | None = None
+    owner_email: str | None = None
+    approval_metadata: dict[str, Any] | None = None
     ticket_link: str | None
     expires_at: str
+    reminder_interval_days: int | None = None
+    next_reminder_at: str | None = None
+    revalidation_interval_days: int | None = None
+    next_revalidation_at: str | None = None
+    lifecycle_status: str
     created_at: str
     updated_at: str
 
@@ -73,9 +100,14 @@ class ExceptionListItem(BaseModel):
     reason: str
     approved_by_user_id: str
     approved_by_email: str | None
+    owner_user_id: str | None = None
+    owner_email: str | None = None
     ticket_link: str | None
     expires_at: str
     created_at: str
+    next_reminder_at: str | None = None
+    next_revalidation_at: str | None = None
+    lifecycle_status: str
     is_expired: bool
 
 
@@ -93,6 +125,7 @@ class ExceptionsListResponse(BaseModel):
 def _exception_to_response(exception: Exception) -> ExceptionResponse:
     """Convert Exception model to response. Requires approved_by relationship loaded."""
     approved_by_email = exception.approved_by.email if exception.approved_by else None
+    owner_email = exception.owner.email if exception.owner else None
     return ExceptionResponse(
         id=str(exception.id),
         tenant_id=str(exception.tenant_id),
@@ -101,8 +134,16 @@ def _exception_to_response(exception: Exception) -> ExceptionResponse:
         reason=exception.reason,
         approved_by_user_id=str(exception.approved_by_user_id),
         approved_by_email=approved_by_email,
+        owner_user_id=str(exception.owner_user_id) if exception.owner_user_id else None,
+        owner_email=owner_email,
+        approval_metadata=exception.approval_metadata if isinstance(exception.approval_metadata, dict) else None,
         ticket_link=exception.ticket_link,
         expires_at=exception.expires_at.isoformat(),
+        reminder_interval_days=exception.reminder_interval_days,
+        next_reminder_at=exception.next_reminder_at.isoformat() if exception.next_reminder_at else None,
+        revalidation_interval_days=exception.revalidation_interval_days,
+        next_revalidation_at=exception.next_revalidation_at.isoformat() if exception.next_revalidation_at else None,
+        lifecycle_status=get_exception_lifecycle_status(exception),
         created_at=exception.created_at.isoformat(),
         updated_at=exception.updated_at.isoformat(),
     )
@@ -111,6 +152,7 @@ def _exception_to_response(exception: Exception) -> ExceptionResponse:
 def _exception_to_list_item(exception: Exception) -> ExceptionListItem:
     """Convert Exception model to list item. Requires approved_by relationship loaded."""
     approved_by_email = exception.approved_by.email if exception.approved_by else None
+    owner_email = exception.owner.email if exception.owner else None
     now = datetime.now(timezone.utc)
     is_expired = exception.expires_at <= now
     return ExceptionListItem(
@@ -120,9 +162,14 @@ def _exception_to_list_item(exception: Exception) -> ExceptionListItem:
         reason=exception.reason,
         approved_by_user_id=str(exception.approved_by_user_id),
         approved_by_email=approved_by_email,
+        owner_user_id=str(exception.owner_user_id) if exception.owner_user_id else None,
+        owner_email=owner_email,
         ticket_link=exception.ticket_link,
         expires_at=exception.expires_at.isoformat(),
         created_at=exception.created_at.isoformat(),
+        next_reminder_at=exception.next_reminder_at.isoformat() if exception.next_reminder_at else None,
+        next_revalidation_at=exception.next_revalidation_at.isoformat() if exception.next_revalidation_at else None,
+        lifecycle_status=get_exception_lifecycle_status(exception, now=now),
         is_expired=is_expired,
     )
 
@@ -181,6 +228,30 @@ async def create_exception(
             detail={"error": "Invalid expires_at", "detail": "expires_at must be in the future"},
         )
 
+    owner_user_id = current_user.id
+    if body.owner_user_id:
+        try:
+            owner_uuid = uuid.UUID(body.owner_user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid owner_user_id", "detail": "owner_user_id must be a valid UUID"},
+            )
+
+        owner_result = await db.execute(
+            select(User).where(
+                User.id == owner_uuid,
+                User.tenant_id == tenant_uuid,
+            )
+        )
+        owner = owner_result.scalar_one_or_none()
+        if not owner:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid owner_user_id", "detail": "owner_user_id must belong to the tenant"},
+            )
+        owner_user_id = owner.id
+
     # Validate entity exists and belongs to tenant
     if body.entity_type == "finding":
         result = await db.execute(
@@ -226,14 +297,36 @@ async def create_exception(
         )
 
     # Create exception
+    approval_metadata = body.approval_metadata if isinstance(body.approval_metadata, dict) else None
+    if approval_metadata is not None:
+        approval_metadata = dict(approval_metadata)
+        approval_metadata.setdefault("approved_at", now.isoformat())
+        approval_metadata.setdefault("approved_by_user_id", str(current_user.id))
+
     exception = Exception(
         tenant_id=tenant_uuid,
         entity_type=EntityType(body.entity_type),
         entity_id=entity_uuid,
         reason=body.reason,
         approved_by_user_id=current_user.id,
+        owner_user_id=owner_user_id,
+        approval_metadata=approval_metadata,
         ticket_link=body.ticket_link,
         expires_at=expires_at,
+        reminder_interval_days=body.reminder_interval_days,
+        revalidation_interval_days=body.revalidation_interval_days,
+        next_reminder_at=schedule_next_reminder_at(
+            expires_at=expires_at,
+            interval_days=body.reminder_interval_days,
+            now=now,
+            last_reminded_at=None,
+        ),
+        next_revalidation_at=schedule_next_revalidation_at(
+            expires_at=expires_at,
+            interval_days=body.revalidation_interval_days,
+            now=now,
+            last_revalidated_at=None,
+        ),
     )
     db.add(exception)
     await db.commit()
@@ -247,7 +340,7 @@ async def create_exception(
     result = await db.execute(
         select(Exception)
         .where(Exception.id == exception.id)
-        .options(selectinload(Exception.approved_by))
+        .options(selectinload(Exception.approved_by), selectinload(Exception.owner))
     )
     exception = result.scalar_one()
 
@@ -305,7 +398,7 @@ async def list_exceptions(
     query = (
         select(Exception)
         .where(Exception.tenant_id == tenant_uuid)
-        .options(selectinload(Exception.approved_by))
+        .options(selectinload(Exception.approved_by), selectinload(Exception.owner))
     )
 
     # Apply filters
@@ -387,7 +480,7 @@ async def get_exception(
     result = await db.execute(
         select(Exception)
         .where(Exception.id == exception_uuid, Exception.tenant_id == tenant_uuid)
-        .options(selectinload(Exception.approved_by))
+        .options(selectinload(Exception.approved_by), selectinload(Exception.owner))
     )
     exception = result.scalar_one_or_none()
     if not exception:

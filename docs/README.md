@@ -8,8 +8,11 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Local development guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/README.md)
 - [Prod-readiness package](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/README.md)
 - [Reconciliation quality review](/Users/marcomaher/AWS%20Security%20Autopilot/docs/reconciliation_quality_review.md)
+- [Item 17 medium/low-confidence control coverage plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 - [Remediation safety model](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-safety-model.md)
 - [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
+- [Communication + Governance layer](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/communication-governance-layer.md)
+- [Secret migration connectors](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/secret-migration-connectors.md)
 - [Queue contract quarantine runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/queue-contract-quarantine-runbook.md)
 
 ### Operators / SaaS owners
@@ -22,6 +25,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Root-key safe remediation acceptance matrix (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md)
 - [Root-key safe remediation implementation checklist (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md)
 - [Control-plane event monitoring](/Users/marcomaher/AWS%20Security%20Autopilot/docs/control-plane-event-monitoring.md)
+- [Item 16 high-confidence live status rollout policy](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/16-high-confidence-live-status-rollout.md)
 
 ### Customers
 - [Customer guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/README.md)

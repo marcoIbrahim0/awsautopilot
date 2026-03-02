@@ -252,6 +252,14 @@ class Settings(BaseSettings):
         default=False,
         description="Enables automated ingest/compute/reconcile closure cycle for root-key runs.",
     )
+    ROOT_KEY_SAFE_REMEDIATION_CLOSURE_MAX_POLLS: int = Field(
+        default=30,
+        description="Maximum closure polling attempts for root-key runs when closure orchestration is enabled.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_CLOSURE_POLL_INTERVAL_SECONDS: float = Field(
+        default=5.0,
+        description="Polling interval seconds between closure status checks for root-key closure orchestration.",
+    )
     ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS: bool = Field(
         default=False,
         description="Enforces strict runtime transition-guard checks in root-key orchestration.",
@@ -266,9 +274,61 @@ class Settings(BaseSettings):
             "Enables guarded executor-worker behavior for root-key disable/rollback/delete operations."
         ),
     )
+    ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Enable deterministic percent-based canary gating for root-key remediation run creation."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT: int = Field(
+        default=100,
+        description=(
+            "Percent of tenant/account combinations eligible when canary gating is enabled "
+            "(0-100, deterministic hash selection)."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST: str = Field(
+        default="",
+        description=(
+            "Comma-separated tenant UUID allowlist that bypasses root-key canary percent gating."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_CANARY_ACCOUNT_ALLOWLIST: str = Field(
+        default="",
+        description=(
+            "Comma-separated AWS account ID allowlist that bypasses root-key canary percent gating."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED: bool = Field(
+        default=False,
+        description="Global kill switch that fail-closes root-key remediation mutating operations.",
+    )
+    ROOT_KEY_SAFE_REMEDIATION_OPS_METRICS_ENABLED: bool = Field(
+        default=False,
+        description="Enable tenant-scoped root-key remediation ops metrics endpoint.",
+    )
     ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES: int = Field(
         default=15,
         description="CloudTrail lookback window for root-key disable monitor signals.",
+    )
+    SECRET_MIGRATION_CONNECTORS_ENABLED: bool = Field(
+        default=False,
+        description="Enables tenant-scoped secret migration connector APIs and execution paths.",
+    )
+    SECRET_MIGRATION_APPROVED_CI_BACKENDS: str = Field(
+        default="github_actions",
+        description=(
+            "Comma-separated CI secret backends allowed for connector execution "
+            "(for example: github_actions)."
+        ),
+    )
+    SECRET_MIGRATION_GITHUB_CLI_BIN: str = Field(
+        default="gh",
+        description="GitHub CLI binary used by the github_actions secret migration connector.",
+    )
+    SECRET_MIGRATION_MAX_TARGETS: int = Field(
+        default=200,
+        description="Maximum number of per-target secret mappings accepted in one migration run.",
     )
     CONTROL_PLANE_SOURCE: str = Field(
         default="event_monitor_shadow",
@@ -277,9 +337,82 @@ class Settings(BaseSettings):
     CONTROL_PLANE_AUTHORITATIVE_CONTROLS: str = Field(
         default="",
         description=(
-            "Comma-separated canonical control IDs (e.g. EC2.53,S3.1) that are promoted to "
-            "authoritative control-plane state when CONTROL_PLANE_SHADOW_MODE=false. "
-            "Promoted controls will auto-resolve/reopen live findings based on shadow status."
+            "Legacy comma-separated canonical control IDs used by earlier authoritative rollout docs. "
+            "Canonical promotion now uses CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS + guardrails."
+        ),
+    )
+    CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Master switch for canonical finding.status promotion/reopen from control-plane shadow evaluations."
+        ),
+    )
+    CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS: str = Field(
+        default="",
+        description=(
+            "Comma-separated canonical control IDs eligible for live canonical promotion/reopen "
+            "when authoritative promotion is enabled."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS: str = Field(
+        default="",
+        description=(
+            "Comma-separated canonical control IDs treated as medium/low confidence for Item 17 "
+            "promotion quality gates."
+        ),
+    )
+    CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE: int = Field(
+        default=95,
+        description=(
+            "Minimum evaluation state_confidence required for canonical status promotion/reopen."
+        ),
+    )
+    CONTROL_PLANE_PROMOTION_PILOT_TENANTS: str = Field(
+        default="",
+        description=(
+            "Optional comma-separated tenant UUID allowlist for authoritative promotion pilot scope. "
+            "When set, only listed tenants can promote/reopen canonical finding status."
+        ),
+    )
+    CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED: bool = Field(
+        default=False,
+        description=(
+            "Allow SOFT_RESOLVED evaluations to promote canonical status to RESOLVED when true."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_COVERAGE: int = Field(
+        default=95,
+        description=(
+            "Minimum observed coverage percentage required before medium/low controls can "
+            "promote canonical status."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_PRECISION: int = Field(
+        default=95,
+        description=(
+            "Minimum observed precision percentage required before medium/low controls can "
+            "promote canonical status."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE: int = Field(
+        default=0,
+        description=(
+            "Current observed medium/low promotion coverage percentage used by Item 17 quality "
+            "gating."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION: int = Field(
+        default=0,
+        description=(
+            "Current observed medium/low promotion precision percentage used by Item 17 quality "
+            "gating."
+        ),
+    )
+    CONTROL_PLANE_MEDIUM_LOW_PROMOTION_ROLLBACK_TRIGGERED: bool = Field(
+        default=False,
+        description=(
+            "When true, medium/low confidence controls are fail-closed from canonical promotion "
+            "until rollback conditions are cleared."
         ),
     )
     WORKER_POOL: str = Field(
@@ -399,6 +532,29 @@ class Settings(BaseSettings):
     DIGEST_ENABLED: bool = Field(
         default=True,
         description="If False, weekly digest email is not sent (e.g. turn off in dev).",
+    )
+    COMMUNICATION_GOVERNANCE_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Enable communication/governance APIs, notification dispatch, "
+            "exception reminder enforcement, and governance dashboard metrics."
+        ),
+    )
+    COMMUNICATION_GOVERNANCE_DEFAULT_REMINDER_INTERVAL_DAYS: int = Field(
+        default=7,
+        description="Default reminder interval (days) for exception governance when configured.",
+    )
+    COMMUNICATION_GOVERNANCE_DEFAULT_REVALIDATION_INTERVAL_DAYS: int = Field(
+        default=30,
+        description="Default revalidation cycle interval (days) for exception governance when configured.",
+    )
+    COMMUNICATION_GOVERNANCE_SLA_BREACH_MINUTES: int = Field(
+        default=120,
+        description="SLA breach threshold for pending/running remediation runs in governance dashboard.",
+    )
+    COMMUNICATION_GOVERNANCE_REMINDER_BATCH_LIMIT: int = Field(
+        default=100,
+        description="Maximum due exception reminders processed in one governance dispatch call.",
     )
     SAAS_ADMIN_EMAILS: str = Field(
         default="",
@@ -521,7 +677,7 @@ class Settings(BaseSettings):
 
     @property
     def control_plane_authoritative_controls_set(self) -> set[str]:
-        """Uppercased set of canonical control IDs promoted to authoritative mode."""
+        """Uppercased legacy control-ID set retained for backward-compatible callers."""
         raw = (self.CONTROL_PLANE_AUTHORITATIVE_CONTROLS or "").strip()
         if not raw:
             return set()
@@ -532,6 +688,71 @@ class Settings(BaseSettings):
                 continue
             values.add(control_id.upper())
         return values
+
+    @property
+    def control_plane_high_confidence_controls_set(self) -> set[str]:
+        """Uppercased set of controls allowed to drive canonical promotion/reopen."""
+        raw = (self.CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS or "").strip()
+        if not raw:
+            return set()
+        values: set[str] = set()
+        for token in raw.split(","):
+            control_id = token.strip()
+            if not control_id:
+                continue
+            values.add(control_id.upper())
+        return values
+
+    @property
+    def control_plane_medium_low_confidence_controls_set(self) -> set[str]:
+        """Uppercased medium/low control IDs gated by Item 17 quality thresholds."""
+        raw = (self.CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS or "").strip()
+        if not raw:
+            return set()
+        values: set[str] = set()
+        for token in raw.split(","):
+            control_id = token.strip()
+            if not control_id:
+                continue
+            values.add(control_id.upper())
+        return values
+
+    @property
+    def control_plane_promotion_min_confidence(self) -> int:
+        """Normalized confidence floor bounded to [0, 100]."""
+        return max(0, min(100, int(self.CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE)))
+
+    @property
+    def control_plane_promotion_pilot_tenants_set(self) -> set[str]:
+        """Normalized tenant UUID allowlist for canonical promotion pilots."""
+        raw = (self.CONTROL_PLANE_PROMOTION_PILOT_TENANTS or "").strip()
+        if not raw:
+            return set()
+        return {
+            tenant_id.strip().lower()
+            for tenant_id in raw.split(",")
+            if tenant_id.strip()
+        }
+
+    @property
+    def control_plane_medium_low_promotion_min_coverage(self) -> int:
+        """Normalized medium/low coverage gate bounded to [0, 100]."""
+        return max(0, min(100, int(self.CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_COVERAGE)))
+
+    @property
+    def control_plane_medium_low_promotion_min_precision(self) -> int:
+        """Normalized medium/low precision gate bounded to [0, 100]."""
+        return max(0, min(100, int(self.CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_PRECISION)))
+
+    @property
+    def control_plane_medium_low_promotion_observed_coverage(self) -> int:
+        """Normalized observed medium/low coverage bounded to [0, 100]."""
+        return max(0, min(100, int(self.CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE)))
+
+    @property
+    def control_plane_medium_low_promotion_observed_precision(self) -> int:
+        """Normalized observed medium/low precision bounded to [0, 100]."""
+        return max(0, min(100, int(self.CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION)))
 
     @property
     def saas_admin_emails_list(self) -> set[str]:
@@ -555,6 +776,27 @@ class Settings(BaseSettings):
             for tenant_id in raw.split(",")
             if tenant_id.strip()
         }
+
+    @property
+    def root_key_canary_percent(self) -> int:
+        """Normalized root-key canary percent bounded to [0, 100]."""
+        return max(0, min(100, int(self.ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT)))
+
+    @property
+    def root_key_canary_tenant_allowlist(self) -> set[str]:
+        """Tenant UUID allowlist bypassing root-key canary percent gating."""
+        raw = (self.ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST or "").strip()
+        if not raw:
+            return set()
+        return {token.strip() for token in raw.split(",") if token.strip()}
+
+    @property
+    def root_key_canary_account_allowlist(self) -> set[str]:
+        """AWS account allowlist bypassing root-key canary percent gating."""
+        raw = (self.ROOT_KEY_SAFE_REMEDIATION_CANARY_ACCOUNT_ALLOWLIST or "").strip()
+        if not raw:
+            return set()
+        return {token.strip() for token in raw.split(",") if token.strip()}
 
 
 # Single instance; import and use as: from config import settings

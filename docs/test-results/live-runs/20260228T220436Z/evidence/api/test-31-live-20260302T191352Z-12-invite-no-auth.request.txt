@@ -1,0 +1,2 @@
+POST https://api.valensjewelry.com/api/users/invite
+Body: {"email":"wave8.test31.member-probe.20260302T191352Z@example.com"}

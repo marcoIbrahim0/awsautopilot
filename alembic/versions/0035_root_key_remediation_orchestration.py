@@ -1,6 +1,6 @@
 """root-key remediation orchestration schema
 
-Revision ID: 0035_root_key_remediation_orchestration
+Revision ID: 0035_rootkey_remediation_orch
 Revises: 0034_remrun_active_unique_guard
 Create Date: 2026-03-02
 """
@@ -14,7 +14,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 
-revision: str = "0035_root_key_remediation_orchestration"
+revision: str = "0035_rootkey_remediation_orch"
 down_revision: Union[str, None] = "0034_remrun_active_unique_guard"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

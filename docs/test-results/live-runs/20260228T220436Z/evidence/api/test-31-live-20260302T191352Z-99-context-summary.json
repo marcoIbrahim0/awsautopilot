@@ -1,0 +1,22 @@
+{
+  "prefix": "test-31-live-20260302T191352Z",
+  "tenant_id": "19b8d7c6-0100-421a-a084-c8b06d466837",
+  "account_id": "029037611564",
+  "statuses": {
+    "admin_login": "200",
+    "member_login": "200",
+    "member_invite_forbidden_probe": "403",
+    "member_delete_forbidden_probe": "403",
+    "admin_invite_control": "201",
+    "admin_delete_control_invalid_account": "404",
+    "noauth_invite_probe": "401",
+    "noauth_delete_probe": "401",
+    "wrong_tenant_signup_initial_missing_company_name": "422",
+    "wrong_tenant_signup_with_company_name": "201",
+    "wrong_tenant_auth_me": "200",
+    "wrong_tenant_delete_initial_unauthenticated": "401",
+    "wrong_tenant_delete_final": "404",
+    "accounts_post": "200"
+  },
+  "restore_triggered": false
+}

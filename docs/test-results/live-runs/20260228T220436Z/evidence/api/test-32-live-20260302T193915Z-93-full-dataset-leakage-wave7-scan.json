@@ -1,0 +1,26 @@
+{
+  "full_scan_total_items": 31,
+  "full_scan_hits_count": 0,
+  "full_scan_hits": [],
+  "focus_keywords": [
+    "root",
+    "governance",
+    "secret_migration",
+    "exception",
+    "notification"
+  ],
+  "focus_item_count": 0,
+  "focus_hits_count": 0,
+  "focus_hits": [],
+  "all_actions": [
+    [
+      "remediation_run_completed",
+      29
+    ],
+    [
+      "control_plane_token_rotated",
+      2
+    ]
+  ],
+  "focus_actions": []
+}

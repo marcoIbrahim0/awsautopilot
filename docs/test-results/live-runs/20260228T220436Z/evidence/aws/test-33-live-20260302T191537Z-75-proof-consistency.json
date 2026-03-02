@@ -1,0 +1,16 @@
+{
+  "c2_present": true,
+  "c5_present": true,
+  "c2_value": "2026-03-02T19:15:43+00:00",
+  "c5_value": "The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.",
+  "c2_parseable": true,
+  "run_created_at": "2026-03-02T19:15:43.545588+00:00",
+  "run_started_at": "2026-03-02T19:15:43.971941+00:00",
+  "run_completed_at": "2026-03-02T19:15:43.976864+00:00",
+  "c2_within_run_window_5min": true,
+  "readme_strategy_id": "s3_bucket_block_public_access_standard",
+  "create_run_strategy_id": "s3_bucket_block_public_access_standard",
+  "strategy_matches_create_payload": true,
+  "apply_context_has_init_plan_apply_steps": true,
+  "run_execution_status": "success"
+}

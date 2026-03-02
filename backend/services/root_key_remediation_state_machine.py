@@ -69,7 +69,9 @@ _ALLOWED_TRANSITIONS: dict[RootKeyRemediationState, set[RootKeyRemediationState]
     },
     RootKeyRemediationState.needs_attention: {
         RootKeyRemediationState.migration,
+        RootKeyRemediationState.validation,
         RootKeyRemediationState.disable_window,
+        RootKeyRemediationState.delete_window,
         RootKeyRemediationState.rolled_back,
         RootKeyRemediationState.failed,
     },
@@ -140,6 +142,9 @@ class RootKeyRemediationStateMachineService:
         self._strict = strict_default if strict_transitions_enabled is None else bool(strict_transitions_enabled)
         delete_default = settings.ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED
         self._delete_enabled = delete_default if delete_enabled is None else bool(delete_enabled)
+        self._kill_switch_enabled = bool(
+            getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED", False)
+        )
         self._retry_policy = retry_policy or RootKeyTransitionRetryPolicy()
         self._sleep = sleep_fn
 
@@ -329,6 +334,68 @@ class RootKeyRemediationStateMachineService:
             event_type="mark_needs_attention",
             actor_metadata=actor_metadata,
             evidence_metadata=evidence_metadata,
+            cancellation_hook=cancellation_hook,
+        )
+
+    async def pause_run(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: uuid.UUID,
+        run_id: uuid.UUID,
+        transition_id: str,
+        pause_reason: str | None = None,
+        actor_metadata: dict[str, Any] | None = None,
+        evidence_metadata: dict[str, Any] | None = None,
+        cancellation_hook: CancellationHook | None = None,
+    ) -> RootKeyTransitionResult:
+        metadata = dict(evidence_metadata or {})
+        metadata["operation"] = "pause"
+        if pause_reason:
+            metadata["pause_reason"] = pause_reason
+        return await self._transition_with_retry(
+            db=db,
+            tenant_id=tenant_id,
+            run_id=run_id,
+            transition_id=transition_id,
+            to_state=RootKeyRemediationState.needs_attention,
+            to_status=RootKeyRemediationRunStatus.waiting_for_user,
+            event_type="pause_run",
+            actor_metadata=actor_metadata,
+            evidence_metadata=metadata,
+            cancellation_hook=cancellation_hook,
+        )
+
+    async def resume_run(
+        self,
+        db: AsyncSession,
+        *,
+        tenant_id: uuid.UUID,
+        run_id: uuid.UUID,
+        transition_id: str,
+        resume_state: RootKeyRemediationState,
+        actor_metadata: dict[str, Any] | None = None,
+        evidence_metadata: dict[str, Any] | None = None,
+        cancellation_hook: CancellationHook | None = None,
+    ) -> RootKeyTransitionResult:
+        if resume_state in _TERMINAL_STATES or resume_state == RootKeyRemediationState.needs_attention:
+            raise self._terminal_error(
+                "invalid_resume_state",
+                "Resume target must be a non-terminal active state.",
+            )
+        metadata = dict(evidence_metadata or {})
+        metadata["operation"] = "resume"
+        metadata["resume_state"] = resume_state.value
+        return await self._transition_with_retry(
+            db=db,
+            tenant_id=tenant_id,
+            run_id=run_id,
+            transition_id=transition_id,
+            to_state=resume_state,
+            to_status=RootKeyRemediationRunStatus.running,
+            event_type="resume_run",
+            actor_metadata=actor_metadata,
+            evidence_metadata=metadata,
             cancellation_hook=cancellation_hook,
         )
 
@@ -651,6 +718,11 @@ class RootKeyRemediationStateMachineService:
             raise self._terminal_error("transition_cancelled", "Transition cancelled by hook.")
 
     def _ensure_feature_enabled(self) -> None:
+        if self._kill_switch_enabled:
+            raise self._terminal_error(
+                "kill_switch_enabled",
+                "Root-key remediation mutating operations are blocked by kill switch.",
+            )
         if self._enabled and self._strict:
             return
         raise self._terminal_error(

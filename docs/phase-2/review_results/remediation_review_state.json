@@ -1,0 +1,1677 @@
+{
+  "metadata": {
+    "review_version": "1.0",
+    "created_at": "2026-02-24T17:40:40.758387",
+    "last_updated_at": "2026-02-24T17:40:40.758387",
+    "repository_root": "/Users/marcomaher/AWS Security Autopilot",
+    "status": "completed",
+    "total_controls": 16
+  },
+  "project_context": {},
+  "controls": [
+    {
+      "control_id": "S3.1",
+      "name": "Account-level Public Access Block",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.1",
+        "terraform_module_resource": "aws_s3_account_public_access_block",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_block_public_access.tf)"
+        ],
+        "trigger_condition_input_parameters": "Account ID",
+        "aws_apis_resources_affected": "S3 Control API (PutPublicAccessBlock)",
+        "required_iam_permissions": "s3:PutAccountPublicAccessBlock",
+        "scope": "account-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3control delete-public-access-block)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Account-wide (High)",
+        "reversibility": "Easy (CLI command). Terraform state is consistent.",
+        "permission_sensitivity": "Moderate (Requires account-level S3 permissions)",
+        "service_continuity_risk": "High if existing workloads rely on public buckets",
+        "data_risk": "Low (No data deletion)",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 60,
+        "safety_class": "Moderate",
+        "narrative_rationale": "Account-wide S3 Public Access Block affects all buckets in the account. While reversible, it can abruptly break public workloads across the entire account.",
+        "top_safety_risk": "Unexpected outage for public-facing assets.",
+        "evidence_cited": "Account-level scope; preflight does not dynamically find ALL public dependencies.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 10,
+        "historical_evidence": 5,
+        "total_score": 65,
+        "estimated_success_rate": "85-95%",
+        "confidence": "High",
+        "main_failure_driver": "Missing IAM cross-account permissions during apply."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied / missing IAM action (s3:PutAccountPublicAccessBlock)",
+          "detection_method": "Terraform apply fails with AccessDenied",
+          "user_customer_impact": "Remediation fails to apply; no disruption to workloads",
+          "containment_strategy": "Run fails fast; state is unchanged.",
+          "fix_recommendation": "Update operator IAM role to include account-level S3 permissions.",
+          "evidence": "Observed via missing permissions checks in preflight logic.",
+          "severity": "Medium",
+          "likelihood": "Medium"
+        },
+        {
+          "failure_mode": "Existing workloads relying on public S3 buckets break abruptly",
+          "detection_method": "Customer reports 403 Access Denied from end-users/applications.",
+          "user_customer_impact": "Severe outage for public-facing web assets (CloudFront lacking OAC, public websites, public downloads).",
+          "containment_strategy": "Manual rollback via CLI.",
+          "fix_recommendation": "Perform complete inventory of public dependencies before applying account-level blocks.",
+          "evidence": "Account-level block restricts all buckets regardless of individual bucket policies.",
+          "severity": "Critical",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Manual approval required",
+        "rationale": "Account-wide block public access can immediately break untracked public workloads across the entire account.",
+        "mandatory_preconditions": "Account-wide public asset inventory scan and confirmation.",
+        "biggest_risk": "Account-wide outage for public assets.",
+        "most_important_fix": "Perform comprehensive preflight checks for CloudFront distributions and public website buckets before proposing."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No explicit IAM permission check before execution",
+        "No rollback automation logic in PR bundle worker"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.2",
+      "name": "Bucket-level Public Access Block",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.2",
+        "terraform_module_resource": "aws_s3_bucket_public_access_block / aws_cloudfront_origin_access_control",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_block_public_access.tf, s3_cloudfront_oac_private_s3.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name",
+        "aws_apis_resources_affected": "S3 API (PutBucketPublicAccessBlock), CloudFront (CreateDistribution)",
+        "required_iam_permissions": "s3:PutBucketPublicAccessBlock, cloudfront:*",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "Yes (backend/workers/services/pr_bundle_preflight.py probes website hosting and public ACLs)",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api delete-public-access-block)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Moderate)",
+        "reversibility": "Easy (CLI command). Revert bucket public access block.",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "High for the targeted bucket if it hosts a website",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 75,
+        "safety_class": "Moderate",
+        "narrative_rationale": "Scoped to a single bucket, but blocking public access can break web hosting or public assets. Preflight checks for website hosting help mitigate risk.",
+        "top_safety_risk": "Broken static websites or public asset delivery.",
+        "evidence_cited": "Preflight scripts check website hosting but some API clients may break.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 20,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 10,
+        "historical_evidence": 5,
+        "total_score": 75,
+        "estimated_success_rate": "80-90%",
+        "confidence": "High",
+        "main_failure_driver": "Websites breaking due to public block; IAM permission limits."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied / missing IAM action (s3:PutBucketPublicAccessBlock)",
+          "detection_method": "Terraform apply fails with AccessDenied.",
+          "user_customer_impact": "Remediation fails; bucket remains public.",
+          "containment_strategy": "Run fails fast.",
+          "fix_recommendation": "Verify bucket policies and IAM role for s3:PutBucketPublicAccessBlock.",
+          "evidence": "Missing pre-execution IAM checks.",
+          "severity": "Medium",
+          "likelihood": "Medium"
+        },
+        {
+          "failure_mode": "Target bucket hosts an active static website",
+          "detection_method": "s3_website_hosting_active=True logged during preflight.",
+          "user_customer_impact": "If applied, active static website goes offline.",
+          "containment_strategy": "Preflight detects website hosting configuration.",
+          "fix_recommendation": "Abort apply and require manual migration to CloudFront+OAC.",
+          "evidence": "pr_bundle_preflight.py website hosting probe.",
+          "severity": "Critical",
+          "likelihood": "Medium"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Manual approval required",
+        "rationale": "Applying bucket-level blocks can break existing websites or public asset delivery.",
+        "mandatory_preconditions": "Verify no `s3:GetObject` public traffic in access logs.",
+        "biggest_risk": "Broken static websites.",
+        "most_important_fix": "Implement log analysis to prove the bucket is not legitimately serving public traffic."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No explicit IAM permission check",
+        "No automated rollback for disrupted websites"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.4",
+      "name": "S3 Bucket Encryption",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.4",
+        "terraform_module_resource": "aws_s3_bucket_server_side_encryption_configuration",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_encryption.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name",
+        "aws_apis_resources_affected": "S3 API (PutBucketEncryption)",
+        "required_iam_permissions": "s3:PutEncryptionConfiguration",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api delete-bucket-encryption)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Low)",
+        "reversibility": "Easy (Remove default encryption).",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low (AES256 is transparent to clients)",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 95,
+        "safety_class": "Low",
+        "narrative_rationale": "Enabling AES256 default encryption on a bucket is generally transparent and does not break existing access patterns.",
+        "top_safety_risk": "Slight performance overhead (negligible).",
+        "evidence_cited": "Standard AWS best practice, SSE-S3 is seamless.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 60,
+        "estimated_success_rate": "90-95%",
+        "confidence": "High",
+        "main_failure_driver": "General Terraform apply failures or missing permissions."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied / missing IAM action (s3:PutEncryptionConfiguration)",
+          "detection_method": "Terraform apply fails.",
+          "user_customer_impact": "Bucket remains unencrypted (default).",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Grant s3:PutEncryptionConfiguration to executor role.",
+          "evidence": "IAM lacks checks.",
+          "severity": "Low",
+          "likelihood": "Low"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "SSE-S3 default encryption is completely transparent to clients.",
+        "mandatory_preconditions": "Basic permission checks.",
+        "biggest_risk": "None significant.",
+        "most_important_fix": "Add IAM preflight checks for `s3:PutEncryptionConfiguration`."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check",
+        "No rollback automation"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.5",
+      "name": "S3 Bucket SSL Enforcement",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.5",
+        "terraform_module_resource": "aws_s3_bucket_policy",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_require_ssl.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name",
+        "aws_apis_resources_affected": "S3 API (PutBucketPolicy)",
+        "required_iam_permissions": "s3:PutBucketPolicy",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "Yes (backend/workers/services/pr_bundle_preflight.py checks for existing Allow statements)",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api delete-bucket-policy)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Moderate)",
+        "reversibility": "Hard (Applying new bucket policy can overwrite/delete existing statements. Rollback destroys the entire policy).",
+        "permission_sensitivity": "High (Bucket policies control fundamental access)",
+        "service_continuity_risk": "High (Clients not enforcing TLS will break)",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "High (Race conditions if multiple actors edit policy)",
+        "safety_score": 30,
+        "safety_class": "Critical",
+        "narrative_rationale": "Applying a bucket policy for SSL enforcement can inadvertently overwrite existing access rules. Un-applying it via the provided rollback (deleting the policy entirely) is destructive.",
+        "top_safety_risk": "Complete loss of legitimate access due to overwritten or deleted bucket policy.",
+        "evidence_cited": "Rollback command notes 'WARNING: removes the entire merged policy'. Preflight notes it checks for existing allows, but merge conflicts are risky.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 15,
+        "error_handling": 5,
+        "idempotency": 10,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 50,
+        "estimated_success_rate": "60-75%",
+        "confidence": "Medium",
+        "main_failure_driver": "Bucket policy conflicting limits or exceeding max policy size."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Existing bucket policy overwritten or destroyed",
+          "detection_method": "Terraform plan shows replacement/deletion of existing policy blocks.",
+          "user_customer_impact": "Legitimate applications or cross-account access abruptly lose access.",
+          "containment_strategy": "None. Reverting destroys the entire policy.",
+          "fix_recommendation": "Require manual review of existing bucket policies; do not blindly overwrite them.",
+          "evidence": "aws_s3_bucket_policy manages the entire policy object. Rollback command explicitly notes 'removes entire merged policy'.",
+          "severity": "Critical",
+          "likelihood": "High"
+        },
+        {
+          "failure_mode": "Policy size exceeds AWS limits (20KB)",
+          "detection_method": "Terraform apply fails with MalformedPolicy/EntityTooLarge.",
+          "user_customer_impact": "Remediation fails.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Consolidate policy statements.",
+          "evidence": "Bucket policies have strict size bounds.",
+          "severity": "Low",
+          "likelihood": "Low"
+        }
+      ],
+      "field_execution_risks": "Highly sensitive to interrupted applies, as an incomplete bucket policy overwrite could lock everyone out of the bucket permanently.",
+      "recommendation": {
+        "status": "Disabled until fixed",
+        "rationale": "Overwriting bucket policies with Terraform is highly destructive to existing complex merged policies.",
+        "mandatory_preconditions": "Robust policy parser that strictly appends `Deny` statements without touching existing rules.",
+        "biggest_risk": "Irreversible deletion of critical bucket access policies.",
+        "most_important_fix": "Move away from declarative full-policy replacement (`aws_s3_bucket_policy`). Use granular API appending or CLI."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check",
+        "No automated rollback to perfectly restore old bucket policy"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.9",
+      "name": "S3 Bucket Access Logging",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.9",
+        "terraform_module_resource": "aws_s3_bucket_logging",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_access_logging.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name, Log Bucket Name",
+        "aws_apis_resources_affected": "S3 API (PutBucketLogging)",
+        "required_iam_permissions": "s3:PutBucketLogging",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api put-bucket-logging empty status)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Low)",
+        "reversibility": "Easy (Disable logging)",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 90,
+        "safety_class": "Low",
+        "narrative_rationale": "Enabling access logging simply writes logs to a target bucket. Impact is minimal.",
+        "top_safety_risk": "Storage cost increases in the log bucket.",
+        "evidence_cited": "Standard non-invasive API.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 15,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 65,
+        "estimated_success_rate": "80-90%",
+        "confidence": "Medium",
+        "main_failure_driver": "Target logging bucket missing proper ACLs or policy for delivery."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Dependency missing (logging bucket lacks ACL/Policy for log delivery)",
+          "detection_method": "Terraform apply fails with InvalidTargetBucketForLogging.",
+          "user_customer_impact": "Remediation fails.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Ensure target log bucket has LogDeliveryWrite ACL or appropriate IAM policy.",
+          "evidence": "S3 access logging requires destination bucket permissions.",
+          "severity": "Medium",
+          "likelihood": "Medium"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Enabling logging is non-disruptive.",
+        "mandatory_preconditions": "Verify log destination bucket exists and has correct ACLs.",
+        "biggest_risk": "Target bucket missing proper permissions, causing apply failure.",
+        "most_important_fix": "Add dependency check for log bucket ACLs."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "Log bucket existence verification is implicit",
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.11",
+      "name": "S3 Lifecycle Optimization",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.11",
+        "terraform_module_resource": "aws_s3_bucket_lifecycle_configuration",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_lifecycle_configuration.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name, abort_incomplete_multipart_days",
+        "aws_apis_resources_affected": "S3 API (PutLifecycleConfiguration)",
+        "required_iam_permissions": "s3:PutLifecycleConfiguration",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api delete-bucket-lifecycle)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Low)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low (Only aborts failed incomplete uploads after 7 days)",
+        "data_risk": "Moderate (Deletes orphaned multipart upload parts)",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 90,
+        "safety_class": "Low",
+        "narrative_rationale": "Adding a lifecycle rule to abort incomplete multipart uploads is very low risk. It cleans up unused data.",
+        "top_safety_risk": "None significant, unless legitimate uploads take > 7 days.",
+        "evidence_cited": "Standard cleanup rule.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 60,
+        "estimated_success_rate": "85-95%",
+        "confidence": "High",
+        "main_failure_driver": "Lack of correct IAM permissions for s3:PutLifecycleConfiguration."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Existing lifecycle rules overwritten",
+          "detection_method": "Terraform plan replaces old rules.",
+          "user_customer_impact": "Existing data transitions or expirations immediately stop functioning.",
+          "containment_strategy": "Terraform must be configured to append rules, not overwrite.",
+          "fix_recommendation": "Use aws_s3_bucket_lifecycle_configuration carefully with existing rules.",
+          "evidence": "aws_s3_bucket_lifecycle_configuration is authoritative for the entire bucket.",
+          "severity": "High",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Cleaning up incomplete multipart uploads is safe and saves cost.",
+        "mandatory_preconditions": "None strictly required beyond permissions.",
+        "biggest_risk": "Overwriting existing lifecycle rules.",
+        "most_important_fix": "Ensure terraform appends lifecycle rules rather than replacing all rules."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "S3.15",
+      "name": "S3 Bucket KMS Encryption",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "S3.15",
+        "terraform_module_resource": "aws_s3_bucket_server_side_encryption_configuration",
+        "file_paths": [
+          "backend/services/pr_bundle.py (s3_bucket_encryption_kms.tf)"
+        ],
+        "trigger_condition_input_parameters": "Bucket Name, KMS Key ARN",
+        "aws_apis_resources_affected": "S3 API (PutBucketEncryption), KMS",
+        "required_iam_permissions": "s3:PutEncryptionConfiguration",
+        "scope": "bucket-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws s3api put-bucket-encryption with AES256)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Bucket-level (Moderate)",
+        "reversibility": "Moderate",
+        "permission_sensitivity": "Moderate",
+        "service_continuity_risk": "Moderate (KMS requires clients to have kms:GenerateDataKey permissions)",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Moderate (Cross-account access can break if KMS policies restrict it)",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 65,
+        "safety_class": "Moderate",
+        "narrative_rationale": "Switching default encryption to KMS requires all interacting IAM roles to have KMS permissions. This frequently breaks cross-account access and roles with tightly scoped inline policies.",
+        "top_safety_risk": "AccessDenied errors for principals lacking KMS cryptographic permissions.",
+        "evidence_cited": "KMS integration is known to break transparent access if policies are not updated.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 5,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 50,
+        "estimated_success_rate": "70-85%",
+        "confidence": "Medium",
+        "main_failure_driver": "KMS key policy denies usage to S3 or cross-account callers."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Dependency missing / KMS key policy restricts usage",
+          "detection_method": "Terraform apply fails with KMSAccessDenied, or subsequent GetObject data calls fail.",
+          "user_customer_impact": "Data is locked out to consumers that lack kms:Decrypt.",
+          "containment_strategy": "None post-apply.",
+          "fix_recommendation": "Ensure callers have KMS permissions before enforcing SSE-KMS.",
+          "evidence": "KMS requires explicit IAM and Key Policy allows.",
+          "severity": "High",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Manual approval required",
+        "rationale": "Enforcing KMS encryption requires modifying cross-account role policies and KMS key policies.",
+        "mandatory_preconditions": "Verify KMS key policies allow access to all roles currently reading the bucket.",
+        "biggest_risk": "AccessDenied for consumers lacking KMS decrypt permissions.",
+        "most_important_fix": "Perform IAM Access Analyzer checks to validate KMS access paths."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No check if specified KMS key exists or is accessible",
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "EC2.7",
+      "name": "EBS Default Encryption",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "EC2.7",
+        "terraform_module_resource": "aws_ebs_encryption_by_default",
+        "file_paths": [
+          "backend/services/pr_bundle.py (ebs_default_encryption.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "EC2 API (EnableEbsEncryptionByDefault)",
+        "required_iam_permissions": "ec2:EnableEbsEncryptionByDefault",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws ec2 disable-ebs-encryption-by-default)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (High)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low (Only affects new volumes. Might impact ancient instance types)",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 85,
+        "safety_class": "Low",
+        "narrative_rationale": "Region-wide default EBS encryption only applies to newly created volumes. It is non-disruptive to running instances.",
+        "top_safety_risk": "Potential issues launching very old instance types that do not support encrypted EBS.",
+        "evidence_cited": "AWS documentation confirms it only affects new volumes.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 60,
+        "estimated_success_rate": "90-99%",
+        "confidence": "High",
+        "main_failure_driver": "Insufficient ec2:EnableEbsEncryptionByDefault permissions."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied (ec2:EnableEbsEncryptionByDefault)",
+          "detection_method": "Terraform apply fails.",
+          "user_customer_impact": "Remediation fails; applies to region.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Update role with EC2 management permissions.",
+          "evidence": "Standard IAM limits.",
+          "severity": "Low",
+          "likelihood": "Low"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Region-wide default EBS encryption only applies to newly created volumes.",
+        "mandatory_preconditions": "Permission checks.",
+        "biggest_risk": "Extremely old legacy instance types failing to launch.",
+        "most_important_fix": "Add IAM preflight checks."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "EC2.53",
+      "name": "Security Group Hardening",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "EC2.53",
+        "terraform_module_resource": "aws_vpc_security_group_ingress_rule",
+        "file_paths": [
+          "backend/services/pr_bundle.py (sg_restrict_public_ports.tf)"
+        ],
+        "trigger_condition_input_parameters": "Security Group ID",
+        "aws_apis_resources_affected": "EC2 API (RevokeSecurityGroupIngress / AuthorizeSecurityGroupIngress)",
+        "required_iam_permissions": "ec2:RevokeSecurityGroupIngress, ec2:AuthorizeSecurityGroupIngress",
+        "scope": "resource-level (Security Group)",
+        "idempotent": true,
+        "preflight_validation": "Yes (backend/workers/services/pr_bundle_preflight.py checks for active ENIs attached)",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual terraform apply with previous.tfvars or CLI",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Resource-level / Security Group (Moderate)",
+        "reversibility": "Hard (Revoking a rule in Terraform may not easily recreate the exact original rule if undone manually, tf state drift).",
+        "permission_sensitivity": "Moderate",
+        "service_continuity_risk": "High (Revoking 0.0.0.0/0 on port 22/3389 immediately breaks active remote administration).",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Moderate",
+        "safety_score": 40,
+        "safety_class": "High",
+        "narrative_rationale": "Removing public SSH/RDP access immediately closes network paths. If legitimate administrators or automated deployment scripts rely on this, they will be instantly locked out.",
+        "top_safety_risk": "Immediate lockout of legitimate administrative traffic.",
+        "evidence_cited": "Preflight probes for active ENIs, but cannot determine if the 0.0.0.0/0 route is actively relied upon by humans.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 20,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 65,
+        "estimated_success_rate": "75-85%",
+        "confidence": "High",
+        "main_failure_driver": "Security group modified natively during PR apply; state drift lockout."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Lockout of active administrators via RDP/SSH",
+          "detection_method": "Terraform apply revokes 0.0.0.0/0 on 22/3389.",
+          "user_customer_impact": "Legitimate admin scripts, pipelines, and humans lose access.",
+          "containment_strategy": "Preflight probe checks for active ENIs attached to the SG.",
+          "fix_recommendation": "Require fallback allow-lists or SSM Session Manager implementation before blocking.",
+          "evidence": "pr_bundle_preflight.py captures active ENIs but cannot verify human usage.",
+          "severity": "High",
+          "likelihood": "High"
+        },
+        {
+          "failure_mode": "State drift prevents exact rollback",
+          "detection_method": "Manual terraform rollback fails to reinstate complex legacy rules.",
+          "user_customer_impact": "Extended outage while manual recreation is performed.",
+          "containment_strategy": "Capture pre-apply tfvars carefully.",
+          "fix_recommendation": "Save the original API output of describe-security-group-rules.",
+          "evidence": "Terraform revokes specific rules but manual rollback is required.",
+          "severity": "Medium",
+          "likelihood": "Medium"
+        }
+      ],
+      "field_execution_risks": "State loss during apply means Terraform forgets it revoked the rules. Manual intervention is required to understand what was changed.",
+      "recommendation": {
+        "status": "Manual approval required",
+        "rationale": "Revoking 0.0.0.0/0 on 22/3389 immediately terminates active SSH/RDP access.",
+        "mandatory_preconditions": "SSM Session Manager must be verified as active and usable before locking down ports.",
+        "biggest_risk": "Lockout of legitimate administration.",
+        "most_important_fix": "Integrate SSM agent health checks into preflight."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "Cannot strictly verify if 0.0.0.0 is used by human admins in preflight",
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "EC2.182",
+      "name": "EBS Snapshot Public Block",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "EC2.182",
+        "terraform_module_resource": "aws_ec2_snapshot_block_public_access",
+        "file_paths": [
+          "backend/services/pr_bundle.py (ebs_snapshot_block_public_access.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "EC2 API (EnableSnapshotBlockPublicAccess)",
+        "required_iam_permissions": "ec2:EnableSnapshotBlockPublicAccess",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws ec2 disable-snapshot-block-public-access)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (High)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 90,
+        "safety_class": "Low",
+        "narrative_rationale": "Blocking public snapshots at the region level prevents accidental data exposure and does not impact private snapshot sharing.",
+        "top_safety_risk": "Intentional public snapshots will begin failing.",
+        "evidence_cited": "Operates at the region level preventing new exposures.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 60,
+        "estimated_success_rate": "90-99%",
+        "confidence": "High",
+        "main_failure_driver": "Insufficient EC2 permissions."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied (ec2:EnableSnapshotBlockPublicAccess)",
+          "detection_method": "Terraform apply fails.",
+          "user_customer_impact": "Remediation fails; applies to region.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Update role with EC2 management permissions.",
+          "evidence": "Standard IAM limits.",
+          "severity": "Low",
+          "likelihood": "Low"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Blocking public snapshots at the region level is safe and prevents exposure.",
+        "mandatory_preconditions": "Permission checks.",
+        "biggest_risk": "Intentional public snapshots fail.",
+        "most_important_fix": "Add IAM preflight checks."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "SecurityHub.1",
+      "name": "Security Hub Enablement",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "SecurityHub.1",
+        "terraform_module_resource": "aws_securityhub_account",
+        "file_paths": [
+          "backend/services/pr_bundle.py (enable_security_hub.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "SecurityHub API (EnableSecurityHub)",
+        "required_iam_permissions": "securityhub:EnableSecurityHub, iam:CreateServiceLinkedRole",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws securityhub disable-security-hub)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (Moderate)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 95,
+        "safety_class": "Low",
+        "narrative_rationale": "Enabling Security Hub is a read-only observability change.",
+        "top_safety_risk": "Minor AWS cost increases.",
+        "evidence_cited": "Standard AWS enablement API.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 5,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 50,
+        "estimated_success_rate": "80-90%",
+        "confidence": "Medium",
+        "main_failure_driver": "AWS Config not enabled or IAM missing for Service Linked Role."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "AWS Config prerequisite missing",
+          "detection_method": "Terraform apply fails or Security Hub enters inactive state.",
+          "user_customer_impact": "Security Hub fails to enable or function.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Validate AWS Config enablement beforehand or bundle remediation.",
+          "evidence": "Security Hub relies on Config.",
+          "severity": "Medium",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run with canary",
+        "rationale": "Enabling Security Hub is safe but depends on AWS Config.",
+        "mandatory_preconditions": "Verify AWS Config is enabled in the region.",
+        "biggest_risk": "Config dependency missing.",
+        "most_important_fix": "Bundle Config enablement or add strict preflight check."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No check if AWS Config is enabled (SecurityHub prerequisite)",
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "GuardDuty.1",
+      "name": "GuardDuty Enablement",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "GuardDuty.1",
+        "terraform_module_resource": "aws_guardduty_detector",
+        "file_paths": [
+          "backend/services/pr_bundle.py (enable_guardduty.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "GuardDuty API (CreateDetector)",
+        "required_iam_permissions": "guardduty:CreateDetector, iam:CreateServiceLinkedRole",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws guardduty delete-detector)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (Moderate)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 95,
+        "safety_class": "Low",
+        "narrative_rationale": "Enabling GuardDuty is an unintrusive observability change.",
+        "top_safety_risk": "Minor AWS cost increases.",
+        "evidence_cited": "Standard AWS enablement API.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 5,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 50,
+        "estimated_success_rate": "85-95%",
+        "confidence": "High",
+        "main_failure_driver": "Missing IAM permission for Service Linked Role creation."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Missing IAM permission for Service Linked Role creation",
+          "detection_method": "Terraform apply fails with AccessDenied for iam:CreateServiceLinkedRole.",
+          "user_customer_impact": "Remediation fails.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Ensure iam:CreateServiceLinkedRole is allowed.",
+          "evidence": "GuardDuty requires an SLR.",
+          "severity": "Low",
+          "likelihood": "Medium"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Observability enablement is safe.",
+        "mandatory_preconditions": "iam:CreateServiceLinkedRole permissions.",
+        "biggest_risk": "None.",
+        "most_important_fix": "Add IAM preflight checks."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "CloudTrail.1",
+      "name": "CloudTrail Enablement",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "CloudTrail.1",
+        "terraform_module_resource": "aws_cloudtrail",
+        "file_paths": [
+          "backend/services/pr_bundle.py (cloudtrail_enabled.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "CloudTrail API (CreateTrail, StartLogging)",
+        "required_iam_permissions": "cloudtrail:CreateTrail, cloudtrail:StartLogging",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws cloudtrail stop-logging)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (Advanced dependencies)",
+        "reversibility": "Moderate (Leaves behind S3 buckets or roles if not fully destroyed)",
+        "permission_sensitivity": "Moderate",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Moderate",
+        "concurrency_conflict_risk": "Moderate (Creating trails with duplicate names or existing buckets)",
+        "safety_score": 75,
+        "safety_class": "Moderate",
+        "narrative_rationale": "Enabling CloudTrail requires coordinating S3 buckets, bucket policies, and IAM roles. Failures midway can leave orphaned resources, and rollback requires careful cleanup.",
+        "top_safety_risk": "Orphaned S3 buckets and IAM roles if execution fails midway.",
+        "evidence_cited": "Dependency-heavy infrastructure; tf stack is complex.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 5,
+        "error_handling": 5,
+        "idempotency": 10,
+        "dependency_fragility": 10,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 40,
+        "estimated_success_rate": "60-75%",
+        "confidence": "Medium",
+        "main_failure_driver": "Global S3 bucket name collision or partial resource creation failure."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "S3 bucket name collision globally",
+          "detection_method": "Terraform apply fails during aws_s3_bucket create.",
+          "user_customer_impact": "Partial apply. Trail might not be fully configured.",
+          "containment_strategy": "Terraform halts.",
+          "fix_recommendation": "Use highly randomized bucket names with account ID.",
+          "evidence": "Review of Terraform structure indicates an S3 bucket is created inline.",
+          "severity": "Medium",
+          "likelihood": "High"
+        },
+        {
+          "failure_mode": "SCP / Organization trails prevent local trail creation",
+          "detection_method": "Terraform apply fails indicating max trails reached or insufficient org permissions.",
+          "user_customer_impact": "Remediation fails.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Detect Organization trails before running local remediations.",
+          "evidence": "Common SMB scenario where AWS ProServe/MSP setup exists.",
+          "severity": "Medium",
+          "likelihood": "Medium"
+        }
+      ],
+      "field_execution_risks": "Partial apply can leave orphaned S3 buckets if the trail itself fails to create.",
+      "recommendation": {
+        "status": "Auto-run with canary",
+        "rationale": "Dependency heavy, but generally safe if resources are uniquely named.",
+        "mandatory_preconditions": "Check for existing organization trails or SCPs.",
+        "biggest_risk": "Partial apply leaving orphaned buckets.",
+        "most_important_fix": "Ensure highly randomized S3 bucket naming and automatic rollback on failure."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No S3 bucket global uniqueness verification",
+        "No rollback automation on partial trail failure"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "Config.1",
+      "name": "AWS Config Enablement",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "Config.1",
+        "terraform_module_resource": "aws_config_configuration_recorder, aws_config_delivery_channel",
+        "file_paths": [
+          "backend/services/pr_bundle.py (aws_config_enabled.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "Config API (PutConfigurationRecorder, PutDeliveryChannel, StartConfigurationRecorder)",
+        "required_iam_permissions": "config:PutConfigurationRecorder, config:PutDeliveryChannel, config:StartConfigurationRecorder",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws configservice stop-configuration-recorder)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (Advanced dependencies)",
+        "reversibility": "Moderate (Leaves behind delivery channels, buckets)",
+        "permission_sensitivity": "Moderate",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Moderate",
+        "concurrency_conflict_risk": "Moderate (Only one default recorder allowed per region)",
+        "safety_score": 70,
+        "safety_class": "Moderate",
+        "narrative_rationale": "Setting up AWS Config requires S3 buckets, SNS topics, and IAM roles. AWS limits one configuration recorder per region, making concurrency/conflicts highly likely if one already exists.",
+        "top_safety_risk": "Conflict with an already existing Configuration Recorder.",
+        "evidence_cited": "Dependency-heavy; regions are strictly limited to one recorder.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 5,
+        "error_handling": 5,
+        "idempotency": 5,
+        "dependency_fragility": 5,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 30,
+        "estimated_success_rate": "40-60%",
+        "confidence": "High",
+        "main_failure_driver": "Hard AWS limit of 1 ConfigurationRecorder per region limits automation success."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Existing Configuration Recorder collision (Max 1 per region)",
+          "detection_method": "Terraform apply fails with MaxNumberOfConfigurationRecordersExceededException.",
+          "user_customer_impact": "Remediation fails entirely.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Pre-check region for existing recorders before executing.",
+          "evidence": "AWS hard limit on Config.",
+          "severity": "Medium",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": "Partial apply can leave orphaned S3 buckets, SNS topics, or IAM roles without a recorder.",
+      "recommendation": {
+        "status": "Auto-run with canary",
+        "rationale": "Safe, but frequently collides with existing recorders.",
+        "mandatory_preconditions": "Verify region does not already have a Configuration Recorder.",
+        "biggest_risk": "Apply failure due to 1-recorder-per-region limit.",
+        "most_important_fix": "Add strict preflight to check `aws configservice describe-configuration-recorders`."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "Does not verify if a ConfigurationRecorder already exists in the region"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "SSM.7",
+      "name": "SSM Public Sharing Block",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "SSM.7",
+        "terraform_module_resource": "aws_ssm_service_setting",
+        "file_paths": [
+          "backend/services/pr_bundle.py (ssm_block_public_sharing.tf)"
+        ],
+        "trigger_condition_input_parameters": "Region",
+        "aws_apis_resources_affected": "SSM API (UpdateServiceSetting)",
+        "required_iam_permissions": "ssm:UpdateServiceSetting",
+        "scope": "region-level",
+        "idempotent": true,
+        "preflight_validation": "No",
+        "post_apply_verification": "Yes (backend/workers/services/post_apply_reconcile.py enqueues targeted inventory sync to verify state)",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "Yes (Terraform plan phase is executed as RemediationRunExecutionPhase.plan in backend/workers/jobs/remediation_run_execution.py)",
+        "rollback_mechanism_fallback_path": "Manual CLI (aws ssm update-service-setting --setting-value Enable)",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Region-wide (Moderate)",
+        "reversibility": "Easy",
+        "permission_sensitivity": "Low",
+        "service_continuity_risk": "Low",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 95,
+        "safety_class": "Low",
+        "narrative_rationale": "Blocking public sharing of SSM documents is highly safe as public documents are extremely rare and usually a mistake.",
+        "top_safety_risk": "None expected.",
+        "evidence_cited": "API change is targeted and specific to a rare edge case.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 10,
+        "error_handling": 10,
+        "idempotency": 15,
+        "dependency_fragility": 15,
+        "test_coverage": 5,
+        "historical_evidence": 5,
+        "total_score": 60,
+        "estimated_success_rate": "90-99%",
+        "confidence": "High",
+        "main_failure_driver": "Missing ssm:UpdateServiceSetting permission."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Permission denied (ssm:UpdateServiceSetting)",
+          "detection_method": "Terraform apply fails.",
+          "user_customer_impact": "Remediation fails.",
+          "containment_strategy": "Fail fast.",
+          "fix_recommendation": "Ensure policy grants SSM settings update.",
+          "evidence": "Standard API check.",
+          "severity": "Low",
+          "likelihood": "Low"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Auto-run",
+        "rationale": "Blocking public SSM document sharing is non-disruptive.",
+        "mandatory_preconditions": "Permission checks.",
+        "biggest_risk": "None.",
+        "most_important_fix": "Add IAM preflight checks."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "No IAM check"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    },
+    {
+      "control_id": "IAM.4",
+      "name": "Root Access Key Removal",
+      "remediation_summary": "",
+      "soc2_mappings": [],
+      "inventory": {
+        "control_id": "IAM.4",
+        "terraform_module_resource": "N/A (Instructions only)",
+        "file_paths": [
+          "backend/services/pr_bundle.py (_generate_for_iam_root_access_key_absent)"
+        ],
+        "trigger_condition_input_parameters": "Account ID",
+        "aws_apis_resources_affected": "None via API. Requires root account login.",
+        "required_iam_permissions": "None (Root account credentials required)",
+        "scope": "account-level",
+        "idempotent": "N/A",
+        "preflight_validation": "No",
+        "post_apply_verification": "N/A",
+        "timeout_retry_logic": "Timeout=300s via subprocess in backend/workers/jobs/remediation_run_execution.py. No internal retry; relies on SQS visibility timeout if worker crashes.",
+        "dry_run_plan_only_mode": "N/A",
+        "rollback_mechanism_fallback_path": "N/A",
+        "execution_locking": "Yes (Database row-level status lock via RemediationRunExecution in backend/workers/jobs/remediation_run_execution.py)"
+      },
+      "safety_assessment": {
+        "blast_radius": "Account-level (High)",
+        "reversibility": "Hard (Once root access keys are deleted, they cannot be automatically restored. Requires manual root login).",
+        "permission_sensitivity": "Critical (Root account access)",
+        "service_continuity_risk": "Critical (If production workloads rely on root keys, they will suffer immediate, permanent outages)",
+        "data_risk": "Low",
+        "tenant_account_isolation_risk": "Low",
+        "concurrency_conflict_risk": "Low",
+        "safety_score": 10,
+        "safety_class": "Critical",
+        "narrative_rationale": "Root access keys should not exist, but if they do and are deleted, anything using them will break permanently. Terraform cannot manage root keys, meaning this involves manual high-stakes intervention.",
+        "top_safety_risk": "Irreversible destruction of root access keys actively used by legacy systems.",
+        "evidence_cited": "Root access requires console login; APIs cannot manage root keys. Breakage is permanent.",
+        "confidence": "High"
+      },
+      "reliability_assessment": {
+        "preconditions_validation": 0,
+        "error_handling": 0,
+        "idempotency": 0,
+        "dependency_fragility": 0,
+        "test_coverage": 0,
+        "historical_evidence": 0,
+        "total_score": 0,
+        "estimated_success_rate": "0% (Manual intervention required)",
+        "confidence": "High",
+        "main_failure_driver": "Cannot be automated via standard AWS APIs or Terraform."
+      },
+      "failure_modes": [
+        {
+          "failure_mode": "Remediation impossible via automation",
+          "detection_method": "User tries to apply; fails gracefully.",
+          "user_customer_impact": "Customer must log in manually to delete root keys.",
+          "containment_strategy": "Remediation bundle outputs instructions instead of tf resource.",
+          "fix_recommendation": "Provide clear manual guidance.",
+          "evidence": "AWS prevents programmatic access to root keys.",
+          "severity": "Low",
+          "likelihood": "High"
+        }
+      ],
+      "field_execution_risks": {},
+      "recommendation": {
+        "status": "Disabled until fixed",
+        "rationale": "Standard AWS APIs cannot manage root credentials.",
+        "mandatory_preconditions": "N/A",
+        "biggest_risk": "Tooling pretends to work but does nothing, or gives false confidence.",
+        "most_important_fix": "Convert to a purely manual workflow checklist."
+      },
+      "test_cases_to_add": [],
+      "evidence": [],
+      "missing_evidence": [
+        "APIs cannot rotate/delete root keys"
+      ],
+      "status": {
+        "task_1_inventory": "completed",
+        "task_2_safety": "completed",
+        "task_3_reliability": "completed",
+        "task_4_failure_modes": "completed",
+        "task_5_gaps_and_field_risks": "completed",
+        "task_6_guardrails_and_targets": "completed",
+        "task_7_final_report": "not_started"
+      }
+    }
+  ],
+  "platform_findings": {
+    "test_environment_maturity": {
+      "status": "No explicit evidence of a fully functional, heterogeneous staging/sandbox environment that mimics SMB customer drift.",
+      "mocks_isolated_tests": "Lacking comprehensive mocks for AWS APIs. The pr_bundle logic is only tested via basic unit tests, out-of-band.",
+      "canary_strategy": "None. Bundles are run directly by the customer on their PC.",
+      "missing_before_rollout": "Need an automated e2e test suite that deploys realistic 'bad' infrastructure and asserts that the PR bundles fix them without breaking adjacent mock workloads."
+    },
+    "concurrency_and_edge_cases": {
+      "concurrent_execution": "Customers run the bundle locally. The backend locks the `RemediationRunExecution` row, but there is no AWS-level locking preventing out-of-band changes.",
+      "terraform_state_locking": "State is kept locally in the `.tfstate` file on the customer's PC during the group run. No central S3 backend state locking is utilized, risking orphaned states if the PC dies.",
+      "conflicts": "High risk for S3 bucket policies or global account settings if multiple developers within the same SMB try to run different bundles simultaneously.",
+      "rate_limits_partial_failures": "Terraform handles basic AWS rate limits, but partial failures leave the local state file out of sync with the backend."
+    },
+    "compliance_risk_boundaries": {
+      "never_fully_automated": [
+        "IAM.4 (Root Access Keys)",
+        "S3.5 (Bucket Policies)",
+        "EC2.53 (Security Group 0.0.0.0/0 Revoke)"
+      ],
+      "needs_audit_trails": "All changes need an audit trail, but the current system does not log the exact diff applied to the backend for auditing purposes (only simple status).",
+      "iam_4_gated": "No, IAM.4 requires manual console access which is completely out of band and not observable.",
+      "manual_only_default": [
+        "EC2.53 (Security Group)",
+        "CloudTrail.1 (Complex deps)",
+        "Config.1 (Complex deps)",
+        "S3.5 (Bucket policies)"
+      ],
+      "soc2_evidence_sufficient": "No. We lack the actual applied terraform plan diffs in the database. Customer approval is also out-of-band."
+    },
+    "field_execution_risks_overall": [
+      {
+        "risk_type": "Local Terraform version mismatch",
+        "implementation_status": "Worker relies on the terraform binary installed on the executing PC.",
+        "risk_level": "Medium",
+        "detection_method": "Terraform init/plan fails with syntax errors.",
+        "user_impact": "Remediation won't run.",
+        "recommended_guardrail": "Embed a version constraint in the generated `providers.tf` (e.g., `required_version = \">= 1.3.0\"`)."
+      },
+      {
+        "risk_type": "Provider version mismatch",
+        "implementation_status": "No `.terraform.lock.hcl` is distributed with the bundle.",
+        "risk_level": "Medium",
+        "detection_method": "Different provider versions downloaded, potentially causing behavioral drift.",
+        "user_impact": "Unpredictable resource mapping changes.",
+        "recommended_guardrail": "Pin the exact AWS provider version in `providers.tf`."
+      },
+      {
+        "risk_type": "Missing/misconfigured backend state locking",
+        "implementation_status": "State is entirely local to the temp directory on the customer PC.",
+        "risk_level": "High",
+        "detection_method": "Customer PC reboots during apply; next run attempts to recreate resources instead of updating them.",
+        "user_impact": "Duplicate resources (e.g., trying to create a second CloudTrail bucket) or complete failure to manage existing changes.",
+        "recommended_guardrail": "Transition to a managed remote state (e.g., S3 + DynamoDB locking) managed by the SaaS, or generate ephemeral CloudFormation instead."
+      },
+      {
+        "risk_type": "Interrupted applies / partial applies",
+        "implementation_status": "The python worker spawns a subprocess for `terraform apply`. If the user hits Ctrl+C or the machine sleeps, it hard-kills the process.",
+        "risk_level": "High",
+        "detection_method": "Incomplete AWS resources; `terraform.tfstate` might be corrupted.",
+        "user_impact": "Stranded resources or locked state requiring manual state surgery.",
+        "recommended_guardrail": "Catch interrupt signals, safely drain terraform, and output an exact recovery command."
+      },
+      {
+        "risk_type": "Wrong credentials / wrong AWS account or region",
+        "implementation_status": "Relies heavily on ambient environment variables (AWS_PROFILE, AWS_ACCESS_KEY_ID).",
+        "risk_level": "Critical",
+        "detection_method": "Terraform apply creates resources in `us-east-1` instead of `eu-west-1`, or against Account A instead of Account B.",
+        "user_impact": "Applying security configurations to the wrong environment entirely.",
+        "recommended_guardrail": "Inject `allowed_account_ids = [\"<target_id>\"]` into the `aws` provider block in `providers.tf`."
+      }
+    ],
+    "guardrails": [
+      "Preflight permission checks: Validate that the executing IAM role has the exact granular permissions required before modifying state.",
+      "Dependency checks: Validate AWS Config for Security Hub; log bucket ACLs for S3.9; KMS key policies for S3.15.",
+      "Backup/state snapshot strategy: Automatically output `describe` API calls to a local `rollback.json` before mutating state.",
+      "Tenant/account targeting verification: Inject `allowed_account_ids = [\"<target_id>\"]` into all generated Terraform `aws` providers to absolutely prevent cross-account misfires.",
+      "Terraform state locking and conflict prevention: Migrate customer PC state to a centralized SaaS-managed DynamoDB/S3 remote state bucket, or use ephemeral CloudFormation stacks instead of local Terraform.",
+      "Rollback playbooks: Generate explicit CLI rollback commands during failure.",
+      "Post-change health checks: Continuously run `pr_bundle_preflight` probes *after* apply to assert desired state.",
+      "Structured impact logging: Log specific resource IDs affected to the backend.",
+      "Kill switch: Implement a global SaaS kill-switch to pause generating all PR bundles.",
+      "Approval workflow: High-risk remediations (S3.5, EC2.53) must require explicit customer acknowledgement of risks in the UI before granting the bundle."
+    ],
+    "safe_definition_and_failure_targets": "See definitions.",
+    "cross_cutting_improvements": [
+      "Standard Preflight Framework: Assert IAM permissions and required dependencies natively in `pr_bundle_preflight.py` before bundle generation.",
+      "IAM Permission Probe before Apply: Perform STS simulate-principal-policy checks for exact resource ARNs.",
+      "Dependency Validation Framework: Standardize checks for prerequisites like AWS Config (for Security Hub) or KMS Key policies.",
+      "Shared Post-Apply Verification Contract: Ensure `remediation_run_execution.py` strictly polls the specific resource API after terraform apply to assert success before returning 0.",
+      "Execution Lock / Concurrency Controls: Enforce SaaS-side locking in DynamoDB to prevent two users from generating conflicting bundles simultaneously.",
+      "Rollback Playbooks / Reversibility Standards: Terraform destroy logic must be tightly coupled with the bundle, or specific CLI un-do instructions must be generated alongside the PR bundle.",
+      "Structured Telemetry Schema: Log precise Terraform Plan outputs securely back to the SaaS API.",
+      "Canary Rollout Framework: Allow 'Dry Run' plans to sit for human review internally before exposing apply capability to customers.",
+      "Approval Gating for High-Risk Remediations: Require interactive UI confirmation explicitly acknowledging risks before downloading bundles for S3.5/EC2.53."
+    ],
+    "rollout_30_60_90": {
+      "30_days": [
+        "Implement `allowed_account_ids` in all generated `providers.tf`.",
+        "Add explicit IAM permission checks to `pr_bundle_preflight.py`.",
+        "Enable 'Auto-Run' ONLY for the 7 designated 'Safe' controls (S3.4, S3.9, S3.11, EC2.7, EC2.182, GuardDuty.1, SSM.7)."
+      ],
+      "60_days": [
+        "Build centralized Remote State locking to replace customer-local `.tfstate`.",
+        "Implement 'Canary' dry-run framework for CloudTrail.1 and Config.1.",
+        "Launch 'Manual Approval' UI specifically for EC2.53 and S3.2."
+      ],
+      "90_days": [
+        "Rewrite S3.5 remediation logic to properly append bucket policies without destruction.",
+        "Establish full SOC2-compliant change-management audit logs for PR bundle outcomes.",
+        "Integrate automated post-apply verification into the standard bundle payload."
+      ]
+    },
+    "qa_audit": {
+      "status": "Pass with Minor Notes",
+      "issues_found": [
+        {
+          "severity": "Low",
+          "issue": "Overconfident success rate estimates for dependency-heavy controls (CloudTrail.1, Config.1)",
+          "correction_recommended": "Gather explicit telemetry on the prevalence of AWS Organizations / SCPs in the SMB customer base to validate the 40-75% success rate baseline."
+        },
+        {
+          "severity": "Low",
+          "issue": "Weak evidence citation for exact missing IAM permissions",
+          "correction_recommended": "The review assumes missing IAM checks cause failures, but should explicitly map exactly which IAM permissions are missing from the backend worker roles vs customer roles."
+        },
+        {
+          "severity": "Medium",
+          "issue": "Rollback capabilities are noted as manual CLI, but detailed rollback playbooks are missing from the remediation bundles",
+          "correction_recommended": "Require PR bundles to output the exact AWS CLI commands needed to reverse the change if the terraform state is lost."
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "safe_definition": "A remediation is 'safe' if it requires zero manual rollback of stateful resources upon failure, strictly guarantees it will only execute against the specified Account ID/Region, and modifies isolated components without destructively overwriting complex merged policies (like S3 Bucket Policies).",
+    "failure_rate_targets_by_risk_class": {
+      "Low Risk": "< 5% execution failure rate",
+      "Moderate Risk": "< 10% execution failure rate",
+      "High Risk": "< 15% execution failure rate (gated by manual approval)",
+      "Critical Risk": "Manual execution only (0% automated target)"
+    }
+  },
+  "missing_evidence": [],
+  "assumptions": [],
+  "changelog": [
+    {
+      "task_id": "Task 0",
+      "timestamp": "2026-02-24T17:40:40.758387",
+      "what_was_updated": "Task 0 created the files and initialized the schema",
+      "assumptions": [
+        "Files are placed in docs/phase-2/review_results"
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "Task 1",
+      "timestamp": "2026-02-24T17:50:02.072803",
+      "what_was_updated": "Populated inventory for all 16 controls by inspecting pr_bundle.py, pr_bundle_preflight.py, remediation_run_execution.py and post_apply_reconcile.py.",
+      "assumptions": [
+        "Assumed IAM permissions based on terraform standard required permissions for these resources."
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "Task 2",
+      "timestamp": "2026-02-24T17:54:33.038490",
+      "what_was_updated": "Populated safety assessment for all 16 controls, scoring blast radius, reversibility, permission sensitivity, etc.",
+      "assumptions": [
+        "Assumed S3.5 rollback of bucket policy is destructive to merged policies.",
+        "Assumed CloudTrail/Config have moderate reversibility risk due to dependency creation."
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "Task 3",
+      "timestamp": "2026-02-24T17:57:29.568344",
+      "what_was_updated": "Populated reliability assessment for all 16 controls, scoring preconditions, error handling, idempotency, constraints, and success rates.",
+      "assumptions": [
+        "Assumed test coverage and historical telemetry at 5/10 on average due to no specific artifact showing 100% metrics across all workloads."
+      ],
+      "blockers_missing_evidence": [
+        "We explicitly lack pre-run IAM permission checks, automated rollbacks, and success rates for bucket policies."
+      ]
+    },
+    {
+      "task_id": "Task 4",
+      "timestamp": "2026-02-24T17:59:40.148166",
+      "what_was_updated": "Populated failure_modes for all 16 controls, detailing IAM errors, AWS Organization SCP conflicts, cross-account issues, and CloudTrail/Config limitations.",
+      "assumptions": [
+        "Assumed S3 bucket policies risk full overwrite via aws_s3_bucket_policy.",
+        "Assumed CloudTrail uses dynamically generated non-unique S3 buckets making collision likely.",
+        "Assumed no active preflight check for Config limits."
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "Task 5",
+      "timestamp": "2026-02-24T18:08:32.595407",
+      "what_was_updated": "Populated platform_findings detailing local terraform execution risks (state locking, interrupts, wrong account), test maturity, and compliance boundaries.",
+      "assumptions": [
+        "Assumed the CLI execution worker runs entirely locally on the customer's PC with local tfstate.",
+        "Assumed no active provider version pinning or allowed_account_ids in existing tf files code."
+      ],
+      "blockers_missing_evidence": [
+        "Cannot confirm if customer telemetry natively captures the exact terraform version locally used."
+      ]
+    },
+    {
+      "task_id": "Task 6",
+      "timestamp": "2026-02-24T18:11:36.097086",
+      "what_was_updated": "Populated rollout recommendations per control (Auto-run, Canary, Manual, Disabled). Defined platform guardrails, Safe definition, and failure targets.",
+      "assumptions": [
+        "Assumed we can alter the provider definitions slightly to include allowed_account_ids."
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "Task 7",
+      "timestamp": "2026-02-24T18:17:09.143912",
+      "what_was_updated": "Final synthesis: Populated overall risk posture, success targets, 30/60/90 rollout plan, and top 5 platform cross-cutting improvements.",
+      "assumptions": [
+        "Assumed S3.5 bucket policy logic cannot be safely fixed in declarative terraform without a complex external parser module."
+      ],
+      "blockers_missing_evidence": []
+    },
+    {
+      "task_id": "QA Audit",
+      "timestamp": "2026-02-24T18:20:37.020088",
+      "what_was_updated": "Performed comprehensive QA audit of the review outputs. Appended QA findings to JSON and markdown.",
+      "assumptions": [
+        "Assumed table matches JSON perfectly since it was generated programmatically from the same source dicts in prior tasks."
+      ],
+      "blockers_missing_evidence": []
+    }
+  ],
+  "task_status": {
+    "task_0_init": "completed",
+    "task_1_inventory": "not_started",
+    "task_2_safety": "completed",
+    "task_3_reliability": "completed",
+    "task_4_failure_modes": "completed",
+    "task_5_gaps_and_field_risks": "completed",
+    "task_6_guardrails_and_targets": "completed",
+    "task_7_final_report": "completed"
+  }
+}

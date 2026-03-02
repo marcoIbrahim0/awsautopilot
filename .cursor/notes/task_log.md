@@ -1,5 +1,1116 @@
 # Task Log
 
+## Item 17 finalization: merge audit + full regression validation for production readiness (2026-03-02)
+
+**Task:** Finalize Item `17` end-to-end by merging all available Item `17` branches, running targeted + full backend suites, and verifying medium/low promotion guardrails without regressing the Item `16` high-confidence promotion path.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Updated Item `17` status to reflect completed code/test validation and fail-closed rollout posture.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md** — Added closure validation update (`131` targeted + `914` full backend pass) and clarified remaining scope to live evidence + operator-fed observed metrics.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this closure task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Performed Item `17` branch merge audit in local git refs:
+  - `git for-each-ref refs/heads` showed no `item17`/`item-17` branches to merge.
+  - `git log --all --grep='Item 17'` returned no branch-specific Item `17` commits.
+  - Attempted remote fetch (`git fetch --all --prune`) but remote DNS resolution failed (`Could not resolve host: github.com`), so merge scope was finalized from available local refs only.
+- Ran targeted Item `16/17` regression suites:
+  - `pytest -q tests/test_shadow_state.py tests/test_saas_admin_api.py tests/test_inventory_reconcile.py tests/test_control_plane_events.py tests/test_reconcile_inventory_shard_worker.py` -> `131 passed`.
+- Ran full backend suite:
+  - `pytest -q` -> `914 passed`.
+- Verified requested production-readiness conditions directly from code + passing tests:
+  - medium/low expanded coverage is active in collector/enrichment + worker integration tests (`tests/test_inventory_reconcile.py`, `tests/test_control_plane_events.py`, `tests/test_reconcile_inventory_shard_worker.py`);
+  - medium/low live promotion is blocked by default unless thresholds are met (`CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS=""`, observed coverage/precision default `0`, and `shadow_state` block reasons for coverage/precision/rollback);
+  - Item `16` high-confidence path remains intact (`test_upsert_shadow_state_promotes_for_qualified_high_confidence_control`, reopen/block tests still passing under the shared promotion decision function).
+
+**Technical debt / gotchas:**
+- Remote branch reconciliation could not be completed beyond local refs due network DNS failure to GitHub in this environment; if external Item `17` branches exist remotely, they still need a follow-up fetch/merge in a network-enabled session.
+- `pytest` still emits two config warnings (`asyncio_default_fixture_loop_scope`, `asyncio_mode`) while all suites pass.
+- Medium/low observed quality metrics remain operator-fed env inputs (`CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_*`), not auto-derived from persisted telemetry in worker logic.
+
+**Open questions / TODOs:**
+- Confirm in a network-enabled environment whether any remote-only Item `17` branches still exist and merge them if present.
+- Capture low-tier live verification evidence for `SecurityHub.1`, `CloudTrail.1`, `S3.5`, and `S3.11` before expanding medium/low live promotion scope.
+- Decide whether to automate population of `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE` and `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION`.
+
+## Item 17 gating implementation: medium/low promotion quality thresholds in shared decision path (2026-03-02)
+
+**Task:** Complete Item `17` gating by wiring medium/low promotion quality thresholds into the existing Item `16` promotion decision path, keep default behavior fail-closed, add regression tests for blocked promotion paths, and document exact threshold knobs plus rollout flow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added Item `17` medium/low promotion gate env settings and normalized helper properties (control allowlist, min/observed coverage, min/observed precision, rollback trigger).
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/services/shadow_state.py** — Extended the existing `_promotion_block_reasons` guardrail path to include medium/low quality gates without introducing a separate promotion path.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_shadow_state.py** — Added medium/low gating tests for default fail-closed behavior, unmet coverage/precision thresholds, rollback-trigger blocking, and successful promotion only when thresholds are satisfied.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md** — Added exact Item `17` threshold knobs, stable reason codes, and explicit medium/low rollout process.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md** — Documented new medium/low promotion environment variables and defaults.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** — Updated rollout section with Item `17` medium/low gating sequence and rollback switch usage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Updated Item `17` completion criteria to include explicit threshold/rollback gate requirements.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reused the existing promotion decision function (`_promotion_block_reasons`) so medium/low gating runs in the same control path as Item `16`.
+- Added Item `17` medium/low gating checks and reason codes:
+  - `medium_low_coverage_below_threshold`
+  - `medium_low_precision_below_threshold`
+  - `medium_low_rollback_triggered`
+- Enforced fail-closed default for medium/low controls by requiring explicit control scoping and explicit observed metrics that meet minimum thresholds.
+- Added focused regression coverage proving medium/low promotion is blocked when thresholds are unmet and only promotes once all gates are satisfied.
+- Verified with targeted tests:
+  - `pytest -q tests/test_shadow_state.py` (`14 passed`)
+  - `pytest -q tests/test_saas_admin_api.py` (`12 passed`)
+
+**Technical debt / gotchas:**
+- Medium/low coverage/precision values are currently operator-fed runtime config inputs (`CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_*`), not auto-computed inside worker promotion logic.
+- Existing `control_not_high_confidence` reason code remains for backward compatibility even though promotion now also supports medium/low controls when Item `17` gates are satisfied.
+
+**Open questions / TODOs:**
+- Decide the authoritative automation path for continuously updating `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE` and `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION`.
+- Decide whether to extend `/api/saas/control-plane/promotion-guardrail-health` response models with explicit Item `17` medium/low gate fields/reason counters.
+- Finalize the first medium/low pilot control set for `CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS`.
+
+## Item 17 closure: reconcile-inventory-shard worker-level integration coverage (2026-03-02)
+
+**Task:** Close the remaining Item `17` testing gap by adding deterministic worker-job integration tests for `execute_reconcile_inventory_shard_job`, validating shard tracking state transitions, mixed snapshot application behavior, and authoritative compute-actions enqueue semantics.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_reconcile_inventory_shard_worker.py** — Added isolated worker-job tests for unsupported/skip branches, targeted-empty skip, success with mixed apply/change outcomes, failed-run shard tracking, and authoritative `compute_actions` enqueue gating.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md** — Added Item `17` progress note for shard-worker integration coverage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Updated Item `17` status text to include worker-level reconciliation integration coverage.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added a new deterministic worker test module (`tests/test_reconcile_inventory_shard_worker.py`) covering:
+  - unsupported service skip path with shard `running -> succeeded` tracking,
+  - targeted resource-scoped service with empty `resource_ids` skip path,
+  - success path with mixed `did_apply/did_change` outcomes and confirmation re-evaluation behavior,
+  - authoritative-mode `compute_actions` enqueue only when `changed_status > 0`,
+  - failure path with shard `failed` tracking and classified error propagation.
+- Preserved isolation by monkeypatching DB session scope, AWS assume-role/session clients, snapshot collectors, and shard-status writers.
+- Verified targeted suites:
+  - `pytest -q tests/test_reconcile_inventory_shard_worker.py` (`5 passed`)
+  - `pytest -q tests/test_inventory_reconcile.py tests/test_shadow_state.py` (`94 passed`)
+
+**Technical debt / gotchas:**
+- Item `17` matrix exit criteria still require additional non-worker scope completion (for example low-tier live verification evidence and remaining matrix rows), even though the worker-level test gap is now closed.
+- Pytest still emits two config warnings (`asyncio_default_fixture_loop_scope`, `asyncio_mode`) while suites pass.
+
+**Open questions / TODOs:**
+- Decide whether to keep Item `17` in `in progress` status until live verification artifacts are captured for low-tier controls (`SecurityHub.1`, `CloudTrail.1`, `S3.5`, `S3.11`).
+
+## Item 17 core implementation: medium/low-confidence edge-case handling in inventory + enrichment (2026-03-02)
+
+**Task:** Implement Item `17` core technical scope by expanding medium/low-confidence rule-pattern handling in inventory collectors and control-plane event enrichment, with explicit stable `status_reason`/`evidence_ref` branches for normal, failure, partial-data, and access-denied paths, while keeping Item `16` promotion paths untouched.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py** — Added explicit edge-case branch handling and evidence contracts for medium/low collectors (`S3.*` medium/low checks, `CloudTrail.1`, `Config.1`, `SSM.7`, `GuardDuty.1`, `SecurityHub.1`), including stable reason codes for access-denied, API-error, and partial-data branches.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/services/control_plane_events.py** — Hardened enrichment evaluation branches (`EC2.53`, `S3.2`) with deterministic fail-soft handling and branch-tagged evidence for access-denied, API-error, partial-data, resource-not-found, and normal outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_inventory_reconcile.py** — Updated/extended assertions to lock explicit branch semantics, reason codes, confidence levels, and evidence-key stability for the new medium/low edge cases.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added explicit medium/low branch handling in inventory collectors:
+  - `S3.2/S3.4/S3.9/S3.11/S3.5` now emit deterministic soft/normal outcomes with stable probe-branch evidence and error-code fields.
+  - `CloudTrail.1` now handles `describe_trails` access-denied/API-error and indeterminate trail-status reads as explicit soft branches with stable reasons and counters.
+  - `Config.1` now classifies recorder/delivery/status read access-denied/API-error paths and multi-recorder status mismatch as explicit soft/partial branches.
+  - `SSM.7` now classifies malformed response shape and unknown API errors with explicit partial/api-error reason codes.
+  - `GuardDuty.1` now classifies list/get API failures and invalid-detector-only partial-data paths explicitly.
+  - `SecurityHub.1` now classifies empty `HubArn` payloads and unknown API failures explicitly.
+- Added explicit medium/low branch handling in enrichment:
+  - `EC2.53` enrichment now classifies API-error and partial payload shapes without raising, with stable evidence branch markers.
+  - `S3.2` enrichment now classifies access-denied, API-error, partial payload, and resource-not-found probes as deterministic branches.
+- Preserved Item `16` promotion configuration/path behavior by not editing `backend/config.py` or `backend/workers/services/shadow_state.py`.
+- Verified with targeted tests:
+  - `pytest -q tests/test_inventory_reconcile.py tests/test_control_plane_events.py` (`100 passed`).
+
+**Technical debt / gotchas:**
+- Medium/low collectors now fail soft for more API/read-shape edge cases, improving continuity but requiring ops to monitor branch counters/reasons in evidence rather than relying on collector exceptions.
+- Pytest still emits two config warnings (`asyncio_default_fixture_loop_scope`, `asyncio_mode`) while suites pass.
+
+**Open questions / TODOs:**
+- Confirm whether Item `17` should now standardize a shared reason-code dictionary/constants module across inventory and enrichment to avoid future drift in branch naming.
+
+## Item 17 test expansion: medium/low-confidence reconciliation scenarios and mixed-state coverage (2026-03-02)
+
+**Task:** Expand Item `17` test coverage for medium/low-confidence reconciliation controls with explicit positive/negative/ambiguous/error-path scenarios, integration-style mixed-state cases, and stronger assertions for confidence, reason codes, and evidence payload shape.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_inventory_reconcile.py** — Added deterministic fake clients and new unit/integration-style reconciliation tests covering medium/low-confidence rule branches and evidence contracts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md** — Updated Item `17` plan status to in-progress and documented completed test-expansion scope plus remaining gaps.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Updated Item `17` status text to reflect implementation in progress.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added Item `17` scenario coverage across medium/low controls and branches:
+  - `S3.2` public-policy open path, missing-PAB branch, account-scoped targeted reconcile behavior, and global mixed-bucket sweep behavior.
+  - `S3.4` missing-encryption path and encryption-access-denied soft-resolution behavior.
+  - `S3.5` missing-policy normal-open behavior and malformed-policy partial-data soft-resolution behavior.
+  - `Config.1` missing role ARN, missing resource coverage, recorder-status mismatch partial-data handling, and delivery-channel access-denied handling.
+  - `SSM.7` open-token normalization (`enabled/true/1/on`), malformed response partial-data handling, and unknown API-error handling.
+  - `GuardDuty.1` list-detectors access denied, invalid-detector partial-data branch, mixed detector outcomes, and detector API-error/throttling handling.
+  - `SecurityHub.1` full branch matrix: compliant, not-enabled, partial-data empty-hub response, access-denied, and API-error/throttling handling.
+  - `CloudTrail.1` include-shadow happy path, describe-trails access-denied branch, trail-status indeterminate partial-data branch, mixed indeterminate branch, and trail-status API-error/throttling branch.
+- Added integration-style mixed-state reconciliation assertions in the inventory collector layer:
+  - mixed S3 bucket posture in one sweep (`OPEN` and `RESOLVED` isolated by bucket),
+  - mixed GuardDuty detector outcomes in one sweep,
+  - mixed CloudTrail trail-status outcomes in one sweep.
+- Added/expanded assertions on:
+  - `state_confidence` per branch (`95` / `50` / `40` as applicable),
+  - stable `status_reason` values,
+  - evidence payload shape and key branch markers (`status_branch`, error-code/counter fields).
+- Verified with targeted tests:
+  - `pytest -q tests/test_inventory_reconcile.py` (`85 passed`)
+  - `pytest -q tests/test_shadow_state.py` (`9 passed`)
+- Updated Item `17` docs status lines so planning docs no longer state tests are fully pending after this branch-expansion pass.
+
+**Technical debt / gotchas:**
+- Collector behavior intentionally prefers fail-soft evidence branches (`SOFT_RESOLVED`) for partial-data/API-error cases instead of raising; tests now lock this contract to prevent accidental regressions.
+- Pytest still emits two config warnings (`asyncio_default_fixture_loop_scope`, `asyncio_mode`) while suites pass.
+
+**Open questions / TODOs:**
+- Resolved (2026-03-02 follow-up): Added job-level reconciliation integration tests for `reconcile_inventory_shard` in `tests/test_reconcile_inventory_shard_worker.py`.
+
+## Item 16 end-to-end closure: prompt outputs integration and full validation (2026-03-02)
+
+**Task:** Integrate Prompt `1/2/3` outputs for Item `16`, run full validation gates (targeted + reconciliation + full backend suite), confirm production-safe promotion defaults, and close implementation readiness.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this closure task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reconciled Prompt `1/2/3` outputs across code paths:
+  - promotion guardrails/defaults in `backend/config.py`,
+  - canonical promotion block logic in `backend/workers/services/shadow_state.py`,
+  - rollout observability metrics/reason-code reporting in `backend/routers/saas_admin.py`.
+- Verified requested test gates with fresh runs:
+  - `pytest -q tests/test_shadow_state.py tests/test_saas_admin_api.py` -> `21 passed`
+  - `pytest -q tests/test_inventory_reconcile.py tests/test_reconciliation_api.py tests/test_internal_inventory_reconcile.py tests/test_reconcile_inventory_global_orchestration_worker.py tests/test_inventory_assets.py tests/test_wave5_test16_preview_reconcile.py` -> `75 passed`
+  - `pytest -q` -> `873 passed`
+- Confirmed production-safe defaults directly from config declarations:
+  - `CONTROL_PLANE_SHADOW_MODE=true`
+  - `CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED=false`
+  - `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS=""`
+  - `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE=95`
+  - `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED=false`
+- Confirmed medium/low-confidence controls remain overlay-only by default unless later explicitly promoted via enable switch + high-confidence allowlist updates.
+
+**Technical debt / gotchas:**
+- Item `16` code/test/doc integration is complete, but production pilot execution evidence and PM/ops sign-off are still operational steps outside local test verification.
+- Pytest emits two config warnings (`asyncio_default_fixture_loop_scope`, `asyncio_mode`) but all suites pass.
+
+**Open questions / TODOs:**
+- Finalize production `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS` and optional `CONTROL_PLANE_PROMOTION_PILOT_TENANTS` values for pilot rollout.
+- Capture pilot run evidence against Item `16` KPI/rollback criteria in rollout docs and release notes.
+
+## Item 17 medium/low-confidence control coverage matrix and done-criteria plan (2026-03-02)
+
+**Task:** Build a medium/low-confidence control coverage plan for Item `17` with a per-control matrix (current rule patterns, missing edge cases, test gaps) and explicit done criteria, without changing promotion logic/config.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md** — Added the Item `17` matrix with per-control done criteria, unimplemented/planned status marker, and verification questions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Expanded Item `17` with explicit status and completion criteria; linked to the new matrix plan.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md** — Added cross-link to the new Item `17` plan doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added quick-navigation link for the Item `17` plan doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/reconciliation_quality_review.md** — Added cross-link and clarified that Item `17` plan doc is the authoritative execution checklist for current medium/low scope.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Built a control matrix for medium/low-confidence controls covering:
+  - current implemented rule patterns from `backend/workers/services/inventory_reconcile.py`,
+  - missing edge-case handling per control,
+  - current and missing coverage in `tests/test_inventory_reconcile.py`,
+  - explicit done criteria per control.
+- Added Item `17` exit conditions tying completion to control-level done criteria, explicit branch coverage, and low-tier live verification evidence.
+- Kept Item `16`/promotion behavior unchanged (no edits in `backend/config.py` or `backend/workers/services/shadow_state.py`).
+- Cross-linked the new plan document from relevant docs indexes/parents (`docs/README.md`, `docs/prod-readiness/README.md`, and `docs/prod-readiness/important-to-do.md`).
+
+**Technical debt / gotchas:**
+- `docs/reconciliation_quality_review.md` still contains historical pre-fix narrative sections; use the new Item `17` plan doc as authoritative for current execution sequencing and done criteria.
+- Several matrix items require live verification artifacts (not implementable in this docs-only step).
+
+**Open questions / TODOs:**
+- Confirm account-scoped `S3.2` targeted reconcile behavior (auto-expand buckets vs require explicit bucket IDs).
+- Confirm live resource-shape parity for `S3.4` findings (`AwsS3Bucket` vs possible `AwsAccount`).
+- Confirm desired `CloudTrail.1` status policy when every multi-region trail status read is indeterminate.
+
+## Item 16 rollout guardrails observability: SaaS-admin promotion health endpoint + metrics tests (2026-03-02)
+
+**Task:** Implement Item `16` rollout guardrails observability so PM/ops can pilot and rollback safely, including a stable SaaS-admin API contract and tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/saas_admin.py** — Added `GET /api/saas/control-plane/promotion-guardrail-health` with tenant/global scope, stable response models, and guardrail observability metrics (attempts/success/blocked-by-reason, mismatch rate, soft-resolved frequency, stale shadow indicators).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_saas_admin_api.py** — Added endpoint auth, tenant/global scope, response-shape, and key metric-calculation coverage for promotion guardrail health.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** — Added endpoint reference and explicit metric list for rollout decision-making.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added a new SaaS-admin endpoint:
+  - `GET /api/saas/control-plane/promotion-guardrail-health`
+  - supports `tenant_id` query for tenant-scoped view; omitting `tenant_id` returns global view.
+- Kept Item `16` business semantics unchanged by computing observability metrics from existing promotion guardrail rules and stable reason codes:
+  - `shadow_mode_enabled`
+  - `promotion_disabled`
+  - `control_not_high_confidence`
+  - `confidence_below_threshold`
+  - `soft_resolved_not_allowed`
+  - `tenant_not_in_pilot`
+- Added stable, testable response schema sections:
+  - `guardrails`
+  - `promotion`
+  - `mismatch`
+  - `soft_resolved`
+  - `shadow_freshness`
+- Verified with targeted tests:
+  - `pytest -q tests/test_saas_admin_api.py` (`12 passed`).
+
+**Technical debt / gotchas:**
+- Promotion attempts are computed from recent shadow evaluations with canonical join keys and rollout-status values (`OPEN`/`RESOLVED`/`SOFT_RESOLVED`), which reflects current guardrail decision points but not immutable historical attempt logs.
+
+**Open questions / TODOs:**
+- Confirm whether PM/ops want this endpoint wired into an explicit dashboard panel and alert thresholds next (for example mismatch-rate rollback trigger automation).
+
+## Item 16 documentation completion: high-confidence rollout policy + production checklist (2026-03-02)
+
+**Task:** Complete Item `16` documentation so PM/ops can execute a high-confidence live-status rollout with explicit guardrails, config knobs, and go/no-go criteria.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/16-high-confidence-live-status-rollout.md** — Added PM/ops-ready rollout policy covering pilot scope, success metrics, rollback triggers, uncertain-read fallback, exact Prompt 1 config knobs, and go/no-go checklist.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** — Added cross-link from rollout section to the Item `16` policy doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/important-to-do.md** — Updated Item `16` status and concrete completion criteria.
+- **/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md** — Added cross-link to the new Item `16` rollout policy doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added top-level cross-link for Item `16` rollout policy discoverability.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Defined high-confidence rollout policy in plain language with explicit:
+  - pilot scope,
+  - success metrics,
+  - rollback triggers,
+  - fallback behavior for uncertain reads.
+- Documented exact Prompt 1 config knobs and defaults from `backend/config.py`:
+  - `CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED`
+  - `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS`
+  - `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE`
+  - `CONTROL_PLANE_PROMOTION_PILOT_TENANTS`
+  - `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED`
+- Added a short production go/no-go checklist in the new policy doc.
+- Cross-linked the new policy from docs indices and from the control-plane rollout doc.
+- Updated Item `16` in `important-to-do.md` with explicit status + concrete completion criteria.
+
+**Technical debt / gotchas:**
+- Item `16` docs are now rollout-ready, but rollout execution still depends on tenant selection and live pilot evidence collection.
+
+**Open questions / TODOs:**
+- Confirm final pilot tenant UUID list for `CONTROL_PLANE_PROMOTION_PILOT_TENANTS`.
+- Decide whether to keep `S3.1,SecurityHub.1,GuardDuty.1` as the initial high-confidence rollout set or revise before pilot start.
+
+## Prompt pack: complete Item 17 + parallelization guidance vs Item 16 (2026-03-02)
+
+**Task:** Provide implementation prompts for fully completing item `17` and clarify whether item `17` can run concurrently with item `16`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Prepared a full prompt pack for item `17` matching the prior structure used for item `16` (serial foundations + parallel workstreams + final integration).
+- Clarified concurrency boundary with item `16`:
+  - medium/low rule-pattern expansion and test-scenario expansion can run in parallel,
+  - live-promotion gate changes should wait for item `16` foundation merge to avoid collisions in promotion/config logic.
+- Included an execution order and explicit “can run simultaneously” guidance.
+
+**Technical debt / gotchas:**
+- Running item `17` promotion-gate changes before item `16` foundation lands can cause duplicate/competing guardrail implementations in shared promotion paths.
+
+**Open questions / TODOs:**
+- Decide whether medium/low promotion should be globally disabled by default or pilot-tenant gated after quality thresholds are met.
+
+## Item 16 core behavior implementation: high-confidence-only canonical promotion guardrails (2026-03-02)
+
+**Task:** Fully implement Item `16` core behavior so only high-confidence controls can drive live canonical status updates, with explicit promotion guardrails, tests, and docs updates.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added explicit promotion guardrail settings and normalized helper properties for high-confidence controls, confidence floor, and pilot tenant scope.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/services/shadow_state.py** — Refactored canonical promotion/reopen path to require all Item `16` guardrails and added structured reason-code logs for blocked promotion decisions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_shadow_state.py** — Expanded unit coverage for qualified promote/reopen and all requested block scenarios (low confidence, non-high-confidence control, soft-resolved disallow, non-pilot tenant).
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md** — Documented new control-plane promotion env variables with high-confidence rollout examples.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** — Updated authoritative rollout section to include new promotion guardrails and pilot rollout controls.
+- **/Users/marcomaher/AWS Security Autopilot/docs/reconciliation_quality_review.md** — Updated config-setting scope wording to reflect guardrail-based promotion.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added new `backend/config.py` settings:
+  - `CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED`
+  - `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS`
+  - `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE`
+  - `CONTROL_PLANE_PROMOTION_PILOT_TENANTS`
+  - `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED` (default `false`)
+- Kept shadow overlay behavior unchanged while enforcing canonical promotion/reopen guardrails:
+  - requires `CONTROL_PLANE_SHADOW_MODE=false`
+  - requires promotion enabled
+  - requires control in high-confidence list
+  - requires `state_confidence >= min threshold`
+  - blocks `SOFT_RESOLVED` unless explicitly allowed
+  - enforces pilot tenant allowlist when configured
+- Added structured promotion-block logging with stable reason codes (`reason_codes=...`).
+- Verified with targeted tests: `pytest -q tests/test_shadow_state.py` (`9 passed`).
+
+**Technical debt / gotchas:**
+- Legacy `CONTROL_PLANE_AUTHORITATIVE_CONTROLS` remains in config for backward compatibility references, but promotion logic now gates on `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS` + explicit guardrails.
+
+**Open questions / TODOs:**
+- Finalize production values for `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS`, `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE`, and optional `CONTROL_PLANE_PROMOTION_PILOT_TENANTS` prior to rollout.
+
+## Wave 8 Test 32 live SaaS run: audit-log access control + secret leakage validation (2026-03-02)
+
+**Task:** Execute Wave 8 Test 32 on live SaaS with evidence-only checks for `/api/audit-log` contract/access boundaries and secret leakage patterns (including focused Wave 7 event-type checks), then update test docs + tracker.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-32.md** — Replaced the Test 32 stub with full preconditions, execution steps, API evidence matrix, assertions, and tracker mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board (Wave 8/TOTAL), Section 3 rows `#11/#12`, Section 8 `T32`, and Section 9 changelog entry for Test 32 closure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-32-live-20260302T193915Z-*** — Added canonical API evidence for admin/member/no-auth probes, pagination/filter contract checks, invalid-filter guardrails, full-dataset page capture, and leakage scan summaries (`90/91/92/93/99` artifacts).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Recorded token preconditions with live logins:
+  - admin `maromaher54@gmail.com` (`200`)
+  - member `wave3acc+20260228T213251Z@example.com` (`200`)
+  - tenant context `Valens` (`tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837`).
+- Verified admin access and contract behavior on `GET /api/audit-log`:
+  - baseline list `200` with `total=31`, `limit=25`, `offset=0`, and expected item shape;
+  - pagination probes `limit=5 offset=0/5` with no overlap;
+  - filter probes succeeded for `actor_user_id`, `resource_type`, `resource_id`, `from_date/to_date`;
+  - invalid actor UUID guard returned `400`.
+- Verified access control boundaries:
+  - member token returned `403` (`Only tenant admins can view audit logs.`);
+  - no-auth probes returned `401` (`Not authenticated`).
+- Executed leakage scans against baseline/date/full datasets:
+  - scanned `31` total records for JWT/access-token/password/role_arn/AWS key/private key/webhook patterns;
+  - observed `0` leakage hits; `payload` remained `null` in returned rows.
+- Added focused Wave 7 event-type keyword scan (`root|governance|secret_migration|exception|notification`) and ran leakage check on that subset:
+  - observed `0` matching actions in current tenant dataset.
+
+**Technical debt / gotchas:**
+- Current tenant audit-log action mix is narrow (`remediation_run_completed`, `control_plane_token_rotated`); expected Wave 7 root-key/governance event names were not present in returned records during this run, so focused scan executed against an empty keyword-matched subset.
+
+**Open questions / TODOs:**
+- Confirm whether root-key/governance events are expected to appear in tenant-visible `/api/audit-log` for this tenant/time window or are intentionally excluded/expired by current event-retention and event-type mapping policy.
+
+## Decision guidance: pre-production priority for confidence-tier rollout items 16/17 (2026-03-02)
+
+**Task:** Decide whether item `16` and item `17` are required before production (`none` / `some` / `all`) based on current implementation state.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Used current code/config findings from prior check:
+  - authoritative promotion is enabled when shadow mode is disabled,
+  - promotion path does not use confidence-tier gating,
+  - medium/low confidence paths can still feed promoted status outcomes.
+- Produced release recommendation in requested format (`none`/`some`/`all`) with minimal must-do scope before production.
+
+**Technical debt / gotchas:**
+- Without pre-prod confidence-tier gating, medium/low-confidence statuses can affect customer-visible canonical status under authoritative mode.
+
+**Open questions / TODOs:**
+- Finalize exact numeric promotion gate thresholds (confidence floor, precision target, rollback trigger).
+
+## Current-state check: high vs medium/low confidence live-status implementation (2026-03-02)
+
+**Task:** Confirm the current implementation status for confidence-tier rollout (items `16` and `17`) using source code and active environment config.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified promotion logic in `shadow_state`:
+  - `SOFT_RESOLVED` is normalized to `RESOLVED`.
+  - When `CONTROL_PLANE_SHADOW_MODE=false` and control is in `CONTROL_PLANE_AUTHORITATIVE_CONTROLS`, canonical Security Hub findings are auto-resolved/reopened.
+  - Promotion path does not gate on `state_confidence`.
+- Verified active env configuration:
+  - `CONTROL_PLANE_SHADOW_MODE="false"` in both backend and worker env files.
+  - `CONTROL_PLANE_AUTHORITATIVE_CONTROLS` currently includes the full listed control set (not an explicit high-confidence-only subset).
+- Verified confidence scoring in collectors:
+  - High-confidence paths commonly emit `state_confidence=95`.
+  - Uncertain/access-denied paths emit lower confidence (`40`, `50`, and `30` in event enrichment) and often `SOFT_RESOLVED`.
+- Confirmed checklist intent remains pending in docs:
+  - Item `16`: enable live updates for high-confidence controls with guardrails/fallback.
+  - Item `17`: expand medium/low coverage and gate promotion on measurable targets.
+
+**Technical debt / gotchas:**
+- There is no explicit confidence-tier promotion gate today; medium/low-confidence controls are not separated at promotion time when authoritative mode is enabled.
+
+**Open questions / TODOs:**
+- Define and implement a confidence-tier gate (for example control allowlist by tier and/or minimum `state_confidence` threshold) before broad medium/low live promotion.
+
+## Wave 8 Test 30 live SaaS run: login rate-limit + Retry-After contract validation (2026-03-02)
+
+**Task:** Execute Wave 8 Test 30 on live SaaS, validate login throttling and `Retry-After` contract behavior end-to-end (including post-window recovery), and update tracker/docs from observed evidence only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-30.md** — Replaced the Test 30 stub with full preconditions, executed steps, API/UI evidence matrix, assertions, and tracker mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board totals, Section 3 rows `#5/#6`, Section 7 row `#5`, Section 8 checkbox `T30-5`, and Section 9 changelog.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-30-live-20260302T191232Z-*** — Added canonical API evidence for dedicated signup/auth, repeated failed login attempts, threshold transition (`401 -> 429`), `retry-after` headers, abuse-path probes, post-window wait, and post-window recovery success (`200` login + `200` auth/me).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-30-live-20260302T191232Z-ui-01-login-route-no-auth.*** — Added UI login-route probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Recorded dedicated identity preconditions for repeat-failure checks:
+  - dedicated email `wave8.test30.20260302T191232Z@example.com` (tenant `a4c06506-cd92-4e11-abb4-85c7dbe559d9`),
+  - control identity `maromaher54@gmail.com` (Valens tenant).
+- Executed repeated failed `POST /api/auth/login` attempts on the dedicated identity:
+  - attempts `1`–`5` returned `401`,
+  - attempt `6` returned `429` with `retry-after: 896`.
+- Verified throttled-state behavior and header contract:
+  - correct password while blocked returned `429` with `retry-after: 895`,
+  - additional throttled probes showed decreasing header values (`894`, `893`).
+- Ran abuse-path/auth-boundary checks:
+  - different-email control login remained healthy (`200`),
+  - alternate wrong-email first try returned `401` (no inherited lockout),
+  - spoofed `X-Forwarded-For` probe on dedicated email remained throttled (`429`),
+  - invalid login payload returned `422`.
+- Verified post-window recovery with the same dedicated identity:
+  - waited observed window (`896` seconds; `2026-03-02T19:13:39Z` → `2026-03-02T19:28:35Z`),
+  - post-window correct login returned `200`,
+  - token usability validated via `GET /api/auth/me` returning `200`.
+
+**Technical debt / gotchas:**
+- Live responses emitted lowercase `retry-after` header; an initial artifact helper parse expected capitalized `Retry-After`, so the wait step was corrected with explicit case-insensitive parsing and separate post-window artifacts.
+- DNS resolution to `api.valensjewelry.com` was intermittently unstable in sandboxed execution; canonical run was completed with escalated network execution for reliability.
+
+**Open questions / TODOs:**
+- None for Test 30 closure scope.
+
+## Docs brief: non-technical PM explanation for important-to-do items 16 and 17 (2026-03-02)
+
+**Task:** Explain checklist items `16` and `17` from `docs/prod-readiness/important-to-do.md` in plain language for a non-technical PM audience.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Used the current `important-to-do.md` wording as source.
+- Reframed both items around PM outcomes:
+  - Item `16`: safely turning on live status for high-confidence controls first.
+  - Item `17`: improving coverage and test depth for medium/low-confidence controls before enabling live status.
+- Prepared explanation in non-technical terms (risk, rollout safety, customer trust, and readiness gates).
+
+**Technical debt / gotchas:**
+- The underlying doc identifies direction but still leaves exact rollout metrics/threshold values to be finalized.
+
+**Open questions / TODOs:**
+- Define explicit PM sign-off gates for 16/17 (target precision, acceptable false-resolved rate, rollback threshold).
+
+## Docs brief: per-item severity summary for prod-readiness important-to-do (2026-03-02)
+
+**Task:** Provide a concise brief for each todo item in `docs/prod-readiness/important-to-do.md`, including severity.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-read `docs/prod-readiness/important-to-do.md` and extracted all active checklist headings/severity labels.
+- Confirmed the current checklist contains items `3` through `17`.
+- Prepared a concise per-item summary that includes severity and one-line execution intent per item.
+
+**Technical debt / gotchas:**
+- Item numbering starts at `3`, which may imply historical/archived items `1` and `2` are no longer present in the active document.
+
+**Open questions / TODOs:**
+- Decide whether to renumber the active checklist for readability or keep historical numbering continuity.
+
+## Docs brief: prod-readiness important-to-do summary (2026-03-02)
+
+**Task:** Read and summarize the `docs/prod-readiness/important-to-do.md` checklist for the user.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Read required project context before the summary:
+  - `.cursor/rules/core-behavior.mdc`
+  - `.cursor/rules/console-protocol.mdc`
+  - `.cursor/rules/production-docs-protection.mdc`
+  - `.cursor/notes/project_status.md`
+  - `.cursor/notes/task_index.md` (headlines)
+  - relevant `important-to-do` entries in `.cursor/notes/task_log.md`
+  - `docs/README.md`
+- Confirmed the requested document path: `docs/prod-readiness/important-to-do.md`.
+- Prepared a concise brief covering the checklist purpose, current highest-priority items, and execution focus.
+
+**Technical debt / gotchas:**
+- The checklist spans mixed priorities and does not include explicit owner/date fields per item; execution planning still needs owner assignment during implementation cycles.
+
+**Open questions / TODOs:**
+- Confirm whether future requests that say “to do file” should default to `docs/prod-readiness/important-to-do.md` or `docs/final-to-do/final-to-do`.
+
+## Media buying handoff brief: baseline-offer GTM inputs and launch blockers (2026-03-02)
+
+**Task:** Prepare a concise, evidence-backed handoff for the media buying team using the current baseline-report GTM docs, landing-page copy, API contracts, and live E2E validation outcomes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Read binding project context before work:
+  - `.cursor/rules/core-behavior.mdc`
+  - `.cursor/rules/console-protocol.mdc`
+  - `.cursor/rules/production-docs-protection.mdc`
+  - `.cursor/notes/project_status.md`
+  - `.cursor/notes/task_index.md`
+  - `.cursor/notes/task_log.md` (headlines + relevant Step 13 / landing entries)
+  - `docs/README.md`
+- Extracted authoritative GTM/baseline inputs from:
+  - `docs/gtm-baseline-report-playbook.md`
+  - `docs/baseline-report-spec.md`
+  - `docs/landing-assets.md`
+  - `docs/customer-guide/*.md`
+  - `backend/routers/baseline_report.py`
+  - `docs/test-results/live-runs/20260228T220436Z/wave-06/test-22.md` and `wave-06/test-21.md`
+- Confirmed baseline-report production contract currently supports promised offer terms:
+  - `POST /api/baseline-report` creates report (`201`) with one-per-tenant-per-24h rate limit (`429` + `Retry-After`).
+  - `GET /api/baseline-report/{id}` returns terminal `success` with presigned `download_url`.
+  - `GET /api/baseline-report/{id}/data` viewer payload is live (`200` auth, `401` no-auth).
+  - Live rerun evidence (2026-03-01) shows Test 22 PASS including throttle and viewer closure.
+- Identified media-readiness blockers/gotchas from current frontend:
+  - `/` is not a marketing route; it redirects unauthenticated users to `/login`.
+  - Marketing page is `/landing`.
+  - `/landing` currently contains placeholder content (`https://calendly.com/placeholder`, `[Founder name]`, `[X] years`) and claim markers requiring verification in code comments.
+  - No explicit marketing analytics/pixel instrumentation was found in frontend code search (`gtag`, `dataLayer`, `fbq`, UTM parsing helpers).
+
+**Technical debt / gotchas:**
+- Paid traffic sent to root domain will not hit a landing flow; campaigns should target `/landing` (or a dedicated future route) until routing is changed.
+- Placeholder CTAs/bio copy in `/landing` should be finalized before scaling spend.
+- Performance marketing optimization is currently limited by missing event instrumentation for top/mid/bottom funnel actions.
+
+**Open questions / TODOs:**
+- Decide primary paid-traffic destination (`/landing`, `/signup`, or a dedicated campaign route).
+- Replace placeholder Calendly and founder fields in landing copy before launch.
+- Define and implement baseline conversion events (at minimum: landing CTA click, signup success, AWS connect success, baseline request success, baseline download).
+
+## Wave 8 Test 33 live SaaS run: PR proof artifact completeness (C2/C5) (2026-03-02)
+
+**Task:** Execute Wave 8 Test 33 on live SaaS with a fresh non-root PR bundle run, validate README proof fields C2/C5 plus metadata consistency, and update tracker/checklist evidence-only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-33.md** — Replaced stub with full Preconditions/Steps/API/UI evidence matrix/assertions/tracker mapping for canonical prefix `test-33-live-20260302T191537Z-*`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board Wave 8/TOTAL counts, Section 4 rows #12/#13, Section 8 `T33` checkboxes, and Section 9 changelog with Test 33 closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-33-live-20260302T191537Z-*** (new) — Added canonical API artifacts for auth/context, target/strategy selection, run create/poll/execution, ZIP auth matrix, and wrong-tenant boundary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T191537Z-*** (new) — Added ZIP extraction inventory, README snapshot, C2/C5 grep outputs, and proof-consistency checks vs run metadata/apply context.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-33-live-20260302T191537Z-ui-*** (new) — Added no-auth UI route probe artifact for `/pr-bundles`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Executed canonical fresh non-root run chain for Test 33:
+  - selected target `action_id=232870db-8f7d-49ee-8361-8ad1bd79eff2` (`control_id=S3.2`, `region=eu-north-1`),
+  - selected strategy `s3_bucket_block_public_access_standard`,
+  - created run `b9e50351-02a0-4784-a2f1-473929da696e` (`201`),
+  - run reached terminal `success` (`GET /api/remediation-runs/{id}` `200`),
+  - execution contract returned `status=success` with completed progress fields.
+- Verified authorized bundle path and boundaries:
+  - `GET /api/remediation-runs/{id}/pr-bundle.zip` authorized `200`,
+  - no-auth `401`,
+  - wrong-tenant token `404` (after corrected wrong-tenant signup payload with required `name` + `company_name`).
+- Extracted bundle and verified proof fields:
+  - C2 present: `terraform_plan_timestamp_utc: 2026-03-02T19:15:43+00:00`,
+  - C5 present: `preserved_configuration_statement: The generated IaC is scoped...`.
+- Verified consistency checks passed (`test-33-live-20260302T191537Z-75-proof-consistency.json`):
+  - `c2_present=true`,
+  - `c5_present=true`,
+  - `c2_within_run_window_5min=true`,
+  - `strategy_matches_create_payload=true`,
+  - `apply_context_has_init_plan_apply_steps=true`.
+- Closed tracker/readiness impact:
+  - Section 4 row #12 -> `✅ FIXED`,
+  - Section 4 row #13 -> `✅ FIXED`,
+  - Section 8 `T33` (both checklist items) -> checked.
+
+**Technical debt / gotchas:**
+- For the selected live S3.2 strategy, dependency checks were `warn`; run creation required explicit `risk_acknowledged=true` to proceed.
+- Wrong-tenant signup contract now requires `name` and `company_name`; older signup payload patterns return `422` and can invalidate boundary probes if not corrected.
+
+**Open questions / TODOs:**
+- None for Test 33 scope.
+
+## Wave 8 Test 31 live SaaS run: non-admin invite-delete authorization boundaries (2026-03-02)
+
+**Task:** Execute Wave 8 Test 31 on live SaaS as an evidence-only regression check for non-admin invite/delete authorization boundaries, then fully update test docs + tracker security/blocker rows.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-31.md** — Replaced the stub with complete preconditions, execution steps, API evidence matrix, assertions, and tracker mapping for Test 31.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board totals, Section 3 rows #7/#8, Section 8 checkboxes `T31-7`/`T31-8`, and Section 9 changelog entries (including Test 31 closure evidence).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-31-live-20260302T191352Z-*** — Added full canonical API evidence chain (`request`, `status`, `headers`, `json`, `timestamp`) for admin/member/no-auth/wrong-tenant probes.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Captured preconditions from live auth/account contracts:
+  - Tenant A admin (`maromaher54@gmail.com`) and same-tenant member (`wave3acc+20260228T213251Z@example.com`) both authenticated successfully (`200`).
+  - Tenant A context confirmed as `Valens` (`tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837`) with target account `029037611564`.
+- Executed required non-admin probes with member token:
+  - `POST /api/users/invite` -> `403` (`Only admins can invite users`)
+  - `DELETE /api/aws/accounts/029037611564?cleanup_resources=false` -> `403` (`Only admins can delete AWS accounts`)
+- Executed admin control-path probes:
+  - `POST /api/users/invite` -> `201` (invite successfully issued)
+  - `DELETE /api/aws/accounts/000000000000?cleanup_resources=false` -> `404` (admin passed auth gate; non-existent account correctly rejected)
+- Executed no-token probes:
+  - `POST /api/users/invite` -> `401`
+  - `DELETE /api/aws/accounts/029037611564?cleanup_resources=false` -> `401`
+- Executed wrong-tenant probes:
+  - Initial signup attempt without `company_name` returned `422` (contract requirement).
+  - Corrected signup with `company_name` returned `201`; wrong-tenant `GET /api/auth/me` returned `200`; corrected wrong-tenant delete probe returned `404` (`account not found for tenant`).
+- Verified no destructive side effect:
+  - `GET /api/aws/accounts` pre/post snapshots both retained target account `029037611564`; restore path was not triggered.
+- Synchronized tracker closure:
+  - Section 3 rows #7/#8 -> `✅ FIXED`
+  - Section 8 high blockers `T31-7`/`T31-8` -> checked
+  - Section 9 changelog updated with Test 31 evidence entry.
+
+**Technical debt / gotchas:**
+- Signup contract for wrong-tenant setup now requires `company_name`; older test payload patterns without this field return `422` and can produce false `401` follow-up probes if not corrected.
+
+**Open questions / TODOs:**
+- None for Test 31 scope.
+
+## Wave 8 Test 29 closure: ingest-sync 500 fix + live PASS rerun (2026-03-02)
+
+**Task:** Fully close Wave 8 Test 29 on live SaaS by diagnosing/fixing `POST /api/aws/accounts/{id}/ingest-sync` `500`, redeploying runtime, rerunning end-to-end evidence, and updating tracker/docs/logs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Hardened ingest-sync runtime branching so queue-backed environments always use async enqueue; added controlled `503` handling for non-ClientError enqueue failures and local sync dependency failures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave8_ingest_sync_freshness.py** — Expanded Wave 8 coverage to include non-local success (`200`), local-env+queue async behavior, controlled enqueue-failure `503`, invalid/no-auth/wrong-tenant/member boundaries, and `last_synced_at` field assertion.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0035_root_key_remediation_orchestration.py** — Shortened revision ID to `0035_rootkey_remediation_orch` (<=32 chars) to satisfy live `alembic_version.version_num` limit.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0036_secret_migration_connectors.py** — Shortened revision/down-revision IDs (`0036_secret_migration_conn` -> `0035_rootkey_remediation_orch`).
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0037_communication_governance_layer.py** — Shortened revision/down-revision IDs (`0037_comm_governance_layer` -> `0036_secret_migration_conn`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-29.md** — Rewritten to PASS with canonical rerun evidence and explicit root-cause trace linkage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Sections 1/2/4/6/7 for Test 29 closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-29-live-20260302T185356Z-*** — Added fresh canonical API evidence set for successful rerun.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-29-live-20260302T185356Z-ui-01-accounts-route-no-auth.*** — Added fresh no-auth UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-29-live-20260302T185356Z-98-root-cause-log-trace.txt** — Added CloudWatch trace excerpts for historical failing request IDs.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Traced historical failing request IDs from prior run:
+  - `Zm3Mlj35Ai0ENhQ=` and `Zm33niMLgi0EPEg=` mapped to Lambda traceback in `trigger_ingest_sync`, showing local-branch worker import path and `ModuleNotFoundError: No module named 'tenacity'`.
+- Implemented ingest-sync contract hardening/fix:
+  - Queue-backed environments now avoid local synchronous worker import path even when `ENV=local`.
+  - Valid known queue failures now return controlled `503` (`Ingestion service unavailable`) instead of raw `500`.
+- Local verification passed:
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_wave8_ingest_sync_freshness.py` -> `8 passed`
+  - `./venv/bin/python -m py_compile backend/routers/aws_accounts.py tests/test_wave8_ingest_sync_freshness.py` -> pass
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_migration.py tests/test_secret_migration_migration.py` -> `5 passed`
+- Live deployment/runtime steps:
+  - Deployed runtime with image tag `20260302T184005Z` (first pass), then observed startup fail-closed migration-guard errors (`current=0034_remrun_active_unique_guard`, expected head `0037_communication_governance_layer`).
+  - Resolved DB/migration chain blocker by shortening overlong Alembic revision IDs (`0035`–`0037`) to <=32 chars and applying `alembic upgrade head` successfully to `0037_comm_governance_layer`.
+  - Redeployed runtime with image tag `20260302T185049Z`; post-deploy `/health` returned `200`.
+- Live Wave 8 Test 29 rerun (canonical):
+  - Canonical prefix: `test-29-live-20260302T185356Z-*`.
+  - Valid in-tenant admin ingest-sync returned `200` (`apigw-requestid: Zm9vfg_hAi0EPNw=`).
+  - Member ingest-sync returned deterministic `200` (`apigw-requestid: Zm95FhXAgi0EJ0Q=`).
+  - Progress contract with `started_after=2026-03-02T18:54:00Z` reached terminal `completed` at poll 11 (`progress=100`, `updated_findings_count=302`).
+  - `GET /api/aws/accounts` freshness field remained non-null and advanced (`2026-03-02T13:40:11.914670Z` -> `2026-03-02T18:54:10.536945Z`).
+  - Boundary contracts: invalid account `404`, no-auth `401`, wrong-tenant `404`, missing `started_after` `422`.
+
+**Technical debt / gotchas:**
+- `.env.ops` still sets `ENV=\"local\"` in live profile; ingest-sync is now resilient for queue-backed runtime, but environment labeling should be normalized in a separate operational cleanup slice.
+- A non-canonical rerun attempt (`test-29-live-20260302T184423Z-*`) captured universal `500` caused by migration-guard startup failure and is excluded from final Test 29 assertions.
+
+**Open questions / TODOs:**
+- None for Test 29 closure scope.
+
+## Wave 8 Test 29 live SaaS run: ingest sync + account freshness fields (2026-03-02)
+
+**Task:** Execute Wave 8 Test 29 on live SaaS, capture full evidence for ingest-sync/freshness behavior, and update tracker sections from observed outcomes only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/wave-08/test-29.md** — Replaced the stub with full preconditions, executed steps, evidence matrix, assertions, and tracker mapping for Test 29.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** — Updated Last updated timestamp, Quick Status Board totals, Section 1 row #14, Section 2 row #12, Section 4 (new row #27), Section 6 (new row #11), and Section 9 changelog with the Wave 8 Test 29 evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/api/test-29-live-20260302T180910Z-*** — Added canonical API evidence artifacts for auth, accounts pre/post freshness, ingest-sync trigger, ingest-progress polling, and negative/auth boundary probes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/ui/test-29-live-20260302T180910Z-ui-01-accounts-route-no-auth.*** — Added no-auth Accounts route UI probe artifact.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Captured preconditions from live auth/account contracts:
+  - tenant `Valens` (`tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837`),
+  - account `029037611564`,
+  - region `eu-north-1`,
+  - `started_after=2026-03-02T18:09:19Z`.
+- Verified account freshness field behavior from `GET /api/aws/accounts`:
+  - `last_synced_at` is present and non-null in both pre/post snapshots (`2026-03-02T13:40:11.914670Z`).
+- Executed `POST /api/aws/accounts/{account_id}/ingest-sync` on live SaaS:
+  - valid-account admin call returned `500 Internal Server Error`,
+  - same-tenant member call also returned `500`,
+  - invalid-account call returned `404`,
+  - no-auth call returned `401`,
+  - wrong-tenant token call returned `404`.
+- Verified ingest progress contract and completion behavior:
+  - progress endpoint accepted the same `started_after` and transitioned `queued -> running -> no_changes_detected`,
+  - terminal state reached with `progress=100`, `percent_complete=100`, `estimated_time_remaining=0`,
+  - missing `started_after` probe returned `422`.
+
+**Technical debt / gotchas:**
+- Live runtime currently shows a contract split for ingest-sync: background refresh progress still appears to run, but trigger responses return `500` instead of success payload on valid in-tenant calls.
+- `last_synced_at` stayed unchanged when terminal progress status was `no_changes_detected` and `updated_findings_count=0`; this is now documented as observed behavior for Test 29.
+
+**Open questions / TODOs:**
+- Investigate and fix the live `/api/aws/accounts/{id}/ingest-sync` `500` response path so valid admin/member calls return the documented success contract while keeping current auth boundaries intact.
+
+## Release gate re-verification after blocker fixes (2026-03-02)
+
+**Task:** Re-run mandatory release gates/scenarios after root-key blocker fixes and produce deterministic GO/NO-GO evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this verification audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**Verification commands run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py tests/test_root_key_usage_discovery.py tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_plan_e2e.py` -> `99 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py tests/test_exceptions_api.py` -> `33 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_secret_migration_migration.py tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py` -> `16 passed`
+- `cd frontend && npm run test:ui -- src/components/root-key/RootKeyRemediationLifecycle.test.tsx` -> `4 passed`
+- `cd frontend && npm run typecheck` -> pass
+- `cd frontend && npx eslint src/components/root-key/RootKeyRemediationLifecycle.tsx src/components/root-key/RootKeyRemediationLifecycle.test.tsx src/components/ActionDetailDrawer.tsx src/lib/api.ts 'src/app/root-key-remediation-runs/[id]/page.tsx'` -> pass
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_runs_api.py::test_delete_fails_closed_when_executor_disabled tests/test_root_key_remediation_executor_worker.py::test_delete_uses_closure_runtime_path_when_enabled tests/test_root_key_remediation_executor_worker.py::test_delete_closure_policy_failure_marks_needs_attention tests/test_root_key_remediation_plan_e2e.py::test_root_key_plan_matrix_matches_expected_artifact` -> `4 passed`
+
+**What was done (verified):**
+- Release gates passed: `10/10` (root-key suite, governance suite, secret-migration suite, frontend lifecycle test, frontend typecheck, targeted eslint gate, delete gating, closure protocol runtime wiring, policy-preservation runtime fail-closed behavior, deterministic scenario-matrix gate).
+- Deterministic scenario matrix passed: `7/7` (`RK-E2E-001`..`RK-E2E-007`) through `test_root_key_plan_matrix_matches_expected_artifact`.
+- Previously failed blocker items now pass in targeted checks:
+  - delete gating -> `test_delete_fails_closed_when_executor_disabled`
+  - closure protocol runtime -> `test_delete_uses_closure_runtime_path_when_enabled`
+  - policy-preservation runtime -> `test_delete_closure_policy_failure_marks_needs_attention`
+
+**Technical debt / gotchas:**
+- None discovered in this verification run.
+
+**Open questions / TODOs:**
+- None.
+
+## Root-key closure runtime wiring for delete path + policy-preservation fail-closed enforcement (2026-03-02)
+
+**Task:** Wire `RootKeyRemediationClosureService` into the live root-key delete runtime path (worker + API entrypoint), enforce closure-enabled fail-closed outcomes and evidence requirements, and add targeted worker/e2e tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_executor_worker.py** — Wired closure-enabled delete execution to run closure orchestration (`ingest/compute/reconcile + polling`) after delete evidence persistence; added runtime closure trigger/poller callables; enforced closure poll policy/evidence checks; persisted `required_safe_permissions_unchanged` metadata in disable/delete evidence.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_closure.py** — Added fail-closed dispatch-exception handling that transitions to `needs_attention` and persists closure summary metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** — Updated executor-worker routing guard so closure-enabled runtime paths use worker orchestration (prevents closure-enabled delete bypass through direct API finalize path).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_executor_worker.py** — Added closure-enabled runtime tests for:
+  - closure success path with summary artifact persistence,
+  - trigger rejection -> `needs_attention`,
+  - policy-preservation failure -> `needs_attention`,
+  - timeout -> `failed`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_plan_e2e.py** — Added runtime-wiring test that executes delete through worker with closure enabled and verifies trigger sequence plus `delete_window_evidence` + `closure_cycle_summary` artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Marked runtime closure wiring checklist item complete and updated status header.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated status/implemented text to reflect runtime delete-path closure wiring.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md** — Updated status note to reflect closure runtime wiring is implemented behind flags.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for closure runtime wiring, evidence-before-terminal behavior, and closure poll policy/evidence gate enforcement.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Closure-enabled delete path now runs through `RootKeyRemediationClosureService` in runtime worker execution; direct terminal completion is not used when closure flag is enabled.
+- Closure dispatch and poll failures are fail-closed:
+  - trigger rejection/dispatch error -> `needs_attention`,
+  - policy-preservation failure -> `needs_attention`,
+  - timeout -> `failed`.
+- Delete evidence is persisted before terminal completion, and closure summary artifact is persisted for closure-driven terminal outcomes.
+- Closure poller now enforces lifecycle evidence requirements (`disable_window_evidence`, `delete_window_evidence`) and requires `required_safe_permissions_unchanged=true` before completion.
+- API runtime routing now uses executor-worker orchestration when closure mode is enabled, so live API delete path cannot bypass closure-enabled worker logic.
+
+**Tests run:**
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_plan_e2e.py tests/test_root_key_remediation_state_machine.py` (pass: `50 passed`)
+
+**Technical debt / gotchas:**
+- `required_safe_permissions_unchanged` is currently derived from runtime worker evidence checks and must remain populated by delete/disable evidence producers; missing metadata now fail-closes completion.
+
+**Open questions / TODOs:**
+- Confirm whether closure-enabled API routing should be hardened further to force executor-worker usage for all root-key mutating transitions (not only delete path safety critical flows).
+
+## Root-key API runtime blockers closure: fail-closed delete path + discovery-gated create-run transitions (2026-03-02)
+
+**Task:** Close root-key API release blockers in runtime paths by removing unsafe delete fallback behavior and wiring discovery/classification gating before create-run auto-forward transitions, with focused regression coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** — Removed `/delete` fallback to `finalize_delete` when executor is disabled and fail-closed with explicit `503 executor_unavailable`; added create-run discovery/classification gating via `RootKeyUsageDiscoveryService` before migration auto-forward (unknown/partial/error routes to `needs_attention`, safe-managed routes to `migration`).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** — Added/updated tests for:
+  - delete fail-closed when executor disabled,
+  - create-run routing to `needs_attention` on unknown/partial discovery,
+  - create-run routing to `migration` on safe discovery,
+  - adjusted existing pause/delete expectation to run with executor-enabled settings so paused-run guard remains covered.
+
+**What was done (verified):**
+- Enforced fail-closed delete behavior in API runtime:
+  - `/api/root-key-remediation-runs/{id}/delete` now requires executor-worker path and returns explicit `503` with `error.code=executor_unavailable` when unavailable.
+  - Router no longer calls `service.finalize_delete(...)` as a fallback when executor is disabled.
+- Wired discovery/classification into create-run transition flow:
+  - After `create_run`, if run remains in `discovery/needs_attention`, runtime evaluates discovery/classification before auto-forward.
+  - Safe managed discovery (`unknown_count=0` and no partial data) proceeds through existing `advance_to_migration` path.
+  - Unknown dependency, partial data, or discovery failure fail closed through `mark_needs_attention` with transition evidence metadata.
+- Preserved tenant scope and idempotency semantics:
+  - Discovery call remains tenant/run scoped (`tenant_id`, `run_id`) and transition ids remain derived from `Idempotency-Key`.
+  - Replay behavior remains deterministic (`idempotency_replayed` on unchanged create results).
+
+**Tests run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_runs_api.py tests/test_root_key_usage_discovery.py` (pass: `24 passed`)
+
+**Technical debt / gotchas:**
+- Create-run discovery currently uses direct boto session construction in router runtime path; account-role session orchestration remains implicit and can produce fail-closed `needs_attention` when discovery execution context is unavailable.
+
+**Open questions / TODOs:**
+- Confirm whether product wants create-run to fail closed to `needs_attention` when discovery feature flag is disabled, or to continue current migration fallback behavior until discovery rollout is mandatory.
+
+## Communication + governance layer: notifications, exception governance, and dashboard APIs (2026-03-02)
+
+**Task:** Implement a production communication/governance layer with strict tenant isolation, idempotent-safe operations, fail-closed delivery behavior, default-off feature flags, and required tests for template rendering, exception lifecycle transitions, reminder scheduling, auth, and retry paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0037_communication_governance_layer.py** (new) — Additive schema for governance notifications, exception governance fields, and tenant governance settings.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/governance_notification.py** (new) — Tenant-scoped, idempotent notification event model.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/exception.py** — Added owner assignment, approval metadata, reminder/revalidation scheduling fields, and indexes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/tenant.py** — Added governance webhook + enable/disable settings.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** — Registered governance notification model.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added default-off communication/governance flags and SLA/reminder tunables.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/governance_templates.py** (new) — Stage template rendering for `pre_change`, `in_progress`, `action_required`, `completion`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/exception_governance.py** (new) — Exception lifecycle state and reminder/revalidation schedule helpers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/governance_notifications.py** (new) — Idempotent channel dispatch with fail-closed behavior and redaction-safe payload handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/email.py** — Added `send_governance_notification(...)` delivery helper.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/governance.py** (new) — Added governance API endpoints:
+  - `POST /api/governance/remediation-runs/{run_id}/notifications`
+  - `PATCH /api/governance/exceptions/{exception_id}`
+  - `POST /api/governance/exceptions/{exception_id}/revalidate`
+  - `POST /api/governance/exceptions/reminders/dispatch`
+  - `GET /api/governance/notifications`
+  - `GET /api/governance/dashboard`
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** — Added governance settings endpoints:
+  - `GET /api/users/me/governance-settings`
+  - `PATCH /api/users/me/governance-settings`
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/exceptions.py** — Extended exception create/list/detail response contract with governance metadata and lifecycle visibility.
+- **/Users/marcomaher/AWS Security Autopilot/backend/main.py** — Mounted governance router.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_governance_templates.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_exception_governance.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_governance_api.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_governance_settings_api.py** (new)
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_exceptions_api.py** — Updated exception mock fixture with new governance fields.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/communication-governance-layer.md** (new) — Feature contract and architecture flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** — Added feature doc cross-link.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added quick-nav link.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased changelog entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry.
+
+**What was done (verified):**
+- Added a default-off communication/governance layer with explicit contract headers and `Idempotency-Key` requirements on new mutating endpoints.
+- Implemented tenant-scoped notification dispatch and persistence for `in_app`, `email`, and optional `slack`/`webhook` channels.
+- Enforced fail-closed behavior for dispatch failures with explicit `failed` notification state recording.
+- Added exception governance lifecycle logic (`active`, `expiring`, `action_required`, `expired`) and reminder/revalidation scheduling helpers.
+- Added reminder-dispatch endpoint that processes due exception reminders with idempotent dedupe keys and schedule advancement.
+- Added governance dashboard aggregation for run-state visibility, open exceptions, SLA breaches, and compliance closure trends.
+- Added tenant governance settings API for enabling governance notifications and configuring/clearing a webhook URL (never returned in responses).
+
+**Tests run:**
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/python -m py_compile backend/models/tenant.py backend/models/exception.py backend/models/governance_notification.py backend/services/governance_templates.py backend/services/exception_governance.py backend/services/governance_notifications.py backend/services/email.py backend/routers/users.py backend/routers/exceptions.py backend/routers/governance.py backend/main.py tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/ruff check backend/models/tenant.py backend/models/exception.py backend/models/governance_notification.py backend/services/governance_templates.py backend/services/exception_governance.py backend/services/governance_notifications.py backend/services/email.py backend/routers/users.py backend/routers/exceptions.py backend/routers/governance.py backend/main.py tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/models/tenant.py backend/models/exception.py backend/models/governance_notification.py backend/services/governance_templates.py backend/services/exception_governance.py backend/services/governance_notifications.py backend/services/email.py backend/routers/users.py backend/routers/exceptions.py backend/routers/governance.py tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest -q tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py tests/test_exceptions_api.py tests/test_digest_settings_api.py tests/test_slack_settings_api.py` (pass: `47 passed`)
+
+**Technical debt / gotchas:**
+- In-app channel persistence/list APIs are implemented, but frontend notification-center integration for governance events is not yet wired.
+- Governance reminder dispatch currently runs via explicit API trigger; no dedicated scheduled worker rail was added in this slice.
+
+**Open questions / TODOs:**
+- Decide whether governance reminder dispatch should be triggered by a scheduled internal job (cron/EventBridge) in the next slice.
+- Decide whether governance dashboard should expose configurable trend windows beyond the current 7–90 day API range.
+
+## Root-key rollout controls: canary percent, kill switch, pause/resume, override audit, and ops metrics (2026-03-02)
+
+**Task:** Implement production rollout/ops controls for root-key remediation with strict tenant isolation, idempotent retry-safe operations, fail-closed behavior, feature-flagged default-off rollout controls, and required canary/kill-switch/pause-resume test coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added behavior-preserving rollout/ops flags:
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST`
+  - `ROOT_KEY_SAFE_REMEDIATION_CANARY_ACCOUNT_ALLOWLIST`
+  - `ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED`
+  - `ROOT_KEY_SAFE_REMEDIATION_OPS_METRICS_ENABLED`
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_rollout_controls.py** (new) — Added deterministic canary selection logic and sanitized operator-override reason handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_ops_metrics.py** (new) — Added tenant-scoped KPI snapshot computation:
+  - auto success rate
+  - rollback rate
+  - needs_attention rate
+  - closure pass rate
+  - mean time to detect unknown dependency
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_state_machine.py** — Added kill-switch guard and new pause/resume transition methods with fail-closed resume-target validation.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** — Added:
+  - create-run canary gating with optional sanitized operator override reason logging,
+  - kill-switch fail-closed mutating preflight,
+  - `POST /api/root-key-remediation-runs/{id}/pause`,
+  - `POST /api/root-key-remediation-runs/{id}/resume`,
+  - paused-run mutation blocking (`run_paused`) for transition/task-complete operations,
+  - immutable `operator_override` event append behavior,
+  - `GET /api/root-key-remediation-runs/ops/metrics`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_rollout_controls.py** (new) — Added canary gating + override reason sanitization tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** — Added tests for:
+  - canary gating deny + canary override reason logging,
+  - kill-switch fail-closed behavior,
+  - pause/resume correctness (including blocked transition while paused),
+  - ops metrics endpoint contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_state_machine.py** — Added pause/resume state-machine coverage and invalid resume target rejection.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated API/flags/coverage sections for rollout and ops controls.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Updated Slice 3 and Slice 6 checklist coverage for pause/resume, canary, kill switch, override logging, and metrics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased entries for new rollout/ops controls and tests.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability index entry.
+
+**What was done (verified):**
+- Implemented deterministic canary gating for root-key run creation (tenant/account hash bucket + percent), with explicit allowlist bypass and fail-closed `canary_not_selected` behavior.
+- Implemented global kill-switch fail-closed handling for all root-key mutating endpoints.
+- Implemented per-run pause/resume operations with:
+  - transition to `needs_attention/waiting_for_user` on pause,
+  - explicit resume to prior active state from pause event context,
+  - fail-closed transition/task-complete blocking while paused.
+- Added immutable operator override reason event logging with text sanitization to avoid secret leakage in artifacts.
+- Added tenant-scoped ops metrics endpoint and metrics service for rollout observability.
+- Preserved default behavior: all newly added rollout controls are flag-gated with conservative defaults.
+
+**Tests run:**
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/ruff check backend/routers/root_key_remediation_runs.py backend/services/root_key_remediation_state_machine.py backend/services/root_key_rollout_controls.py backend/services/root_key_remediation_ops_metrics.py tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_state_machine.py` (pass: `55 passed`)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_plan_e2e.py` (pass: `12 passed`)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/python -m py_compile backend/config.py backend/routers/root_key_remediation_runs.py backend/services/root_key_rollout_controls.py backend/services/root_key_remediation_ops_metrics.py backend/services/root_key_remediation_state_machine.py tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_state_machine.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/routers/root_key_remediation_runs.py backend/services/root_key_rollout_controls.py backend/services/root_key_remediation_ops_metrics.py backend/services/root_key_remediation_state_machine.py tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_state_machine.py` (pass: `Success: no issues found in 7 source files`)
+
+**Technical debt / gotchas:**
+- Ops metrics are currently computed over all available tenant historical runs (no time-window filter yet).
+- Root-key closure service runtime wiring is still pending; closure pass-rate metric currently relies on persisted closure summary artifacts when present.
+
+**Open questions / TODOs:**
+- Decide whether ops metrics endpoint should support explicit date-window query params for SLO reporting.
+- Decide whether kill-switch should permit an emergency rollback-only bypass path in future slices (currently strict fail-closed for all mutating root-key routes).
+
+## Secret migration connectors: tenant-scoped API + rollback-safe transaction orchestration (2026-03-02)
+
+**Task:** Implement automatic migration connectors for known systems with strict tenant isolation, idempotent/retry-safe behavior, fail-closed error handling, dry-run support, per-target transaction logging, partial-failure handling, rollback support, feature-flag gating, and explicit test coverage for positive/negative/auth/retry paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0036_secret_migration_connectors.py** (new) — Additive schema for `secret_migration_runs` and `secret_migration_transactions` with tenant/idempotency and per-target uniqueness constraints.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/enums.py** — Added `SecretMigrationRunStatus` and `SecretMigrationTransactionStatus`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/secret_migration_run.py** (new) — Tenant-scoped run model with idempotency key, connector configs, counters, and error summary.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/secret_migration_transaction.py** (new) — Per-target transaction log model with attempt counters, rollback metadata, and sanitized error fields.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** — Registered new models/enums for metadata discovery.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added default-off feature flags/config:
+  - `SECRET_MIGRATION_CONNECTORS_ENABLED=false`
+  - `SECRET_MIGRATION_APPROVED_CI_BACKENDS=github_actions`
+  - `SECRET_MIGRATION_GITHUB_CLI_BIN=gh`
+  - `SECRET_MIGRATION_MAX_TARGETS=200`
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/secret_migration_connectors.py** (new) — Connector implementations and fail-closed error taxonomy for:
+  - `aws_secrets_manager`
+  - `aws_ssm_parameter_store`
+  - approved CI backend `github_actions` (target-only, fail-closed on non-restorable existing-secret updates).
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/secret_migration_service.py** (new) — Tenant-scoped orchestration service for idempotent run creation, connector resolution, dry-run execution, per-target transaction updates, partial-failure rollback, and retry processing.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/secret_migrations.py** (new) — Versioned API contract:
+  - `POST /api/secret-migrations/runs`
+  - `GET /api/secret-migrations/runs/{run_id}`
+  - `POST /api/secret-migrations/runs/{run_id}/retry`
+  with fail-closed error envelope and `Idempotency-Key` requirement on create.
+- **/Users/marcomaher/AWS Security Autopilot/backend/main.py** — Mounted secret migration router under `/api`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_secret_migration_migration.py** (new) — Migration guard tests for required schema objects.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_secret_migration_connectors.py** (new) — Connector happy-path and target-unavailable coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_secret_migration_service.py** (new) — Partial-failure + rollback + retry convergence and dry-run behavior coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_secret_migrations_api.py** (new) — Auth/no-auth/role, idempotent replay, wrong-tenant read denial, retry endpoint, and feature-flag gating coverage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/secret-migration-connectors.md** (new) — Feature contract, connector matrix, dry-run/rollback semantics, and flow diagram.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** — Added cross-link to secret migration connectors doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** — Added secret migration connectors to quick navigation.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for secret migration connectors feature.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added a default-off production feature for tenant-scoped secret migration orchestration with explicit connector contracts and per-target execution logs.
+- Enforced fail-closed behavior for invalid connector usage, missing tenant-scoped AWS account access, unsupported rollback guarantees, and idempotency payload mismatches.
+- Added dry-run mode where source reads are validated and writes are skipped while transaction rows are still recorded.
+- Implemented rollback handling for applied connector updates on partial failures and retry flow for non-success transaction states.
+- Ensured no plaintext secret values are persisted in transaction metadata/error fields by sanitizing secret-like payload keys and masking sensitive error text.
+
+**Tests run:**
+- `./venv/bin/ruff check backend/routers/secret_migrations.py backend/services/secret_migration_connectors.py backend/services/secret_migration_service.py backend/models/secret_migration_run.py backend/models/secret_migration_transaction.py backend/models/enums.py backend/models/__init__.py backend/config.py backend/main.py alembic/versions/0036_secret_migration_connectors.py tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py tests/test_secret_migration_migration.py` (pass)
+- `./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/routers/secret_migrations.py backend/services/secret_migration_connectors.py backend/services/secret_migration_service.py backend/models/secret_migration_run.py backend/models/secret_migration_transaction.py tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py` (pass: `Success: no issues found in 8 source files`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py tests/test_secret_migration_migration.py` (pass: `16 passed`)
+- `./venv/bin/python -m py_compile backend/routers/secret_migrations.py backend/services/secret_migration_connectors.py backend/services/secret_migration_service.py backend/models/secret_migration_run.py backend/models/secret_migration_transaction.py tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py alembic/versions/0036_secret_migration_connectors.py` (pass)
+
+**Technical debt / gotchas:**
+- `github_actions` target connector is intentionally fail-closed for pre-existing secrets because GitHub does not provide value readback needed for guaranteed in-place rollback.
+- CI backend coverage currently includes allowlisted `github_actions`; additional CI backends require explicit connector implementation and approval list expansion.
+
+**Open questions / TODOs:**
+- Confirm whether CI connector rollout should include additional approved backends in this phase or remain GitHub-only until parity rollback semantics are defined.
+- Decide whether long-running connector execution should move to worker/SQS orchestration for large target sets beyond API request window.
+
+## Root-key closure orchestration service + deterministic full-plan integration/e2e matrix (2026-03-02)
+
+**Task:** Implement root-key closure orchestration service and deterministic integration/e2e test coverage for the full seven-path plan (managed-only completion, unknown dependency `needs_attention`, external-task continuation, post-disable rollback, closure polling cycle, policy-preservation assertions, and self-cutoff prevention), with fixture-backed run-summary matrix artifacts tied to acceptance docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_closure.py** (new) — Added fail-closed closure-cycle orchestration (`ingest -> compute -> reconcile -> polling`) with tenant-scoped run loading, policy-preservation gating, timeout terminal handling, idempotent-safe replay behavior, and redacted closure summary artifact persistence.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** — Added closure tuning flags (default behavior-preserving):
+  - `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_MAX_POLLS=30`
+  - `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_POLL_INTERVAL_SECONDS=5.0`
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_plan_e2e.py** (new) — Added deterministic integration/e2e harness and matrix assertion test for all seven required paths, plus explicit auth-scope denial and retry/idempotency tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/fixtures/root_key_safe_remediation_plan_scenarios.json** (new) — Deterministic scenario fixture and acceptance-case mapping source.
+- **/Users/marcomaher/AWS Security Autopilot/tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json** (new) — Deterministic expected run-summary pass/fail matrix artifact.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md** — Added `RK-E2E-001`..`RK-E2E-007` integration/e2e acceptance rows and deterministic matrix artifact references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** — Updated implementation status, service/flag tables, and test-plan coverage to include closure service and deterministic e2e matrix artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md** — Updated Slice 4/7 status to reflect implemented closure service and deterministic integration/e2e matrix coverage, with runtime wiring still pending.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** — Added Unreleased notes for closure service, new closure tuning flags, and deterministic e2e plan-matrix tests/fixtures.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added a production closure orchestration service that:
+  - enforces tenant-scoped run loads,
+  - fails closed on unconfigured triggers, invalid states, poll failures, and policy-preservation failures,
+  - supports idempotent-safe retries (replay short-circuit when run already `completed`),
+  - records redacted closure summary artifacts with dispatch + polling evidence.
+- Added deterministic fixture-backed integration/e2e coverage for all required plan paths.
+- Added acceptance-document linkage from fixture cases to `RK-*` case IDs and matrix artifact outputs.
+- Preserved default behavior with all root-key rollout flags still default-off.
+
+**Tests run:**
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_plan_e2e.py` (pass: `3 passed`)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/ruff check backend/services/root_key_remediation_closure.py tests/test_root_key_remediation_plan_e2e.py backend/config.py` (pass)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/mypy --ignore-missing-imports --follow-imports=skip --explicit-package-bases --namespace-packages backend/services/root_key_remediation_closure.py tests/test_root_key_remediation_plan_e2e.py` (pass: `Success: no issues found in 2 source files`)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_plan_e2e.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_state_machine.py tests/test_root_key_usage_discovery.py tests/test_root_key_remediation_runs_api.py` (pass: `59 passed`)
+- `cd '/Users/marcomaher/AWS Security Autopilot' && ./venv/bin/python -m py_compile backend/services/root_key_remediation_closure.py tests/test_root_key_remediation_plan_e2e.py backend/config.py` (pass)
+
+**Technical debt / gotchas:**
+- Closure orchestration service is implemented and test-covered, but runtime API/worker wiring remains gated and not yet enabled by default.
+- `blocked_operator_error` terminal mapping remains open; closure fail-closed non-success paths currently resolve to `needs_attention`/`failed` with explicit reasons.
+
+**Open questions / TODOs:**
+- Decide runtime invocation point for `RootKeyRemediationClosureService` (API inline vs worker-queue driven orchestration) before enabling `ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED`.
+- Confirm final terminal-state policy for closure timeout and policy-preservation failure (`needs_attention` vs dedicated `blocked_operator_error` state).
+
 ## Root-key executor workers for disable/rollback/delete with self-cutoff safety guard (2026-03-02)
 
 **Task:** Implement guarded executor workers for root-key `disable` / `rollback` / `delete` operations with strict tenant isolation, idempotent retry safety, fail-closed behavior, and delete gate enforcement while preserving default behavior behind feature flags.
@@ -12300,3 +13411,66 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - None.
+
+## Root-key safe remediation release audit (P0-P12) (2026-03-02)
+
+**Task:** Perform full implementation audit and verification for root-key safe remediation program (P0-P12) and produce release GO/NO-GO with concrete evidence.
+
+**Files reviewed (no code edits):**
+- `docs/live-e2e-testing/root-key-safe-remediation-spec.md`
+- `docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md`
+- `docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md`
+- `docs/features/root-key-remediation-lifecycle-ui.md`
+- `backend/routers/root_key_remediation_runs.py`
+- `backend/services/root_key_remediation_state_machine.py`
+- `backend/services/root_key_remediation_executor_worker.py`
+- `backend/services/root_key_remediation_closure.py`
+- `backend/services/root_key_usage_discovery.py`
+- `backend/services/root_key_remediation_store.py`
+- `backend/services/root_key_rollout_controls.py`
+- `backend/services/root_key_remediation_ops_metrics.py`
+- `backend/config.py`
+- `backend/routers/governance.py`
+- `backend/services/governance_notifications.py`
+- `backend/services/exception_governance.py`
+- `backend/routers/secret_migrations.py`
+- `backend/services/secret_migration_service.py`
+- `backend/services/secret_migration_connectors.py`
+- `frontend/src/components/root-key/RootKeyRemediationLifecycle.tsx`
+- `frontend/src/components/root-key/RootKeyRemediationLifecycle.test.tsx`
+- `frontend/src/app/root-key-remediation-runs/[id]/page.tsx`
+- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/lib/api.ts`
+- `tests/test_root_key_remediation_plan_e2e.py`
+- `tests/test_root_key_remediation_executor_worker.py`
+- `tests/test_root_key_remediation_runs_api.py`
+- `tests/test_root_key_remediation_store.py`
+- `tests/test_root_key_remediation_state_machine.py`
+- `tests/test_root_key_usage_discovery.py`
+- `tests/test_root_key_rollout_controls.py`
+- `tests/test_governance_api.py`
+- `tests/test_governance_settings_api.py`
+- `tests/test_exception_governance.py`
+- `tests/test_exceptions_api.py`
+- `tests/test_secret_migrations_api.py`
+- `tests/test_secret_migration_service.py`
+
+**Verification commands run:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_migration.py tests/test_root_key_remediation_models.py tests/test_root_key_remediation_store.py tests/test_root_key_remediation_state_machine.py tests/test_root_key_usage_discovery.py tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_plan_e2e.py` -> `91 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_governance_templates.py tests/test_exception_governance.py tests/test_governance_api.py tests/test_governance_settings_api.py tests/test_exceptions_api.py` -> `33 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_secret_migration_migration.py tests/test_secret_migration_connectors.py tests/test_secret_migration_service.py tests/test_secret_migrations_api.py` -> `16 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_runs_api.py::test_create_root_key_run_no_auth_returns_401 tests/test_root_key_remediation_runs_api.py::test_get_root_key_run_wrong_tenant_returns_404 tests/test_root_key_remediation_runs_api.py::test_kill_switch_blocks_mutating_endpoint tests/test_root_key_remediation_store.py::test_create_run_fails_closed_when_action_not_scoped_to_tenant tests/test_root_key_remediation_store.py::test_create_run_fails_closed_when_finding_not_scoped_to_tenant tests/test_root_key_remediation_executor_worker.py::test_delete_gating_failures_mark_needs_attention tests/test_root_key_remediation_executor_worker.py::test_self_cutoff_regression_marks_needs_attention tests/test_governance_api.py::test_notify_remediation_run_stage_requires_admin tests/test_secret_migrations_api.py::test_create_secret_migration_run_member_forbidden_returns_403` -> `12 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_remediation_executor_worker.py::test_disable_breakage_signal_triggers_rollback_alert tests/test_root_key_remediation_executor_worker.py::test_delete_gating_failures_mark_needs_attention tests/test_root_key_remediation_plan_e2e.py::test_root_key_plan_matrix_matches_expected_artifact tests/test_secret_migration_service.py::test_partial_failure_rolls_back_then_retry_succeeds tests/test_root_key_remediation_state_machine.py::test_retry_idempotency_on_converged_lock_conflict tests/test_root_key_remediation_state_machine.py::test_retry_policy_uses_capped_backoff` -> `9 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_root_key_rollout_controls.py tests/test_root_key_remediation_runs_api.py::test_kill_switch_blocks_mutating_endpoint tests/test_exception_governance.py` -> `15 passed`
+- `cd frontend && npm run test:ui -- src/components/root-key/RootKeyRemediationLifecycle.test.tsx` -> `4 passed`
+- `cd frontend && npm run typecheck` -> pass
+- `cd frontend && npx eslint src/components/root-key/RootKeyRemediationLifecycle.tsx src/components/root-key/RootKeyRemediationLifecycle.test.tsx src/components/ActionDetailDrawer.tsx src/lib/api.ts 'src/app/root-key-remediation-runs/[id]/page.tsx'` -> pass
+
+**Findings summary:**
+- Runtime delete path bypass exists when executor worker is disabled (`/delete` falls back to `finalize_delete` directly).
+- Closure orchestration service exists but is not wired into router/worker runtime path.
+- Discovery/classification service is implemented and tested, but not orchestrated from create-run runtime path for early managed/unknown branching.
+
+**Open questions / TODOs:**
+- Decide whether delete endpoint must hard-fail when executor worker is disabled.
+- Decide runtime integration point for closure cycle and policy-preservation enforcement in live path.

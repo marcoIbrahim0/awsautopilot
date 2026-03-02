@@ -4,6 +4,126 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Item 17 finalization: merge audit + full regression validation for production readiness (2026-03-02)](task_log.md#item-17-finalization-merge-audit--full-regression-validation-for-production-readiness-2026-03-02)
+  - Audited all available git refs and found no local Item `17` branches left to merge; remote fetch was attempted but blocked by DNS resolution to GitHub in this environment.
+  - Re-ran Item `16/17` targeted validation suites (`131 passed`) and full backend regression suite (`914 passed`) with no failures.
+  - Reconfirmed fail-closed medium/low promotion defaults/threshold gates and no regression on the Item `16` high-confidence promotion path.
+- [Item 17 gating implementation: medium/low promotion quality thresholds in shared decision path (2026-03-02)](task_log.md#item-17-gating-implementation-mediumlow-promotion-quality-thresholds-in-shared-decision-path-2026-03-02)
+  - Wired Item `17` medium/low quality gates directly into the existing Item `16` promotion decision path in `shadow_state` (no parallel promotion logic).
+  - Added explicit gate knobs and defaults for minimum coverage, minimum observed precision, and rollback-trigger fail-close behavior.
+  - Added medium/low promotion-block regression tests (`tests/test_shadow_state.py`) and updated rollout docs with exact config knobs/process.
+- [Item 17 closure: reconcile-inventory-shard worker-level integration coverage (2026-03-02)](task_log.md#item-17-closure-reconcile-inventory-shard-worker-level-integration-coverage-2026-03-02)
+  - Added deterministic worker-job integration tests for `execute_reconcile_inventory_shard_job`, including skip/failure/success tracking flows and authoritative compute-actions enqueue gating.
+  - Verified the new worker suite plus Item `17` regression suites (`tests/test_reconcile_inventory_shard_worker.py`, `tests/test_inventory_reconcile.py`, `tests/test_shadow_state.py`).
+  - Closed the previously logged Item `17` open question around shard-worker integration coverage, while keeping low-tier live-evidence tasks explicitly pending.
+- [Item 17 core implementation: medium/low-confidence edge-case handling in inventory + enrichment (2026-03-02)](task_log.md#item-17-core-implementation-mediumlow-confidence-edge-case-handling-in-inventory--enrichment-2026-03-02)
+  - Implemented medium/low collector and enrichment edge-case branches with deterministic `status_reason`/`evidence_ref` contracts for normal, access-denied, partial-data, and API-error outcomes.
+  - Hardened `inventory_reconcile` and `control_plane_events` paths without touching Item `16` promotion config/path (`backend/config.py`, `shadow_state.py` unchanged).
+  - Verified with targeted regression runs: `tests/test_inventory_reconcile.py` + `tests/test_control_plane_events.py` (`100 passed`).
+- [Item 17 test expansion: medium/low-confidence reconciliation scenarios and mixed-state coverage (2026-03-02)](task_log.md#item-17-test-expansion-mediumlow-confidence-reconciliation-scenarios-and-mixed-state-coverage-2026-03-02)
+  - Expanded `tests/test_inventory_reconcile.py` with medium/low-confidence branch coverage across positive, negative, ambiguous, access-denied, unsupported, and API-error/throttling scenarios.
+  - Added integration-style mixed-state reconciliation tests (S3 mixed bucket posture, GuardDuty mixed detector outcomes, CloudTrail mixed trail-status outcomes).
+  - Added explicit assertions for `state_confidence`, stable `status_reason`, and evidence payload shape/branch markers; verified with targeted pytest runs.
+- [Item 16 end-to-end closure: prompt outputs integration and full validation (2026-03-02)](task_log.md#item-16-end-to-end-closure-prompt-outputs-integration-and-full-validation-2026-03-02)
+  - Reconciled Prompt `1/2/3` outputs across config, promotion guardrails, and SaaS-admin rollout observability paths to ensure consistent reason-code and gating behavior.
+  - Completed full validation sequence: targeted Item `16` suites (`21 passed`), reconciliation-focused suites (`75 passed`), and full backend `pytest` (`873 passed`).
+  - Confirmed production-safe defaults keep canonical promotion fail-closed by default and medium/low confidence controls overlay-only unless explicitly promoted later.
+- [Item 17 medium/low-confidence control coverage matrix and done-criteria plan (2026-03-02)](task_log.md#item-17-mediumlow-confidence-control-coverage-matrix-and-done-criteria-plan-2026-03-02)
+  - Added a per-control Item `17` matrix for medium/low-confidence controls with current rule-pattern coverage, missing edge cases, and explicit test gaps sourced from `inventory_reconcile` + `test_inventory_reconcile`.
+  - Added clear done criteria per control plus Item `17` exit conditions while explicitly keeping promotion logic/config unchanged.
+  - Cross-linked the new plan from `docs/prod-readiness/important-to-do.md`, `docs/prod-readiness/README.md`, `docs/README.md`, and `docs/reconciliation_quality_review.md`.
+- [Item 16 rollout guardrails observability: SaaS-admin promotion health endpoint + metrics tests (2026-03-02)](task_log.md#item-16-rollout-guardrails-observability-saas-admin-promotion-health-endpoint--metrics-tests-2026-03-02)
+  - Added `GET /api/saas/control-plane/promotion-guardrail-health` with optional tenant scope and stable response contract for rollout decisions.
+  - Exposed required guardrail metrics: attempts/success/blocked (by reason), shadow-vs-canonical mismatch rate, soft-resolved frequency for promoted controls, and stale shadow freshness indicators.
+  - Added targeted endpoint tests for auth, contract shape, tenant/global scope, and key metric calculations.
+- [Item 16 documentation completion: high-confidence rollout policy + production checklist (2026-03-02)](task_log.md#item-16-documentation-completion-high-confidence-rollout-policy--production-checklist-2026-03-02)
+  - Added a dedicated PM/ops Item `16` rollout policy with pilot scope, success metrics, rollback triggers, uncertain-read fallback behavior, and go/no-go checklist.
+  - Documented exact Prompt 1 promotion config knobs/defaults from runtime config and aligned Item `16` completion criteria in `important-to-do.md`.
+  - Added discoverability cross-links from `docs/README.md`, `docs/prod-readiness/README.md`, and `docs/control-plane-event-monitoring.md`.
+- [Prompt pack: complete Item 17 + parallelization guidance vs Item 16 (2026-03-02)](task_log.md#prompt-pack-complete-item-17--parallelization-guidance-vs-item-16-2026-03-02)
+  - Prepared full Item `17` execution prompts with serial/parallel sequencing.
+  - Confirmed Item `17` can partially run while Item `16` is in flight (coverage/tests parallel), but promotion-gate work should wait for Item `16` foundation merge.
+  - Captured conflict-avoidance guidance for shared promotion/config logic.
+- [Item 16 core behavior implementation: high-confidence-only canonical promotion guardrails (2026-03-02)](task_log.md#item-16-core-behavior-implementation-high-confidence-only-canonical-promotion-guardrails-2026-03-02)
+  - Added explicit promotion guardrail settings in `backend/config.py` (promotion enable switch, high-confidence control list, min confidence, pilot tenants, soft-resolved policy).
+  - Refactored `shadow_state` canonical promotion/reopen to require all guardrails while preserving shadow overlay writes.
+  - Added targeted unit tests for qualified promote/reopen and all required block scenarios; updated rollout/config docs for new env variables.
+- [Wave 8 Test 32 live SaaS run: audit-log access control + secret leakage validation (2026-03-02)](task_log.md#wave-8-test-32-live-saas-run-audit-log-access-control--secret-leakage-validation-2026-03-02)
+  - Executed live admin/member/no-auth probes on `GET /api/audit-log` and verified deny-closed behavior for non-admin/no-token paths (`403/401`).
+  - Verified audit-log contract shape, pagination (`limit/offset`), and filters (`actor_user_id`, `resource_type`, `resource_id`, `from_date/to_date`) with canonical evidence artifacts.
+  - Scanned baseline/date/full datasets (`31` records total) for token/password/credential leakage patterns with zero hits; focused Wave-7 keyword subset matched zero actions in current tenant dataset.
+- [Decision guidance: pre-production priority for confidence-tier rollout items 16/17 (2026-03-02)](task_log.md#decision-guidance-pre-production-priority-for-confidence-tier-rollout-items-1617-2026-03-02)
+  - Evaluated requested go-live priority outcome (`none`/`some`/`all`) using current authoritative promotion behavior.
+  - Determined minimal pre-prod scope should include confidence-tier gating safeguards before launch.
+  - Confirmed full medium/low expansion can be phased after launch once quality thresholds are met.
+- [Current-state check: high vs medium/low confidence live-status implementation (2026-03-02)](task_log.md#current-state-check-high-vs-mediumlow-confidence-live-status-implementation-2026-03-02)
+  - Verified current runtime behavior from code/config: authoritative promotion is active when shadow mode is disabled and does not gate on `state_confidence`.
+  - Confirmed backend/worker env currently set `CONTROL_PLANE_SHADOW_MODE=false` and include a full authoritative controls list, not a confidence-tier subset.
+  - Confirmed medium/low-confidence evidence paths exist (`SOFT_RESOLVED` + lower confidence values), but explicit confidence-tier promotion gates remain a TODO.
+- [Wave 8 Test 30 live SaaS run: login rate-limit + Retry-After contract validation (2026-03-02)](task_log.md#wave-8-test-30-live-saas-run-login-rate-limit--retry-after-contract-validation-2026-03-02)
+  - Executed dedicated-identity live lockout sequence and confirmed deterministic transition `401 x5 -> 429` on attempt `#6` for `POST /api/auth/login`.
+  - Verified `retry-after` contract presence/countdown (`896`, `895`, `894`, `893`) and validated blocked-correct-login behavior (`429`) plus different-email key independence (`200` control login, `401` alternate wrong-email first try).
+  - Completed post-window recovery validation by waiting the observed window (`896s`) and confirming dedicated correct login + follow-up `/api/auth/me` both returned `200`; closed tracker Section 3 `#5/#6`, Section 7 `#5`, and Section 8 `T30-5`.
+- [Docs brief: non-technical PM explanation for important-to-do items 16 and 17 (2026-03-02)](task_log.md#docs-brief-non-technical-pm-explanation-for-important-to-do-items-16-and-17-2026-03-02)
+  - Converted checklist items `16`/`17` into PM-focused plain-language outcomes and rollout logic.
+  - Emphasized phased enablement: launch live status first for high-confidence controls, then expand after medium/low confidence quality gates are met.
+  - Captured remaining gap: concrete promotion/rollback thresholds still need explicit definition.
+- [Docs brief: per-item severity summary for prod-readiness important-to-do (2026-03-02)](task_log.md#docs-brief-per-item-severity-summary-for-prod-readiness-important-to-do-2026-03-02)
+  - Extracted all active checklist items in `docs/prod-readiness/important-to-do.md` and confirmed current range (`3`–`17`).
+  - Prepared concise one-line summaries for each todo with its explicit severity label.
+  - Noted numbering continuity risk (active file starts at item `3`).
+- [Docs brief: prod-readiness important-to-do summary (2026-03-02)](task_log.md#docs-brief-prod-readiness-important-to-do-summary-2026-03-02)
+  - Read required `.cursor` rules/notes plus `docs/README.md`, then summarized `docs/prod-readiness/important-to-do.md`.
+  - Confirmed the checklist focus is post-prod-readiness follow-up actions with severity-tagged execution guidance and source references.
+  - Highlighted current top-priority direction: high-confidence live status enablement and medium/low confidence coverage expansion.
+- [Media buying handoff brief: baseline-offer GTM inputs and launch blockers (2026-03-02)](task_log.md#media-buying-handoff-brief-baseline-offer-gtm-inputs-and-launch-blockers-2026-03-02)
+  - Consolidated media-buying inputs from baseline GTM/spec docs, customer onboarding docs, baseline-report API contract, and live Wave 6 evidence (`Test 22 PASS`).
+  - Confirmed production baseline-offer contract (`201` create, `429` throttle with `Retry-After`, terminal `download_url`, viewer payload endpoint).
+  - Logged launch blockers for paid traffic readiness: root route redirects to login, `/landing` still has placeholder CTA/founder content, and explicit marketing event instrumentation is not yet present.
+- [Wave 8 Test 33 live SaaS run: PR proof artifact completeness (C2/C5) (2026-03-02)](task_log.md#wave-8-test-33-live-saas-run-pr-proof-artifact-completeness-c2c5-2026-03-02)
+  - Executed a fresh non-root PR-only run (`S3.2`) to terminal `success`, downloaded/extracted the bundle through authorized path, and captured auth boundaries (`200/401/404`) for ZIP access.
+  - Verified README proof completeness from artifacts: C2 `terraform_plan_timestamp_utc` and C5 `preserved_configuration_statement` are both present in canonical prefix `test-33-live-20260302T191537Z-*`.
+  - Validated evidence consistency with run metadata/apply context (`c2_within_run_window_5min=true`, strategy match true, apply commands present), then closed tracker Section 4 `#12/#13` and Section 8 `T33`.
+- [Wave 8 Test 31 live SaaS run: non-admin invite-delete authorization boundaries (2026-03-02)](task_log.md#wave-8-test-31-live-saas-run-non-admin-invite-delete-authorization-boundaries-2026-03-02)
+  - Executed full live auth-boundary evidence chain for member/admin/no-auth/wrong-tenant probes on `POST /api/users/invite` and `DELETE /api/aws/accounts/{account_id}`.
+  - Verified regression closure from observed behavior: member invite/delete blocked (`403`), no-auth blocked (`401`), corrected wrong-tenant delete blocked (`404`), and admin invite control path still works (`201`).
+  - Updated `wave-08/test-31.md` and tracker Section 3 rows `#7/#8` plus Section 8 blockers `T31-7/T31-8` to `✅ FIXED` with canonical evidence prefix `test-31-live-20260302T191352Z-*`.
+- [Wave 8 Test 29 closure: ingest-sync 500 fix + live PASS rerun (2026-03-02)](task_log.md#wave-8-test-29-closure-ingest-sync-500-fix--live-pass-rerun-2026-03-02)
+  - Traced historical failing request IDs (`Zm3Mlj35Ai0ENhQ=`, `Zm33niMLgi0EPEg=`) to `trigger_ingest_sync` local-path worker import failure (`ModuleNotFoundError: tenacity`) and hardened the endpoint to avoid raw `500` responses.
+  - Added/expanded Wave 8 ingest-sync tests for non-local success, controlled queue-failure `503`, auth boundaries (`401/404`), deterministic member behavior (`200`), and `last_synced_at` freshness contract.
+  - Deployed runtime, resolved migration-chain startup blocker (shortened Alembic revision IDs `0035`–`0037` to fit live `alembic_version` constraint, upgraded DB to head), reran live Test 29 to PASS with canonical evidence prefix `test-29-live-20260302T185356Z-*`.
+- [Wave 8 Test 29 live SaaS run: ingest sync + account freshness fields (2026-03-02)](task_log.md#wave-8-test-29-live-saas-run-ingest-sync--account-freshness-fields-2026-03-02)
+  - Executed full live Test 29 evidence chain for ingest-sync trigger/progress/freshness and auth boundary probes (admin/member/wrong-tenant/no-auth/invalid-account).
+  - Verified tracker closure for missing-endpoint/wiring rows (`Section 1 #14`, `Section 2 #12`) and logged new open runtime contract regression (`Section 4 #27`, `Section 6 #11`) from observed `500` responses.
+  - Captured canonical evidence prefix `test-29-live-20260302T180910Z-*` and synchronized `wave-08/test-29.md` plus tracker changelog/totals.
+- [Release gate re-verification after blocker fixes (2026-03-02)](task_log.md#release-gate-re-verification-after-blocker-fixes-2026-03-02)
+  - Re-ran mandatory root-key/governance/secret/frontend verification suites plus targeted blocker checks.
+  - Confirmed previously failed runtime items now pass (`delete gating`, `closure runtime`, `policy-preservation fail-closed`) with explicit test evidence.
+  - Recorded deterministic release evidence: gates `10/10` pass and root-key scenario matrix `RK-E2E-001..007` `7/7` pass.
+- [Root-key closure runtime wiring for delete path + policy-preservation fail-closed enforcement (2026-03-02)](task_log.md#root-key-closure-runtime-wiring-for-delete-path--policy-preservation-fail-closed-enforcement-2026-03-02)
+  - Wired closure-enabled delete orchestration into live worker/API runtime path so terminal completion goes through closure service polling instead of direct completion bypass.
+  - Enforced fail-closed closure outcomes (`trigger rejection -> needs_attention`, `policy preservation failure -> needs_attention`, `timeout -> failed`) and closure summary artifact persistence.
+  - Added worker/e2e tests validating runtime closure wiring and terminal-state evidence requirements (`disable_window_evidence`, `delete_window_evidence`, `closure_cycle_summary`).
+- [Root-key API runtime blockers closure: fail-closed delete path + discovery-gated create-run transitions (2026-03-02)](task_log.md#root-key-api-runtime-blockers-closure-fail-closed-delete-path--discovery-gated-create-run-transitions-2026-03-02)
+  - Removed unsafe `/delete` fallback path so executor-disabled runtime now returns explicit fail-closed `503 executor_unavailable`.
+  - Wired `RootKeyUsageDiscoveryService` into create-run auto-forward path with fail-closed routing to `needs_attention` on unknown/partial/error discovery and `migration` on safe managed discovery.
+  - Added/updated API tests for delete fail-closed behavior and discovery-driven create-run branching.
+- [Communication + governance layer: notifications, exception governance, and dashboard APIs (2026-03-02)](task_log.md#communication--governance-layer-notifications-exception-governance-and-dashboard-apis-2026-03-02)
+  - Added additive governance schema (`0037_communication_governance_layer`) for notification events, exception governance metadata/schedules, and tenant governance settings.
+  - Implemented feature-flagged governance APIs for run-stage notifications, exception governance updates/revalidation, reminder dispatch, notification listing, and tenant-scoped dashboard metrics.
+  - Added tests for template rendering, exception lifecycle/reminder scheduling, governance auth/idempotency retry behavior, and governance settings API validation.
+- [Secret migration connectors: tenant-scoped API + rollback-safe transaction orchestration (2026-03-02)](task_log.md#secret-migration-connectors-tenant-scoped-api--rollback-safe-transaction-orchestration-2026-03-02)
+  - Added additive secret-migration schema (`0036`) with tenant-scoped idempotent runs and per-target transaction logs.
+  - Implemented fail-closed connector + orchestration service for `aws_secrets_manager`, `aws_ssm_parameter_store`, and approved CI backend `github_actions` (target-only with rollback-safety guards).
+  - Added feature-flagged API endpoints (`create/get/retry`) plus positive/negative/auth/retry test coverage and documentation/changelog updates.
+- [Root-key rollout controls: canary percent, kill switch, pause/resume, override audit, and ops metrics (2026-03-02)](task_log.md#root-key-rollout-controls-canary-percent-kill-switch-pauseresume-override-audit-and-ops-metrics-2026-03-02)
+  - Added deterministic canary rollout gating for root-key run creation with tenant/account percent selection and allowlist bypass.
+  - Added fail-closed kill switch, per-run pause/resume endpoints, paused-run mutation blocking, and immutable operator-override reason event logging.
+  - Added tenant-scoped root-key ops metrics endpoint/service and focused tests for canary gating, kill-switch behavior, and pause/resume correctness.
+- [Root-key closure orchestration service + deterministic full-plan integration/e2e matrix (2026-03-02)](task_log.md#root-key-closure-orchestration-service--deterministic-full-plan-integratione2e-matrix-2026-03-02)
+  - Added `RootKeyRemediationClosureService` for fail-closed closure-cycle orchestration (`ingest/compute/reconcile + polling`) with tenant isolation, redacted artifacts, and retry-safe replay behavior.
+  - Added deterministic full-plan integration/e2e suite + fixtures (`RK-E2E-001`..`RK-E2E-007`) covering managed completion, unknown dependency escalation, external-task continuation, rollback, closure polling, policy preservation, and self-cutoff prevention.
+  - Added fixture-backed pass/fail matrix artifact outputs and linked acceptance/spec/checklist/changelog documentation updates.
 - [Root-key executor workers for disable/rollback/delete with self-cutoff safety guard (2026-03-02)](task_log.md#root-key-executor-workers-for-disablerollbackdelete-with-self-cutoff-safety-guard-2026-03-02)
   - Added `RootKeyRemediationExecutorWorker` for guarded disable/rollback/delete execution with strict fail-closed behavior and tenant-scoped isolation.
   - Added self-cutoff protection, disable monitor-window signal collection, rollback alert generation, and strict delete gating checks.
@@ -542,3 +662,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [PM follow-up: prompts for risk #1 and #2 + docs important-to-do for #3/#4 (2026-02-25)](task_log.md#pm-follow-up-prompts-for-risk-1-and-2--docs-important-to-do-for-34-2026-02-25)
   - Added `docs/prod-readiness/important-to-do.md` with severity-tagged follow-up actions for risks #3 and #4.
   - Linked the checklist from docs indexes for discoverability.
+- [Root-key safe remediation release audit (P0-P12) (2026-03-02)](task_log.md#root-key-safe-remediation-release-audit-p0-p12-2026-03-02)
+  - Completed end-to-end audit verification runs for root-key, governance, and secret-migration scopes with explicit test evidence.
+  - Documented release blockers: delete-path safety bypass when executor is off, and closure service not wired into runtime path.
+  - Captured focused security and fail-closed checks (tenant isolation/auth boundaries/idempotency/safety gates).

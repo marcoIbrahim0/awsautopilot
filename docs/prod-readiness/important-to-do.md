@@ -158,11 +158,19 @@ This checklist tracks the top follow-up actions after enforcing explicit PR-bund
 ### 16) Enable live status updates for high-confidence controls
 - **Severity:** High
 - **Why this is important:** High-confidence controls have clearer signal quality and can support faster status updates with lower false-resolved risk.
+- **Status (2026-03-02):** Guardrail implementation and rollout documentation are complete; pilot execution and production sign-off are pending.
+- **Completion criteria (all required):**
+  1. Pilot uses only approved high-confidence controls (`S3.1`, `SecurityHub.1`, `GuardDuty.1`) for at least `7` consecutive days.
+  2. Pilot records `0` confirmed false-resolved canonical findings for Item `16` controls.
+  3. Pilot meets SLO gates: in-scope `NEW` match rate `>=95%`, shadow freshness lag `<6h`, and missing canonical/resource keys stay `0`.
+  4. Promotion guardrails are verified in deployed runtime: `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE=95`, `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED=false`, and pilot tenant allowlist behavior is confirmed.
+  5. Rollback path is tested and documented: operator can disable promotion in one deploy cycle (`CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED=false`).
 - **What to do now:**
-  1. Enable SaaS live status updates for high-confidence controls.
-  2. Define rollout guardrails (pilot scope, metrics, rollback trigger) before global enablement.
-  3. Keep explicit fallback for uncertain reads so findings are not incorrectly marked as solved.
+  1. Execute the tenant-scoped pilot using the Item `16` rollout policy.
+  2. Capture KPI evidence from SaaS control-plane metrics endpoints for PM/ops sign-off.
+  3. Move from pilot to global enablement only after every go/no-go checklist item is complete.
 - **References:**
+  - [`docs/prod-readiness/16-high-confidence-live-status-rollout.md`](16-high-confidence-live-status-rollout.md)
   - [`docs/reconciliation_quality_review.md`](../reconciliation_quality_review.md)
   - [`backend/workers/services/shadow_state.py`](../../backend/workers/services/shadow_state.py)
   - [`docs/control-plane-event-monitoring.md`](../control-plane-event-monitoring.md)
@@ -170,11 +178,19 @@ This checklist tracks the top follow-up actions after enforcing explicit PR-bund
 ### 17) Expand medium/low-confidence rule-pattern coverage and test scenarios
 - **Severity:** High
 - **Why this is important:** Medium and low-confidence controls need broader pattern handling and stronger test depth before they can be trusted for live status promotion.
+- **Status (2026-03-02):** Item `17` implementation and regression validation are complete in code (`pytest -q tests/test_shadow_state.py tests/test_saas_admin_api.py tests/test_inventory_reconcile.py tests/test_control_plane_events.py tests/test_reconcile_inventory_shard_worker.py` -> `131 passed`; `pytest -q` -> `914 passed`). Medium/low promotion remains fail-closed by default until operators provide observed quality metrics and low-tier live verification evidence.
+- **Completion criteria (all required):**
+  1. Every control in [`17-medium-low-confidence-control-coverage-plan.md`](17-medium-low-confidence-control-coverage-plan.md) meets all row-level done criteria.
+  2. Reconciliation tests include explicit branch coverage for each medium/low control (`OPEN`, `RESOLVED`, and `SOFT_RESOLVED` when applicable).
+  3. Low-tier controls in the matrix have live verification evidence captured and linked from task logs before promotion scope is expanded.
+  4. Promotion gating documentation is updated to reflect Item `17` readiness decisions before any medium/low control is added to live promotion allowlists.
+  5. Medium/low quality gates are explicitly configured and passing (`CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE >= CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_COVERAGE`, `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION >= CONTROL_PLANE_MEDIUM_LOW_PROMOTION_MIN_PRECISION`, and `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_ROLLBACK_TRIGGERED=false`).
 - **What to do now:**
-  1. Add more rule-pattern coverage for medium and low-confidence controls (normal and edge-case variants).
-  2. Add more test scenarios for these controls in reconciliation/unit/integration test suites.
-  3. Gate live-status promotion for medium/low controls on measurable coverage and observed precision targets.
+  1. Keep medium/low controls out of live promotion scope (`CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS=""`) until low-tier live evidence is attached and reviewed.
+  2. Populate observed quality metrics (`CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_COVERAGE`, `CONTROL_PLANE_MEDIUM_LOW_PROMOTION_OBSERVED_PRECISION`) from production telemetry before any medium/low pilot expansion.
+  3. Keep rollback fail-close ready (`CONTROL_PLANE_MEDIUM_LOW_PROMOTION_ROLLBACK_TRIGGERED`) and test operator rollback runbook before enabling any medium/low control.
 - **References:**
+  - [`docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md`](17-medium-low-confidence-control-coverage-plan.md)
   - [`docs/reconciliation_quality_review.md`](../reconciliation_quality_review.md)
   - [`backend/workers/services/inventory_reconcile.py`](../../backend/workers/services/inventory_reconcile.py)
   - [`tests/test_inventory_reconcile.py`](../../tests/test_inventory_reconcile.py)

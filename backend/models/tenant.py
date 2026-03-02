@@ -37,6 +37,14 @@ class Tenant(Base):
     # Slack delivery (Step 11.4): webhook URL is secret; do not log in full
     slack_webhook_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     slack_digest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # Communication/governance layer settings (default-off rollout).
+    governance_webhook_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    governance_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
 
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")

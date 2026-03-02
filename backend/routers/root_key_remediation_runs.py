@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import boto3
 import hashlib
+import inspect
 import uuid
 from datetime import datetime, timezone
 from typing import Annotated, Any
@@ -19,9 +21,18 @@ from backend.models.action import Action
 from backend.models.finding import Finding
 from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
 from backend.models.root_key_external_task import RootKeyExternalTask
+from backend.models.root_key_remediation_event import RootKeyRemediationEvent
 from backend.models.root_key_remediation_run import RootKeyRemediationRun
 from backend.models.user import User
-from backend.models.enums import RootKeyExternalTaskStatus, RootKeyRemediationMode
+from backend.models.enums import (
+    RootKeyExternalTaskStatus,
+    RootKeyRemediationMode,
+    RootKeyRemediationState,
+)
+from backend.services.root_key_rollout_controls import (
+    evaluate_root_key_canary,
+    sanitize_operator_override_reason,
+)
 from backend.services.root_key_remediation_state_machine import (
     RootKeyRemediationStateMachineService,
     RootKeyStateMachineError,
@@ -29,6 +40,11 @@ from backend.services.root_key_remediation_state_machine import (
 from backend.services.root_key_remediation_executor_worker import (
     RootKeyRemediationExecutorWorker,
 )
+from backend.services.root_key_remediation_ops_metrics import (
+    RootKeyOpsMetricsSnapshot,
+    compute_root_key_ops_metrics,
+)
+from backend.services.root_key_usage_discovery import RootKeyUsageDiscoveryService
 from backend.services.root_key_remediation_store import (
     create_root_key_remediation_event_idempotent,
 )
@@ -72,6 +88,11 @@ class RootKeyCreateRunRequest(BaseModel):
 
 class RootKeyRollbackRequest(BaseModel):
     reason: str | None = Field(default=None, description="Optional rollback reason.")
+    actor_metadata: dict[str, Any] | None = Field(default=None, description="Optional non-secret actor metadata.")
+
+
+class RootKeyPauseResumeRequest(BaseModel):
+    reason: str | None = Field(default=None, description="Optional pause/resume reason.")
     actor_metadata: dict[str, Any] | None = Field(default=None, description="Optional non-secret actor metadata.")
 
 
@@ -180,6 +201,23 @@ class RootKeyExternalTaskCompleteResponse(BaseModel):
     task: RootKeyExternalTaskSnapshot
 
 
+class RootKeyRateMetricSnapshot(BaseModel):
+    numerator: int
+    denominator: int
+    rate: float | None
+
+
+class RootKeyOpsMetricsResponse(BaseModel):
+    correlation_id: str
+    contract_version: str
+    auto_success_rate: RootKeyRateMetricSnapshot
+    rollback_rate: RootKeyRateMetricSnapshot
+    needs_attention_rate: RootKeyRateMetricSnapshot
+    closure_pass_rate: RootKeyRateMetricSnapshot
+    mean_time_to_detect_unknown_dependency_seconds: float | None
+    unknown_dependency_sample_size: int
+
+
 def _new_correlation_id(correlation_header: str | None) -> str:
     value = (correlation_header or "").strip()
     return value or uuid.uuid4().hex
@@ -199,7 +237,26 @@ def _is_api_enabled() -> bool:
 
 
 def _use_executor_worker() -> bool:
-    return bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED", False))
+    return bool(
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED", False)
+        or getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED", False)
+    )
+
+
+def _kill_switch_enabled() -> bool:
+    return bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_KILL_SWITCH_ENABLED", False))
+
+
+def _use_discovery_service() -> bool:
+    return bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED", False))
+
+
+def _discovery_lookback_minutes() -> int:
+    try:
+        configured = int(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES", 15))
+    except Exception:
+        configured = 15
+    return max(1, configured)
 
 
 def _error_response(
@@ -470,7 +527,7 @@ def _status_code_for_state_machine_error(exc: RootKeyStateMachineError) -> int:
         return status.HTTP_404_NOT_FOUND
     if code in {"illegal_transition", "idempotency_payload_mismatch"}:
         return status.HTTP_409_CONFLICT
-    if code in {"delete_window_disabled", "transition_cancelled"}:
+    if code in {"delete_window_disabled", "transition_cancelled", "kill_switch_enabled", "invalid_resume_state"}:
         return status.HTTP_409_CONFLICT
     if exc.classification.is_retryable:
         return status.HTTP_409_CONFLICT
@@ -488,6 +545,119 @@ def _state_machine_error_response(
         code=exc.classification.code,
         message=exc.classification.message,
         retryable=exc.classification.is_retryable,
+    )
+
+
+def _operator_override_reason(value: str | None) -> str | None:
+    return sanitize_operator_override_reason(value)
+
+
+def _merge_override_reason(
+    payload: dict[str, Any] | None,
+    *,
+    override_reason: str | None,
+) -> dict[str, Any] | None:
+    if override_reason is None:
+        return payload
+    merged = dict(payload or {})
+    merged["operator_override_reason"] = override_reason
+    return merged
+
+
+async def _record_operator_override_event(
+    *,
+    db: AsyncSession,
+    run: RootKeyRemediationRun,
+    operation: str,
+    reason: str,
+    actor_metadata: dict[str, Any] | None,
+    idempotency_key: str,
+) -> None:
+    await create_root_key_remediation_event_idempotent(
+        db,
+        run_id=run.id,
+        tenant_id=run.tenant_id,
+        account_id=run.account_id,
+        region=run.region,
+        control_id=run.control_id,
+        action_id=run.action_id,
+        finding_id=run.finding_id,
+        state=run.state,
+        status=run.status,
+        strategy_id=run.strategy_id,
+        mode=run.mode,
+        correlation_id=run.correlation_id,
+        event_type="operator_override",
+        actor_metadata=actor_metadata,
+        payload={"operation": operation, "reason": reason},
+        idempotency_key=idempotency_key,
+    )
+
+
+async def _latest_pause_control_event(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+) -> RootKeyRemediationEvent | None:
+    result = await db.execute(
+        select(RootKeyRemediationEvent)
+        .where(
+            RootKeyRemediationEvent.tenant_id == tenant_id,
+            RootKeyRemediationEvent.run_id == run_id,
+            RootKeyRemediationEvent.event_type.in_(("pause_run", "resume_run")),
+        )
+        .order_by(RootKeyRemediationEvent.created_at.desc(), RootKeyRemediationEvent.id.desc())
+        .limit(1)
+    )
+    scalar = result.scalar_one_or_none()
+    if inspect.isawaitable(scalar):
+        scalar = await scalar
+    if getattr(scalar, "event_type", None) in {"pause_run", "resume_run"}:
+        return scalar
+    return None
+
+
+def _paused_resume_target(event: RootKeyRemediationEvent | None) -> RootKeyRemediationState | None:
+    if event is None or event.event_type != "pause_run":
+        return None
+    payload = event.payload if isinstance(event.payload, dict) else {}
+    from_state = str(payload.get("from_state") or "").strip()
+    try:
+        target = RootKeyRemediationState(from_state)
+    except ValueError:
+        return None
+    if target == RootKeyRemediationState.needs_attention:
+        return None
+    return target
+
+
+def _is_run_paused(event: RootKeyRemediationEvent | None) -> bool:
+    return bool(event is not None and event.event_type == "pause_run")
+
+
+def _rate_snapshot(metric: Any) -> RootKeyRateMetricSnapshot:
+    return RootKeyRateMetricSnapshot(
+        numerator=int(getattr(metric, "numerator", 0)),
+        denominator=int(getattr(metric, "denominator", 0)),
+        rate=getattr(metric, "rate", None),
+    )
+
+
+def _ops_metrics_response(
+    *,
+    correlation_id: str,
+    snapshot: RootKeyOpsMetricsSnapshot,
+) -> RootKeyOpsMetricsResponse:
+    return RootKeyOpsMetricsResponse(
+        correlation_id=correlation_id,
+        contract_version=ROOT_KEY_CONTRACT_VERSION,
+        auto_success_rate=_rate_snapshot(snapshot.auto_success_rate),
+        rollback_rate=_rate_snapshot(snapshot.rollback_rate),
+        needs_attention_rate=_rate_snapshot(snapshot.needs_attention_rate),
+        closure_pass_rate=_rate_snapshot(snapshot.closure_pass_rate),
+        mean_time_to_detect_unknown_dependency_seconds=snapshot.mean_time_to_detect_unknown_dependency_seconds,
+        unknown_dependency_sample_size=snapshot.unknown_dependency_sample_size,
     )
 
 
@@ -556,6 +726,13 @@ def _mutating_preflight(
     )
     if idempotency_err is not None:
         return None, None, idempotency_err
+    if _kill_switch_enabled():
+        return None, None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="kill_switch_enabled",
+            message="Root-key remediation mutating operations are blocked by kill switch.",
+        )
     return current_user.tenant_id, idempotency_key, None
 
 
@@ -601,6 +778,7 @@ async def create_root_key_remediation_run(
     current_user: Annotated[User | None, Depends(get_optional_user)],
     body: RootKeyCreateRunRequest = Body(...),
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyRunResponse | JSONResponse:
@@ -620,6 +798,7 @@ async def create_root_key_remediation_run(
         return preflight_err
     assert tenant_id is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     action_uuid, action_uuid_err = _parse_uuid(
         body.action_id,
         field_name="action_id",
@@ -645,6 +824,7 @@ async def create_root_key_remediation_run(
     mode, mode_err = _parse_mode(body.mode, correlation_id=correlation_id)
     if mode_err is not None:
         return mode_err
+    assert mode is not None
     if mode == RootKeyRemediationMode.auto and not settings.ROOT_KEY_SAFE_REMEDIATION_AUTO_ENABLED:
         return _error_response(
             correlation_id=correlation_id,
@@ -658,6 +838,27 @@ async def create_root_key_remediation_run(
     )
     if strategy_err is not None:
         return strategy_err
+    assert strategy_id is not None
+    canary_decision = evaluate_root_key_canary(
+        tenant_id=tenant_id,
+        account_id=action.account_id,
+        enabled=bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED", False)),
+        percent=int(getattr(settings, "root_key_canary_percent", 100)),
+        tenant_allowlist=set(getattr(settings, "root_key_canary_tenant_allowlist", set()) or set()),
+        account_allowlist=set(getattr(settings, "root_key_canary_account_allowlist", set()) or set()),
+    )
+    if not canary_decision.allowed and override_reason is None:
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="canary_not_selected",
+            message="Root-key remediation run is outside canary rollout selection.",
+            details={
+                "canary_percent": canary_decision.percent,
+                "selection_bucket": canary_decision.bucket,
+                "selection_reason": canary_decision.reason,
+            },
+        )
     finding_uuid: uuid.UUID | None = None
     if body.finding_id:
         finding_uuid, finding_uuid_err = _parse_uuid(
@@ -680,9 +881,12 @@ async def create_root_key_remediation_run(
                 status_code=status.HTTP_404_NOT_FOUND,
                 code="finding_not_found",
                 message="Finding not found in tenant/account scope.",
-            )
+        )
     service = RootKeyRemediationStateMachineService()
-    actor_metadata = _actor_metadata_from_user(current_user, body.actor_metadata)
+    actor_metadata = _actor_metadata_from_user(
+        current_user,
+        _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+    )
     try:
         create_result = await service.create_run(
             db,
@@ -699,16 +903,79 @@ async def create_root_key_remediation_run(
             actor_metadata=actor_metadata,
         )
         run = create_result.run
-        if _enum_value(run.state) in {"discovery", "needs_attention"}:
-            migration_id = _transition_id("create_migration", idempotency_key)
-            migration_result = await service.advance_to_migration(
-                db,
-                tenant_id=tenant_id,
-                run_id=run.id,
-                transition_id=migration_id,
+        if create_result.state_changed and _enum_value(run.state) in {"discovery", "needs_attention"}:
+            allow_migration_transition = True
+            needs_attention_reason = "discovery_auto_flow_not_eligible"
+            discovery_metadata: dict[str, Any] | None = None
+            if _use_discovery_service():
+                allow_migration_transition = False
+                discovery_service = RootKeyUsageDiscoveryService()
+                discovery_session = boto3.Session(region_name=action.region or settings.AWS_REGION)
+                try:
+                    discovery_result = await discovery_service.discover_and_classify(
+                        db,
+                        session_boto=discovery_session,
+                        tenant_id=tenant_id,
+                        run_id=run.id,
+                        lookback_minutes=_discovery_lookback_minutes(),
+                    )
+                    discovery_metadata = {
+                        "managed_count": int(discovery_result.managed_count),
+                        "unknown_count": int(discovery_result.unknown_count),
+                        "partial_data": bool(discovery_result.partial_data),
+                        "eligible_for_auto_flow": bool(discovery_result.eligible_for_auto_flow),
+                        "retries_used": int(discovery_result.retries_used),
+                    }
+                    allow_migration_transition = (
+                        discovery_result.eligible_for_auto_flow
+                        and discovery_result.unknown_count == 0
+                        and not discovery_result.partial_data
+                    )
+                    if discovery_result.partial_data:
+                        needs_attention_reason = "discovery_partial_data"
+                    elif discovery_result.unknown_count > 0:
+                        needs_attention_reason = "discovery_unknown_dependency"
+                except Exception as exc:
+                    discovery_metadata = {
+                        "partial_data": True,
+                        "eligible_for_auto_flow": False,
+                        "discovery_error": type(exc).__name__,
+                    }
+                    needs_attention_reason = "discovery_unavailable"
+            if allow_migration_transition:
+                migration_id = _transition_id("create_migration", idempotency_key)
+                migration_result = await service.advance_to_migration(
+                    db,
+                    tenant_id=tenant_id,
+                    run_id=run.id,
+                    transition_id=migration_id,
+                    actor_metadata=actor_metadata,
+                )
+                run = migration_result.run
+            else:
+                needs_attention_id = _transition_id("create_needs_attention", idempotency_key)
+                needs_attention_result = await service.mark_needs_attention(
+                    db,
+                    tenant_id=tenant_id,
+                    run_id=run.id,
+                    transition_id=needs_attention_id,
+                    actor_metadata=actor_metadata,
+                    evidence_metadata={
+                        "operation": "create_run_discovery_gate",
+                        "reason": needs_attention_reason,
+                        "discovery": discovery_metadata or {"partial_data": True},
+                    },
+                )
+                run = needs_attention_result.run
+        if override_reason is not None:
+            await _record_operator_override_event(
+                db=db,
+                run=run,
+                operation="create_run",
+                reason=override_reason,
                 actor_metadata=actor_metadata,
+                idempotency_key=f"{idempotency_key}:operator_override:create",
             )
-            run = migration_result.run
         await db.commit()
     except RootKeyStateMachineError as exc:
         await _safe_rollback(db)
@@ -732,6 +999,53 @@ async def create_root_key_remediation_run(
         return payload
     response.status_code = status.HTTP_200_OK
     return payload
+
+
+@router.get(
+    "/ops/metrics",
+    response_model=RootKeyOpsMetricsResponse,
+    summary="Get tenant-scoped root-key remediation operational metrics",
+    responses={401: {"model": RootKeyErrorResponse}, 404: {"model": RootKeyErrorResponse}, 500: {"model": RootKeyErrorResponse}},
+)
+async def get_root_key_ops_metrics(
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+    correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
+    contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
+) -> RootKeyOpsMetricsResponse | JSONResponse:
+    correlation_id = _new_correlation_id(correlation_id_header)
+    contract_err = _validate_contract_header(
+        contract_version_header=contract_version_header,
+        correlation_id=correlation_id,
+    )
+    if contract_err is not None:
+        return contract_err
+    tenant_id, preflight_err = _readonly_preflight(
+        correlation_id=correlation_id,
+        current_user=current_user,
+    )
+    if preflight_err is not None:
+        return preflight_err
+    if not bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OPS_METRICS_ENABLED", False)):
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="feature_disabled",
+            message="Root-key remediation ops metrics are disabled.",
+        )
+    assert tenant_id is not None
+    try:
+        snapshot = await compute_root_key_ops_metrics(db, tenant_id=tenant_id)
+    except Exception:
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="metrics_unavailable",
+            message="Unable to compute root-key remediation metrics.",
+        )
+    _set_common_headers(response, correlation_id=correlation_id)
+    return _ops_metrics_response(correlation_id=correlation_id, snapshot=snapshot)
 
 
 @router.get(
@@ -827,11 +1141,31 @@ async def _run_transition_operation(
     idempotency_key: str,
     operation: str,
     operation_call: Any,
+    operator_override_reason: str | None = None,
+    operator_override_actor_metadata: dict[str, Any] | None = None,
+    allow_when_paused: bool = False,
 ) -> tuple[RootKeyRunResponse | None, JSONResponse | None]:
     service = RootKeyRemediationStateMachineService()
     transition_id = _transition_id(operation, idempotency_key)
+    pause_event = await _latest_pause_control_event(db, tenant_id=tenant_id, run_id=run_id)
+    if not allow_when_paused and _is_run_paused(pause_event):
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="run_paused",
+            message="Root-key remediation run is paused and must be resumed before this operation.",
+        )
     try:
         transition_result = await operation_call(service, transition_id)
+        if operator_override_reason is not None:
+            await _record_operator_override_event(
+                db=db,
+                run=transition_result.run,
+                operation=operation,
+                reason=operator_override_reason,
+                actor_metadata=operator_override_actor_metadata,
+                idempotency_key=f"{idempotency_key}:operator_override:{operation}",
+            )
         await db.commit()
     except RootKeyStateMachineError as exc:
         await _safe_rollback(db)
@@ -860,9 +1194,20 @@ async def _run_transition_operation(
     ), None
 
 
-def _build_transition_metadata(user: User) -> dict[str, Any]:
+def _build_transition_metadata(
+    user: User,
+    *,
+    override_reason: str | None = None,
+) -> dict[str, Any]:
     role = getattr(getattr(user, "role", None), "value", getattr(user, "role", "member"))
-    return {"actor_type": "user", "actor_user_id": str(user.id), "actor_role": str(role)}
+    payload: dict[str, Any] = {
+        "actor_type": "user",
+        "actor_user_id": str(user.id),
+        "actor_role": str(role),
+    }
+    if override_reason is not None:
+        payload["operator_override_reason"] = override_reason
+    return payload
 
 
 async def _transition_preflight(
@@ -897,6 +1242,7 @@ async def validate_root_key_remediation_run(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyRunResponse | JSONResponse:
@@ -915,6 +1261,7 @@ async def validate_root_key_remediation_run(
     assert tenant_id is not None
     assert run_uuid is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -922,12 +1269,17 @@ async def validate_root_key_remediation_run(
         run_id=run_uuid,
         idempotency_key=idempotency_key,
         operation="validate",
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_build_transition_metadata(
+            current_user,
+            override_reason=override_reason,
+        ),
         operation_call=lambda service, transition_id: service.advance_to_validation(
             db,
             tenant_id=tenant_id,
             run_id=run_uuid,
             transition_id=transition_id,
-            actor_metadata=_build_transition_metadata(current_user),
+            actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
         ),
     )
     if err is not None:
@@ -948,6 +1300,7 @@ async def disable_root_key_remediation_run(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyRunResponse | JSONResponse:
@@ -966,6 +1319,7 @@ async def disable_root_key_remediation_run(
     assert tenant_id is not None
     assert run_uuid is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
     payload, err = await _run_transition_operation(
         db=db,
@@ -974,6 +1328,11 @@ async def disable_root_key_remediation_run(
         run_id=run_uuid,
         idempotency_key=idempotency_key,
         operation="disable",
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_build_transition_metadata(
+            current_user,
+            override_reason=override_reason,
+        ),
         operation_call=lambda service, transition_id: (
             executor_worker.execute_disable(
                 db,
@@ -981,7 +1340,7 @@ async def disable_root_key_remediation_run(
                 run_id=run_uuid,
                 transition_id=transition_id,
                 state_machine=service,
-                actor_metadata=_build_transition_metadata(current_user),
+                actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
             )
             if executor_worker is not None
             else service.start_disable_window(
@@ -989,7 +1348,7 @@ async def disable_root_key_remediation_run(
                 tenant_id=tenant_id,
                 run_id=run_uuid,
                 transition_id=transition_id,
-                actor_metadata=_build_transition_metadata(current_user),
+                actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
             )
         ),
     )
@@ -1012,6 +1371,7 @@ async def rollback_root_key_remediation_run(
     current_user: Annotated[User | None, Depends(get_optional_user)],
     body: RootKeyRollbackRequest = Body(default=RootKeyRollbackRequest()),
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyRunResponse | JSONResponse:
@@ -1030,6 +1390,7 @@ async def rollback_root_key_remediation_run(
     assert tenant_id is not None
     assert run_uuid is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     reason = (body.reason or "").strip() or "operator_requested_rollback"
     executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
     payload, err = await _run_transition_operation(
@@ -1039,6 +1400,11 @@ async def rollback_root_key_remediation_run(
         run_id=run_uuid,
         idempotency_key=idempotency_key,
         operation="rollback",
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_actor_metadata_from_user(
+            current_user,
+            _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+        ),
         operation_call=lambda service, transition_id: (
             executor_worker.execute_rollback(
                 db,
@@ -1047,7 +1413,10 @@ async def rollback_root_key_remediation_run(
                 transition_id=transition_id,
                 rollback_reason=reason,
                 state_machine=service,
-                actor_metadata=_actor_metadata_from_user(current_user, body.actor_metadata),
+                actor_metadata=_actor_metadata_from_user(
+                    current_user,
+                    _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+                ),
             )
             if executor_worker is not None
             else service.rollback(
@@ -1056,7 +1425,10 @@ async def rollback_root_key_remediation_run(
                 run_id=run_uuid,
                 transition_id=transition_id,
                 rollback_reason=reason,
-                actor_metadata=_actor_metadata_from_user(current_user, body.actor_metadata),
+                actor_metadata=_actor_metadata_from_user(
+                    current_user,
+                    _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+                ),
             )
         ),
     )
@@ -1070,7 +1442,7 @@ async def rollback_root_key_remediation_run(
     "/{run_id}/delete",
     response_model=RootKeyRunResponse,
     summary="Finalize delete window and complete run",
-    responses={400: {"model": RootKeyErrorResponse}, 401: {"model": RootKeyErrorResponse}, 404: {"model": RootKeyErrorResponse}, 409: {"model": RootKeyErrorResponse}, 500: {"model": RootKeyErrorResponse}},
+    responses={400: {"model": RootKeyErrorResponse}, 401: {"model": RootKeyErrorResponse}, 404: {"model": RootKeyErrorResponse}, 409: {"model": RootKeyErrorResponse}, 500: {"model": RootKeyErrorResponse}, 503: {"model": RootKeyErrorResponse}},
 )
 async def delete_root_key_remediation_run(
     run_id: str,
@@ -1078,6 +1450,7 @@ async def delete_root_key_remediation_run(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyRunResponse | JSONResponse:
@@ -1096,7 +1469,16 @@ async def delete_root_key_remediation_run(
     assert tenant_id is not None
     assert run_uuid is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
+    if executor_worker is None:
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="executor_unavailable",
+            message="Delete execution worker path is unavailable while executor is disabled.",
+            retryable=True,
+        )
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -1104,23 +1486,181 @@ async def delete_root_key_remediation_run(
         run_id=run_uuid,
         idempotency_key=idempotency_key,
         operation="delete",
-        operation_call=lambda service, transition_id: (
-            executor_worker.execute_delete(
-                db,
-                tenant_id=tenant_id,
-                run_id=run_uuid,
-                transition_id=transition_id,
-                state_machine=service,
-                actor_metadata=_build_transition_metadata(current_user),
-            )
-            if executor_worker is not None
-            else service.finalize_delete(
-                db,
-                tenant_id=tenant_id,
-                run_id=run_uuid,
-                transition_id=transition_id,
-                actor_metadata=_build_transition_metadata(current_user),
-            )
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_build_transition_metadata(
+            current_user,
+            override_reason=override_reason,
+        ),
+        operation_call=lambda service, transition_id: executor_worker.execute_delete(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            transition_id=transition_id,
+            state_machine=service,
+            actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
+        ),
+    )
+    if err is not None:
+        return err
+    _set_common_headers(response, correlation_id=correlation_id)
+    return payload
+
+
+@router.post(
+    "/{run_id}/pause",
+    response_model=RootKeyRunResponse,
+    summary="Pause a root-key remediation run",
+    responses={400: {"model": RootKeyErrorResponse}, 401: {"model": RootKeyErrorResponse}, 404: {"model": RootKeyErrorResponse}, 409: {"model": RootKeyErrorResponse}, 500: {"model": RootKeyErrorResponse}},
+)
+async def pause_root_key_remediation_run(
+    run_id: str,
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+    body: RootKeyPauseResumeRequest = Body(default=RootKeyPauseResumeRequest()),
+    idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
+    correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
+    contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
+) -> RootKeyRunResponse | JSONResponse:
+    correlation_id = _new_correlation_id(correlation_id_header)
+    contract_err = _validate_contract_header(contract_version_header=contract_version_header, correlation_id=correlation_id)
+    if contract_err is not None:
+        return contract_err
+    tenant_id, run_uuid, idempotency_key, preflight_err = await _transition_preflight(
+        run_id=run_id,
+        correlation_id=correlation_id,
+        current_user=current_user,
+        idempotency_key_header=idempotency_key_header,
+    )
+    if preflight_err is not None:
+        return preflight_err
+    assert tenant_id is not None
+    assert run_uuid is not None
+    assert idempotency_key is not None
+    pause_event = await _latest_pause_control_event(db, tenant_id=tenant_id, run_id=run_uuid)
+    latest_run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_uuid)
+    if latest_run is None:
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="run_not_found",
+            message="Root-key remediation run not found in tenant scope.",
+        )
+    if _is_run_paused(pause_event):
+        _set_common_headers(response, correlation_id=correlation_id)
+        response.status_code = status.HTTP_200_OK
+        return RootKeyRunResponse(
+            correlation_id=correlation_id,
+            contract_version=ROOT_KEY_CONTRACT_VERSION,
+            idempotency_replayed=True,
+            run=_run_snapshot(latest_run),
+        )
+    override_reason = _operator_override_reason(operator_override_reason_header)
+    payload, err = await _run_transition_operation(
+        db=db,
+        correlation_id=correlation_id,
+        tenant_id=tenant_id,
+        run_id=run_uuid,
+        idempotency_key=idempotency_key,
+        operation="pause",
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_actor_metadata_from_user(
+            current_user,
+            _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+        ),
+        allow_when_paused=True,
+        operation_call=lambda service, transition_id: service.pause_run(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            transition_id=transition_id,
+            pause_reason=(body.reason or "").strip() or None,
+            actor_metadata=_actor_metadata_from_user(
+                current_user,
+                _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+            ),
+        ),
+    )
+    if err is not None:
+        return err
+    _set_common_headers(response, correlation_id=correlation_id)
+    return payload
+
+
+@router.post(
+    "/{run_id}/resume",
+    response_model=RootKeyRunResponse,
+    summary="Resume a paused root-key remediation run",
+    responses={400: {"model": RootKeyErrorResponse}, 401: {"model": RootKeyErrorResponse}, 404: {"model": RootKeyErrorResponse}, 409: {"model": RootKeyErrorResponse}, 500: {"model": RootKeyErrorResponse}},
+)
+async def resume_root_key_remediation_run(
+    run_id: str,
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+    body: RootKeyPauseResumeRequest = Body(default=RootKeyPauseResumeRequest()),
+    idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
+    correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
+    contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
+) -> RootKeyRunResponse | JSONResponse:
+    correlation_id = _new_correlation_id(correlation_id_header)
+    contract_err = _validate_contract_header(contract_version_header=contract_version_header, correlation_id=correlation_id)
+    if contract_err is not None:
+        return contract_err
+    tenant_id, run_uuid, idempotency_key, preflight_err = await _transition_preflight(
+        run_id=run_id,
+        correlation_id=correlation_id,
+        current_user=current_user,
+        idempotency_key_header=idempotency_key_header,
+    )
+    if preflight_err is not None:
+        return preflight_err
+    assert tenant_id is not None
+    assert run_uuid is not None
+    assert idempotency_key is not None
+    pause_event = await _latest_pause_control_event(db, tenant_id=tenant_id, run_id=run_uuid)
+    if not _is_run_paused(pause_event):
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="run_not_paused",
+            message="Root-key remediation run is not paused.",
+        )
+    resume_state = _paused_resume_target(pause_event)
+    if resume_state is None:
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="pause_context_missing",
+            message="Pause context is incomplete; resume target cannot be determined.",
+        )
+    override_reason = _operator_override_reason(operator_override_reason_header)
+    payload, err = await _run_transition_operation(
+        db=db,
+        correlation_id=correlation_id,
+        tenant_id=tenant_id,
+        run_id=run_uuid,
+        idempotency_key=idempotency_key,
+        operation="resume",
+        operator_override_reason=override_reason,
+        operator_override_actor_metadata=_actor_metadata_from_user(
+            current_user,
+            _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+        ),
+        allow_when_paused=True,
+        operation_call=lambda service, transition_id: service.resume_run(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            transition_id=transition_id,
+            resume_state=resume_state,
+            actor_metadata=_actor_metadata_from_user(
+                current_user,
+                _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+            ),
+            evidence_metadata={"resume_reason": (body.reason or "").strip() or None},
         ),
     )
     if err is not None:
@@ -1143,6 +1683,7 @@ async def complete_root_key_external_task(
     current_user: Annotated[User | None, Depends(get_optional_user)],
     body: RootKeyExternalTaskCompleteRequest = Body(default=RootKeyExternalTaskCompleteRequest()),
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    operator_override_reason_header: Annotated[str | None, Header(alias="X-Operator-Override-Reason")] = None,
     correlation_id_header: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
     contract_version_header: Annotated[str | None, Header(alias="X-Root-Key-Contract-Version")] = None,
 ) -> RootKeyExternalTaskCompleteResponse | JSONResponse:
@@ -1159,6 +1700,7 @@ async def complete_root_key_external_task(
         return preflight_err
     assert tenant_id is not None
     assert idempotency_key is not None
+    override_reason = _operator_override_reason(operator_override_reason_header)
     run_uuid, run_uuid_err = _parse_uuid(run_id, field_name="run_id", correlation_id=correlation_id)
     if run_uuid_err is not None:
         return run_uuid_err
@@ -1174,6 +1716,13 @@ async def complete_root_key_external_task(
             status_code=status.HTTP_404_NOT_FOUND,
             code="run_not_found",
             message="Root-key remediation run not found in tenant scope.",
+        )
+    if _is_run_paused(await _latest_pause_control_event(db, tenant_id=tenant_id, run_id=run_uuid)):
+        return _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_409_CONFLICT,
+            code="run_paused",
+            message="Root-key remediation run is paused and must be resumed before this operation.",
         )
     task = await _load_tenant_external_task(
         db,
@@ -1206,7 +1755,10 @@ async def complete_root_key_external_task(
             mode=run.mode,
             correlation_id=run.correlation_id,
             event_type="external_task_completed",
-            actor_metadata=_actor_metadata_from_user(current_user, body.actor_metadata),
+            actor_metadata=_actor_metadata_from_user(
+                current_user,
+                _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+            ),
             payload={
                 "task_id": str(task.id),
                 "task_type": task.task_type,
@@ -1214,12 +1766,24 @@ async def complete_root_key_external_task(
             },
             idempotency_key=f"{transition_id}:event",
         )
+        if override_reason is not None:
+            await _record_operator_override_event(
+                db=db,
+                run=run,
+                operation="external_task_complete",
+                reason=override_reason,
+                actor_metadata=_actor_metadata_from_user(current_user, {"operator_override_reason": override_reason}),
+                idempotency_key=f"{idempotency_key}:operator_override:external_task_complete",
+            )
         if task.status != RootKeyExternalTaskStatus.completed:
             now = datetime.now(timezone.utc)
             task.status = RootKeyExternalTaskStatus.completed
             task.task_result = _sanitize_json(body.result)
             task.completed_at = now
-            task.actor_metadata = _actor_metadata_from_user(current_user, body.actor_metadata)
+            task.actor_metadata = _actor_metadata_from_user(
+                current_user,
+                _merge_override_reason(body.actor_metadata, override_reason=override_reason),
+            )
             task.updated_at = now
         await db.commit()
     except Exception:

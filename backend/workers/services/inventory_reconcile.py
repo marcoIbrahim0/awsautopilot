@@ -54,6 +54,18 @@ def _extract_error_code(exc: Exception) -> str:
     return type(exc).__name__
 
 
+_ACCESS_DENIED_ERROR_CODES = {
+    "AccessDenied",
+    "AccessDeniedException",
+    "UnauthorizedOperation",
+    "UnauthorizedAccess",
+}
+
+
+def _is_access_denied_error_code(code: str) -> bool:
+    return code in _ACCESS_DENIED_ERROR_CODES
+
+
 def _bucket_name_from_any(value: str) -> str:
     v = (value or "").strip()
     if v.startswith("arn:aws:s3:::"):
@@ -262,21 +274,21 @@ def _s3_bucket_has_valid_lifecycle_rule(s3_client: Any, bucket: str) -> bool:
     return False
 
 
-def _s3_bucket_policy_json(s3_client: Any, bucket: str) -> dict[str, Any] | None:
+def _s3_bucket_policy_json(s3_client: Any, bucket: str) -> tuple[dict[str, Any] | None, bool]:
     try:
         resp = s3_client.get_bucket_policy(Bucket=bucket)
     except ClientError as exc:
         if _extract_error_code(exc) in {"NoSuchBucketPolicy", "NoSuchBucket"}:
-            return None
+            return (None, False)
         raise
     policy_str = resp.get("Policy")
     if not isinstance(policy_str, str) or not policy_str.strip():
-        return None
+        return (None, False)
     try:
         parsed = json.loads(policy_str)
-        return parsed if isinstance(parsed, dict) else None
+        return ((parsed if isinstance(parsed, dict) else None), not isinstance(parsed, dict))
     except Exception:
-        return None
+        return (None, True)
 
 
 def _policy_condition_has_secure_transport_false(condition: Any) -> bool:
@@ -500,20 +512,168 @@ def _collect_s3_buckets(
         bucket_region = _s3_bucket_region(s3, bucket)
         if bucket_region is None or bucket_region != region:
             continue
-        pab = _s3_bucket_public_access_block(s3, bucket)
-        policy_public = _s3_bucket_policy_is_public(s3, bucket)
-        non_compliant_public, public_evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
 
-        algo, encryption_enabled, kms_enabled = _s3_bucket_default_encryption_summary(s3, bucket)
-        logging_enabled = _s3_bucket_logging_enabled(s3, bucket)
-        lifecycle_has_valid_rule = _s3_bucket_has_valid_lifecycle_rule(s3, bucket)
-        policy_json = _s3_bucket_policy_json(s3, bucket)
-        ssl_deny = _policy_has_ssl_deny(policy_json, bucket)
+        pab: dict[str, Any] = {}
+        policy_public = False
+        s32_access_denied_error_codes: list[str] = []
+        s32_api_error_codes: list[str] = []
+        try:
+            pab = _s3_bucket_public_access_block(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            if _is_access_denied_error_code(code):
+                s32_access_denied_error_codes.append(code)
+            else:
+                s32_api_error_codes.append(code)
+        try:
+            policy_public = _s3_bucket_policy_is_public(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            if _is_access_denied_error_code(code):
+                s32_access_denied_error_codes.append(code)
+            else:
+                s32_api_error_codes.append(code)
+        non_compliant_public, public_evidence = evaluate_s3_bucket_public_posture(pab, policy_public)
+        if s32_access_denied_error_codes:
+            s32_status = SHADOW_STATUS_SOFT_RESOLVED
+            s32_reason = "inventory_access_denied_s3_get_bucket_public_posture"
+            s32_confidence = 40
+            s32_branch = "access_denied"
+        elif s32_api_error_codes:
+            s32_status = SHADOW_STATUS_SOFT_RESOLVED
+            s32_reason = "inventory_api_error_s3_get_bucket_public_posture"
+            s32_confidence = 40
+            s32_branch = "api_error"
+        else:
+            s32_status = SHADOW_STATUS_OPEN if non_compliant_public else SHADOW_STATUS_RESOLVED
+            s32_reason = "inventory_confirmed_non_compliant" if non_compliant_public else "inventory_confirmed_compliant"
+            s32_confidence = 95
+            s32_branch = "normal"
+
+        algo: str | None = None
+        encryption_enabled = False
+        kms_enabled = False
+        s34_s315_error_code: str | None = None
+        s34_s315_access_denied = False
+        try:
+            algo, encryption_enabled, kms_enabled = _s3_bucket_default_encryption_summary(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            s34_s315_error_code = code
+            s34_s315_access_denied = _is_access_denied_error_code(code)
+
+        if s34_s315_access_denied:
+            s34_status = SHADOW_STATUS_SOFT_RESOLVED
+            s34_reason = "inventory_access_denied_s3_get_bucket_encryption"
+            s34_confidence = 40
+            s34_s315_branch = "access_denied"
+            s315_status = SHADOW_STATUS_SOFT_RESOLVED
+            s315_reason = "inventory_access_denied_s3_get_bucket_encryption"
+            s315_confidence = 40
+        elif s34_s315_error_code is not None:
+            s34_status = SHADOW_STATUS_SOFT_RESOLVED
+            s34_reason = "inventory_api_error_s3_get_bucket_encryption"
+            s34_confidence = 40
+            s34_s315_branch = "api_error"
+            s315_status = SHADOW_STATUS_SOFT_RESOLVED
+            s315_reason = "inventory_api_error_s3_get_bucket_encryption"
+            s315_confidence = 40
+        else:
+            s34_status = SHADOW_STATUS_RESOLVED if encryption_enabled else SHADOW_STATUS_OPEN
+            s34_reason = "inventory_confirmed_compliant" if encryption_enabled else "inventory_confirmed_non_compliant"
+            s34_confidence = 95
+            s34_s315_branch = "normal"
+            s315_status = SHADOW_STATUS_RESOLVED if kms_enabled else SHADOW_STATUS_OPEN
+            s315_reason = "inventory_confirmed_compliant" if kms_enabled else "inventory_confirmed_non_compliant"
+            s315_confidence = 95
+
+        logging_enabled = False
+        s39_error_code: str | None = None
+        s39_access_denied = False
+        try:
+            logging_enabled = _s3_bucket_logging_enabled(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            s39_error_code = code
+            s39_access_denied = _is_access_denied_error_code(code)
+
+        if s39_access_denied:
+            s39_status = SHADOW_STATUS_SOFT_RESOLVED
+            s39_reason = "inventory_access_denied_s3_get_bucket_logging"
+            s39_confidence = 40
+            s39_branch = "access_denied"
+        elif s39_error_code is not None:
+            s39_status = SHADOW_STATUS_SOFT_RESOLVED
+            s39_reason = "inventory_api_error_s3_get_bucket_logging"
+            s39_confidence = 40
+            s39_branch = "api_error"
+        else:
+            s39_status = SHADOW_STATUS_RESOLVED if logging_enabled else SHADOW_STATUS_OPEN
+            s39_reason = "inventory_confirmed_compliant" if logging_enabled else "inventory_confirmed_non_compliant"
+            s39_confidence = 95
+            s39_branch = "normal"
+
+        lifecycle_has_valid_rule = False
+        s311_error_code: str | None = None
+        s311_access_denied = False
+        try:
+            lifecycle_has_valid_rule = _s3_bucket_has_valid_lifecycle_rule(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            s311_error_code = code
+            s311_access_denied = _is_access_denied_error_code(code)
+
+        if s311_access_denied:
+            s311_status = SHADOW_STATUS_SOFT_RESOLVED
+            s311_reason = "inventory_access_denied_s3_get_bucket_lifecycle_configuration"
+            s311_confidence = 40
+            s311_branch = "access_denied"
+        elif s311_error_code is not None:
+            s311_status = SHADOW_STATUS_SOFT_RESOLVED
+            s311_reason = "inventory_api_error_s3_get_bucket_lifecycle_configuration"
+            s311_confidence = 40
+            s311_branch = "api_error"
+        else:
+            s311_status = SHADOW_STATUS_RESOLVED if lifecycle_has_valid_rule else SHADOW_STATUS_OPEN
+            s311_reason = "inventory_confirmed_compliant" if lifecycle_has_valid_rule else "inventory_confirmed_non_compliant"
+            s311_confidence = 95
+            s311_branch = "normal"
+
+        policy_json: dict[str, Any] | None = None
+        policy_parse_error = False
+        s35_error_code: str | None = None
+        s35_access_denied = False
+        ssl_deny = False
+        try:
+            policy_json, policy_parse_error = _s3_bucket_policy_json(s3, bucket)
+        except ClientError as exc:
+            code = _extract_error_code(exc)
+            s35_error_code = code
+            s35_access_denied = _is_access_denied_error_code(code)
+
+        if s35_access_denied:
+            s35_status = SHADOW_STATUS_SOFT_RESOLVED
+            s35_reason = "inventory_access_denied_s3_get_bucket_policy"
+            s35_confidence = 40
+            s35_branch = "access_denied"
+        elif s35_error_code is not None:
+            s35_status = SHADOW_STATUS_SOFT_RESOLVED
+            s35_reason = "inventory_api_error_s3_get_bucket_policy"
+            s35_confidence = 40
+            s35_branch = "api_error"
+        elif policy_parse_error:
+            s35_status = SHADOW_STATUS_SOFT_RESOLVED
+            s35_reason = "inventory_partial_data_s3_bucket_policy_parse_failed"
+            s35_confidence = 50
+            s35_branch = "partial_data"
+        else:
+            ssl_deny = _policy_has_ssl_deny(policy_json, bucket)
+            s35_status = SHADOW_STATUS_RESOLVED if ssl_deny else SHADOW_STATUS_OPEN
+            s35_reason = "inventory_confirmed_compliant" if ssl_deny else "inventory_confirmed_non_compliant"
+            s35_confidence = 95
+            s35_branch = "normal"
 
         resource_id = f"arn:aws:s3:::{bucket}"
-        s32_status = SHADOW_STATUS_OPEN if non_compliant_public else SHADOW_STATUS_RESOLVED
-        s32_reason = "inventory_confirmed_non_compliant" if non_compliant_public else "inventory_confirmed_compliant"
-        s32_confidence = 95
         evals = [
             _control_eval(
                 control_id="S3.2",
@@ -524,7 +684,13 @@ def _collect_s3_buckets(
                 description="Inventory reconciliation for public access posture.",
                 status_reason=s32_reason,
                 state_confidence=s32_confidence,
-                evidence_ref={"source": "inventory", **public_evidence},
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s32_branch,
+                    "access_denied_error_codes": s32_access_denied_error_codes,
+                    "api_error_codes": s32_api_error_codes,
+                    **public_evidence,
+                },
             ),
             _control_eval(
                 control_id="S3.2",
@@ -535,71 +701,97 @@ def _collect_s3_buckets(
                 description="Inventory reconciliation for public access posture.",
                 status_reason=s32_reason,
                 state_confidence=s32_confidence,
-                evidence_ref={"source": "inventory", **public_evidence},
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s32_branch,
+                    "access_denied_error_codes": s32_access_denied_error_codes,
+                    "api_error_codes": s32_api_error_codes,
+                    **public_evidence,
+                },
             ),
             _control_eval(
                 control_id="S3.4",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
-                status=SHADOW_STATUS_RESOLVED if encryption_enabled else SHADOW_STATUS_OPEN,
+                status=s34_status,
                 title="S3 bucket default encryption enabled",
                 description="Inventory reconciliation for bucket default encryption.",
-                status_reason=(
-                    "inventory_confirmed_compliant" if encryption_enabled else "inventory_confirmed_non_compliant"
-                ),
-                evidence_ref={"source": "inventory", "default_encryption_algorithm": algo},
+                status_reason=s34_reason,
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s34_s315_branch,
+                    "error_code": s34_s315_error_code,
+                    "default_encryption_algorithm": algo,
+                },
+                state_confidence=s34_confidence,
             ),
             _control_eval(
                 control_id="S3.15",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
-                status=SHADOW_STATUS_RESOLVED if kms_enabled else SHADOW_STATUS_OPEN,
+                status=s315_status,
                 title="S3 bucket uses SSE-KMS by default",
                 description="Inventory reconciliation for KMS default encryption.",
-                status_reason=("inventory_confirmed_compliant" if kms_enabled else "inventory_confirmed_non_compliant"),
+                status_reason=s315_reason,
                 evidence_ref={
                     "source": "inventory",
+                    "probe_branch": s34_s315_branch,
+                    "error_code": s34_s315_error_code,
                     "default_encryption_algorithm": algo,
                     "kms_default_enabled": kms_enabled,
                 },
+                state_confidence=s315_confidence,
             ),
             _control_eval(
                 control_id="S3.9",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
-                status=SHADOW_STATUS_RESOLVED if logging_enabled else SHADOW_STATUS_OPEN,
+                status=s39_status,
                 title="S3 bucket access logging enabled",
                 description="Inventory reconciliation for server access logging.",
-                status_reason=(
-                    "inventory_confirmed_compliant" if logging_enabled else "inventory_confirmed_non_compliant"
-                ),
-                evidence_ref={"source": "inventory", "logging_enabled": logging_enabled},
+                status_reason=s39_reason,
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s39_branch,
+                    "error_code": s39_error_code,
+                    "logging_enabled": logging_enabled,
+                },
+                state_confidence=s39_confidence,
             ),
             _control_eval(
                 control_id="S3.11",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
-                status=SHADOW_STATUS_RESOLVED if lifecycle_has_valid_rule else SHADOW_STATUS_OPEN,
+                status=s311_status,
                 title="S3 bucket lifecycle rules configured",
                 description="Inventory reconciliation for lifecycle policy coverage.",
-                status_reason=(
-                    "inventory_confirmed_compliant"
-                    if lifecycle_has_valid_rule
-                    else "inventory_confirmed_non_compliant"
-                ),
-                evidence_ref={"source": "inventory", "lifecycle_has_valid_rule": lifecycle_has_valid_rule},
+                status_reason=s311_reason,
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s311_branch,
+                    "error_code": s311_error_code,
+                    "lifecycle_has_valid_rule": lifecycle_has_valid_rule,
+                },
                 severity_label="MEDIUM",
+                state_confidence=s311_confidence,
             ),
             _control_eval(
                 control_id="S3.5",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
-                status=SHADOW_STATUS_RESOLVED if ssl_deny else SHADOW_STATUS_OPEN,
+                status=s35_status,
                 title="S3 bucket enforces SSL requests",
                 description="Inventory reconciliation for deny-insecure-transport policy.",
-                status_reason=("inventory_confirmed_compliant" if ssl_deny else "inventory_confirmed_non_compliant"),
-                evidence_ref={"source": "inventory", "ssl_deny_policy": ssl_deny},
+                status_reason=s35_reason,
+                evidence_ref={
+                    "source": "inventory",
+                    "probe_branch": s35_branch,
+                    "error_code": s35_error_code,
+                    "policy_parse_error": policy_parse_error,
+                    "ssl_deny_policy": ssl_deny,
+                },
                 severity_label="MEDIUM",
+                state_confidence=s35_confidence,
             ),
         ]
         state_for_hash = {
@@ -610,6 +802,11 @@ def _collect_s3_buckets(
             "logging_enabled": logging_enabled,
             "lifecycle_has_valid_rule": lifecycle_has_valid_rule,
             "ssl_deny_policy": ssl_deny,
+            "s32_branch": s32_branch,
+            "s34_s315_branch": s34_s315_branch,
+            "s39_branch": s39_branch,
+            "s311_branch": s311_branch,
+            "s35_branch": s35_branch,
         }
         key_fields = {
             "bucket": bucket,
@@ -644,41 +841,82 @@ def _collect_cloudtrail_account(
     region: str,
 ) -> list[InventorySnapshot]:
     cloudtrail = session_boto.client("cloudtrail", region_name=region)
-    trails_resp = cloudtrail.describe_trails(includeShadowTrails=True)
-    trails = _as_list(trails_resp.get("trailList"))
+    trails: list[Any] = []
+    describe_access_denied = False
+    describe_error_code: str | None = None
+    try:
+        trails_resp = cloudtrail.describe_trails(includeShadowTrails=True)
+        trails = _as_list(trails_resp.get("trailList"))
+    except ClientError as exc:
+        code = _extract_error_code(exc)
+        describe_error_code = code
+        if _is_access_denied_error_code(code):
+            describe_access_denied = True
+        else:
+            trails = []
 
     logging_multi_region = 0
+    multi_region_trail_count = 0
     trail_status_access_denied = False
     trail_status_access_denied_count = 0
+    trail_status_not_found_count = 0
+    trail_status_unknown_error_count = 0
+    trail_status_read_success_count = 0
     for trail in trails:
         if not isinstance(trail, dict):
             continue
         if not bool(trail.get("IsMultiRegionTrail")):
             continue
+        multi_region_trail_count += 1
         name = trail.get("TrailARN") or trail.get("Name")
         try:
             status = cloudtrail.get_trail_status(Name=name)
+            trail_status_read_success_count += 1
             if bool(status.get("IsLogging")):
                 logging_multi_region += 1
         except ClientError as exc:
             code = _extract_error_code(exc)
-            if code in {"AccessDenied", "AccessDeniedException"}:
+            if _is_access_denied_error_code(code):
                 trail_status_access_denied = True
                 trail_status_access_denied_count += 1
                 continue
             if code == "TrailNotFoundException":
+                trail_status_not_found_count += 1
                 continue
-            raise
+            trail_status_unknown_error_count += 1
+            continue
 
-    if trail_status_access_denied:
+    if describe_access_denied:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_access_denied_cloudtrail_describe_trails"
+        confidence = 40
+        status_branch = "access_denied_describe_trails"
+    elif describe_error_code is not None:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_cloudtrail_describe_trails"
+        confidence = 40
+        status_branch = "api_error_describe_trails"
+    elif trail_status_access_denied:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_cloudtrail_get_trail_status"
         confidence = 40
+        status_branch = "access_denied_get_trail_status"
+    elif trail_status_unknown_error_count > 0:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_cloudtrail_get_trail_status"
+        confidence = 40
+        status_branch = "api_error_get_trail_status"
+    elif multi_region_trail_count > 0 and trail_status_read_success_count == 0:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_partial_data_cloudtrail_trail_status_indeterminate"
+        confidence = 50
+        status_branch = "partial_data_indeterminate_trail_status"
     else:
         compliant = logging_multi_region > 0
         status = SHADOW_STATUS_RESOLVED if compliant else SHADOW_STATUS_OPEN
         reason = "inventory_confirmed_compliant" if compliant else "inventory_confirmed_non_compliant"
         confidence = 95
+        status_branch = "normal"
     evals = [
         _control_eval(
             control_id="CloudTrail.1",
@@ -691,18 +929,32 @@ def _collect_cloudtrail_account(
             evidence_ref={
                 "source": "inventory",
                 "trail_count": len(trails),
+                "multi_region_trail_count": multi_region_trail_count,
                 "logging_multi_region_trails": logging_multi_region,
+                "describe_access_denied": describe_access_denied,
+                "describe_error_code": describe_error_code,
                 "trail_status_access_denied": trail_status_access_denied,
                 "trail_status_access_denied_count": trail_status_access_denied_count,
+                "trail_status_not_found_count": trail_status_not_found_count,
+                "trail_status_unknown_error_count": trail_status_unknown_error_count,
+                "trail_status_read_success_count": trail_status_read_success_count,
+                "status_branch": status_branch,
             },
             state_confidence=confidence,
         )
     ]
     state_for_hash = {
         "trail_count": len(trails),
+        "multi_region_trail_count": multi_region_trail_count,
         "logging_multi_region_trails": logging_multi_region,
+        "describe_access_denied": describe_access_denied,
+        "describe_error_code": describe_error_code,
         "trail_status_access_denied": trail_status_access_denied,
         "trail_status_access_denied_count": trail_status_access_denied_count,
+        "trail_status_not_found_count": trail_status_not_found_count,
+        "trail_status_unknown_error_count": trail_status_unknown_error_count,
+        "trail_status_read_success_count": trail_status_read_success_count,
+        "status_branch": status_branch,
     }
     key_fields = state_for_hash.copy()
     return [
@@ -724,19 +976,44 @@ def _collect_config_account(
     region: str,
 ) -> list[InventorySnapshot]:
     config_client = session_boto.client("config", region_name=region)
-    recorders_raw = _as_list(config_client.describe_configuration_recorders().get("ConfigurationRecorders"))
+    recorders_raw: list[Any] = []
+    recorders_access_denied = False
+    recorders_error_code: str | None = None
+    try:
+        recorders_raw = _as_list(config_client.describe_configuration_recorders().get("ConfigurationRecorders"))
+    except ClientError as exc:
+        code = _extract_error_code(exc)
+        recorders_error_code = code
+        if _is_access_denied_error_code(code):
+            recorders_access_denied = True
+        else:
+            recorders_raw = []
     recorders = [recorder for recorder in recorders_raw if isinstance(recorder, dict)]
     status_access_denied = False
+    status_error_code: str | None = None
     try:
         statuses_raw = _as_list(config_client.describe_configuration_recorder_status().get("ConfigurationRecordersStatus"))
     except ClientError as exc:
-        if _extract_error_code(exc) in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+        code = _extract_error_code(exc)
+        status_error_code = code
+        if _is_access_denied_error_code(code):
             status_access_denied = True
             statuses_raw = []
         else:
-            raise
+            statuses_raw = []
     statuses = [status for status in statuses_raw if isinstance(status, dict)]
-    delivery_channels_raw = _as_list(config_client.describe_delivery_channels().get("DeliveryChannels"))
+    delivery_channels_raw: list[Any] = []
+    delivery_access_denied = False
+    delivery_error_code: str | None = None
+    try:
+        delivery_channels_raw = _as_list(config_client.describe_delivery_channels().get("DeliveryChannels"))
+    except ClientError as exc:
+        code = _extract_error_code(exc)
+        delivery_error_code = code
+        if _is_access_denied_error_code(code):
+            delivery_access_denied = True
+        else:
+            delivery_channels_raw = []
     delivery_channels = [channel for channel in delivery_channels_raw if isinstance(channel, dict)]
 
     status_by_name: dict[str, bool] = {}
@@ -795,16 +1072,50 @@ def _collect_config_account(
         for channel in delivery_channels
     )
     recording = recording_any
+    recorder_status_name_mismatch_count = sum(
+        1
+        for recorder in recorders
+        if str(recorder.get("name") or "").strip()
+        and str(recorder.get("name") or "").strip() not in status_by_name
+    )
+    read_access_denied = status_access_denied or recorders_access_denied or delivery_access_denied
+    read_error_codes = [code for code in [recorders_error_code, status_error_code, delivery_error_code] if code]
+    has_non_access_read_error = any(
+        code and not _is_access_denied_error_code(code)
+        for code in [recorders_error_code, status_error_code, delivery_error_code]
+    )
 
     if status_access_denied:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_config_describe_configuration_recorder_status"
         confidence = 40
+        status_branch = "access_denied_describe_configuration_recorder_status"
+    elif recorders_access_denied:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_access_denied_config_describe_configuration_recorders"
+        confidence = 40
+        status_branch = "access_denied_describe_configuration_recorders"
+    elif delivery_access_denied:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_access_denied_config_describe_delivery_channels"
+        confidence = 40
+        status_branch = "access_denied_describe_delivery_channels"
+    elif has_non_access_read_error:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_config_read_state"
+        confidence = 40
+        status_branch = "api_error_read_state"
+    elif len(recorders) > 1 and recorder_status_name_mismatch_count > 0:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_partial_data_config_recorder_status_mismatch"
+        confidence = 50
+        status_branch = "partial_data_recorder_status_mismatch"
     else:
         compliant = recorder_quality_passed and delivery_channel_present and delivery_channel_configured
         status = SHADOW_STATUS_RESOLVED if compliant else SHADOW_STATUS_OPEN
         reason = "inventory_confirmed_compliant" if compliant else "inventory_confirmed_non_compliant"
         confidence = 95
+        status_branch = "normal"
     resource_id = account_id
     resource_type = "AwsAccount"
     evals = [
@@ -829,7 +1140,16 @@ def _collect_config_account(
                 "delivery_channel_count": delivery_channel_count,
                 "delivery_channel_present": delivery_channel_present,
                 "delivery_channel_configured": delivery_channel_configured,
+                "recorders_access_denied": recorders_access_denied,
                 "status_access_denied": status_access_denied,
+                "delivery_access_denied": delivery_access_denied,
+                "recorders_error_code": recorders_error_code,
+                "status_error_code": status_error_code,
+                "delivery_error_code": delivery_error_code,
+                "read_access_denied": read_access_denied,
+                "read_error_codes": read_error_codes,
+                "recorder_status_name_mismatch_count": recorder_status_name_mismatch_count,
+                "status_branch": status_branch,
                 "recorders_evaluated": recorders_evaluated,
             },
             state_confidence=confidence,
@@ -841,7 +1161,14 @@ def _collect_config_account(
         "recorder_quality_passed": recorder_quality_passed,
         "delivery_channel_present": delivery_channel_present,
         "delivery_channel_configured": delivery_channel_configured,
+        "recorders_access_denied": recorders_access_denied,
         "status_access_denied": status_access_denied,
+        "delivery_access_denied": delivery_access_denied,
+        "recorders_error_code": recorders_error_code,
+        "status_error_code": status_error_code,
+        "delivery_error_code": delivery_error_code,
+        "recorder_status_name_mismatch_count": recorder_status_name_mismatch_count,
+        "status_branch": status_branch,
     }
     return [
         InventorySnapshot(
@@ -1207,20 +1534,26 @@ def _collect_ssm_account(
     ssm = session_boto.client("ssm", region_name=region)
     setting_id = "/ssm/documents/console/public-sharing-permission"
     setting_value: str | None = None
+    setting_value_present = False
     supported = True
     access_denied = False
     unsupported_operation = False
+    partial_data = False
+    api_error = False
     error_code: str | None = None
     try:
         resp = ssm.get_service_setting(SettingId=setting_id)
         service_setting = resp.get("ServiceSetting") if isinstance(resp, dict) else {}
         if isinstance(service_setting, dict):
             raw = service_setting.get("SettingValue")
+            setting_value_present = raw is not None
             setting_value = str(raw).strip().lower() if raw is not None else None
+        else:
+            partial_data = True
     except ClientError as exc:
         code = _extract_error_code(exc)
         error_code = code
-        if code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+        if _is_access_denied_error_code(code):
             supported = False
             access_denied = True
         elif code == "ThrottlingException":
@@ -1234,26 +1567,43 @@ def _collect_ssm_account(
             supported = False
             unsupported_operation = True
         else:
-            raise
+            supported = False
+            api_error = True
 
     enabled_tokens = {"enabled", "true", "1", "on"}
+    if supported and not setting_value_present:
+        partial_data = True
     public_sharing_enabled = bool(setting_value in enabled_tokens)
     if access_denied:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_ssm_get_service_setting"
         confidence = 40
+        status_branch = "access_denied"
     elif unsupported_operation:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_unsupported_operation_ssm_default_host_management"
         confidence = 40
+        status_branch = "unsupported_operation"
+    elif api_error:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_ssm_get_service_setting"
+        confidence = 40
+        status_branch = "api_error"
+    elif partial_data:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_partial_data_ssm_get_service_setting"
+        confidence = 50
+        status_branch = "partial_data"
     elif supported:
         status = SHADOW_STATUS_OPEN if public_sharing_enabled else SHADOW_STATUS_RESOLVED
         reason = "inventory_confirmed_non_compliant" if public_sharing_enabled else "inventory_confirmed_compliant"
         confidence = 90
+        status_branch = "normal"
     else:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_api_unavailable"
         confidence = 40
+        status_branch = "api_unavailable"
     resource_id = account_id
     resource_type = "AwsAccount"
     evals = [
@@ -1269,10 +1619,14 @@ def _collect_ssm_account(
                 "source": "inventory",
                 "setting_id": setting_id,
                 "setting_value": setting_value,
+                "setting_value_present": setting_value_present,
                 "api_supported": supported,
                 "access_denied": access_denied,
                 "unsupported_operation": unsupported_operation,
+                "partial_data": partial_data,
+                "api_error": api_error,
                 "error_code": error_code,
+                "status_branch": status_branch,
             },
             state_confidence=confidence,
         )
@@ -1280,10 +1634,14 @@ def _collect_ssm_account(
     state_for_hash = {
         "setting_id": setting_id,
         "setting_value": setting_value,
+        "setting_value_present": setting_value_present,
         "api_supported": supported,
         "access_denied": access_denied,
         "unsupported_operation": unsupported_operation,
+        "partial_data": partial_data,
+        "api_error": api_error,
         "error_code": error_code,
+        "status_branch": status_branch,
     }
     return [
         InventorySnapshot(
@@ -1306,6 +1664,8 @@ def _collect_guardduty_account(
     guardduty = session_boto.client("guardduty", region_name=region)
     detector_ids: list[str] = []
     access_ok = True
+    list_access_denied = False
+    list_error_code: str | None = None
     try:
         next_token: str | None = None
         while True:
@@ -1320,59 +1680,93 @@ def _collect_guardduty_account(
             if not next_token:
                 break
     except ClientError as exc:
-        if _extract_error_code(exc) in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+        code = _extract_error_code(exc)
+        list_error_code = code
+        if _is_access_denied_error_code(code):
             access_ok = False
+            list_access_denied = True
         else:
-            raise
+            access_ok = False
 
     detector_statuses: list[str] = []
     has_enabled_detector = False
     detector_access_denied = False
     detector_access_denied_count = 0
     detector_invalid_input_count = 0
+    detector_api_error_count = 0
+    detector_api_error_codes: list[str] = []
+    detector_status_read_success_count = 0
     if access_ok:
         for detector_id in detector_ids:
             try:
                 status = str((guardduty.get_detector(DetectorId=detector_id) or {}).get("Status") or "").upper()
             except ClientError as exc:
                 code = _extract_error_code(exc)
-                if code in {"AccessDenied", "AccessDeniedException"}:
+                if _is_access_denied_error_code(code):
                     detector_access_denied = True
                     detector_access_denied_count += 1
                     continue
                 if code in {"InvalidInputException", "BadRequestException"}:
                     detector_invalid_input_count += 1
                     continue
-                raise
+                detector_api_error_count += 1
+                detector_api_error_codes.append(code)
+                continue
+            detector_status_read_success_count += 1
             if status:
                 detector_statuses.append(status)
             if status == "ENABLED":
                 has_enabled_detector = True
 
-    if not access_ok:
+    if list_access_denied:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_guardduty_list_detectors"
         confidence = 40
+        status_branch = "access_denied_list_detectors"
+    elif list_error_code is not None:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_guardduty_list_detectors"
+        confidence = 40
+        status_branch = "api_error_list_detectors"
     elif detector_access_denied:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_guardduty_get_detector"
         confidence = 40
+        status_branch = "access_denied_get_detector"
+    elif detector_api_error_count > 0:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_guardduty_get_detector"
+        confidence = 40
+        status_branch = "api_error_get_detector"
+    elif detector_ids and detector_invalid_input_count == len(detector_ids):
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_partial_data_guardduty_invalid_detector_ids"
+        confidence = 50
+        status_branch = "partial_data_invalid_detector_ids"
     elif has_enabled_detector:
         status = SHADOW_STATUS_RESOLVED
         reason = "inventory_confirmed_compliant"
         confidence = 95
+        status_branch = "normal_compliant"
     else:
         status = SHADOW_STATUS_OPEN
         reason = "inventory_confirmed_non_compliant"
         confidence = 95
+        status_branch = "normal_non_compliant"
 
     state_for_hash = {
         "detector_count": len(detector_ids),
         "detector_statuses": detector_statuses,
         "access_ok": access_ok,
+        "list_access_denied": list_access_denied,
+        "list_error_code": list_error_code,
         "detector_access_denied": detector_access_denied,
         "detector_access_denied_count": detector_access_denied_count,
         "detector_invalid_input_count": detector_invalid_input_count,
+        "detector_api_error_count": detector_api_error_count,
+        "detector_api_error_codes": detector_api_error_codes,
+        "detector_status_read_success_count": detector_status_read_success_count,
+        "status_branch": status_branch,
     }
     # GuardDuty.1 findings are account-scoped (AwsAccount). Keep the same
     # identity here so shadow evaluation can attach to the target finding.
@@ -1400,9 +1794,15 @@ def _collect_guardduty_account(
                         "detector_ids": detector_ids,
                         "detector_statuses": detector_statuses,
                         "access_ok": access_ok,
+                        "list_access_denied": list_access_denied,
+                        "list_error_code": list_error_code,
                         "detector_access_denied": detector_access_denied,
                         "detector_access_denied_count": detector_access_denied_count,
                         "detector_invalid_input_count": detector_invalid_input_count,
+                        "detector_api_error_count": detector_api_error_count,
+                        "detector_api_error_codes": detector_api_error_codes,
+                        "detector_status_read_success_count": detector_status_read_success_count,
+                        "status_branch": status_branch,
                     },
                     state_confidence=confidence,
                 )
@@ -1420,31 +1820,51 @@ def _collect_securityhub_account(
     enabled = False
     access_ok = True
     hub_arn: str | None = None
+    partial_data = False
+    api_error = False
+    not_enabled_error = False
     error_code: str | None = None
     try:
-        hub_arn = str((securityhub.describe_hub() or {}).get("HubArn") or "").strip() or None
+        describe_resp = securityhub.describe_hub() or {}
+        hub_arn = str(describe_resp.get("HubArn") or "").strip() or None
         enabled = bool(hub_arn)
+        if not enabled:
+            partial_data = True
     except ClientError as exc:
         error_code = _extract_error_code(exc)
         if error_code in {"InvalidAccessException", "ResourceNotFoundException"}:
+            not_enabled_error = True
             enabled = False
-        elif error_code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}:
+        elif _is_access_denied_error_code(error_code):
             access_ok = False
         else:
-            raise
+            api_error = True
 
     if not access_ok:
         status = SHADOW_STATUS_SOFT_RESOLVED
         reason = "inventory_access_denied_securityhub_describe_hub"
         confidence = 40
+        status_branch = "access_denied"
+    elif api_error:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_api_error_securityhub_describe_hub"
+        confidence = 40
+        status_branch = "api_error"
+    elif partial_data:
+        status = SHADOW_STATUS_SOFT_RESOLVED
+        reason = "inventory_partial_data_securityhub_describe_hub"
+        confidence = 50
+        status_branch = "partial_data"
     elif enabled:
         status = SHADOW_STATUS_RESOLVED
         reason = "inventory_confirmed_compliant"
         confidence = 95
+        status_branch = "normal_compliant"
     else:
         status = SHADOW_STATUS_OPEN
         reason = "inventory_confirmed_non_compliant"
         confidence = 95
+        status_branch = "normal_non_compliant"
 
     # SecurityHub.1 findings are account-scoped (AwsAccount). Keep the same
     # identity here so shadow evaluation can attach to the target finding.
@@ -1454,7 +1874,11 @@ def _collect_securityhub_account(
         "enabled": enabled,
         "hub_arn": hub_arn,
         "access_ok": access_ok,
+        "partial_data": partial_data,
+        "api_error": api_error,
+        "not_enabled_error": not_enabled_error,
         "error_code": error_code,
+        "status_branch": status_branch,
     }
     return [
         InventorySnapshot(
@@ -1478,7 +1902,11 @@ def _collect_securityhub_account(
                         "enabled": enabled,
                         "hub_arn": hub_arn,
                         "access_ok": access_ok,
+                        "partial_data": partial_data,
+                        "api_error": api_error,
+                        "not_enabled_error": not_enabled_error,
                         "error_code": error_code,
+                        "status_branch": status_branch,
                     },
                     state_confidence=confidence,
                 )

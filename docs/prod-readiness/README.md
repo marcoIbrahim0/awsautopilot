@@ -14,6 +14,8 @@ Cross-reference:
 - [Implementation Plan — archived snapshot](../archive/2026-02-doc-cleanup/implementation-plan.md)
 - [No-UI PR Bundle Agent Runbook](../runbooks/no-ui-pr-bundle-agent.md)
 - [Important To Do](important-to-do.md)
+- [Item 16 High-Confidence Live Status Rollout Policy](16-high-confidence-live-status-rollout.md)
+- [Item 17 Medium/Low-Confidence Control Coverage Plan](17-medium-low-confidence-control-coverage-plan.md)
 - [Discovery Contract](01-discovery.md)
 - [Task 1 Candidate File Map](06-task1-file-map.md)
 - [Task 1 Input Validation](07-task1-input-validation.md)

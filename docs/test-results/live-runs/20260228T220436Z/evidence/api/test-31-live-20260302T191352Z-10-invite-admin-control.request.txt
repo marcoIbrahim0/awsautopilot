@@ -1,0 +1,3 @@
+POST https://api.valensjewelry.com/api/users/invite
+Authorization: Bearer <redacted>
+Body: {"email":"wave8.test31.admin-control.20260302T191352Z@example.com"}

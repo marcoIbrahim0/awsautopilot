@@ -1,0 +1,64 @@
+{
+  "preconditions": {
+    "tenant_id": "19b8d7c6-0100-421a-a084-c8b06d466837",
+    "tenant_name": "Valens",
+    "aws_account_id": "029037611564",
+    "admin_user_id": "57e658d9-d5c1-478a-81f8-8cf0400d001e"
+  },
+  "status_codes": {
+    "baseline": "200",
+    "page1": "200",
+    "page2": "200",
+    "actor_filter": "200",
+    "date_filter": "200",
+    "invalid_actor": "400",
+    "member": "403",
+    "no_auth": "401",
+    "no_auth_filter": "401"
+  },
+  "contract": {
+    "shape_ok": true,
+    "shape_errors": [],
+    "payload_non_null_ids": [],
+    "baseline_total": 31,
+    "baseline_limit": 25,
+    "baseline_offset": 0
+  },
+  "pagination": {
+    "page1_count": 5,
+    "page2_count": 5,
+    "overlap_count": 0,
+    "overlap_ids": []
+  },
+  "actions": {
+    "top_actions_date_window": [
+      [
+        "remediation_run_completed",
+        25
+      ]
+    ],
+    "focus_actions": [],
+    "focus_item_count": 0
+  },
+  "leakage_scan": {
+    "patterns": [
+      "jwt_like",
+      "aws_access_key_id",
+      "aws_secret_access_key_field",
+      "password_field",
+      "refresh_or_access_token_field",
+      "role_arn_field",
+      "private_key_marker",
+      "slack_webhook"
+    ],
+    "baseline_item_count": 25,
+    "baseline_hits_count": 0,
+    "baseline_hits": [],
+    "date_window_item_count": 25,
+    "date_window_hits_count": 0,
+    "date_window_hits": [],
+    "focus_item_count": 0,
+    "focus_hits_count": 0,
+    "focus_hits": []
+  }
+}

@@ -543,6 +543,73 @@ def test_finalize_delete_covers_required_path(
     assert len(trace["artifact_calls"]) == len(transition_calls)
 
 
+def test_pause_then_resume_restores_active_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.validation,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    trace = _install_transition_store_fakes(monkeypatch, run=run)
+    service = _enabled_service()
+
+    paused = _run(
+        service.pause_run(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-pause",
+            pause_reason="maintenance",
+        )
+    )
+    resumed = _run(
+        service.resume_run(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-resume",
+            resume_state=RootKeyRemediationState.validation,
+        )
+    )
+
+    assert paused.state_changed is True
+    assert trace["transition_targets"] == [
+        RootKeyRemediationState.needs_attention,
+        RootKeyRemediationState.validation,
+    ]
+    assert resumed.run.state == RootKeyRemediationState.validation
+    assert resumed.run.status == RootKeyRemediationRunStatus.running
+    assert len(trace["event_calls"]) == 2
+    assert len(trace["artifact_calls"]) == 2
+
+
+def test_resume_rejects_terminal_target_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.needs_attention,
+        status=RootKeyRemediationRunStatus.waiting_for_user,
+    )
+    trace = _install_transition_store_fakes(monkeypatch, run=run)
+    service = _enabled_service()
+
+    with pytest.raises(Exception) as exc_info:
+        _run(
+            service.resume_run(
+                MagicMock(),
+                tenant_id=tenant_id,
+                run_id=run.id,
+                transition_id="tx-resume-invalid",
+                resume_state=RootKeyRemediationState.completed,
+            )
+        )
+
+    err = exc_info.value
+    assert hasattr(err, "classification")
+    assert err.classification.code == "invalid_resume_state"
+    assert trace["transition_targets"] == []
+
+
 def test_illegal_transition_is_rejected_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     tenant_id = uuid.uuid4()
     run = _build_run(

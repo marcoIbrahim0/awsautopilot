@@ -1,0 +1,76 @@
+{
+  "spec_acceptance_doc": "/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md",
+  "scenarios": [
+    {
+      "case_id": "RK-E2E-001",
+      "path": "managed_only_zero_interaction_completion",
+      "acceptance_case_ids": [
+        "RK-SM-001",
+        "RK-POL-001",
+        "RK-E2E-001"
+      ],
+      "expected_final_state": "completed",
+      "expected_final_status": "completed"
+    },
+    {
+      "case_id": "RK-E2E-002",
+      "path": "unknown_dependency_to_needs_attention",
+      "acceptance_case_ids": [
+        "RK-UNK-001",
+        "RK-E2E-002"
+      ],
+      "expected_final_state": "needs_attention",
+      "expected_final_status": "waiting_for_user"
+    },
+    {
+      "case_id": "RK-E2E-003",
+      "path": "external_task_completion_then_validate_disable_delete",
+      "acceptance_case_ids": [
+        "RK-SM-001",
+        "RK-E2E-003"
+      ],
+      "expected_final_state": "completed",
+      "expected_final_status": "completed"
+    },
+    {
+      "case_id": "RK-E2E-004",
+      "path": "post_disable_breakage_triggers_rollback",
+      "acceptance_case_ids": [
+        "RK-RBK-001",
+        "RK-E2E-004"
+      ],
+      "expected_final_state": "rolled_back",
+      "expected_final_status": "failed"
+    },
+    {
+      "case_id": "RK-E2E-005",
+      "path": "closure_cycle_ingest_compute_reconcile_polling",
+      "acceptance_case_ids": [
+        "RK-CLS-001",
+        "RK-E2E-005"
+      ],
+      "expected_final_state": "completed",
+      "expected_final_status": "completed"
+    },
+    {
+      "case_id": "RK-E2E-006",
+      "path": "policy_preservation_assertion_fail_closed",
+      "acceptance_case_ids": [
+        "RK-POL-001",
+        "RK-E2E-006"
+      ],
+      "expected_final_state": "needs_attention",
+      "expected_final_status": "waiting_for_user"
+    },
+    {
+      "case_id": "RK-E2E-007",
+      "path": "self_cutoff_prevention",
+      "acceptance_case_ids": [
+        "RK-RBK-001",
+        "RK-E2E-007"
+      ],
+      "expected_final_state": "needs_attention",
+      "expected_final_status": "waiting_for_user"
+    }
+  ]
+}

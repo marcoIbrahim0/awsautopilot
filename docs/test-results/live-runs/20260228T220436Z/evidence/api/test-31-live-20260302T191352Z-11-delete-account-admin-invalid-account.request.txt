@@ -1,0 +1,2 @@
+DELETE https://api.valensjewelry.com/api/aws/accounts/000000000000?cleanup_resources=false
+Authorization: Bearer <redacted>

@@ -44,6 +44,14 @@ router = APIRouter(prefix="/saas", tags=["saas-admin"])
 
 
 SAFE_ARTIFACT_KEYS = {"pr_bundle", "summary", "plan", "diff_summary", "files"}
+PROMOTION_BLOCK_REASON_CODES = (
+    "shadow_mode_enabled",
+    "promotion_disabled",
+    "control_not_high_confidence",
+    "confidence_below_threshold",
+    "soft_resolved_not_allowed",
+    "tenant_not_in_pilot",
+)
 
 
 class TenantListItem(BaseModel):
@@ -269,6 +277,66 @@ class ControlPlaneSLOResponse(BaseModel):
     sweep_failures: int
 
 
+class ControlPlanePromotionBlockedByReason(BaseModel):
+    shadow_mode_enabled: int
+    promotion_disabled: int
+    control_not_high_confidence: int
+    confidence_below_threshold: int
+    soft_resolved_not_allowed: int
+    tenant_not_in_pilot: int
+
+
+class ControlPlanePromotionMetrics(BaseModel):
+    attempts: int
+    successes: int
+    blocked: int
+    success_rate: float
+    blocked_rate: float
+    blocked_by_reason: ControlPlanePromotionBlockedByReason
+
+
+class ControlPlaneMismatchMetrics(BaseModel):
+    comparable_rows: int
+    mismatches: int
+    mismatch_rate: float
+
+
+class ControlPlaneSoftResolvedMetrics(BaseModel):
+    promoted_controls_rows: int
+    soft_resolved_rows: int
+    soft_resolved_rate: float
+
+
+class ControlPlaneShadowFreshnessMetrics(BaseModel):
+    stale_threshold_minutes: int
+    total_rows: int
+    stale_rows: int
+    stale_rate: float
+    latest_evaluated_at: str | None
+    oldest_evaluated_at: str | None
+
+
+class ControlPlanePromotionGuardrailConfig(BaseModel):
+    shadow_mode_enabled: bool
+    promotion_enabled: bool
+    high_confidence_controls_count: int
+    promotion_min_confidence: int
+    allow_soft_resolved: bool
+    pilot_tenants_count: int
+
+
+class ControlPlanePromotionGuardrailHealthResponse(BaseModel):
+    generated_at: str
+    scope: str
+    tenant_id: str | None
+    window_hours: int
+    guardrails: ControlPlanePromotionGuardrailConfig
+    promotion: ControlPlanePromotionMetrics
+    mismatch: ControlPlaneMismatchMetrics
+    soft_resolved: ControlPlaneSoftResolvedMetrics
+    shadow_freshness: ControlPlaneShadowFreshnessMetrics
+
+
 class ControlPlaneShadowSummaryResponse(BaseModel):
     tenant_id: str
     total_rows: int
@@ -428,6 +496,61 @@ def _normalize_shadow_status(status_raw: str | None) -> str:
     if s in {"RESOLVED", "SOFT_RESOLVED"}:
         return "RESOLVED"
     return "UNKNOWN"
+
+
+def _rate(numerator: int, denominator: int) -> float:
+    return float(numerator / denominator) if denominator > 0 else 0.0
+
+
+def _coerce_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _empty_promotion_block_reason_counts() -> dict[str, int]:
+    return {reason: 0 for reason in PROMOTION_BLOCK_REASON_CODES}
+
+
+def _promotion_guardrail_block_reasons(
+    *,
+    tenant_id: uuid.UUID,
+    canonical_control_id: str,
+    raw_status: str | None,
+    state_confidence: int,
+    shadow_mode_enabled: bool,
+    promotion_enabled: bool,
+    high_confidence_controls: set[str],
+    min_confidence: int,
+    allow_soft_resolved: bool,
+    pilot_tenants: set[str],
+) -> list[str]:
+    reasons: list[str] = []
+    if shadow_mode_enabled:
+        reasons.append("shadow_mode_enabled")
+    if not promotion_enabled:
+        reasons.append("promotion_disabled")
+    if canonical_control_id.upper() not in high_confidence_controls:
+        reasons.append("control_not_high_confidence")
+    if state_confidence < min_confidence:
+        reasons.append("confidence_below_threshold")
+    if (raw_status or "").strip().upper() == "SOFT_RESOLVED" and not allow_soft_resolved:
+        reasons.append("soft_resolved_not_allowed")
+    if pilot_tenants and str(tenant_id).lower() not in pilot_tenants:
+        reasons.append("tenant_not_in_pilot")
+    return reasons
+
+
+def _build_promotion_blocked_by_reason(counts: dict[str, int]) -> ControlPlanePromotionBlockedByReason:
+    return ControlPlanePromotionBlockedByReason(
+        shadow_mode_enabled=int(counts.get("shadow_mode_enabled") or 0),
+        promotion_disabled=int(counts.get("promotion_disabled") or 0),
+        control_not_high_confidence=int(counts.get("control_not_high_confidence") or 0),
+        confidence_below_threshold=int(counts.get("confidence_below_threshold") or 0),
+        soft_resolved_not_allowed=int(counts.get("soft_resolved_not_allowed") or 0),
+        tenant_not_in_pilot=int(counts.get("tenant_not_in_pilot") or 0),
+    )
 
 
 def _inventory_queue_or_503() -> str:
@@ -786,6 +909,210 @@ async def get_control_plane_slo(
         in_scope_new_match_rate=in_scope_new_match_rate,
         shadow_freshness_lag_minutes=shadow_freshness_lag_minutes,
         sweep_failures=sweep_failures,
+    )
+
+
+@router.get(
+    "/control-plane/promotion-guardrail-health",
+    response_model=ControlPlanePromotionGuardrailHealthResponse,
+)
+async def get_control_plane_promotion_guardrail_health(
+    _admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    tenant_id: Annotated[str | None, Query()] = None,
+    hours: Annotated[int, Query(ge=1, le=168)] = 24,
+) -> ControlPlanePromotionGuardrailHealthResponse:
+    tenant_uuid: uuid.UUID | None = None
+    if tenant_id:
+        tenant_uuid = _parse_tenant_id(tenant_id)
+        await _get_tenant_or_404(db, tenant_uuid)
+
+    now_utc = datetime.now(timezone.utc)
+    since = now_utc - timedelta(hours=hours)
+
+    high_confidence_controls = settings.control_plane_high_confidence_controls_set
+    promotion_min_confidence = settings.control_plane_promotion_min_confidence
+    pilot_tenants = settings.control_plane_promotion_pilot_tenants_set
+    allow_soft_resolved = bool(settings.CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED)
+    shadow_mode_enabled = bool(settings.CONTROL_PLANE_SHADOW_MODE)
+    promotion_enabled = bool(settings.CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED)
+    scope = "tenant" if tenant_uuid is not None else "global"
+
+    shadow_alias = sa.orm.aliased(FindingShadowState)
+    shadow_eval_col = func.coalesce(shadow_alias.last_evaluated_at, shadow_alias.updated_at)
+    candidate_filters: list[Any] = [
+        shadow_alias.source == settings.CONTROL_PLANE_SOURCE,
+        shadow_alias.canonical_control_id.isnot(None),
+        shadow_alias.resource_key.isnot(None),
+        shadow_alias.status.in_(("OPEN", "RESOLVED", "SOFT_RESOLVED")),
+        shadow_eval_col >= since,
+    ]
+    if tenant_uuid is not None:
+        candidate_filters.append(shadow_alias.tenant_id == tenant_uuid)
+
+    canonical_subq = (
+        select(Finding.status)
+        .where(
+            Finding.tenant_id == shadow_alias.tenant_id,
+            Finding.account_id == shadow_alias.account_id,
+            Finding.region == shadow_alias.region,
+            Finding.source == "security_hub",
+            Finding.canonical_control_id == shadow_alias.canonical_control_id,
+            Finding.resource_key == shadow_alias.resource_key,
+        )
+        .order_by(Finding.updated_at.desc())
+        .limit(1)
+        .lateral()
+        .alias("canonical_finding")
+    )
+
+    candidate_stmt = (
+        select(
+            shadow_alias.tenant_id,
+            shadow_alias.canonical_control_id,
+            shadow_alias.status,
+            shadow_alias.state_confidence,
+            shadow_eval_col.label("shadow_evaluated_at"),
+            canonical_subq.c.status.label("canonical_status"),
+        )
+        .select_from(shadow_alias)
+        .outerjoin(canonical_subq, sa.true())
+        .where(*candidate_filters)
+    )
+    candidate_rows = (await db.execute(candidate_stmt)).all()
+
+    attempts = 0
+    successes = 0
+    blocked = 0
+    blocked_by_reason_counts = _empty_promotion_block_reason_counts()
+    comparable_rows = 0
+    mismatches = 0
+    promoted_controls_rows = 0
+    soft_resolved_rows = 0
+
+    for row in candidate_rows:
+        (
+            row_tenant_id,
+            row_control_id,
+            raw_shadow_status,
+            row_state_confidence,
+            _shadow_evaluated_at,
+            raw_canonical_status,
+        ) = row
+        shadow_norm = _normalize_shadow_status(raw_shadow_status)
+        if shadow_norm not in {"OPEN", "RESOLVED"}:
+            continue
+
+        attempts += 1
+        control_id = str(row_control_id or "").strip().upper()
+        state_confidence = _coerce_int(row_state_confidence)
+        row_tenant_uuid = row_tenant_id if isinstance(row_tenant_id, uuid.UUID) else uuid.UUID(str(row_tenant_id))
+
+        block_reasons = _promotion_guardrail_block_reasons(
+            tenant_id=row_tenant_uuid,
+            canonical_control_id=control_id,
+            raw_status=raw_shadow_status,
+            state_confidence=state_confidence,
+            shadow_mode_enabled=shadow_mode_enabled,
+            promotion_enabled=promotion_enabled,
+            high_confidence_controls=high_confidence_controls,
+            min_confidence=promotion_min_confidence,
+            allow_soft_resolved=allow_soft_resolved,
+            pilot_tenants=pilot_tenants,
+        )
+
+        if block_reasons:
+            blocked += 1
+            for reason in block_reasons:
+                if reason in blocked_by_reason_counts:
+                    blocked_by_reason_counts[reason] += 1
+        else:
+            canonical_norm = _normalize_canonical_finding_status(raw_canonical_status)
+            if canonical_norm == shadow_norm:
+                successes += 1
+
+        if control_id in high_confidence_controls:
+            promoted_controls_rows += 1
+            if str(raw_shadow_status or "").strip().upper() == "SOFT_RESOLVED":
+                soft_resolved_rows += 1
+            canonical_norm = _normalize_canonical_finding_status(raw_canonical_status)
+            if canonical_norm in {"OPEN", "RESOLVED"}:
+                comparable_rows += 1
+                if canonical_norm != shadow_norm:
+                    mismatches += 1
+
+    freshness_filters: list[Any] = [FindingShadowState.source == settings.CONTROL_PLANE_SOURCE]
+    if tenant_uuid is not None:
+        freshness_filters.append(FindingShadowState.tenant_id == tenant_uuid)
+
+    freshness_eval_col = func.coalesce(FindingShadowState.last_evaluated_at, FindingShadowState.updated_at)
+    stale_threshold_minutes = max(1, _coerce_int(settings.CONTROL_PLANE_PREREQ_MAX_STALENESS_MINUTES, 30))
+    stale_before = now_utc - timedelta(minutes=stale_threshold_minutes)
+
+    total_shadow_rows = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(FindingShadowState).where(*freshness_filters)
+            )
+        ).scalar()
+        or 0
+    )
+    stale_rows = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(FindingShadowState)
+                .where(*freshness_filters, freshness_eval_col < stale_before)
+            )
+        ).scalar()
+        or 0
+    )
+    latest_shadow_eval = (
+        await db.execute(select(func.max(freshness_eval_col)).where(*freshness_filters))
+    ).scalar()
+    oldest_shadow_eval = (
+        await db.execute(select(func.min(freshness_eval_col)).where(*freshness_filters))
+    ).scalar()
+
+    return ControlPlanePromotionGuardrailHealthResponse(
+        generated_at=now_utc.isoformat(),
+        scope=scope,
+        tenant_id=str(tenant_uuid) if tenant_uuid is not None else None,
+        window_hours=hours,
+        guardrails=ControlPlanePromotionGuardrailConfig(
+            shadow_mode_enabled=shadow_mode_enabled,
+            promotion_enabled=promotion_enabled,
+            high_confidence_controls_count=len(high_confidence_controls),
+            promotion_min_confidence=promotion_min_confidence,
+            allow_soft_resolved=allow_soft_resolved,
+            pilot_tenants_count=len(pilot_tenants),
+        ),
+        promotion=ControlPlanePromotionMetrics(
+            attempts=attempts,
+            successes=successes,
+            blocked=blocked,
+            success_rate=_rate(successes, attempts),
+            blocked_rate=_rate(blocked, attempts),
+            blocked_by_reason=_build_promotion_blocked_by_reason(blocked_by_reason_counts),
+        ),
+        mismatch=ControlPlaneMismatchMetrics(
+            comparable_rows=comparable_rows,
+            mismatches=mismatches,
+            mismatch_rate=_rate(mismatches, comparable_rows),
+        ),
+        soft_resolved=ControlPlaneSoftResolvedMetrics(
+            promoted_controls_rows=promoted_controls_rows,
+            soft_resolved_rows=soft_resolved_rows,
+            soft_resolved_rate=_rate(soft_resolved_rows, promoted_controls_rows),
+        ),
+        shadow_freshness=ControlPlaneShadowFreshnessMetrics(
+            stale_threshold_minutes=stale_threshold_minutes,
+            total_rows=total_shadow_rows,
+            stale_rows=stale_rows,
+            stale_rate=_rate(stale_rows, total_shadow_rows),
+            latest_evaluated_at=latest_shadow_eval.isoformat() if latest_shadow_eval else None,
+            oldest_evaluated_at=oldest_shadow_eval.isoformat() if oldest_shadow_eval else None,
+        ),
     )
 
 

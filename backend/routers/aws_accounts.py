@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal, Optional
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import func, select
@@ -2314,13 +2314,35 @@ async def trigger_ingest_sync(
             detail={"error": "Account not validated", "detail": "Validate the account first."},
         )
     regions = _resolve_sync_ingest_regions(acc.regions, body)
-    if settings.is_local:
-        now = datetime.now(timezone.utc).isoformat()
-        from backend.workers.jobs.ingest_findings import execute_ingest_job
 
-        for r in regions:
-            job = build_ingest_job_payload(tenant_uuid, account_id, r, now)
-            await asyncio.to_thread(execute_ingest_job, job)
+    # Sync mode is strictly local-only and only when no queue is configured.
+    # If queue wiring exists, prefer async enqueue to avoid importing worker-only deps in API runtime.
+    should_run_sync_locally = settings.is_local and not settings.has_ingest_queue
+    if should_run_sync_locally:
+        now = datetime.now(timezone.utc).isoformat()
+        try:
+            from backend.workers.jobs.ingest_findings import execute_ingest_job
+        except ModuleNotFoundError as exc:
+            logger.exception("Local ingest-sync dependencies are unavailable: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": "Ingestion service unavailable",
+                    "detail": "Local ingest worker dependencies are unavailable. Configure SQS ingest queue or install worker dependencies.",
+                },
+            ) from exc
+
+        try:
+            for r in regions:
+                job = build_ingest_job_payload(tenant_uuid, account_id, r, now)
+                await asyncio.to_thread(execute_ingest_job, job)
+        except Exception as exc:
+            logger.exception("Synchronous ingest-sync execution failed: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"error": "Ingestion service unavailable", "detail": "Could not complete synchronous ingest job."},
+            ) from exc
+
         return IngestSyncResponse(
             account_id=account_id,
             regions=regions,
@@ -2334,8 +2356,14 @@ async def trigger_ingest_sync(
         )
     try:
         _enqueue_ingest_jobs(tenant_uuid, account_id, regions)
-    except ClientError as exc:
+    except (ClientError, BotoCoreError) as exc:
         logger.exception("SQS send_message failed for ingest-sync fallback enqueue: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Ingestion service unavailable", "detail": "Could not enqueue ingest jobs."},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected ingest-sync enqueue failure: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"error": "Ingestion service unavailable", "detail": "Could not enqueue ingest jobs."},

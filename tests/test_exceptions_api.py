@@ -16,8 +16,6 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user
@@ -124,6 +122,15 @@ def _mock_exception(
     exc.approved_by_user_id = uuid.UUID(approved_by_id)
     exc.ticket_link = "https://jira.example.com/TICKET-123"
     exc.expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    exc.owner_user_id = None
+    exc.owner = None
+    exc.approval_metadata = None
+    exc.reminder_interval_days = None
+    exc.next_reminder_at = None
+    exc.last_reminded_at = None
+    exc.revalidation_interval_days = None
+    exc.next_revalidation_at = None
+    exc.last_revalidated_at = None
     exc.created_at = datetime.now(timezone.utc)
     exc.updated_at = datetime.now(timezone.utc)
     exc.approved_by = _mock_user(approved_by_id, tenant_id)
@@ -152,7 +159,6 @@ def _valid_create_request(
 def test_create_exception_success_finding() -> None:
     """Successfully create exception for a finding."""
     user = _mock_user()
-    tenant = _mock_tenant()
     finding = _mock_finding()
     exc = _mock_exception()
     result_entity = MagicMock()
@@ -166,7 +172,7 @@ def test_create_exception_success_finding() -> None:
     session.add = MagicMock()
     session.commit = AsyncMock()
 
-    async def _override_get_current_user() -> None:
+    async def _override_get_current_user() -> MagicMock:
         return user
 
     async def _override_get_db() -> AsyncGenerator[MagicMock, None]:
@@ -196,7 +202,7 @@ def test_create_exception_invalid_entity_id() -> None:
     """Reject invalid entity_id (not a UUID)."""
     user = _mock_user()
     session = _mock_session_with_user(user=user)
-    async def _override_get_current_user() -> None:
+    async def _override_get_current_user() -> MagicMock:
         return user
     async def _override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -218,7 +224,7 @@ def test_create_exception_expires_in_past() -> None:
     """Reject expires_at in the past."""
     user = _mock_user()
     session = _mock_session_with_user(user=user)
-    async def _override_get_current_user() -> None:
+    async def _override_get_current_user() -> MagicMock:
         return user
     async def _override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -240,7 +246,7 @@ def test_create_exception_entity_not_found() -> None:
     """Reject when entity (finding/action) not found."""
     user = _mock_user()
     session = _mock_session_with_user(user=user, tenant=None, entity=None)
-    async def _override_get_current_user() -> None:
+    async def _override_get_current_user() -> MagicMock:
         return user
     async def _override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -264,7 +270,7 @@ def test_create_exception_duplicate() -> None:
     finding = _mock_finding()
     existing_exc = _mock_exception()
     session = _mock_session_with_user(user=user, tenant=tenant, entity=finding, exception=existing_exc)
-    async def _override_get_current_user() -> None:
+    async def _override_get_current_user() -> MagicMock:
         return user
     async def _override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
