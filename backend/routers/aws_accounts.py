@@ -351,6 +351,11 @@ _TEMPLATE_VERSION_PATTERN = re.compile(r"/(v?\d+\.\d+\.\d+)\.ya?ml$")
 _AUTHORITATIVE_MODE_REQUIRED_PERMISSIONS: tuple[str, ...] = (
     "securityhub:GetFindings",
     "ec2:DescribeSecurityGroups",
+    "config:DescribeConfigurationRecorders",
+    "config:DescribeDeliveryChannels",
+    "config:DescribeConfigRules",
+    "config:DescribeComplianceByConfigRules",
+    "config:GetComplianceDetailsByConfigRule",
     "s3:ListAllMyBuckets",
     "s3:GetBucketPublicAccessBlock",
     "s3:GetBucketPolicyStatus",

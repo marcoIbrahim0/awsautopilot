@@ -1,0 +1,16 @@
+{
+  "test": "D4",
+  "pass": true,
+  "expected_error_code": "unresolved_placeholder_token",
+  "error": {
+    "code": "unresolved_placeholder_token",
+    "detail": "Generated bundle contains unresolved placeholder token 'REPLACE_LOG_BUCKET_NAME' in file 's3_bucket_access_logging.tf'. Refresh findings/action targets and retry remediation bundle generation.",
+    "action_type": "s3_bucket_access_logging",
+    "format": "terraform",
+    "strategy_id": "",
+    "variant": ""
+  },
+  "notes": [
+    "Expected fail-closed placeholder block triggered."
+  ]
+}

@@ -1,0 +1,23 @@
+aws cloudformation delete-stack --stack-name phase2-live-a-ec253-20260303T175347Z --region eu-north-1
+aws cloudformation wait stack-delete-complete --stack-name phase2-live-a-ec253-20260303T175347Z --region eu-north-1
+aws ec2 revoke-security-group-ingress --group-id sg-05781a53012300032 --protocol tcp --port 22 --cidr 0.0.0.0/0 --region eu-north-1
+{
+    "Return": true,
+    "RevokedSecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-050cbed1ae6bd5e1b",
+            "GroupId": "sg-05781a53012300032",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Phase2 Live Test A public ssh"
+        }
+    ]
+}
+aws ec2 delete-security-group --group-id sg-05781a53012300032 --region eu-north-1
+{
+    "Return": true,
+    "GroupId": "sg-05781a53012300032"
+}

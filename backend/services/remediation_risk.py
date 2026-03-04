@@ -370,6 +370,26 @@ def evaluate_strategy_impact(
                     "Root key deletion is irreversible; ensure fallback access is validated.",
                 )
             )
+            mfa_gate_status: CheckStatus = "unknown"
+            mfa_gate_message = "Unable to verify root MFA enrollment from account summary."
+            if runtime_signals.get("iam_root_account_mfa_enrolled") is True:
+                mfa_gate_status = "pass"
+                mfa_gate_message = "Root MFA enrollment is active (AccountMFAEnabled=1)."
+            elif runtime_signals.get("iam_root_account_mfa_enrolled") is False:
+                mfa_gate_status = "fail"
+                mfa_gate_message = (
+                    "Delete path is blocked: root MFA is not enrolled (AccountMFAEnabled=0). "
+                    "Enable root MFA before selecting root key delete."
+                )
+            elif runtime_signals.get("iam_root_account_mfa_probe_error"):
+                mfa_gate_message = str(runtime_signals.get("iam_root_account_mfa_probe_error"))
+            checks.append(
+                _build_check(
+                    "iam_root_mfa_enrollment_gate",
+                    mfa_gate_status,
+                    mfa_gate_message,
+                )
+            )
     elif strategy_id == "iam_root_key_keep_exception":
         checks.append(
             _build_check(

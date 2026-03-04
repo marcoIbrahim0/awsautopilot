@@ -12,14 +12,10 @@ Tests cover:
 """
 from __future__ import annotations
 
-import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from botocore.exceptions import ClientError
-from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
 from backend.database import get_db
@@ -229,6 +225,12 @@ def test_validate_200_security_hub_failure(client: TestClient) -> None:
     data = r.json()
     assert data["status"] == "validated"
     assert data["permissions_ok"] is False
+    required = set(data["required_permissions"])
+    assert "config:DescribeConfigurationRecorders" in required
+    assert "config:DescribeDeliveryChannels" in required
+    assert "config:DescribeConfigRules" in required
+    assert "config:DescribeComplianceByConfigRules" in required
+    assert "config:GetComplianceDetailsByConfigRule" in required
 
 
 # ---------------------------------------------------------------------------
@@ -277,4 +279,10 @@ def test_validate_200_success(client: TestClient) -> None:
     assert data["status"] == "validated"
     assert data["permissions_ok"] is True
     assert data["account_id"] == "123456789012"
+    required = set(data["required_permissions"])
+    assert "config:DescribeConfigurationRecorders" in required
+    assert "config:DescribeDeliveryChannels" in required
+    assert "config:DescribeConfigRules" in required
+    assert "config:DescribeComplianceByConfigRules" in required
+    assert "config:GetComplianceDetailsByConfigRule" in required
     assert acc.status == AwsAccountStatus.validated

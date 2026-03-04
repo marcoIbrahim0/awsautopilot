@@ -881,6 +881,185 @@ def test_pr_bundle_execution_plan_success() -> None:
     assert isinstance(execution.results, dict)
 
 
+def test_pr_bundle_execution_plan_missing_terraform_dependency_fails() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.side_effect = FileNotFoundError(2, "No such file or directory", "terraform")
+                execute_pr_bundle_execution_job(job)
+
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert execution.error_summary == "runtime_missing_dependency"
+    assert run.status == RemediationRunStatus.failed
+    assert "terraform" in str(run.outcome or "")
+
+
+def test_pr_bundle_execution_plan_fail_fast_persists_partial_results_with_error_detail() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = {"fail_fast": True}
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.return_value = {
+                    "command": "terraform init",
+                    "returncode": 1,
+                    "stdout": "",
+                    "stderr": "Failed to query available provider packages",
+                }
+                execute_pr_bundle_execution_job(job)
+
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert run.status == RemediationRunStatus.failed
+    assert isinstance(execution.results, dict)
+    assert execution.results.get("folder_count") == 1
+    assert execution.results.get("failed_folder_count") == 1
+    assert "terraform init failed for ." in str(execution.error_summary or "")
+    assert "Failed to query available provider packages" in str(execution.error_summary or "")
+
+
+def test_pr_bundle_execution_apply_duplicate_sg_rule_is_treated_as_success() -> None:
+    run = _mock_run_with_action("sg_restrict_public_ports")
+    run.mode = RemediationRunMode.pr_only
+    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": 'terraform {}'}]}}
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.apply
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = {"fail_fast": True}
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    account_result = MagicMock()
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account_result.scalar_one_or_none.return_value = account
+
+    mock_session = MagicMock()
+    claim_result = MagicMock()
+    claim_result.rowcount = 1
+    mock_session.execute.side_effect = [exec_result, claim_result, account_result]
+    mock_session.flush = MagicMock()
+
+    job = {
+        "job_type": "execute_pr_bundle_apply",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "apply",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    duplicate_stderr = (
+        "Error: creating VPC Security Group Rule\\n"
+        "operation error EC2: AuthorizeSecurityGroupIngress, "
+        "api error InvalidPermission.Duplicate"
+    )
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                mock_run_cmd.side_effect = [
+                    {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                    {"command": "terraform apply", "returncode": 1, "stdout": "", "stderr": duplicate_stderr},
+                ]
+                with patch("backend.workers.jobs.remediation_run_execution.enqueue_post_apply_reconcile") as mock_reconcile:
+                    execute_pr_bundle_execution_job(job)
+
+    assert execution.status == RemediationRunExecutionStatus.success
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "SaaS apply completed successfully."
+    assert isinstance(execution.results, dict)
+    assert execution.results.get("failed_folder_count") == 0
+    assert mock_reconcile.call_count == 1
+
+
 def test_pr_bundle_execution_root_credentials_required_fails_fast() -> None:
     """SaaS plan/apply worker rejects root-key runs before any terraform command executes."""
     run = _mock_run_with_action("iam_root_access_key_absent")

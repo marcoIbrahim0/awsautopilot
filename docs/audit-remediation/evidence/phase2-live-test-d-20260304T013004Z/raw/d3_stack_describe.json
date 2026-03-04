@@ -1,0 +1,40 @@
+{
+    "Stacks": [
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3-s311-0304014023/23265410-176b-11f1-8769-06b6dc214ca7",
+            "StackName": "security-autopilot-live-d3-s311-0304014023",
+            "ChangeSetId": "arn:aws:cloudformation:eu-north-1:029037611564:changeSet/awscli-cloudformation-package-deploy-1772588433/2bbee921-345a-43d6-b805-533806eb2c1d",
+            "Description": "Configure S3 lifecycle policy for a bucket via Lambda custom resource.",
+            "Parameters": [
+                {
+                    "ParameterKey": "AbortIncompleteMultipartDays",
+                    "ParameterValue": "7"
+                },
+                {
+                    "ParameterKey": "BucketName",
+                    "ParameterValue": "sa-live-d3-s311-029037611564-0304014023"
+                }
+            ],
+            "CreationTime": "2026-03-04T01:40:34.450000+00:00",
+            "LastUpdatedTime": "2026-03-04T01:40:40.227000+00:00",
+            "RollbackConfiguration": {},
+            "StackStatus": "CREATE_COMPLETE",
+            "DisableRollback": false,
+            "NotificationARNs": [],
+            "Capabilities": [
+                "CAPABILITY_IAM"
+            ],
+            "Tags": [],
+            "EnableTerminationProtection": false,
+            "DriftInformation": {
+                "StackDriftStatus": "NOT_CHECKED"
+            },
+            "LastOperations": [
+                {
+                    "OperationType": "CREATE_STACK",
+                    "OperationId": "cb81fcfb-504b-4f8b-bff7-e3df45a7d1ea"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+{
+  "test": "D5",
+  "pass": true,
+  "checks": {
+    "source_bucket": "sa-live-d5-src-029037611564-0304014445",
+    "log_bucket": "sa-live-d5-log-029037611564-0304014445",
+    "target_bucket_after_apply": "sa-live-d5-log-029037611564-0304014445",
+    "target_bucket_is_separate_log_bucket": true
+  },
+  "notes": []
+}

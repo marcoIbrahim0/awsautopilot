@@ -1,0 +1,3 @@
+aws cloudtrail delete-trail --name security-autopilot-trail --region eu-north-1
+aws cloudtrail describe-trails --trail-name-list security-autopilot-trail --region eu-north-1
+aws s3 rb s3://<bucket> --force (for c1..c4)

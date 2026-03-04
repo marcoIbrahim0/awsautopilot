@@ -84,6 +84,12 @@ ACTIVE_RUN_DUPLICATE_STATUSES = (
 )
 ACTIVE_RUN_DUPLICATE_STATUS_VALUES = {status.value for status in ACTIVE_RUN_DUPLICATE_STATUSES}
 RECENT_DUPLICATE_WINDOW_SECONDS = 30
+PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES = 20
+PR_BUNDLE_RATE_LIMIT_TOTAL_PER_WINDOW = 6
+PR_BUNDLE_RATE_LIMIT_IDENTICAL_PER_WINDOW = 3
+RESEND_RATE_LIMIT_WINDOW_MINUTES = 20
+RESEND_RATE_LIMIT_MAX_PER_WINDOW = 3
+QUEUE_RESEND_ATTEMPTS_ARTIFACT_KEY = "queue_resend_attempts"
 EXECUTION_TOTAL_STEPS = 3
 EXECUTION_STATUS_PROGRESS = {
     RemediationRunExecutionStatus.queued.value: (0, 10),
@@ -162,6 +168,27 @@ def _raise_duplicate_run_conflict(existing_run: RemediationRun, *, reason: str, 
             "reason": reason,
             "existing_run_id": str(existing_run.id),
             "existing_run_status": _as_status_value(existing_run.status),
+        },
+    )
+
+
+def _raise_pr_bundle_rate_limit(
+    *,
+    reason: Literal["pr_bundle_rate_limit_total", "pr_bundle_rate_limit_identical"],
+    detail: str,
+    limit: int,
+    observed: int,
+    window_minutes: int,
+) -> NoReturn:
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={
+            "error": "PR bundle queue rate limit exceeded",
+            "reason": reason,
+            "detail": detail,
+            "limit": limit,
+            "observed": observed,
+            "window_minutes": window_minutes,
         },
     )
 
@@ -685,6 +712,39 @@ def _parse_group_action_ids_from_artifacts(artifacts: dict | None) -> list[str]:
     return action_ids
 
 
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _recent_resend_attempts(artifacts: dict[str, Any] | None, *, cutoff: datetime) -> list[str]:
+    if not isinstance(artifacts, dict):
+        return []
+    raw_attempts = artifacts.get(QUEUE_RESEND_ATTEMPTS_ARTIFACT_KEY)
+    if not isinstance(raw_attempts, list):
+        return []
+    kept: list[tuple[datetime, str]] = []
+    for raw in raw_attempts:
+        parsed = _parse_iso_datetime(raw)
+        if parsed is None or parsed < cutoff:
+            continue
+        kept.append((parsed, parsed.isoformat()))
+    kept.sort(key=lambda item: item[0])
+    return [iso for _, iso in kept]
+
+
 # ---------------------------------------------------------------------------
 # POST /remediation-runs - Create run and enqueue worker (requires auth)
 # ---------------------------------------------------------------------------
@@ -704,6 +764,7 @@ def _parse_group_action_ids_from_artifacts(artifacts: dict | None) -> list[str]:
         401: {"description": "Not authenticated"},
         404: {"description": "Action not found"},
         409: {"description": "Duplicate pending run for same action"},
+        429: {"description": "PR bundle queue rate limit exceeded"},
         503: {"description": "Queue unavailable or SQS send failed"},
     },
 )
@@ -741,7 +802,7 @@ async def create_remediation_run(
         )
 
     result = await db.execute(
-        select(Action).where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
+        select(Action).where(Action.id == action_uuid, Action.tenant_id == tenant_uuid).with_for_update()
     )
     action = result.scalar_one_or_none()
     if not action:
@@ -1060,7 +1121,10 @@ async def create_remediation_run(
                 probe_detail,
             )
 
-    recent_cutoff = datetime.now(timezone.utc) - timedelta(seconds=RECENT_DUPLICATE_WINDOW_SECONDS)
+    now_utc = datetime.now(timezone.utc)
+    recent_cutoff = now_utc - timedelta(seconds=RECENT_DUPLICATE_WINDOW_SECONDS)
+    pr_bundle_window_cutoff = now_utc - timedelta(minutes=PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES)
+    duplicate_scan_cutoff = pr_bundle_window_cutoff if body.mode == "pr_only" else recent_cutoff
     duplicate_candidate_result = await db.execute(
         select(RemediationRun)
         .where(
@@ -1068,7 +1132,7 @@ async def create_remediation_run(
             RemediationRun.action_id == action_uuid,
             (
                 RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES)
-                | (RemediationRun.created_at >= recent_cutoff)
+                | (RemediationRun.created_at >= duplicate_scan_cutoff)
             ),
         )
         .order_by(
@@ -1078,39 +1142,108 @@ async def create_remediation_run(
             ),
             RemediationRun.created_at.desc(),
         )
-        .limit(1)
     )
-    duplicate_candidate = duplicate_candidate_result.scalar_one_or_none()
-    if duplicate_candidate is not None:
-        existing_status = _as_status_value(duplicate_candidate.status)
-        if existing_status in ACTIVE_RUN_DUPLICATE_STATUS_VALUES:
+    duplicate_candidates = duplicate_candidate_result.scalars().all()
+    active_duplicate = next(
+        (
+            candidate
+            for candidate in duplicate_candidates
+            if _as_status_value(candidate.status) in ACTIVE_RUN_DUPLICATE_STATUS_VALUES
+        ),
+        None,
+    )
+    if active_duplicate is not None:
+        emit_validation_failure(
+            logger,
+            reason="duplicate_active_run",
+            action_type=action.action_type,
+            strategy_id=selected_strategy_id,
+            mode=body.mode,
+        )
+        _raise_duplicate_run_conflict(
+            active_duplicate,
+            reason="duplicate_active_run",
+            detail=(
+                "An active remediation run already exists for this action. "
+                "Wait for it to complete or use the existing run."
+            ),
+        )
+
+    if body.mode == "pr_only":
+        window_runs = [
+            candidate
+            for candidate in duplicate_candidates
+            if _as_mode_value(candidate.mode) == RemediationRunMode.pr_only.value
+            and candidate.created_at is not None
+            and candidate.created_at >= pr_bundle_window_cutoff
+        ]
+        total_count = len(window_runs)
+        if total_count >= PR_BUNDLE_RATE_LIMIT_TOTAL_PER_WINDOW:
             emit_validation_failure(
                 logger,
-                reason="duplicate_active_run",
+                reason="pr_bundle_rate_limit_total",
                 action_type=action.action_type,
                 strategy_id=selected_strategy_id,
                 mode=body.mode,
             )
-            _raise_duplicate_run_conflict(
-                duplicate_candidate,
-                reason="duplicate_active_run",
+            _raise_pr_bundle_rate_limit(
+                reason="pr_bundle_rate_limit_total",
                 detail=(
-                    "An active remediation run already exists for this action. "
-                    "Wait for it to complete or use the existing run."
+                    "Too many PR bundles were queued for this action recently. "
+                    "Try again after the rate-limit window resets."
                 ),
+                limit=PR_BUNDLE_RATE_LIMIT_TOTAL_PER_WINDOW,
+                observed=total_count,
+                window_minutes=PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES,
             )
 
-        if (
-            duplicate_candidate.created_at is not None
-            and duplicate_candidate.created_at >= recent_cutoff
-            and _run_matches_request_signature(
-                duplicate_candidate,
+        identical_count = sum(
+            1
+            for candidate in window_runs
+            if _run_matches_request_signature(
+                candidate,
                 mode=body.mode,
                 strategy_id=selected_strategy_id,
                 strategy_inputs=selected_strategy_inputs,
                 pr_bundle_variant=normalized_variant,
             )
-        ):
+        )
+        if identical_count >= PR_BUNDLE_RATE_LIMIT_IDENTICAL_PER_WINDOW:
+            emit_validation_failure(
+                logger,
+                reason="pr_bundle_rate_limit_identical",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            _raise_pr_bundle_rate_limit(
+                reason="pr_bundle_rate_limit_identical",
+                detail=(
+                    "This PR bundle configuration hit the queue submission limit for this action. "
+                    "Try a different configuration or wait for the window to reset."
+                ),
+                limit=PR_BUNDLE_RATE_LIMIT_IDENTICAL_PER_WINDOW,
+                observed=identical_count,
+                window_minutes=PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES,
+            )
+    else:
+        recent_identical = next(
+            (
+                candidate
+                for candidate in duplicate_candidates
+                if candidate.created_at is not None
+                and candidate.created_at >= recent_cutoff
+                and _run_matches_request_signature(
+                    candidate,
+                    mode=body.mode,
+                    strategy_id=selected_strategy_id,
+                    strategy_inputs=selected_strategy_inputs,
+                    pr_bundle_variant=normalized_variant,
+                )
+            ),
+            None,
+        )
+        if recent_identical is not None:
             emit_validation_failure(
                 logger,
                 reason="duplicate_recent_request",
@@ -1119,7 +1252,7 @@ async def create_remediation_run(
                 mode=body.mode,
             )
             _raise_duplicate_run_conflict(
-                duplicate_candidate,
+                recent_identical,
                 reason="duplicate_recent_request",
                 detail=(
                     "An identical remediation run was created recently for this action. "
@@ -2414,6 +2547,7 @@ async def execute_pr_bundle_plan(
         select(RemediationRun)
         .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
         .options(selectinload(RemediationRun.action))
+        .with_for_update()
     )
     run = run_result.scalar_one_or_none()
     if run is None:
@@ -2538,6 +2672,7 @@ async def approve_apply_pr_bundle(
         select(RemediationRun)
         .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
         .options(selectinload(RemediationRun.action))
+        .with_for_update()
     )
     run = run_result.scalar_one_or_none()
     if run is None:
@@ -2697,6 +2832,7 @@ class ResendRemediationRunResponse(BaseModel):
     responses={
         400: {"description": "Run is not pending"},
         404: {"description": "Remediation run not found"},
+        429: {"description": "Resend rate limit exceeded"},
         503: {"description": "Queue unavailable"},
     },
 )
@@ -2737,7 +2873,7 @@ async def resend_remediation_run(
         select(RemediationRun).where(
             RemediationRun.id == run_uuid,
             RemediationRun.tenant_id == tenant_uuid,
-        )
+        ).with_for_update()
     )
     run = result.scalar_one_or_none()
     if not run:
@@ -2755,7 +2891,35 @@ async def resend_remediation_run(
             },
         )
 
-    now = datetime.now(timezone.utc).isoformat()
+    now_dt = datetime.now(timezone.utc)
+    resend_cutoff = now_dt - timedelta(minutes=RESEND_RATE_LIMIT_WINDOW_MINUTES)
+    recent_resend_attempts = _recent_resend_attempts(
+        run.artifacts if isinstance(run.artifacts, dict) else None,
+        cutoff=resend_cutoff,
+    )
+    if len(recent_resend_attempts) >= RESEND_RATE_LIMIT_MAX_PER_WINDOW:
+        oldest_attempt = _parse_iso_datetime(recent_resend_attempts[0])
+        retry_after_seconds = None
+        if oldest_attempt is not None:
+            retry_after_seconds = max(
+                1,
+                int((oldest_attempt + timedelta(minutes=RESEND_RATE_LIMIT_WINDOW_MINUTES) - now_dt).total_seconds()),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "Resend rate limit exceeded",
+                "detail": (
+                    f"No more than {RESEND_RATE_LIMIT_MAX_PER_WINDOW} resend attempts are allowed "
+                    f"within {RESEND_RATE_LIMIT_WINDOW_MINUTES} minutes for the same run."
+                ),
+                "limit": RESEND_RATE_LIMIT_MAX_PER_WINDOW,
+                "window_minutes": RESEND_RATE_LIMIT_WINDOW_MINUTES,
+                "retry_after_seconds": retry_after_seconds,
+            },
+        )
+
+    now = now_dt.isoformat()
     variant: str | None = None
     strategy_id: str | None = None
     strategy_inputs: dict[str, Any] | None = None
@@ -2803,6 +2967,12 @@ async def resend_remediation_run(
                 "detail": "Could not re-send job. Please try again later.",
             },
         ) from e
+
+    updated_artifacts = dict(run.artifacts) if isinstance(run.artifacts, dict) else {}
+    recent_resend_attempts.append(now)
+    updated_artifacts[QUEUE_RESEND_ATTEMPTS_ARTIFACT_KEY] = recent_resend_attempts
+    run.artifacts = updated_artifacts
+    await db.commit()
 
     logger.info(
         "Re-sent remediation run to queue run_id=%s action_id=%s tenant_id=%s",

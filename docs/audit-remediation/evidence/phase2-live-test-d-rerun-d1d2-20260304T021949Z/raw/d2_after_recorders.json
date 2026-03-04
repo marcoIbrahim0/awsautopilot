@@ -1,0 +1,25 @@
+{
+    "ConfigurationRecorders": [
+        {
+            "arn": "arn:aws:config:ap-south-1:029037611564:configuration-recorder/security-autopilot-recorder/ph2wxwqei9iug0ss",
+            "name": "security-autopilot-recorder",
+            "roleARN": "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+            "recordingGroup": {
+                "allSupported": true,
+                "includeGlobalResourceTypes": true,
+                "resourceTypes": [],
+                "exclusionByResourceTypes": {
+                    "resourceTypes": []
+                },
+                "recordingStrategy": {
+                    "useOnly": "ALL_SUPPORTED_RESOURCE_TYPES"
+                }
+            },
+            "recordingMode": {
+                "recordingFrequency": "CONTINUOUS",
+                "recordingModeOverrides": []
+            },
+            "recordingScope": "PAID"
+        }
+    ]
+}

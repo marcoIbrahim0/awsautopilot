@@ -1,0 +1,27 @@
+./venv/bin/python - << 'PY'
+from types import SimpleNamespace
+import json, uuid
+from backend.services.pr_bundle import generate_pr_bundle, PRBundleGenerationError
+
+action = SimpleNamespace(
+    id=uuid.uuid4(),
+    action_type='s3_bucket_require_ssl',
+    account_id='029037611564',
+    region='eu-north-1',
+    target_id='phase2-live-c5-s35-target',
+    title='Enforce SSL for S3 bucket',
+    control_id='S3.5',
+)
+result = {'expected_error_code': 'bucket_policy_preservation_evidence_missing'}
+try:
+    bundle = generate_pr_bundle(action, 'terraform', risk_snapshot={'evidence': {'existing_bucket_policy_statement_count': 2}})
+    result['raised'] = False
+    result['actual'] = 'bundle_generated'
+    result['generated_files'] = [f['path'] for f in bundle.get('files', [])]
+except PRBundleGenerationError as exc:
+    payload = exc.as_dict()
+    result['raised'] = True
+    result['actual'] = payload.get('code')
+    result['error_payload'] = payload
+print(json.dumps(result, indent=2))
+PY

@@ -1,0 +1,5 @@
+aws cloudtrail delete-trail --name security-autopilot-trail --region eu-north-1
+aws s3 rb s3://phase2-live-c1-trail-224523z-029037611564 --force
+aws s3 rb s3://phase2-live-c2-trail-224523z-029037611564 --force
+aws s3 rb s3://phase2-live-c3-s35-224523z-029037611564 --force
+aws s3 rb s3://phase2-live-c4-s35-224523z-029037611564 --force

@@ -1,0 +1,11 @@
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_cloudformation/bundle.json
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_cloudformation/sg_restrict_public_ports.yaml
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_cloudformation/steps.json
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform/README.txt
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform/bundle.json
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform/providers.tf
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform/sg_restrict_public_ports.tf
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform/steps.json
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/s3_1_cloudformation/bundle.json
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/s3_1_cloudformation/s3_block_public_access.yaml
+docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/s3_1_cloudformation/steps.json

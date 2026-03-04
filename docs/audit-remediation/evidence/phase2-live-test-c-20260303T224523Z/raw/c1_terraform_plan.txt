@@ -1,0 +1,71 @@
+data.aws_iam_policy_document.cloudtrail_bucket_policy: Reading...
+data.aws_iam_policy_document.cloudtrail_bucket_policy: Read complete after 0s [id=2427099271]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_cloudtrail.security_autopilot will be created
+  + resource "aws_cloudtrail" "security_autopilot" {
+      + arn                           = (known after apply)
+      + enable_log_file_validation    = false
+      + enable_logging                = true
+      + home_region                   = (known after apply)
+      + id                            = (known after apply)
+      + include_global_service_events = true
+      + is_multi_region_trail         = true
+      + is_organization_trail         = false
+      + name                          = "security-autopilot-trail"
+      + region                        = "eu-north-1"
+      + s3_bucket_name                = "phase2-live-c1-trail-224523z-029037611564"
+      + sns_topic_arn                 = (known after apply)
+      + tags_all                      = (known after apply)
+    }
+
+  # aws_s3_bucket_policy.cloudtrail_delivery[0] will be created
+  + resource "aws_s3_bucket_policy" "cloudtrail_delivery" {
+      + bucket = "phase2-live-c1-trail-224523z-029037611564"
+      + id     = (known after apply)
+      + policy = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "s3:GetBucketAcl"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "cloudtrail.amazonaws.com"
+                        }
+                      + Resource  = "arn:aws:s3:::phase2-live-c1-trail-224523z-029037611564"
+                      + Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  + {
+                      + Action    = "s3:PutObject"
+                      + Condition = {
+                          + StringEquals = {
+                              + "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "cloudtrail.amazonaws.com"
+                        }
+                      + Resource  = "arn:aws:s3:::phase2-live-c1-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/*"
+                      + Sid       = "AWSCloudTrailWrite"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + region = "eu-north-1"
+    }
+
+Plan: 2 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: c1-plan.tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "c1-plan.tfplan"

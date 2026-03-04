@@ -1,0 +1,1 @@
+delete: s3://sa-live-d2r-config-029037611564-0304023013/AWSLogs/029037611564/Config/ConfigWritabilityCheckFile

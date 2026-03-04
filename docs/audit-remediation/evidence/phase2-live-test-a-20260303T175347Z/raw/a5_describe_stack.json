@@ -1,0 +1,41 @@
+{
+    "Stacks": [
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "ChangeSetId": "arn:aws:cloudformation:eu-north-1:029037611564:changeSet/awscli-cloudformation-package-deploy-1772560989/048d4e6c-0eab-461c-9c61-1dd667e0c834",
+            "Description": "Restrict SSH/RDP to allowed CIDR - Security Autopilot. Use incremental tightening to avoid outages.",
+            "Parameters": [
+                {
+                    "ParameterKey": "AllowedCidrIpv6",
+                    "ParameterValue": ""
+                },
+                {
+                    "ParameterKey": "AllowedCidr",
+                    "ParameterValue": "10.0.0.0/8"
+                },
+                {
+                    "ParameterKey": "SecurityGroupId",
+                    "ParameterValue": "sg-05781a53012300032"
+                }
+            ],
+            "CreationTime": "2026-03-03T18:03:11.279000+00:00",
+            "LastUpdatedTime": "2026-03-03T18:03:17.007000+00:00",
+            "RollbackConfiguration": {},
+            "StackStatus": "CREATE_COMPLETE",
+            "DisableRollback": false,
+            "NotificationARNs": [],
+            "Tags": [],
+            "EnableTerminationProtection": false,
+            "DriftInformation": {
+                "StackDriftStatus": "NOT_CHECKED"
+            },
+            "LastOperations": [
+                {
+                    "OperationType": "CREATE_STACK",
+                    "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866"
+                }
+            ]
+        }
+    ]
+}

@@ -32,6 +32,9 @@ PYTHONPATH=. python -m backend.workers.main
 
 # run tests
 pytest
+
+# recompute actions safely for one tenant/account (idempotent)
+PYTHONPATH=. ./venv/bin/python scripts/recompute_account_actions.py --tenant-id <TENANT_UUID> --account-id <ACCOUNT_ID> [--region <REGION>]
 ```
 
 ## Related

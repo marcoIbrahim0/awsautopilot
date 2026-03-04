@@ -1,0 +1,1 @@
+Error: creating CloudTrail Trail (security-autopilot-trail): operation error CloudTrail: CreateTrail, https response error StatusCode: 400, RequestID: c7a1cd61-4040-47ac-87d7-4151d4e10c1b, InsufficientS3BucketPolicyException: Incorrect S3 bucket policy is detected for bucket: phase2-live-c1-trail-224523z-029037611564

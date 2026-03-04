@@ -1,0 +1,7 @@
+total 8
+drwxr-xr-x    6 marcomaher  staff   192 Mar  3 19:53 .
+drwxr-xr-x  170 marcomaher  staff  5440 Mar  3 19:53 ..
+drwxr-xr-x    2 marcomaher  staff    64 Mar  3 19:53 artifacts
+drwxr-xr-x    2 marcomaher  staff    64 Mar  3 19:53 commands
+-rw-r--r--    1 marcomaher  staff   118 Mar  3 19:53 context.txt
+drwxr-xr-x    5 marcomaher  staff   160 Mar  3 19:54 raw

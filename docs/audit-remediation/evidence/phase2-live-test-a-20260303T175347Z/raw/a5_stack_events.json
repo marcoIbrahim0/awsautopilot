@@ -1,0 +1,112 @@
+{
+    "StackEvents": [
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "441f2380-172b-11f1-83d1-0afccc2c8ca7",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "phase2-live-a-ec253-20260303T175347Z",
+            "PhysicalResourceId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "ResourceType": "AWS::CloudFormation::Stack",
+            "Timestamp": "2026-03-03T18:03:21.882000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressSSH-CREATE_COMPLETE-2026-03-03T18:03:21.169Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressSSH",
+            "PhysicalResourceId": "sgr-08ac29201245fa0ca",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:21.169000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"22\",\"Description\":\"SSH from allowed CIDR - Security Autopilot\",\"ToPort\":\"22\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressRDP-CREATE_COMPLETE-2026-03-03T18:03:21.143Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressRDP",
+            "PhysicalResourceId": "sgr-071a5d12d7f050586",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:21.143000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"3389\",\"Description\":\"RDP from allowed CIDR - Security Autopilot\",\"ToPort\":\"3389\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressSSH-CREATE_IN_PROGRESS-2026-03-03T18:03:20.426Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressSSH",
+            "PhysicalResourceId": "sgr-08ac29201245fa0ca",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:20.426000+00:00",
+            "ResourceStatus": "CREATE_IN_PROGRESS",
+            "ResourceStatusReason": "Resource creation Initiated",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"22\",\"Description\":\"SSH from allowed CIDR - Security Autopilot\",\"ToPort\":\"22\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressRDP-CREATE_IN_PROGRESS-2026-03-03T18:03:20.351Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressRDP",
+            "PhysicalResourceId": "sgr-071a5d12d7f050586",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:20.351000+00:00",
+            "ResourceStatus": "CREATE_IN_PROGRESS",
+            "ResourceStatusReason": "Resource creation Initiated",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"3389\",\"Description\":\"RDP from allowed CIDR - Security Autopilot\",\"ToPort\":\"3389\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressRDP-CREATE_IN_PROGRESS-2026-03-03T18:03:19.450Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressRDP",
+            "PhysicalResourceId": "",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:19.450000+00:00",
+            "ResourceStatus": "CREATE_IN_PROGRESS",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"3389\",\"Description\":\"RDP from allowed CIDR - Security Autopilot\",\"ToPort\":\"3389\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "IngressSSH-CREATE_IN_PROGRESS-2026-03-03T18:03:19.434Z",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "IngressSSH",
+            "PhysicalResourceId": "",
+            "ResourceType": "AWS::EC2::SecurityGroupIngress",
+            "Timestamp": "2026-03-03T18:03:19.434000+00:00",
+            "ResourceStatus": "CREATE_IN_PROGRESS",
+            "ResourceProperties": "{\"CidrIp\":\"10.0.0.0/8\",\"FromPort\":\"22\",\"Description\":\"SSH from allowed CIDR - Security Autopilot\",\"ToPort\":\"22\",\"IpProtocol\":\"tcp\",\"GroupId\":\"sg-05781a53012300032\"}"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "41354a00-172b-11f1-bb77-06b1a6fd58ad",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "OperationId": "038e2f81-78da-4351-b49c-afe3dd213866",
+            "LogicalResourceId": "phase2-live-a-ec253-20260303T175347Z",
+            "PhysicalResourceId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "ResourceType": "AWS::CloudFormation::Stack",
+            "Timestamp": "2026-03-03T18:03:17.007000+00:00",
+            "ResourceStatus": "CREATE_IN_PROGRESS",
+            "ResourceStatusReason": "User Initiated"
+        },
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "EventId": "3dbec0e0-172b-11f1-8888-0e57a7c8227b",
+            "StackName": "phase2-live-a-ec253-20260303T175347Z",
+            "LogicalResourceId": "phase2-live-a-ec253-20260303T175347Z",
+            "PhysicalResourceId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-ec253-20260303T175347Z/3dbf0f00-172b-11f1-8888-0e57a7c8227b",
+            "ResourceType": "AWS::CloudFormation::Stack",
+            "Timestamp": "2026-03-03T18:03:11.279000+00:00",
+            "ResourceStatus": "REVIEW_IN_PROGRESS",
+            "ResourceStatusReason": "User Initiated"
+        }
+    ]
+}

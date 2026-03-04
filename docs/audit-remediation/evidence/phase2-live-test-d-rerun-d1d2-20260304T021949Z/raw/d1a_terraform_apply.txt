@@ -1,0 +1,184 @@
+[0m[1mnull_resource.aws_config_enablement: Creating...[0m[0m
+[0m[1mnull_resource.aws_config_enablement: Provisioning with 'local-exec'...[0m[0m
+[0m[1mnull_resource.aws_config_enablement (local-exec):[0m [0mExecuting: ["/bin/bash" "-c" "set -euo pipefail\nREGION=\"eu-central-1\"\nBUCKET=\"sa-live-d1a-miss-029037611564-0304022103\"\nROLE_ARN=\"arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\nKMS_ARN=\"\"\nCREATE_LOCAL_BUCKET=\"false\"\nOVERWRITE_RECORDING_GROUP=\"false\"\nACCOUNT_ID=\"029037611564\"\n\nif [ \"$CREATE_LOCAL_BUCKET\" = \"true\" ]; then\n  if ! aws s3api head-bucket --bucket \"$BUCKET\" --region \"$REGION\" >/dev/null 2>&1; then\n    if [ \"$REGION\" = \"us-east-1\" ]; then\n      aws s3api create-bucket --bucket \"$BUCKET\" --region \"$REGION\" >/dev/null\n    else\n      aws s3api create-bucket --bucket \"$BUCKET\" --region \"$REGION\" --create-bucket-configuration LocationConstraint=\"$REGION\" >/dev/null\n    fi\n  fi\n\n  REQUIRED_CONFIG_BUCKET_POLICY=$(cat <<JSON\n{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AWSConfigBucketPermissionsCheck\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"config.amazonaws.com\"},\"Action\":\"s3:GetBucketAcl\",\"Resource\":\"arn:aws:s3:::$BUCKET\"},{\"Sid\":\"AWSConfigBucketDelivery\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"config.amazonaws.com\"},\"Action\":\"s3:PutObject\",\"Resource\":\"arn:aws:s3:::$BUCKET/AWSLogs/$ACCOUNT_ID/Config/*\",\"Condition\":{\"StringEquals\":{\"s3:x-amz-acl\":\"bucket-owner-full-control\"}}}]}\nJSON\n)\n\n  set +e\n  EXISTING_BUCKET_POLICY_RAW=$(aws s3api get-bucket-policy --bucket \"$BUCKET\" --region \"$REGION\" --query 'Policy' --output text 2>&1)\n  EXISTING_POLICY_EXIT=$?\n  set -e\n\n  if [ $EXISTING_POLICY_EXIT -ne 0 ]; then\n    if [[ \"$EXISTING_BUCKET_POLICY_RAW\" == *\"NoSuchBucketPolicy\"* ]]; then\n      EXISTING_BUCKET_POLICY_RAW=\"\"\n    else\n      echo \"WARNING: Unable to inspect existing bucket policy for '$BUCKET'. Applying required AWS Config statements only.\" >&2\n      EXISTING_BUCKET_POLICY_RAW=\"\"\n    fi\n  elif [ \"$EXISTING_BUCKET_POLICY_RAW\" = \"None\" ] || [ \"$EXISTING_BUCKET_POLICY_RAW\" = \"null\" ]; then\n    EXISTING_BUCKET_POLICY_RAW=\"\"\n  fi\n\n  MERGED_CONFIG_BUCKET_POLICY=$(EXISTING_BUCKET_POLICY_RAW=\"$EXISTING_BUCKET_POLICY_RAW\" REQUIRED_CONFIG_BUCKET_POLICY=\"$REQUIRED_CONFIG_BUCKET_POLICY\" python3 - <<'PY'\nimport json\nimport os\n\n\ndef parse_policy(raw: str) -> dict:\n    text = (raw or \"\").strip()\n    if not text:\n        return dict(Version=\"2012-10-17\", Statement=[])\n    try:\n        data = json.loads(text)\n    except json.JSONDecodeError:\n        return dict(Version=\"2012-10-17\", Statement=[])\n    if not isinstance(data, dict):\n        return dict(Version=\"2012-10-17\", Statement=[])\n    statements = data.get(\"Statement\", [])\n    if isinstance(statements, dict):\n        statements = [statements]\n    if not isinstance(statements, list):\n        statements = []\n    data[\"Statement\"] = [statement for statement in statements if isinstance(statement, dict)]\n    data.setdefault(\"Version\", \"2012-10-17\")\n    return data\n\n\ndef statement_key(statement: dict) -> tuple[str, str]:\n    sid = statement.get(\"Sid\")\n    if isinstance(sid, str) and sid.strip():\n        return (\"sid\", sid.strip())\n    return (\"json\", json.dumps(statement, sort_keys=True, separators=(\",\", \":\")))\n\n\nexisting = parse_policy(os.environ.get(\"EXISTING_BUCKET_POLICY_RAW\", \"\"))\nrequired = parse_policy(os.environ.get(\"REQUIRED_CONFIG_BUCKET_POLICY\", \"\"))\n\nmerged_by_key: dict[tuple[str, str], dict] = dict()\nfor statement in existing.get(\"Statement\", []):\n    merged_by_key[statement_key(statement)] = statement\nfor statement in required.get(\"Statement\", []):\n    merged_by_key[statement_key(statement)] = statement\n\nmerged = dict(\n    Version=existing.get(\"Version\") or \"2012-10-17\",\n    Statement=list(merged_by_key.values()),\n)\nprint(json.dumps(merged, sort_keys=True, separators=(\",\", \":\")))\nPY\n)\n\n  aws s3api put-bucket-policy --bucket \"$BUCKET\" --region \"$REGION\" --policy \"$MERGED_CONFIG_BUCKET_POLICY\" >/dev/null\nelse\n  if ! aws s3api head-bucket --bucket \"$BUCKET\" --region \"$REGION\" >/dev/null 2>&1; then\n    echo \"ERROR: create_local_bucket=false and delivery bucket '$BUCKET' is unreachable. Provide a reachable delivery_bucket_name or set create_local_bucket=true.\" >&2\n    exit 1\n  fi\nfi\n\nRECORDER_NAME=$(aws configservice describe-configuration-recorders --region \"$REGION\" --query 'ConfigurationRecorders[0].name' --output text 2>/dev/null || true)\nRECORDER_ALL_SUPPORTED=$(aws configservice describe-configuration-recorders --region \"$REGION\" --query 'ConfigurationRecorders[0].recordingGroup.allSupported' --output text 2>/dev/null || true)\nRECORDER_EXISTS=\"true\"\nif [ -z \"$RECORDER_NAME\" ] || [ \"$RECORDER_NAME\" = \"None\" ] || [ \"$RECORDER_NAME\" = \"null\" ]; then\n  RECORDER_NAME=\"security-autopilot-recorder\"\n  RECORDER_EXISTS=\"false\"\nfi\n\nif [ \"$RECORDER_EXISTS\" = \"false\" ] || [ \"$OVERWRITE_RECORDING_GROUP\" = \"true\" ]; then\n  RECORDER_PAYLOAD=$(cat <<JSON\n{\"name\":\"$RECORDER_NAME\",\"roleARN\":\"$ROLE_ARN\",\"recordingGroup\":{\"allSupported\":true,\"includeGlobalResourceTypes\":true}}\nJSON\n)\n  aws configservice put-configuration-recorder --region \"$REGION\" --configuration-recorder \"$RECORDER_PAYLOAD\" >/dev/null\nelif [ \"$RECORDER_ALL_SUPPORTED\" = \"false\" ]; then\n  echo \"Preserving existing selective AWS Config recorder '$RECORDER_NAME' (overwrite_recording_group=false).\" >&2\nelse\n  echo \"Preserving existing AWS Config recorder '$RECORDER_NAME' recording group (overwrite_recording_group=false).\" >&2\nfi\n\nDELIVERY_NAME=$(aws configservice describe-delivery-channels --region \"$REGION\" --query 'DeliveryChannels[0].name' --output text 2>/dev/null || true)\nEXISTING_DELIVERY_BUCKET=$(aws configservice describe-delivery-channels --region \"$REGION\" --query 'DeliveryChannels[0].s3BucketName' --output text 2>/dev/null || true)\nif [ -z \"$DELIVERY_NAME\" ] || [ \"$DELIVERY_NAME\" = \"None\" ] || [ \"$DELIVERY_NAME\" = \"null\" ]; then\n  DELIVERY_NAME=\"security-autopilot-delivery-channel\"\nfi\n\nEXISTING_DELIVERY_BUCKET_STALE=\"false\"\nif [ -n \"$EXISTING_DELIVERY_BUCKET\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" != \"None\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" != \"null\" ]; then\n  if ! aws s3api head-bucket --bucket \"$EXISTING_DELIVERY_BUCKET\" --region \"$REGION\" >/dev/null 2>&1; then\n    EXISTING_DELIVERY_BUCKET_STALE=\"true\"\n  fi\nfi\n\nif [ \"$EXISTING_DELIVERY_BUCKET_STALE\" = \"true\" ] && [ \"$CREATE_LOCAL_BUCKET\" = \"false\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" = \"$BUCKET\" ]; then\n  echo \"ERROR: Existing AWS Config delivery channel '$DELIVERY_NAME' points to unreachable bucket '$EXISTING_DELIVERY_BUCKET' and create_local_bucket=false cannot repair it. Provide a reachable delivery_bucket_name or set create_local_bucket=true.\" >&2\n  exit 1\nfi\n\nif [ -n \"$EXISTING_DELIVERY_BUCKET\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" != \"None\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" != \"null\" ] && [ \"$EXISTING_DELIVERY_BUCKET\" != \"$BUCKET\" ]; then\n  if [ \"$EXISTING_DELIVERY_BUCKET_STALE\" = \"true\" ]; then\n    echo \"WARNING: Existing AWS Config delivery channel '$DELIVERY_NAME' currently targets unreachable bucket '$EXISTING_DELIVERY_BUCKET'. This bundle will redirect delivery to '$BUCKET'.\" >&2\n  else\n    echo \"WARNING: Existing AWS Config delivery channel '$DELIVERY_NAME' currently targets bucket '$EXISTING_DELIVERY_BUCKET'. This bundle will redirect delivery to '$BUCKET'.\" >&2\n  fi\nfi\n\nif [ -n \"$KMS_ARN\" ]; then\n  aws configservice put-delivery-channel --region \"$REGION\" --delivery-channel \"name=$DELIVERY_NAME,s3BucketName=$BUCKET,s3KmsKeyArn=$KMS_ARN\" >/dev/null\nelse\n  aws configservice put-delivery-channel --region \"$REGION\" --delivery-channel \"name=$DELIVERY_NAME,s3BucketName=$BUCKET\" >/dev/null\nfi\n\naws configservice start-configuration-recorder --region \"$REGION\" --configuration-recorder-name \"$RECORDER_NAME\" >/dev/null || true\n"]
+[0m[1mnull_resource.aws_config_enablement (local-exec):[0m [0mERROR: create_local_bucket=false and delivery bucket 'sa-live-d1a-miss-029037611564-0304022103' is unreachable. Provide a reachable delivery_bucket_name or set create_local_bucket=true.
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mlocal-exec provisioner error[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with null_resource.aws_config_enablement,
+[31m│[0m [0m  on aws_config_enabled.tf line 52, in resource "null_resource" "aws_config_enablement":
+[31m│[0m [0m  52:   provisioner "local-exec" [4m{[0m[0m
+[31m│[0m [0m
+[31m│[0m [0mError running command 'set -euo pipefail
+[31m│[0m [0mREGION="eu-central-1"
+[31m│[0m [0mBUCKET="sa-live-d1a-miss-029037611564-0304022103"
+[31m│[0m [0mROLE_ARN="arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+[31m│[0m [0mKMS_ARN=""
+[31m│[0m [0mCREATE_LOCAL_BUCKET="false"
+[31m│[0m [0mOVERWRITE_RECORDING_GROUP="false"
+[31m│[0m [0mACCOUNT_ID="029037611564"
+[31m│[0m [0m
+[31m│[0m [0mif [ "$CREATE_LOCAL_BUCKET" = "true" ]; then
+[31m│[0m [0m  if ! aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null 2>&1; then
+[31m│[0m [0m    if [ "$REGION" = "us-east-1" ]; then
+[31m│[0m [0m      aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null
+[31m│[0m [0m    else
+[31m│[0m [0m      aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION" >/dev/null
+[31m│[0m [0m    fi
+[31m│[0m [0m  fi
+[31m│[0m [0m
+[31m│[0m [0m  REQUIRED_CONFIG_BUCKET_POLICY=$(cat <<JSON
+[31m│[0m [0m{"Version":"2012-10-17","Statement":[{"Sid":"AWSConfigBucketPermissionsCheck","Effect":"Allow","Principal":{"Service":"config.amazonaws.com"},"Action":"s3:GetBucketAcl","Resource":"arn:aws:s3:::$BUCKET"},{"Sid":"AWSConfigBucketDelivery","Effect":"Allow","Principal":{"Service":"config.amazonaws.com"},"Action":"s3:PutObject","Resource":"arn:aws:s3:::$BUCKET/AWSLogs/$ACCOUNT_ID/Config/*","Condition":{"StringEquals":{"s3:x-amz-acl":"bucket-owner-full-control"}}}]}
+[31m│[0m [0mJSON
+[31m│[0m [0m)
+[31m│[0m [0m
+[31m│[0m [0m  set +e
+[31m│[0m [0m  EXISTING_BUCKET_POLICY_RAW=$(aws s3api get-bucket-policy --bucket "$BUCKET" --region "$REGION" --query 'Policy' --output text 2>&1)
+[31m│[0m [0m  EXISTING_POLICY_EXIT=$?
+[31m│[0m [0m  set -e
+[31m│[0m [0m
+[31m│[0m [0m  if [ $EXISTING_POLICY_EXIT -ne 0 ]; then
+[31m│[0m [0m    if [[ "$EXISTING_BUCKET_POLICY_RAW" == *"NoSuchBucketPolicy"* ]]; then
+[31m│[0m [0m      EXISTING_BUCKET_POLICY_RAW=""
+[31m│[0m [0m    else
+[31m│[0m [0m      echo "WARNING: Unable to inspect existing bucket policy for '$BUCKET'. Applying required AWS Config statements only." >&2
+[31m│[0m [0m      EXISTING_BUCKET_POLICY_RAW=""
+[31m│[0m [0m    fi
+[31m│[0m [0m  elif [ "$EXISTING_BUCKET_POLICY_RAW" = "None" ] || [ "$EXISTING_BUCKET_POLICY_RAW" = "null" ]; then
+[31m│[0m [0m    EXISTING_BUCKET_POLICY_RAW=""
+[31m│[0m [0m  fi
+[31m│[0m [0m
+[31m│[0m [0m  MERGED_CONFIG_BUCKET_POLICY=$(EXISTING_BUCKET_POLICY_RAW="$EXISTING_BUCKET_POLICY_RAW" REQUIRED_CONFIG_BUCKET_POLICY="$REQUIRED_CONFIG_BUCKET_POLICY" python3 - <<'PY'
+[31m│[0m [0mimport json
+[31m│[0m [0mimport os
+[31m│[0m [0m
+[31m│[0m [0m
+[31m│[0m [0mdef parse_policy(raw: str) -> dict:
+[31m│[0m [0m    text = (raw or "").strip()
+[31m│[0m [0m    if not text:
+[31m│[0m [0m        return dict(Version="2012-10-17", Statement=[])
+[31m│[0m [0m    try:
+[31m│[0m [0m        data = json.loads(text)
+[31m│[0m [0m    except json.JSONDecodeError:
+[31m│[0m [0m        return dict(Version="2012-10-17", Statement=[])
+[31m│[0m [0m    if not isinstance(data, dict):
+[31m│[0m [0m        return dict(Version="2012-10-17", Statement=[])
+[31m│[0m [0m    statements = data.get("Statement", [])
+[31m│[0m [0m    if isinstance(statements, dict):
+[31m│[0m [0m        statements = [statements]
+[31m│[0m [0m    if not isinstance(statements, list):
+[31m│[0m [0m        statements = []
+[31m│[0m [0m    data["Statement"] = [statement for statement in statements if isinstance(statement, dict)]
+[31m│[0m [0m    data.setdefault("Version", "2012-10-17")
+[31m│[0m [0m    return data
+[31m│[0m [0m
+[31m│[0m [0m
+[31m│[0m [0mdef statement_key(statement: dict) -> tuple[str, str]:
+[31m│[0m [0m    sid = statement.get("Sid")
+[31m│[0m [0m    if isinstance(sid, str) and sid.strip():
+[31m│[0m [0m        return ("sid", sid.strip())
+[31m│[0m [0m    return ("json", json.dumps(statement, sort_keys=True, separators=(",", ":")))
+[31m│[0m [0m
+[31m│[0m [0m
+[31m│[0m [0mexisting = parse_policy(os.environ.get("EXISTING_BUCKET_POLICY_RAW", ""))
+[31m│[0m [0mrequired = parse_policy(os.environ.get("REQUIRED_CONFIG_BUCKET_POLICY",
+[31m│[0m [0m""))
+[31m│[0m [0m
+[31m│[0m [0mmerged_by_key: dict[tuple[str, str], dict] = dict()
+[31m│[0m [0mfor statement in existing.get("Statement", []):
+[31m│[0m [0m    merged_by_key[statement_key(statement)] = statement
+[31m│[0m [0mfor statement in required.get("Statement", []):
+[31m│[0m [0m    merged_by_key[statement_key(statement)] = statement
+[31m│[0m [0m
+[31m│[0m [0mmerged = dict(
+[31m│[0m [0m    Version=existing.get("Version") or "2012-10-17",
+[31m│[0m [0m    Statement=list(merged_by_key.values()),
+[31m│[0m [0m)
+[31m│[0m [0mprint(json.dumps(merged, sort_keys=True, separators=(",", ":")))
+[31m│[0m [0mPY
+[31m│[0m [0m)
+[31m│[0m [0m
+[31m│[0m [0m  aws s3api put-bucket-policy --bucket "$BUCKET" --region "$REGION" --policy "$MERGED_CONFIG_BUCKET_POLICY" >/dev/null
+[31m│[0m [0melse
+[31m│[0m [0m  if ! aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null 2>&1; then
+[31m│[0m [0m    echo "ERROR: create_local_bucket=false and delivery bucket '$BUCKET' is unreachable. Provide a reachable delivery_bucket_name or set create_local_bucket=true." >&2
+[31m│[0m [0m    exit 1
+[31m│[0m [0m  fi
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mRECORDER_NAME=$(aws configservice describe-configuration-recorders --region
+[31m│[0m [0m"$REGION" --query 'ConfigurationRecorders[0].name' --output text
+[31m│[0m [0m2>/dev/null || true)
+[31m│[0m [0mRECORDER_ALL_SUPPORTED=$(aws configservice describe-configuration-recorders
+[31m│[0m [0m--region "$REGION" --query
+[31m│[0m [0m'ConfigurationRecorders[0].recordingGroup.allSupported' --output text
+[31m│[0m [0m2>/dev/null || true)
+[31m│[0m [0mRECORDER_EXISTS="true"
+[31m│[0m [0mif [ -z "$RECORDER_NAME" ] || [ "$RECORDER_NAME" = "None" ] || [
+[31m│[0m [0m"$RECORDER_NAME" = "null" ]; then
+[31m│[0m [0m  RECORDER_NAME="security-autopilot-recorder"
+[31m│[0m [0m  RECORDER_EXISTS="false"
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mif [ "$RECORDER_EXISTS" = "false" ] || [ "$OVERWRITE_RECORDING_GROUP" =
+[31m│[0m [0m"true" ]; then
+[31m│[0m [0m  RECORDER_PAYLOAD=$(cat <<JSON
+[31m│[0m [0m{"name":"$RECORDER_NAME","roleARN":"$ROLE_ARN","recordingGroup":{"allSupported":true,"includeGlobalResourceTypes":true}}
+[31m│[0m [0mJSON
+[31m│[0m [0m)
+[31m│[0m [0m  aws configservice put-configuration-recorder --region "$REGION" --configuration-recorder "$RECORDER_PAYLOAD" >/dev/null
+[31m│[0m [0melif [ "$RECORDER_ALL_SUPPORTED" = "false" ]; then
+[31m│[0m [0m  echo "Preserving existing selective AWS Config recorder '$RECORDER_NAME' (overwrite_recording_group=false)." >&2
+[31m│[0m [0melse
+[31m│[0m [0m  echo "Preserving existing AWS Config recorder '$RECORDER_NAME' recording group (overwrite_recording_group=false)." >&2
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mDELIVERY_NAME=$(aws configservice describe-delivery-channels --region
+[31m│[0m [0m"$REGION" --query 'DeliveryChannels[0].name' --output text 2>/dev/null ||
+[31m│[0m [0mtrue)
+[31m│[0m [0mEXISTING_DELIVERY_BUCKET=$(aws configservice describe-delivery-channels
+[31m│[0m [0m--region "$REGION" --query 'DeliveryChannels[0].s3BucketName' --output text
+[31m│[0m [0m2>/dev/null || true)
+[31m│[0m [0mif [ -z "$DELIVERY_NAME" ] || [ "$DELIVERY_NAME" = "None" ] || [
+[31m│[0m [0m"$DELIVERY_NAME" = "null" ]; then
+[31m│[0m [0m  DELIVERY_NAME="security-autopilot-delivery-channel"
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mEXISTING_DELIVERY_BUCKET_STALE="false"
+[31m│[0m [0mif [ -n "$EXISTING_DELIVERY_BUCKET" ] && [ "$EXISTING_DELIVERY_BUCKET" !=
+[31m│[0m [0m"None" ] && [ "$EXISTING_DELIVERY_BUCKET" != "null" ]; then
+[31m│[0m [0m  if ! aws s3api head-bucket --bucket "$EXISTING_DELIVERY_BUCKET" --region "$REGION" >/dev/null 2>&1; then
+[31m│[0m [0m    EXISTING_DELIVERY_BUCKET_STALE="true"
+[31m│[0m [0m  fi
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mif [ "$EXISTING_DELIVERY_BUCKET_STALE" = "true" ] && [
+[31m│[0m [0m"$CREATE_LOCAL_BUCKET" = "false" ] && [ "$EXISTING_DELIVERY_BUCKET" =
+[31m│[0m [0m"$BUCKET" ]; then
+[31m│[0m [0m  echo "ERROR: Existing AWS Config delivery channel '$DELIVERY_NAME' points to unreachable bucket '$EXISTING_DELIVERY_BUCKET' and create_local_bucket=false cannot repair it. Provide a reachable delivery_bucket_name or set create_local_bucket=true." >&2
+[31m│[0m [0m  exit 1
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mif [ -n "$EXISTING_DELIVERY_BUCKET" ] && [ "$EXISTING_DELIVERY_BUCKET" !=
+[31m│[0m [0m"None" ] && [ "$EXISTING_DELIVERY_BUCKET" != "null" ] && [
+[31m│[0m [0m"$EXISTING_DELIVERY_BUCKET" != "$BUCKET" ]; then
+[31m│[0m [0m  if [ "$EXISTING_DELIVERY_BUCKET_STALE" = "true" ]; then
+[31m│[0m [0m    echo "WARNING: Existing AWS Config delivery channel '$DELIVERY_NAME' currently targets unreachable bucket '$EXISTING_DELIVERY_BUCKET'. This bundle will redirect delivery to '$BUCKET'." >&2
+[31m│[0m [0m  else
+[31m│[0m [0m    echo "WARNING: Existing AWS Config delivery channel '$DELIVERY_NAME' currently targets bucket '$EXISTING_DELIVERY_BUCKET'. This bundle will redirect delivery to '$BUCKET'." >&2
+[31m│[0m [0m  fi
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0mif [ -n "$KMS_ARN" ]; then
+[31m│[0m [0m  aws configservice put-delivery-channel --region "$REGION" --delivery-channel "name=$DELIVERY_NAME,s3BucketName=$BUCKET,s3KmsKeyArn=$KMS_ARN" >/dev/null
+[31m│[0m [0melse
+[31m│[0m [0m  aws configservice put-delivery-channel --region "$REGION" --delivery-channel "name=$DELIVERY_NAME,s3BucketName=$BUCKET" >/dev/null
+[31m│[0m [0mfi
+[31m│[0m [0m
+[31m│[0m [0maws configservice start-configuration-recorder --region "$REGION"
+[31m│[0m [0m--configuration-recorder-name "$RECORDER_NAME" >/dev/null || true
+[31m│[0m [0m': exit status 1. Output: ERROR: create_local_bucket=false and delivery
+[31m│[0m [0mbucket 'sa-live-d1a-miss-029037611564-0304022103' is unreachable. Provide a
+[31m│[0m [0mreachable delivery_bucket_name or set create_local_bucket=true.
+[31m│[0m [0m
+[31m╵[0m[0m

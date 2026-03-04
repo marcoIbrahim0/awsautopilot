@@ -1,0 +1,13 @@
+{
+  "expected_error_code": "bucket_policy_preservation_evidence_missing",
+  "raised": true,
+  "actual": "bucket_policy_preservation_evidence_missing",
+  "error_payload": {
+    "code": "bucket_policy_preservation_evidence_missing",
+    "detail": "Existing bucket policy statements were detected, but preservation evidence is missing. Regenerate after refreshing remediation options or provide strategy_inputs.existing_bucket_policy_json before generating this bundle.",
+    "action_type": "s3_bucket_require_ssl",
+    "format": "terraform",
+    "strategy_id": "",
+    "variant": ""
+  }
+}

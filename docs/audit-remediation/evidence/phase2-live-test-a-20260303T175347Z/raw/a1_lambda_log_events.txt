@@ -1,0 +1,17 @@
+INIT_START Runtime Version: python:3.12.mainlinev2.v3	Runtime Version ARN: arn:aws:lambda:eu-north-1::runtime:27990c3d0965bea97240f3380b8d623b692705303bbde4c31fb02fa7daa05453
+START RequestId: 39a6b096-1868-4fbc-a1db-a867e79f3904 Version: $LATEST
+Response body:
+{"Status": "FAILED", "Reason": "See the details in CloudWatch Log Stream: 2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538", "PhysicalResourceId": "S3PublicAccessBlock", "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d", "RequestId": "2987ad02-ae7b-442e-9993-6a6a4c0033e9", "LogicalResourceId": "S3AccountPublicAccessBlock", "NoEcho": false, "Data": {"Error": "An error occurred (AccessDenied) when calling the PutPublicAccessBlock operation: User: arn:aws:sts::029037611564:assumed-role/phase2-live-a-s3-20260303-S3AccountPublicAccessBloc-71qEcoF54SmC/phase2-live-a-s3-20260303-S3AccountPublicAccessBlo-lxCfY6YRI7Xf is not authorized to perform: s3:PutAccountPublicAccessBlock because no identity-based policy allows the s3:PutAccountPublicAccessBlock action"}}
+Status code: 200
+S3 Request id: KG0ZMQPVZH7N0RHV
+S3 Request id 2 / host id: WuQGZcd5e76D14RJVgWny69GV/tTTh0lAU16qAYdCrAYlelSIooNTCJjpdRkRsS44SUuho8RMVmVFTSY1JaTsYacEVg2U9P7
+END RequestId: 39a6b096-1868-4fbc-a1db-a867e79f3904
+REPORT RequestId: 39a6b096-1868-4fbc-a1db-a867e79f3904	Duration: 2550.42 ms	Billed Duration: 2836 ms	Memory Size: 128 MB	Max Memory Used: 90 MB	Init Duration: 284.84 ms
+START RequestId: 2e3284c2-72e9-410f-bfc7-2c78d0bd0015 Version: $LATEST
+Response body:
+{"Status": "SUCCESS", "Reason": "See the details in CloudWatch Log Stream: 2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538", "PhysicalResourceId": "S3PublicAccessBlock", "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d", "RequestId": "26e90e08-2be8-4183-af84-f262bf45a6e3", "LogicalResourceId": "S3AccountPublicAccessBlock", "NoEcho": false, "Data": {}}
+Status code: 200
+S3 Request id: WECQQEV4NS6Q6456
+S3 Request id 2 / host id: JrjvLGfVzy+QqnkEWZZPdFai+wo36EryEyFkim5p/HeR5/Ykw9KdHxUC+20ZQpIyZuV4HcmIocZXqiz/jzJpZZ+y9Muzb8Tp
+END RequestId: 2e3284c2-72e9-410f-bfc7-2c78d0bd0015
+REPORT RequestId: 2e3284c2-72e9-410f-bfc7-2c78d0bd0015	Duration: 36.10 ms	Billed Duration: 37 ms	Memory Size: 128 MB	Max Memory Used: 90 MB

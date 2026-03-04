@@ -1,0 +1,52 @@
+{
+  "executed_at_utc": "2026-03-03T18:10:16.914574+00:00",
+  "overall_pass": true,
+  "cases": [
+    {
+      "case": "B1",
+      "passed": true,
+      "expectation": "MFA=0 blocks iam_root_key_delete strategy selection",
+      "http_status": 400,
+      "gate_code": "iam_root_mfa_enrollment_gate",
+      "gate_status": "fail",
+      "message_excerpt": "Delete path is blocked: root MFA is not enrolled (AccountMFAEnabled=0). Enable root MFA before selecting root key delete."
+    },
+    {
+      "case": "B2",
+      "passed": true,
+      "expectation": "MFA=1 makes iam_root_key_delete selectable and create-run proceeds",
+      "options_http_status": 200,
+      "run_http_status": 201,
+      "gate_code": "iam_root_mfa_enrollment_gate",
+      "gate_status": "pass",
+      "message_excerpt": "Root MFA enrollment is active (AccountMFAEnabled=1).",
+      "account_mfa_enabled": 1,
+      "run_id": "3b0a17e7-1a44-4948-b4db-b80066260af4"
+    },
+    {
+      "case": "B3",
+      "passed": true,
+      "expectation": "execute_delete MFA=0 transitions to needs_attention with root_mfa_not_enrolled",
+      "result_state": "needs_attention",
+      "result_status": "waiting_for_user",
+      "needs_attention_reason": "root_mfa_not_enrolled",
+      "transition_id": "tx-live-test-b3:mfa_gate",
+      "delete_calls": []
+    }
+  ],
+  "artifacts": {
+    "b1_response": "b1-response.json",
+    "b2_options_response": "b2-options-response.json",
+    "b2_run_response": "b2-run-response.json",
+    "b2_account_summary": "b2-account-summary.json",
+    "b3_worker_simulation": "b3-worker-simulation.json",
+    "b2_run_cancel_response": "b2-run-cancel-response.json"
+  },
+  "notes": [
+    "No root safety controls were bypassed.",
+    "B1 used staging/test-path simulation (runtime signal MFA=0 injection) because no connected live account with AccountMFAEnabled=0 was available in tenant-linked accounts.",
+    "B2 used live runtime probe + live AWS account summary evidence with AccountMFAEnabled=1.",
+    "B3 used isolated worker simulation with AccountMFAEnabled=0 to validate fail-closed execute_delete behavior.",
+    "Post-evidence cleanup: B2 test run 3b0a17e7-1a44-4948-b4db-b80066260af4 was cancelled to avoid leaving an active duplicate run."
+  ]
+}

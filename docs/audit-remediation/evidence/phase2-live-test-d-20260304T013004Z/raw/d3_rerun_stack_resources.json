@@ -1,0 +1,40 @@
+{
+    "StackResources": [
+        {
+            "StackName": "security-autopilot-live-d3r-s311-0304014224",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3r-s311-0304014224/6bdcad80-176b-11f1-950f-0ad0f9eaf6a1",
+            "LogicalResourceId": "S3BucketLifecycleConfiguration",
+            "PhysicalResourceId": "S3BucketLifecycle",
+            "ResourceType": "Custom::S3BucketLifecycleConfiguration",
+            "Timestamp": "2026-03-04T01:43:16.800000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "security-autopilot-live-d3r-s311-0304014224",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3r-s311-0304014224/6bdcad80-176b-11f1-950f-0ad0f9eaf6a1",
+            "LogicalResourceId": "S3BucketLifecycleFunction",
+            "PhysicalResourceId": "security-autopilot-live-d-S3BucketLifecycleFunctio-CaPhOCeVFwjb",
+            "ResourceType": "AWS::Lambda::Function",
+            "Timestamp": "2026-03-04T01:43:11.146000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "security-autopilot-live-d3r-s311-0304014224",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3r-s311-0304014224/6bdcad80-176b-11f1-950f-0ad0f9eaf6a1",
+            "LogicalResourceId": "S3BucketLifecycleRole",
+            "PhysicalResourceId": "security-autopilot-live-d3r-s-S3BucketLifecycleRole-wqWIcimRROS4",
+            "ResourceType": "AWS::IAM::Role",
+            "Timestamp": "2026-03-04T01:43:02.312000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        }
+    ]
+}

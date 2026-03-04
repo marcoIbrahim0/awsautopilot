@@ -1,0 +1,5 @@
+cd /Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-c-20260303T224523Z/artifacts/c1_cloudtrail_terraform
+terraform apply -input=false -no-color -auto-approve -var trail_bucket_name=phase2-live-c1-trail-224523z-029037611564
+aws cloudtrail get-trail-status --name security-autopilot-trail --region eu-north-1
+sleep 310
+aws cloudtrail get-trail-status --name security-autopilot-trail --region eu-north-1

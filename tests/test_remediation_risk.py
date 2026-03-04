@@ -169,3 +169,37 @@ def test_s3_public_access_dependency_warns_when_probe_data_is_incomplete() -> No
 
     status_map = _code_status(snapshot)
     assert status_map["s3_public_access_dependency"] == "warn"
+
+
+def test_iam_root_delete_strategy_blocks_when_root_mfa_not_enrolled() -> None:
+    action = SimpleNamespace(action_type="iam_root_access_key_absent")
+    strategy = _fake_strategy(
+        "iam_root_key_delete",
+        action_type="iam_root_access_key_absent",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={"iam_root_account_mfa_enrolled": False},
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["iam_root_mfa_enrollment_gate"] == "fail"
+    assert snapshot["recommendation"] == "blocked"
+
+
+def test_iam_root_delete_strategy_allows_when_root_mfa_enrolled() -> None:
+    action = SimpleNamespace(action_type="iam_root_access_key_absent")
+    strategy = _fake_strategy(
+        "iam_root_key_delete",
+        action_type="iam_root_access_key_absent",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={"iam_root_account_mfa_enrolled": True},
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["iam_root_mfa_enrollment_gate"] == "pass"
+    assert snapshot["recommendation"] == "review_and_acknowledge"

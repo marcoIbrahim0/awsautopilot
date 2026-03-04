@@ -1,0 +1,40 @@
+{
+    "StackResources": [
+        {
+            "StackName": "phase2-live-a-s3-20260303T175347Z",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d",
+            "LogicalResourceId": "S3AccountPublicAccessBlock",
+            "PhysicalResourceId": "S3PublicAccessBlock",
+            "ResourceType": "Custom::S3AccountPublicAccessBlock",
+            "Timestamp": "2026-03-03T17:55:40.107000+00:00",
+            "ResourceStatus": "DELETE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "phase2-live-a-s3-20260303T175347Z",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d",
+            "LogicalResourceId": "S3AccountPublicAccessBlockFunction",
+            "PhysicalResourceId": "phase2-live-a-s3-20260303-S3AccountPublicAccessBlo-lxCfY6YRI7Xf",
+            "ResourceType": "AWS::Lambda::Function",
+            "Timestamp": "2026-03-03T17:55:44.116000+00:00",
+            "ResourceStatus": "DELETE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "phase2-live-a-s3-20260303T175347Z",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d",
+            "LogicalResourceId": "S3AccountPublicAccessBlockRole",
+            "PhysicalResourceId": "phase2-live-a-s3-20260303-S3AccountPublicAccessBloc-71qEcoF54SmC",
+            "ResourceType": "AWS::IAM::Role",
+            "Timestamp": "2026-03-03T17:55:59.355000+00:00",
+            "ResourceStatus": "DELETE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        }
+    ]
+}

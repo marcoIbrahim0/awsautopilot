@@ -4,6 +4,221 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Phase 2 Config.1 robustness patch + Live Test D1/D2 rerun (2026-03-04)](task_log.md#phase-2-config1-robustness-patch--live-test-d1d2-rerun-2026-03-04)
+  - Patched Config.1 Terraform generation to use explicit `--region` for bucket create/check and fail closed when centralized delivery bucket is unreachable/stale.
+  - Added Step 7 unit coverage for explicit-region and fail-closed centralized-delivery behavior.
+  - Re-ran Live Test D scope `D1`/`D2` with ambient region mismatch; results: `D1 PASS`, `D2 PASS`, and `D1a` fail-closed check `PASS` (`docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/`).
+- [Phase 2 Live Test D execution: Config.1 + S3.11 + S3.9 (2026-03-04)](task_log.md#phase-2-live-test-d-execution-config1--s311--s39-2026-03-04)
+  - Executed live `D1`–`D5` with evidence under `docs/audit-remediation/evidence/phase2-live-test-d-20260304T013004Z/`.
+  - Results: `D1 PASS`, `D2 PASS`, `D3 PASS`, `D4 PASS`, `D5 PASS`.
+  - Captured Config recorder/channel CLI verification, S3 lifecycle verification, S3 logging verification, and post-run cleanup artifacts.
+- [Phase 2 Task 7 Config.1 preflight recorder + delivery inspection (2026-03-04)](task_log.md#phase-2-task-7-config1-preflight-recorder--delivery-inspection-2026-03-04)
+  - Added Config.1 Terraform preflight safeguards: recorder-scope overwrite opt-in (`overwrite_recording_group=false` default), recorder-name reuse, delivery-channel bucket mismatch warning, and merge-safe local bucket-policy write path.
+  - Added Config.1 README guardrail section describing recorder/delivery preflight behavior.
+  - Updated read-role/validation permission surfaces for Config recorder and delivery describe operations (`DescribeConfigurationRecorders`, `DescribeDeliveryChannels`) with focused tests.
+- [Phase 2 Task 6b S3.5 merge and fail-closed generation (2026-03-04)](task_log.md#phase-2-task-6b-s35-merge-and-fail-closed-generation-2026-03-04)
+  - Reworked S3.5 generation to use shared policy-preservation resolver path and enforce fail-closed `bucket_policy_preservation_evidence_missing` when statement count is non-zero but policy JSON is absent.
+  - Switched S3.5 Terraform to merge via `aws_iam_policy_document` and emit `terraform.auto.tfvars.json` with preserved policy JSON when available.
+  - Switched S3.5 CloudFormation to merge policy via Lambda-backed `Custom::S3SslPolicyMerge` and added Step 7 coverage for merge, zero-policy, and fail-closed paths.
+- [Phase 2 Task 9 S3.9 self-referencing log bucket default fix (2026-03-04)](task_log.md#phase-2-task-9-s39-self-referencing-log-bucket-default-fix-2026-03-04)
+  - Updated S3.9 Terraform/CloudFormation generation so unresolved `log_bucket_name` defaults to `REPLACE_LOG_BUCKET_NAME` (not source bucket) and fails closed.
+  - Added `REPLACE_LOG_BUCKET_NAME` to blocked placeholder enforcement and explicit step guidance to never use source bucket as log destination.
+  - Added tests proving unresolved-log-bucket failure and valid separate-log-bucket override success.
+- [Phase 2 Task 8 S3.11 CF lifecycle fix (2026-03-04)](task_log.md#phase-2-task-8-s311-cf-lifecycle-fix-2026-03-04)
+  - Replaced S3.11 CloudFormation `AWS::S3::Bucket` lifecycle resource with a Lambda custom resource that calls `PutLifecycleConfiguration`.
+  - Enforced create/update apply behavior and explicit delete no-op semantics.
+  - Added Step 7 assertions for no `AWS::S3::Bucket`, Lambda/custom-resource presence, API call path, and delete no-op behavior.
+- [Phase 2 Live Test C rerun: CloudTrail.1 + S3.5 final validation (2026-03-04)](task_log.md#phase-2-live-test-c-rerun-cloudtrail1--s35-final-validation-2026-03-04)
+  - Implemented CloudTrail/S3.5 policy-preservation + fail-closed generation fixes and executed fresh Live Test C evidence run at `docs/audit-remediation/evidence/phase2-live-test-c-20260303T234636Z/`.
+  - Results: `C1 PASS`, `C2 PASS`, `C3 PASS`, `C4 PASS`, `C5 PASS`.
+  - Captured before/after bucket policy snippets and post-run cleanup verification.
+- [Phase 2 Live Test C execution: CloudTrail.1 + S3.5 policy preservation (2026-03-04)](task_log.md#phase-2-live-test-c-execution-cloudtrail1--s35-policy-preservation-2026-03-04)
+  - Executed Live Test C (`C1`–`C5`) with evidence under `docs/audit-remediation/evidence/phase2-live-test-c-20260303T224523Z/`.
+  - Results: `C1 FAIL`, `C2 FAIL`, `C3 FAIL`, `C4 PASS`, `C5 FAIL`.
+  - Captured before/after bucket policy JSON snippets (`policy-snippets.md`) and regression-risk notes (`summary.md`).
+- [Phase 2 Task 5 CloudTrail.1 required bucket policy in TF+CF (2026-03-03)](task_log.md#phase-2-task-5-cloudtrail1-required-bucket-policy-in-tfcf-2026-03-03)
+  - Added required CloudTrail bucket-policy statements for `cloudtrail.amazonaws.com`: `s3:GetBucketAcl` and `s3:PutObject` on `AWSLogs/<account>/CloudTrail/*` with `bucket-owner-full-control`.
+  - Added `create_bucket_policy` wiring (default `true`) and strategy opt-out support.
+  - Added Step 7 assertions that policy statements/resources exist by default and are removed when opt-out is selected.
+- [Phase 2 Task 6a S3.5 runtime policy capture (2026-03-03)](task_log.md#phase-2-task-6a-s35-runtime-policy-capture-2026-03-03)
+  - Implemented S3.5 runtime policy evidence capture in `collect_runtime_risk_signals()` for `existing_bucket_policy_json` and `existing_bucket_policy_statement_count`.
+  - Added explicit branch handling for `NoSuchBucketPolicy` (`count=0`) and `AccessDenied` (access path marked unavailable, non-crashing probe path).
+  - Added focused unit coverage in `tests/test_remediation_runtime_checks.py` for success, missing-policy, and access-denied branches.
+- [Phase 2 Task 4 EC2.53 CF revoke parity via Lambda custom resource (2026-03-03)](task_log.md#phase-2-task-4-ec253-cf-revoke-parity-via-lambda-custom-resource-2026-03-03)
+  - Implemented CloudFormation parity for EC2.53 with Lambda custom resource revoke flow (`ec2:RevokeSecurityGroupIngress`) for `0.0.0.0/0` and `::/0` on ports `22/3389`.
+  - Added `DependsOn: RevokePublicAdminIngress` to all restricted ingress resources so revoke executes before adds.
+  - Added/updated Step 7 assertions for Lambda/custom-resource presence, revoke logic, ordering dependency, and delete no-op behavior.
+- [Phase 2 Live Test B execution: IAM.4 MFA gate (2026-03-03)](task_log.md#phase-2-live-test-b-execution-iam4-mfa-gate-2026-03-03)
+  - Executed Live Test B (`B1`–`B3`) with evidence under `docs/audit-remediation/evidence/phase2-live-test-b-20260303T175808Z/`.
+  - Results: `B1 PASS` (hard block + explicit MFA gate fail message), `B2 PASS` (delete strategy selectable with `iam_root_mfa_enrollment_gate=pass`, run create `201`), `B3 PASS` (`execute_delete` transitions to `needs_attention` with `root_mfa_not_enrolled`).
+  - Captured explicit manual-console prerequisites and noted B1 used staging/test-path MFA=0 simulation because no tenant-linked live MFA-disabled account was available during execution.
+  - Cancelled the temporary B2 test run after evidence capture to avoid leaving a pending duplicate-run blocker.
+- [Phase 2 Live Test A execution: Tasks 1-2 remediation safety (2026-03-03)](task_log.md#phase-2-live-test-a-execution-tasks-1-2-remediation-safety-2026-03-03)
+  - Executed Live Test A (`A1`–`A5`) in test account `029037611564` (`eu-north-1`) with full artifact capture under `docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/`.
+  - Results: `A1 FAIL` (S3.1 CF deploy rollback), `A2 PASS`, `A3 PASS`, `A4 PASS`, `A5 PASS`.
+  - Blocker isolated from Lambda logs: role denied `s3:PutAccountPublicAccessBlock` during S3.1 custom-resource create path.
+- [Phase 2 Task 3 IAM.4 MFA gate for root-key delete path (2026-03-03)](task_log.md#phase-2-task-3-iam4-mfa-gate-for-root-key-delete-path-2026-03-03)
+  - Added runtime `AccountMFAEnabled` probe for `iam_root_key_delete` and converted MFA-disabled state into a hard dependency-check failure.
+  - Added worker delete-path hard stop to `needs_attention` with reason `root_mfa_not_enrolled`.
+  - Updated RemediationModal strategy surface to show explicit safety-gate blocked messaging and disabled execution when MFA gate fails.
+- [Phase 2 Tasks 1-2 focused validation pass (2026-03-03)](task_log.md#phase-2-tasks-1-2-focused-validation-pass-2026-03-03)
+  - Ran targeted post-implementation test scope for S3 and SG/CloudFormation coverage (`44 passed, 31 deselected`).
+  - Re-ran lint on touched implementation/test files (`pr_bundle.py`, `test_step7_components.py`) with clean result.
+  - Confirmed assertion-level proof for S3.1 non-no-op behavior, EC2.53 revoke opt-in gating, and EC2.53 CF additive/manual-revoke fail-closed contract.
+- [Phase 2 Task 2 EC2.53 revoke opt-in and CF fail-closed checklist (2026-03-03)](task_log.md#phase-2-task-2-ec253-revoke-opt-in-and-cf-fail-closed-checklist-2026-03-03)
+  - Added Terraform opt-in guard `remove_existing_public_rules` (default `false`) so SG public-rule revoke preflight executes only when explicitly enabled.
+  - Added CloudFormation fail-closed guidance that the template is additive only and does not revoke existing `0.0.0.0/0` or `::/0` admin rules.
+  - Added mandatory manual-revoke checklist language plus unit assertions for IMPORTANT step coverage and no revoke API calls in CF template.
+- [Phase 2 Task 1: S3.1 CloudFormation custom resource remediation (2026-03-03)](task_log.md#phase-2-task-1-s31-cloudformation-custom-resource-remediation-2026-03-03)
+  - Replaced S3.1 CloudFormation `WaitConditionHandle` no-op path with a Lambda custom resource that performs real `s3control:PutPublicAccessBlock` remediation.
+  - Enforced all four account-level public access block flags in the generated Lambda code and added delete-path no-op success handling.
+  - Updated Step 7 component tests to assert no placeholder resource, required Lambda/Custom resource presence, API call pattern, and delete success semantics.
+- [Prompt pack: Phase 2 remediation-safety Tasks 1-2 implementation prompts (2026-03-03)](task_log.md#prompt-pack-phase-2-remediation-safety-tasks-1-2-implementation-prompts-2026-03-03)
+  - Prepared ready-to-run prompts for immediate implementation of Task 1 (`S3.1` CloudFormation no-op fix) and Task 2 (`EC2.53` revoke opt-in + CF fail-closed checklist).
+  - Included explicit scope, acceptance criteria, and required unit-test expectations aligned to the Phase 2 remediation-safety plan.
+  - Added a validation prompt covering post-change checks aligned to Live Test A intent.
+- [Prompt enhancement: long-context illogical-remediation audit prompt rewrite (2026-03-03)](task_log.md#prompt-enhancement-long-context-illogical-remediation-audit-prompt-rewrite-2026-03-03)
+  - Rewrote the PM audit prompt into a stricter execution brief with explicit scope boundaries and out-of-scope handling.
+  - Added deterministic completeness checks across all mapped controls/aliases plus a required missing-gap validation section.
+  - Enforced decision-ready output contract: severity, PM impact, suggested fix, owner/priority ordering, and delta vs prior pass.
+- [Full-pass audit: all mapped actions re-reviewed for illogical fixes (2026-03-03)](task_log.md#full-pass-audit-all-mapped-actions-re-reviewed-for-illogical-fixes-2026-03-03)
+  - Re-audited every in-scope control/action path (including aliases) instead of only prior flagged controls.
+  - Confirmed previous four issues and added newly identified logic risks (`S3.1` broad-impact no-strategy direct path, `Config.1` bucket-policy overwrite risk, `S3.11` lifecycle overwrite risk).
+  - Re-confirmed unsupported-by-design controls remain out of remediation scope (`RDS.PUBLIC_ACCESS`, `RDS.ENCRYPTION`, `EKS.PUBLIC_ENDPOINT`).
+- [Follow-up audit: IAM.4 included in illogical-fix list + PM action plan (2026-03-03)](task_log.md#follow-up-audit-iam4-included-in-illogical-fix-list--pm-action-plan-2026-03-03)
+  - Re-validated IAM.4 root-key strategies and execution path behavior.
+  - Confirmed delete path exists and is gated by warning/acknowledgement, but not by hard fallback-proof preconditions.
+  - Expanded illogical-fix scope to include IAM.4 as a product logic gap.
+- [SG account-scoped finding expansion: executable EC2 SG action fan-out (2026-03-03)](task_log.md#sg-account-scoped-finding-expansion-executable-ec2-sg-action-fan-out-2026-03-03)
+  - Implemented account-scoped SG finding expansion using AWS Config NON_COMPLIANT resource lookup and SG-ID dedupe for `EC2.13/18/19/53`.
+  - Updated action computation to fan out account-scoped SG findings into SG-scoped executable actions and fail closed when SG IDs cannot be resolved.
+  - Added permission-surface updates (read-role template + validation/preflight checks), executable-only finding/group action hints, and safe recompute script path.
+- [Control-action audit: illogical remediation paths across in-scope controls (2026-03-03)](task_log.md#control-action-audit-illogical-remediation-paths-across-in-scope-controls-2026-03-03)
+  - Audited all in-scope control-to-action mappings plus alias controls and unsupported-control decisions.
+  - Identified illogical remediation paths in `EC2.53` family, `S3.1` CloudFormation flow, `S3.5` policy replacement behavior, and `S3.9` defaults.
+  - Confirmed strategy/risk-ack coverage is still inconsistent for several high-impact legacy action types.
+- [UI wording polish: removed remaining test-like customer phrasing (2026-03-03)](task_log.md#ui-wording-polish-removed-remaining-test-like-customer-phrasing-2026-03-03)
+  - Reworded onboarding control-plane guidance from `synthetic/test` terminology to `verification` terminology without behavior changes.
+  - Reworded Settings helper card from `How to test` phrasing and updated rule description token text (`autopilot-cp-test` -> `autopilot-cp-verify`).
+  - Removed Tenant ID `development` wording and replaced `Coming Soon` badge text with `Not Available Yet`.
+- [Findings deep-link fix: Top Risks buttons now apply URL filters (2026-03-03)](task_log.md#findings-deep-link-fix-top-risks-buttons-now-apply-url-filters-2026-03-03)
+  - Added Findings-page URL filter hydration for `severity`, `status`, `source`, `account_id`, `region`, `control_id`, and `resource_id`.
+  - Fixed Top Risks deep links so `Resolved Findings`, `Critical Findings`, and `View All High-Priority Findings` now apply real filters after redirect.
+  - Confirmed typecheck and targeted lint pass (with one pre-existing unused-import warning in findings page).
+- [Queue hardening: PR-bundle submission rate limits + SaaS run/apply UI disabled (2026-03-03)](task_log.md#queue-hardening-pr-bundle-submission-rate-limits--saas-runapply-ui-disabled-2026-03-03)
+  - Added rolling-window guardrails for PR-bundle queue submissions: max `6` per action and max `3` per identical bundle config within `20` minutes.
+  - Added resend throttle for stale pending runs: max `3` resend attempts per run within `20` minutes with structured `429` response.
+  - Disabled interactive Run on SaaS / Approve & Apply controls in single-run and bulk UI surfaces.
+- [UI copy follow-up audit: remaining test-like wording after cleanup (2026-03-03)](task_log.md#ui-copy-follow-up-audit-remaining-test-like-wording-after-cleanup-2026-03-03)
+  - Confirmed previously removed stale/placeholder/debug copy remains absent from frontend and auth message surfaces.
+  - Found remaining user-visible test-like wording in control-plane verification guidance (`How to test (example event)`, `Manual fallback test event`, `synthetic` messaging).
+  - Marked these as intentional operational guidance and flagged optional rewording for customer-facing polish.
+- [Top Risks CTA audit: inert findings-filter links (2026-03-03)](task_log.md#top-risks-cta-audit-inert-findings-filter-links-2026-03-03)
+  - Verified `Resolved Findings` on Top Risks links to `/findings?status=RESOLVED` but Findings does not currently hydrate filters from URL params.
+  - Confirmed the same no-op filter behavior also affects Top Risks `Critical Findings` and `View All High-Priority Findings` links.
+  - Confirmed `Refresh Findings` is not a no-op and intentionally routes to `/accounts`.
+- [Live findings action-coverage audit: current account covered vs uncovered list (2026-03-03)](task_log.md#live-findings-action-coverage-audit-current-account-covered-vs-uncovered-list-2026-03-03)
+  - Audited live account `029037611564` findings/action linkage and produced full CSV matrix of coverage decisions plus group attachments.
+  - Confirmed open in-scope coverage is `257/261` with `4` uncovered edge-case findings (`missing_security_group_id` on account-scoped SG controls).
+  - Confirmed the EC2.19 issue is the account-scoped `AwsAccount` row; SG-scoped EC2.19 rows are covered.
+- [UI copy cleanup: removed queued-run test/debug and placeholder customer text (2026-03-03)](task_log.md#ui-copy-cleanup-removed-queued-run-testdebug-and-placeholder-customer-text-2026-03-03)
+  - Removed queued-run stale/test phrasing and local worker command from remediation progress UI while keeping resend workflow.
+  - Replaced Connect AWS copy `Template version (for testing)` with `Template version`.
+  - Replaced landing placeholder content (`calendly.com/placeholder`, `[Founder name]`, `[X]`) and removed local verification debug-suffix messaging.
+- [UI copy audit: test/debug/placeholder user messages inventory (2026-03-03)](task_log.md#ui-copy-audit-testdebugplaceholder-user-messages-inventory-2026-03-03)
+  - Confirmed queued PR-bundle stale warning copy includes local-worker troubleshooting text in remediation progress UI.
+  - Identified additional user-visible test/placeholder copy in Connect Account (`Template version (for testing)`) and Landing (`calendly.com/placeholder`, `[Founder name]`, `[X] years`).
+  - Verified verification `debug_code` suffix is local-only (`settings.is_local`) and not production-exposed by default.
+- [Live cost cleanup: removed EKS + Architecture 2 resources from AWS account (2026-03-03)](task_log.md#live-cost-cleanup-removed-eks--architecture-2-resources-from-aws-account-2026-03-03)
+  - Verified AWS context (`029037611564`, `eu-north-1`) and identified 11 tagged `Architecture=architecture-2` resources before deletion.
+  - Deleted EKS cluster, RDS instance/subnet-group, CloudTrail trail, arch2 S3 buckets, arch2 IAM roles, and architecture-tagged VPC/network resources.
+  - Confirmed post-delete state is clean: tagged architecture resources `0`, no arch2 EKS/RDS/VPC/IAM roles/S3 buckets remain.
+- [Live status check: resolved vs unresolved project controls for current connected account (2026-03-03)](task_log.md#live-status-check-resolved-vs-unresolved-project-controls-for-current-connected-account-2026-03-03)
+  - Queried live `security_autopilot` DB for `account_id=029037611564` and computed project-control status using findings effective-status logic.
+  - Confirmed `Valens` tenant has active control data while a secondary test tenant connection for the same account has no project-control findings.
+  - Produced resolved/unresolved/no-findings split for the project control set (including alias-to-base control mapping).
+- [Clarification: EKS/Kubernetes controls in test architecture (2026-03-03)](task_log.md#clarification-ekskubernetes-controls-in-test-architecture-2026-03-03)
+  - Confirmed the explicit EKS/Kubernetes control is `EKS.PUBLIC_ENDPOINT` (inventory reconciliation checks EKS API endpoint exposure).
+  - Confirmed this control is currently inventory-only with explicit unsupported remediation mapping.
+  - Confirmed Architecture 2 includes a broader 11-control coverage set, but only `EKS.PUBLIC_ENDPOINT` is Kubernetes-specific.
+- [Clarification: Kubernetes usage vs test architectures (2026-03-03)](task_log.md#clarification-kubernetes-usage-vs-test-architectures-2026-03-03)
+  - Confirmed SaaS hosting/runtime options are ECS Fargate and Lambda serverless; Kubernetes is not a deployment target for the app itself.
+  - Confirmed EKS references are for customer-account inventory checks (`EKS.PUBLIC_ENDPOINT`) and appear in test/live evidence artifacts.
+  - Confirmed current proven-live posture remains serverless-first, with ECS implemented but not equivalently validated in the latest status check.
+- [Live apply unblock: SG ingress permissions + duplicate-rule idempotency (2026-03-03)](task_log.md#live-apply-unblock-sg-ingress-permissions--duplicate-rule-idempotency-2026-03-03)
+  - Diagnosed apply denial on `ec2:AuthorizeSecurityGroupIngress` and updated `SecurityAutopilotWriteRolePolicy` to include required EC2 security-group ingress actions.
+  - Confirmed next apply failed only on `InvalidPermission.Duplicate` (rules already existed), then added scoped idempotency tolerance for `sg_restrict_public_ports`.
+  - Deployed worker image `20260303T011027Z` and verified fresh apply execution `e84f93da-c685-46c7-a44d-bdc9bf886270` completed with `status=success`.
+- [Live runtime hardening: Terraform init writable env + fail-fast diagnostics (2026-03-03)](task_log.md#live-runtime-hardening-terraform-init-writable-env--fail-fast-diagnostics-2026-03-03)
+  - Diagnosed post-install `terraform init failed for .` run (`bfea019e-1551-457d-9900-9c823c3f557b`) and verified bundle itself is valid via local replay.
+  - Root cause confirmed from worker results: provider install failed with `no space left on device` in Lambda temp storage.
+  - Hardened worker execution env (`HOME`, `TF_DATA_DIR`, checkpoint disabled), removed forced plugin-cache duplication, and increased worker ephemeral storage to `2048 MB`.
+  - Preserved partial fail-fast command results and surfaced stderr tail in error summaries; deployed runtime image `20260303T010029Z` and validated new plan reaches `awaiting_approval`.
+- [Live runtime fix: Lambda worker image now bundles Terraform for SaaS executor (2026-03-03)](task_log.md#live-runtime-fix-lambda-worker-image-now-bundles-terraform-for-saas-executor-2026-03-03)
+  - Diagnosed plan/apply execution failures with `error_summary=runtime_missing_dependency` to missing Terraform binary in worker runtime image.
+  - Patched `Containerfile.lambda-worker` to install Terraform (`1.7.5`) and added regression test coverage for `FileNotFoundError -> runtime_missing_dependency`.
+  - Deployed serverless runtime with new worker image tag (`20260303T004404Z`) and verified function update to `Active`.
+- [Live frontend redeploy: restarted Next.js dev origin behind valens-dev tunnel (2026-03-03)](task_log.md#live-frontend-redeploy-restarted-nextjs-dev-origin-behind-valens-dev-tunnel-2026-03-03)
+  - Restarted local `next dev` process serving `dev.valensjewelry.com` behind active `cloudflared` tunnel.
+  - Verified listener restored on port `3000` and frontend URL returns `HTTP 200`.
+  - Recorded operational caveat that live frontend currently depends on manual dev-origin process lifecycle.
+- [Fix: hide synthetic run_fallback execution as SaaS success in web runner UI (2026-03-03)](task_log.md#fix-hide-synthetic-run_fallback-execution-as-saas-success-in-web-runner-ui-2026-03-03)
+  - Diagnosed that `/execution` fallback (`source=run_fallback`) was being rendered as real `apply · success` in UI.
+  - Updated single-run + grouped-summary frontend flows to ignore fallback as executable SaaS status.
+  - Verified with frontend typecheck and targeted lint pass.
+- [Single-run web wiring: re-enabled SaaS PR bundle runner controls (2026-03-03)](task_log.md#single-run-web-wiring-re-enabled-saas-pr-bundle-runner-controls-2026-03-03)
+  - Re-enabled existing single-run UI controls in remediation run progress (`Run on SaaS`, `Approve & Apply`) that were previously comment-disabled as `V2 DEFERRED`.
+  - Confirmed frontend uses existing execute/approve execution endpoints and live execution polling contract.
+  - Verified frontend `typecheck` and targeted `eslint` pass after re-enable.
+- [Live ops hardening: scheduler DLQ alerting wired + endpoint smoke check (2026-03-03)](task_log.md#live-ops-hardening-scheduler-dlq-alerting-wired--endpoint-smoke-check-2026-03-03)
+  - Wired reconcile scheduler alarms to SNS topic `security-autopilot-alarms` so DLQ/failure growth is no longer silent.
+  - Verified notification subscriber exists (`email` to `marcoibrahim11@outlook.com`).
+  - Executed live internal endpoint smoke call (`HTTP 200`) to confirm current API target health.
+- [Live ops cleanup: purged reconcile scheduler target DLQ backlog (2026-03-03)](task_log.md#live-ops-cleanup-purged-reconcile-scheduler-target-dlq-backlog-2026-03-03)
+  - Verified pre-purge DLQ backlog was `56` messages on `security-autopilot-reconcile-scheduler-target-dlq-eu-north-1`.
+  - Purged queue with `aws sqs purge-queue` and confirmed depth dropped to `0`.
+  - Captured caveat that purge is destructive and skipped event replay is no longer available for those messages.
+- [Live ops fix: reconcile scheduler base URL switched to api.valensjewelry.com (2026-03-03)](task_log.md#live-ops-fix-reconcile-scheduler-base-url-switched-to-apivalensjewelrycom-2026-03-03)
+  - Updated stack `security-autopilot-reconcile-scheduler` parameter `SaaSBaseUrl` from offline ngrok endpoint to `https://api.valensjewelry.com`.
+  - Verified EventBridge API Destination endpoint now targets `/api/internal/reconcile-inventory-global-all-tenants` on `api.valensjewelry.com`.
+  - Noted remaining scheduler target DLQ backlog still needs explicit redrive/replay.
+- [Re-evaluation gap diagnosis: shadow-null findings not auto-updating after manual PR apply (2026-03-03)](task_log.md#re-evaluation-gap-diagnosis-shadow-null-findings-not-auto-updating-after-manual-pr-apply-2026-03-03)
+  - Verified run `1026da29-8fea-4012-92bd-763818324496` is single-action `pr_only` bundle generation (manual local apply path, no group callback metadata).
+  - Verified periodic reconcile scheduler stack is pointing to offline ngrok URL and accumulating DLQ failures (`ERR_NGROK_3200`), preventing automatic refresh.
+  - Confirmed this combination explains persistent `shadow=null` findings until explicit reconcile/ingest is triggered.
+- [Findings status mismatch diagnosis: collapsed group shows resolved while expanded list has unresolved items (2026-03-03)](task_log.md#findings-status-mismatch-diagnosis-collapsed-group-shows-resolved-while-expanded-list-has-unresolved-items-2026-03-03)
+  - Verified live EC2.19 scope has mixed status (`AwsEc2SecurityGroup`: `16 resolved`, `18 new`) despite collapsed-card `resolved` label.
+  - Confirmed grouped API currently maps one action hint per control (latest action), which can mask unresolved findings in mixed groups.
+  - Confirmed expanded group fetch uses `control_id` only and can include out-of-scope rows (e.g., account-scoped finding).
+- [Live deployment: Lambda workers on + full-tenant promotion rollout config (2026-03-03)](task_log.md#live-deployment-lambda-workers-on--full-tenant-promotion-rollout-config-2026-03-03)
+  - Deployed serverless runtime with worker mappings re-enabled and bounded concurrency (`reserved=10`, ingest/events/inventory/export caps `10/4/4/2`).
+  - Applied promotion guardrail env vars directly to API/worker Lambdas (`promotion=true`, `shadow=false`, `min_confidence=85`, `soft_resolved=false`, pilot tenants empty).
+  - Confirmed previously stuck run `1026da29-8fea-4012-92bd-763818324496` moved from `pending` to `success` after worker re-enable.
+  - Verified `SAAS_BUNDLE_EXECUTOR_ENABLED=true`, `TENANT_RECONCILIATION_ENABLED=true`, and all worker SQS event-source mappings are enabled.
+- [PM clarification: source of truth for canonical finding status (2026-03-03)](task_log.md#pm-clarification-source-of-truth-for-canonical-finding-status-2026-03-03)
+  - Confirmed canonical status is persisted in `findings.status` and returned as `canonical_status` by findings API.
+  - Confirmed primary canonical updates come from source ingest mappings (Security Hub, Access Analyzer, Inspector).
+  - Confirmed control-plane promotion can update canonical `security_hub` statuses only when authoritative guardrails are enabled and passed.
+- [PM clarification: when findings can display `resolved` and why `SOFT_RESOLVED` appears (2026-03-03)](task_log.md#pm-clarification-when-findings-can-display-resolved-and-why-soft_resolved-appears-2026-03-03)
+  - Confirmed effective/user status prioritizes shadow `RESOLVED`, reopens to `NEW` on shadow `OPEN` over canonical `RESOLVED`, otherwise falls back to canonical status.
+  - Confirmed raw `SOFT_RESOLVED` is normalized to `RESOLVED` for effective-status display/filter logic.
+  - Confirmed `SOFT_RESOLVED` is produced on access-denied, API-error, and partial-data branches in control-plane enrichment and inventory reconciliation.
+- [Clarification: meaning of `shadow resolved` vs Security Hub verification scope (2026-03-03)](task_log.md#clarification-meaning-of-shadow-resolved-vs-security-hub-verification-scope-2026-03-03)
+  - Confirmed `shadow_status_normalized=RESOLVED` can originate from raw `RESOLVED` or raw `SOFT_RESOLVED`.
+  - Confirmed `SecurityHub.1` specifically uses `securityhub.describe_hub()` while other controls are verified through their own AWS service APIs.
+  - Captured operator caveat: use raw shadow status/reason for confidence-sensitive interpretation.
+- [Deployment status check: Lambda vs ECS implementation/testing (2026-03-03)](task_log.md#deployment-status-check-lambda-vs-ecs-implementationtesting-2026-03-03)
+  - Confirmed both deployment options are implemented in repo (CloudFormation + deploy scripts; ECS also has Terraform module).
+  - Confirmed Lambda/serverless has substantial live-run validation coverage and active runtime stack in `eu-north-1`.
+  - Confirmed ECS stack `security-autopilot-saas-ecs-dev` is currently `ROLLBACK_COMPLETE`, so ECS is implemented but not currently in equivalent proven-live state.
+- [Deployment diagnosis: worker disabled causing PR bundle runs to stay pending (2026-03-03)](task_log.md#deployment-diagnosis-worker-disabled-causing-pr-bundle-runs-to-stay-pending-2026-03-03)
+  - Verified live runtime stack currently has `EnableWorker=false` and no worker Lambda SQS event-source mappings.
+  - Confirmed provided remediation run `1026da29-8fea-4012-92bd-763818324496` is still `pending` with `started_at=null` while matching queue messages remain in ingest SQS.
+  - Isolated root cause to deploy defaults in `deploy_saas_serverless.sh` when worker flags are omitted.
+- [EC2.19 group coverage check: PR-bundle actionability and edge-case validation (2026-03-03)](task_log.md#ec219-group-coverage-check-pr-bundle-actionability-and-edge-case-validation-2026-03-03)
+  - Confirmed `EC2.19` aliases to canonical `EC2.53` with `sg_restrict_public_ports` remediation and PR-bundle support.
+  - Verified open findings with linked remediation actions surface fix/group PR paths, while resolved findings are non-actionable in list view.
+  - Documented edge case where non-SG-shaped targets can produce `missing_security_group_id` and be skipped in grouped bundle generation.
 - [Root-route behavior update: domain default now lands on /landing (2026-03-03)](task_log.md#root-route-behavior-update-domain-default-now-lands-on-landing-2026-03-03)
   - Updated root page unauthenticated redirect behavior from `/login` to `/landing`.
   - Preserved authenticated routing (`/onboarding` or `/findings`) and only changed guest default entrypoint.

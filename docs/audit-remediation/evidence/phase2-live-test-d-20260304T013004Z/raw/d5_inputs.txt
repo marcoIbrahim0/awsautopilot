@@ -1,0 +1,2 @@
+D5 source bucket: sa-live-d5-src-029037611564-0304014445
+D5 log bucket: sa-live-d5-log-029037611564-0304014445

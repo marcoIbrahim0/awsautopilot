@@ -549,6 +549,8 @@ Resources:
       Role: !GetAtt WorkerLambdaRole.Arn
       MemorySize: 1024
       Timeout: 900
+      EphemeralStorage:
+        Size: 2048
       ReservedConcurrentExecutions: !If
         - WorkerDisabled
         - 0

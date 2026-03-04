@@ -53,6 +53,7 @@ _DELETE_GATING_CLEAN_WINDOW_CODE = "delete_disable_window_not_clean"
 _DELETE_GATING_DISABLED_CODE = "delete_window_disabled"
 _DELETE_GATING_DEPENDENCY_CODE = "delete_unknown_dependencies"
 _DELETE_GATING_ACTIVE_KEYS_CODE = "delete_active_keys_present"
+_DELETE_GATING_ROOT_MFA_CODE = "root_mfa_not_enrolled"
 _ROLLBACK_ALERT_TASK_TYPE = "rollback_alert"
 _MASKED_EMPTY_KEY = "<EMPTY>"
 
@@ -315,6 +316,17 @@ class RootKeyRemediationExecutorWorker:
             )
 
         sessions = self._build_execution_sessions(run)
+        mfa_enrolled = self._is_root_mfa_enrolled(sessions.observer_session, run.region)
+        if mfa_enrolled is False:
+            return await self._mark_needs_attention(
+                db=db,
+                run=run,
+                state_machine=state_machine,
+                transition_id=f"{transition_id}:mfa_gate",
+                reason=_DELETE_GATING_ROOT_MFA_CODE,
+                actor_metadata=actor_metadata,
+            )
+
         key_states = self._list_root_key_states(sessions.mutation_session, run.region)
         active_keys = [item["access_key_id"] for item in key_states if item["status"] == "active"]
         if active_keys:
@@ -453,6 +465,20 @@ class RootKeyRemediationExecutorWorker:
             rows.append({"access_key_id": key_id, "status": normalized})
         rows.sort(key=lambda row: row["access_key_id"])
         return rows
+
+    def _is_root_mfa_enrolled(self, session_boto: Any, region: str | None) -> bool | None:
+        client = session_boto.client("iam", region_name=region or settings.AWS_REGION)
+        try:
+            summary = client.get_account_summary()
+        except Exception:
+            return None
+        summary_map = summary.get("SummaryMap") if isinstance(summary, dict) else None
+        if not isinstance(summary_map, dict):
+            return None
+        mfa_enabled = _safe_int(summary_map.get("AccountMFAEnabled"))
+        if mfa_enabled is None:
+            return None
+        return mfa_enabled == 1
 
     def _disable_root_keys(
         self,

@@ -4,12 +4,13 @@ Findings API endpoints for listing and retrieving Security Hub findings.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -29,6 +30,7 @@ from backend.services.exception_service import get_exception_state_for_response,
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/findings", tags=["findings"])
+_SG_TARGET_PATTERN = re.compile(r"\bsg-[0-9a-fA-F]{8,17}\b")
 
 def _normalize_shadow_status(status_raw: str | None) -> str:
     s = (status_raw or "").strip().upper()
@@ -39,6 +41,16 @@ def _normalize_shadow_status(status_raw: str | None) -> str:
     if s in {"UNKNOWN", ""}:
         return "UNKNOWN"
     return "UNKNOWN"
+
+
+def _is_executable_action_target(action_type: str | None, target_id: str | None, resource_id: str | None) -> bool:
+    token = str(action_type or "").strip()
+    if token != "sg_restrict_public_ports":
+        return True
+    for candidate in (target_id, resource_id):
+        if candidate and _SG_TARGET_PATTERN.search(str(candidate)):
+            return True
+    return False
 
 
 # ============================================
@@ -235,6 +247,8 @@ async def get_remediation_hints_for_findings(
             Action.status,
             Action.account_id,
             Action.region,
+            Action.target_id,
+            Action.resource_id,
         )
         .join(Action, Action.id == ActionFinding.action_id)
         .where(
@@ -251,11 +265,14 @@ async def get_remediation_hints_for_findings(
     for row in action_rows:
         finding_uuid = row[0]
         action_uuid = row[1]
+        action_type = row[2]
+        if not _is_executable_action_target(action_type, row[6], row[7]):
+            continue
         if finding_uuid in hints_by_finding:
             continue
         hints_by_finding[finding_uuid] = {
             "remediation_action_id": str(action_uuid),
-            "remediation_action_type": row[2],
+            "remediation_action_type": action_type,
             "remediation_action_status": row[3],
             "remediation_action_account_id": row[4],
             "remediation_action_region": row[5],
@@ -462,6 +479,8 @@ async def _fetch_action_hints_for_controls(
             Action.id,
             Action.action_type,
             Action.status,
+            Action.target_id,
+            Action.resource_id,
         )
         .join(ActionFinding, ActionFinding.finding_id == Finding.id)
         .join(Action, Action.id == ActionFinding.action_id)
@@ -473,7 +492,9 @@ async def _fetch_action_hints_for_controls(
         .order_by(Action.updated_at.desc().nullslast())
     )
     hints: dict[str, dict] = {}
-    for control_id, action_id, action_type, action_status in rows_result.all():
+    for control_id, action_id, action_type, action_status, target_id, resource_id in rows_result.all():
+        if not _is_executable_action_target(action_type, target_id, resource_id):
+            continue
         if control_id not in hints:
             hints[control_id] = {
                 "remediation_action_id": str(action_id),

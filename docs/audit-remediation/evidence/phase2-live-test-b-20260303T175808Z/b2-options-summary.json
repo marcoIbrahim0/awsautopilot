@@ -1,0 +1,14 @@
+{
+  "executed_at_utc": "2026-03-03T18:07:09.583786+00:00",
+  "http_status": 200,
+  "action_id": "c8201c18-5054-42ee-99c6-815ea082f2c9",
+  "tenant_id": "19b8d7c6-0100-421a-a084-c8b06d466837",
+  "strategy_found": true,
+  "mfa_gate": {
+    "code": "iam_root_mfa_enrollment_gate",
+    "status": "pass",
+    "message": "Root MFA enrollment is active (AccountMFAEnabled=1)."
+  },
+  "account_mfa_enabled": 1,
+  "passed": true
+}

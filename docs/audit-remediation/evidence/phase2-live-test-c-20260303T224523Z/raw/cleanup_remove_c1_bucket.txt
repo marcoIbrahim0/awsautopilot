@@ -1,0 +1,3 @@
+delete: s3://phase2-live-c1-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/
+delete: s3://phase2-live-c1-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/eu-north-1/2026/03/03/029037611564_CloudTrail_eu-north-1_20260303T2305Z_kNG53vJaJBALnhRj.json.gz
+remove_bucket: phase2-live-c1-trail-224523z-029037611564

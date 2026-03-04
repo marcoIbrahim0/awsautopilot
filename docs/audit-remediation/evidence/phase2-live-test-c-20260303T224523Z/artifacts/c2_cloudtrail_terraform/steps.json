@@ -1,0 +1,8 @@
+[
+  "Configure AWS provider for account 029037611564 and region eu-north-1.",
+  "Create an S3 bucket for trail logs and set trail_bucket_name in the Terraform file.",
+  "Set create_bucket_policy = false only when bucket policy statements are managed outside this bundle.",
+  "Run `terraform init` and `terraform plan`.",
+  "Run `terraform apply` to enable CloudTrail (multi-region).",
+  "Return to the action and click **Recompute actions** or trigger ingest to verify."
+]

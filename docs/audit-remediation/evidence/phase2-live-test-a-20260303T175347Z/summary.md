@@ -1,0 +1,108 @@
+# Phase 2 Live Test A Results
+- A1: FAIL
+- A2: PASS
+- A3: PASS
+- A4: PASS
+- A5: PASS
+
+## Details
+### A1
+```json
+{
+  "pass": false,
+  "stack_status": "ROLLBACK_COMPLETE",
+  "failure_summary": [
+    {
+      "Timestamp": "2026-03-03T17:55:59.822000+00:00",
+      "LogicalResourceId": "phase2-live-a-s3-20260303T175347Z",
+      "ResourceType": "AWS::CloudFormation::Stack",
+      "ResourceStatus": "ROLLBACK_COMPLETE",
+      "ResourceStatusReason": ""
+    },
+    {
+      "Timestamp": "2026-03-03T17:55:36.459000+00:00",
+      "LogicalResourceId": "phase2-live-a-s3-20260303T175347Z",
+      "ResourceType": "AWS::CloudFormation::Stack",
+      "ResourceStatus": "ROLLBACK_IN_PROGRESS",
+      "ResourceStatusReason": "The following resource(s) failed to create: [S3AccountPublicAccessBlock]. Rollback requested by user."
+    },
+    {
+      "Timestamp": "2026-03-03T17:55:36.100000+00:00",
+      "LogicalResourceId": "S3AccountPublicAccessBlock",
+      "ResourceType": "Custom::S3AccountPublicAccessBlock",
+      "ResourceStatus": "CREATE_FAILED",
+      "ResourceStatusReason": "Received response status [FAILED] from custom resource. Message returned: See the details in CloudWatch Log Stream: 2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538 (RequestId: 2987ad02-ae7b-442e-9993-6a6a4c0033e9)"
+    }
+  ]
+}
+```
+### A2
+```json
+{
+  "pass": true,
+  "post_delete_describe_exit": 254,
+  "post_delete_describe_error": "An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id phase2-live-a-s3-20260303T175347Z does not exist"
+}
+```
+### A3
+```json
+{
+  "pass": true,
+  "revoke_changes": [],
+  "ingress_create_changes": [
+    {
+      "address": "aws_vpc_security_group_ingress_rule.rdp_restricted",
+      "actions": [
+        "create"
+      ]
+    },
+    {
+      "address": "aws_vpc_security_group_ingress_rule.ssh_restricted",
+      "actions": [
+        "create"
+      ]
+    }
+  ],
+  "revoke_change_count": 0,
+  "ingress_create_count": 2
+}
+```
+### A4
+```json
+{
+  "pass": true,
+  "revoke_changes": [
+    {
+      "address": "null_resource.revoke_public_admin_ingress[0]",
+      "actions": [
+        "create"
+      ]
+    }
+  ],
+  "ingress_create_changes": [
+    {
+      "address": "aws_vpc_security_group_ingress_rule.rdp_restricted",
+      "actions": [
+        "create"
+      ]
+    },
+    {
+      "address": "aws_vpc_security_group_ingress_rule.ssh_restricted",
+      "actions": [
+        "create"
+      ]
+    }
+  ],
+  "revoke_change_count": 1,
+  "ingress_create_count": 2
+}
+```
+### A5
+```json
+{
+  "pass": true,
+  "stack_status": "CREATE_COMPLETE",
+  "public_22_rule_still_present": true,
+  "manual_revoke_warning_present": true
+}
+```

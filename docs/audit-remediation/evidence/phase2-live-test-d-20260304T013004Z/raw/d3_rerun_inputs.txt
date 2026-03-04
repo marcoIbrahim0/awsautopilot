@@ -1,0 +1,2 @@
+D3R bucket: sa-live-d3r-s311-029037611564-0304014224
+D3R stack: security-autopilot-live-d3r-s311-0304014224

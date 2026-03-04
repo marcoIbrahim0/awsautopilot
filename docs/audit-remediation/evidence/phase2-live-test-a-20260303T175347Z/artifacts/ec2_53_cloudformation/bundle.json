@@ -1,0 +1,24 @@
+{
+  "format": "cloudformation",
+  "files": [
+    {
+      "path": "sg_restrict_public_ports.yaml",
+      "content": "# SG restrict public ports (22/3389) - Action: 22222222-2222-2222-2222-222222222222\n# Remediation for: Restrict public SSH and RDP\n# Account: 029037611564 | Region: eu-north-1 | Security group: sg-05781a53012300032\n# Control: EC2.53\n# IMPORTANT: review remove_existing_public_rules before applying.\n# FAIL-CLOSED: This CloudFormation template is additive only. It does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389.\n# MANDATORY manual revoke checklist: 1) identify existing 0.0.0.0/0 and ::/0 rules on ports 22/3389, 2) revoke them manually, 3) verify only approved CIDRs remain.\n\nAWSTemplateFormatVersion: \"2010-09-09\"\nDescription: \"Restrict SSH/RDP to allowed CIDR - Security Autopilot. Use incremental tightening to avoid outages.\"\nMetadata:\n  SecurityAutopilotNotes:\n    - \"Identify SG attachments and active dependencies before tightening ingress.\"\n    - \"Replace broad sources incrementally (VPN CIDR, office IP, or source SG), then test connectivity.\"\n    - \"Avoid blind auto-remediation in production; prefer restrict-over-remove.\"\n    - \"FAIL-CLOSED: This stack is additive only and does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389.\"\n    - \"MANDATORY MANUAL CHECKLIST: revoke existing 0.0.0.0/0 and ::/0 ingress on ports 22/3389 before marking remediation complete.\"\nParameters:\n  SecurityGroupId:\n    Type: AWS::EC2::SecurityGroup::Id\n    Default: \"sg-05781a53012300032\"\n    Description: Security group to add restricted ingress\n  AllowedCidr:\n    Type: String\n    Default: \"10.0.0.0/8\"\n    Description: CIDR allowed for SSH (22) and RDP (3389)\n  AllowedCidrIpv6:\n    Type: String\n    Default: \"\"\n    Description: Optional IPv6 CIDR allowed for SSH (22) and RDP (3389). Leave empty to skip IPv6 ingress.\nConditions:\n  HasAllowedIpv6:\n    Fn::Not:\n      - Fn::Equals:\n          - !Ref AllowedCidrIpv6\n          - \"\"\nResources:\n  IngressSSH:\n    Type: AWS::EC2::SecurityGroupIngress\n    Properties:\n      GroupId: !Ref SecurityGroupId\n      IpProtocol: tcp\n      FromPort: 22\n      ToPort: 22\n      CidrIp: !Ref AllowedCidr\n      Description: \"SSH from allowed CIDR - Security Autopilot\"\n  IngressRDP:\n    Type: AWS::EC2::SecurityGroupIngress\n    Properties:\n      GroupId: !Ref SecurityGroupId\n      IpProtocol: tcp\n      FromPort: 3389\n      ToPort: 3389\n      CidrIp: !Ref AllowedCidr\n      Description: \"RDP from allowed CIDR - Security Autopilot\"\n  IngressSSHIPv6:\n    Condition: HasAllowedIpv6\n    Type: AWS::EC2::SecurityGroupIngress\n    Properties:\n      GroupId: !Ref SecurityGroupId\n      IpProtocol: tcp\n      FromPort: 22\n      ToPort: 22\n      CidrIpv6: !Ref AllowedCidrIpv6\n      Description: \"SSH from allowed IPv6 CIDR - Security Autopilot\"\n  IngressRDPIPv6:\n    Condition: HasAllowedIpv6\n    Type: AWS::EC2::SecurityGroupIngress\n    Properties:\n      GroupId: !Ref SecurityGroupId\n      IpProtocol: tcp\n      FromPort: 3389\n      ToPort: 3389\n      CidrIpv6: !Ref AllowedCidrIpv6\n      Description: \"RDP from allowed IPv6 CIDR - Security Autopilot\"\n"
+    }
+  ],
+  "steps": [
+    "Configure AWS credentials for account 029037611564 and region eu-north-1.",
+    "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
+    "Review inbound rules and confirm which high-risk ports are open to 0.0.0.0/0 and/or ::/0. Public SSH/RDP and database ports are usually unnecessary.",
+    "Confirm alternative admin access first (SSM Session Manager, bastion, or VPN). Optionally review VPC Flow Logs to confirm active source IPs.",
+    "IMPORTANT: review remove_existing_public_rules before applying.",
+    "FAIL-CLOSED: CloudFormation is additive only for this action and does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389.",
+    "MANDATORY manual revoke checklist: identify existing 0.0.0.0/0 and ::/0 rules on ports 22/3389, revoke them manually, then verify only approved CIDRs remain.",
+    "Do not delete broad rules blindly. Narrow sources incrementally to VPN CIDR, office IP, or source security group.",
+    "Set Parameters SecurityGroupId and AllowedCidr (e.g. 10.0.0.0/8). Optionally set AllowedCidrIpv6 (e.g. fd00::/8).",
+    "Validate the template and create/update the stack to add restricted ingress. Keep public 80/443 only where explicitly required.",
+    "Test connectivity after each change and tighten in small steps.",
+    "Avoid blind auto-remediation in production. If automation is enabled, prefer restrict-over-remove and use dev/test first.",
+    "Return to the action and click **Recompute actions** or trigger ingest to verify."
+  ]
+}

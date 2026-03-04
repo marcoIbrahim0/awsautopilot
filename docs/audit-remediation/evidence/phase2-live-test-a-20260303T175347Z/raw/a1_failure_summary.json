@@ -1,0 +1,23 @@
+[
+  {
+    "Timestamp": "2026-03-03T17:55:59.822000+00:00",
+    "LogicalResourceId": "phase2-live-a-s3-20260303T175347Z",
+    "ResourceType": "AWS::CloudFormation::Stack",
+    "ResourceStatus": "ROLLBACK_COMPLETE",
+    "ResourceStatusReason": ""
+  },
+  {
+    "Timestamp": "2026-03-03T17:55:36.459000+00:00",
+    "LogicalResourceId": "phase2-live-a-s3-20260303T175347Z",
+    "ResourceType": "AWS::CloudFormation::Stack",
+    "ResourceStatus": "ROLLBACK_IN_PROGRESS",
+    "ResourceStatusReason": "The following resource(s) failed to create: [S3AccountPublicAccessBlock]. Rollback requested by user."
+  },
+  {
+    "Timestamp": "2026-03-03T17:55:36.100000+00:00",
+    "LogicalResourceId": "S3AccountPublicAccessBlock",
+    "ResourceType": "Custom::S3AccountPublicAccessBlock",
+    "ResourceStatus": "CREATE_FAILED",
+    "ResourceStatusReason": "Received response status [FAILED] from custom resource. Message returned: See the details in CloudWatch Log Stream: 2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538 (RequestId: 2987ad02-ae7b-442e-9993-6a6a4c0033e9)"
+  }
+]

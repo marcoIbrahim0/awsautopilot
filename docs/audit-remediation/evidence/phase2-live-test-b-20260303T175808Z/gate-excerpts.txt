@@ -1,0 +1,4 @@
+B1 API block: HTTP 400 | iam_root_mfa_enrollment_gate=fail | Delete path is blocked: root MFA is not enrolled (AccountMFAEnabled=0). Enable root MFA before selecting root key delete.
+B2 options gate: HTTP 200 | iam_root_mfa_enrollment_gate=pass | Root MFA enrollment is active (AccountMFAEnabled=1).
+B2 create run: HTTP 201 | run_id=3b0a17e7-1a44-4948-b4db-b80066260af4 | status=pending
+B3 worker transition: state=needs_attention status=waiting_for_user reason=root_mfa_not_enrolled transition_id=tx-live-test-b3:mfa_gate

@@ -1,0 +1,2 @@
+6:  "IMPORTANT: review remove_existing_public_rules before applying.",
+8:  "MANDATORY manual revoke checklist: identify existing 0.0.0.0/0 and ::/0 rules on ports 22/3389, revoke them manually, then verify only approved CIDRs remain.",

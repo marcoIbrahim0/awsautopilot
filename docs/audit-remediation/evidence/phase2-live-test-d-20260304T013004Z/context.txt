@@ -1,0 +1,4 @@
+timestamp_utc=20260304T013004Z
+evidence_dir=docs/audit-remediation/evidence/phase2-live-test-d-20260304T013004Z
+aws_account_id=029037611564
+aws_default_region=unset

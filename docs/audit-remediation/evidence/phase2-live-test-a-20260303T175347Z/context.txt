@@ -1,0 +1,4 @@
+timestamp_utc=20260303T175347Z
+pwd=/Users/marcomaher/AWS Security Autopilot
+aws_region=eu-north-1
+aws_profile=default

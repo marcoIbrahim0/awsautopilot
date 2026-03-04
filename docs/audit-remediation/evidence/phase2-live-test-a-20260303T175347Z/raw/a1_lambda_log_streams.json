@@ -1,0 +1,14 @@
+{
+    "logStreams": [
+        {
+            "logStreamName": "2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538",
+            "creationTime": 1772560535291,
+            "firstEventTimestamp": 1772560532630,
+            "lastEventTimestamp": 1772560535051,
+            "lastIngestionTime": 1772560535299,
+            "uploadSequenceToken": "49039859663845531210394513417449753984953929007604398955",
+            "arn": "arn:aws:logs:eu-north-1:029037611564:log-group:/aws/lambda/phase2-live-a-s3-20260303-S3AccountPublicAccessBlo-lxCfY6YRI7Xf:log-stream:2026/03/03/[$LATEST]8e14ebb5fb604c6cae102fa47ca4d538",
+            "storedBytes": 0
+        }
+    ]
+}

@@ -1,0 +1,331 @@
+[
+  {
+    "region": "ap-south-2",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ap-south-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "eu-south-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "eu-south-2",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "me-central-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "il-central-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ca-central-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-east-2",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "mx-central-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "eu-central-1",
+    "recorders": [
+      {
+        "arn": "arn:aws:config:eu-central-1:029037611564:configuration-recorder/default/euhtnco9hagqqebi",
+        "name": "default",
+        "roleARN": "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "channels": [
+      {
+        "name": "default",
+        "s3BucketName": "config-bucket-029037611564"
+      }
+    ],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "eu-central-2",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "us-west-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "us-west-2",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "af-south-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "eu-north-1",
+    "recorders": [
+      {
+        "arn": "arn:aws:config:eu-north-1:029037611564:configuration-recorder/default/vpv6dnl6bih3616g",
+        "name": "default",
+        "roleARN": "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": true,
+          "includeGlobalResourceTypes": true,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": []
+          },
+          "recordingStrategy": {
+            "useOnly": "ALL_SUPPORTED_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "channels": [
+      {
+        "name": "default",
+        "s3BucketName": "arch2-config-bucket-c-029037611564-eu-north-1"
+      }
+    ],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "eu-west-3",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "eu-west-2",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "eu-west-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-northeast-3",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-northeast-2",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "me-south-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ap-northeast-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "sa-east-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-east-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ca-west-1",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ap-southeast-1",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-southeast-2",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-southeast-3",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ap-southeast-4",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "us-east-1",
+    "recorders": [
+      {
+        "arn": "arn:aws:config:us-east-1:029037611564:configuration-recorder/default/n21be5m6b4yspeyp",
+        "name": "default",
+        "roleARN": "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "channels": [
+      {
+        "name": "default",
+        "s3BucketName": "config-bucket-029037611564"
+      }
+    ],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-southeast-5",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "ap-southeast-6",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  },
+  {
+    "region": "us-east-2",
+    "recorders": [],
+    "channels": [],
+    "status": "ok",
+    "error": null
+  },
+  {
+    "region": "ap-southeast-7",
+    "recorders": null,
+    "channels": null,
+    "status": "error",
+    "error": ""
+  }
+]

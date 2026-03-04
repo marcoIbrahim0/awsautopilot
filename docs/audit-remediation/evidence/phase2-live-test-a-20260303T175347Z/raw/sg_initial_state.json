@@ -1,0 +1,41 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-05781a53012300032",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-0247a0b9c5bf43132",
+            "SecurityGroupArn": "arn:aws:ec2:eu-north-1:029037611564:security-group/sg-05781a53012300032",
+            "OwnerId": "029037611564",
+            "GroupName": "phase2-live-test-a-sg-20260303T175347Z",
+            "Description": "Phase2 Live Test A SG 20260303T175347Z",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "Phase2 Live Test A public ssh",
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}

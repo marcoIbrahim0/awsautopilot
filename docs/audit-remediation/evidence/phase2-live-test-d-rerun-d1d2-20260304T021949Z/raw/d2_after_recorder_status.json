@@ -1,0 +1,12 @@
+{
+    "ConfigurationRecordersStatus": [
+        {
+            "arn": "arn:aws:config:ap-south-1:029037611564:configuration-recorder/security-autopilot-recorder/ph2wxwqei9iug0ss",
+            "name": "security-autopilot-recorder",
+            "lastStartTime": "2026-03-04T04:34:43.726000+02:00",
+            "recording": true,
+            "lastStatus": "PENDING",
+            "lastStatusChangeTime": "2026-03-04T04:34:43.726000+02:00"
+        }
+    ]
+}

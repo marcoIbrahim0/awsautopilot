@@ -1,0 +1,2 @@
+
+An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id phase2-live-a-s3-20260303T175347Z does not exist

@@ -5,12 +5,10 @@ Covers: POST create run (approval, direct_fix validation), GET remediation-previ
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import uuid
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.auth import get_current_user
@@ -74,11 +72,23 @@ def _mock_existing_run(
 
 
 def _mock_async_session(*scalar_results: object) -> MagicMock:
-    """Mock AsyncSession with execute returning results in order."""
-    result = MagicMock()
-    result.scalar_one_or_none.side_effect = list(scalar_results)
+    """Mock AsyncSession with execute returning one mocked result per call."""
+    results: list[MagicMock] = []
+    for value in scalar_results:
+        result = MagicMock()
+        if isinstance(value, list):
+            first = value[0] if value else None
+            result.scalar_one_or_none.return_value = first
+            result.scalars.return_value.first.return_value = first
+            result.scalars.return_value.all.return_value = value
+        else:
+            result.scalar_one_or_none.return_value = value
+            result.scalars.return_value.first.return_value = value
+            result.scalars.return_value.all.return_value = [] if value is None else [value]
+        result.scalar.return_value = value
+        results.append(result)
     session = MagicMock()
-    session.execute = AsyncMock(return_value=result)
+    session.execute = AsyncMock(side_effect=results)
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
@@ -374,15 +384,19 @@ def test_create_run_duplicate_active_status_returns_409_with_existing_run_id(cli
     assert session.commit.await_count == 0
 
 
-def test_create_run_recent_identical_retry_returns_409(client: TestClient) -> None:
-    """Recent identical requests are deduplicated even if prior run already completed."""
+def test_create_run_identical_pr_bundle_rate_limit_returns_429(client: TestClient) -> None:
+    """Same PR bundle config is capped at 3 queue submissions per 20-minute window."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="enable_security_hub")
     action.tenant_id = tenant.id
-    existing = _mock_existing_run(action, status=RemediationRunStatus.success)
+    existing_runs = [
+        _mock_existing_run(action, status=RemediationRunStatus.success),
+        _mock_existing_run(action, status=RemediationRunStatus.success),
+        _mock_existing_run(action, status=RemediationRunStatus.success),
+    ]
 
-    session = _mock_async_session(action, None, existing)
+    session = _mock_async_session(action, None, existing_runs)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -403,13 +417,59 @@ def test_create_run_recent_identical_retry_returns_409(client: TestClient) -> No
             app.dependency_overrides.pop(get_db, None)
             app.dependency_overrides.pop(get_current_user, None)
 
-    assert r.status_code == 409
+    assert r.status_code == 429
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
-        assert detail.get("error") == "Duplicate pending run"
-        assert detail.get("reason") == "duplicate_recent_request"
-        assert detail.get("existing_run_id") == str(existing.id)
-        assert detail.get("existing_run_status") == "success"
+        assert detail.get("error") == "PR bundle queue rate limit exceeded"
+        assert detail.get("reason") == "pr_bundle_rate_limit_identical"
+        assert detail.get("limit") == 3
+        assert detail.get("observed") == 3
+    assert session.commit.await_count == 0
+
+
+def test_create_run_total_pr_bundle_rate_limit_returns_429(client: TestClient) -> None:
+    """Total PR bundle submissions for an action are capped at 6 per 20-minute window."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing_runs = [
+        _mock_existing_run(
+            action,
+            status=RemediationRunStatus.success,
+            artifacts={"selected_strategy": f"strategy-{idx}"},
+        )
+        for idx in range(6)
+    ]
+
+    session = _mock_async_session(action, None, existing_runs)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(
+                "/api/remediation-runs",
+                json={"action_id": str(action.id), "mode": "pr_only"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 429
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "PR bundle queue rate limit exceeded"
+        assert detail.get("reason") == "pr_bundle_rate_limit_total"
+        assert detail.get("limit") == 6
+        assert detail.get("observed") == 6
     assert session.commit.await_count == 0
 
 
@@ -460,6 +520,55 @@ def test_create_run_recent_different_signature_allows_new_run(client: TestClient
     assert r.status_code == 201
     assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
+
+
+def test_resend_run_rate_limited_after_three_attempts_in_window(client: TestClient) -> None:
+    """Resend endpoint blocks the 4th resend attempt within 20 minutes for the same run."""
+    from backend.auth import get_optional_user
+
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.action_id = uuid.uuid4()
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.pending
+    now = datetime.now(timezone.utc)
+    run.artifacts = {
+        "queue_resend_attempts": [
+            (now - timedelta(minutes=1)).isoformat(),
+            (now - timedelta(minutes=2)).isoformat(),
+            (now - timedelta(minutes=3)).isoformat(),
+        ]
+    }
+
+    session = _mock_async_session(tenant, run)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.is_local = True
+        try:
+            r = client.post(f"/api/remediation-runs/{run.id}/resend")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 429
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Resend rate limit exceeded"
+        assert detail.get("limit") == 3
+        assert detail.get("window_minutes") == 20
+    assert session.commit.await_count == 0
 
 
 def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
@@ -782,6 +891,106 @@ def test_create_run_strategy_input_validation_400(client: TestClient) -> None:
     if isinstance(detail, dict):
         assert detail.get("error") == "Invalid strategy selection"
         assert "strategy_inputs.delivery_bucket is required" in str(detail.get("detail", ""))
+
+
+def test_create_run_root_delete_strategy_mfa_disabled_blocks_400(client: TestClient) -> None:
+    """IAM root key delete strategy fails closed when root MFA is not enrolled."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn=None)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(action, account)
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch(
+            "backend.routers.remediation_runs.collect_runtime_risk_signals",
+            return_value={"iam_root_account_mfa_enrolled": False},
+        ):
+            try:
+                r = client.post(
+                    "/api/remediation-runs",
+                    json={
+                        "action_id": str(action.id),
+                        "mode": "pr_only",
+                        "strategy_id": "iam_root_key_delete",
+                        "risk_acknowledged": True,
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    assert isinstance(detail, dict)
+    assert detail.get("error") == "Dependency check failed"
+    checks = detail.get("risk_snapshot", {}).get("checks", [])
+    mfa_gate = next((check for check in checks if check.get("code") == "iam_root_mfa_enrollment_gate"), None)
+    assert isinstance(mfa_gate, dict)
+    assert mfa_gate.get("status") == "fail"
+
+
+def test_create_run_root_delete_strategy_mfa_enabled_allows_201(client: TestClient) -> None:
+    """IAM root key delete strategy proceeds when MFA probe reports AccountMFAEnabled=1."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn=None)
+    session = _mock_async_session(action, account, None)
+
+    async def _refresh(run_obj: MagicMock) -> None:
+        run_obj.created_at = datetime.now(timezone.utc)
+        run_obj.updated_at = datetime.now(timezone.utc)
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-root-delete"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.routers.remediation_runs.collect_runtime_risk_signals",
+                return_value={"iam_root_account_mfa_enrolled": True},
+            ):
+                try:
+                    r = client.post(
+                        "/api/remediation-runs",
+                        json={
+                            "action_id": str(action.id),
+                            "mode": "pr_only",
+                            "strategy_id": "iam_root_key_delete",
+                            "risk_acknowledged": True,
+                        },
+                    )
+                finally:
+                    app.dependency_overrides.pop(get_db, None)
+                    app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert mock_sqs.send_message.call_count == 1
+    body = mock_sqs.send_message.call_args.kwargs.get("MessageBody", "")
+    assert '"strategy_id": "iam_root_key_delete"' in body
 
 
 def test_create_run_warn_requires_risk_ack_400(client: TestClient) -> None:

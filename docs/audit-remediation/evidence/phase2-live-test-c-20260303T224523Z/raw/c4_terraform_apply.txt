@@ -1,0 +1,4 @@
+aws_s3_bucket_policy.security_autopilot: Creating...
+aws_s3_bucket_policy.security_autopilot: Creation complete after 1s [id=phase2-live-c4-s35-224523z-029037611564]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

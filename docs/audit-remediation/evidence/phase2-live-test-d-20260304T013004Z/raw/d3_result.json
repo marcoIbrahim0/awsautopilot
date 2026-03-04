@@ -1,0 +1,14 @@
+{
+  "test": "D3",
+  "pass": true,
+  "checks": {
+    "stack_status": "CREATE_COMPLETE",
+    "has_aws_s3_bucket_resource_in_stack": false,
+    "sentinel_object_present_after_deploy": true,
+    "lifecycle_rule_count": 1,
+    "has_abort_incomplete_rule_days7": true
+  },
+  "notes": [
+    "Rerun verification uses sentinel object continuity as no-recreation proof."
+  ]
+}

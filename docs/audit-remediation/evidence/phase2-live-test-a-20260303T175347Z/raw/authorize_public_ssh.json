@@ -1,0 +1,17 @@
+{
+    "Return": true,
+    "SecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-050cbed1ae6bd5e1b",
+            "GroupId": "sg-05781a53012300032",
+            "GroupOwnerId": "029037611564",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Phase2 Live Test A public ssh",
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:029037611564:security-group-rule/sgr-050cbed1ae6bd5e1b"
+        }
+    ]
+}

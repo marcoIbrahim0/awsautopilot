@@ -1,0 +1,17 @@
+{
+    "Contents": [
+        {
+            "Key": "AWSLogs/029037611564/CloudTrail/",
+            "LastModified": "2026-03-03T23:53:12+00:00",
+            "ETag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+            "ChecksumAlgorithm": [
+                "CRC64NVME"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 0,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": "AWSLogs/029037611564/CloudTrail/"
+}

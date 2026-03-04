@@ -1,0 +1,21 @@
+account_check=aws sts get-caller-identity
+aws configservice describe-configuration-recorders --region eu-central-1
+aws configservice describe-delivery-channels --region eu-central-1
+D1a commands (fail-closed path)
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_failclosed init
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_failclosed plan -out tfplan
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_failclosed apply -auto-approve tfplan
+D1b commands (existing selective recorder path)
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_apply init
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_apply plan -out tfplan
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d1_apply apply -auto-approve tfplan
+D2 commands (fresh recorder path)
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d2_apply init
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d2_apply plan -out tfplan
+terraform -chdir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/d2_apply apply -auto-approve tfplan
+Cleanup D2 commands
+aws configservice stop-configuration-recorder --region ap-south-1 --configuration-recorder-name security-autopilot-recorder
+aws configservice delete-delivery-channel --region ap-south-1 --delivery-channel-name security-autopilot-delivery-channel
+aws configservice delete-configuration-recorder --region ap-south-1 --configuration-recorder-name security-autopilot-recorder
+aws s3 rm s3://sa-live-d2r-config-029037611564-0304023013 --recursive
+aws s3api delete-bucket --bucket sa-live-d2r-config-029037611564-0304023013 --region ap-south-1

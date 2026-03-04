@@ -17,7 +17,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import String, and_, case, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import load_only, selectinload
+from sqlalchemy.orm import selectinload
 
 from backend.auth import get_optional_user
 from backend.config import settings
@@ -63,6 +63,7 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "iam_root_key_delete",
     }
 )
 

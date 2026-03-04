@@ -1,0 +1,6 @@
+delete: s3://phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/us-east-1/2026/03/03/029037611564_CloudTrail_us-east-1_20260303T2310Z_lFZrNZM33WuUDMMm.json.gz
+delete: s3://phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/eu-central-1/2026/03/03/029037611564_CloudTrail_eu-central-1_20260303T2305Z_YLXaax3CjofBvWtW.json.gz
+delete: s3://phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/eu-north-1/2026/03/03/029037611564_CloudTrail_eu-north-1_20260303T2315Z_mVH7tKgbWdVeTTPG.json.gz
+delete: s3://phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/eu-north-1/2026/03/03/029037611564_CloudTrail_eu-north-1_20260303T2310Z_xjmSBaCKvgetlT0A.json.gz
+delete: s3://phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/
+remove_bucket: phase2-live-c2-trail-224523z-029037611564

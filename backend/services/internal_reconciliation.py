@@ -79,6 +79,45 @@ async def authoritative_permissions_precheck(
             if is_access_denied_code(extract_error_code(exc)):
                 missing.append("ec2:DescribeSecurityGroups")
 
+        config_client = session.client("config", region_name=region)
+        config_rule_names: list[str] = []
+        try:
+            config_client.describe_configuration_recorders()
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("config:DescribeConfigurationRecorders")
+
+        try:
+            config_client.describe_delivery_channels()
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("config:DescribeDeliveryChannels")
+
+        try:
+            response = config_client.describe_config_rules()
+            config_rule_names = [str(rule.get("ConfigRuleName") or "").strip() for rule in (response.get("ConfigRules") or []) if rule]
+            config_rule_names = [name for name in config_rule_names if name]
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("config:DescribeConfigRules")
+
+        try:
+            config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+        except ClientError as exc:
+            if is_access_denied_code(extract_error_code(exc)):
+                missing.append("config:DescribeComplianceByConfigRules")
+
+        if config_rule_names:
+            try:
+                config_client.get_compliance_details_by_config_rule(
+                    ConfigRuleName=config_rule_names[0],
+                    ComplianceTypes=["NON_COMPLIANT"],
+                    Limit=1,
+                )
+            except ClientError as exc:
+                if is_access_denied_code(extract_error_code(exc)):
+                    missing.append("config:GetComplianceDetailsByConfigRule")
+
         buckets: list[dict] = []
         try:
             buckets = session.client("s3", region_name=region).list_buckets().get("Buckets") or []

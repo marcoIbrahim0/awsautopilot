@@ -13,7 +13,8 @@ from backend.models.base import Base
 class ActionFinding(Base):
     """
     Association table: many-to-many between Action and Finding.
-    One action can group multiple findings; one finding maps to one action.
+    One action can group multiple findings; one finding can map to one or more
+    actions when account-scoped findings are expanded into resource targets.
     Supports drill-down from action to source findings and evidence.
     """
 

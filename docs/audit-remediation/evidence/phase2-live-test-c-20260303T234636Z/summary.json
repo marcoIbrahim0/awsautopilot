@@ -1,0 +1,74 @@
+{
+  "timestamp": "20260303T234636Z",
+  "results": {
+    "C1": "PASS",
+    "C2": "PASS",
+    "C3": "PASS",
+    "C4": "PASS",
+    "C5": "PASS"
+  },
+  "checks": {
+    "c1_status_after_5m": {
+      "IsLogging": true,
+      "StartLoggingTime": "2026-03-04T01:53:12.163000+02:00",
+      "LatestDeliveryAttemptTime": "",
+      "LatestNotificationAttemptTime": "",
+      "LatestNotificationAttemptSucceeded": "",
+      "LatestDeliveryAttemptSucceeded": "",
+      "TimeLoggingStarted": "2026-03-03T23:53:12Z",
+      "TimeLoggingStopped": ""
+    },
+    "c2_status_after_5m": {
+      "IsLogging": true,
+      "LatestDeliveryTime": "2026-03-04T02:13:11.299000+02:00",
+      "StartLoggingTime": "2026-03-04T02:08:44.342000+02:00",
+      "LatestDeliveryAttemptTime": "2026-03-04T00:13:11Z",
+      "LatestNotificationAttemptTime": "",
+      "LatestNotificationAttemptSucceeded": "",
+      "LatestDeliveryAttemptSucceeded": "2026-03-04T00:13:11Z",
+      "TimeLoggingStarted": "2026-03-04T00:08:44Z",
+      "TimeLoggingStopped": ""
+    },
+    "c2_before_sids": [
+      "C2PreExistingDenyDeleteBucket"
+    ],
+    "c2_after_sids": [
+      "C2PreExistingDenyDeleteBucket",
+      "AWSCloudTrailAclCheck",
+      "AWSCloudTrailWrite"
+    ],
+    "c3_before_sids": [
+      "C3PreExistingDenyDeleteBucket"
+    ],
+    "c3_after_sids": [
+      "C3PreExistingDenyDeleteBucket",
+      "DenyInsecureTransport"
+    ],
+    "c4_after_sids": [
+      "DenyInsecureTransport"
+    ],
+    "c5_probe": {
+      "expected_error_code": "bucket_policy_preservation_evidence_missing",
+      "raised": true,
+      "actual": "bucket_policy_preservation_evidence_missing",
+      "error_payload": {
+        "code": "bucket_policy_preservation_evidence_missing",
+        "detail": "Existing bucket policy statements were detected, but preservation evidence is missing. Regenerate after refreshing remediation options or provide strategy_inputs.existing_bucket_policy_json before generating this bundle.",
+        "action_type": "s3_bucket_require_ssl",
+        "format": "terraform",
+        "strategy_id": "",
+        "variant": ""
+      }
+    }
+  },
+  "regression_risk_notes": [
+    "CloudTrail and S3.5 bundles now merge existing policies via local AWS CLI + Python in a null_resource local-exec; regression risk concentrates around local execution environment availability (python3/aws cli) and runner IAM permissions for get/put-bucket-policy.",
+    "Trail name remains static (security-autopilot-trail), so repeated tests must continue to destroy/import between isolated runs to avoid cross-run collisions.",
+    "Terraform provider installation can stall in restricted networks; this run used plugin-dir from previously initialized providers to ensure deterministic execution."
+  ],
+  "cleanup": {
+    "trail_delete_exitcode_file": "raw/cleanup_delete_trail.exitcode",
+    "trail_post_delete_describe_file": "raw/cleanup_describe_trail_after_delete.json",
+    "bucket_absence_verification_file": "raw/cleanup_bucket_head_checks.txt"
+  }
+}

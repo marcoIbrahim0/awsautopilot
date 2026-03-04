@@ -1,0 +1,1 @@
+Error: creating CloudTrail Trail (security-autopilot-trail): operation error CloudTrail: CreateTrail, https response error StatusCode: 400, RequestID: f8487bb3-b199-4d8a-8b1c-6ac41e27ca41, TrailAlreadyExistsException: Trail security-autopilot-trail already exists for customer: 029037611564

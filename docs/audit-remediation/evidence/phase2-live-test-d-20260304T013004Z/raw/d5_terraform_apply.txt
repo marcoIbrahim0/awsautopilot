@@ -1,0 +1,4 @@
+aws_s3_bucket_logging.security_autopilot: Creating...
+aws_s3_bucket_logging.security_autopilot: Creation complete after 2s [id=sa-live-d5-src-029037611564-0304014445]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

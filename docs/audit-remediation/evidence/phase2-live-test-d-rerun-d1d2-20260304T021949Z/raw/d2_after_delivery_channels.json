@@ -1,0 +1,8 @@
+{
+    "DeliveryChannels": [
+        {
+            "name": "security-autopilot-delivery-channel",
+            "s3BucketName": "sa-live-d2r-config-029037611564-0304023013"
+        }
+    ]
+}

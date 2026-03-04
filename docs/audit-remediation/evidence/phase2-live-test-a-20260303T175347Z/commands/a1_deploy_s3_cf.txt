@@ -1,0 +1,8 @@
+aws cloudformation deploy --stack-name phase2-live-a-s3-20260303T175347Z --template-file docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/s3_1_cloudformation/s3_block_public_access.yaml --region eu-north-1 --capabilities CAPABILITY_NAMED_IAM --parameter-overrides AccountId=029037611564
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+
+Failed to create/update the stack. Run the following command
+to fetch the list of events leading up to the failure
+aws cloudformation describe-stack-events --stack-name phase2-live-a-s3-20260303T175347Z

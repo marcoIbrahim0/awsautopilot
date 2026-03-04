@@ -1,0 +1,96 @@
+# S3 Block Public Access (account-level) - Action: 11111111-1111-1111-1111-111111111111
+# Remediation for: Enable S3 Block Public Access
+# Account: 029037611564
+# Control: S3.1
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Enable S3 account-level Block Public Access via Lambda custom resource."
+Metadata:
+  SecurityAutopilot:
+    ActionId: "11111111-1111-1111-1111-111111111111"
+    ControlId: "S3.1"
+    RemediationAPI: "s3control:PutPublicAccessBlock"
+Parameters:
+  AccountId:
+    Type: String
+    Default: "029037611564"
+    Description: AWS account ID that should receive account-level S3 Block Public Access.
+Resources:
+  S3AccountPublicAccessBlockRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: s3-account-public-access-block
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3control:PutPublicAccessBlock
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  S3AccountPublicAccessBlockFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 120
+      Role: !GetAtt S3AccountPublicAccessBlockRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def _resolve_account_id(event, context):
+              explicit = (event.get("ResourceProperties", {}).get("AccountId") or "").strip()
+              if explicit:
+                  return explicit
+              arn = getattr(context, "invoked_function_arn", "") or ""
+              parts = arn.split(":")
+              return parts[4] if len(parts) > 4 else ""
+
+          def handler(event, context):
+              request_type = event.get("RequestType")
+              try:
+                  if request_type == "Delete":
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "S3PublicAccessBlock")
+                      return
+                  account_id = _resolve_account_id(event, context)
+                  if not account_id:
+                      raise ValueError("AccountId is required.")
+                  s3control = boto3.client("s3control")
+                  s3control.put_public_access_block(
+                      AccountId=account_id,
+                      PublicAccessBlockConfiguration={
+                          "BlockPublicAcls": True,
+                          "IgnorePublicAcls": True,
+                          "BlockPublicPolicy": True,
+                          "RestrictPublicBuckets": True,
+                      },
+                  )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "S3PublicAccessBlock")
+              except Exception as exc:
+                  cfnresponse.send(
+                      event,
+                      context,
+                      cfnresponse.FAILED,
+                      {"Error": str(exc)},
+                      "S3PublicAccessBlock",
+                  )
+  S3AccountPublicAccessBlock:
+    Type: Custom::S3AccountPublicAccessBlock
+    Properties:
+      ServiceToken: !GetAtt S3AccountPublicAccessBlockFunction.Arn
+      AccountId: !Ref AccountId

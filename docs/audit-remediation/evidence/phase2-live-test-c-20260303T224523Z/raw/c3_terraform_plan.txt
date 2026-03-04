@@ -1,0 +1,46 @@
+data.aws_iam_policy_document.security_autopilot_ssl_enforcement: Reading...
+data.aws_iam_policy_document.security_autopilot_ssl_enforcement: Read complete after 0s [id=88476061]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket_policy.security_autopilot will be created
+  + resource "aws_s3_bucket_policy" "security_autopilot" {
+      + bucket = "phase2-live-c3-s35-224523z-029037611564"
+      + id     = (known after apply)
+      + policy = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "s3:*"
+                      + Condition = {
+                          + Bool = {
+                              + "aws:SecureTransport" = "false"
+                            }
+                        }
+                      + Effect    = "Deny"
+                      + Principal = "*"
+                      + Resource  = [
+                          + "arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564/*",
+                          + "arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564",
+                        ]
+                      + Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + region = "eu-north-1"
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: c3-plan.tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "c3-plan.tfplan"

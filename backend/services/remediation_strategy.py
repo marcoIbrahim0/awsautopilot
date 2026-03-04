@@ -451,6 +451,10 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                     f"{ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
                     f"Runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
                 ),
+                (
+                    "Gate: Root MFA must be active before this delete path is selectable. "
+                    "If AccountMFAEnabled=0, strategy selection is blocked."
+                ),
                 "Deleting root keys is irreversible and requires validated fallback access.",
             ],
             legacy_pr_bundle_variant=None,

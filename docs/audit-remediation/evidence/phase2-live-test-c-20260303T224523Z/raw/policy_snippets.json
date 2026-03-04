@@ -1,0 +1,135 @@
+{
+  "C2_before": {
+    "Bucket": "phase2-live-c2-trail-224523z-029037611564",
+    "StatementSids": [
+      "C2PreExistingDenyDeleteBucket",
+      "AWSCloudTrailAclCheck",
+      "AWSCloudTrailWrite"
+    ],
+    "Statements": [
+      {
+        "Sid": "C2PreExistingDenyDeleteBucket",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:DeleteBucket",
+        "Resource": "arn:aws:s3:::phase2-live-c2-trail-224523z-029037611564"
+      },
+      {
+        "Sid": "AWSCloudTrailAclCheck",
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "cloudtrail.amazonaws.com"
+        },
+        "Action": "s3:GetBucketAcl",
+        "Resource": "arn:aws:s3:::phase2-live-c2-trail-224523z-029037611564"
+      },
+      {
+        "Sid": "AWSCloudTrailWrite",
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "cloudtrail.amazonaws.com"
+        },
+        "Action": "s3:PutObject",
+        "Resource": "arn:aws:s3:::phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/*",
+        "Condition": {
+          "StringEquals": {
+            "s3:x-amz-acl": "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  },
+  "C2_after": {
+    "Bucket": "phase2-live-c2-trail-224523z-029037611564",
+    "StatementSids": [
+      "AWSCloudTrailAclCheck",
+      "AWSCloudTrailWrite"
+    ],
+    "Statements": [
+      {
+        "Sid": "AWSCloudTrailAclCheck",
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "cloudtrail.amazonaws.com"
+        },
+        "Action": "s3:GetBucketAcl",
+        "Resource": "arn:aws:s3:::phase2-live-c2-trail-224523z-029037611564"
+      },
+      {
+        "Sid": "AWSCloudTrailWrite",
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "cloudtrail.amazonaws.com"
+        },
+        "Action": "s3:PutObject",
+        "Resource": "arn:aws:s3:::phase2-live-c2-trail-224523z-029037611564/AWSLogs/029037611564/CloudTrail/*",
+        "Condition": {
+          "StringEquals": {
+            "s3:x-amz-acl": "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  },
+  "C3_before": {
+    "Bucket": "phase2-live-c3-s35-224523z-029037611564",
+    "StatementSids": [
+      "C3PreExistingDenyDeleteBucket"
+    ],
+    "Statements": [
+      {
+        "Sid": "C3PreExistingDenyDeleteBucket",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:DeleteBucket",
+        "Resource": "arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564"
+      }
+    ]
+  },
+  "C3_after": {
+    "Bucket": "phase2-live-c3-s35-224523z-029037611564",
+    "StatementSids": [
+      "DenyInsecureTransport"
+    ],
+    "Statements": [
+      {
+        "Sid": "DenyInsecureTransport",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:*",
+        "Resource": [
+          "arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564/*",
+          "arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564"
+        ],
+        "Condition": {
+          "Bool": {
+            "aws:SecureTransport": "false"
+          }
+        }
+      }
+    ]
+  },
+  "C4_after": {
+    "Bucket": "phase2-live-c4-s35-224523z-029037611564",
+    "StatementSids": [
+      "DenyInsecureTransport"
+    ],
+    "Statements": [
+      {
+        "Sid": "DenyInsecureTransport",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:*",
+        "Resource": [
+          "arn:aws:s3:::phase2-live-c4-s35-224523z-029037611564/*",
+          "arn:aws:s3:::phase2-live-c4-s35-224523z-029037611564"
+        ],
+        "Condition": {
+          "Bool": {
+            "aws:SecureTransport": "false"
+          }
+        }
+      }
+    ]
+  }
+}

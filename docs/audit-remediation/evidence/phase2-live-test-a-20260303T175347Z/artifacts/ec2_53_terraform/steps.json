@@ -1,0 +1,17 @@
+[
+  "Configure AWS provider for account 029037611564 and region eu-north-1.",
+  "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
+  "Review inbound rules and confirm which high-risk ports are open to 0.0.0.0/0 and/or ::/0. Public SSH/RDP and database ports are usually unnecessary.",
+  "Confirm alternative admin access first (SSM Session Manager, bastion, or VPN). Optionally review VPC Flow Logs to confirm active source IPs.",
+  "IMPORTANT: review remove_existing_public_rules before applying.",
+  "Do not delete broad rules blindly. Narrow sources incrementally to VPN CIDR, office IP, or source security group.",
+  "Set security_group_id and allowed_cidr in the Terraform file (target SG: sg-05781a53012300032).",
+  "Optionally set allowed_cidr_ipv6 (e.g. fd00::/8) to add IPv6-restricted ingress.",
+  "By default, remove_existing_public_rules = false (no automatic revoke). Set remove_existing_public_rules = true only after validating alternative access paths.",
+  "When remove_existing_public_rules = true, bundle preflight revokes conflicting public/duplicate 22/3389 CIDR rules before creating restricted rules.",
+  "Run `terraform init` and `terraform plan`.",
+  "Run `terraform apply` to add restricted SSH/RDP ingress. Keep public 80/443 only where explicitly required.",
+  "Test connectivity after each change and tighten in small steps.",
+  "Avoid blind auto-remediation in production. If automation is enabled, prefer restrict-over-remove and use dev/test first.",
+  "Return to the action and click **Recompute actions** or trigger ingest to verify."
+]

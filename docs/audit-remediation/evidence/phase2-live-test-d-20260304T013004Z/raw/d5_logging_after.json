@@ -1,0 +1,6 @@
+{
+    "LoggingEnabled": {
+        "TargetBucket": "sa-live-d5-log-029037611564-0304014445",
+        "TargetPrefix": "s3-access-logs/"
+    }
+}

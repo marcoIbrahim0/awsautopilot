@@ -1,0 +1,28 @@
+{
+    "Contents": [
+        {
+            "Key": "AWSLogs/029037611564/CloudTrail/",
+            "LastModified": "2026-03-04T00:08:45+00:00",
+            "ETag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+            "ChecksumAlgorithm": [
+                "CRC64NVME"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 0,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": "AWSLogs/029037611564/CloudTrail/eu-north-1/2026/03/04/029037611564_CloudTrail_eu-north-1_20260304T0015Z_M4BvdJucexVsoYBW.json.gz",
+            "LastModified": "2026-03-04T00:13:12+00:00",
+            "ETag": "\"08cc8a0ce7f041b1fbf46b260698737a\"",
+            "ChecksumAlgorithm": [
+                "CRC64NVME"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 104216,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": "AWSLogs/029037611564/CloudTrail/"
+}

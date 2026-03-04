@@ -1,0 +1,67 @@
+{
+  "http_status": 200,
+  "response": {
+    "id": "3b0a17e7-1a44-4948-b4db-b80066260af4",
+    "action_id": "c8201c18-5054-42ee-99c6-815ea082f2c9",
+    "mode": "pr_only",
+    "status": "cancelled",
+    "outcome": "Cancelled by user",
+    "logs": "Cancelled by user.",
+    "artifacts": {
+      "risk_snapshot": {
+        "checks": [
+          {
+            "code": "iam_root_break_glass_review",
+            "status": "warn",
+            "message": "Confirm break-glass and emergency automation does not depend on root access keys."
+          },
+          {
+            "code": "iam_root_delete_irreversible",
+            "status": "warn",
+            "message": "Root key deletion is irreversible; ensure fallback access is validated."
+          },
+          {
+            "code": "iam_root_mfa_enrollment_gate",
+            "status": "unknown",
+            "message": "TypeError"
+          }
+        ],
+        "evidence": {
+          "strategy_id": "iam_root_key_delete",
+          "collected_at": "2026-03-03T18:08:56.221397+00:00"
+        },
+        "warnings": [
+          "Root credentials required. This remediation is manual/high-risk and must follow the runbook. Runbook: docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md.",
+          "Gate: Root MFA must be active before this delete path is selectable. If AccountMFAEnabled=0, strategy selection is blocked.",
+          "Deleting root keys is irreversible and requires validated fallback access."
+        ],
+        "recommendation": "review_and_acknowledge"
+      },
+      "manual_high_risk": {
+        "marker": "MANUAL_HIGH_RISK_ROOT_CREDENTIALS_REQUIRED",
+        "message": "Root credentials required. This remediation is manual/high-risk and must follow the runbook.",
+        "risk_level": "high",
+        "action_type": "iam_root_access_key_absent",
+        "recorded_at": "2026-03-03T18:08:56.975758+00:00",
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "strategy_id": "iam_root_key_delete",
+        "execution_path": "manual",
+        "approved_by_user_id": "57e658d9-d5c1-478a-81f8-8cf0400d001e",
+        "requires_root_credentials": true
+      },
+      "risk_acknowledged": true,
+      "selected_strategy": "iam_root_key_delete"
+    },
+    "approved_by_user_id": "57e658d9-d5c1-478a-81f8-8cf0400d001e",
+    "started_at": null,
+    "completed_at": "2026-03-03T18:12:19.328366+00:00",
+    "created_at": "2026-03-03T18:08:55.140195+00:00",
+    "updated_at": "2026-03-03T18:12:17.037150+00:00",
+    "action": {
+      "id": "c8201c18-5054-42ee-99c6-815ea082f2c9",
+      "title": "IAM root user access key should not exist",
+      "account_id": "029037611564",
+      "region": "eu-north-1"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "C3PreExistingDenyDeleteBucket",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:DeleteBucket",
+      "Resource": "arn:aws:s3:::phase2-live-c2-c3-s35-234636z-029037611564"
+    },
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::phase2-live-c2-c3-s35-234636z-029037611564",
+        "arn:aws:s3:::phase2-live-c2-c3-s35-234636z-029037611564/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    }
+  ]
+}

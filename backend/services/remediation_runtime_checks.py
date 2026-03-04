@@ -60,6 +60,13 @@ def _is_access_denied(exc: ClientError) -> bool:
     return "access denied" in message or "not authorized" in message
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return None
+
+
 def _bucket_name_from_target_id(target_id: str | None) -> str | None:
     if target_id is None:
         return None
@@ -377,6 +384,31 @@ def collect_runtime_risk_signals(
                             signals["ebs_customer_kms_key_valid"] = False
                             signals["ebs_customer_kms_key_error"] = _error_code(exc) or "DescribeKeyFailed"
 
+    if strategy_id == "iam_root_key_delete":
+        session = _get_read_session()
+        if session is None:
+            signals["iam_root_account_mfa_probe_error"] = (
+                read_probe_error or "ReadRole runtime probe unavailable for root MFA enrollment check."
+            )
+        else:
+            iam = session.client("iam", region_name=action.region or None)
+            try:
+                summary = iam.get_account_summary()
+                summary_map = summary.get("SummaryMap") if isinstance(summary, dict) else {}
+                mfa_raw = summary_map.get("AccountMFAEnabled") if isinstance(summary_map, dict) else None
+                mfa_enabled = _to_int(mfa_raw)
+                if mfa_enabled is None:
+                    signals["iam_root_account_mfa_probe_error"] = "AccountMFAEnabled is unavailable in account summary."
+                else:
+                    signals["iam_root_account_mfa_enrolled"] = mfa_enabled == 1
+                    evidence_payload = signals.setdefault("evidence", {})
+                    if isinstance(evidence_payload, dict):
+                        evidence_payload["account_mfa_enabled"] = mfa_enabled
+            except ClientError as exc:
+                signals["iam_root_account_mfa_probe_error"] = _error_code(exc) or "GetAccountSummaryFailed"
+            except Exception as exc:  # pragma: no cover - defensive
+                signals["iam_root_account_mfa_probe_error"] = f"{type(exc).__name__}"
+
     if strategy_id in ("s3_enforce_ssl_strict_deny", "s3_enforce_ssl_with_principal_exemptions"):
         bucket = _bucket_name_from_target_id(action.target_id)
         exempt_principals = strategy_inputs.get("exempt_principals")
@@ -402,15 +434,33 @@ def collect_runtime_risk_signals(
             else:
                 s3 = session.client("s3")
                 try:
-                    s3.get_bucket_policy(Bucket=bucket)
+                    raw_policy = s3.get_bucket_policy(Bucket=bucket).get("Policy")
+                    normalized_policy = _normalize_bucket_policy_document(raw_policy)
+                    evidence_payload = signals.setdefault("evidence", {})
+                    if isinstance(evidence_payload, dict):
+                        if normalized_policy is not None:
+                            statement_count = _policy_statement_count(normalized_policy)
+                            evidence_payload["existing_bucket_policy_statement_count"] = statement_count
+                            if statement_count > 0:
+                                evidence_payload["existing_bucket_policy_json"] = normalized_policy
+                        else:
+                            evidence_payload["existing_bucket_policy_parse_error"] = (
+                                "GetBucketPolicy returned invalid JSON."
+                            )
                     signals["s3_policy_analysis_possible"] = True
                 except ClientError as exc:
                     code = _error_code(exc)
                     if code == "NoSuchBucketPolicy":
                         signals["s3_policy_analysis_possible"] = True
+                        evidence_payload = signals.setdefault("evidence", {})
+                        if isinstance(evidence_payload, dict):
+                            evidence_payload["existing_bucket_policy_statement_count"] = 0
                     else:
                         signals["s3_policy_analysis_possible"] = False
                         signals["s3_policy_analysis_error"] = code or "GetBucketPolicyFailed"
+                        evidence_payload = signals.setdefault("evidence", {})
+                        if isinstance(evidence_payload, dict):
+                            evidence_payload["existing_bucket_policy_capture_error"] = code or "GetBucketPolicyFailed"
                         if is_access_path_strategy and account is not None:
                             _mark_access_path_unavailable(
                                 f"Unable to inspect current bucket policy ({code or 'GetBucketPolicyFailed'})."

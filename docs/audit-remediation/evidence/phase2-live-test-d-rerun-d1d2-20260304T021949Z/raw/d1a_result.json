@@ -1,0 +1,11 @@
+{
+  "test": "D1a_fail_closed_unreachable_centralized_bucket",
+  "expected_failure": true,
+  "apply_exit_code": 1,
+  "checks": {
+    "apply_failed": true,
+    "explicit_unreachable_bucket_error_present": true,
+    "stale_bucket_guidance_present": true
+  },
+  "pass": true
+}

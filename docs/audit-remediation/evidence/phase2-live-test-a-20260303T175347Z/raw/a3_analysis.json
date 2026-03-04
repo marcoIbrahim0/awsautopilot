@@ -1,0 +1,19 @@
+{
+  "revoke_changes": [],
+  "ingress_create_changes": [
+    {
+      "address": "aws_vpc_security_group_ingress_rule.rdp_restricted",
+      "actions": [
+        "create"
+      ]
+    },
+    {
+      "address": "aws_vpc_security_group_ingress_rule.ssh_restricted",
+      "actions": [
+        "create"
+      ]
+    }
+  ],
+  "revoke_change_count": 0,
+  "ingress_create_count": 2
+}

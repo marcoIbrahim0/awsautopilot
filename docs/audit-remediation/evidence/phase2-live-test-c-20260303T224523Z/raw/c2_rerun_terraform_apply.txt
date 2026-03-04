@@ -1,0 +1,6 @@
+aws_s3_bucket_policy.cloudtrail_delivery[0]: Creating...
+aws_cloudtrail.security_autopilot: Creating...
+aws_s3_bucket_policy.cloudtrail_delivery[0]: Creation complete after 2s [id=phase2-live-c2-trail-224523z-029037611564]
+aws_cloudtrail.security_autopilot: Creation complete after 2s [id=arn:aws:cloudtrail:eu-north-1:029037611564:trail/security-autopilot-trail]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.

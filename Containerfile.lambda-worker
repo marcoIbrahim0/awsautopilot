@@ -1,5 +1,15 @@
 FROM public.ecr.aws/lambda/python:3.12
 
+ARG TERRAFORM_VERSION=1.7.5
+
+# SaaS PR-bundle executor runs terraform init/plan/apply inside the worker.
+RUN dnf install -y unzip && \
+  curl -fsSLo /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" && \
+  unzip /tmp/terraform.zip -d /usr/local/bin && \
+  chmod +x /usr/local/bin/terraform && \
+  rm -f /tmp/terraform.zip && \
+  dnf clean all
+
 # Worker needs both worker + backend deps (models, migration guard, shared utils).
 COPY backend/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-backend.txt
 COPY backend/workers/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-worker.txt

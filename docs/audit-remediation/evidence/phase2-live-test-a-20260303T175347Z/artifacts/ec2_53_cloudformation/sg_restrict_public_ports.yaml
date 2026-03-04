@@ -1,0 +1,75 @@
+# SG restrict public ports (22/3389) - Action: 22222222-2222-2222-2222-222222222222
+# Remediation for: Restrict public SSH and RDP
+# Account: 029037611564 | Region: eu-north-1 | Security group: sg-05781a53012300032
+# Control: EC2.53
+# IMPORTANT: review remove_existing_public_rules before applying.
+# FAIL-CLOSED: This CloudFormation template is additive only. It does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389.
+# MANDATORY manual revoke checklist: 1) identify existing 0.0.0.0/0 and ::/0 rules on ports 22/3389, 2) revoke them manually, 3) verify only approved CIDRs remain.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Restrict SSH/RDP to allowed CIDR - Security Autopilot. Use incremental tightening to avoid outages."
+Metadata:
+  SecurityAutopilotNotes:
+    - "Identify SG attachments and active dependencies before tightening ingress."
+    - "Replace broad sources incrementally (VPN CIDR, office IP, or source SG), then test connectivity."
+    - "Avoid blind auto-remediation in production; prefer restrict-over-remove."
+    - "FAIL-CLOSED: This stack is additive only and does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389."
+    - "MANDATORY MANUAL CHECKLIST: revoke existing 0.0.0.0/0 and ::/0 ingress on ports 22/3389 before marking remediation complete."
+Parameters:
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: "sg-05781a53012300032"
+    Description: Security group to add restricted ingress
+  AllowedCidr:
+    Type: String
+    Default: "10.0.0.0/8"
+    Description: CIDR allowed for SSH (22) and RDP (3389)
+  AllowedCidrIpv6:
+    Type: String
+    Default: ""
+    Description: Optional IPv6 CIDR allowed for SSH (22) and RDP (3389). Leave empty to skip IPv6 ingress.
+Conditions:
+  HasAllowedIpv6:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref AllowedCidrIpv6
+          - ""
+Resources:
+  IngressSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedCidr
+      Description: "SSH from allowed CIDR - Security Autopilot"
+  IngressRDP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 3389
+      ToPort: 3389
+      CidrIp: !Ref AllowedCidr
+      Description: "RDP from allowed CIDR - Security Autopilot"
+  IngressSSHIPv6:
+    Condition: HasAllowedIpv6
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIpv6: !Ref AllowedCidrIpv6
+      Description: "SSH from allowed IPv6 CIDR - Security Autopilot"
+  IngressRDPIPv6:
+    Condition: HasAllowedIpv6
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 3389
+      ToPort: 3389
+      CidrIpv6: !Ref AllowedCidrIpv6
+      Description: "RDP from allowed IPv6 CIDR - Security Autopilot"

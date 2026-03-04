@@ -1,0 +1,10 @@
+{
+  "expected_error_code": "bucket_policy_preservation_evidence_missing",
+  "raised": false,
+  "actual": "bundle_generated",
+  "generated_files": [
+    "providers.tf",
+    "s3_bucket_require_ssl.tf",
+    "README.txt"
+  ]
+}

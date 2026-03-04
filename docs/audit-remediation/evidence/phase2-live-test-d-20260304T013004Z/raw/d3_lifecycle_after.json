@@ -1,0 +1,13 @@
+{
+    "TransitionDefaultMinimumObjectSize": "all_storage_classes_128K",
+    "Rules": [
+        {
+            "ID": "security-autopilot-abort-incomplete-multipart",
+            "Filter": {},
+            "Status": "Enabled",
+            "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7
+            }
+        }
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "DeliveryChannels": [
+        {
+            "name": "default",
+            "s3BucketName": "sa-live-d1-config-029037611564-0304013744"
+        }
+    ]
+}

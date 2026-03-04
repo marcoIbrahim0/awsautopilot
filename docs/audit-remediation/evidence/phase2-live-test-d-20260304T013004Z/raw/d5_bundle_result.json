@@ -1,0 +1,25 @@
+{
+  "format": "terraform",
+  "files": [
+    {
+      "path": "providers.tf",
+      "content": "# Configure AWS provider for account 029037611564 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 4.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n"
+    },
+    {
+      "path": "s3_bucket_access_logging.tf",
+      "content": "# S3 bucket access logging - Action: fb8e7dcb-2acb-49df-84e1-09ff82bf8015\n# Remediation for: S3.9 access logging (Live Test D5)\n# Account: 029037611564 | Region: eu-north-1 | Bucket: sa-live-d5-src-029037611564-0304014445\n# Control: S3.9\n\nvariable \"source_bucket_name\" {\n  type        = string\n  description = \"S3 source bucket where server access logging is enabled\"\n  default     = \"sa-live-d5-src-029037611564-0304014445\"\n}\n\nvariable \"log_bucket_name\" {\n  type        = string\n  description = \"S3 bucket that will receive access logs\"\n  default     = \"sa-live-d5-log-029037611564-0304014445\"\n}\n\nvariable \"log_prefix\" {\n  type        = string\n  description = \"Prefix for delivered access logs\"\n  default     = \"s3-access-logs/\"\n}\n\nresource \"aws_s3_bucket_logging\" \"security_autopilot\" {\n  bucket        = var.source_bucket_name\n  target_bucket = var.log_bucket_name\n  target_prefix = var.log_prefix\n}\n"
+    },
+    {
+      "path": "README.txt",
+      "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-04T01:44:53+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n"
+    }
+  ],
+  "steps": [
+    "Configure AWS provider for account 029037611564 and region eu-north-1.",
+    "Set log_bucket_name to a dedicated destination bucket.",
+    "Do not use the source bucket as the log destination.",
+    "Run `terraform init` and `terraform plan`.",
+    "Run `terraform apply` to enable S3 server access logging.",
+    "Return to the action and click **Recompute actions** or trigger ingest to verify."
+  ]
+}

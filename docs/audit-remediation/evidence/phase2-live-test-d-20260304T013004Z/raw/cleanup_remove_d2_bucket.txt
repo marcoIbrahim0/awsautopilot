@@ -1,0 +1,2 @@
+delete: s3://sa-live-d2-config-029037611564-0304013921/AWSLogs/029037611564/Config/ConfigWritabilityCheckFile
+remove_bucket: sa-live-d2-config-029037611564-0304013921

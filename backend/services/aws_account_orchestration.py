@@ -152,6 +152,62 @@ def run_validation_probes(
         else:
             warnings.append(f"EC2 probe failed: {code}")
 
+    config_client = session.client("config", region_name=region)
+    config_rule_names: list[str] = []
+    try:
+        config_client.describe_configuration_recorders()
+    except ClientError as error:
+        code = _client_error_code(error)
+        if _is_access_denied(code):
+            missing_permissions.append("config:DescribeConfigurationRecorders")
+        else:
+            warnings.append(f"AWS Config describe_configuration_recorders probe failed: {code}")
+
+    try:
+        config_client.describe_delivery_channels()
+    except ClientError as error:
+        code = _client_error_code(error)
+        if _is_access_denied(code):
+            missing_permissions.append("config:DescribeDeliveryChannels")
+        else:
+            warnings.append(f"AWS Config describe_delivery_channels probe failed: {code}")
+
+    try:
+        response = config_client.describe_config_rules()
+        config_rule_names = [str(rule.get("ConfigRuleName") or "").strip() for rule in (response.get("ConfigRules") or []) if rule]
+        config_rule_names = [name for name in config_rule_names if name]
+    except ClientError as error:
+        code = _client_error_code(error)
+        if _is_access_denied(code):
+            missing_permissions.append("config:DescribeConfigRules")
+        else:
+            warnings.append(f"AWS Config describe_config_rules probe failed: {code}")
+
+    try:
+        config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+    except ClientError as error:
+        code = _client_error_code(error)
+        if _is_access_denied(code):
+            missing_permissions.append("config:DescribeComplianceByConfigRules")
+        else:
+            warnings.append(f"AWS Config describe_compliance_by_config_rules probe failed: {code}")
+
+    if config_rule_names:
+        try:
+            config_client.get_compliance_details_by_config_rule(
+                ConfigRuleName=config_rule_names[0],
+                ComplianceTypes=["NON_COMPLIANT"],
+                Limit=1,
+            )
+        except ClientError as error:
+            code = _client_error_code(error)
+            if _is_access_denied(code):
+                missing_permissions.append("config:GetComplianceDetailsByConfigRule")
+            elif code not in {"NoSuchConfigRuleException", "NoSuchConfigRule"}:
+                warnings.append(f"AWS Config get_compliance_details_by_config_rule probe failed: {code}")
+    else:
+        warnings.append("No AWS Config rules found to probe config:GetComplianceDetailsByConfigRule.")
+
     buckets: list[dict] = []
     try:
         buckets = (session.client("s3", region_name=region).list_buckets().get("Buckets") or [])

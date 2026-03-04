@@ -1,0 +1,40 @@
+{
+    "StackResources": [
+        {
+            "StackName": "security-autopilot-live-d3-s311-0304014023",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3-s311-0304014023/23265410-176b-11f1-8769-06b6dc214ca7",
+            "LogicalResourceId": "S3BucketLifecycleConfiguration",
+            "PhysicalResourceId": "S3BucketLifecycle",
+            "ResourceType": "Custom::S3BucketLifecycleConfiguration",
+            "Timestamp": "2026-03-04T01:41:15.164000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "security-autopilot-live-d3-s311-0304014023",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3-s311-0304014023/23265410-176b-11f1-8769-06b6dc214ca7",
+            "LogicalResourceId": "S3BucketLifecycleFunction",
+            "PhysicalResourceId": "security-autopilot-live-d-S3BucketLifecycleFunctio-dbXbqci9agSF",
+            "ResourceType": "AWS::Lambda::Function",
+            "Timestamp": "2026-03-04T01:41:09.277000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "security-autopilot-live-d3-s311-0304014023",
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/security-autopilot-live-d3-s311-0304014023/23265410-176b-11f1-8769-06b6dc214ca7",
+            "LogicalResourceId": "S3BucketLifecycleRole",
+            "PhysicalResourceId": "security-autopilot-live-d3-s3-S3BucketLifecycleRole-FBQmFcRdorFY",
+            "ResourceType": "AWS::IAM::Role",
+            "Timestamp": "2026-03-04T01:41:00.384000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        }
+    ]
+}

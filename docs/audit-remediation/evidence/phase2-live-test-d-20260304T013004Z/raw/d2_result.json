@@ -1,0 +1,16 @@
+{
+  "test": "D2",
+  "pass": true,
+  "checks": {
+    "before_recorder_count": 0,
+    "before_channel_count": 0,
+    "fresh_precondition": true,
+    "after_recorder_name": "security-autopilot-recorder",
+    "after_all_supported": true,
+    "after_include_global": true,
+    "after_channel_count": 1,
+    "after_channel_bucket": "sa-live-d2-config-029037611564-0304013921",
+    "after_recording_started": true
+  },
+  "notes": []
+}

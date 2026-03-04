@@ -1,0 +1,42 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_cloudtrail.security_autopilot will be created
+  + resource "aws_cloudtrail" "security_autopilot" {
+      + arn                           = (known after apply)
+      + enable_log_file_validation    = false
+      + enable_logging                = true
+      + home_region                   = (known after apply)
+      + id                            = (known after apply)
+      + include_global_service_events = true
+      + is_multi_region_trail         = true
+      + is_organization_trail         = false
+      + name                          = "security-autopilot-trail"
+      + region                        = "eu-north-1"
+      + s3_bucket_name                = "phase2-live-c2-c2-trail-234636z-029037611564"
+      + sns_topic_arn                 = (known after apply)
+      + tags_all                      = (known after apply)
+    }
+
+  # null_resource.cloudtrail_bucket_policy[0] will be created
+  + resource "null_resource" "cloudtrail_bucket_policy" {
+      + id       = (known after apply)
+      + triggers = {
+          + "account_id"         = "029037611564"
+          + "remediation_region" = "eu-north-1"
+          + "trail_bucket_name"  = "phase2-live-c2-c2-trail-234636z-029037611564"
+        }
+    }
+
+Plan: 2 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: c2-plan.tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "c2-plan.tfplan"

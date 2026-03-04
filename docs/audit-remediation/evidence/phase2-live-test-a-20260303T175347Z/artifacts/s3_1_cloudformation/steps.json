@@ -1,0 +1,6 @@
+[
+  "Ensure AWS credentials target account 029037611564.",
+  "Validate the template (e.g. aws cloudformation validate-template) and create/update the stack.",
+  "Deploy the stack to enable S3 Block Public Access.",
+  "Return to the action and click **Recompute actions** or trigger ingest to verify the finding is resolved."
+]

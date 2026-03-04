@@ -1,0 +1,25 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.s3_ssl_policy_merge will be created
+  + resource "null_resource" "s3_ssl_policy_merge" {
+      + id       = (known after apply)
+      + triggers = {
+          + "exempt_principals"  = null
+          + "remediation_region" = "eu-north-1"
+          + "target_bucket"      = "phase2-live-c2-c4-s35-234636z-029037611564"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: c4-plan.tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "c4-plan.tfplan"

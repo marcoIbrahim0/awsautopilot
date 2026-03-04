@@ -1,0 +1,45 @@
+{
+  "test": "D1",
+  "pass": true,
+  "checks": {
+    "before_name": "default",
+    "after_name": "default",
+    "before_recording_group": {
+      "allSupported": false,
+      "includeGlobalResourceTypes": false,
+      "resourceTypes": [],
+      "exclusionByResourceTypes": {
+        "resourceTypes": [
+          "AWS::IAM::Policy",
+          "AWS::IAM::User",
+          "AWS::IAM::Role",
+          "AWS::IAM::Group"
+        ]
+      },
+      "recordingStrategy": {
+        "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+      }
+    },
+    "after_recording_group": {
+      "allSupported": false,
+      "includeGlobalResourceTypes": false,
+      "resourceTypes": [],
+      "exclusionByResourceTypes": {
+        "resourceTypes": [
+          "AWS::IAM::Policy",
+          "AWS::IAM::User",
+          "AWS::IAM::Role",
+          "AWS::IAM::Group"
+        ]
+      },
+      "recordingStrategy": {
+        "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+      }
+    },
+    "after_delivery_bucket": "sa-live-d1-config-029037611564-0304013744",
+    "name_reused": true,
+    "recording_group_unchanged": true,
+    "all_supported_unchanged": true,
+    "delivery_channel_bucket_present": true
+  }
+}

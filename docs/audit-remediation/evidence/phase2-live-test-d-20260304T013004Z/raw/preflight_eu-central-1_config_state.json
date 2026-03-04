@@ -1,0 +1,39 @@
+{
+  "region": "eu-central-1",
+  "status": "ok",
+  "recorders": [
+    {
+      "arn": "arn:aws:config:eu-central-1:029037611564:configuration-recorder/default/euhtnco9hagqqebi",
+      "name": "default",
+      "roleARN": "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+      "recordingGroup": {
+        "allSupported": false,
+        "includeGlobalResourceTypes": false,
+        "resourceTypes": [],
+        "exclusionByResourceTypes": {
+          "resourceTypes": [
+            "AWS::IAM::Policy",
+            "AWS::IAM::User",
+            "AWS::IAM::Role",
+            "AWS::IAM::Group"
+          ]
+        },
+        "recordingStrategy": {
+          "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+        }
+      },
+      "recordingMode": {
+        "recordingFrequency": "CONTINUOUS",
+        "recordingModeOverrides": []
+      },
+      "recordingScope": "PAID"
+    }
+  ],
+  "channels": [
+    {
+      "name": "default",
+      "s3BucketName": "config-bucket-029037611564"
+    }
+  ],
+  "error": null
+}

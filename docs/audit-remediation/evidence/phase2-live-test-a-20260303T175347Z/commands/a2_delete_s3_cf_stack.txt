@@ -1,0 +1,2 @@
+aws cloudformation delete-stack --stack-name phase2-live-a-s3-20260303T175347Z --region eu-north-1
+aws cloudformation wait stack-delete-complete --stack-name phase2-live-a-s3-20260303T175347Z --region eu-north-1

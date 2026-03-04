@@ -44,7 +44,13 @@ _SERVICE_PERMISSION_HINTS: dict[str, list[str]] = {
         "s3:GetLifecycleConfiguration",
     ],
     "cloudtrail": ["cloudtrail:DescribeTrails"],
-    "config": ["config:DescribeConfigurationRecorders"],
+    "config": [
+        "config:DescribeConfigurationRecorders",
+        "config:DescribeDeliveryChannels",
+        "config:DescribeConfigRules",
+        "config:DescribeComplianceByConfigRules",
+        "config:GetComplianceDetailsByConfigRule",
+    ],
     "iam": ["iam:ListAccountAliases"],
     "ebs": ["ec2:DescribeVolumes"],
     "rds": ["rds:DescribeDBInstances"],
@@ -249,7 +255,21 @@ async def run_preflight_for_services(
                 elif service == "cloudtrail":
                     session.client("cloudtrail", region_name=probe_region).describe_trails(includeShadowTrails=False)
                 elif service == "config":
-                    session.client("config", region_name=probe_region).describe_configuration_recorders()
+                    config_client = session.client("config", region_name=probe_region)
+                    config_client.describe_configuration_recorders()
+                    config_client.describe_delivery_channels()
+                    config_rules = config_client.describe_config_rules().get("ConfigRules") or []
+                    config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+                    if config_rules:
+                        first_rule_name = str((config_rules[0] or {}).get("ConfigRuleName") or "").strip()
+                        if first_rule_name:
+                            config_client.get_compliance_details_by_config_rule(
+                                ConfigRuleName=first_rule_name,
+                                ComplianceTypes=["NON_COMPLIANT"],
+                                Limit=1,
+                            )
+                    else:
+                        service_warnings.append("No AWS Config rules found to probe config:GetComplianceDetailsByConfigRule.")
                 elif service == "iam":
                     session.client("iam").list_account_aliases(MaxItems=5)
                 elif service == "ebs":

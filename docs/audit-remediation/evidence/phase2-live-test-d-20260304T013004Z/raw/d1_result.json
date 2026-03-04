@@ -1,0 +1,49 @@
+{
+  "test": "D1",
+  "pass": true,
+  "checks": {
+    "before_name": "default",
+    "after_name": "default",
+    "name_reused": true,
+    "before_recording_group": {
+      "allSupported": false,
+      "includeGlobalResourceTypes": false,
+      "resourceTypes": [],
+      "exclusionByResourceTypes": {
+        "resourceTypes": [
+          "AWS::IAM::Policy",
+          "AWS::IAM::User",
+          "AWS::IAM::Role",
+          "AWS::IAM::Group"
+        ]
+      },
+      "recordingStrategy": {
+        "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+      }
+    },
+    "after_recording_group": {
+      "allSupported": false,
+      "includeGlobalResourceTypes": false,
+      "resourceTypes": [],
+      "exclusionByResourceTypes": {
+        "resourceTypes": [
+          "AWS::IAM::Policy",
+          "AWS::IAM::User",
+          "AWS::IAM::Role",
+          "AWS::IAM::Group"
+        ]
+      },
+      "recordingStrategy": {
+        "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+      }
+    },
+    "recording_group_unchanged": true,
+    "before_all_supported": false,
+    "after_all_supported": false,
+    "all_supported_unchanged": true,
+    "after_delivery_bucket": "sa-live-d1-config-029037611564-0304013744"
+  },
+  "notes": [
+    "Used fallback dedicated delivery bucket because pre-existing channel bucket reference was stale/missing."
+  ]
+}

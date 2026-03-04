@@ -1,0 +1,28 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.aws_config_enablement will be created
+  + resource "null_resource" "aws_config_enablement" {
+      + id       = (known after apply)
+      + triggers = {
+          + "config_role_arn"           = "arn:aws:iam::029037611564:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+          + "create_local_bucket"       = "true"
+          + "delivery_bucket"           = "sa-live-d2-config-029037611564-0304013921"
+          + "kms_key_arn"               = null
+          + "overwrite_recording_group" = "false"
+          + "region"                    = "ap-south-1"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"

@@ -1,0 +1,109 @@
+# S3 bucket lifecycle configuration - Action: 94095639-a732-4578-8626-032e95496861
+# Remediation for: S3.11 lifecycle remediation (Live Test D3)
+# Account: 029037611564 | Region: eu-north-1 | Bucket: sa-live-d3-s311-029037611564-0304014023
+# Control: S3.11
+# IMPORTANT: applies lifecycle rule via Lambda custom resource (PutLifecycleConfiguration).
+# Delete path is no-op and does NOT remove existing lifecycle rules.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Configure S3 lifecycle policy for a bucket via Lambda custom resource."
+Metadata:
+  SecurityAutopilot:
+    ActionId: "94095639-a732-4578-8626-032e95496861"
+    ControlId: "S3.11"
+    RemediationAPI: "s3:PutLifecycleConfiguration"
+Parameters:
+  BucketName:
+    Type: String
+    Default: "sa-live-d3-s311-029037611564-0304014023"
+    Description: Target bucket for lifecycle configuration
+  AbortIncompleteMultipartDays:
+    Type: Number
+    Default: 7
+    Description: Days before aborting incomplete multipart uploads
+Resources:
+  S3BucketLifecycleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: s3-bucket-lifecycle-configuration
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutLifecycleConfiguration
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  S3BucketLifecycleFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 120
+      Role: !GetAtt S3BucketLifecycleRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def _to_positive_int(value):
+              number = int(value)
+              if number < 1:
+                  raise ValueError("AbortIncompleteMultipartDays must be >= 1.")
+              return number
+
+          def handler(event, context):
+              request_type = event.get("RequestType")
+              try:
+                  if request_type == "Delete":
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "S3BucketLifecycle")
+                      return
+                  props = event.get("ResourceProperties", {})
+                  bucket_name = (props.get("BucketName") or "").strip()
+                  if not bucket_name:
+                      raise ValueError("BucketName is required.")
+                  abort_days = _to_positive_int(props.get("AbortIncompleteMultipartDays", 7))
+                  s3 = boto3.client("s3")
+                  s3.put_bucket_lifecycle_configuration(
+                      Bucket=bucket_name,
+                      LifecycleConfiguration={
+                          "Rules": [
+                              {
+                                  "ID": "security-autopilot-abort-incomplete-multipart",
+                                  "Status": "Enabled",
+                                  "Filter": {},
+                                  "AbortIncompleteMultipartUpload": {
+                                      "DaysAfterInitiation": abort_days
+                                  },
+                              }
+                          ]
+                      },
+                  )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "S3BucketLifecycle")
+              except Exception as exc:
+                  cfnresponse.send(
+                      event,
+                      context,
+                      cfnresponse.FAILED,
+                      {"Error": str(exc)},
+                      "S3BucketLifecycle",
+                  )
+  S3BucketLifecycleConfiguration:
+    Type: Custom::S3BucketLifecycleConfiguration
+    Properties:
+      ServiceToken: !GetAtt S3BucketLifecycleFunction.Arn
+      BucketName: !Ref BucketName
+      AbortIncompleteMultipartDays: !Ref AbortIncompleteMultipartDays

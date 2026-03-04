@@ -1,0 +1,22 @@
+null_resource.aws_config_enablement: Refreshing state... [id=2613894515052028778]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # null_resource.aws_config_enablement is tainted, so must be replaced
+-/+ resource "null_resource" "aws_config_enablement" {
+      ~ id       = "2613894515052028778" -> (known after apply)
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 1 to add, 0 to change, 1 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"

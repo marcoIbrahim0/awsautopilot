@@ -1,0 +1,6 @@
+{
+  "case": "B1",
+  "passed": true,
+  "expectation": "hard block when MFA=0",
+  "http_status": 400
+}

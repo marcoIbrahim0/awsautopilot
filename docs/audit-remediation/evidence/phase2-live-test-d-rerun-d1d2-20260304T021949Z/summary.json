@@ -1,0 +1,92 @@
+{
+  "test_suite": "Phase 2 Live Test D rerun (D1/D2 only)",
+  "executed_at_utc": "2026-03-04T02:36:00Z",
+  "account_id": "029037611564",
+  "results": {
+    "D1": {
+      "test": "D1",
+      "pass": true,
+      "checks": {
+        "before_name": "default",
+        "after_name": "default",
+        "before_recording_group": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "after_recording_group": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "after_delivery_bucket": "sa-live-d1-config-029037611564-0304013744",
+        "name_reused": true,
+        "recording_group_unchanged": true,
+        "all_supported_unchanged": true,
+        "delivery_channel_bucket_present": true
+      }
+    },
+    "D2": {
+      "test": "D2",
+      "pass": true,
+      "checks": {
+        "before_recorder_count": 0,
+        "before_channel_count": 0,
+        "after_recorder_name": "security-autopilot-recorder",
+        "after_all_supported": true,
+        "after_include_global": true,
+        "after_channel_bucket": "sa-live-d2r-config-029037611564-0304023013",
+        "after_recording_started": true,
+        "fresh_precondition": true,
+        "recorder_created": true,
+        "all_supported_true": true,
+        "include_global_true": true,
+        "delivery_channel_created": true,
+        "delivery_bucket_matches": true,
+        "recording_started": true
+      }
+    },
+    "D1a_fail_closed_check": {
+      "test": "D1a_fail_closed_unreachable_centralized_bucket",
+      "expected_failure": true,
+      "apply_exit_code": 1,
+      "checks": {
+        "apply_failed": true,
+        "explicit_unreachable_bucket_error_present": true,
+        "stale_bucket_guidance_present": true
+      },
+      "pass": true
+    }
+  },
+  "all_pass": true,
+  "notes": [
+    "D1 and D2 were executed with ambient AWS_REGION/AWS_DEFAULT_REGION intentionally set to us-west-2 to validate explicit-region handling in generated local-exec commands.",
+    "D1a validates fail-closed behavior for centralized delivery when the configured delivery bucket is unreachable."
+  ],
+  "recommendation": {
+    "decision": "GO_FOR_TASK_SCOPE",
+    "reason": "Config.1 rerun scope (D1/D2 + fail-closed centralized-bucket check) passed after the two targeted robustness fixes."
+  }
+}

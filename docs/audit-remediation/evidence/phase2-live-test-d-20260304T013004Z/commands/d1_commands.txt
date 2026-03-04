@@ -1,0 +1,5 @@
+# D1 commands
+region=eu-central-1
+evidence_dir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-20260304T013004Z
+aws configservice describe-configuration-recorders --region eu-central-1
+aws configservice describe-delivery-channels --region eu-central-1

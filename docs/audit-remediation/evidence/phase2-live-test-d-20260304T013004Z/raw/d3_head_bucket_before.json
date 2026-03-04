@@ -1,0 +1,5 @@
+{
+    "BucketArn": "arn:aws:s3:::sa-live-d3-s311-029037611564-0304014023",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}

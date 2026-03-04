@@ -1,0 +1,40 @@
+{
+    "Stacks": [
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:029037611564:stack/phase2-live-a-s3-20260303T175347Z/16d0bd40-172a-11f1-88ee-0e728ee6594d",
+            "StackName": "phase2-live-a-s3-20260303T175347Z",
+            "Description": "Enable S3 account-level Block Public Access via Lambda custom resource.",
+            "Parameters": [
+                {
+                    "ParameterKey": "AccountId",
+                    "ParameterValue": "029037611564"
+                }
+            ],
+            "CreationTime": "2026-03-03T17:54:56.464000+00:00",
+            "DeletionTime": "2026-03-03T17:55:36.459000+00:00",
+            "LastUpdatedTime": "2026-03-03T17:55:02.363000+00:00",
+            "RollbackConfiguration": {},
+            "StackStatus": "ROLLBACK_COMPLETE",
+            "DisableRollback": false,
+            "NotificationARNs": [],
+            "Capabilities": [
+                "CAPABILITY_NAMED_IAM"
+            ],
+            "Tags": [],
+            "EnableTerminationProtection": false,
+            "DriftInformation": {
+                "StackDriftStatus": "NOT_CHECKED"
+            },
+            "LastOperations": [
+                {
+                    "OperationType": "ROLLBACK",
+                    "OperationId": "655c00ae-f04f-4e79-8361-4ebd4507bd42"
+                },
+                {
+                    "OperationType": "CREATE_STACK",
+                    "OperationId": "54396dcb-7935-4daf-8c47-6446046b6426"
+                }
+            ]
+        }
+    ]
+}

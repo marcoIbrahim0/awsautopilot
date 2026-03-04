@@ -1,0 +1,72 @@
+{
+  "executed_at_utc": "2026-03-03T23:16:38.045162+00:00",
+  "overall_pass": false,
+  "cases": {
+    "C1": {
+      "pass": false,
+      "first_apply_error_code": "InsufficientS3BucketPolicyException",
+      "retry_is_logging": true,
+      "retry_latest_delivery_error": null,
+      "retry_latest_notification_error": null
+    },
+    "C2": {
+      "pass": false,
+      "policy_preserved": false,
+      "delivery_ok": true,
+      "before_sids": [
+        "C2PreExistingDenyDeleteBucket",
+        "AWSCloudTrailAclCheck",
+        "AWSCloudTrailWrite"
+      ],
+      "after_sids": [
+        "AWSCloudTrailAclCheck",
+        "AWSCloudTrailWrite"
+      ]
+    },
+    "C3": {
+      "pass": false,
+      "policy_preserved": false,
+      "ssl_statement_present": true,
+      "before_sids": [
+        "C3PreExistingDenyDeleteBucket"
+      ],
+      "after_sids": [
+        "DenyInsecureTransport"
+      ]
+    },
+    "C4": {
+      "pass": true,
+      "before_no_policy_exitcode": "254",
+      "after_sids": [
+        "DenyInsecureTransport"
+      ]
+    },
+    "C5": {
+      "pass": false,
+      "expected_error_code": "bucket_policy_preservation_evidence_missing",
+      "actual": "bundle_generated",
+      "raised": false
+    }
+  },
+  "regression_risks": [
+    "CloudTrail fresh-bucket apply is not reliably one-shot: trail creation can race bucket-policy creation and fail with InsufficientS3BucketPolicyException.",
+    "CloudTrail existing-bucket path replaces bucket policy instead of supplementing existing statements.",
+    "S3.5 path replaces existing bucket policy statements instead of merge-preserving unrelated Deny/Allow statements.",
+    "S3.5 fail-closed generation guard is missing: statement_count>0 with missing policy JSON still generates a bundle.",
+    "CloudTrail trail name is hardcoded (security-autopilot-trail), which causes cross-test/state collisions in repeated live runs."
+  ],
+  "cleanup": {
+    "trail_deleted": true,
+    "test_buckets_deleted": [
+      "phase2-live-c1-trail-224523z-029037611564",
+      "phase2-live-c2-trail-224523z-029037611564",
+      "phase2-live-c3-s35-224523z-029037611564",
+      "phase2-live-c4-s35-224523z-029037611564"
+    ],
+    "evidence": {
+      "commands": "commands/cleanup_test_resources.txt",
+      "trail_check": "raw/cleanup_describe_trail_after_delete.json",
+      "bucket_checks": "raw/cleanup_bucket_head_checks.txt"
+    }
+  }
+}

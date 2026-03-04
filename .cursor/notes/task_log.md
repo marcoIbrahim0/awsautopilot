@@ -1,5 +1,1695 @@
 # Task Log
 
+## Phase 2 Config.1 robustness patch + Live Test D1/D2 rerun (2026-03-04)
+
+**Task:** Close the two Live Test D Config.1 robustness gaps by patching `aws_config_enabled` bundle generation (`pr_bundle.py`), adding Step 7 unit tests, and rerunning Live Test D scope `D1`/`D2` only.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Updated Config.1 Terraform local-exec generation to: (1) pass explicit `--region "$REGION"` for `s3api head-bucket` + `create-bucket`, and (2) fail closed when `create_local_bucket=false` and delivery bucket is unreachable/stale (with explicit actionable error messaging).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Added Config.1 assertions for explicit region usage in bucket-create path and fail-closed centralized delivery behavior; updated README safeguard assertion to include fail-closed guidance.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z/** — Added D1/D2 rerun evidence package (`summary.md`, `summary.json`, raw Terraform/AWS CLI outputs, per-test JSON, cleanup outputs).
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Added Live Test D rerun status/evidence lines for D1/D2 + D1a fail-closed verification.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Patched Config.1 Terraform bundle generation so bucket create/check commands do not depend on ambient shell region.
+- Added centralized-delivery fail-closed checks so unreachable bucket states now stop early with explicit guidance instead of late ambiguous `NoSuchBucket` apply failure.
+- Step 7 validation passed:
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k 'aws_config_enabled'` (`9 passed, 81 deselected`)
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` (`90 passed`)
+  - `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (`All checks passed`)
+- Live rerun scope (`D1`/`D2`) passed in production account `029037611564`, with ambient `AWS_REGION/AWS_DEFAULT_REGION=us-west-2` to validate explicit-region robustness:
+  - D1: **PASS** (existing selective recorder reused; recordingGroup unchanged)
+  - D2: **PASS** (fresh region recorder/channel creation; recording started)
+  - D1a fail-closed check: **PASS** (centralized unreachable bucket path exits with explicit error)
+- Post-run cleanup completed for D2 (recorder/channel deleted and temporary test bucket removed).
+
+**Technical debt / gotchas:**
+- Config.1 now intentionally fails closed for unreachable centralized delivery buckets; it does not auto-heal stale delivery-channel bucket references.
+
+**Open questions / TODOs:**
+- Decide whether to keep fail-closed-only handling for stale centralized delivery buckets or add an explicit opt-in auto-repair path in a future task.
+
+## Phase 2 Live Test D execution: Config.1 + S3.11 + S3.9 (2026-03-04)
+
+**Task:** Execute Live Test D (`D1`–`D5`) after Tasks 7/8/9 with real AWS validation artifacts, including Config recorder/channel behavior, S3.11 CloudFormation lifecycle application on unmanaged buckets, and S3.9 fail-closed + dedicated log-bucket behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-20260304T013004Z/** — Added full Live Test D evidence package (`summary.md`, `summary.json`, command transcripts, raw CLI/CF/TF outputs, per-test result JSON, cleanup artifacts).
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 8 as implemented and Live Test D as completed with evidence/result summary.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- D1 (`Config.1` existing selective recorder, `eu-central-1`): recorder name reused (`default`) and `recordingGroup` preserved unchanged with `overwrite_recording_group=false`.
+- D2 (`Config.1` fresh state, `ap-south-1`): recorder created (`security-autopilot-recorder`) with `allSupported=true`, delivery channel created, recorder status `recording=true`.
+- D3 (`S3.11` CF on unmanaged bucket, `eu-north-1`): stack reached `CREATE_COMPLETE`, stack resources contained no `AWS::S3::Bucket`, and lifecycle rule `security-autopilot-abort-incomplete-multipart` was applied. Sentinel-object continuity verification confirmed no bucket replacement.
+- D4 (`S3.9` generation without log bucket): failed closed as expected with `unresolved_placeholder_token` and `REPLACE_LOG_BUCKET_NAME`.
+- D5 (`S3.9` with dedicated log bucket): Terraform apply succeeded and source bucket logging `TargetBucket` matched dedicated log bucket (not source bucket).
+
+**Validation summary (`D1`–`D5`):**
+- D1: **PASS**
+- D2: **PASS**
+- D3: **PASS**
+- D4: **PASS**
+- D5: **PASS**
+
+**Technical debt / gotchas:**
+- Discovered Config.1 runtime robustness gaps during live execution:
+  - Existing delivery channel in `eu-central-1` referenced a non-existent bucket (`NoSuchBucketException`) when applying with `create_local_bucket=false`.
+  - Config bundle local-exec `create-bucket` path is region-endpoint sensitive; reliable execution required pinning `AWS_REGION/AWS_DEFAULT_REGION` to the remediation region during apply.
+- Cleanup completed for D2/D3/D5 test artifacts; D1 fallback bucket was intentionally retained because `eu-central-1` active delivery channel now points to it.
+
+**Open questions / TODOs:**
+- Patch Config Terraform local-exec bucket-create path to pass explicit `--region "$REGION"` and add regression coverage for mismatched shell default region.
+- Decide whether stale/missing existing delivery-channel bucket references should auto-heal (preflight repair) or fail closed with explicit operator action in Config.1 bundle flow.
+
+## Phase 2 Task 7 Config.1 preflight recorder + delivery inspection (2026-03-04)
+
+**Task:** Implement Config.1 preflight safeguards in PR bundle generation so existing recorder scope is preserved by default, delivery-channel bucket mismatches are surfaced, and local bucket policy updates merge existing statements instead of replacing them.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Updated Terraform Config bundle generation to add `overwrite_recording_group` (default `false`), recorder preflight/reuse logic, delivery-channel mismatch warning, merge-safe local bucket-policy handling, and README guardrail text; updated CloudFormation Config template to include `OverwriteRecordingGroup` parameterized behavior and explicit outputs.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/aws_account_orchestration.py** — Added validation probes for `config:DescribeConfigurationRecorders` and `config:DescribeDeliveryChannels`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/internal_reconciliation.py** — Added authoritative precheck probes for `config:DescribeConfigurationRecorders` and `config:DescribeDeliveryChannels`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/tenant_reconciliation.py** — Added Config preflight probe for `describe_delivery_channels` and permission-hint mapping for `config:DescribeDeliveryChannels`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Extended authoritative required-permissions list with Config recorder/delivery describe actions.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/read-role-template.yaml** — Added `config:DescribeDeliveryChannels` to `ConfigReadinessChecks` policy actions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Added/updated Config.1 assertions for selective-mode preservation default, recorder-name reuse, README warning coverage, and merged bucket-policy behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_aws_account_orchestration_permissions.py** — Added coverage for missing Config recorder/delivery describe permissions and updated stubs for new probes.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_validate_account.py** — Added assertions that required-permissions response includes Config recorder/delivery describe permissions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 7 implemented and updated implementation notes/permission mapping terminology.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Config.1 Terraform bundle now inspects existing recorder state and preserves recording-group scope by default; overwrite now requires explicit `overwrite_recording_group=true`.
+- Existing recorder name is reused when present; fallback name remains `security-autopilot-recorder` for first-time setup.
+- Config.1 Terraform now inspects existing delivery channel and emits explicit mismatch warning before redirecting bucket target; README includes Config.1 preflight safeguard warning text.
+- Local Config delivery bucket policy write path now performs `get-bucket-policy` preflight and merges required Config statements before `put-bucket-policy`.
+- Validation/preflight permission surfaces now include recorder/delivery describe requirements and read-role template includes `config:DescribeDeliveryChannels`.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k 'aws_config_enabled'` (pass: `6 passed, 81 deselected`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` (pass: `87 passed`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py` (pass: `10 passed`)
+- `PYTHONPATH=. ./venv/bin/python -m py_compile backend/services/pr_bundle.py backend/services/aws_account_orchestration.py backend/services/internal_reconciliation.py backend/services/tenant_reconciliation.py backend/routers/aws_accounts.py tests/test_step7_components.py tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py` (pass)
+- `./venv/bin/ruff check backend/services/pr_bundle.py backend/services/aws_account_orchestration.py backend/services/internal_reconciliation.py backend/services/tenant_reconciliation.py backend/routers/aws_accounts.py tests/test_step7_components.py tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py` (pass)
+
+**Technical debt / gotchas:**
+- CloudFormation Config path now exposes overwrite toggle semantics, but Terraform path remains the canonical implementation for inline preflight inspection/mismatch warnings and merge-safe policy write behavior.
+
+**Open questions / TODOs:**
+- Decide whether CloudFormation Config path should gain full preflight parity (custom-resource inspection/merge behavior) instead of parameterized overwrite guidance.
+
+## Phase 2 Task 6b S3.5 merge and fail-closed generation (2026-03-04)
+
+**Task:** Implement Task 6b in `backend/services/pr_bundle.py` so S3.5 generation preserves existing bucket policy statements (merge, not overwrite), writes preservation JSON into Terraform tfvars when needed, and fails closed with `bucket_policy_preservation_evidence_missing` when statement-count evidence indicates a non-empty policy but JSON evidence is missing.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Reworked S3.5 generation path to use `_resolve_s3_migrate_policy_preservation()`; added configurable fail-closed behavior in resolver; wired S3.5 Terraform to emit `terraform.auto.tfvars.json` when preservation JSON exists; replaced S3.5 Terraform local-exec merge with `aws_iam_policy_document` merge (`source_policy_documents` + `override_policy_documents`); replaced S3.5 CloudFormation overwrite policy resource with Lambda-backed `Custom::S3SslPolicyMerge` merge flow.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Updated/added S3.5 tests for required paths: merge+tfvars preload path, zero-policy no-tfvars path, fail-closed error path, and CloudFormation merge custom-resource assertions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** - Updated Task 6b implementation notes to reflect current merge mechanics (Terraform policy-document merge + CloudFormation custom-resource merge) instead of prior local-exec wording.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- S3.5 now resolves preservation input through the shared policy-preservation resolver path (same source of truth as S3.2 migration) while keeping S3.5-specific fail-closed semantics.
+- S3.5 now fails closed with `bucket_policy_preservation_evidence_missing` when `existing_bucket_policy_statement_count > 0` and no policy JSON is available.
+- S3.5 Terraform now merges existing statements with required SSL deny statement using Terraform-native policy-document merging and preloads existing policy JSON into `terraform.auto.tfvars.json` when present.
+- S3.5 CloudFormation now applies merge behavior via `Custom::S3SslPolicyMerge` instead of replacing the entire policy document.
+
+**Validation:**
+- `./venv/bin/pytest -q tests/test_step7_components.py -k "s3_ssl"` (pass: `4 passed, 78 deselected`)
+- `./venv/bin/pytest -q tests/test_step7_components.py` (pass: `83 passed`)
+- `./venv/bin/python -m py_compile backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- CloudFormation S3.5 merge now depends on inline Lambda `cfnresponse` behavior and runtime IAM permissions (`s3:GetBucketPolicy`, `s3:PutBucketPolicy`); further shared custom-resource patterns may justify extracting common helper snippets to reduce inline-code drift.
+
+**Open questions / TODOs:**
+- None.
+
+## Phase 2 Task 9 S3.9 self-referencing log bucket default fix (2026-03-04)
+
+**Task:** Implement Task 9 by removing S3.9 same-bucket logging defaults, enforcing fail-closed placeholder blocking for unresolved log bucket destination, and validating override behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Added `REPLACE_LOG_BUCKET_NAME` to `_BLOCKED_PLACEHOLDER_TOKENS`; wired `strategy_inputs` into S3.9 generator dispatch; added S3.9 log-bucket resolver using `strategy_inputs.log_bucket_name` with dedicated-bucket validation; changed Terraform/CloudFormation S3.9 defaults to `REPLACE_LOG_BUCKET_NAME` when unset; added explicit step guidance to not use source bucket as log destination.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Replaced old S3.9 same-bucket default assertion with fail-closed test for unresolved log bucket placeholder; added passing Terraform override test with separate log bucket; updated Terraform/CloudFormation parameterized generation tests to provide S3.9 `log_bucket_name` override.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 9 as implemented and aligned task text to the placeholder-based fail-closed behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- S3.9 log destination no longer defaults to source bucket in either Terraform or CloudFormation content.
+- Unset S3.9 log bucket now renders `REPLACE_LOG_BUCKET_NAME`, which is blocked during bundle generation by unresolved-placeholder checks.
+- Added explicit instruction text in S3.9 bundle steps: do not use source bucket as log destination.
+- Confirmed generation fails when unresolved and passes with valid separate log bucket override.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "s3_bucket_access_logging or supported_action_type_generates_executable_terraform_artifact or new_s3_controls_cloudformation"` (pass: `21 passed, 62 deselected`)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` (pass: `83 passed`)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- `S3.9` bundle generation now intentionally fails closed unless callers provide `strategy_inputs.log_bucket_name`; existing automation paths that omit this input must be updated before using S3.9 PR bundles.
+
+**Open questions / TODOs:**
+- None.
+
+## Phase 2 Task 8 S3.11 CF lifecycle fix (2026-03-04)
+
+**Task:** Implement Task 8 by replacing the `S3.11` CloudFormation `AWS::S3::Bucket` lifecycle approach with a Lambda custom resource that applies lifecycle via `PutLifecycleConfiguration` on create/update and performs delete no-op.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Reworked `_cloudformation_s3_bucket_lifecycle_configuration_content()` from direct `AWS::S3::Bucket` lifecycle definition to Lambda custom resource pattern (`AWS::IAM::Role`, `AWS::Lambda::Function`, `Custom::S3BucketLifecycleConfiguration`) that calls `s3.put_bucket_lifecycle_configuration(...)` with abort-incomplete-multipart rule on create/update; delete path now returns success without mutating lifecycle state.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Added explicit S3.11 CloudFormation custom-resource assertions for: no `AWS::S3::Bucket`, Lambda/custom-resource presence, `PutLifecycleConfiguration` path presence, and delete no-op handler behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Replaced the S3.11 CloudFormation template path with Lambda-backed custom resource behavior.
+- Create/Update now applies lifecycle by calling:
+  - `s3.put_bucket_lifecycle_configuration(...)`
+  - rule id: `security-autopilot-abort-incomplete-multipart`
+  - `AbortIncompleteMultipartUpload.DaysAfterInitiation` sourced from parameter.
+- Delete path is explicit no-op and does not attempt lifecycle rollback/removal.
+- Added metadata/API hints (`s3:PutLifecycleConfiguration`) and retained parameterized bucket/day inputs.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "lifecycle or new_s3_controls_cloudformation"` (pass: `6 passed, 74 deselected`)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- S3.11 CloudFormation path still applies a full lifecycle configuration object for the target bucket via API; preserving/merging arbitrary pre-existing multi-rule lifecycle intents is not yet modeled as a first-class merge strategy in this generator.
+
+**Open questions / TODOs:**
+- Decide whether to add runtime-evidence-driven lifecycle merge/preservation guardrails for S3.11 similar to the S3.5 policy-preservation model.
+
+## Phase 2 Live Test C rerun: CloudTrail.1 + S3.5 final validation (2026-03-04)
+
+**Task:** Close all Live Test C failures by implementing CloudTrail/S3.5 policy-preservation fixes, rerunning `C1`–`C5`, and publishing final all-pass evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Reworked CloudTrail and S3.5 Terraform generation to preserve existing bucket policies via merge-safe local-exec flow; added S3.5 fail-closed generation guard when statement count exists without policy JSON; passed runtime risk snapshot into S3.5 generation path.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Updated CloudTrail assertions for merge-preserving policy application behavior and added S3.5 fail-closed + merge-content tests.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-c-20260303T234636Z/** — Added final rerun evidence pack (`summary.md`, `summary.json`, `policy-snippets.md`, command transcripts, raw AWS/Terraform outputs, cleanup proofs).
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Updated Task 6 and Live Test C status to final rerun all-pass state.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-complete-plan.md** — Added status note pointing to final execution/evidence sources.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this rerun.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Implemented merge-preserving CloudTrail bucket-policy handling (supplement existing statements instead of replacement).
+- Implemented merge-preserving S3.5 SSL-deny handling (preserve existing statements and add `DenyInsecureTransport`).
+- Implemented S3.5 fail-closed guard: bundle generation now raises `bucket_policy_preservation_evidence_missing` when statement count indicates existing policy but policy JSON evidence is missing.
+- Re-ran Live Test C with fresh test resources and captured before/after policy JSON evidence.
+- Cleaned up all test trails/buckets and verified deletion.
+
+**Validation summary (`C1`–`C5`) — rerun evidence `phase2-live-test-c-20260303T234636Z`:**
+- C1: **PASS** (`IsLogging=true`, no delivery error fields reported after ~5 min)
+- C2: **PASS** (pre-existing SID preserved and CloudTrail delivery healthy)
+- C3: **PASS** (pre-existing deny preserved + SSL deny added)
+- C4: **PASS** (no prior policy -> SSL deny only)
+- C5: **PASS** (expected fail-closed error `bucket_policy_preservation_evidence_missing`)
+
+**Technical debt / gotchas:**
+- CloudTrail trail name is still static (`security-autopilot-trail`), so repeated isolated tests require cleanup/import discipline to avoid name collisions.
+- Terraform provider initialization can stall in restricted-network conditions; this rerun used a local provider-dir workaround for deterministic execution.
+
+**Open questions / TODOs:**
+- None for Live Test C scope; all requested cases passed with evidence.
+
+## Phase 2 Live Test C execution: CloudTrail.1 + S3.5 policy preservation (2026-03-04)
+
+**Task:** Execute Live Test C (`C1`–`C5`) after Tasks 5/6, capture pass/fail outcomes with bucket-policy before/after evidence, and publish artifacts under the Phase 2 audit evidence tree.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-c-20260303T224523Z/** — Added complete Live Test C evidence pack (`summary.md`, `summary.json`, `policy-snippets.md`, `context.txt`, command logs, raw AWS/terraform outputs, policy probes, and case-specific artifacts).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live-test execution task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Executed CloudTrail.1 Terraform live runs for:
+  - `C1` fresh bucket path (`phase2-live-c1-trail-224523z-029037611564`), including first-apply and retry evidence.
+  - `C2` existing bucket path (`phase2-live-c2-trail-224523z-029037611564`) with explicit pre-existing policy statement seeding and before/after policy capture.
+- Executed S3.5 Terraform live runs for:
+  - `C3` existing-policy bucket (`phase2-live-c3-s35-224523z-029037611564`) with pre-existing Deny statement capture.
+  - `C4` no-policy bucket (`phase2-live-c4-s35-224523z-029037611564`) with `NoSuchBucketPolicy` pre-check and post-apply verification.
+- Executed `C5` fail-closed generation probe for `s3_bucket_require_ssl` with `existing_bucket_policy_statement_count=2` and missing policy JSON.
+
+**Validation summary (`C1`–`C5`):**
+- C1: **FAIL**
+  - First apply on fresh bucket failed with `InsufficientS3BucketPolicyException` (`raw/c1_first_apply_error_excerpt.txt`).
+  - Retry succeeded and reached healthy status after ~5 min (`IsLogging=true`, no delivery errors), but case is marked fail because one-shot fresh-bucket apply did not satisfy acceptance.
+- C2: **FAIL**
+  - Delivery works after apply (`IsLogging=true`, no delivery error).
+  - Pre-existing policy statement `C2PreExistingDenyDeleteBucket` was removed (policy replaced, not supplemented).
+- C3: **FAIL**
+  - Pre-existing deny `C3PreExistingDenyDeleteBucket` was removed; only `DenyInsecureTransport` remained after apply.
+- C4: **PASS**
+  - Pre-check returned `NoSuchBucketPolicy`; post-apply policy contains only `DenyInsecureTransport`; apply succeeded.
+- C5: **FAIL**
+  - Expected `bucket_policy_preservation_evidence_missing` was not raised; bundle generation proceeded.
+
+**Technical debt / gotchas:**
+- CloudTrail Terraform bundle has a first-apply ordering race on fresh buckets (`aws_cloudtrail` may create before bucket-policy propagation), causing intermittent/one-shot apply failure.
+- CloudTrail bundle uses fixed trail name `security-autopilot-trail`, which causes cross-run collisions unless prior trail state is cleaned.
+- S3.5 generator remains replacement-oriented and does not consume policy-preservation evidence for merge-safe output.
+
+**Open questions / TODOs:**
+- Implement CloudTrail trail-to-policy dependency/order hardening so C1 is one-shot reliable on fresh buckets.
+- Implement Task 6b for S3.5 policy preservation merge + fail-closed generation guard, then re-run Live Test C.
+
+## Phase 2 Task 5 CloudTrail.1 required bucket policy in TF+CF (2026-03-03)
+
+**Task:** Implement Task 5 for `cloudtrail_enabled` PR bundles by adding required CloudTrail S3 bucket policy statements in Terraform and CloudFormation, with `create_bucket_policy` defaulting to `true` and supporting opt-out.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Wired CloudTrail generator dispatch to accept `strategy_inputs`; added `_coerce_bool()` helper for strategy input parsing; updated `_generate_for_cloudtrail_enabled()` to resolve `create_bucket_policy` (default `true`); updated `_terraform_cloudtrail_content()` and `_cloudformation_cloudtrail_content()` to include required CloudTrail bucket policy statements by default:
+  - `s3:GetBucketAcl` for `cloudtrail.amazonaws.com`
+  - `s3:PutObject` on `AWSLogs/<account>/CloudTrail/*` with `s3:x-amz-acl = bucket-owner-full-control`
+  Also added opt-out behavior (`create_bucket_policy=false`) that removes bucket-policy resources from generated TF/CF files.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Expanded CloudTrail Step 9.12 assertions to require policy resources/statements and added opt-out tests verifying bucket-policy resources are removed for Terraform and CloudFormation.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 5 as implemented.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added CloudTrail generator wiring so `generate_pr_bundle(..., strategy_inputs={"create_bucket_policy": false})` flows into content generation.
+- Default (`create_bucket_policy=true`) Terraform now emits CloudTrail trail plus policy-document and bucket-policy resources with required AWS service-principal statements.
+- Default (`create_bucket_policy=true`) CloudFormation now emits CloudTrail trail plus `AWS::S3::BucketPolicy` with the same required statements.
+- Opt-out (`create_bucket_policy=false`) removes bucket-policy resources from generated Terraform and CloudFormation CloudTrail files.
+
+**Validation:**
+- `pytest -q tests/test_step7_components.py` (pass: `77 passed`)
+- `ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (not run: `ruff` not installed in this environment)
+
+**Technical debt / gotchas:**
+- Repository has broad pre-existing uncommitted changes unrelated to Task 5; this task only modified the files listed above.
+
+**Open questions / TODOs:**
+- None.
+
+## Phase 2 Task 6a S3.5 runtime policy capture (2026-03-03)
+
+**Task:** Implement Task 6a in `collect_runtime_risk_signals()` for `s3_bucket_require_ssl` by capturing existing bucket policy evidence and adding runtime-check branch coverage tests.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** — Added S3.5 runtime policy evidence capture (`existing_bucket_policy_json`, `existing_bucket_policy_statement_count`) and explicit capture-error recording on policy read failures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** — Added focused unit tests for S3.5 runtime probe branches: policy present (`count=2` + JSON capture), `NoSuchBucketPolicy` (`count=0`), and `AccessDenied` (access path marked unavailable, no hard failure).
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 6 Step 6a as implemented and Step 6b as pending.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Updated SSL strategy runtime branch to capture normalized existing bucket policy JSON and statement count when `s3:GetBucketPolicy` succeeds.
+- Added `NoSuchBucketPolicy` handling to store `existing_bucket_policy_statement_count = 0`.
+- Added `AccessDenied`/policy-read error evidence capture while marking strict access-path evidence unavailable instead of raising or crashing the runtime probe path.
+
+**Validation:**
+- `pytest -q tests/test_remediation_runtime_checks.py tests/test_remediation_risk.py` (pass: `13 passed`)
+
+**Technical debt / gotchas:**
+- Step 6a now captures policy-preservation evidence for S3.5, but bundle-generation merge/preservation behavior for S3.5 (Task 6b) is still not implemented.
+
+**Open questions / TODOs:**
+- Implement Task 6b in `backend/services/pr_bundle.py` to consume this new S3.5 runtime evidence for merge-safe bundle generation and fail-closed preservation checks.
+
+## Phase 2 Task 4 EC2.53 CF revoke parity via Lambda custom resource (2026-03-03)
+
+**Task:** Implement Task 4 parity for `EC2.53` CloudFormation by adding a Lambda custom resource that revokes public SSH/RDP ingress (`0.0.0.0/0`, `::/0`) before restricted ingress resources are created, with delete-path no-op semantics.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Updated `_cloudformation_sg_restrict_content()` to include IAM role + Lambda function + `Custom::SecurityGroupIngressRevoke` resource that calls `ec2.revoke_security_group_ingress` for ports `22/3389` on both IPv4/IPv6 public CIDRs; added `DependsOn: RevokePublicAdminIngress` to all SG ingress resources so revoke runs first; delete handler returns success without re-adding public rules. Updated CloudFormation SG step guidance to reflect revoke-before-add behavior and delete no-op semantics.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Updated `test_pr_bundle_sg_restrict_cloudformation_step_9_11` assertions to require Lambda/custom-resource presence, explicit revoke logic, `DependsOn` ordering, and delete no-op handler behavior; removed obsolete additive/manual-revoke-only assertions.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- EC2.53 CloudFormation template now includes a Lambda-backed custom resource that revokes:
+  - `0.0.0.0/0` on port `22`
+  - `0.0.0.0/0` on port `3389`
+  - `::/0` on port `22`
+  - `::/0` on port `3389`
+- Restricted ingress resources (`IngressSSH`, `IngressRDP`, `IngressSSHIPv6`, `IngressRDPIPv6`) now all explicitly depend on `RevokePublicAdminIngress`.
+- Lambda delete path is explicit no-op success and contains no authorize/re-add flow.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "sg_restrict"` (pass: `7 passed, 68 deselected`)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- Inline Lambda code in `ZipFile` remains string-embedded in `pr_bundle.py`; any further branching should consider extracting shared helper snippets to reduce quoting/escaping drift risk.
+
+**Open questions / TODOs:**
+- Re-run/manual-refresh Live Test A `A5` evidence artifacts if Phase 2 evidence pack needs to reflect Task 4 parity behavior instead of Task 2 additive-only snapshot.
+
+## Phase 2 Live Test B execution: IAM.4 MFA gate (2026-03-03)
+
+**Task:** Execute Live Test B (`B1`–`B3`) for IAM.4 MFA gate behavior after Task 3, capture API/worker evidence artifacts, and report pass/fail outcomes without bypassing root safety controls.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-b-20260303T175808Z/** — Added Live Test B evidence package (`b1-response.json`, `b2-options-response.json`, `b2-run-response.json`, `b2-account-summary.json`, `b3-worker-simulation.json`, `gate-excerpts.txt`, `manual-console-prerequisites.md`, `summary.json`).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live-test execution task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- B1 (`MFA=0` block path): **PASS**
+  - Exercised `POST /api/remediation-runs` with `strategy_id=iam_root_key_delete` on staging/test-path injection (`iam_root_account_mfa_enrolled=false`).
+  - Observed `HTTP 400` with `iam_root_mfa_enrollment_gate=fail` and explicit gate text:
+    - `Delete path is blocked: root MFA is not enrolled (AccountMFAEnabled=0). Enable root MFA before selecting root key delete.`
+- B2 (`MFA=1` selectable + proceeds): **PASS**
+  - Observed `GET /api/actions/{action_id}/remediation-options` `HTTP 200` with delete strategy dependency check `iam_root_mfa_enrollment_gate=pass`.
+  - Observed live account summary `AccountMFAEnabled=1` (`b2-account-summary.json`).
+  - Observed `POST /api/remediation-runs` `HTTP 201` for `iam_root_key_delete` (`run_id=3b0a17e7-1a44-4948-b4db-b80066260af4`, status `pending`).
+  - Post-evidence cleanup: cancelled this run (`HTTP 200`) to avoid leaving an active duplicate-run blocker (`b2-run-cancel-response.json`).
+- B3 (`execute_delete` hard-stop with `MFA=0`): **PASS**
+  - Simulated worker `execute_delete()` with IAM summary probe returning `AccountMFAEnabled=0`.
+  - Observed transition to `state=needs_attention`, `status=waiting_for_user`, reason `root_mfa_not_enrolled`, transition id suffix `:mfa_gate`.
+  - Observed zero delete API calls (mutation blocked before delete).
+
+**Validation summary (`B1`–`B3`):**
+- B1: **PASS**
+- B2: **PASS**
+- B3: **PASS**
+- Overall: **PASS**
+
+**Manual-console prerequisites (explicit):**
+- Fully live B1 requires a tenant-linked account with root MFA disabled (`AccountMFAEnabled=0`).
+- No such MFA-disabled account was available in connected tenant-linked accounts during this run.
+- B1 therefore used approved staging/test-path signal injection for MFA=0 gate validation; B2 used live MFA=1 account state; B3 is worker-simulation only.
+
+**Technical debt / gotchas:**
+- FastAPI `TestClient` + asyncpg pooled connections can hit cross-event-loop errors when chaining mixed API/worker flows in one process; this run used per-case isolated processes.
+
+**Open questions / TODOs:**
+- If a dedicated live MFA-disabled account becomes available, run an additional fully live B1 replay to complement the current staging/test-path evidence.
+
+## Phase 2 Live Test A execution: Tasks 1-2 remediation safety (2026-03-03)
+
+**Task:** Execute Live Test A (`A1`–`A5`) after Phase 2 Task 1 and Task 2 implementation, capture evidence artifacts, and report pass/fail outcomes plus blockers.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/** — New full evidence package for Live Test A including generated bundles, command transcripts, AWS API outputs, Terraform plans, analysis summaries, and result summary (`summary.md`, `raw/live_test_a_results.json`).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live-test execution task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Preflight:
+  - Confirmed active AWS identity and region via STS/CLI context (`Account=029037611564`, `Region=eu-north-1`).
+  - Created dedicated test SG in default VPC for `EC2.53` live validation and captured initial state.
+- A1 (`S3.1` CloudFormation deploy): **FAIL**
+  - Stack creation rolled back (`ROLLBACK_COMPLETE`).
+  - Root cause from Lambda logs: execution role denied `s3:PutAccountPublicAccessBlock` during `put_public_access_block` call.
+- A2 (`S3.1` stack delete): **PASS**
+  - Deletion command + waiter succeeded; post-delete describe confirms stack no longer exists.
+- A3 (`EC2.53` Terraform default plan): **PASS**
+  - Plan includes restricted ingress resources and zero active revoke changes.
+- A4 (`EC2.53` Terraform with `remove_existing_public_rules=true`): **PASS**
+  - Plan includes `null_resource.revoke_public_admin_ingress[0]` plus restricted ingress additions.
+- A5 (`EC2.53` CloudFormation deploy): **PASS**
+  - Stack reached `CREATE_COMPLETE`.
+  - Original public `22/tcp` rule remained present post-deploy (additive-only behavior).
+  - Generated template/steps include explicit manual-revoke fail-closed warnings.
+- Cleanup:
+  - Deleted A5 stack and temporary SG to avoid leaving test resources/public ingress behind.
+
+**Validation summary (`A1`–`A5`):**
+- A1: **FAIL**
+- A2: **PASS**
+- A3: **PASS**
+- A4: **PASS**
+- A5: **PASS**
+
+**Technical debt / gotchas:**
+- Current S3.1 CloudFormation custom-resource IAM policy grants `s3control:PutPublicAccessBlock`, but live API authorization failure requires `s3:PutAccountPublicAccessBlock` for this runtime call path.
+
+**Open questions / TODOs:**
+- Backend follow-up fix: update S3.1 CloudFormation Lambda role permissions to include `s3:PutAccountPublicAccessBlock` (and keep/validate least-privilege alignment), then rerun Live Test A1/A2 to close the remaining launch blocker.
+
+## Phase 2 Task 3 IAM.4 MFA gate for root-key delete path (2026-03-03)
+
+**Task:** Implement remediation-safety Task 3 by adding an `AccountMFAEnabled` runtime probe and hard-gating IAM root-key delete paths in strategy evaluation, worker delete execution, and strategy-selection UI messaging.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** — Added `iam_root_key_delete` runtime probe using IAM account summary (`AccountMFAEnabled`) and emitted deterministic MFA gate signals/evidence.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py** — Added `iam_root_mfa_enrollment_gate` dependency check (`fail` when MFA disabled, `pass` when enabled, `unknown` when unreadable) so strategy selection hard-blocks on MFA-disabled accounts.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** — Enabled runtime-risk probing for `iam_root_key_delete` in remediation-options payloads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_executor_worker.py** — Added delete-path runtime MFA guard and fail-closed `needs_attention` transition with reason `root_mfa_not_enrolled`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** — Promoted IAM delete warning copy to explicit gate language.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** — Added explicit safety-gate blocked messaging for failing dependency checks and updated blocked submit messaging language.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** — Added UI test for MFA-gate blocked strategy messaging and disabled run button.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/read-role-template.yaml** — Added `iam:GetAccountSummaryReport` alongside `iam:GetAccountSummary` in read-role IAM inventory permissions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py** — Added IAM delete MFA gate fail/pass assertions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** — Added run-creation tests for MFA-disabled hard block and MFA-enabled allow flow.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_executor_worker.py** — Added worker delete-path tests for `MFA=0` fail-closed and `MFA=1` normal flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 3 as implemented.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added runtime probe for IAM root-key delete strategy to read `SummaryMap.AccountMFAEnabled` from account summary and expose it to risk evaluation.
+- Converted IAM root-key delete from warning-only behavior to a hard dependency gate when MFA is not enrolled.
+- Added executor-worker delete runtime guard that transitions to `needs_attention` with reason `root_mfa_not_enrolled` before mutation.
+- Updated strategy-selection UI to surface explicit safety-gate blocked language and blocking-check detail text.
+- Extended read-role template IAM inventory permissions with `iam:GetAccountSummaryReport` per Task 3 requirement.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_risk.py tests/test_remediation_runs_api.py tests/test_root_key_remediation_executor_worker.py` (pass: `65 passed`)
+- `./venv/bin/ruff check backend/services/remediation_runtime_checks.py backend/services/remediation_risk.py backend/services/root_key_remediation_executor_worker.py backend/services/remediation_strategy.py backend/routers/actions.py tests/test_remediation_risk.py tests/test_remediation_runs_api.py tests/test_root_key_remediation_executor_worker.py` (pass)
+- `cd frontend && npx eslint src/components/RemediationModal.tsx src/components/RemediationModal.test.tsx` (pass)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `3 passed`)
+
+**Technical debt / gotchas:**
+- Runtime probe currently uses IAM `GetAccountSummary` API; policy now includes `iam:GetAccountSummaryReport` for checklist parity, but AWS SDK call path remains `GetAccountSummary`.
+- MFA gate fail-close in worker currently blocks only on explicit `AccountMFAEnabled=0`; unreadable MFA status remains non-blocking at worker level and surfaces as strategy-risk unknowns upstream.
+
+**Open questions / TODOs:**
+- Decide whether worker delete path should also fail closed when MFA probe is unreadable (`unknown`) instead of allowing execution.
+
+## Phase 2 Tasks 1-2 focused validation pass (2026-03-03)
+
+**Task:** Run a focused post-implementation validation pass for remediation-safety Task 1 (S3.1 CF custom resource) and Task 2 (EC2.53 revoke opt-in + CF fail-closed/manual-revoke guidance), and provide manual Live Test A execution checklist.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this focused validation pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Executed targeted tests exactly as requested:
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "s3 or sg_restrict or cloudformation"`
+  - Result: `44 passed, 31 deselected`
+- Executed lint exactly as requested:
+  - `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py`
+  - Result: `All checks passed!`
+- Confirmed assertion coverage for requested proof points:
+  - S3.1 CF no-op removed (no `WaitConditionHandle`, Lambda + custom resource present, put-public-access-block call present, delete no-op success path asserted).
+  - EC2.53 revoke is opt-in (`remove_existing_public_rules` variable and conditional revoke count expression asserted).
+  - EC2.53 CloudFormation is explicit additive/manual-revoke path (explicit additive/manual checklist assertions; revoke API call strings explicitly forbidden).
+
+**Technical debt / gotchas:**
+- Live Test A (`A1`–`A5`) remains manual AWS execution and is not covered by local unit tests/lint.
+
+**Open questions / TODOs:**
+- After manual Live Test A execution, attach command outputs/artifacts to task log so launch-gate evidence includes both unit and live validation proof.
+
+## Phase 2 Task 2 EC2.53 revoke opt-in and CF fail-closed checklist (2026-03-03)
+
+**Task:** Implement remediation-safety Phase 2 Task 2 for `EC2.53` by making Terraform revoke behavior opt-in (`remove_existing_public_rules=false` by default), adding CloudFormation fail-closed/manual-revoke guidance, and updating unit coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Updated `_generate_for_sg_restrict_public_ports()` steps for both Terraform/CloudFormation to include the explicit IMPORTANT review step; changed Terraform guidance to opt-in revoke behavior; added `remove_existing_public_rules` variable to `_terraform_sg_restrict_content()` and conditioned `null_resource.revoke_public_admin_ingress` on `var.remove_existing_public_rules == true`; added explicit fail-closed + mandatory manual revoke guidance to `_cloudformation_sg_restrict_content()` top instructions and metadata.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Extended `EC2.53` SG restrict tests to assert Terraform variable default false, conditional revoke expression, mandatory CloudFormation manual-revoke warning/checklist language, absence of revoke API calls in CloudFormation template, and required IMPORTANT step in generated steps for both formats.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Terraform SG restrict bundle now keeps restricted ingress resources intact while making public-rule revoke preflight explicitly opt-in (`remove_existing_public_rules` defaults to `false`).
+- CloudFormation SG restrict bundle now states fail-closed behavior clearly: additive-only and does not revoke existing `0.0.0.0/0` / `::/0` admin rules.
+- Added mandatory manual revoke checklist language in CloudFormation template metadata/top instructions.
+- Added explicit IMPORTANT instruction in generated steps for both Terraform and CloudFormation:
+  - `IMPORTANT: review remove_existing_public_rules before applying.`
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "sg_restrict or EC2.53"` (pass: `7 passed, 68 deselected`)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- CloudFormation path is intentionally additive-only in this task and still requires manual revoke for full `EC2.53` closure.
+
+**Open questions / TODOs:**
+- Task 4 parity remains: add CloudFormation Lambda custom resource for automated revoke (`ec2:RevokeSecurityGroupIngress`) with revoke-before-add sequencing and test coverage.
+
+## Phase 2 Task 1: S3.1 CloudFormation custom resource remediation (2026-03-03)
+
+**Task:** Implement Phase 2 remediation-safety Task 1 by replacing S3.1 CloudFormation no-op placeholder behavior with an applyable Lambda custom-resource path that actually sets account-level S3 Block Public Access.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Replaced `_cloudformation_s3_content()` WaitConditionHandle placeholder template with Lambda Custom Resource pattern (`AWS::IAM::Role`, `AWS::Lambda::Function`, `Custom::S3AccountPublicAccessBlock`) that calls `s3control.put_public_access_block` with all four flags set `True`; delete path now returns success without mutation.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Updated S3.1 CloudFormation test assertions to enforce custom-resource behavior and reject legacy placeholder/no-op behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this implementation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Updated S3.1 CloudFormation generator to remove `AWS::CloudFormation::WaitConditionHandle` and emit a Lambda-backed custom resource that performs real remediation.
+- Added Lambda handler logic:
+  - `Create` / `Update`: invokes `s3control.put_public_access_block` with `BlockPublicAcls=True`, `IgnorePublicAcls=True`, `BlockPublicPolicy=True`, `RestrictPublicBuckets=True`.
+  - `Delete`: short-circuits with `cfnresponse.SUCCESS` and no API mutation.
+- Preserved valid/applyable template structure and metadata while removing no-op guidance language tied to placeholder behavior.
+- Added/updated unit assertions to confirm:
+  - no `WaitConditionHandle`,
+  - presence of `AWS::Lambda::Function` + `Custom::S3AccountPublicAccessBlock`,
+  - explicit `put_public_access_block` call with all four true flags,
+  - delete no-op success path.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "s3 or cloudformation"` → `38 passed, 37 deselected`.
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` → `All checks passed!`
+
+**Technical debt / gotchas:**
+- Inline Lambda Python in CloudFormation ZipFile remains string-embedded in `pr_bundle.py`; future logic growth should consider extracting shared custom-resource snippets to reduce drift and quoting/escaping risk.
+
+**Open questions / TODOs:**
+- None for this task scope.
+
+## Prompt pack: Phase 2 remediation-safety Tasks 1-2 implementation prompts (2026-03-03)
+
+**Task:** Prepare ready-to-run implementation prompts for the first couple tasks in Phase 2 remediation safety (`remediation-safety-tasks.md` + `remediation-safety-complete-plan.md`) so execution can start immediately with consistent scope and acceptance checks.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this prompt-pack handoff task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Read required project context before producing prompts:
+  - `.cursor/rules/*`,
+  - `.cursor/notes/project_status.md`,
+  - `.cursor/notes/task_index.md`,
+  - relevant `.cursor/notes/task_log.md` entries tied to remediation safety/root-key safety work,
+  - `docs/README.md`,
+  - `docs/phase-2/remediation-safety-tasks.md`,
+  - `docs/phase-2/remediation-safety-complete-plan.md`.
+- Produced implementation-ready prompt structure for:
+  - Task 1 (`S3.1` CloudFormation no-op fix),
+  - Task 2 (`EC2.53` revoke opt-in + CF fail-closed checklist),
+  - immediate post-change validation scope aligned to Live Test A intent.
+- Kept prompts scoped to concrete files/functions, explicit acceptance criteria, and required tests.
+
+**Technical debt / gotchas:**
+- Prompts reference current function names and expected behaviors; line numbers in docs may drift as `pr_bundle.py` evolves.
+
+**Open questions / TODOs:**
+- Decide whether to immediately queue Task 3 (`IAM.4` MFA gate) prompt in the same execution batch or keep it as a separate pass after Tasks 1-2 validation.
+
+## Prompt enhancement: long-context illogical-remediation audit prompt rewrite (2026-03-03)
+
+**Task:** Upgrade a long-form PM audit prompt so the next audit pass checks completeness, catches missing logic gaps, and returns fix recommendations in a strict decision-ready format.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this prompt-rewrite task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Read required project context before execution:
+  - `.cursor/rules/*`,
+  - `.cursor/notes/project_status.md`,
+  - `.cursor/notes/task_index.md`,
+  - relevant `.cursor/notes/task_log.md` entries tied to illogical-remediation audits and prior prompt enhancement,
+  - `docs/README.md`.
+- Produced a stronger prompt structure that keeps the full audit context but tightens execution requirements:
+  - explicit mission, scope boundaries, and out-of-scope handling,
+  - deterministic completeness checks across all mapped controls and aliases,
+  - required evidence-backed output schema with severity, PM impact, and remediation plan per issue,
+  - explicit “changed vs prior pass” section to prevent silent misses.
+
+**Technical debt / gotchas:**
+- Repeated ad-hoc prompt rewrites indicate a need for one canonical reusable audit prompt template with fixed output contract.
+
+**Open questions / TODOs:**
+- Decide whether to store this version as a shared reusable template under docs for PM + QA audit workflows.
+
+## Prompt enhancement: illogical-remediation re-audit request template (2026-03-03)
+
+**Task:** Enhance the PM prompt used to re-review illogical remediation audit results, check for missing gaps, and request concrete fix recommendations.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this prompt-enhancement task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Read required project context before execution:
+  - `.cursor/rules/*`,
+  - `.cursor/notes/project_status.md`,
+  - `.cursor/notes/task_index.md`,
+  - relevant `.cursor/notes/task_log.md` entries for the illogical-remediation audits,
+  - `docs/README.md`.
+- Produced an upgraded prompt structure that preserves audit context while adding:
+  - explicit objective/scope definitions,
+  - completeness checks for missing controls or logic gaps,
+  - required PM-friendly output format,
+  - prioritized remediation plan and acceptance criteria.
+
+**Technical debt / gotchas:**
+- Prompt quality for audit tasks can drift if required output schema is not standardized.
+
+**Open questions / TODOs:**
+- Decide whether to store this prompt template in a shared docs location for reuse by PM/QA flows.
+
+## Full-pass audit: all mapped actions re-reviewed for illogical fixes (2026-03-03)
+
+**Task:** Re-run a complete control/action audit after PM feedback to ensure no illogical remediation path was missed.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this full-pass audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-validated complete in-scope mapping from `backend/services/control_scope.py` (all canonical controls + aliases).
+- Re-reviewed action-level behavior across:
+  - strategy/risk gates (`backend/services/remediation_strategy.py`, `backend/services/remediation_risk.py`, `backend/routers/actions.py`, `backend/routers/remediation_runs.py`),
+  - direct-fix executor (`backend/workers/services/direct_fix.py`),
+  - PR bundle generators (`backend/services/pr_bundle.py`).
+- Confirmed previously flagged gaps still stand:
+  - `EC2.53` family (`EC2.13/18/19`) strategy-gap and SG-change asymmetry.
+  - `S3.5` SSL policy replacement/merge risk.
+  - `S3.9` same-bucket logging defaults.
+  - `IAM.4` delete path lacks hard fallback-proof precondition.
+- Added newly confirmed additional illogical-risk controls:
+  - `S3.1` account-level BPA has no strategy-based safe alternative path despite broad blast radius (plus CloudFormation no-op confusion).
+  - `Config.1` Terraform local-delivery path can overwrite existing bucket policy via `put-bucket-policy`.
+  - `S3.11` lifecycle remediation path defines a single lifecycle configuration and can overwrite existing lifecycle intent.
+- Re-confirmed unsupported-by-design scope remains unchanged: `RDS.PUBLIC_ACCESS`, `RDS.ENCRYPTION`, `EKS.PUBLIC_ENDPOINT`.
+
+**Technical debt / gotchas:**
+- High-impact controls are not uniformly migrated to strategy catalog + mandatory dependency checks.
+- Several generators still rely on replacement-style policy/config resources without first-class merge/preserve semantics.
+
+**Open questions / TODOs:**
+- Should `S3.1`, `EC2.53`, and `CloudTrail.1` be mandatory strategy-based before production auto-apply eligibility?
+- Should replacement-style generators (`S3.5`, `S3.11`, `Config.1` local-bucket policy step) be blocked unless explicit preserve/merge evidence is present?
+
+## Follow-up audit: IAM.4 included in illogical-fix list + PM action plan (2026-03-03)
+
+**Task:** Re-check IAM.4 remediation behavior after PM feedback and provide suggested actions for each illogical fix.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged follow-up audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-validated IAM.4 strategy behavior in code:
+  - `iam_root_key_disable`, `iam_root_key_delete`, and `iam_root_key_keep_exception` are available strategies.
+  - SaaS executor is blocked for root-required runs and requires manual/root execution path.
+  - Delete path exists in generated Terraform and can execute when root credentials are used.
+- Confirmed PM concern is valid as a product logic gap:
+  - IAM.4 currently warns and requires risk acknowledgment, but does not hard-require proof of validated alternative/break-glass path before delete.
+- Updated illogical-fix recommendation scope to include IAM.4 explicitly.
+
+**Technical debt / gotchas:**
+- High-risk destructive actions (root key delete) rely on acknowledgement rather than hard preconditions.
+
+**Open questions / TODOs:**
+- Should IAM.4 delete be blocked by default unless a mandatory fallback checklist (MFA + break-glass principal + tested login path) is completed and attested?
+
+## SG account-scoped finding expansion: executable EC2 SG action fan-out (2026-03-03)
+
+**Task:** Implement account-scoped SG finding expansion so `EC2.13/EC2.18/EC2.19/EC2.53` findings can resolve concrete security-group targets and generate executable remediation actions.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/read-role-template.yaml** — Added AWS Config read permissions required for SG account-scope expansion (`config:DescribeConfigRules`, `config:DescribeComplianceByConfigRules`, `config:GetComplianceDetailsByConfigRule`).
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/sg_account_scope_resolver.py** — New resolver service to derive Config rule identifiers from finding payloads, query NON_COMPLIANT Config resources, extract/dedupe SG IDs, and fail closed with explicit reasons.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** — Added account-scoped SG expansion context in action computation, SG fan-out into SG-scoped action targets, stale SG-link pruning, and fail-closed skip behavior when SG IDs cannot be resolved.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py** — Updated finding/group remediation hints to skip non-executable SG actions and prefer executable targets only.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/aws_account_orchestration.py** — Added validation probes for new Config permissions so missing actions are surfaced in account validation responses.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/internal_reconciliation.py** — Added authoritative-mode precheck probes for new Config permissions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/tenant_reconciliation.py** — Added Config preflight probes + permission hints for new actions in reconciliation preflight.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py** — Extended authoritative-mode required permissions list with new Config actions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action_finding.py** — Updated association docstring to reflect valid one-finding-to-many-actions fan-out behavior for account-scoped expansions.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/recompute_account_actions.py** — New safe/idempotent recompute script for tenant/account action backfill.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/README.md** — Added recompute command so backfill path is discoverable.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_sg_account_scope_resolver.py** — Added resolver tests (happy path, no-SG fail-closed path, dedupe).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_account_scoped_sg.py** — Added action expansion tests (fan-out, fail-closed no-SG, idempotent upsert, PR-bundle regression for missing SG ID).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_aws_account_orchestration_permissions.py** — Added permission-probe tests for new Config validation actions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_validate_account.py** — Added assertions ensuring account validation required-permissions output includes new Config actions.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added SG account-scope resolver logic that:
+  - derives Config rule identifiers from finding payload strings (`Id`, `GeneratorId`, `ProductFields`, `Resources`, `Compliance`),
+  - resolves concrete Config rule names,
+  - queries AWS Config for NON_COMPLIANT evaluations,
+  - extracts and deduplicates `sg-*` identifiers.
+- Updated action computation so account-scoped SG findings no longer create account-only non-executable SG actions:
+  - expanded SG account-scoped findings fan out to SG-scoped action targets,
+  - unresolved expansions fail closed (skip action target creation, log clear reason),
+  - stale SG action links for expanded findings are pruned to current resolvable SG targets.
+- Kept existing SG-scoped behavior intact while making account-scoped SG aliases (`EC2.13/18/19/53`) actionable when SGs are resolvable.
+- Updated finding-level and grouped remediation hint selection to exclude non-executable SG targets.
+- Added safe recompute/backfill script:
+  - `PYTHONPATH=. ./venv/bin/python scripts/recompute_account_actions.py --tenant-id <TENANT_UUID> --account-id <ACCOUNT_ID> [--region <REGION>]`
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_sg_account_scope_resolver.py tests/test_action_engine_account_scoped_sg.py tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py tests/test_action_engine_merge.py tests/test_step7_components.py tests/test_worker_ingest.py tests/test_reconciliation_api.py` (pass, 130 tests)
+- `./venv/bin/ruff check backend/services/sg_account_scope_resolver.py backend/services/action_engine.py backend/services/aws_account_orchestration.py backend/services/internal_reconciliation.py backend/services/tenant_reconciliation.py backend/routers/findings.py scripts/recompute_account_actions.py tests/test_sg_account_scope_resolver.py tests/test_action_engine_account_scoped_sg.py tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py` (pass)
+- `PYTHONPATH=. ./venv/bin/python -m py_compile backend/services/sg_account_scope_resolver.py backend/services/action_engine.py backend/services/aws_account_orchestration.py backend/services/internal_reconciliation.py backend/services/tenant_reconciliation.py backend/routers/findings.py scripts/recompute_account_actions.py tests/test_sg_account_scope_resolver.py tests/test_action_engine_account_scoped_sg.py tests/test_aws_account_orchestration_permissions.py tests/test_validate_account.py` (pass)
+- `PYTHONPATH=. ./venv/bin/python scripts/recompute_account_actions.py --help` (pass)
+
+**Technical debt / gotchas:**
+- Config-rule derivation depends on finding payload breadcrumbs; accounts with atypical payload shapes may fail closed until rule-identification heuristics are extended.
+- Validation probes for `config:GetComplianceDetailsByConfigRule` require at least one Config rule in the account to probe directly; when none exist, a warning is returned instead of a deterministic missing-permission result.
+
+**Open questions / TODOs:**
+- Decide whether to persist SG-expansion failure reasons to a first-class field surfaced in API/UI (currently logged and fail-closed, but not persisted on finding/action rows).
+
+## Control-action audit: illogical remediation paths across in-scope controls (2026-03-03)
+
+**Task:** Audit all currently in-scope controls/rules and their mapped remediation actions to identify illogical fix behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reviewed source-of-truth control mappings and aliases in `backend/services/control_scope.py`.
+- Reviewed strategy catalog coverage and run-creation guardrail enforcement in `backend/services/remediation_strategy.py`, `backend/routers/actions.py`, and `backend/routers/remediation_runs.py`.
+- Reviewed direct-fix and PR-bundle generator behavior across all in-scope action types.
+- Flagged concrete illogical fix paths:
+  - `EC2.53` (`EC2.13`/`EC2.18`/`EC2.19` aliases): no strategy catalog alternatives or risk-ack gating; CloudFormation path adds restricted SSH/RDP ingress but does not remove existing public rules; Terraform default can lock out operators without validated alternate access path.
+  - `S3.1`: CloudFormation bundle is explicit placeholder/no-op while step text says deploy stack to enable remediation, creating a false-success operator path; action type also has no strategy-based risk gating.
+  - `S3.5`: generated bucket policy path is replacement-oriented, so users can unintentionally overwrite existing policy statements if they apply bundle output without manual merge.
+  - `S3.9`: source bucket and log bucket default to the same bucket, which is a risky/non-opinionated default for production logging topology.
+- Confirmed explicitly unsupported controls remain non-remediable by design: `RDS.PUBLIC_ACCESS`, `RDS.ENCRYPTION`, `EKS.PUBLIC_ENDPOINT`.
+
+**Technical debt / gotchas:**
+- Several high-impact action types still use legacy no-strategy fallback behavior, so risk checks/ack are not enforced uniformly.
+- CloudFormation parity differs from Terraform behavior for some controls (notably `S3.1` and `EC2.53` family).
+
+**Open questions / TODOs:**
+- Should `EC2.53` be moved to explicit strategy-based remediation before broader rollout (allowlisted CIDR, bastion/SSM route, close-only, exception)?
+- Should `S3.1` CloudFormation remediation format be disabled to avoid no-op confusion?
+- Should `S3.5` generation move to policy-preserving merge by default instead of replacement-oriented output?
+
+## UI wording polish: removed remaining test-like customer phrasing (2026-03-03)
+
+**Task:** Remove remaining user-facing test/development wording after prior placeholder/debug cleanup.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx** — Reworded control-plane verification copy to remove `synthetic`/`test` phrasing in user-visible messages and guidance.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.tsx** — Reworded verification helper section (`How to test` -> `How to verify`), replaced test wording in instructions, and changed `Coming Soon` badge text to `Not Available Yet`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/TenantIdForm.tsx** — Removed `Tenant ID (development)` heading wording and `dev-tenant` placeholder example.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Onboarding copy updates:
+  - `synthetic verify` / `Synthetic verification` -> `automated verification`
+  - `Send synthetic control-plane event` -> `Send control-plane verification event`
+  - `Manual fallback test event` -> `Manual fallback verification event`
+  - Rule-description token `autopilot-cp-test` -> `autopilot-cp-verify`
+- Settings copy updates:
+  - `How to test (example event)` -> `How to verify (example event)`
+  - `run this test` -> `run this verification`
+  - `Coming Soon` badge -> `Not Available Yet`
+  - Rule-description token `autopilot-cp-test` -> `autopilot-cp-verify`
+- Tenant helper copy updates:
+  - `Tenant ID (development)` -> `Tenant ID`
+  - placeholder `e.g. tenant-uuid or dev-tenant` -> `e.g. tenant-uuid`
+- Verified removed phrases no longer appear in these surfaces.
+
+**Validation:**
+- `npm --prefix frontend run typecheck` (pass)
+- `npm --prefix frontend run lint -- src/app/onboarding/page.tsx src/app/settings/page.tsx src/components/TenantIdForm.tsx` (pass with existing warnings only)
+
+**Technical debt / gotchas:**
+- Frontend lint still reports pre-existing warnings in `frontend/src/app/settings/page.tsx`:
+  - unused `digestSettings`
+  - missing `useEffect` dependency (`currentExportDetail`)
+
+**Open questions / TODOs:**
+- Decide whether to hide Tenant ID fallback input entirely for authenticated production flows instead of only neutralizing wording.
+
+## Findings deep-link fix: Top Risks buttons now apply URL filters (2026-03-03)
+
+**Task:** Make Top Risks redirect buttons actually apply Findings filters (for example “View All High-Priority Findings”).
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.tsx** — Added URL-query hydration for findings filters (`severity`, `status`, `source`, `account_id`, `region`, `control_id`, `resource_id`) so redirected links apply filters immediately.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this fix task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added query-normalization helpers for scalar and CSV values.
+- Added a filter-hydration `useEffect` that reads `useSearchParams()` and sets Findings page filter state from URL params.
+- Confirmed this resolves Top Risks link behavior that relied on query params:
+  - `Resolved Findings` (`/findings?status=RESOLVED`)
+  - `Critical Findings` (`/findings?severity=CRITICAL`)
+  - `View All ... High-Priority Findings` (`/findings?severity=CRITICAL,HIGH&status=NEW,NOTIFIED`)
+
+**Validation:**
+- `npm --prefix frontend run typecheck` (pass)
+- `npm --prefix frontend run lint -- src/app/findings/page.tsx` (pass with one existing warning: unused `FindingGroupCard` import)
+
+**Technical debt / gotchas:**
+- Findings filter UI controls are single-select widgets, while deep links can now set CSV multi-value filters (for example `status=NEW,NOTIFIED`), so control labels may not reflect that multi-value state perfectly even though API filtering is applied.
+
+**Open questions / TODOs:**
+- Decide whether to add explicit multi-value UI options (for example “Open = NEW + NOTIFIED” and “High Priority = CRITICAL + HIGH”) so dropdown/tab visuals match deep-link state.
+
+## Queue hardening: PR-bundle submission rate limits + SaaS run/apply UI disabled (2026-03-03)
+
+**Task:** Prevent queue damage from repeated submissions, enforce bounded resend/generation behavior, and disable the Run on SaaS option in the UI.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** — Added queue submission guardrails: PR-bundle generation rate limits, resend rate limits, and row-locking on mutating execution/resend paths.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** — Removed interactive single-run SaaS execute/apply controls and replaced with explicit disabled guidance.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/pr-bundles/OnlineExecutionControls.tsx** — Kept bulk SaaS plan/apply controls visible but permanently disabled with explanatory banner.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/pr-bundles/OnlineExecutionControls.test.tsx** — Updated UI expectations for permanently disabled SaaS controls.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** — Updated helper behavior for per-query mocked results; added/updated API tests for new queue rate-limit rules and resend throttling.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added PR-bundle generation submission limits in `POST /api/remediation-runs` (pr_only path):
+  - **Max 6** queued submissions per action in a rolling **20-minute** window.
+  - **Max 3** queued submissions for the **same bundle configuration** (same request signature) per action in the same window.
+  - Returns controlled `429` with structured reason (`pr_bundle_rate_limit_total` or `pr_bundle_rate_limit_identical`).
+- Added resend throttling in `POST /api/remediation-runs/{run_id}/resend`:
+  - **Max 3** resend attempts per run in a rolling **20-minute** window.
+  - Persisted resend attempt timestamps in `remediation_runs.artifacts.queue_resend_attempts`.
+  - Returns controlled `429` with `retry_after_seconds` when blocked.
+- Added row-level locking (`SELECT ... FOR UPDATE`) on run mutations to reduce double-submit races for:
+  - `execute-pr-bundle`,
+  - `approve-apply`,
+  - `resend`.
+- Disabled Run on SaaS actions in UI surfaces:
+  - Single-run progress page no longer exposes `Run on SaaS` / `Approve & Apply`.
+  - Group/bulk execution controls now render as disabled with explicit notice.
+
+**Validation:**
+- `./venv/bin/pytest -q tests/test_remediation_runs_api.py` → `38 passed`.
+- `npm --prefix frontend run typecheck` → pass.
+- `npm --prefix frontend run lint -- src/components/RemediationRunProgress.tsx src/components/pr-bundles/OnlineExecutionControls.tsx src/components/pr-bundles/OnlineExecutionControls.test.tsx` → pass.
+- `npm --prefix frontend run test:ui -- src/components/pr-bundles/OnlineExecutionControls.test.tsx` → `4 passed`.
+
+**Technical debt / gotchas:**
+- SaaS execution endpoints remain implemented server-side behind existing executor feature checks; this change disables the UI option and adds queue protections, but does not remove API routes.
+- `queue_resend_attempts` history is persisted in `artifacts` and currently unbounded in key size over long lifetimes (entries are pruned logically at runtime by cutoff, not fully compacted historically).
+
+**Open questions / TODOs:**
+- Decide whether to hard-disable SaaS execution endpoints in backend config/runtime as well, or keep API availability for operator-only/manual use cases.
+
+## UI copy follow-up audit: remaining test-like wording after cleanup (2026-03-03)
+
+**Task:** Re-check the codebase for any remaining user-visible test/debug/placeholder messages after the prior cleanup.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this follow-up audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Searched frontend + router user-facing strings for `test/testing`, `synthetic`, `placeholder`, `debug code`, `local mode`, and related wording.
+- Confirmed previously removed items do not exist anymore:
+  - `This run is taking longer than expected.`
+  - `The worker may not be running. Start it with ...`
+  - `Template version (for testing)`
+  - `calendly.com/placeholder`
+  - `[Founder name]` and `[X] years`
+  - `(local code: ...)` suffix in verification success UI
+- Identified remaining user-visible test-like wording that appears intentional for control-plane verification guidance:
+  - `frontend/src/app/settings/page.tsx` — `How to test (example event)` with SG add/remove verification steps.
+  - `frontend/src/app/onboarding/page.tsx` — `Manual fallback test event (safe + reversible)` and multiple `synthetic` verification messages.
+
+**Technical debt / gotchas:**
+- Remaining “test”/“synthetic” wording is operationally meaningful but can still feel non-production to customer readers.
+
+**Open questions / TODOs:**
+- Decide whether to keep this as operator guidance or rephrase to customer-facing language (`verification check` / `sample verification event`) without changing behavior.
+
+## Top Risks CTA audit: inert findings-filter links (2026-03-03)
+
+**Task:** Verify whether the Top Risks `Resolved Findings` quick-action button is a no-op and identify any other buttons with the same behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this Top Risks CTA audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Reviewed Top Risks quick-action and “View All” links in `frontend/src/app/top-risks/page.tsx`:
+  - `href="/findings?status=RESOLVED"` (`Resolved Findings`)
+  - `href="/findings?severity=CRITICAL"` (`Critical Findings`)
+  - `href="/findings?severity=CRITICAL,HIGH&status=NEW,NOTIFIED"` (`View All ... High-Priority Findings`)
+- Verified Findings page currently reads query params only for first-run handoff fields (`first_run`, `account_id`, `findings_job_id`, `actions_job_id`) and does not initialize filter state from `status`/`severity` URL params (`frontend/src/app/findings/page.tsx`).
+- Confirmed impact: all Top Risks links that rely on findings query params appear to “do nothing” from a filtering perspective after navigation.
+- Verified `Refresh Findings` quick action is not a no-op; it intentionally navigates to `/accounts`.
+
+**Technical debt / gotchas:**
+- Top Risks is using findings deep-link query params that are currently not consumed by Findings page filter state, creating UX mismatch.
+
+**Open questions / TODOs:**
+- Decide whether to (a) parse query params into Findings filter state or (b) remove/replace query-parameterized Top Risks links.
+
+## Live findings action-coverage audit: current account covered vs uncovered list (2026-03-03)
+
+**Task:** Check the current AWS account findings coverage, identify which findings are covered vs uncovered by remediation actions/PR-bundle paths, and list the action groups attached to each finding.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live findings coverage audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/artifacts/reports/finding_action_coverage_029037611564_20260303T150553Z.csv** — Full finding-level coverage matrix (all findings, action/group linkage, coverage decision).
+- **/Users/marcomaher/AWS Security Autopilot/artifacts/reports/finding_action_uncovered_open_029037611564_20260303T150553Z.csv** — Open uncovered findings only.
+- **/Users/marcomaher/AWS Security Autopilot/artifacts/reports/finding_action_group_summary_029037611564_20260303T150553Z.csv** — Grouped summary by `(control_id, resource_type)` with covered/uncovered counts.
+
+**What was done (verified):**
+- Verified live AWS execution context with STS:
+  - Account: `029037611564`
+  - Principal: `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+- Queried live `security_autopilot` DB and confirmed active findings/actions are under tenant `Valens` (`tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837`) for this account.
+- Built a finding-level audit matrix with:
+  - findings effective-status logic (shadow override semantics),
+  - control-to-action mapping (`control_scope` aliases included),
+  - linked action + action-group membership,
+  - action-generation decision per open finding (including SG-ID resolvability check for `sg_restrict_public_ports`).
+- Verified coverage results:
+  - Total findings: `3354`
+  - Open findings (effective): `2490`
+  - Open in-scope findings: `261`
+  - Covered open in-scope findings: `257`
+  - Uncovered open in-scope findings: `4` (all `missing_security_group_id`, account-scoped SG-control identity shape)
+  - Open out-of-scope findings: `2229` (unmapped/unsupported controls by current scope; no generated action by design)
+- Verified the EC2.19 concern:
+  - `EC2.19` SG-scoped findings (`AwsEc2SecurityGroup`) are covered for open rows.
+  - One `EC2.19` account-scoped finding (`AwsAccount`) is attached to a group/action but is not actionable for PR generation because SG ID cannot be inferred (`missing_security_group_id`).
+
+**Technical debt / gotchas:**
+- Open uncovered in-scope findings are all the same SG-control edge case (`EC2.13`, `EC2.18`, `EC2.19`, `EC2.53`) with `AwsAccount` scope and non-SG resource identity.
+- Group attachment can exist even when per-action PR generation is non-actionable for that row (group is resilient and can skip errored items).
+
+**Open questions / TODOs:**
+- Decide whether account-scoped SG controls should be excluded from action creation or normalized to SG-scoped identifiers before action creation to eliminate `missing_security_group_id` edge cases.
+
+## UI copy cleanup: removed queued-run test/debug and placeholder customer text (2026-03-03)
+
+**Task:** Remove user-visible test/debug/placeholder messages identified in the queued PR-bundle and landing/connect-account audit.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** — Removed stale-run test-like copy and local worker command from user UI; replaced with neutral resend guidance.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/ConnectAccountModal.tsx** — Changed `Template version (for testing)` to `Template version`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** — Replaced placeholder Calendly URL with real configured URL and replaced founder placeholder text (`[Founder name]`, `[X]`) with production-safe copy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/ProfileTab.tsx** — Removed local-only `(local code: ######)` suffix from verification success UI.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** — Updated local-mode verification message to remove “debug code shown below” wording.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Removed queued-run wording:
+  - `This run is taking longer than expected.`
+  - `The worker may not be running. Start it with: PYTHONPATH=. python -m backend.workers.main`
+- Kept resend workflow intact and user-facing.
+- Removed explicit test marker in Connect AWS copy:
+  - `Template version (for testing)` -> `Template version`
+- Removed landing page placeholder customer-facing text/links:
+  - `https://calendly.com/placeholder` (landing page occurrences) -> `https://calendly.com/maromaher54/30min`
+  - `[Founder name] ... [X] years ...` -> real non-placeholder copy
+- Removed debug-code wording mismatch for local verification flow:
+  - Frontend no longer appends local code in success message.
+  - Backend local-mode message no longer claims a code is shown below.
+
+**Validation:**
+- `npm --prefix frontend run typecheck` (pass)
+- `npm --prefix frontend run lint -- src/components/RemediationRunProgress.tsx src/app/accounts/ConnectAccountModal.tsx src/app/landing/page.tsx src/app/settings/ProfileTab.tsx` (pass)
+- `./venv/bin/python -m py_compile backend/routers/auth.py` (pass)
+
+**Technical debt / gotchas:**
+- Local-mode verification still returns `debug_code` in API payload for dev workflows, but UI no longer surfaces it.
+- Landing team section still uses placeholder avatar visuals (gray circle); textual placeholders are removed.
+
+**Open questions / TODOs:**
+- Decide whether to replace the landing team placeholder avatar block with a real image before launch.
+
+## UI copy audit: test/debug/placeholder user messages inventory (2026-03-03)
+
+**Task:** Audit user-visible copy related to queued PR-bundle generation and identify any additional test-only/debug/placeholder messages that should be removed.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this UI copy audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed queued PR-bundle stale warning copy in remediation progress UI:
+  - `frontend/src/components/RemediationRunProgress.tsx`
+  - User-facing text includes:
+    - `This run is taking longer than expected.`
+    - `The worker may not be running. Start it with: PYTHONPATH=. python -m backend.workers.main`
+- Searched frontend/backend user-facing strings for likely test/debug markers (`for testing`, `synthetic`, `placeholder`, `debug`, `TODO`) and reviewed only runtime-exposed UI contexts.
+- Identified additional user-visible candidate copy that appears test-only or launch-placeholder:
+  - `frontend/src/app/accounts/ConnectAccountModal.tsx`:
+    - `Template version (for testing): ...`
+  - `frontend/src/app/landing/page.tsx`:
+    - `https://calendly.com/placeholder`
+    - `[Founder name] ... [X] years ...`
+- Verified local-only debug suffix behavior for verification flow:
+  - `frontend/src/app/settings/ProfileTab.tsx` appends `(local code: ...)` only when backend returns `debug_code`.
+  - Backend confirms `debug_code` is returned only when `settings.is_local` (`backend/routers/auth.py`), so this is not production-exposed by default.
+- Reviewed control-plane “test event” guidance in onboarding/settings and classified it as intentional operator verification guidance, not accidental test-only leakage.
+
+**Technical debt / gotchas:**
+- Remediation stale warning text currently mixes a valid UX warning with local-dev operational instructions, which can confuse production SaaS users.
+- Landing page still contains explicit pre-launch placeholder content in customer-visible sections.
+
+**Open questions / TODOs:**
+- Decide whether control-plane verification copy should keep “test” terminology (`How to test`, `Manual fallback test event`) or be reframed as “verification check” language for customer-facing polish.
+- If requested, apply a follow-up copy patch to remove/replace the identified test/debug/placeholder strings.
+
+## Live cost cleanup: removed EKS + Architecture 2 resources from AWS account (2026-03-03)
+
+**Task:** Fully remove Kubernetes (EKS) test architecture resources from AWS account `029037611564` due cost concerns.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live cleanup task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed AWS execution context before deletion:
+  - Account: `029037611564`
+  - Principal: `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+  - Region: `eu-north-1`
+- Enumerated all tagged architecture resources (`Architecture=architecture-2`) and found 11 resources pre-delete:
+  - EKS cluster, RDS instance + subnet group, VPC + subnets + IGW + route table, CloudTrail trail, and two S3 buckets.
+- Performed full teardown sequence (scripted CLI), including:
+  - Deleted EKS cluster `arch2-eks-cluster-c` and waited for completion.
+  - Deleted RDS instance `arch2-rds-primary-c` (`--skip-final-snapshot --delete-automated-backups`) and waited for completion.
+  - Deleted CloudTrail trail `arch2_cloudtrail_main_c`.
+  - Purged and deleted buckets:
+    - `arch2-cloudtrail-logs-bucket-c-029037611564-eu-north-1`
+    - `arch2-config-bucket-c-029037611564-eu-north-1`
+  - Deleted IAM roles:
+    - `arch2_shared_compute_role_a3`
+    - `arch2_mixed_policy_role_b3`
+  - Deleted architecture VPC `vpc-074551f5bfff4d418` and associated tagged network resources.
+- Post-delete verification (all clean):
+  - `Architecture=architecture-2` tagged resources count: `0`
+  - EKS clusters: `[]`
+  - Remaining RDS instances: only `arch1-claims-db-a2`, `security-autopilot-db-main`
+  - Architecture-tagged VPCs: `[]`
+  - `arch2_` IAM roles: `[]`
+  - `arch2-` S3 buckets: `[]`
+
+**Technical debt / gotchas:**
+- AWS CLI pager caused interactive pauses during teardown verification output; this was handled and execution completed successfully. Future live ops should force `AWS_PAGER=""` in long-running scripts.
+
+**Open questions / TODOs:**
+- None.
+
+## Live status check: resolved vs unresolved project controls for current connected account (2026-03-03)
+
+**Task:** Report which project control IDs are currently resolved vs unresolved for the connected AWS account.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live status-check task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Connected to live `security_autopilot` database using `backend/.env` `DATABASE_URL_SYNC`.
+- Verified account mappings for `account_id=029037611564` and found two tenant connections:
+  - `Valens` (`tenant_id=19b8d7c6-0100-421a-a084-c8b06d466837`) with active findings/actions.
+  - `Wave7 Test23 ...` tenant with no project-control findings.
+- Computed project-control status for `Valens` using findings effective-status semantics matching API logic:
+  - effective status rule: shadow `RESOLVED` overrides; shadow `OPEN` reopens canonical `RESOLVED` to `NEW`; else canonical.
+  - grouped by project control set (including aliases mapped to base controls).
+- Cross-checked with `actions` table aggregate counts for the same controls and account.
+
+**Technical debt / gotchas:**
+- Alias controls (`EC2.13/18/19` and `S3.3/8/17`) share the same base-control evidence (`EC2.53` and `S3.2` respectively), so their resolved/unresolved state is intentionally mirrored.
+- Some controls can show `NO_FINDINGS` in this tenant even when the service is enabled (for example `SecurityHub.1`), because no active finding rows exist for that control in current dataset.
+
+**Open questions / TODOs:**
+- Confirm whether operators want status derived from findings-effective status (current report) or action-state status as primary UX/source-of-truth for dashboard summaries.
+
+## Clarification: EKS/Kubernetes controls in test architecture (2026-03-03)
+
+**Task:** Identify which control IDs use EKS/Kubernetes in this project’s testing and reconciliation model.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this clarification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified direct EKS/Kubernetes control coverage:
+  - `EKS.PUBLIC_ENDPOINT` is the explicit EKS control collected in inventory reconciliation (`_EKS_PUBLIC_ENDPOINT_CONTROL_ID`), evaluating whether the EKS API endpoint is publicly reachable.
+  - This control is currently marked inventory-only with explicit unsupported remediation decision.
+- Verified architecture-test scope context:
+  - Architecture 2 scenario includes an EKS cluster and covers a broader 11-control set, but EKS/Kubernetes-specific posture testing maps directly to `EKS.PUBLIC_ENDPOINT`.
+
+**Technical debt / gotchas:**
+- Architecture 2 includes many non-EKS controls; seeing EKS resources in that scenario does not mean all those controls are Kubernetes-specific.
+
+**Open questions / TODOs:**
+- Optional docs clarity follow-up: add a concise “EKS-specific vs architecture-wide controls” note in prod-readiness scenario docs.
+
+## Clarification: Kubernetes usage vs test architectures (2026-03-03)
+
+**Task:** Confirm whether Kubernetes is used to run AWS Security Autopilot, or whether Kubernetes references are limited to customer/test architectures.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this clarification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified runtime/deployment posture from project status and deployment docs:
+  - Primary architecture is ECS Fargate and Lambda serverless; no Kubernetes deployment path is documented as a platform runtime.
+  - Deployment docs list only ECS and Lambda options for hosting the app.
+- Verified live-status notes:
+  - Serverless (Lambda) is the currently proven-live path.
+  - ECS path is implemented but currently not in equivalent proven-live status (`ROLLBACK_COMPLETE` during prior check).
+- Verified where Kubernetes appears in code/repo:
+  - EKS is used as a **customer AWS inventory signal** (`EKS.PUBLIC_ENDPOINT`) in reconciliation logic.
+  - ReadRole policy includes `eks:ListClusters` and `eks:DescribeCluster` permissions for that inventory check.
+  - Live test evidence includes EKS cluster artifacts tagged as architecture test resources (`architecture-2`), confirming EKS is present in test/customer environments rather than as the SaaS hosting substrate.
+
+**Technical debt / gotchas:**
+- Terminology can be confusing because EKS appears in control checks and test artifacts; this does not imply the SaaS itself runs on Kubernetes.
+
+**Open questions / TODOs:**
+- Optional doc clarity follow-up: add a one-line explicit note in deployment docs that Kubernetes/EKS is monitored customer surface area, not current SaaS control-plane hosting.
+
+## Live apply unblock: SG ingress permissions + duplicate-rule idempotency (2026-03-03)
+
+**Task:** Resolve apply-phase failures for run `bfea019e-1551-457d-9900-9c823c3f557b` after plan was fixed.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py** — Added tolerant duplicate-ingress apply handling for SG restrict action type.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** — Added regression test for duplicate SG rule apply being treated as idempotent success.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live unblock.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Diagnosed apply failure `43d7c510-57eb-489a-8501-5cedfbda25cd` root cause:
+  - `UnauthorizedOperation` on `ec2:AuthorizeSecurityGroupIngress` for assumed role `SecurityAutopilotWriteRole`.
+- Updated managed policy `arn:aws:iam::029037611564:policy/SecurityAutopilotWriteRolePolicy` to version `v4` with SG remediation actions:
+  - `ec2:AuthorizeSecurityGroupIngress`
+  - `ec2:RevokeSecurityGroupIngress`
+  - `ec2:DescribeSecurityGroups`
+  - `ec2:DescribeSecurityGroupRules`
+- Re-ran apply (`aea7573a-ce48-449b-ac05-3127dcb4ba0a`): permissions issue resolved, but failed with `InvalidPermission.Duplicate` because SSH/RDP restricted rules already existed.
+- Implemented idempotency handling:
+  - For `sg_restrict_public_ports`, treat apply failure as success when Terraform stderr indicates only duplicate ingress rule creation (`InvalidPermission.Duplicate`) and no auth/not-found markers.
+- Validation:
+  - `./venv/bin/pytest -q tests/test_remediation_run_worker.py -k "duplicate_sg_rule_is_treated_as_success or pr_bundle_execution_plan_success or pr_bundle_execution_plan_missing_terraform_dependency_fails or test_pr_bundle_execution_plan_fail_fast_persists_partial_results_with_error_detail or pr_bundle_execution_plan_non_fail_fast_continues_folders or pr_bundle_execution_apply_hash_mismatch_fails"` → `6 passed`.
+- Deployed runtime:
+  - worker image tag `20260303T011027Z` (`security-autopilot-dev-worker` active).
+- Post-fix apply validation:
+  - Triggered apply `e84f93da-c685-46c7-a44d-bdc9bf886270`
+  - Result `success`
+  - Run terminal status `success`
+  - Outcome `SaaS apply completed successfully.`
+
+**Technical debt / gotchas:**
+- Duplicate-ingress tolerance is intentionally scoped to `sg_restrict_public_ports`; other action types still fail closed on apply errors.
+
+**Open questions / TODOs:**
+- Optional cleanup: improve `error_summary` extraction to prefer semantic error lines over box-drawing tail characters when non-tolerated apply failures occur.
+
+## Live runtime hardening: Terraform init writable env + fail-fast diagnostics (2026-03-03)
+
+**Task:** Fix SaaS execution plan failures that still returned `terraform init failed for .` after Terraform binary installation.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py** — Hardened Terraform runtime env and improved fail-fast diagnostics persistence.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** — Added regression test for fail-fast result persistence + stderr detail propagation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this runtime hardening task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed failing run context:
+  - `run_id=bfea019e-1551-457d-9900-9c823c3f557b`
+  - action type `sg_restrict_public_ports` (`control_id=EC2.53`)
+  - execution failed at plan with `error_summary="terraform init failed for ."`
+- Extracted run bundle and validated locally:
+  - Bundle files are syntactically valid.
+  - Local `terraform init` succeeds for the exact generated files (`providers.tf`, `sg_restrict_public_ports.tf`).
+- Triggered controlled backend re-execution (`execution_id=4d57d8fb-e0b7-45b3-8df6-2dad087a184b`) and captured concrete worker error:
+  - `Failed to install provider ... no space left on device` while writing AWS provider under temp workspace.
+- Implemented Lambda Terraform env hardening in worker execution path:
+  - Force writable, deterministic directories under workspace temp dir:
+    - `HOME=.terraform-home`
+    - `TF_DATA_DIR=.terraform-data`
+  - Set `CHECKPOINT_DISABLE=1` and `TF_IN_AUTOMATION=1`.
+  - Removed forced `TF_PLUGIN_CACHE_DIR` to avoid duplicate provider storage pressure per run.
+- Improved diagnostics for fail-fast folder failures:
+  - Include stderr/stdout tail in folder error text (for init/plan/show/apply).
+  - Persist partial `execution.results` and `logs_ref` before fail-fast raise so command outputs are no longer dropped.
+  - Strip ANSI escape codes from surfaced error details.
+- Increased worker Lambda ephemeral storage from default to `2048 MB` (`EphemeralStorage.Size`) in runtime stack template.
+- Validation:
+  - `./venv/bin/pytest -q tests/test_remediation_run_worker.py -k "pr_bundle_execution_plan_success or pr_bundle_execution_plan_missing_terraform_dependency_fails or test_pr_bundle_execution_plan_fail_fast_persists_partial_results_with_error_detail or pr_bundle_execution_plan_non_fail_fast_continues_folders or pr_bundle_execution_apply_hash_mismatch_fails"` → `5 passed`.
+- Deployed serverless runtime:
+  - stack `security-autopilot-saas-serverless-runtime`
+  - worker image tag `20260303T010029Z`
+  - function `security-autopilot-dev-worker` now `Active`, `LastModified=2026-03-03T01:02:35+00:00`
+  - effective worker ephemeral storage `2048 MB`.
+- Post-fix validation execution:
+  - Triggered plan execution `b0368a2d-581f-4f17-ac36-951bfeb178c5` for the same run.
+  - Reached `status=awaiting_approval` with successful Terraform `init/plan` results persisted.
+
+**Technical debt / gotchas:**
+- Worker plan/apply output still includes ANSI-colored Terraform stdout/stderr payloads in stored command logs; this is expected but noisy in raw JSON.
+
+**Open questions / TODOs:**
+- None for this incident path; plan execution now reaches `awaiting_approval`.
+
+## Live runtime fix: Lambda worker image now bundles Terraform for SaaS executor (2026-03-03)
+
+**Task:** Fix `runtime_missing_dependency` failures in SaaS PR-bundle plan/apply executions.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/Containerfile.lambda-worker** — Installed Terraform CLI in worker Lambda image used by SaaS executor.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** — Added regression coverage for missing terraform binary failure mapping.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this runtime fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed failure path: `backend/workers/jobs/remediation_run_execution.py` catches `FileNotFoundError` and maps to `error_summary="runtime_missing_dependency"` when executor binaries are absent.
+- Patched worker image build to install Terraform (`v1.7.5`) into `/usr/local/bin/terraform` using HashiCorp release ZIP.
+- Added regression test `test_pr_bundle_execution_plan_missing_terraform_dependency_fails` to ensure missing binary remains surfaced as `runtime_missing_dependency`.
+- Validation:
+  - `./venv/bin/pytest -q tests/test_remediation_run_worker.py -k "pr_bundle_execution_plan_success or pr_bundle_execution_plan_missing_terraform_dependency_fails or pr_bundle_execution_plan_non_fail_fast_continues_folders or pr_bundle_execution_apply_hash_mismatch_fails"` → `4 passed`.
+- Deployed serverless runtime with worker enabled and existing concurrency profile:
+  - stack: `security-autopilot-saas-serverless-runtime`
+  - worker image tag: `20260303T004404Z`
+  - function: `security-autopilot-dev-worker`
+- Verified live deployment:
+  - Lambda now references `029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260303T004404Z`
+  - function state `Active`, last modified `2026-03-03T00:46:15+00:00`
+  - CodeBuild logs confirm terraform extraction: `/usr/local/bin/terraform`.
+
+**Technical debt / gotchas:**
+- Terraform version is pinned in `Containerfile.lambda-worker` (`1.7.5`); periodic review/upgrades should be tracked to avoid stale CLI/runtime drift.
+
+**Open questions / TODOs:**
+- Re-run the failed execution (`run_id=10f44965-a694-464e-a249-c3f4638485c9`) from the web flow and confirm it no longer fails at `runtime_missing_dependency`.
+
+## Live frontend redeploy: restarted Next.js dev origin behind valens-dev tunnel (2026-03-03)
+
+**Task:** Redeploy frontend so latest remediation-run UI fix is served on `https://dev.valensjewelry.com`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live redeploy operation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed frontend origin topology:
+  - `cloudflared tunnel run valens-dev` active.
+  - local Next.js origin process serving port `3000`.
+- Restarted frontend origin process (`next dev`) and relaunched from `frontend/` in background.
+- Verified service health after restart:
+  - local listener on `*:3000` restored.
+  - `GET https://dev.valensjewelry.com` returns `HTTP 200`.
+
+**Technical debt / gotchas:**
+- Current live frontend is running from `next dev` process (not a versioned production build artifact), so restarts are operationally manual and stateful to this host process.
+
+**Open questions / TODOs:**
+- Optional hardening: switch live frontend to deterministic production mode (`next build` + `next start` with managed service supervision) to reduce drift/restart risk.
+
+## Fix: hide synthetic run_fallback execution as SaaS success in web runner UI (2026-03-03)
+
+**Task:** Resolve user confusion where run detail showed `SaaS Runner apply · success` without clicking run/apply, caused by `/execution` fallback payloads.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** — Treat `source=run_fallback` execution payload as "no real SaaS execution yet" (do not render synthetic apply success).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx** — Ignore `run_fallback` entries in bulk execution status summary.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** — Extended `RemediationRunExecutionDetail` type with optional execution metadata fields (`source/current_step/progress`).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Root cause confirmed from payload contract:
+  - `/api/remediation-runs/{id}/execution` can return `source="run_fallback"` when no execution row exists.
+  - Previous UI treated this fallback as a real SaaS apply status and displayed `apply · success`.
+- Applied UI guardrails:
+  - Single-run page now treats fallback payloads as "not started" for SaaS runner controls.
+  - Group summary execution refresh stores only real execution rows (`source="execution"`).
+- Validation:
+  - `npm --prefix frontend run typecheck` (pass)
+  - `npm --prefix frontend run lint -- src/components/RemediationRunProgress.tsx src/app/pr-bundles/create/summary/page.tsx src/lib/api.ts` (pass)
+
+**Technical debt / gotchas:**
+- Backend fallback contract still reports run-level synthesized status (`source=run_fallback`) by design; frontend now handles this explicitly to avoid misleading execution UX.
+
+**Open questions / TODOs:**
+- Optional backend follow-up: change fallback status semantics (`not_started`) for `pr_only` runs with no execution row to reduce confusion for direct API consumers.
+
+## Single-run web wiring: re-enabled SaaS PR bundle runner controls (2026-03-03)
+
+**Task:** Enable running generated PR bundles directly from the remediation-run web page (single-run flow), not only from the grouped PR-bundles summary flow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** — Removed `V2 DEFERRED` comment wrapper so existing SaaS runner controls render in `pr_only` runs.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Re-enabled existing UI block on run detail/progress view that was previously disabled by comment:
+  - `Run on SaaS` (plan phase queue)
+  - `Approve & Apply` (apply phase queue once plan is awaiting approval)
+  - live execution status badge and per-folder command output rendering.
+- This wiring uses already-implemented frontend API methods/endpoints:
+  - `POST /api/remediation-runs/{run_id}/execute-pr-bundle`
+  - `POST /api/remediation-runs/{run_id}/approve-apply`
+  - `GET /api/remediation-runs/{run_id}/execution`
+- Validation:
+  - `npm --prefix frontend run typecheck` (pass)
+  - `npm --prefix frontend run lint -- src/components/RemediationRunProgress.tsx` (pass)
+
+**Technical debt / gotchas:**
+- Endpoint auth still requires signed-in user context; tenant-id-only fallback users can see run details but execution calls may return auth errors.
+- No additional role gating was added in this component; backend auth/rules remain authoritative for permission enforcement.
+
+**Open questions / TODOs:**
+- Optional UX follow-up: align single-run controls with grouped summary admin-permission messaging for clearer non-admin behavior.
+
+## Live ops hardening: scheduler DLQ alerting wired + endpoint smoke check (2026-03-03)
+
+**Task:** Ensure scheduler target DLQ cannot silently grow again after URL fix by enabling alert routing and validating endpoint health.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live hardening task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Diagnosed silent-alert gap:
+  - Existing scheduler alarms had `AlarmActions=[]` (no notifications configured), even though alarms existed.
+- Updated stack `security-autopilot-reconcile-scheduler` with:
+  - `AlarmTopicArn=arn:aws:sns:eu-north-1:029037611564:security-autopilot-alarms`
+- Verified both scheduler alarms now publish to SNS topic:
+  - `security-autopilot-reconcile-scheduler-failed-invocations-eu-north-1`
+  - `security-autopilot-reconcile-scheduler-target-dlq-depth-eu-north-1`
+- Verified SNS delivery target exists:
+  - `email -> marcoibrahim11@outlook.com`
+- Ran live endpoint smoke check against scheduler target API:
+  - `POST https://api.valensjewelry.com/api/internal/reconcile-inventory-global-all-tenants`
+  - Auth via runtime `CONTROL_PLANE_EVENTS_SECRET`
+  - Result `HTTP 200` with successful enqueue payload (`orchestration_jobs_failed=0`).
+
+**Technical debt / gotchas:**
+- This confirms API path health and alert routing; it does not simulate EventBridge Connection secret mismatches directly.
+- DLQ alarm may remain briefly in `ALARM` state after purge due CloudWatch metric window lag.
+
+**Open questions / TODOs:**
+- Optional: run a scheduled post-change check after the next `rate(6 hours)` tick to verify no new scheduler DLQ messages were produced.
+
+## Live ops cleanup: purged reconcile scheduler target DLQ backlog (2026-03-03)
+
+**Task:** Delete stale reconcile scheduler DLQ messages after endpoint correction.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live operations cleanup.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified pre-cleanup depth on queue `security-autopilot-reconcile-scheduler-target-dlq-eu-north-1`:
+  - `ApproximateNumberOfMessages=56`
+  - `ApproximateNumberOfMessagesNotVisible=0`
+- Executed:
+  - `aws sqs purge-queue --region eu-north-1 --queue-url https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-reconcile-scheduler-target-dlq-eu-north-1`
+- Verified post-cleanup queue depth:
+  - `ApproximateNumberOfMessages=0`
+  - `ApproximateNumberOfMessagesNotVisible=0`
+
+**Technical debt / gotchas:**
+- Purge is destructive and removes all queued messages; no replay remains for those dropped events.
+
+**Open questions / TODOs:**
+- Monitor the scheduler DLQ for re-growth to confirm endpoint/secret health is stable after the base URL fix.
+
+## Live ops fix: reconcile scheduler base URL switched to api.valensjewelry.com (2026-03-03)
+
+**Task:** Update live reconcile scheduler stack to stop calling offline ngrok endpoint and point to production API domain.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this live operations fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Updated CloudFormation stack `security-autopilot-reconcile-scheduler` in `eu-north-1` with:
+  - `SaaSBaseUrl=https://api.valensjewelry.com`
+- Verified stack parameter now reports the new base URL.
+- Verified EventBridge API Destination is active and now invokes:
+  - `https://api.valensjewelry.com/api/internal/reconcile-inventory-global-all-tenants`
+
+**Technical debt / gotchas:**
+- Existing DLQ backlog from the ngrok outage remains and is not automatically replayed by this parameter update.
+
+**Open questions / TODOs:**
+- Replay or redrive `security-autopilot-reconcile-scheduler-target-dlq-eu-north-1` messages now that endpoint is corrected.
+
+## Re-evaluation gap diagnosis: shadow-null findings not auto-updating after manual PR apply (2026-03-03)
+
+**Task:** Explain why EC2.19 findings with `shadow=null` did not auto-re-evaluate after user applied downloaded Terraform bundle manually.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this diagnosis task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified user run `1026da29-8fea-4012-92bd-763818324496` is a **single-action `pr_only` bundle generation** run (`outcome="PR bundle generated"`, no `group_bundle` callback metadata).
+- Verified generated bundle guidance explicitly instructs manual refresh after apply (`"Return to the action and click Recompute actions or trigger ingest to verify"`), indicating no guaranteed immediate auto-close from local manual apply.
+- Verified automatic post-apply reconcile enqueue helper exists (`backend/workers/services/post_apply_reconcile.py`) but is wired to SaaS executor apply path (`backend/workers/jobs/remediation_run_execution.py`) rather than local manual `terraform apply` done outside platform execution flow.
+- Verified periodic global reconcile scheduler is currently misconfigured/broken:
+  - Stack `security-autopilot-reconcile-scheduler` parameter `SaaSBaseUrl=https://685e-156-215-169-20.ngrok-free.app` (offline endpoint).
+  - Target DLQ `security-autopilot-reconcile-scheduler-target-dlq-eu-north-1` has backlog (`ApproximateNumberOfMessages=56`).
+  - Sample DLQ message attributes show `ERROR_CODE=SDK_CLIENT_ERROR` and `ERROR_MESSAGE` with `ERR_NGROK_3200` / endpoint offline.
+- Conclusion: shadow-null findings are not being refreshed automatically because scheduled reconciliation calls are failing, and the specific local manual apply path does not emit apply callbacks that trigger post-apply reconcile in current single-action flow.
+
+**Technical debt / gotchas:**
+- Reconcile scheduler base URL drift can silently disable periodic reconciliation while UI still appears operational.
+- Single-action downloaded bundle flow lacks apply callback/report channel; closure depends on explicit refresh/reconcile or periodic scheduler health.
+
+**Open questions / TODOs:**
+- Update reconcile scheduler stack `SaaSBaseUrl` to live API base (`https://api.valensjewelry.com`) and verify rule delivery + DLQ drain.
+- Decide whether single-action downloaded bundle flow should embed callback reporting (similar to group bundle `run_all.sh` wrapper) to reduce manual refresh dependency.
+
+## Findings status mismatch diagnosis: collapsed group shows resolved while expanded list has unresolved items (2026-03-03)
+
+**Task:** Explain why EC2.19 findings remain unresolved after PR-bundle apply while the collapsed group view appears as `resolved`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this diagnosis task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified live data for account `029037611564`, region `eu-north-1`, `control_id=EC2.19`:
+  - `AwsEc2SecurityGroup`: `16 RESOLVED`, `18 NEW` (effective status).
+  - Shadow breakdown for SG findings: `16 shadow RESOLVED`, `4 shadow OPEN`, `14 shadow null`.
+  - One extra `AwsAccount` finding remains `NEW` and is not part of the `AwsEc2SecurityGroup` count.
+- Verified the specific open critical SGs still have public exposure in AWS (for example `0.0.0.0/0` with SSH/broad port ranges):
+  - `sg-037319d6b9aebf6de`
+  - `sg-054da435d55725a93`
+  - `sg-0de002382892023f5`
+  - `sg-04c93cf37e5f27d07`
+- Verified why collapsed group can show `resolved`:
+  - Grouped endpoint picks one remediation hint per **control_id** (latest action), not an aggregate across all findings/actions in the group.
+  - Frontend group card renders that single `remediation_action_status` label (`resolved`/`open`) as the action CTA text.
+- Verified expanded-list inconsistency:
+  - Expanded group fetch currently filters only by `control_id`, so it can include findings outside the selected grouped scope (for example account-scoped rows).
+
+**Technical debt / gotchas:**
+- Group-level action status in collapsed view can be misleading for mixed-status groups.
+- Expanded group panel can leak out-of-scope findings because it does not apply the full group filters (`resource_type`, account/region/resource scope).
+
+**Open questions / TODOs:**
+- Should grouped API expose aggregate status fields (for example `open_count`, `resolved_count`, `mixed_status`) and avoid single-action hint semantics?
+- Should expanded group fetch use grouped-scope filters (at least `control_id + resource_type + account/region`) to guarantee consistency with the parent card counts?
+
+## Live deployment: Lambda workers on + full-tenant promotion rollout config (2026-03-03)
+
+**Task:** Execute live serverless deployment with Lambda worker mappings enabled, reconciliation enabled, shadow mode off, promotion enabled, and PM-requested promotion thresholds for broad rollout.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this deployment/change record.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Deployed runtime stack with worker enabled and bounded concurrency profile:
+  - `EnableWorker=true`
+  - `WorkerReservedConcurrency=10`
+  - `IngestMaximumConcurrency=10`
+  - `EventsMaximumConcurrency=4`
+  - `InventoryMaximumConcurrency=4`
+  - `ExportMaximumConcurrency=2`
+- Confirmed worker queue mappings are present and `Enabled` for ingest/events/inventory/export queues.
+- Verified previously stuck remediation run now processed successfully:
+  - `1026da29-8fea-4012-92bd-763818324496` transitioned to `success`
+  - `started_at=2026-03-02 23:42:26.212575+00`
+  - `completed_at=2026-03-02 23:42:26.221461+00`
+- Kept/verified requested runtime flags:
+  - `SAAS_BUNDLE_EXECUTOR_ENABLED=true`
+  - `TENANT_RECONCILIATION_ENABLED=true`
+  - `TENANT_RECONCILIATION_PILOT_TENANTS=""`
+  - `CONTROL_PLANE_SHADOW_MODE=false`
+- Applied promotion env vars directly on both Lambda functions (`security-autopilot-dev-api`, `security-autopilot-dev-worker`) because current serverless template/deploy path does not yet expose the newer promotion knobs:
+  - `CONTROL_PLANE_AUTHORITATIVE_PROMOTION_ENABLED=true`
+  - `CONTROL_PLANE_HIGH_CONFIDENCE_CONTROLS=S3.1,SecurityHub.1,GuardDuty.1,S3.2,S3.4,EC2.53,CloudTrail.1,Config.1,SSM.7,EC2.182,EC2.7,S3.5,IAM.4,S3.9,S3.11,S3.15`
+  - `CONTROL_PLANE_PROMOTION_MIN_CONFIDENCE=85`
+  - `CONTROL_PLANE_PROMOTION_ALLOW_SOFT_RESOLVED=false`
+  - `CONTROL_PLANE_PROMOTION_PILOT_TENANTS=""`
+  - `CONTROL_PLANE_MEDIUM_LOW_CONFIDENCE_CONTROLS=""`
+
+**Technical debt / gotchas:**
+- Serverless deployment wiring currently handles `CONTROL_PLANE_SHADOW_MODE` but not the newer promotion env vars; promotion settings can drift unless manually set post-deploy or template/script wiring is extended.
+- AWS CLI `update-function-configuration --environment` requires file-based JSON payload for large env maps; inline JSON may fail parsing.
+
+**Open questions / TODOs:**
+- Decide whether to wire promotion env vars into `infrastructure/cloudformation/saas-serverless-httpapi.yaml` and `scripts/deploy_saas_serverless.sh` to remove manual post-deploy steps.
+
+## PM clarification: source of truth for canonical finding status (2026-03-03)
+
+**Task:** Clarify the source of truth for canonical finding status (`canonical_status`) in non-technical PM language.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this clarification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified canonical finding status storage:
+  - Canonical status is persisted in database column `findings.status` (served as `canonical_status` by findings API).
+- Verified canonical-status write sources:
+  - Security Hub ingestion writes canonical status from Security Hub payload mapping:
+    - `Compliance.Status=PASSED` -> `RESOLVED`
+    - otherwise `NEW`/`NOTIFIED` by workflow mapping.
+  - Access Analyzer and Inspector ingestion similarly upsert canonical status for their own source findings.
+- Verified canonical overrides from control plane:
+  - In authoritative promotion mode (not shadow mode, promotion enabled, guardrails satisfied), shadow evaluation can update canonical `security_hub` findings to `RESOLVED` or reopen to `NEW`.
+  - Promotion path is explicitly scoped to findings with `source="security_hub"` in current implementation.
+
+**Technical debt / gotchas:**
+- User-facing status can still differ from canonical because effective-status overlay may present shadow result first; canonical remains the official record-of-truth.
+
+**Open questions / TODOs:**
+- Decide whether product copy/tooltips should explicitly label canonical status as “official/audit” and shadow/effective status as “live operational signal.”
+
+## PM clarification: when findings can display `resolved` and why `SOFT_RESOLVED` appears (2026-03-03)
+
+**Task:** Explain in plain language whether findings can show as resolved when shadow mode is on, and in which situations `SOFT_RESOLVED` is produced.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this clarification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified user-facing status logic in findings API:
+  - If shadow normalized status is `RESOLVED`, effective/user status is `RESOLVED`.
+  - If shadow is `OPEN` while canonical is `RESOLVED`, effective/user status reopens to `NEW`.
+  - Otherwise effective/user status falls back to canonical status.
+- Verified shadow normalization behavior:
+  - Raw `SOFT_RESOLVED` is normalized to shadow `RESOLVED` for effective-status calculations.
+- Verified when `SOFT_RESOLVED` is generated:
+  - Access-denied branches (missing AWS read permissions),
+  - API error branches,
+  - Partial/incomplete-data branches
+  in both event-enrichment and inventory-reconciliation collectors.
+
+**Technical debt / gotchas:**
+- A finding can appear `resolved` to users while raw shadow status is `SOFT_RESOLVED` (lower confidence), unless raw shadow fields are explicitly inspected.
+
+**Open questions / TODOs:**
+- Decide whether customer-facing finding views should explicitly distinguish `SOFT_RESOLVED` from strict `RESOLVED`.
+
+## Clarification: meaning of `shadow resolved` vs Security Hub verification scope (2026-03-03)
+
+**Task:** Clarify whether a finding shown as `shadow resolved` means it was verified against AWS services, including Security Hub.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this clarification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified `shadow` status semantics in runtime code:
+  - Shadow evaluations are produced from live AWS API reads in control-plane enrichment and/or inventory reconciliation paths.
+  - `shadow_status_normalized` intentionally maps both raw `RESOLVED` and raw `SOFT_RESOLVED` to normalized `RESOLVED` in findings API/UI status calculations.
+- Verified Security Hub scope:
+  - For control `SecurityHub.1`, reconciliation uses `securityhub.describe_hub()` to determine compliance (`RESOLVED`/`OPEN`/`SOFT_RESOLVED` by branch).
+  - For other controls (for example `EC2.53`, `S3.2`, `GuardDuty.1`, `Config.1`, etc.), checks use their respective AWS service APIs and do not require Security Hub API confirmation.
+- Verified confidence caveat:
+  - Raw `SOFT_RESOLVED` can represent access-denied/API-error/partial-data branches and should be treated as lower-confidence than raw `RESOLVED`.
+
+**Technical debt / gotchas:**
+- Product-facing normalized status can read as `RESOLVED` even when raw status is `SOFT_RESOLVED`; operators should inspect raw shadow status/reason for confidence-sensitive decisions.
+
+**Open questions / TODOs:**
+- Decide whether primary end-user surfaces should distinguish `SOFT_RESOLVED` from strict `RESOLVED` more explicitly to reduce ambiguity.
+
+## Deployment status check: Lambda vs ECS implementation/testing (2026-03-03)
+
+**Task:** Confirm whether both deployment options (Lambda serverless and ECS Fargate) are implemented and tested.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this deployment status check.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified both deployment paths are implemented in repo:
+  - Lambda/serverless: `infrastructure/cloudformation/saas-serverless-httpapi.yaml`, `scripts/deploy_saas_serverless.sh`
+  - ECS/Fargate: `infrastructure/cloudformation/saas-ecs-dev.yaml`, `scripts/deploy_saas_ecs_dev.sh` (plus Terraform alternative under `infrastructure/terraform/saas-ecs-dev/`)
+- Verified Lambda/serverless has extensive live validation evidence:
+  - Repeated live-run entries across Wave 1-8 in task history and `docs/test-results/live-runs/*`.
+  - Active runtime stack exists and is currently `UPDATE_COMPLETE` (`security-autopilot-saas-serverless-runtime`, `eu-north-1`).
+- Verified ECS does not currently have equivalent live validation status in this environment:
+  - ECS CloudFormation stack `security-autopilot-saas-ecs-dev` is `ROLLBACK_COMPLETE` (last updated `2026-02-24T15:48:08.527000+00:00`).
+  - No active services found in expected `security-autopilot-dev-cluster` context during this check.
+
+**Technical debt / gotchas:**
+- Documentation presents ECS as a supported option, but current live posture/evidence is serverless-first; ECS needs a fresh successful deployment + smoke/e2e validation before being treated as equivalently tested.
+
+**Open questions / TODOs:**
+- Decide whether ECS should be maintained as a production-ready path now or treated as secondary/standby until a full redeploy and validation pass is completed.
+
+## Deployment diagnosis: worker disabled causing PR bundle runs to stay pending (2026-03-03)
+
+**Task:** Determine whether the current SaaS deployment worker is running and diagnose why PR-bundle remediation runs remain `pending` with no start timestamp.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this runtime diagnosis task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified live runtime stack parameters on `security-autopilot-saas-serverless-runtime` in `eu-north-1`:
+  - `EnableWorker=false`
+  - `WorkerReservedConcurrency=0`
+  - `LastUpdatedTime=2026-03-02T22:28:59.929000+00:00`
+- Verified worker trigger wiring is absent:
+  - `aws lambda list-event-source-mappings --function-name security-autopilot-dev-worker` returned `[]`.
+  - `aws cloudformation list-stack-resources` shows no `AWS::Lambda::EventSourceMapping` resources in the runtime stack.
+- Verified provided remediation run is stuck pre-execution in DB:
+  - `remediation_runs.id=1026da29-8fea-4012-92bd-763818324496`
+  - `status=pending`, `started_at=NULL`, `completed_at=NULL`, `created_at=2026-03-02 22:52:40.646265+00`
+- Verified matching queue payload exists and is not being consumed:
+  - Ingest queue contains `job_type=remediation_run` for `run_id=1026da29-8fea-4012-92bd-763818324496`.
+- Confirmed deployment-path root cause:
+  - `scripts/deploy_saas_serverless.sh` defaults to `EnableWorker=false` and `WorkerReservedConcurrency=0` unless explicitly overridden (`--enable-worker true --worker-reserved-concurrency <n>` or matching env vars).
+
+**Technical debt / gotchas:**
+- A runtime deploy without explicit worker flags can silently disable all worker queue consumption while API enqueue still succeeds, causing remediation/export/batch jobs to accumulate in `pending`.
+- Existing `pending` runs remain stuck until worker mappings are re-enabled and runs are re-queued or naturally consumed from backlog.
+
+**Open questions / TODOs:**
+- Redeploy runtime with worker enabled and bounded concurrency (for example `--enable-worker true --worker-reserved-concurrency 1`) and verify event-source mappings return to `Enabled`.
+- After re-enable, validate one stuck run transition (`pending -> running -> terminal`) and decide whether to use `/api/remediation-runs/{run_id}/resend` for old pending rows.
+
+## EC2.19 group coverage check: PR-bundle actionability and edge-case validation (2026-03-03)
+
+**Task:** Validate whether the current EC2.19 security-group findings group is fully covered by remediation actions and whether findings in that group will have PR-bundle action paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed canonical control mapping:
+  - `EC2.19` aliases to action type `sg_restrict_public_ports`.
+  - Canonical control for that action type is `EC2.53`.
+  - PR bundle support is enabled for this action type.
+- Confirmed ingestion/resource selection for SG-scoped controls prefers `AwsEc2SecurityGroup` resources and falls back to SG-ID/ARN heuristics when possible.
+- Confirmed PR-bundle generation path exists for `sg_restrict_public_ports` and generates executable Terraform/CloudFormation artifacts when a resolvable SG ID is present.
+- Confirmed current UI actionability behavior:
+  - open findings with linked remediation actions surface `Fix this finding` and `View PR bundle group`,
+  - resolved findings do not surface active fix/group CTA in the list view.
+- Confirmed failure mode for non-SG-shaped EC2.53/EC2.19 action targets:
+  - PR generation raises structured error `missing_security_group_id`.
+  - Group PR-bundle generation continues and marks those actions as skipped (`errors/*.txt`) while generating valid actions.
+
+**Technical debt / gotchas:**
+- Mixed identity shapes (especially account-scoped forms for SG controls) can appear actionable in UI but still fail per-action PR generation when SG ID cannot be inferred.
+- Group bundles are resilient (skip + continue), so “group generated” does not necessarily mean every included action produced IaC files.
+
+**Open questions / TODOs:**
+- Decide whether account-scoped EC2.53/EC2.19 findings should be excluded from remediation action creation, or normalized to SG-scoped identities before action generation.
+
 ## Root-route behavior update: domain default now lands on /landing (2026-03-03)
 
 **Task:** Change default root-page behavior so visiting the domain (`/`) sends unauthenticated users to the landing page instead of login.

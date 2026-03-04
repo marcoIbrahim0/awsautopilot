@@ -1,0 +1,5 @@
+aws cloudformation deploy --stack-name phase2-live-a-ec253-20260303T175347Z --template-file docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_cloudformation/sg_restrict_public_ports.yaml --region eu-north-1 --parameter-overrides SecurityGroupId=sg-05781a53012300032
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - phase2-live-a-ec253-20260303T175347Z

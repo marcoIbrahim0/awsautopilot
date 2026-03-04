@@ -72,8 +72,9 @@ class _FakeCredentials:
 
 
 class _FakeIamClient:
-    def __init__(self, keys: list[tuple[str, str]]) -> None:
+    def __init__(self, keys: list[tuple[str, str]], *, account_mfa_enabled: int = 1) -> None:
         self._keys = [{"AccessKeyId": key_id, "Status": status} for key_id, status in keys]
+        self._account_mfa_enabled = account_mfa_enabled
         self.update_calls: list[tuple[str, str]] = []
         self.delete_calls: list[str] = []
 
@@ -92,7 +93,12 @@ class _FakeIamClient:
         self._keys = [item for item in self._keys if item["AccessKeyId"] != AccessKeyId]
 
     def get_account_summary(self) -> dict[str, Any]:
-        return {"SummaryMap": {"AccountAccessKeysPresent": len(self._keys)}}
+        return {
+            "SummaryMap": {
+                "AccountAccessKeysPresent": len(self._keys),
+                "AccountMFAEnabled": self._account_mfa_enabled,
+            }
+        }
 
 
 class _FakeSession:
@@ -413,6 +419,130 @@ def test_delete_gating_failures_mark_needs_attention(
     assert service.finalize_delete.await_count == 0
     reason = service.mark_needs_attention.await_args.kwargs["evidence_metadata"]["reason"]
     assert expected_reason in reason
+
+
+def test_delete_root_mfa_not_enrolled_marks_needs_attention(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([("AKIADELETE0000013", "Inactive")], account_mfa_enabled=0)
+    mutation_session = _FakeSession("AKIAMUTATE000013", iam_client)
+    observer_session = _FakeSession("AKIAOBSERVE000013", iam_client)
+    usage_service = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=False, retries_used=0)
+    )
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: mutation_session,
+        observer_session_factory=lambda *_: observer_session,
+        usage_discovery_factory=lambda: usage_service,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(worker, "_is_disable_window_clean", AsyncMock(return_value=True))
+    monkeypatch.setattr(worker, "_has_unknown_active_dependencies", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        module + ".settings",
+        SimpleNamespace(
+            ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED=True,
+            ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED=False,
+            AWS_REGION="eu-north-1",
+        ),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_remediation_artifact_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_external_task_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+
+    result = _run(
+        worker.execute_delete(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-delete-mfa-gate",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.needs_attention
+    assert service.mark_needs_attention.await_count == 1
+    assert service.finalize_delete.await_count == 0
+    reason = service.mark_needs_attention.await_args.kwargs["evidence_metadata"]["reason"]
+    assert reason == "root_mfa_not_enrolled"
+    assert iam_client.delete_calls == []
+
+
+def test_delete_root_mfa_enrolled_allows_normal_delete_flow(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([("AKIADELETE0000014", "Inactive")], account_mfa_enabled=1)
+    mutation_session = _FakeSession("AKIAMUTATE000014", iam_client)
+    observer_session = _FakeSession("AKIAOBSERVE000014", iam_client)
+    usage_service = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=False, retries_used=0)
+    )
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: mutation_session,
+        observer_session_factory=lambda *_: observer_session,
+        usage_discovery_factory=lambda: usage_service,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(worker, "_is_disable_window_clean", AsyncMock(return_value=True))
+    monkeypatch.setattr(worker, "_has_unknown_active_dependencies", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        module + ".settings",
+        SimpleNamespace(
+            ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED=True,
+            ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED=False,
+            AWS_REGION="eu-north-1",
+        ),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_remediation_artifact_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_external_task_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+
+    result = _run(
+        worker.execute_delete(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-delete-mfa-pass",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.completed
+    assert service.finalize_delete.await_count == 1
+    assert service.mark_needs_attention.await_count == 0
+    assert iam_client.delete_calls == ["AKIADELETE0000014"]
 
 
 def test_delete_uses_closure_runtime_path_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,0 +1,16 @@
+{
+    "trailList": [
+        {
+            "Name": "management-events",
+            "S3BucketName": "demomarcoss",
+            "IncludeGlobalServiceEvents": true,
+            "IsMultiRegionTrail": true,
+            "HomeRegion": "eu-north-1",
+            "TrailARN": "arn:aws:cloudtrail:eu-north-1:029037611564:trail/management-events",
+            "LogFileValidationEnabled": false,
+            "HasCustomEventSelectors": true,
+            "HasInsightSelectors": false,
+            "IsOrganizationTrail": false
+        }
+    ]
+}

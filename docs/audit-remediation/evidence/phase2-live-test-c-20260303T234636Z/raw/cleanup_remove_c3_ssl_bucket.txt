@@ -1,0 +1,1 @@
+remove_bucket failed: s3://phase2-live-c2-c3-s35-234636z-029037611564 An error occurred (AccessDenied) when calling the DeleteBucket operation: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: s3:DeleteBucket on resource: "arn:aws:s3:::phase2-live-c2-c3-s35-234636z-029037611564" with an explicit deny in a resource-based policy

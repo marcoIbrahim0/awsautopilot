@@ -1,0 +1,6 @@
+[
+  "Configure AWS provider for account 029037611564 and region eu-north-1.",
+  "Merge generated policy statements with any existing bucket policy.",
+  "Run `terraform init`, `terraform plan`, and `terraform apply`.",
+  "Validate impacted clients and recompute actions."
+]

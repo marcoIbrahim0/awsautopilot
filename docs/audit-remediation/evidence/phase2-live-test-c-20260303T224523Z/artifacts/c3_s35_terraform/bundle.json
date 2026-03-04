@@ -1,0 +1,23 @@
+{
+  "format": "terraform",
+  "files": [
+    {
+      "path": "providers.tf",
+      "content": "# Configure AWS provider for account 029037611564 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 4.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n"
+    },
+    {
+      "path": "s3_bucket_require_ssl.tf",
+      "content": "# Enforce SSL-only S3 requests - Action: 07ab40cb-e2c0-45c6-b124-f109e9a7c072\ndata \"aws_iam_policy_document\" \"security_autopilot_ssl_enforcement\" {\n  statement {\n    sid    = \"DenyInsecureTransport\"\n    effect = \"Deny\"\n    principals {\n      type        = \"*\"\n      identifiers = [\"*\"]\n    }\n    actions = [\"s3:*\"]\n    resources = [\n      \"arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564\",\n      \"arn:aws:s3:::phase2-live-c3-s35-224523z-029037611564/*\",\n    ]\n    condition {\n      test     = \"Bool\"\n      variable = \"aws:SecureTransport\"\n      values   = [\"false\"]\n    }\n  }\n\n}\n\nresource \"aws_s3_bucket_policy\" \"security_autopilot\" {\n  bucket = \"phase2-live-c3-s35-224523z-029037611564\"\n  policy = data.aws_iam_policy_document.security_autopilot_ssl_enforcement.json\n}\n"
+    },
+    {
+      "path": "README.txt",
+      "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-03T22:46:07+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n"
+    }
+  ],
+  "steps": [
+    "Configure AWS provider for account 029037611564 and region eu-north-1.",
+    "Merge generated policy statements with any existing bucket policy.",
+    "Run `terraform init`, `terraform plan`, and `terraform apply`.",
+    "Validate impacted clients and recompute actions."
+  ]
+}

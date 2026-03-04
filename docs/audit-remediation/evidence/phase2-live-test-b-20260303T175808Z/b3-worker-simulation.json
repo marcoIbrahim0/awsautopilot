@@ -1,0 +1,18 @@
+{
+  "executed_at_utc": "2026-03-03T18:09:36.788146+00:00",
+  "details": {
+    "result_state": "needs_attention",
+    "result_status": "waiting_for_user",
+    "mark_needs_attention_calls": 1,
+    "finalize_delete_calls": 0,
+    "needs_attention_reason": "root_mfa_not_enrolled",
+    "needs_attention_transition_id": "tx-live-test-b3:mfa_gate",
+    "needs_attention_evidence_metadata": {
+      "operation": "mark_needs_attention",
+      "reason": "root_mfa_not_enrolled"
+    },
+    "delete_calls": [],
+    "account_mfa_enabled_in_probe": 0
+  },
+  "passed": true
+}

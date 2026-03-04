@@ -1,0 +1,3 @@
+{
+    "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"DenyInsecureTransport\",\"Effect\":\"Deny\",\"Principal\":\"*\",\"Action\":\"s3:*\",\"Resource\":[\"arn:aws:s3:::phase2-live-c4-s35-224523z-029037611564/*\",\"arn:aws:s3:::phase2-live-c4-s35-224523z-029037611564\"],\"Condition\":{\"Bool\":{\"aws:SecureTransport\":\"false\"}}}]}"
+}

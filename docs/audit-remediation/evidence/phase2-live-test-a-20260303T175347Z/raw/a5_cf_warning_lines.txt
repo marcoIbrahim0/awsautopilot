@@ -1,0 +1,5 @@
+5:# IMPORTANT: review remove_existing_public_rules before applying.
+6:# FAIL-CLOSED: This CloudFormation template is additive only. It does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389.
+7:# MANDATORY manual revoke checklist: 1) identify existing 0.0.0.0/0 and ::/0 rules on ports 22/3389, 2) revoke them manually, 3) verify only approved CIDRs remain.
+16:    - "FAIL-CLOSED: This stack is additive only and does NOT revoke existing 0.0.0.0/0 or ::/0 rules on ports 22/3389."
+17:    - "MANDATORY MANUAL CHECKLIST: revoke existing 0.0.0.0/0 and ::/0 ingress on ports 22/3389 before marking remediation complete."

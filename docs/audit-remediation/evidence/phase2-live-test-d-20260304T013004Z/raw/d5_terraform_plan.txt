@@ -1,0 +1,24 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket_logging.security_autopilot will be created
+  + resource "aws_s3_bucket_logging" "security_autopilot" {
+      + bucket        = "sa-live-d5-src-029037611564-0304014445"
+      + id            = (known after apply)
+      + region        = "eu-north-1"
+      + target_bucket = "sa-live-d5-log-029037611564-0304014445"
+      + target_prefix = "s3-access-logs/"
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"

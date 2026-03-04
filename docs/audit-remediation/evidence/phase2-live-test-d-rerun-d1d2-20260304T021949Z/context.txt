@@ -1,0 +1,8 @@
+timestamp_utc=20260304T021949Z
+evidence_dir=/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-d-rerun-d1d2-20260304T021949Z
+d1_region=eu-central-1
+d1_existing_delivery_bucket=sa-live-d1-config-029037611564-0304013744
+d1a_unreachable_bucket=sa-live-d1a-miss-029037611564-0304022103
+d2_region=ap-south-1
+d2_bucket=sa-live-d2r-config-029037611564-0304023013
+cleanup_d2_head_exit=254

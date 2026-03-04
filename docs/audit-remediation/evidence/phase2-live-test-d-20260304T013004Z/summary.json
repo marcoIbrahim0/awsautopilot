@@ -1,0 +1,149 @@
+{
+  "test_suite": "Phase 2 Live Test D",
+  "executed_at_utc": "2026-03-04T01:48:31Z",
+  "account_id": "029037611564",
+  "results": {
+    "D1": {
+      "pass": true,
+      "details": {
+        "test": "D1",
+        "pass": true,
+        "checks": {
+          "before_name": "default",
+          "after_name": "default",
+          "name_reused": true,
+          "before_recording_group": {
+            "allSupported": false,
+            "includeGlobalResourceTypes": false,
+            "resourceTypes": [],
+            "exclusionByResourceTypes": {
+              "resourceTypes": [
+                "AWS::IAM::Policy",
+                "AWS::IAM::User",
+                "AWS::IAM::Role",
+                "AWS::IAM::Group"
+              ]
+            },
+            "recordingStrategy": {
+              "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+            }
+          },
+          "after_recording_group": {
+            "allSupported": false,
+            "includeGlobalResourceTypes": false,
+            "resourceTypes": [],
+            "exclusionByResourceTypes": {
+              "resourceTypes": [
+                "AWS::IAM::Policy",
+                "AWS::IAM::User",
+                "AWS::IAM::Role",
+                "AWS::IAM::Group"
+              ]
+            },
+            "recordingStrategy": {
+              "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+            }
+          },
+          "recording_group_unchanged": true,
+          "before_all_supported": false,
+          "after_all_supported": false,
+          "all_supported_unchanged": true,
+          "after_delivery_bucket": "sa-live-d1-config-029037611564-0304013744"
+        },
+        "notes": [
+          "Used fallback dedicated delivery bucket because pre-existing channel bucket reference was stale/missing."
+        ]
+      }
+    },
+    "D2": {
+      "pass": true,
+      "details": {
+        "test": "D2",
+        "pass": true,
+        "checks": {
+          "before_recorder_count": 0,
+          "before_channel_count": 0,
+          "fresh_precondition": true,
+          "after_recorder_name": "security-autopilot-recorder",
+          "after_all_supported": true,
+          "after_include_global": true,
+          "after_channel_count": 1,
+          "after_channel_bucket": "sa-live-d2-config-029037611564-0304013921",
+          "after_recording_started": true
+        },
+        "notes": []
+      }
+    },
+    "D3": {
+      "pass": true,
+      "details": {
+        "test": "D3",
+        "pass": true,
+        "checks": {
+          "stack_status": "CREATE_COMPLETE",
+          "has_aws_s3_bucket_resource_in_stack": false,
+          "sentinel_object_present_after_deploy": true,
+          "lifecycle_rule_count": 1,
+          "has_abort_incomplete_rule_days7": true
+        },
+        "notes": [
+          "Rerun verification uses sentinel object continuity as no-recreation proof."
+        ]
+      }
+    },
+    "D4": {
+      "pass": true,
+      "details": {
+        "test": "D4",
+        "pass": true,
+        "expected_error_code": "unresolved_placeholder_token",
+        "error": {
+          "code": "unresolved_placeholder_token",
+          "detail": "Generated bundle contains unresolved placeholder token 'REPLACE_LOG_BUCKET_NAME' in file 's3_bucket_access_logging.tf'. Refresh findings/action targets and retry remediation bundle generation.",
+          "action_type": "s3_bucket_access_logging",
+          "format": "terraform",
+          "strategy_id": "",
+          "variant": ""
+        },
+        "notes": [
+          "Expected fail-closed placeholder block triggered."
+        ]
+      }
+    },
+    "D5": {
+      "pass": true,
+      "details": {
+        "test": "D5",
+        "pass": true,
+        "checks": {
+          "source_bucket": "sa-live-d5-src-029037611564-0304014445",
+          "log_bucket": "sa-live-d5-log-029037611564-0304014445",
+          "target_bucket_after_apply": "sa-live-d5-log-029037611564-0304014445",
+          "target_bucket_is_separate_log_bucket": true
+        },
+        "notes": []
+      }
+    }
+  },
+  "discovered_issues": [
+    {
+      "id": "D1-OBS-01",
+      "severity": "medium",
+      "summary": "eu-central-1 existing Config delivery channel referenced missing bucket config-bucket-029037611564, causing PutDeliveryChannel NoSuchBucketException when create_local_bucket=false."
+    },
+    {
+      "id": "D1D2-OBS-02",
+      "severity": "medium",
+      "summary": "Config bundle local-exec create-bucket path is region-endpoint sensitive; successful execution required AWS_REGION/AWS_DEFAULT_REGION pinned to remediation region."
+    }
+  ],
+  "all_pass": true,
+  "recommendation": {
+    "decision": "NO-GO",
+    "reason": "All D1\u2013D5 acceptance checks passed, but discovered Config execution robustness gaps (stale delivery bucket handling + region-sensitive create-bucket behavior) should be fixed before moving past near-term tasks in production rollout.",
+    "required_followups": [
+      "Patch Config Terraform local-exec create-bucket commands to include explicit --region \"$REGION\" (and test with mismatched shell default region).",
+      "Handle stale/missing existing delivery-channel bucket references in create_local_bucket=false path (preflight repair or explicit fail-closed guidance)."
+    ]
+  }
+}

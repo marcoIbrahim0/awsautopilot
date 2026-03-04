@@ -1,0 +1,6 @@
+phase=Phase 2 Live Test C (rerun after final fixes)
+executed_at_utc=2026-03-03T23:46:36Z
+account_id=029037611564
+region=eu-north-1
+caller_arn=arn:aws:iam::029037611564:user/AutoPilotAdmin
+safety_note=Test-only resources with phase2-live-c2- prefix; no production buckets/trails targeted.

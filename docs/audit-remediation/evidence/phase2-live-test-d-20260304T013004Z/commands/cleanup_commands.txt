@@ -1,0 +1,17 @@
+aws cloudformation delete-stack --stack-name security-autopilot-live-d3-s311-0304014023 --region eu-north-1
+aws cloudformation delete-stack --stack-name security-autopilot-live-d3r-s311-0304014224 --region eu-north-1
+aws cloudformation wait stack-delete-complete --stack-name security-autopilot-live-d3-s311-0304014023 --region eu-north-1
+aws cloudformation wait stack-delete-complete --stack-name security-autopilot-live-d3r-s311-0304014224 --region eu-north-1
+aws s3 rm s3://sa-live-d3-s311-029037611564-0304014023 --recursive
+aws s3 rb s3://sa-live-d3-s311-029037611564-0304014023 --force
+aws s3 rm s3://sa-live-d3r-s311-029037611564-0304014224 --recursive
+aws s3 rb s3://sa-live-d3r-s311-029037611564-0304014224 --force
+aws s3 rm s3://sa-live-d5-src-029037611564-0304014445 --recursive
+aws s3 rb s3://sa-live-d5-src-029037611564-0304014445 --force
+aws s3 rm s3://sa-live-d5-log-029037611564-0304014445 --recursive
+aws s3 rb s3://sa-live-d5-log-029037611564-0304014445 --force
+aws configservice stop-configuration-recorder --region ap-south-1 --configuration-recorder-name security-autopilot-recorder
+aws configservice delete-delivery-channel --region ap-south-1 --delivery-channel-name security-autopilot-delivery-channel
+aws configservice delete-configuration-recorder --region ap-south-1 --configuration-recorder-name security-autopilot-recorder
+aws s3 rm s3://sa-live-d2-config-029037611564-0304013921 --recursive
+aws s3 rb s3://sa-live-d2-config-029037611564-0304013921 --force

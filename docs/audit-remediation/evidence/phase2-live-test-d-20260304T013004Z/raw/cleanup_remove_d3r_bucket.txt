@@ -1,0 +1,2 @@
+delete: s3://sa-live-d3r-s311-029037611564-0304014224/sentinel-before-deploy.txt
+remove_bucket: sa-live-d3r-s311-029037611564-0304014224

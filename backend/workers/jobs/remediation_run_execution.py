@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import subprocess
 import tempfile
 import uuid
@@ -45,6 +46,7 @@ from backend.workers.services.post_apply_reconcile import enqueue_post_apply_rec
 logger = logging.getLogger("worker.jobs.remediation_run_execution")
 
 RUN_TIMEOUT_SECONDS = 300
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
 def _resolve_fail_fast(execution: RemediationRunExecution) -> bool:
@@ -127,6 +129,79 @@ def _run_cmd(
         "returncode": completed.returncode,
         "stdout": completed.stdout,
         "stderr": completed.stderr,
+    }
+
+
+def _prepare_terraform_env(base_env: dict[str, str], workspace: Path) -> dict[str, str]:
+    """
+    Prepare deterministic writable Terraform paths for Lambda runtime.
+
+    Lambda container roots are read-only except `/tmp`, so force HOME/cache/data
+    under the execution workspace to prevent init failures on state/cache writes.
+    """
+    env = dict(base_env)
+    tf_home = workspace / ".terraform-home"
+    tf_home.mkdir(parents=True, exist_ok=True)
+    tf_data_dir = workspace / ".terraform-data"
+    tf_data_dir.mkdir(parents=True, exist_ok=True)
+
+    env["HOME"] = str(tf_home)
+    env["TF_DATA_DIR"] = str(tf_data_dir)
+    env["CHECKPOINT_DISABLE"] = "1"
+    env["TF_IN_AUTOMATION"] = "1"
+    return env
+
+
+def _command_failure_detail(result: dict[str, object]) -> str:
+    stderr = ANSI_ESCAPE_RE.sub("", str(result.get("stderr") or "")).strip()
+    stdout = ANSI_ESCAPE_RE.sub("", str(result.get("stdout") or "")).strip()
+    detail = stderr or stdout
+    if not detail:
+        return ""
+    lines = [line.strip() for line in detail.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    return lines[-1][:300]
+
+
+def _is_tolerable_sg_duplicate_apply_failure(
+    *,
+    action: Action | None,
+    result: dict[str, object],
+) -> bool:
+    """
+    Detect SG-restrict apply failures that are safe idempotent duplicates.
+
+    When restricted SSH/RDP rules already exist (for example from prior manual apply),
+    Terraform create can return InvalidPermission.Duplicate. Treat this as success for
+    sg_restrict_public_ports to keep SaaS apply idempotent.
+    """
+    if action is None or action.action_type != "sg_restrict_public_ports":
+        return False
+    stderr = ANSI_ESCAPE_RE.sub("", str(result.get("stderr") or ""))
+    if "InvalidPermission.Duplicate" not in stderr:
+        return False
+    blocked_markers = [
+        "UnauthorizedOperation",
+        "AccessDenied",
+        "InvalidGroup.NotFound",
+        "AuthFailure",
+    ]
+    return not any(marker in stderr for marker in blocked_markers)
+
+
+def _execution_results_payload(
+    folder_results: list[dict[str, object]],
+    *,
+    fail_fast: bool,
+) -> dict[str, object]:
+    failed_folders = [item for item in folder_results if item.get("status") == "failed"]
+    return {
+        "folders": folder_results,
+        "folder_count": len(folder_results),
+        "failed_folder_count": len(failed_folders),
+        "executor": "terraform",
+        "fail_fast": fail_fast,
     }
 
 
@@ -543,10 +618,11 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
         folder_results: list[dict[str, object]] = []
         try:
             account_id, _ = _ensure_group_invariants(session, run)
-            env = _assume_write_role(session, run, account_id)
+            base_env = _assume_write_role(session, run, account_id)
             fail_fast = _resolve_fail_fast(execution)
             with tempfile.TemporaryDirectory(prefix="bundle-exec-") as tmp_dir:
                 workspace = Path(tmp_dir)
+                env = _prepare_terraform_env(base_env, workspace)
                 for item in files:
                     _safe_write(workspace, item["path"], item["content"])
 
@@ -567,24 +643,48 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                     init_result = _run_cmd(["terraform", "init", "-input=false"], folder, env)
                     item_results.append(init_result)
                     if int(init_result["returncode"]) != 0:
+                        detail = _command_failure_detail(init_result)
                         folder_error = f"terraform init failed for {rel_folder}"
+                        if detail:
+                            folder_error = f"{folder_error}: {detail}"
 
                     if folder_error is None:
                         plan_result = _run_cmd(["terraform", "plan", "-input=false", "-out=tfplan"], folder, env)
                         item_results.append(plan_result)
                         if int(plan_result["returncode"]) != 0:
+                            detail = _command_failure_detail(plan_result)
                             folder_error = f"terraform plan failed for {rel_folder}"
+                            if detail:
+                                folder_error = f"{folder_error}: {detail}"
 
                     if folder_error is None and phase == RemediationRunExecutionPhase.plan:
                         show_result = _run_cmd(["terraform", "show", "-no-color", "tfplan"], folder, env)
                         item_results.append(show_result)
                         if int(show_result["returncode"]) != 0:
+                            detail = _command_failure_detail(show_result)
                             folder_error = f"terraform show failed for {rel_folder}"
+                            if detail:
+                                folder_error = f"{folder_error}: {detail}"
                     elif folder_error is None:
                         apply_result = _run_cmd(["terraform", "apply", "-auto-approve", "tfplan"], folder, env)
                         item_results.append(apply_result)
                         if int(apply_result["returncode"]) != 0:
-                            folder_error = f"terraform apply failed for {rel_folder}"
+                            if _is_tolerable_sg_duplicate_apply_failure(
+                                action=run.action,
+                                result=apply_result,
+                            ):
+                                logger.info(
+                                    "treating duplicate SG ingress apply as success "
+                                    "run_id=%s execution_id=%s folder=%s",
+                                    run.id,
+                                    execution.id,
+                                    rel_folder,
+                                )
+                            else:
+                                detail = _command_failure_detail(apply_result)
+                                folder_error = f"terraform apply failed for {rel_folder}"
+                                if detail:
+                                    folder_error = f"{folder_error}: {detail}"
 
                     if folder_error is not None:
                         folder_results.append(
@@ -596,6 +696,8 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                             }
                         )
                         if fail_fast:
+                            execution.results = _execution_results_payload(folder_results, fail_fast=fail_fast)
+                            execution.logs_ref = json.dumps(execution.results)
                             raise RuntimeError(folder_error)
                         continue
 
@@ -604,13 +706,7 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                 failed_folders = [item for item in folder_results if item.get("status") == "failed"]
                 any_failed = bool(failed_folders)
 
-                execution.results = {
-                    "folders": folder_results,
-                    "folder_count": len(folder_results),
-                    "failed_folder_count": len(failed_folders),
-                    "executor": "terraform",
-                    "fail_fast": fail_fast,
-                }
+                execution.results = _execution_results_payload(folder_results, fail_fast=fail_fast)
                 execution.workspace_manifest = {
                     "bundle_hash": digest,
                     "folders": [str(folder.relative_to(workspace)) if folder != workspace else "." for folder in folders],

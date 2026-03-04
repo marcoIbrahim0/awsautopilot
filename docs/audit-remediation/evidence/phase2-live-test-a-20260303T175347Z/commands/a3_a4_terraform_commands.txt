@@ -1,0 +1,9 @@
+cd /Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/artifacts/ec2_53_terraform
+terraform version
+terraform init -input=false -no-color
+terraform plan -input=false -no-color -out=plan-default.tfplan
+terraform show -no-color plan-default.tfplan
+terraform show -json plan-default.tfplan
+terraform plan -input=false -no-color -var remove_existing_public_rules=true -out=plan-optin.tfplan
+terraform show -no-color plan-optin.tfplan
+terraform show -json plan-optin.tfplan
