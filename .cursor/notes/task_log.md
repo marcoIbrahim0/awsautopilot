@@ -1,5 +1,33 @@
 # Task Log
 
+## Landing-page mobile animation parity: proof scroll sync + hero entrance (2026-03-07)
+
+**Task:** Make the landing page animate properly on phone by giving the `Maximize Security. Minimize Effort.` section a scroll-driven mobile experience and adding an explicit hero entrance animation on mobile load.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - replaced the mobile horizontal proof carousel with a vertical sticky-card flow that syncs the active visual to scroll position, matching the desktop interaction model.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - added staged hero entrance animations around the logo, headline, body copy, and CTA so the phone hero visibly animates on load.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the mobile-only swipe carousel and arrow controls from the proof section.
+- Added a mobile sticky visual card plus a vertically scrolling feature stack so `Connect Securely in 5 Minutes`, `Instant Visibility`, and `Absolute Control` now drive the visual state as the user scrolls.
+- Kept the existing desktop proof layout intact.
+- Added explicit mount animations to the hero content so the phone hero no longer depends on the previous static render path.
+
+**Validation:**
+- Playwright browser verification on `http://127.0.0.1:3000/landing` at `390x844`:
+  - confirmed the mobile proof visual switches to `Instant Visibility` when that copy block reaches the viewport center,
+  - confirmed the mobile proof visual switches to `Absolute Control` when that copy block reaches the viewport center.
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- The mobile proof-state switching still depends on tuned viewport-midpoint math, so future copy-height or sticky-offset changes should be rechecked on a real phone viewport.
+
+**Open questions / TODOs:**
+- None.
+
 ## Landing-page proof/services final retune and history cleanup (2026-03-07)
 
 **Task:** Move `Comprehensive Security Services` down by `49px` on desktop, keep the latest `Absolute Control` proof-card depth, and remove the redundant iterative task-history entries for this landing-page section.

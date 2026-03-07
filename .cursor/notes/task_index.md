@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Landing-page mobile animation parity: proof scroll sync + hero entrance (2026-03-07)](task_log.md#landing-page-mobile-animation-parity-proof-scroll-sync--hero-entrance-2026-03-07)
+  - Replaced the mobile proof carousel with a vertical sticky-card flow that updates on scroll like the desktop section.
+  - Added explicit hero entrance animation so the phone hero visibly animates on load.
+  - Verified in a mobile browser at `390x844` and with a successful frontend production build.
 - [Landing-page proof/services final retune and history cleanup (2026-03-07)](task_log.md#landing-page-proofservices-final-retune-and-history-cleanup-2026-03-07)
   - Moved `Comprehensive Security Services` down by `49px` on desktop.
   - Kept the current `Absolute Control` proof-card depth and removed the redundant iterative history for this section.
