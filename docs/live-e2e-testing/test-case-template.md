@@ -3,8 +3,8 @@
 - Wave: `<WAVE_NUMBER>`
 - Date (UTC): `<YYYY-MM-DDTHH:MM:SSZ>`
 - Tester: `<name>`
-- Frontend URL: `https://dev.valensjewelry.com`
-- Backend URL: `https://api.valensjewelry.com`
+- Frontend URL: `https://dev.ocypheris.com`
+- Backend URL: `https://api.ocypheris.com`
 
 ## Preconditions
 

@@ -79,7 +79,7 @@ AWS Security Autopilot uses environment variables for configuration. In producti
 | `EMAIL_SMTP_PASSWORD` | SMTP password | `<YOUR_VALUE_HERE>` | Runtime environment variable / Secrets Manager |
 | `EMAIL_SMTP_STARTTLS` | Use STARTTLS | `true` | Runtime environment variable |
 
-> ❓ Needs verification: Which SMTP provider and verified sender identity should be used for `api.valensjewelry.com` production traffic?
+> ❓ Needs verification: Which SMTP provider and verified sender identity should be used for `api.ocypheris.com` production traffic?
 
 #### S3 Storage
 

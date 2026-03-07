@@ -135,6 +135,47 @@
 
 **Done when:** approve → (fix or PR bundle) with before/after checks and logs.
 
+### Phase 3 — Feature Addition: Context-Driven Prioritization + Fix Workflow Intelligence
+
+This addition extends Phase 3 from "can execute fixes" to "executes the right fixes first, with clear owner workflows and business impact context."
+
+Priority order for rollout:
+
+- `P0` (start here): Core prioritization + owner execution loop
+  - Context-driven risk prioritization
+    - Replace severity-only ranking with a deterministic action score combining severity, internet exposure, privilege level, data sensitivity, exploit signals, and compensating controls.
+    - Every prioritized action must include explainable score factors ("why this is ranked high now") to support operator trust and auditor review.
+  - Toxic-combination / attack-path-lite prioritization
+    - Detect high-risk combinations across related findings (for example: public exposure + privilege weakness + sensitive data target) and elevate the parent action group.
+    - Preserve fail-closed behavior: when relationship data is missing, avoid over-promoting and surface "context incomplete" explicitly.
+  - Ownership-based risk queues and SLA routing
+    - Map actions to team/service ownership so each owner sees accountable queues (open, overdue, expiring exceptions, blocked fixes).
+    - Add SLA windows and escalation hooks (digest + Slack/ticket) for unresolved high-impact actions.
+  - Shared Security + Engineering execution workflow
+    - Enrich each action with implementation-ready guidance: blast radius, pre-checks, expected outcome, post-checks, and rollback.
+    - Make "handoff-free" closure possible by pairing security intent with engineer-executable remediation artifacts.
+
+- `P1`: Fix delivery acceleration + business decision surface
+  - Security Graph foundation (explicit)
+    - Build a relationship graph across AWS resources, identities, network exposure, findings, and actions so prioritization can reason over connected risk instead of isolated records.
+    - Expose graph-backed context on action detail ("connected assets", "identity path", "blast-radius neighborhood") to support explainable decision-making.
+  - Cloud-to-code remediation PR automation
+    - Extend PR bundle output to repository-aware pull request generation (Terraform/CloudFormation), including generated diff, rollback notes, and control mapping context.
+    - Keep execution approval-gated; no autonomous production mutation outside explicit approved direct-fix scope.
+  - Integration-first remediation operations
+    - Add bi-directional integration support for Jira/ServiceNow/Slack workflows: ticket creation, status sync, assignee sync, reopen on regression.
+    - Keep platform as system-of-record for remediation state while integrating into existing engineering/ITSM operating rhythm.
+  - Business impact matrix (risk x criticality)
+    - Add an executive-facing matrix that combines technical risk score with business criticality (customer-facing, revenue-path, regulated data).
+    - Use matrix position to drive default recommendation mode (direct-fix candidate vs PR-only vs exception review).
+
+- `P2`: Prioritization quality refinement
+  - Threat-intelligence weighting
+    - Increase priority for findings linked to active exploitation signals (for example CISA KEV-backed CVEs, high-confidence exploitability feeds).
+    - Decay weighting over time and keep provenance fields to avoid opaque score jumps.
+
+**Done when:** top risks are context-ranked with transparent explanations, owner-routed remediation queues are active, PR workflows can be opened directly from prioritized actions, and ticket/chat integrations keep fix status synchronized end-to-end.
+
 ### Phase 4 — Evidence + Billing
 
 - Evidence pack export to S3

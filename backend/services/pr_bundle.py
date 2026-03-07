@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 import uuid
 import json
+from ipaddress import ip_network
 from datetime import datetime, timezone
 from typing import Any, Literal, NoReturn, Protocol, TypedDict
 
@@ -217,6 +218,128 @@ def _coerce_bool(value: object, *, default: bool) -> bool:
     return default
 
 
+def _coerce_cidr(value: object, *, default: str, version: int | None) -> str:
+    """Normalize CIDR input or fall back to a safe default."""
+    if not isinstance(value, str):
+        return default
+    cleaned = value.strip()
+    if not cleaned:
+        return default
+    try:
+        network = ip_network(cleaned, strict=False)
+    except ValueError:
+        return default
+    if version is not None and network.version != version:
+        return default
+    return str(network)
+
+
+def _resolve_sg_restrict_defaults(strategy_inputs: dict[str, Any] | None) -> tuple[str, str, bool]:
+    """Resolve SG restrict defaults from guided strategy inputs."""
+    inputs = strategy_inputs or {}
+    access_mode = str(inputs.get("access_mode", "")).strip().lower()
+    if not access_mode and _coerce_bool(inputs.get("remove_existing_public_rules"), default=False):
+        access_mode = "close_and_revoke"
+    allowed_cidr = _coerce_cidr(inputs.get("allowed_cidr"), default="10.0.0.0/8", version=4)
+    allowed_cidr_ipv6 = _coerce_cidr(inputs.get("allowed_cidr_ipv6"), default="", version=6)
+    remove_existing_public_rules = access_mode == "close_and_revoke"
+    return allowed_cidr, allowed_cidr_ipv6, remove_existing_public_rules
+
+
+def _resolve_aws_config_defaults(
+    *,
+    account_id: str,
+    strategy: str,
+    strategy_inputs: dict[str, Any],
+) -> tuple[str, str, bool, bool]:
+    """Resolve AWS Config guided inputs with legacy fallback behavior."""
+    default_bucket = f"security-autopilot-config-{account_id}"
+    delivery_bucket_mode = str(strategy_inputs.get("delivery_bucket_mode", "")).strip().lower()
+    if delivery_bucket_mode == "create_new":
+        create_local_bucket = True
+    elif delivery_bucket_mode == "use_existing":
+        create_local_bucket = False
+    else:
+        create_local_bucket = strategy != "config_enable_centralized_delivery"
+
+    existing_bucket_name = str(strategy_inputs.get("existing_bucket_name", "")).strip()
+    legacy_delivery_bucket = str(strategy_inputs.get("delivery_bucket", "")).strip()
+    bucket = existing_bucket_name or legacy_delivery_bucket or default_bucket
+
+    recording_scope = str(strategy_inputs.get("recording_scope", "")).strip().lower()
+    overwrite_recording_group = recording_scope == "all_resources"
+
+    legacy_kms_key_arn = str(strategy_inputs.get("kms_key_arn", "")).strip()
+    encrypt_with_kms = _coerce_bool(
+        strategy_inputs.get("encrypt_with_kms"),
+        default=bool(legacy_kms_key_arn),
+    )
+    kms_key_arn = legacy_kms_key_arn if encrypt_with_kms else ""
+
+    return bucket, kms_key_arn, create_local_bucket, overwrite_recording_group
+
+
+def _resolve_cloudtrail_defaults(
+    strategy_inputs: dict[str, Any] | None,
+) -> tuple[str, bool, bool]:
+    """Resolve CloudTrail guided-input defaults with legacy-safe fallbacks."""
+    inputs = strategy_inputs or {}
+    trail_name = str(inputs.get("trail_name", "")).strip() or "security-autopilot-trail"
+    create_bucket_policy = _coerce_bool(inputs.get("create_bucket_policy"), default=True)
+    multi_region = _coerce_bool(inputs.get("multi_region"), default=True)
+    return trail_name, create_bucket_policy, multi_region
+
+
+def _resolve_s3_lifecycle_abort_days(strategy_inputs: dict[str, Any] | None) -> int:
+    """Resolve S3.11 abort-days input with bounded defaults."""
+    default_days = 7
+    raw = (strategy_inputs or {}).get("abort_days")
+    try:
+        candidate = int(raw) if raw is not None else default_days
+    except (TypeError, ValueError):
+        return default_days
+    if candidate < 1:
+        return 1
+    if candidate > 365:
+        return 365
+    return candidate
+
+
+def _resolve_s3_kms_defaults(
+    *,
+    meta: dict[str, str],
+    strategy_inputs: dict[str, Any] | None,
+    format: PRBundleFormat,
+) -> tuple[str, str]:
+    """Resolve S3.15 key mode and effective key ARN."""
+    default_kms_arn = f"arn:aws:kms:{meta['region']}:{meta['account_id']}:alias/aws/s3"
+    inputs = strategy_inputs or {}
+    raw_mode = str(inputs.get("kms_key_mode", "")).strip().lower()
+    custom_kms_key_arn = str(inputs.get("kms_key_arn", "")).strip()
+
+    if raw_mode in {"aws_managed", "custom"}:
+        key_mode = raw_mode
+    elif custom_kms_key_arn:
+        key_mode = "custom"
+    else:
+        key_mode = "aws_managed"
+
+    if key_mode == "custom":
+        if not custom_kms_key_arn:
+            _raise_pr_bundle_error(
+                code="missing_kms_key_arn",
+                detail=(
+                    "kms_key_mode is set to custom, but no kms_key_arn was provided. "
+                    "Set strategy_inputs.kms_key_arn to an approved customer-managed KMS key ARN."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+                format=format,
+            )
+        return custom_kms_key_arn, key_mode
+
+    return default_kms_arn, key_mode
+
+
 def _strategy_risk_evidence(risk_snapshot: dict[str, Any] | None) -> dict[str, Any]:
     """Extract evidence object from risk snapshot."""
     if not isinstance(risk_snapshot, dict):
@@ -409,11 +532,23 @@ def generate_pr_bundle(
             variant=normalized_variant or None,
         )
     elif action_type == ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION:
-        result = _generate_for_s3_bucket_lifecycle_configuration(action, normalized_format)
+        result = _generate_for_s3_bucket_lifecycle_configuration(
+            action,
+            normalized_format,
+            strategy_inputs=strategy_inputs,
+        )
     elif action_type == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS:
-        result = _generate_for_s3_bucket_encryption_kms(action, normalized_format)
+        result = _generate_for_s3_bucket_encryption_kms(
+            action,
+            normalized_format,
+            strategy_inputs=strategy_inputs,
+        )
     elif action_type == ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS:
-        result = _generate_for_sg_restrict_public_ports(action, normalized_format)
+        result = _generate_for_sg_restrict_public_ports(
+            action,
+            normalized_format,
+            strategy_inputs=strategy_inputs,
+        )
     elif action_type == ACTION_TYPE_CLOUDTRAIL_ENABLED:
         result = _generate_for_cloudtrail_enabled(
             action,
@@ -557,32 +692,26 @@ def _terraform_s3_bucket_block_guardrails_content() -> str:
     """
     return """
 
-S3.2 guardrail (read before apply)
-----------------------------------
-- This bundle is control-level hardening: it enforces S3 Block Public Access on a bucket.
+S3.2 post-fix access guidance
+-----------------------------
+What changes
+- This bundle enforces S3 Block Public Access on the target bucket.
 - It is NOT a full CloudFront + OAC + private S3 migration.
-- Applying this can break workloads that rely on public S3 access (public object URLs, website endpoint, public ACLs/policies).
 
-Pre-apply checks (required)
----------------------------
-- Capture current bucket policy and ACL.
-- Confirm whether bucket website hosting is enabled.
-- Confirm whether this bucket is a log sink (CloudTrail / Config / ELB / CloudFront / S3 access logs).
-- Confirm encryption mode (SSE-S3 vs SSE-KMS). If SSE-KMS, identify required KMS key policy updates.
-- Identify cross-account principals and access points that need to keep access.
-- If available, review CloudTrail S3 data events for recent GetObject/ListBucket/PutObject callers.
+How to access now
+- CloudFront usage note: serve user traffic through a CloudFront HTTPS endpoint, not direct public S3 website/object URLs.
+- Example HTTPS check:
+  curl -I https://<cloudfront-domain>/<object-key>
 
-Apply sequence (recommended)
-----------------------------
-- Deploy CloudFront + OAC + bucket policy updates (and KMS policy updates if needed).
-- Update clients/apps to use CloudFront instead of direct S3 public access.
-- Then apply S3 Block Public Access.
-- Monitor for AccessDenied/KMS errors and CloudFront 4xx spikes.
+Verify
+- Confirm all four block-public-access flags are true:
+  aws s3api get-public-access-block --bucket <bucket-name> --query 'PublicAccessBlockConfiguration' --output json
+- Validate clients are using CloudFront (or another approved private path) and monitor for 4xx/AccessDenied spikes.
 
-Rollback plan
--------------
-- Keep a backup of prior bucket policy/ACL and restore quickly if needed.
-- Temporarily re-enable only minimum required access to recover service.
+Rollback
+- Restore the prior bucket policy/ACL backup if application access breaks.
+- Emergency-only unblock command:
+  aws s3api put-public-access-block --bucket <bucket-name> --public-access-block-configuration BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false
 """
 
 
@@ -597,20 +726,97 @@ def _terraform_s3_cloudfront_oac_private_guardrails_content() -> str:
 
 S3.2 migration variant (CloudFront + OAC + private S3)
 -------------------------------------------------------
-- This bundle creates CloudFront distribution + OAC, enforces S3 Block Public Access, and applies a bucket policy for CloudFront read access.
-- It is intended to replace direct public S3 access with CloudFront.
+What changes
+- Creates CloudFront + OAC, enforces S3 Block Public Access, and updates bucket policy for CloudFront-origin read access.
+- Intended to replace direct public S3 access.
 
-Before apply
-------------
-- Existing bucket policy statements are preloaded into `terraform.auto.tfvars.json` when runtime evidence is available.
-- If your environment requires a different baseline, set variable existing_bucket_policy_json explicitly.
-- If additional internal/cross-account roles need read access, set additional_read_principal_arns.
-- If objects use SSE-KMS, confirm KMS key policy allows required principals.
+How to access now
+- Use the CloudFront HTTPS domain output for clients/apps.
+- Example HTTPS check:
+  curl -I https://<cloudfront-domain>/<object-key>
 
-After apply
------------
-- Update clients/apps to use the CloudFront domain output.
-- Validate key object paths and monitor CloudFront 4xx/S3 AccessDenied/KMS AccessDenied.
+Verify
+- Existing bucket policy statements are preloaded into `terraform.auto.tfvars.json` when evidence is available.
+- If additional internal/cross-account roles still need direct S3 reads, set `additional_read_principal_arns`.
+- Validate key object paths and monitor CloudFront 4xx plus S3/KMS AccessDenied signals.
+
+Rollback
+- Restore previous bucket policy JSON if needed, then roll back CloudFront origin-routing changes.
+- Keep rollback scoped and temporary; re-apply least-privilege policy once access is restored.
+"""
+
+
+def _terraform_ec2_53_access_guidance_content() -> str:
+    """README guidance for EC2.53 post-fix operator access workflow."""
+    return """
+
+EC2.53 post-fix access guidance
+-------------------------------
+What changes
+- Public SSH/RDP ingress on 22/3389 is restricted; optional preflight may revoke broad rules before adding restricted rules.
+
+How to access now
+- Use SSM Session Manager for operator access instead of public SSH/RDP:
+  aws ssm start-session --target <instance-id> --region <region>
+- Keep bastion/VPN as fallback for non-SSM-managed workloads.
+
+Verify
+- Confirm no 0.0.0.0/0 or ::/0 remains for 22/3389:
+  aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query "SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]" --output json
+
+Rollback
+- Re-authorize only temporary, scoped admin ingress if lockout occurs:
+  aws ec2 authorize-security-group-ingress --region <region> --group-id <security-group-id> --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=<admin-cidr>}]'
+"""
+
+
+def _terraform_s3_5_access_guidance_content() -> str:
+    """README guidance for S3.5 TLS-only bucket access behavior."""
+    return """
+
+S3.5 post-fix access guidance
+-----------------------------
+What changes
+- Adds `DenyInsecureTransport` to the bucket policy and preserves unrelated existing policy statements.
+
+How to access now
+- HTTPS requirement: all clients must use `https://` for S3 requests; `http://` requests are denied.
+
+Verify
+- Confirm bucket policy contains `DenyInsecureTransport`:
+  aws s3api get-bucket-policy --bucket <bucket-name> --query Policy --output text
+- Confirm HTTPS succeeds and HTTP is denied:
+  curl -I https://<bucket-name>.s3.<region>.amazonaws.com/<object-key>
+  curl -I http://<bucket-name>.s3.<region>.amazonaws.com/<object-key>
+
+Rollback
+- Restore prior bucket policy JSON backup if needed:
+  aws s3api put-bucket-policy --bucket <bucket-name> --policy file://pre-remediation-policy.json
+"""
+
+
+def _terraform_ssm_7_access_guidance_content() -> str:
+    """README guidance for SSM.7 document-sharing posture after remediation."""
+    return """
+
+SSM.7 post-fix access guidance
+------------------------------
+What changes
+- Sets SSM service setting to block public document sharing.
+
+How to access now
+- SSM sharing guidance: share documents to specific AWS accounts (private share), not publicly:
+  aws ssm modify-document-permission --name <document-name> --permission-type Share --account-ids-to-add <account-id>
+
+Verify
+- Confirm service setting remains `Disable`:
+  aws ssm get-service-setting --setting-id arn:aws:ssm:<region>:<account-id>:servicesetting/ssm/documents/console/public-sharing-permission --query 'ServiceSetting.SettingValue' --output text
+- Confirm per-document share targets:
+  aws ssm describe-document-permission --name <document-name> --permission-type Share
+
+Rollback
+- Emergency-only rollback to re-enable public sharing:
+  aws ssm update-service-setting --setting-id arn:aws:ssm:<region>:<account-id>:servicesetting/ssm/documents/console/public-sharing-permission --setting-value Enable
 """
 
 
@@ -649,6 +855,12 @@ def _maybe_append_terraform_readme(
         readme += _terraform_s3_bucket_block_guardrails_content()
     if any(f.get("path") == "s3_cloudfront_oac_private_s3.tf" for f in files):
         readme += _terraform_s3_cloudfront_oac_private_guardrails_content()
+    if any(f.get("path") == "sg_restrict_public_ports.tf" for f in files):
+        readme += _terraform_ec2_53_access_guidance_content()
+    if any(f.get("path") == "s3_bucket_require_ssl.tf" for f in files):
+        readme += _terraform_s3_5_access_guidance_content()
+    if any(f.get("path") == "ssm_block_public_sharing.tf" for f in files):
+        readme += _terraform_ssm_7_access_guidance_content()
     if any(f.get("path") == "aws_config_enabled.tf" for f in files):
         readme += _terraform_aws_config_guardrails_content()
     if strategy_id:
@@ -1235,10 +1447,12 @@ def _generate_for_s3_bucket_block_public_access(action: ActionLike, format: PRBu
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
-            "IMPORTANT: this bundle is control hardening (Block Public Access), not a complete CloudFront+OAC migration.",
-            "Inventory dependencies first (website hosting, log delivery, cross-account/service principals, KMS if SSE-KMS).",
+            "What changes: sets Bucket PublicAccessBlockConfiguration (BlockPublicAcls/BlockPublicPolicy/IgnorePublicAcls/RestrictPublicBuckets).",
+            "How to access now: CloudFront usage note - serve traffic through CloudFront HTTPS endpoints, not direct public S3 website/object URLs.",
             "Set Parameter BucketName to the target bucket (or use default).",
             "Validate the template and create/update the stack.",
+            "Verify: run `aws s3api get-public-access-block --bucket <bucket-name> --query 'PublicAccessBlockConfiguration' --output json` and confirm all flags are true.",
+            "Rollback: emergency-only unblock command `aws s3api put-public-access-block --bucket <bucket-name> --public-access-block-configuration BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false`.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
@@ -1835,21 +2049,33 @@ Resources:
 # ---------------------------------------------------------------------------
 
 
-def _generate_for_s3_bucket_lifecycle_configuration(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
+def _generate_for_s3_bucket_lifecycle_configuration(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_inputs: dict[str, Any] | None = None,
+) -> PRBundleResult:
     """Generate IaC for S3 bucket lifecycle configuration (S3.11)."""
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    abort_days = _resolve_s3_lifecycle_abort_days(strategy_inputs)
     if format == CLOUDFORMATION_FORMAT:
         files = [
             PRBundleFile(
                 path="s3_bucket_lifecycle_configuration.yaml",
-                content=_cloudformation_s3_bucket_lifecycle_configuration_content(meta),
+                content=_cloudformation_s3_bucket_lifecycle_configuration_content(
+                    meta,
+                    abort_days=abort_days,
+                ),
             )
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
-            "Set Parameter BucketName and optionally adjust AbortIncompleteMultipartDays.",
+            (
+                "Set Parameter BucketName and optionally adjust AbortIncompleteMultipartDays "
+                f"(default: {abort_days})."
+            ),
             "Validate the template and create/update the stack.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
@@ -1858,12 +2084,18 @@ def _generate_for_s3_bucket_lifecycle_configuration(action: ActionLike, format: 
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
                 path="s3_bucket_lifecycle_configuration.tf",
-                content=_terraform_s3_bucket_lifecycle_configuration_content(meta),
+                content=_terraform_s3_bucket_lifecycle_configuration_content(
+                    meta,
+                    abort_days=abort_days,
+                ),
             ),
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
-            f"Set bucket name (target: {bucket_name}) and lifecycle day threshold if needed.",
+            (
+                f"Set bucket name (target: {bucket_name}) and lifecycle day threshold "
+                f"(default: {abort_days}) if needed."
+            ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to configure lifecycle policy.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
@@ -1871,7 +2103,11 @@ def _generate_for_s3_bucket_lifecycle_configuration(action: ActionLike, format: 
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _terraform_s3_bucket_lifecycle_configuration_content(meta: dict[str, str]) -> str:
+def _terraform_s3_bucket_lifecycle_configuration_content(
+    meta: dict[str, str],
+    *,
+    abort_days: int,
+) -> str:
     """Terraform for S3 bucket lifecycle configuration (S3.11)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     return f"""# S3 bucket lifecycle configuration - Action: {meta["action_id"]}
@@ -1882,7 +2118,7 @@ def _terraform_s3_bucket_lifecycle_configuration_content(meta: dict[str, str]) -
 variable "abort_incomplete_multipart_days" {{
   type        = number
   description = "Days before incomplete multipart uploads are aborted"
-  default     = 7
+  default     = {abort_days}
 }}
 
 resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot" {{
@@ -1902,7 +2138,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot" {{
 """
 
 
-def _cloudformation_s3_bucket_lifecycle_configuration_content(meta: dict[str, str]) -> str:
+def _cloudformation_s3_bucket_lifecycle_configuration_content(
+    meta: dict[str, str],
+    *,
+    abort_days: int,
+) -> str:
     """CloudFormation for S3 bucket lifecycle configuration (S3.11)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     return f"""# S3 bucket lifecycle configuration - Action: {meta["action_id"]}
@@ -1926,7 +2166,7 @@ Parameters:
     Description: Target bucket for lifecycle configuration
   AbortIncompleteMultipartDays:
     Type: Number
-    Default: 7
+    Default: {abort_days}
     Description: Days before aborting incomplete multipart uploads
 Resources:
   S3BucketLifecycleRole:
@@ -2022,21 +2262,37 @@ Resources:
 # ---------------------------------------------------------------------------
 
 
-def _generate_for_s3_bucket_encryption_kms(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
+def _generate_for_s3_bucket_encryption_kms(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_inputs: dict[str, Any] | None = None,
+) -> PRBundleResult:
     """Generate IaC for S3 bucket SSE-KMS encryption (S3.15)."""
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    kms_key_arn, kms_key_mode = _resolve_s3_kms_defaults(
+        meta=meta,
+        strategy_inputs=strategy_inputs,
+        format=format,
+    )
     if format == CLOUDFORMATION_FORMAT:
         files = [
             PRBundleFile(
                 path="s3_bucket_encryption_kms.yaml",
-                content=_cloudformation_s3_bucket_encryption_kms_content(meta),
+                content=_cloudformation_s3_bucket_encryption_kms_content(
+                    meta,
+                    kms_key_arn=kms_key_arn,
+                ),
             )
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
-            "Set Parameter BucketName and KmsKeyArn to the target bucket and approved KMS key.",
+            (
+                "Set Parameter BucketName and KmsKeyArn to the target bucket and approved KMS key "
+                f"(mode: {kms_key_mode})."
+            ),
             "Validate the template and create/update the stack.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
@@ -2045,15 +2301,15 @@ def _generate_for_s3_bucket_encryption_kms(action: ActionLike, format: PRBundleF
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
                 path="s3_bucket_encryption_kms.tf",
-                content=_terraform_s3_bucket_encryption_kms_content(meta),
+                content=_terraform_s3_bucket_encryption_kms_content(
+                    meta,
+                    kms_key_arn=kms_key_arn,
+                ),
             ),
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
-            (
-                f"Bucket defaults to target ({bucket_name}); "
-                "override kms_key_arn if customer-managed key is required."
-            ),
+            f"Bucket defaults to target ({bucket_name}); generated key mode is {kms_key_mode}.",
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enforce SSE-KMS default encryption.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
@@ -2061,10 +2317,13 @@ def _generate_for_s3_bucket_encryption_kms(action: ActionLike, format: PRBundleF
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _terraform_s3_bucket_encryption_kms_content(meta: dict[str, str]) -> str:
+def _terraform_s3_bucket_encryption_kms_content(
+    meta: dict[str, str],
+    *,
+    kms_key_arn: str,
+) -> str:
     """Terraform for S3 bucket SSE-KMS encryption (S3.15)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
-    default_kms_arn = f"arn:aws:kms:{meta['region']}:{meta['account_id']}:alias/aws/s3"
     return f"""# S3 bucket SSE-KMS encryption - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -2073,7 +2332,7 @@ def _terraform_s3_bucket_encryption_kms_content(meta: dict[str, str]) -> str:
 variable "kms_key_arn" {{
   type        = string
   description = "KMS key ARN to use for bucket default encryption (override for customer-managed key)"
-  default     = "{default_kms_arn}"
+  default     = "{kms_key_arn}"
 }}
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {{
@@ -2090,7 +2349,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilo
 """
 
 
-def _cloudformation_s3_bucket_encryption_kms_content(meta: dict[str, str]) -> str:
+def _cloudformation_s3_bucket_encryption_kms_content(
+    meta: dict[str, str],
+    *,
+    kms_key_arn: str,
+) -> str:
     """CloudFormation for S3 bucket SSE-KMS encryption (S3.15)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     return f"""# S3 bucket SSE-KMS encryption - Action: {meta["action_id"]}
@@ -2107,7 +2370,7 @@ Parameters:
     Description: S3 bucket name to enable SSE-KMS encryption
   KmsKeyArn:
     Type: String
-    Default: "arn:aws:kms:{meta["region"]}:{meta["account_id"]}:alias/aws/s3"
+    Default: "{kms_key_arn}"
     Description: KMS key ARN used for default bucket encryption (override for customer-managed key)
 Resources:
   BucketEncryption:
@@ -2134,11 +2397,18 @@ Resources:
 # ---------------------------------------------------------------------------
 
 
-def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
+def _generate_for_sg_restrict_public_ports(
+    action: ActionLike,
+    format: PRBundleFormat,
+    strategy_inputs: dict[str, Any] | None = None,
+) -> PRBundleResult:
     """Generate IaC for sg_restrict_public_ports (per security group, EC2.53). Step 9.11."""
     meta = _action_meta(action)
     region = meta["region"]
     sg_id = _security_group_id_from_action_context(action, meta["target_id"])
+    allowed_cidr, allowed_cidr_ipv6, remove_existing_public_rules = _resolve_sg_restrict_defaults(
+        strategy_inputs
+    )
     if not sg_id:
         _raise_pr_bundle_error(
             code="missing_security_group_id",
@@ -2153,22 +2423,24 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
         files = [
             PRBundleFile(
                 path="sg_restrict_public_ports.yaml",
-                content=_cloudformation_sg_restrict_content(meta, sg_id),
+                content=_cloudformation_sg_restrict_content(
+                    meta,
+                    sg_id,
+                    allowed_cidr=allowed_cidr,
+                    allowed_cidr_ipv6=allowed_cidr_ipv6,
+                ),
             )
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
-            "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
-            "Review inbound rules and confirm which high-risk ports are open to 0.0.0.0/0 and/or ::/0. Public SSH/RDP and database ports are usually unnecessary.",
-            "Confirm alternative admin access first (SSM Session Manager, bastion, or VPN). Optionally review VPC Flow Logs to confirm active source IPs.",
+            "What changes: custom resource revokes 0.0.0.0/0 and ::/0 SSH/RDP ingress (22/3389) before restricted rules are added.",
+            "How to access now: use SSM Session Manager for operator access `aws ssm start-session --target <instance-id> --region <region>`.",
+            "Keep bastion/VPN fallback ready for instances not managed by SSM.",
             "IMPORTANT: review revoke-before-add behavior before applying.",
-            "CloudFormation custom resource revokes existing 0.0.0.0/0 and ::/0 rules on ports 22/3389 before restricted ingress resources are created.",
-            "Delete path is intentionally no-op and does not re-add public ingress.",
-            "Do not delete broad rules blindly. Narrow sources incrementally to VPN CIDR, office IP, or source security group.",
             "Set Parameters SecurityGroupId and AllowedCidr (e.g. 10.0.0.0/8). Optionally set AllowedCidrIpv6 (e.g. fd00::/8).",
-            "Validate the template and create/update the stack to add restricted ingress. Keep public 80/443 only where explicitly required.",
-            "Test connectivity after each change and tighten in small steps.",
-            "Avoid blind auto-remediation in production. If automation is enabled, prefer restrict-over-remove and use dev/test first.",
+            "Validate the template and create/update the stack.",
+            "Verify: run `aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query \"SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]\" --output json` and confirm empty result.",
+            "Rollback: re-authorize only temporary scoped admin ingress, for example `aws ec2 authorize-security-group-ingress --region <region> --group-id <security-group-id> --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=<admin-cidr>}]'`.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
@@ -2176,7 +2448,13 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
                 path="sg_restrict_public_ports.tf",
-                content=_terraform_sg_restrict_content(meta, sg_id),
+                content=_terraform_sg_restrict_content(
+                    meta,
+                    sg_id,
+                    allowed_cidr=allowed_cidr,
+                    allowed_cidr_ipv6=allowed_cidr_ipv6,
+                    remove_existing_public_rules=remove_existing_public_rules,
+                ),
             ),
         ]
         steps = [
@@ -2199,8 +2477,16 @@ def _generate_for_sg_restrict_public_ports(action: ActionLike, format: PRBundleF
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _terraform_sg_restrict_content(meta: dict[str, str], sg_id: str) -> str:
+def _terraform_sg_restrict_content(
+    meta: dict[str, str],
+    sg_id: str,
+    *,
+    allowed_cidr: str,
+    allowed_cidr_ipv6: str,
+    remove_existing_public_rules: bool,
+) -> str:
     """Terraform for SG restrict public ports 22/3389 (EC2.53). Step 9.11: aws_vpc_security_group_ingress_rule with variables."""
+    remove_existing_default = "true" if remove_existing_public_rules else "false"
     return f"""# SG restrict public ports (22/3389) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
@@ -2216,19 +2502,19 @@ variable "security_group_id" {{
 
 variable "allowed_cidr" {{
   type        = string
-  default     = "10.0.0.0/8"
+  default     = "{allowed_cidr}"
   description = "CIDR allowed for SSH/RDP (e.g. VPN or bastion)"
 }}
 
 variable "allowed_cidr_ipv6" {{
   type        = string
-  default     = ""
+  default     = "{allowed_cidr_ipv6}"
   description = "Optional IPv6 CIDR allowed for SSH/RDP (e.g. fd00::/8). Leave empty to skip IPv6 ingress."
 }}
 
 variable "remove_existing_public_rules" {{
   type        = bool
-  default     = false
+  default     = {remove_existing_default}
   description = "When true, revoke existing public SSH/RDP ingress (0.0.0.0/0 and ::/0) before adding restricted rules."
 }}
 
@@ -2313,7 +2599,13 @@ resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6" {{
 """
 
 
-def _cloudformation_sg_restrict_content(meta: dict[str, str], sg_id: str) -> str:
+def _cloudformation_sg_restrict_content(
+    meta: dict[str, str],
+    sg_id: str,
+    *,
+    allowed_cidr: str,
+    allowed_cidr_ipv6: str,
+) -> str:
     """CloudFormation for SG restrict public ports (EC2.53). Step 9.5 (all seven), 9.11."""
     return f"""# SG restrict public ports (22/3389) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
@@ -2339,11 +2631,11 @@ Parameters:
     Description: Security group to add restricted ingress
   AllowedCidr:
     Type: String
-    Default: "10.0.0.0/8"
+    Default: "{allowed_cidr}"
     Description: CIDR allowed for SSH (22) and RDP (3389)
   AllowedCidrIpv6:
     Type: String
-    Default: ""
+    Default: "{allowed_cidr_ipv6}"
     Description: Optional IPv6 CIDR allowed for SSH (22) and RDP (3389). Leave empty to skip IPv6 ingress.
 Conditions:
   HasAllowedIpv6:
@@ -2514,9 +2806,8 @@ def _generate_for_cloudtrail_enabled(
 ) -> PRBundleResult:
     """Generate IaC for cloudtrail_enabled (multi-region trail, CloudTrail.1). Step 9.12."""
     meta = _action_meta(action)
-    create_bucket_policy = _coerce_bool(
-        (strategy_inputs or {}).get("create_bucket_policy"),
-        default=True,
+    trail_name, create_bucket_policy, multi_region = _resolve_cloudtrail_defaults(
+        strategy_inputs,
     )
     region = meta["region"]
     if format == CLOUDFORMATION_FORMAT:
@@ -2525,6 +2816,8 @@ def _generate_for_cloudtrail_enabled(
                 path="cloudtrail_enabled.yaml",
                 content=_cloudformation_cloudtrail_content(
                     meta,
+                    trail_name=trail_name,
+                    multi_region=multi_region,
                     create_bucket_policy=create_bucket_policy,
                 ),
             )
@@ -2546,6 +2839,8 @@ def _generate_for_cloudtrail_enabled(
                 path="cloudtrail_enabled.tf",
                 content=_terraform_cloudtrail_content(
                     meta,
+                    trail_name=trail_name,
+                    multi_region=multi_region,
                     create_bucket_policy=create_bucket_policy,
                 ),
             ),
@@ -2589,8 +2884,15 @@ provider "aws" {{
 """
 
 
-def _terraform_cloudtrail_content(meta: dict[str, str], *, create_bucket_policy: bool) -> str:
+def _terraform_cloudtrail_content(
+    meta: dict[str, str],
+    *,
+    trail_name: str,
+    multi_region: bool,
+    create_bucket_policy: bool,
+) -> str:
     """Terraform for CloudTrail enabled (multi-region, CloudTrail.1)."""
+    multi_region_default = "true" if multi_region else "false"
     create_bucket_policy_default = "true" if create_bucket_policy else "false"
     policy_block = ""
     if create_bucket_policy:
@@ -2717,6 +3019,18 @@ variable "trail_bucket_name" {{
   description = "S3 bucket name for CloudTrail logs (create the bucket if it does not exist)"
 }}
 
+variable "trail_name" {{
+  type        = string
+  default     = "{trail_name}"
+  description = "CloudTrail trail name."
+}}
+
+variable "multi_region" {{
+  type        = bool
+  default     = {multi_region_default}
+  description = "When true, enables multi-region CloudTrail logging."
+}}
+
 variable "create_bucket_policy" {{
   type        = bool
   default     = {create_bucket_policy_default}
@@ -2724,9 +3038,9 @@ variable "create_bucket_policy" {{
 }}
 
 resource "aws_cloudtrail" "security_autopilot" {{
-  name                          = "security-autopilot-trail"
+  name                          = var.trail_name
   s3_bucket_name                = var.trail_bucket_name
-  is_multi_region_trail          = true
+  is_multi_region_trail          = var.multi_region
   include_global_service_events = true
   enable_logging                = true
 {"  depends_on                    = [null_resource.cloudtrail_bucket_policy]" if create_bucket_policy else ""}
@@ -2735,8 +3049,15 @@ resource "aws_cloudtrail" "security_autopilot" {{
 """
 
 
-def _cloudformation_cloudtrail_content(meta: dict[str, str], *, create_bucket_policy: bool) -> str:
+def _cloudformation_cloudtrail_content(
+    meta: dict[str, str],
+    *,
+    trail_name: str,
+    multi_region: bool,
+    create_bucket_policy: bool,
+) -> str:
     """CloudFormation for CloudTrail enabled (CloudTrail.1). Step 9.5 (all seven), 9.12."""
+    multi_region_default = "true" if multi_region else "false"
     create_bucket_policy_default = "true" if create_bucket_policy else "false"
     bucket_policy_resource = ""
     if create_bucket_policy:
@@ -2773,9 +3094,20 @@ def _cloudformation_cloudtrail_content(meta: dict[str, str], *, create_bucket_po
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "CloudTrail multi-region trail - Security Autopilot. Provide S3 bucket for logs."
 Parameters:
+  TrailName:
+    Type: String
+    Default: "{trail_name}"
+    Description: CloudTrail trail name
   TrailBucketName:
     Type: String
     Description: S3 bucket name for CloudTrail logs
+  MultiRegion:
+    Type: String
+    Default: "{multi_region_default}"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When true, enables multi-region CloudTrail logging.
   CreateBucketPolicy:
     Type: String
     Default: "{create_bucket_policy_default}"
@@ -2789,9 +3121,9 @@ Resources:
   Trail:
     Type: AWS::CloudTrail::Trail
     Properties:
-      TrailName: security-autopilot-trail
+      TrailName: !Ref TrailName
       S3BucketName: !Ref TrailBucketName
-      IsMultiRegionTrail: true
+      IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]
       IncludeGlobalServiceEvents: true
 {bucket_policy_resource if bucket_policy_resource else ""}
 """
@@ -2873,6 +3205,10 @@ def _generate_for_aws_config_enabled(
 def _generate_for_ssm_block_public_sharing(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
     """Generate SSM document public-sharing block bundle."""
     meta = _action_meta(action)
+    setting_id = (
+        f"arn:aws:ssm:{meta['region']}:{meta['account_id']}:"
+        "servicesetting/ssm/documents/console/public-sharing-permission"
+    )
     if format == CLOUDFORMATION_FORMAT:
         return PRBundleResult(
             format=format,
@@ -2884,7 +3220,12 @@ def _generate_for_ssm_block_public_sharing(action: ActionLike, format: PRBundleF
             ],
             steps=[
                 f"Configure AWS credentials for account {meta['account_id']} and region {meta['region']}.",
-                "Deploy the template to enforce SSM service setting for blocked public sharing.",
+                "What changes: sets the SSM public-sharing service setting to Disable.",
+                "How to access now: share SSM documents privately per account `aws ssm modify-document-permission --name <document-name> --permission-type Share --account-ids-to-add <account-id>`.",
+                "Deploy the template to enforce blocked public sharing.",
+                f"Verify: `aws ssm get-service-setting --setting-id {setting_id} --query 'ServiceSetting.SettingValue' --output text` returns Disable.",
+                "Verify: `aws ssm describe-document-permission --name <document-name> --permission-type Share` shows explicit account shares (not public).",
+                f"Rollback: emergency-only command `aws ssm update-service-setting --setting-id {setting_id} --setting-value Enable`.",
                 "Recompute actions to verify remediation state.",
             ],
         )
@@ -3016,26 +3357,30 @@ def _generate_for_s3_bucket_require_ssl(
 ) -> PRBundleResult:
     """Generate S3 SSL enforcement bundle."""
     meta = _action_meta(action)
+    bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
     strategy = (strategy_id or "s3_enforce_ssl_strict_deny").strip().lower()
     if strategy == "s3_keep_non_ssl_exception":
         return _generate_for_exception_guidance(action, format, "Keep non-SSL S3 access (exception path)")
 
     inputs = strategy_inputs or {}
-    preservation_policy = _resolve_s3_migrate_policy_preservation(
-        strategy_inputs=strategy_inputs,
-        risk_snapshot=risk_snapshot,
-        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
-        format=format,
-        strategy_id=strategy_id,
-        variant=None,
-        missing_policy_error_code="bucket_policy_preservation_evidence_missing",
-        missing_policy_error_detail=(
-            "Existing bucket policy statements were detected, but preservation evidence is missing. "
-            "Regenerate after refreshing remediation options or provide "
-            "strategy_inputs.existing_bucket_policy_json before generating this bundle."
-        ),
-        fail_when_evidence_missing=False,
-    )
+    preserve_existing_policy = _coerce_bool(inputs.get("preserve_existing_policy"), default=True)
+    preservation_policy: str | None = None
+    if preserve_existing_policy:
+        preservation_policy = _resolve_s3_migrate_policy_preservation(
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+            format=format,
+            strategy_id=strategy_id,
+            variant=None,
+            missing_policy_error_code="bucket_policy_preservation_evidence_missing",
+            missing_policy_error_detail=(
+                "Existing bucket policy statements were detected, but preservation evidence is missing. "
+                "Regenerate after refreshing remediation options or provide "
+                "strategy_inputs.existing_bucket_policy_json before generating this bundle."
+            ),
+            fail_when_evidence_missing=False,
+        )
 
     exempt_principals = inputs.get("exempt_principals")
     if not isinstance(exempt_principals, list):
@@ -3051,13 +3396,30 @@ def _generate_for_s3_bucket_require_ssl(
                         meta,
                         exempt_principals=exempt_principals,
                         existing_policy_json=preservation_policy,
+                        preserve_existing_policy=preserve_existing_policy,
                     ),
                 )
             ],
             steps=[
                 f"Configure AWS credentials for account {meta['account_id']}.",
-                "Deploy template; the custom resource merges existing bucket policy statements before applying SSL deny.",
-                "Deploy template and validate affected clients can use TLS.",
+                (
+                    "What changes: merges existing bucket policy statements and adds "
+                    "DenyInsecureTransport for the target bucket."
+                    if preserve_existing_policy
+                    else "What changes: replaces bucket policy statements with SSL-enforcement "
+                    "statements including DenyInsecureTransport."
+                ),
+                "How to access now: HTTPS requirement - clients must use `https://` S3 requests; `http://` requests are denied.",
+                (
+                    "Deploy template; the custom resource merges existing bucket policy statements "
+                    "before applying SSL deny."
+                    if preserve_existing_policy
+                    else "Deploy template; the custom resource applies SSL deny without preserving "
+                    "existing policy statements."
+                ),
+                f"Verify: `aws s3api get-bucket-policy --bucket {bucket_name} --query Policy --output text` contains DenyInsecureTransport.",
+                f"Verify: `curl -I https://{bucket_name}.s3.{meta['region']}.amazonaws.com/<object-key>` succeeds while `curl -I http://{bucket_name}.s3.{meta['region']}.amazonaws.com/<object-key>` is denied.",
+                f"Rollback: restore prior policy with `aws s3api put-bucket-policy --bucket {bucket_name} --policy file://pre-remediation-policy.json` if required.",
                 "Recompute actions to verify remediation state.",
             ],
         )
@@ -3097,8 +3459,14 @@ def _generate_for_s3_bucket_require_ssl(
             (
                 "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
                 "for merge-safe preservation."
-                if preservation_policy is not None
-                else "No existing bucket policy statements were detected; existing_bucket_policy_json remains empty."
+                if preservation_policy is not None and preserve_existing_policy
+                else (
+                    "No existing bucket policy statements were detected; "
+                    "existing_bucket_policy_json remains empty."
+                    if preserve_existing_policy
+                    else "preserve_existing_policy=false selected; existing bucket policy statements "
+                    "are not preloaded."
+                )
             ),
             "Run `terraform init`, `terraform plan`, and `terraform apply`.",
             "Validate impacted clients and recompute actions.",
@@ -3176,10 +3544,13 @@ def _terraform_aws_config_enabled_content(
     strategy: str,
     strategy_inputs: dict[str, Any],
 ) -> str:
-    bucket = str(strategy_inputs.get("delivery_bucket", "")).strip() or f"security-autopilot-config-{meta['account_id']}"
-    kms_key_arn = str(strategy_inputs.get("kms_key_arn", "")).strip()
-    create_local_bucket = strategy != "config_enable_centralized_delivery"
+    bucket, kms_key_arn, create_local_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
+        account_id=meta["account_id"],
+        strategy=strategy,
+        strategy_inputs=strategy_inputs,
+    )
     create_local_bucket_text = "true" if create_local_bucket else "false"
+    overwrite_recording_group_text = "true" if overwrite_recording_group else "false"
     return f"""# AWS Config enablement - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]}
@@ -3217,7 +3588,7 @@ variable "create_local_bucket" {{
 
 variable "overwrite_recording_group" {{
   type        = bool
-  default     = false
+  default     = {overwrite_recording_group_text}
   description = "When true, overwrite an existing recorder recordingGroup with all-supported mode."
 }}
 
@@ -3394,9 +3765,12 @@ def _cloudformation_aws_config_enabled_content(
     strategy: str,
     strategy_inputs: dict[str, Any],
 ) -> str:
-    bucket = str(strategy_inputs.get("delivery_bucket", "")).strip() or f"security-autopilot-config-{meta['account_id']}"
-    kms_key_arn = str(strategy_inputs.get("kms_key_arn", "")).strip()
-    create_bucket = strategy != "config_enable_centralized_delivery"
+    bucket, kms_key_arn, create_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
+        account_id=meta["account_id"],
+        strategy=strategy,
+        strategy_inputs=strategy_inputs,
+    )
+    overwrite_recording_group_default = "true" if overwrite_recording_group else "false"
     bucket_resource = ""
     bucket_ref = "ConfigDeliveryBucket"
     if create_bucket:
@@ -3409,10 +3783,10 @@ def _cloudformation_aws_config_enabled_content(
     else:
         bucket_ref = "DeliveryBucketName"
     kms_line = f"      S3KmsKeyArn: {kms_key_arn}\n" if kms_key_arn else ""
-    parameter_block = """
+    parameter_block = f"""
   OverwriteRecordingGroup:
     Type: String
-    Default: "false"
+    Default: "{overwrite_recording_group_default}"
     AllowedValues:
       - "true"
       - "false"
@@ -3715,9 +4089,11 @@ def _cloudformation_s3_bucket_require_ssl_content(
     meta: dict[str, str],
     exempt_principals: list[str],
     existing_policy_json: str | None = None,
+    preserve_existing_policy: bool = True,
 ) -> str:
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     existing_policy_literal = json.dumps(existing_policy_json or "")
+    preserve_existing_policy_literal = "true" if preserve_existing_policy else "false"
     exemptions = "      ExemptPrincipalArns: []"
     if exempt_principals:
         items = "\n".join(f"        - {json.dumps(principal)}" for principal in exempt_principals)
@@ -3777,7 +4153,25 @@ Resources:
                   return [statements]
               return []
 
-          def _load_existing_policy(s3_client, bucket_name, preloaded_json):
+          def _to_bool(value, default=True):
+              if isinstance(value, bool):
+                  return value
+              if isinstance(value, str):
+                  normalized = value.strip().lower()
+                  if normalized in {{"1", "true", "yes", "y", "on"}}:
+                      return True
+                  if normalized in {{"0", "false", "no", "n", "off"}}:
+                      return False
+              if isinstance(value, int):
+                  if value == 1:
+                      return True
+                  if value == 0:
+                      return False
+              return default
+
+          def _load_existing_policy(s3_client, bucket_name, preloaded_json, preserve_existing_policy):
+              if not preserve_existing_policy:
+                  return {{"Version": "2012-10-17", "Statement": []}}
               if preloaded_json:
                   parsed = json.loads(preloaded_json)
                   if isinstance(parsed, dict):
@@ -3812,9 +4206,18 @@ Resources:
                   elif not isinstance(exempt_principals, list):
                       exempt_principals = []
 
+                  preserve_existing_policy = _to_bool(
+                      props.get("PreserveExistingPolicy", True),
+                      default=True,
+                  )
                   preloaded_json = (props.get("ExistingBucketPolicyJson") or "").strip()
                   s3 = boto3.client("s3")
-                  existing = _load_existing_policy(s3, bucket, preloaded_json)
+                  existing = _load_existing_policy(
+                      s3,
+                      bucket,
+                      preloaded_json,
+                      preserve_existing_policy,
+                  )
                   statements = _normalize_statements(existing.get("Statement"))
 
                   preserved = [
@@ -3878,6 +4281,7 @@ Resources:
       ServiceToken: !GetAtt S3SslPolicyMergeFunction.Arn
       BucketName: "{bucket}"
       ExistingBucketPolicyJson: {existing_policy_literal}
+      PreserveExistingPolicy: {preserve_existing_policy_literal}
 {exemptions if exemptions else ""}
 """
 

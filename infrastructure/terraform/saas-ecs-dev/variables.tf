@@ -43,7 +43,7 @@ variable "certificate_arn" {
 variable "api_domain" {
   type        = string
   description = "Public API hostname (used for API_PUBLIC_URL when HTTPS is enabled)."
-  default     = "api.valensjewelry.com"
+  default     = "api.ocypheris.com"
 }
 
 variable "app_name" {
@@ -67,13 +67,13 @@ variable "log_level" {
 variable "frontend_url" {
   type        = string
   description = "Frontend URL used for redirects/invites."
-  default     = "https://valensjewelry.com"
+  default     = "https://ocypheris.com"
 }
 
 variable "cors_origins" {
   type        = string
   description = "Comma-separated CORS origins."
-  default     = "https://valensjewelry.com"
+  default     = "https://ocypheris.com"
 }
 
 variable "worker_pool" {

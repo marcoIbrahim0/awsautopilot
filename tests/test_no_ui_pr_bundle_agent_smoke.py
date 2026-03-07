@@ -169,7 +169,7 @@ class FakeClientStrategyFallback(FakeClient):
 
 def test_no_ui_agent_dry_run_smoke(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -211,7 +211,7 @@ def test_no_ui_agent_dry_run_smoke(tmp_path: Path) -> None:
 
 def test_outcome_type_failed(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -258,7 +258,7 @@ def test_outcome_type_failed(tmp_path: Path) -> None:
 
 def test_outcome_type_remediated(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -304,7 +304,7 @@ def test_outcome_type_remediated(tmp_path: Path) -> None:
 
 def test_no_ui_agent_dry_run_smoke_pr_only_without_strategy(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -337,7 +337,7 @@ def test_no_ui_agent_dry_run_smoke_pr_only_without_strategy(tmp_path: Path) -> N
 
 def test_no_ui_agent_dry_run_smoke_strategy_fallback(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -371,7 +371,7 @@ def test_no_ui_agent_dry_run_smoke_strategy_fallback(tmp_path: Path) -> None:
 
 def test_refresh_phase_timeout_budget_uses_reconcile_window(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -529,7 +529,7 @@ class FakeClientRemediated(FakeClient):
 
 def test_target_select_noops_when_preferred_control_has_no_eligible_finding(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -575,7 +575,7 @@ def test_target_select_noops_when_preferred_control_has_no_eligible_finding(tmp_
 
 def test_readiness_self_heal_retries_once_before_failing(tmp_path: Path, monkeypatch) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),
@@ -625,7 +625,7 @@ def test_readiness_self_heal_retries_once_before_failing(tmp_path: Path, monkeyp
 
 def test_outcome_type_already_compliant_noop(tmp_path: Path) -> None:
     settings = {
-        "api_base": "https://api.valensjewelry.com",
+        "api_base": "https://api.ocypheris.com",
         "account_id": "029037611564",
         "region": "eu-north-1",
         "output_dir": str(tmp_path),

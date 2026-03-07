@@ -5,11 +5,13 @@ Covers: POST create run (approval, direct_fix validation), GET remediation-previ
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 import uuid
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
+import pytest
 
 from backend.auth import get_current_user
 from backend.database import get_db
@@ -19,6 +21,10 @@ from backend.models.enums import (
     RemediationRunExecutionStatus,
     RemediationRunMode,
     RemediationRunStatus,
+)
+from backend.services.remediation_strategy import (
+    list_strategies_for_action_type,
+    validate_strategy_inputs,
 )
 
 
@@ -42,6 +48,8 @@ def _mock_action(action_type: str = "s3_block_public_access") -> MagicMock:
 
 def _mock_account(role_write_arn: str | None) -> MagicMock:
     acc = MagicMock()
+    acc.account_id = "123456789012"
+    acc.role_read_arn = "arn:aws:iam::123456789012:role/ReadRole"
     acc.role_write_arn = role_write_arn
     acc.external_id = "ext-123"
     return acc
@@ -51,6 +59,23 @@ def _mock_tenant() -> MagicMock:
     t = MagicMock()
     t.id = uuid.uuid4()
     return t
+
+
+def _mock_strategy_with_fields(fields: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "strategy_id": "test_strategy",
+        "action_type": "test_action_type",
+        "label": "Test strategy",
+        "mode": "pr_only",
+        "risk_level": "low",
+        "recommended": False,
+        "requires_inputs": bool(fields),
+        "input_schema": {"fields": fields},
+        "supports_exception_flow": False,
+        "exception_only": False,
+        "warnings": [],
+        "legacy_pr_bundle_variant": None,
+    }
 
 
 def _mock_existing_run(
@@ -151,10 +176,14 @@ def test_create_direct_fix_no_write_role_400(client: TestClient) -> None:
     with patch("backend.routers.remediation_runs.settings") as mock_settings:
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
     try:
-        r = client.post(
-            "/api/remediation-runs",
-            json={"action_id": str(action.id), "mode": "direct_fix"},
-        )
+                    r = client.post(
+                        "/api/remediation-runs",
+                        json={
+                            "action_id": str(action.id),
+                            "mode": "direct_fix",
+                            "strategy_id": "s3_account_block_public_access_direct_fix",
+                        },
+                    )
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_current_user, None)
@@ -164,7 +193,7 @@ def test_create_direct_fix_no_write_role_400(client: TestClient) -> None:
     err = data.get("detail", {})
     if isinstance(err, dict):
         err = err.get("error", "")
-    assert "writerole" in str(err).lower()
+    assert str(err) == "Dependency check failed"
 
 
 def test_create_direct_fix_with_pr_bundle_variant_400(client: TestClient) -> None:
@@ -230,7 +259,12 @@ def test_create_direct_fix_permission_probe_failed_400(client: TestClient) -> No
             try:
                 r = client.post(
                     "/api/remediation-runs",
-                    json={"action_id": str(action.id), "mode": "direct_fix"},
+                    json={
+                        "action_id": str(action.id),
+                        "mode": "direct_fix",
+                        "strategy_id": "s3_account_block_public_access_direct_fix",
+                        "risk_acknowledged": True,
+                    },
                 )
             finally:
                 app.dependency_overrides.pop(get_db, None)
@@ -693,6 +727,10 @@ def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: Tes
                         "region": "eu-north-1",
                         "status": "open",
                         "strategy_id": "config_keep_exception",
+                        "strategy_inputs": {
+                            "exception_duration_days": "90",
+                            "exception_reason": "Approved temporary exception during migration freeze.",
+                        },
                     },
                 )
             finally:
@@ -704,6 +742,10 @@ def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: Tes
     if isinstance(detail, dict):
         assert detail.get("error") == "Exception-only strategy"
         assert "Use Exception workflow instead of PR bundle." in str(detail.get("detail", ""))
+        assert detail.get("exception_flow") == {
+            "duration_days": 90,
+            "reason": "Approved temporary exception during migration freeze.",
+        }
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0
@@ -804,6 +846,10 @@ def test_create_run_exception_only_strategy_rejected_400_no_run_created(client: 
                         "action_id": str(action.id),
                         "mode": "pr_only",
                         "strategy_id": "config_keep_exception",
+                        "strategy_inputs": {
+                            "exception_duration_days": "14",
+                            "exception_reason": "Short-term approved exception pending next change window.",
+                        },
                     },
                 )
             finally:
@@ -815,6 +861,10 @@ def test_create_run_exception_only_strategy_rejected_400_no_run_created(client: 
     if isinstance(detail, dict):
         assert detail.get("error") == "Exception-only strategy"
         assert "Use Exception workflow instead of PR bundle." in str(detail.get("detail", ""))
+        assert detail.get("exception_flow") == {
+            "duration_days": 14,
+            "reason": "Short-term approved exception pending next change window.",
+        }
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0
@@ -891,6 +941,223 @@ def test_create_run_strategy_input_validation_400(client: TestClient) -> None:
     if isinstance(detail, dict):
         assert detail.get("error") == "Invalid strategy selection"
         assert "strategy_inputs.delivery_bucket is required" in str(detail.get("detail", ""))
+
+
+def test_validate_strategy_input_new_types_accept_valid_values() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "access_mode",
+                "type": "select",
+                "required": True,
+                "description": "Access mode",
+                "options": [
+                    {"value": "close_public", "label": "Close public"},
+                    {"value": "restrict_to_cidr", "label": "Restrict to CIDR"},
+                ],
+            },
+            {
+                "key": "dry_run",
+                "type": "boolean",
+                "required": True,
+                "description": "Dry run",
+            },
+            {
+                "key": "allowed_cidr",
+                "type": "cidr",
+                "required": True,
+                "description": "Allowed CIDR",
+            },
+            {
+                "key": "abort_days",
+                "type": "number",
+                "required": True,
+                "description": "Abort days",
+                "min": 1,
+                "max": 365,
+            },
+        ]
+    )
+
+    normalized = validate_strategy_inputs(
+        strategy,
+        {
+            "access_mode": "restrict_to_cidr",
+            "dry_run": False,
+            "allowed_cidr": "10.0.0.1/24",
+            "abort_days": 7,
+        },
+    )
+
+    assert normalized == {
+        "access_mode": "restrict_to_cidr",
+        "dry_run": False,
+        "allowed_cidr": "10.0.0.0/24",
+        "abort_days": 7,
+    }
+
+
+def test_validate_strategy_input_select_rejects_value_outside_options() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "access_mode",
+                "type": "select",
+                "required": True,
+                "description": "Access mode",
+                "options": [
+                    {"value": "close_public", "label": "Close public"},
+                    {"value": "restrict_to_cidr", "label": "Restrict to CIDR"},
+                ],
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="strategy_inputs.access_mode must be one of"):
+        validate_strategy_inputs(strategy, {"access_mode": "delete_everything"})
+
+
+def test_validate_strategy_input_boolean_rejects_non_boolean() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "create_bucket_policy",
+                "type": "boolean",
+                "required": True,
+                "description": "Create bucket policy",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="strategy_inputs.create_bucket_policy must be a boolean"):
+        validate_strategy_inputs(strategy, {"create_bucket_policy": "true"})
+
+
+def test_validate_strategy_input_cidr_rejects_invalid_value() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "allowed_cidr",
+                "type": "cidr",
+                "required": True,
+                "description": "Allowed CIDR",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="strategy_inputs.allowed_cidr must be a valid CIDR"):
+        validate_strategy_inputs(strategy, {"allowed_cidr": "not-a-cidr"})
+
+
+def test_validate_strategy_input_number_enforces_type_and_bounds() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "abort_days",
+                "type": "number",
+                "required": True,
+                "description": "Abort days",
+                "min": 1,
+                "max": 365,
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="strategy_inputs.abort_days must be a number"):
+        validate_strategy_inputs(strategy, {"abort_days": "7"})
+
+    with pytest.raises(ValueError, match="strategy_inputs.abort_days must be >= 1"):
+        validate_strategy_inputs(strategy, {"abort_days": 0})
+
+    with pytest.raises(ValueError, match="strategy_inputs.abort_days must be <= 365"):
+        validate_strategy_inputs(strategy, {"abort_days": 400})
+
+
+def test_validate_strategy_input_string_and_array_behavior_unchanged() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "delivery_bucket",
+                "type": "string",
+                "required": True,
+                "description": "Delivery bucket",
+            },
+            {
+                "key": "kms_key_arn",
+                "type": "string",
+                "required": False,
+                "description": "KMS key ARN",
+            },
+            {
+                "key": "exempt_principals",
+                "type": "string_array",
+                "required": True,
+                "description": "Principal exemptions",
+            },
+        ]
+    )
+
+    normalized = validate_strategy_inputs(
+        strategy,
+        {
+            "delivery_bucket": "  central-bucket  ",
+            "kms_key_arn": "   ",
+            "exempt_principals": [" arn:aws:iam::111111111111:role/a ", "", "arn:aws:iam::111111111111:role/a"],
+        },
+    )
+
+    assert normalized == {
+        "delivery_bucket": "central-bucket",
+        "exempt_principals": ["arn:aws:iam::111111111111:role/a"],
+    }
+
+
+def test_validate_strategy_input_unknown_field_rejected() -> None:
+    strategy = _mock_strategy_with_fields(
+        [
+            {
+                "key": "delivery_bucket",
+                "type": "string",
+                "required": True,
+                "description": "Delivery bucket",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="strategy_inputs contains unknown field"):
+        validate_strategy_inputs(strategy, {"delivery_bucket": "central", "extra": "value"})
+
+
+def test_validate_strategy_input_iam_root_action_mode_accepts_matching_strategy() -> None:
+    """IAM root action_mode is optional but accepted when it matches selected strategy."""
+    strategies = {
+        strategy["strategy_id"]: strategy
+        for strategy in list_strategies_for_action_type("iam_root_access_key_absent")
+    }
+    disable_strategy = strategies["iam_root_key_disable"]
+    delete_strategy = strategies["iam_root_key_delete"]
+
+    assert validate_strategy_inputs(disable_strategy, {}) == {}
+    assert validate_strategy_inputs(disable_strategy, {"action_mode": "disable_key"}) == {
+        "action_mode": "disable_key"
+    }
+    assert validate_strategy_inputs(delete_strategy, {"action_mode": "delete_key"}) == {
+        "action_mode": "delete_key"
+    }
+
+
+def test_validate_strategy_input_iam_root_action_mode_mismatch_rejected() -> None:
+    """IAM root action_mode must map to the selected existing strategy ID."""
+    strategies = {
+        strategy["strategy_id"]: strategy
+        for strategy in list_strategies_for_action_type("iam_root_access_key_absent")
+    }
+
+    with pytest.raises(ValueError, match="requires strategy_id 'iam_root_key_delete'"):
+        validate_strategy_inputs(strategies["iam_root_key_disable"], {"action_mode": "delete_key"})
+
+    with pytest.raises(ValueError, match="requires strategy_id 'iam_root_key_disable'"):
+        validate_strategy_inputs(strategies["iam_root_key_delete"], {"action_mode": "disable_key"})
 
 
 def test_create_run_root_delete_strategy_mfa_disabled_blocks_400(client: TestClient) -> None:
@@ -1128,6 +1395,8 @@ def test_remediation_options_marks_exception_only_strategies(client: TestClient)
     assert strategies["config_keep_exception"]["exception_only"] is True
     assert strategies["config_keep_exception"]["supports_exception_flow"] is True
     assert strategies["config_enable_account_local_delivery"]["exception_only"] is False
+    exception_fields = strategies["config_keep_exception"]["input_schema"]["fields"]
+    assert [field["key"] for field in exception_fields] == ["exception_duration_days", "exception_reason"]
 
 
 def test_remediation_options_root_action_exposes_runbook_notice(client: TestClient) -> None:
@@ -1158,6 +1427,393 @@ def test_remediation_options_root_action_exposes_runbook_notice(client: TestClie
     assert body.get("manual_high_risk") is True
     assert "Root credentials required" in str(body.get("pre_execution_notice", ""))
     assert body.get("runbook_url") == "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md"
+    strategies = {item["strategy_id"]: item for item in body.get("strategies", [])}
+    disable_field = strategies["iam_root_key_disable"]["input_schema"]["fields"][0]
+    delete_field = strategies["iam_root_key_delete"]["input_schema"]["fields"][0]
+    for field in (disable_field, delete_field):
+        assert field["key"] == "action_mode"
+        assert field["type"] == "select"
+        option_values = [option["value"] for option in field.get("options", [])]
+        assert option_values == ["disable_key", "delete_key"]
+        for option in field.get("options", []):
+            assert option.get("impact_text")
+
+
+@pytest.mark.parametrize(
+    ("action_type", "expected_impact_fragment", "expected_estimate", "expected_supports_reeval"),
+    [
+        (
+            "enable_security_hub",
+            "AWS Security Hub will be enabled in this region.",
+            "~1 hour",
+            False,
+        ),
+        (
+            "enable_guardduty",
+            "Amazon GuardDuty will be enabled in this region.",
+            "~1 hour",
+            False,
+        ),
+        ("ssm_block_public_sharing", "Public sharing of SSM documents", "12-24 hours", True),
+        ("ebs_snapshot_block_public_access", "Public access to EBS snapshots", "12-24 hours", True),
+        (
+            "ebs_default_encryption",
+            "All new EBS volumes in this region will be encrypted by default.",
+            "12-24 hours",
+            True,
+        ),
+    ],
+)
+def test_remediation_options_simple_controls_expose_non_empty_impact_text(
+    client: TestClient,
+    action_type: str,
+    expected_impact_fragment: str,
+    expected_estimate: str,
+    expected_supports_reeval: bool,
+) -> None:
+    """Task 7: simple-control remediation options include non-empty strategy impact_text metadata."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type=action_type)
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    body = r.json()
+    strategies = body.get("strategies", [])
+    assert strategies
+
+    for strategy in strategies:
+        assert "impact_text" in strategy
+        assert str(strategy.get("impact_text") or "").strip()
+        assert str(strategy.get("estimated_resolution_time") or "").strip()
+        assert isinstance(strategy.get("supports_immediate_reeval"), bool)
+
+    assert any(
+        expected_impact_fragment in str(strategy.get("impact_text") or "")
+        for strategy in strategies
+    )
+    assert all(
+        str(strategy.get("estimated_resolution_time") or "") == expected_estimate
+        for strategy in strategies
+    )
+    non_exception_strategies = [strategy for strategy in strategies if not bool(strategy.get("exception_only"))]
+    assert non_exception_strategies
+    assert all(
+        bool(strategy.get("supports_immediate_reeval")) is expected_supports_reeval
+        for strategy in non_exception_strategies
+    )
+    exception_strategies = [strategy for strategy in strategies if bool(strategy.get("exception_only"))]
+    assert all(
+        bool(strategy.get("supports_immediate_reeval")) is False
+        for strategy in exception_strategies
+    )
+
+    if action_type in {"enable_security_hub", "enable_guardduty"}:
+        assert set(body.get("mode_options", [])) == {"pr_only", "direct_fix"}
+
+
+@pytest.mark.parametrize(
+    ("action_type", "expected_estimate", "expected_non_exception_supports_reeval"),
+    [
+        ("aws_config_enabled", "1-6 hours", True),
+        ("cloudtrail_enabled", "1-6 hours", True),
+        ("sg_restrict_public_ports", "12-24 hours", True),
+    ],
+)
+def test_remediation_options_include_estimate_and_reeval_metadata(
+    client: TestClient,
+    action_type: str,
+    expected_estimate: str,
+    expected_non_exception_supports_reeval: bool,
+) -> None:
+    """Task 14: strategy metadata includes estimated resolution and re-eval support flags."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type=action_type)
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = r.json().get("strategies", [])
+    assert strategies
+    non_exception_strategies = [strategy for strategy in strategies if not bool(strategy.get("exception_only"))]
+    assert non_exception_strategies
+    for strategy in strategies:
+        assert strategy.get("estimated_resolution_time") == expected_estimate
+    for strategy in non_exception_strategies:
+        assert strategy.get("supports_immediate_reeval") is expected_non_exception_supports_reeval
+    for strategy in strategies:
+        if bool(strategy.get("exception_only")):
+            assert strategy.get("supports_immediate_reeval") is False
+
+
+@pytest.mark.parametrize(
+    ("action_type", "expected_blast_radius"),
+    [
+        ("s3_block_public_access", "account"),
+        ("s3_bucket_block_public_access", "resource"),
+        ("s3_bucket_encryption", "resource"),
+        ("aws_config_enabled", "account"),
+        ("cloudtrail_enabled", "resource"),
+        ("enable_security_hub", "account"),
+        ("enable_guardduty", "account"),
+        ("ssm_block_public_sharing", "account"),
+        ("ebs_snapshot_block_public_access", "account"),
+        ("ebs_default_encryption", "account"),
+        ("s3_bucket_access_logging", "resource"),
+        ("s3_bucket_lifecycle_configuration", "resource"),
+        ("s3_bucket_encryption_kms", "resource"),
+        ("s3_bucket_require_ssl", "resource"),
+        ("sg_restrict_public_ports", "access_changing"),
+        ("iam_root_access_key_absent", "access_changing"),
+    ],
+)
+def test_remediation_options_include_blast_radius_metadata_for_all_controls(
+    client: TestClient,
+    action_type: str,
+    expected_blast_radius: str,
+) -> None:
+    """Task 15: remediation options expose blast-radius metadata for all 16 in-scope controls."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type=action_type)
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = r.json().get("strategies", [])
+    assert strategies
+    for strategy in strategies:
+        assert strategy.get("blast_radius") in {"account", "resource", "access_changing"}
+        assert strategy.get("blast_radius") == expected_blast_radius
+
+
+@pytest.mark.parametrize(
+    ("action_type", "expected_rollback_fragment"),
+    [
+        ("s3_block_public_access", "delete-public-access-block --account-id <ACCOUNT_ID>"),
+        ("s3_bucket_block_public_access", "delete-public-access-block --bucket <BUCKET_NAME>"),
+        ("s3_bucket_encryption", "delete-bucket-encryption --bucket <BUCKET_NAME>"),
+        (
+            "aws_config_enabled",
+            "stop-configuration-recorder --configuration-recorder-name <RECORDER_NAME>",
+        ),
+        ("cloudtrail_enabled", "cloudtrail stop-logging --name <TRAIL_NAME>"),
+        ("enable_security_hub", "securityhub disable-security-hub"),
+        ("enable_guardduty", "guardduty delete-detector --detector-id <DETECTOR_ID>"),
+        (
+            "ssm_block_public_sharing",
+            "/ssm/documents/console/public-sharing-permission --setting-value Enable",
+        ),
+        ("ebs_snapshot_block_public_access", "disable-snapshot-block-public-access"),
+        ("ebs_default_encryption", "disable-ebs-encryption-by-default"),
+        ("s3_bucket_access_logging", "put-bucket-logging --bucket <SOURCE_BUCKET>"),
+        ("s3_bucket_lifecycle_configuration", "delete-bucket-lifecycle --bucket <BUCKET_NAME>"),
+        ("s3_bucket_encryption_kms", "put-bucket-encryption --bucket <BUCKET_NAME>"),
+        ("s3_bucket_require_ssl", "delete-bucket-policy --bucket <BUCKET_NAME>"),
+        (
+            "sg_restrict_public_ports",
+            "authorize-security-group-ingress --group-id <SECURITY_GROUP_ID>",
+        ),
+        ("iam_root_access_key_absent", "update-access-key --access-key-id <ROOT_ACCESS_KEY_ID>"),
+    ],
+)
+def test_remediation_options_include_rollback_command_for_all_controls(
+    client: TestClient,
+    action_type: str,
+    expected_rollback_fragment: str,
+) -> None:
+    """Task 13: remediation options expose rollback commands for all 16 in-scope controls."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type=action_type)
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = r.json().get("strategies", [])
+    assert strategies
+
+    for strategy in strategies:
+        rollback_command = str(strategy.get("rollback_command") or "").strip()
+        assert rollback_command
+
+    assert any(
+        expected_rollback_fragment in str(strategy.get("rollback_command") or "")
+        for strategy in strategies
+    )
+
+
+def test_remediation_options_root_delete_strategy_exposes_delete_specific_rollback(client: TestClient) -> None:
+    """Root-key delete strategy should expose a create-access-key rollback recipe."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    strategies = {item["strategy_id"]: item for item in r.json().get("strategies", [])}
+    assert strategies["iam_root_key_delete"]["rollback_command"] == "aws iam create-access-key"
+
+
+def test_trigger_reeval_enqueues_reconcile_jobs(client: TestClient) -> None:
+    """Task 14: POST trigger-reeval enqueues inventory shard jobs for the action scope."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account.regions = ["us-east-1"]
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "reeval-msg-1"}
+    with patch("backend.routers.actions.boto3.client", return_value=mock_sqs):
+        with patch("backend.routers.actions.settings") as mock_settings:
+            mock_settings.has_inventory_reconcile_queue = True
+            mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/reconcile"
+            mock_settings.control_plane_inventory_services_list = ["ec2", "s3"]
+            mock_settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD = 500
+            mock_settings.AWS_REGION = "us-east-1"
+            try:
+                r = client.post(
+                    f"/api/actions/{action.id}/trigger-reeval",
+                    json={"strategy_id": "sg_restrict_public_ports_guided"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 202
+    body = r.json()
+    assert body["action_id"] == str(action.id)
+    assert body["strategy_id"] == "sg_restrict_public_ports_guided"
+    assert body["estimated_resolution_time"] == "12-24 hours"
+    assert body["supports_immediate_reeval"] is True
+    assert body["enqueued_jobs"] == 2
+    assert mock_sqs.send_message.call_count == 2
+    first_payload = json.loads(mock_sqs.send_message.call_args_list[0].kwargs["MessageBody"])
+    assert first_payload["job_type"] == "reconcile_inventory_shard"
+    assert first_payload["account_id"] == action.account_id
+    assert first_payload["region"] == action.region
+
+
+def test_trigger_reeval_rejects_unsupported_strategy(client: TestClient) -> None:
+    """Task 14: immediate re-evaluation endpoint rejects unsupported control families."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.post(
+            f"/api/actions/{action.id}/trigger-reeval",
+            json={"strategy_id": "security_hub_enable_direct_fix"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Immediate re-evaluation not supported"
 
 
 def test_remediation_options_s3_dependency_pass_when_runtime_indicates_no_public_dependency(client: TestClient) -> None:
@@ -1237,6 +1893,9 @@ def test_remediation_preview_action_not_fixable(client: TestClient) -> None:
     assert data["compliant"] is False
     assert data["will_apply"] is False
     assert "does not support direct fix" in data["message"]
+    assert data["before_state"] == {}
+    assert data["after_state"] == {}
+    assert data["diff_lines"] == []
 
 
 def test_remediation_preview_no_write_role(client: TestClient) -> None:
@@ -1272,6 +1931,179 @@ def test_remediation_preview_no_write_role(client: TestClient) -> None:
     data = r.json()
     assert data["compliant"] is False
     assert "WriteRole" in data["message"]
+
+
+def test_remediation_preview_pr_only_includes_choice_impact_summary(client: TestClient) -> None:
+    """pr_only preview includes impact summary derived from selected strategy choices."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "evidence": {
+                "security_group_id": "sg-0123456789abcdef0",
+                "public_admin_ipv4_ports": [22, 3389],
+                "public_admin_ipv6_ports": [],
+            }
+        },
+    ):
+        try:
+            r = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "tenant_id": str(tenant.id),
+                    "strategy_id": "sg_restrict_public_ports_guided",
+                    "strategy_inputs": json.dumps({"access_mode": "close_and_revoke"}),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compliant"] is False
+    assert data["will_apply"] is False
+    assert "informational only" in data["message"]
+    assert isinstance(data.get("impact_summary"), str)
+    assert "automatically removed" in data["impact_summary"]
+    assert isinstance(data.get("before_state"), dict)
+    assert isinstance(data.get("after_state"), dict)
+    assert isinstance(data.get("diff_lines"), list)
+    assert any(
+        line.get("type") == "remove" and line.get("label") == "Public admin ingress (IPv4)"
+        for line in data["diff_lines"]
+    )
+    assert any(
+        line.get("type") == "add" and line.get("label") == "Restricted admin ingress (IPv4)"
+        for line in data["diff_lines"]
+    )
+
+
+def test_remediation_preview_pr_only_s3_5_includes_before_after_simulation(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_require_ssl")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "evidence": {
+                "target_bucket": "example-bucket",
+                "s3_ssl_deny_present": False,
+                "existing_bucket_policy_statement_count": 2,
+            }
+        },
+    ):
+        try:
+            r = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "tenant_id": str(tenant.id),
+                    "strategy_id": "s3_enforce_ssl_strict_deny",
+                    "strategy_inputs": json.dumps({"preserve_existing_policy": True}),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["before_state"]["bucket"] == "example-bucket"
+    assert data["before_state"]["ssl_enforced"] is False
+    assert data["after_state"]["ssl_enforced"] is True
+    assert any(
+        line.get("type") == "add" and line.get("label") == "HTTPS-only access"
+        for line in data["diff_lines"]
+    )
+
+
+def test_remediation_preview_pr_only_config_1_includes_before_after_simulation(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="aws_config_enabled")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "evidence": {
+                "config_recorder_exists": False,
+                "config_recording_scope": "not_configured",
+                "config_delivery_bucket_name": None,
+            }
+        },
+    ):
+        try:
+            r = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "tenant_id": str(tenant.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": json.dumps(
+                        {
+                            "recording_scope": "all_resources",
+                            "delivery_bucket_mode": "use_existing",
+                            "existing_bucket_name": "security-autopilot-config-123456789012",
+                            "delivery_bucket": "security-autopilot-config-123456789012",
+                        }
+                    ),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["before_state"]["recorder_enabled"] is False
+    assert data["after_state"]["recorder_enabled"] is True
+    assert data["after_state"]["delivery_bucket"] == "security-autopilot-config-123456789012"
+    assert any(
+        line.get("type") == "add" and line.get("label") == "Configuration recorder"
+        for line in data["diff_lines"]
+    )
 
 
 def test_remediation_preview_success(client: TestClient) -> None:
@@ -1318,6 +2150,60 @@ def test_remediation_preview_success(client: TestClient) -> None:
     assert data["compliant"] is False
     assert data["will_apply"] is True
     assert "S3 Block Public Access" in data["message"]
+
+
+def test_remediation_preview_direct_fix_includes_strategy_impact_summary(client: TestClient) -> None:
+    """direct_fix preview includes strategy-level impact summary when strategy is provided."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_block_public_access")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+    from backend.workers.services.direct_fix import RemediationPreviewResult
+
+    preview_result = RemediationPreviewResult(
+        compliant=False,
+        message="S3 Block Public Access not configured; will enable.",
+        will_apply=True,
+    )
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.actions.assume_role", return_value=MagicMock()):
+        with patch(
+            "backend.workers.services.direct_fix.run_remediation_preview",
+            return_value=preview_result,
+        ):
+            try:
+                r = client.get(
+                    f"/api/actions/{action.id}/remediation-preview",
+                    params={
+                        "mode": "direct_fix",
+                        "tenant_id": str(tenant.id),
+                        "strategy_id": "s3_account_block_public_access_direct_fix",
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compliant"] is False
+    assert data["will_apply"] is True
+    assert "S3 Block Public Access" in data["message"]
+    assert (
+        data.get("impact_summary")
+        == "All four account-level public access block settings will be enabled."
+    )
 
 
 # ---------------------------------------------------------------------------

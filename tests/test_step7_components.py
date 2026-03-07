@@ -37,6 +37,7 @@ from backend.services.pr_bundle import (
     generate_pr_bundle,
     _s3_bucket_name_from_target_id,
 )
+from backend.services.remediation_strategy import list_strategies_for_action_type
 from backend.services.remediation_audit import (
     allow_update_outcome,
     is_run_completed,
@@ -499,6 +500,108 @@ def test_pr_bundle_aws_config_enabled_cloudformation_overwrite_toggle_defaults_s
     assert "RecordingGroup: !If" in content
 
 
+def test_config_1_strategy_schema_guided_choice_fields() -> None:
+    """Task 4: Config.1 strategy exposes guided schema fields for scope, delivery, and KMS toggles."""
+    strategies = {
+        strategy["strategy_id"]: strategy
+        for strategy in list_strategies_for_action_type(ACTION_TYPE_AWS_CONFIG_ENABLED)
+    }
+    strategy = strategies["config_enable_centralized_delivery"]
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+
+    recording_scope = fields["recording_scope"]
+    assert recording_scope["type"] == "select"
+    assert [option["value"] for option in recording_scope.get("options", [])] == [
+        "all_resources",
+        "keep_existing",
+    ]
+
+    delivery_bucket_mode = fields["delivery_bucket_mode"]
+    assert delivery_bucket_mode["type"] == "select"
+    assert [option["value"] for option in delivery_bucket_mode.get("options", [])] == [
+        "create_new",
+        "use_existing",
+    ]
+
+    existing_bucket_name = fields["existing_bucket_name"]
+    assert existing_bucket_name["type"] == "string"
+    assert existing_bucket_name["visible_when"] == {
+        "field": "delivery_bucket_mode",
+        "equals": "use_existing",
+    }
+
+    encrypt_with_kms = fields["encrypt_with_kms"]
+    assert encrypt_with_kms["type"] == "boolean"
+
+    kms_key_arn = fields["kms_key_arn"]
+    assert kms_key_arn["type"] == "string"
+    assert kms_key_arn["visible_when"] == {
+        "field": "encrypt_with_kms",
+        "equals": True,
+    }
+
+
+def test_pr_bundle_aws_config_enabled_guided_inputs_drive_terraform_defaults() -> None:
+    """Task 4: Config.1 Terraform wiring should honor guided strategy input defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="config_enable_account_local_delivery",
+        strategy_inputs={
+            "recording_scope": "all_resources",
+            "delivery_bucket_mode": "use_existing",
+            "existing_bucket_name": "shared-config-bucket-111122223333",
+            "encrypt_with_kms": True,
+            "kms_key_arn": "arn:aws:kms:eu-north-1:111122223333:key/1234abcd",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+
+    assert 'variable "delivery_bucket_name"' in content
+    assert 'default     = "shared-config-bucket-111122223333"' in content
+    assert 'variable "create_local_bucket"' in content
+    assert 'default     = false' in content
+    assert 'variable "overwrite_recording_group"' in content
+    assert 'default     = true' in content
+    assert 'variable "kms_key_arn"' in content
+    assert 'default     = "arn:aws:kms:eu-north-1:111122223333:key/1234abcd"' in content
+
+
+def test_pr_bundle_aws_config_enabled_guided_inputs_drive_cloudformation_defaults() -> None:
+    """Task 4: Config.1 CloudFormation wiring should honor guided strategy input defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_id="config_enable_account_local_delivery",
+        strategy_inputs={
+            "recording_scope": "all_resources",
+            "delivery_bucket_mode": "use_existing",
+            "existing_bucket_name": "shared-config-bucket-111122223333",
+            "encrypt_with_kms": True,
+            "kms_key_arn": "arn:aws:kms:eu-north-1:111122223333:key/1234abcd",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.yaml")["content"]
+
+    assert "DeliveryBucketName:" in content
+    assert 'Default: "shared-config-bucket-111122223333"' in content
+    assert 'Default: "true"' in content
+    assert "S3KmsKeyArn: arn:aws:kms:eu-north-1:111122223333:key/1234abcd" in content
+    assert "ConfigDeliveryBucket:" not in content
+
+
 def test_pr_bundle_dispatch_s3_bucket_block_terraform_step_9_9() -> None:
     """Step 9.9: s3_bucket_block_public_access returns Terraform with aws_s3_bucket_public_access_block."""
     action = _make_action(
@@ -548,11 +651,12 @@ def test_pr_bundle_s3_bucket_block_terraform_readme_has_guardrails() -> None:
     )
     r = generate_pr_bundle(action, "terraform")
     readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
-    assert "S3.2 guardrail (read before apply)" in readme
+    assert "S3.2 post-fix access guidance" in readme
     assert "NOT a full CloudFront + OAC + private S3 migration" in readme
-    assert "Pre-apply checks (required)" in readme
-    assert "Apply sequence (recommended)" in readme
-    assert "Rollback plan" in readme
+    assert "What changes" in readme
+    assert "How to access now" in readme
+    assert "Verify" in readme
+    assert "Rollback" in readme
 
 
 def test_pr_bundle_non_s3_terraform_readme_excludes_s3_guardrails() -> None:
@@ -565,7 +669,7 @@ def test_pr_bundle_non_s3_terraform_readme_excludes_s3_guardrails() -> None:
     )
     r = generate_pr_bundle(action, "terraform")
     readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
-    assert "S3.2 guardrail (read before apply)" not in readme
+    assert "S3.2 post-fix access guidance" not in readme
 
 
 def test_pr_bundle_terraform_readme_includes_c2_c5_proof_fields() -> None:
@@ -580,6 +684,79 @@ def test_pr_bundle_terraform_readme_includes_c2_c5_proof_fields() -> None:
     readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
     assert "terraform_plan_timestamp_utc:" in readme
     assert "preserved_configuration_statement:" in readme
+
+
+@pytest.mark.parametrize(
+    ("action_type", "target_id", "control_id", "risk_snapshot", "expected_snippets"),
+    [
+        (
+            ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            "my-bucket",
+            "S3.2",
+            None,
+            [
+                "S3.2 post-fix access guidance",
+                "CloudFront usage note",
+                "curl -I https://<cloudfront-domain>/<object-key>",
+                "aws s3api get-public-access-block --bucket <bucket-name>",
+            ],
+        ),
+        (
+            ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+            "sg-0abc1234def567890",
+            "EC2.53",
+            None,
+            [
+                "EC2.53 post-fix access guidance",
+                "aws ssm start-session --target <instance-id> --region <region>",
+                "describe-security-group-rules --region <region>",
+                "authorize-security-group-ingress --region <region>",
+            ],
+        ),
+        (
+            ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+            "my-bucket",
+            "S3.5",
+            {"evidence": {"existing_bucket_policy_statement_count": 0}},
+            [
+                "S3.5 post-fix access guidance",
+                "HTTPS requirement",
+                "curl -I http://<bucket-name>.s3.<region>.amazonaws.com/<object-key>",
+                "put-bucket-policy --bucket <bucket-name> --policy file://pre-remediation-policy.json",
+            ],
+        ),
+        (
+            ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING,
+            "account-ssm",
+            "SSM.7",
+            None,
+            [
+                "SSM.7 post-fix access guidance",
+                "modify-document-permission --name <document-name>",
+                "get-service-setting --setting-id arn:aws:ssm:<region>:<account-id>:servicesetting/ssm/documents/console/public-sharing-permission",
+                "update-service-setting --setting-id arn:aws:ssm:<region>:<account-id>:servicesetting/ssm/documents/console/public-sharing-permission --setting-value Enable",
+            ],
+        ),
+    ],
+)
+def test_pr_bundle_terraform_readme_includes_post_fix_access_guidance(
+    action_type: str,
+    target_id: str,
+    control_id: str,
+    risk_snapshot: dict[str, object] | None,
+    expected_snippets: list[str],
+) -> None:
+    """Terraform README appends post-fix access guidance for high-risk controls."""
+    action = _make_action(
+        action_type=action_type,
+        target_id=target_id,
+        region="us-east-1",
+        control_id=control_id,
+    )
+    bundle = generate_pr_bundle(action, "terraform", risk_snapshot=risk_snapshot)
+    readme = next(f for f in bundle["files"] if f["path"] == "README.txt")["content"]
+    for snippet in expected_snippets:
+        assert snippet in readme
 
 
 def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> None:
@@ -1026,6 +1203,88 @@ def test_pr_bundle_sg_restrict_terraform_step_9_11_exact_structure() -> None:
     assert "EC2.53" in content or "Control:" in content
 
 
+def test_ec2_53_strategy_schema_guided_choice_fields() -> None:
+    """Task 2: EC2.53 strategy exposes guided access-mode schema with impact text."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS)
+    assert len(strategies) == 1
+    strategy = strategies[0]
+    assert strategy["strategy_id"] == "sg_restrict_public_ports_guided"
+    assert strategy["requires_inputs"] is True
+
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+    access_mode = fields["access_mode"]
+    assert access_mode["type"] == "select"
+    option_values = [option["value"] for option in access_mode.get("options", [])]
+    assert option_values == [
+        "close_public",
+        "close_and_revoke",
+        "restrict_to_ip",
+        "restrict_to_cidr",
+    ]
+    for option in access_mode.get("options", []):
+        assert option.get("impact_text")
+
+    allowed_cidr = fields["allowed_cidr"]
+    assert allowed_cidr["type"] == "cidr"
+    assert allowed_cidr["visible_when"] == {
+        "field": "access_mode",
+        "equals": ["restrict_to_ip", "restrict_to_cidr"],
+    }
+
+    allowed_cidr_ipv6 = fields["allowed_cidr_ipv6"]
+    assert allowed_cidr_ipv6["type"] == "cidr"
+    assert allowed_cidr_ipv6["visible_when"] == {
+        "field": "access_mode",
+        "equals": ["restrict_to_ip", "restrict_to_cidr"],
+    }
+
+
+def test_pr_bundle_sg_restrict_terraform_strategy_inputs_map_defaults() -> None:
+    """Task 2: SG Terraform bundle uses access-mode and CIDR strategy inputs as defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="us-east-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "access_mode": "close_and_revoke",
+            "allowed_cidr": "203.0.113.99/32",
+            "allowed_cidr_ipv6": "2001:db8::123/64",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
+    assert 'default     = "203.0.113.99/32"' in content
+    assert 'default     = "2001:db8::/64"' in content
+    assert 'variable "remove_existing_public_rules"' in content
+    assert "default     = true" in content
+
+
+def test_pr_bundle_sg_restrict_remove_existing_true_only_for_close_and_revoke() -> None:
+    """Task 2: remove_existing_public_rules default is true only for access_mode=close_and_revoke."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="us-east-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "access_mode": "restrict_to_cidr",
+            "remove_existing_public_rules": True,
+            "allowed_cidr": "198.51.100.0/24",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
+    assert 'default     = "198.51.100.0/24"' in content
+    assert "default     = false" in content
+
+
 def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
     """Step 9.11: CloudFormation for EC2.53 includes revoke custom resource + ordered restricted ingress."""
     action = _make_action(
@@ -1064,6 +1323,101 @@ def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
     assert "authorize-security-group-ingress" not in content
     assert "authorize_security_group_ingress" not in content
     assert "EC2.53" in content or "Control:" in content
+
+
+def test_pr_bundle_sg_restrict_cloudformation_strategy_inputs_map_defaults() -> None:
+    """Task 2: SG CloudFormation bundle maps CIDR strategy inputs into parameter defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="us-east-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "access_mode": "restrict_to_ip",
+            "allowed_cidr": "198.51.100.44/32",
+            "allowed_cidr_ipv6": "2001:db8::abcd/64",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.yaml")["content"]
+    assert 'Default: "198.51.100.44/32"' in content
+    assert 'Default: "2001:db8::/64"' in content
+
+
+@pytest.mark.parametrize(
+    ("action_type", "target_id", "control_id", "risk_snapshot", "expected_step_snippets"),
+    [
+        (
+            ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            "my-bucket",
+            "S3.2",
+            None,
+            [
+                "What changes: sets Bucket PublicAccessBlockConfiguration",
+                "CloudFront usage note - serve traffic through CloudFront HTTPS endpoints",
+                "aws s3api get-public-access-block --bucket <bucket-name>",
+                "Rollback: emergency-only unblock command",
+            ],
+        ),
+        (
+            ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+            "sg-0abc1234def567890",
+            "EC2.53",
+            None,
+            [
+                "What changes: custom resource revokes 0.0.0.0/0 and ::/0 SSH/RDP ingress (22/3389)",
+                "aws ssm start-session --target <instance-id> --region <region>",
+                "describe-security-group-rules --region <region>",
+                "Rollback: re-authorize only temporary scoped admin ingress",
+            ],
+        ),
+        (
+            ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+            "my-bucket",
+            "S3.5",
+            {"evidence": {"existing_bucket_policy_statement_count": 0}},
+            [
+                "What changes: merges existing bucket policy statements and adds DenyInsecureTransport",
+                "How to access now: HTTPS requirement",
+                "curl -I https://my-bucket.s3.us-east-1.amazonaws.com/<object-key>",
+                "put-bucket-policy --bucket my-bucket --policy file://pre-remediation-policy.json",
+            ],
+        ),
+        (
+            ACTION_TYPE_SSM_BLOCK_PUBLIC_SHARING,
+            "account-ssm",
+            "SSM.7",
+            None,
+            [
+                "What changes: sets the SSM public-sharing service setting to Disable.",
+                "modify-document-permission --name <document-name> --permission-type Share --account-ids-to-add <account-id>",
+                "get-service-setting --setting-id arn:aws:ssm:us-east-1:123456789012:servicesetting/ssm/documents/console/public-sharing-permission",
+                "update-service-setting --setting-id arn:aws:ssm:us-east-1:123456789012:servicesetting/ssm/documents/console/public-sharing-permission --setting-value Enable",
+            ],
+        ),
+    ],
+)
+def test_pr_bundle_cloudformation_steps_include_post_fix_access_guidance(
+    action_type: str,
+    target_id: str,
+    control_id: str,
+    risk_snapshot: dict[str, object] | None,
+    expected_step_snippets: list[str],
+) -> None:
+    """CloudFormation instructions include post-fix access guidance strings per control."""
+    action = _make_action(
+        action_type=action_type,
+        target_id=target_id,
+        region="us-east-1",
+        control_id=control_id,
+    )
+    bundle = generate_pr_bundle(action, "cloudformation", risk_snapshot=risk_snapshot)
+    step_text = "\n".join(bundle["steps"])
+    for snippet in expected_step_snippets:
+        assert snippet in step_text
 
 
 def test_pr_bundle_sg_restrict_target_id_composite_extracts_sg_id() -> None:
@@ -1138,6 +1492,28 @@ def test_pr_bundle_iam_root_cloudformation_raises_structured_error() -> None:
     assert payload["action_type"] == ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT
 
 
+def test_cloudtrail_1_strategy_schema_guided_choice_fields() -> None:
+    """Task 5: CloudTrail.1 strategy exposes guided fields and defaults."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_CLOUDTRAIL_ENABLED)
+    assert len(strategies) == 1
+    strategy = strategies[0]
+    assert strategy["strategy_id"] == "cloudtrail_enable_guided"
+    assert strategy["requires_inputs"] is True
+
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+    trail_name = fields["trail_name"]
+    assert trail_name["type"] == "string"
+    assert trail_name["default_value"] == "security-autopilot-trail"
+
+    create_bucket_policy = fields["create_bucket_policy"]
+    assert create_bucket_policy["type"] == "boolean"
+    assert create_bucket_policy["default_value"] is True
+
+    multi_region = fields["multi_region"]
+    assert multi_region["type"] == "boolean"
+    assert multi_region["default_value"] is True
+
+
 def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:
     """Step 9.12: cloudtrail_enabled returns Terraform with aws_cloudtrail."""
     action = _make_action(
@@ -1161,10 +1537,15 @@ def test_pr_bundle_cloudtrail_terraform_step_9_12_exact_structure() -> None:
     r = generate_pr_bundle(action, "terraform")
     content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
     assert 'variable "trail_bucket_name"' in content
+    assert 'variable "trail_name"' in content
+    assert 'default     = "security-autopilot-trail"' in content
+    assert 'variable "multi_region"' in content
+    assert "default     = true" in content
     assert 'variable "create_bucket_policy"' in content
     assert 'resource "aws_cloudtrail" "security_autopilot"' in content
+    assert "name                          = var.trail_name" in content
     assert "s3_bucket_name" in content
-    assert "is_multi_region_trail" in content
+    assert "is_multi_region_trail          = var.multi_region" in content
     assert "include_global_service_events" in content
     assert "enable_logging" in content
     assert 'resource "null_resource" "cloudtrail_bucket_policy"' in content
@@ -1194,9 +1575,13 @@ def test_pr_bundle_cloudtrail_cloudformation_step_9_12() -> None:
     assert r["files"][0]["path"] == "cloudtrail_enabled.yaml"
     content = r["files"][0]["content"]
     assert "AWS::CloudTrail::Trail" in content
+    assert "TrailName:" in content
+    assert 'Default: "security-autopilot-trail"' in content
     assert "TrailBucketName:" in content or "TrailBucketName" in content
+    assert "MultiRegion:" in content
+    assert 'Default: "true"' in content
     assert "CreateBucketPolicy:" in content
-    assert "IsMultiRegionTrail: true" in content or "IsMultiRegionTrail:" in content
+    assert 'IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]' in content
     assert "IncludeGlobalServiceEvents" in content or "S3BucketName:" in content
     assert "AWS::S3::BucketPolicy" in content
     assert "cloudtrail.amazonaws.com" in content
@@ -1236,6 +1621,278 @@ def test_pr_bundle_cloudtrail_cloudformation_opt_out_bucket_policy() -> None:
     assert "CreateBucketPolicy:" in content
     assert 'Default: "false"' in content
     assert "AWS::S3::BucketPolicy" not in content
+
+
+def test_pr_bundle_cloudtrail_terraform_strategy_inputs_map_defaults() -> None:
+    """Task 5: CloudTrail Terraform bundle honors guided strategy input defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+        control_id="CloudTrail.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "trail_name": "org-audit-trail",
+            "multi_region": False,
+            "create_bucket_policy": False,
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
+
+    assert 'variable "trail_name"' in content
+    assert 'default     = "org-audit-trail"' in content
+    assert 'variable "multi_region"' in content
+    assert "default     = false" in content
+    assert "name                          = var.trail_name" in content
+    assert "is_multi_region_trail          = var.multi_region" in content
+    assert 'resource "null_resource" "cloudtrail_bucket_policy"' not in content
+
+
+def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> None:
+    """Task 5: CloudTrail CloudFormation bundle honors guided strategy input defaults."""
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+        control_id="CloudTrail.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "trail_name": "org-audit-trail",
+            "multi_region": False,
+            "create_bucket_policy": False,
+        },
+    )
+    content = r["files"][0]["content"]
+
+    assert "TrailName:" in content
+    assert 'Default: "org-audit-trail"' in content
+    assert "MultiRegion:" in content
+    assert 'Default: "false"' in content
+    assert 'IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]' in content
+    assert "AWS::S3::BucketPolicy" not in content
+
+
+def test_task_6_s3_impact_text_present_for_s3_1_s3_2_s3_4() -> None:
+    """Task 6: S3.1/S3.2/S3.4 strategies expose impact_text for guided UX."""
+    for action_type in (
+        ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS,
+        ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        ACTION_TYPE_S3_BUCKET_ENCRYPTION,
+    ):
+        strategies = list_strategies_for_action_type(action_type)
+        assert strategies
+        for strategy in strategies:
+            assert strategy.get("impact_text")
+
+
+def test_task_6_s3_5_strategy_schema_preserve_existing_policy_with_impact_text() -> None:
+    """Task 6: S3.5 strategies include preserve_existing_policy boolean with impact_text."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_S3_BUCKET_REQUIRE_SSL)
+    strategy_by_id = {strategy["strategy_id"]: strategy for strategy in strategies}
+
+    for strategy_id in (
+        "s3_enforce_ssl_strict_deny",
+        "s3_enforce_ssl_with_principal_exemptions",
+    ):
+        strategy = strategy_by_id[strategy_id]
+        fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+        preserve = fields["preserve_existing_policy"]
+        assert preserve["type"] == "boolean"
+        assert preserve["default_value"] is True
+        assert preserve.get("impact_text")
+        assert strategy.get("impact_text")
+
+
+def test_task_6_s3_9_strategy_schema_log_bucket_required_with_impact_text() -> None:
+    """Task 6: S3.9 strategy includes required log_bucket_name with impact text."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING)
+    assert len(strategies) == 1
+    strategy = strategies[0]
+    assert strategy["strategy_id"] == "s3_enable_access_logging_guided"
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+    log_bucket_name = fields["log_bucket_name"]
+    assert log_bucket_name["type"] == "string"
+    assert log_bucket_name["required"] is True
+    assert log_bucket_name.get("impact_text")
+    assert strategy.get("impact_text")
+
+
+def test_task_6_s3_11_strategy_schema_abort_days_bounds_and_impact_text() -> None:
+    """Task 6: S3.11 strategy includes abort_days bounds/default and impact text."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION)
+    assert len(strategies) == 1
+    strategy = strategies[0]
+    assert strategy["strategy_id"] == "s3_enable_abort_incomplete_uploads"
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+    abort_days = fields["abort_days"]
+    assert abort_days["type"] == "number"
+    assert abort_days["default_value"] == 7
+    assert abort_days["min"] == 1
+    assert abort_days["max"] == 365
+    assert abort_days.get("impact_text")
+    assert strategy.get("impact_text")
+
+
+def test_task_6_s3_15_strategy_schema_kms_mode_and_conditional_kms_arn() -> None:
+    """Task 6: S3.15 strategy includes key mode select and conditional KMS ARN field."""
+    strategies = list_strategies_for_action_type(ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS)
+    assert len(strategies) == 1
+    strategy = strategies[0]
+    assert strategy["strategy_id"] == "s3_enable_sse_kms_guided"
+    fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+
+    kms_key_mode = fields["kms_key_mode"]
+    assert kms_key_mode["type"] == "select"
+    assert kms_key_mode["default_value"] == "aws_managed"
+    assert [option["value"] for option in kms_key_mode.get("options", [])] == [
+        "aws_managed",
+        "custom",
+    ]
+
+    kms_key_arn = fields["kms_key_arn"]
+    assert kms_key_arn["type"] == "string"
+    assert kms_key_arn["visible_when"] == {
+        "field": "kms_key_mode",
+        "equals": "custom",
+    }
+    assert strategy.get("impact_text")
+
+
+def test_pr_bundle_s3_11_terraform_strategy_inputs_map_defaults() -> None:
+    """Task 6: S3.11 Terraform bundle uses strategy_inputs.abort_days default."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"abort_days": 30},
+    )
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_lifecycle_configuration.tf")["content"]
+    assert 'variable "abort_incomplete_multipart_days"' in content
+    assert "default     = 30" in content
+
+
+def test_pr_bundle_s3_11_cloudformation_strategy_inputs_map_defaults() -> None:
+    """Task 6: S3.11 CloudFormation bundle uses strategy_inputs.abort_days default."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={"abort_days": 30},
+    )
+    content = r["files"][0]["content"]
+    assert "AbortIncompleteMultipartDays:" in content
+    assert "Default: 30" in content
+
+
+def test_pr_bundle_s3_15_terraform_strategy_inputs_map_defaults() -> None:
+    """Task 6: S3.15 Terraform bundle maps custom key inputs."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "kms_key_mode": "custom",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_encryption_kms.tf")["content"]
+    assert 'default     = "arn:aws:kms:us-east-1:123456789012:key/custom-key-id"' in content
+
+
+def test_pr_bundle_s3_15_cloudformation_strategy_inputs_map_defaults() -> None:
+    """Task 6: S3.15 CloudFormation bundle maps custom key inputs."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "kms_key_mode": "custom",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+        },
+    )
+    content = r["files"][0]["content"]
+    assert "KmsKeyArn:" in content
+    assert 'Default: "arn:aws:kms:us-east-1:123456789012:key/custom-key-id"' in content
+
+
+def test_pr_bundle_s3_15_custom_mode_requires_kms_key_arn() -> None:
+    """Task 6: S3.15 custom key mode fails closed when kms_key_arn is missing."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "terraform",
+            strategy_inputs={"kms_key_mode": "custom"},
+        )
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "missing_kms_key_arn"
+    assert payload["action_type"] == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS
+
+
+def test_pr_bundle_s3_ssl_preserve_existing_policy_false_skips_fail_closed_and_tfvars() -> None:
+    """Task 6: S3.5 preserve_existing_policy=false bypasses preservation preload/fail-closed path."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"preserve_existing_policy": False},
+        risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 2}},
+    )
+    paths = [f["path"] for f in r["files"]]
+    assert "s3_bucket_require_ssl.tf" in paths
+    assert "terraform.auto.tfvars.json" not in paths
+
+
+def test_pr_bundle_s3_ssl_cloudformation_preserve_existing_policy_false_sets_flag() -> None:
+    """Task 6: S3.5 CloudFormation wires preserve_existing_policy=false into custom resource inputs."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={"preserve_existing_policy": False},
+        risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 2}},
+    )
+    content = r["files"][0]["content"]
+    assert "PreserveExistingPolicy: false" in content
 
 
 def test_pr_bundle_s3_ssl_fails_closed_when_policy_count_present_without_policy_json() -> None:

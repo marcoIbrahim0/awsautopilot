@@ -14,8 +14,8 @@ AWS_EVIDENCE_DIR="${ROOT_DIR}/docs/test-results/live-runs/${RUN_ID}/evidence/aws
 UI_EVIDENCE_DIR="${ROOT_DIR}/docs/test-results/live-runs/${RUN_ID}/evidence/ui"
 mkdir -p "${API_EVIDENCE_DIR}" "${AWS_EVIDENCE_DIR}" "${UI_EVIDENCE_DIR}"
 
-API_BASE_URL="${API_BASE_URL:-https://api.valensjewelry.com}"
-UI_BASE_URL="${UI_BASE_URL:-https://dev.valensjewelry.com}"
+API_BASE_URL="${API_BASE_URL:-https://api.ocypheris.com}"
+UI_BASE_URL="${UI_BASE_URL:-https://dev.ocypheris.com}"
 ADMIN_EMAIL="${TEST_ADMIN_EMAIL:-maromaher54@gmail.com}"
 ADMIN_PASSWORD="${TEST_ADMIN_PASSWORD:-Maher730}"
 AWS_PROFILE_NAME="${AWS_PROFILE:-default}"

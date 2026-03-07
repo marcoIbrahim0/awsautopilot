@@ -62,7 +62,7 @@ sequenceDiagram
 
 ```bash
 PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py \
-  --api-base https://api.valensjewelry.com \
+  --api-base https://api.ocypheris.com \
   --account-id 029037611564 \
   --region eu-north-1
 ```
@@ -163,7 +163,7 @@ aws events describe-api-destination \
 ```
 
 Expected endpoint format:
-`https://api.valensjewelry.com/api/control-plane/events`
+`https://api.ocypheris.com/api/control-plane/events`
 
 ### Debug Note: `eu-north-1` Freshness Incident (2026-02-20)
 

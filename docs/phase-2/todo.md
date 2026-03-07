@@ -2,7 +2,7 @@
 
 > **Dev environment**
 > - Frontend: `npm run dev` in `frontend/` → `http://localhost:3000`
-> - Public URL: **https://dev.valensjewelry.com**
+> - Public URL: **https://dev.ocypheris.com**
 > - Tunnel: `cloudflared tunnel --config /Users/marcomaher/.cloudflared/config.yml run 71b14aef-c5f7-4a83-bd93-9c04b4f025f4`
 > - Login: `maromaher54@gmail.com` / `Maher730`
 

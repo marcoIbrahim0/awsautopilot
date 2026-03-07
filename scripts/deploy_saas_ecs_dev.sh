@@ -37,9 +37,9 @@ LOG_LEVEL="${LOG_LEVEL:-$(read_env_file_value LOG_LEVEL || true)}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
 FRONTEND_URL="${FRONTEND_URL:-$(read_env_file_value FRONTEND_URL || true)}"
-FRONTEND_URL="${FRONTEND_URL:-https://valensjewelry.com}"
+FRONTEND_URL="${FRONTEND_URL:-https://ocypheris.com}"
 CORS_ORIGINS="${CORS_ORIGINS:-$(read_env_file_value CORS_ORIGINS || true)}"
-CORS_ORIGINS="${CORS_ORIGINS:-https://valensjewelry.com}"
+CORS_ORIGINS="${CORS_ORIGINS:-https://ocypheris.com}"
 WORKER_POOL="${WORKER_POOL:-$(read_env_file_value WORKER_POOL || true)}"
 WORKER_POOL="${WORKER_POOL:-all}"
 
@@ -49,7 +49,7 @@ ECR_REPO_NAME="${SAAS_ECR_REPO_NAME:-security-autopilot-app}"
 IMAGE_TAG="${SAAS_IMAGE_TAG:-dev}"
 CPU_ARCH="${SAAS_CPU_ARCH:-ARM64}"
 
-API_DOMAIN="${SAAS_API_DOMAIN:-api.valensjewelry.com}"
+API_DOMAIN="${SAAS_API_DOMAIN:-api.ocypheris.com}"
 CERT_ARN="${SAAS_CERTIFICATE_ARN:-}"
 
 API_DESIRED_COUNT="${SAAS_API_DESIRED_COUNT:-0}"

@@ -44,7 +44,7 @@ except ImportError:  # pragma: no cover
 
 TARGET_CONTROLS = ["S3.9", "S3.5", "S3.11", "S3.15"]
 
-DEFAULT_API_BASE = "https://api.valensjewelry.com"
+DEFAULT_API_BASE = "https://api.ocypheris.com"
 DEFAULT_ACCOUNT_ID = "029037611564"
 DEFAULT_REGION = "eu-north-1"
 

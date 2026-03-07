@@ -4,6 +4,202 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Coverage mapping: 9 safety/confidence points vs current implementation and Phase 3 plan (2026-03-05)](task_log.md#coverage-mapping-9-safetyconfidence-points-vs-current-implementation-and-phase-3-plan-2026-03-05)
+  - Mapped all 9 proposed safety/confidence points to current capabilities and Phase 3 scope.
+  - Distinguished implemented vs partial vs planned items.
+  - Flagged explicit remaining gap around formal per-control workflow policy engine.
+- [Competitor-inspired safety architecture blueprint for lower blast radius and higher remediation confidence (2026-03-05)](task_log.md#competitor-inspired-safety-architecture-blueprint-for-lower-blast-radius-and-higher-remediation-confidence-2026-03-05)
+  - Compiled adoptable Wiz/Drata/Vanta patterns focused on safer remediation execution.
+  - Structured recommendations across prioritization, controlled rollout, and confidence verification.
+  - Anchored blueprint to current official vendor documentation.
+- [Phase 3 update: explicit Security Graph foundation added (2026-03-05)](task_log.md#phase-3-update-explicit-security-graph-foundation-added-2026-03-05)
+  - Added explicit Security Graph feature wording to the Phase 3 roadmap addition.
+  - Captured graph scope as relationship modeling plus graph-backed action context.
+  - Preserved existing priority structure while making the capability explicit.
+- [Clarification: risk-reduction vs guarantee for Phase 3 safety/prioritization features (2026-03-05)](task_log.md#clarification-risk-reduction-vs-guarantee-for-phase-3-safetyprioritization-features-2026-03-05)
+  - Clarified that new Phase 3 features reduce risk but do not provide absolute guarantees.
+  - Documented required guardrails that turn prioritization quality into safer execution outcomes.
+  - Anchored response to existing project safety and auditability constraints.
+- [Phase 3 feature-addition prioritization (P0/P1/P2) for kickoff sequencing (2026-03-05)](task_log.md#phase-3-feature-addition-prioritization-p0p1p2-for-kickoff-sequencing-2026-03-05)
+  - Added explicit `P0`/`P1`/`P2` order to the new Phase 3 feature-addition section.
+  - Clarified first-wave kickoff scope versus later-wave enhancements.
+  - Preserved detailed context while making implementation sequence operational.
+- [Clarification: Drata/Vanta remediation depth vs compliance monitoring (2026-03-05)](task_log.md#clarification-dratavanta-remediation-depth-vs-compliance-monitoring-2026-03-05)
+  - Clarified whether Drata and Vanta provide direct fixes or primarily compliance/monitoring workflows.
+  - Distinguished guided remediation and workflow automation from autonomous infra mutation.
+  - Anchored summary to current official vendor/help pages.
+- [Clarification: Wiz compliance offering scope (2026-03-05)](task_log.md#clarification-wiz-compliance-offering-scope-2026-03-05)
+  - Confirmed Wiz offers cloud compliance capabilities.
+  - Clarified scope boundaries versus full compliance-operations suites.
+  - Anchored conclusion to current official Wiz compliance sources.
+- [Clarification: value of Drata/Vanta without infra auto-fix + compliance definition (2026-03-05)](task_log.md#clarification-value-of-dratavanta-without-infra-auto-fix--compliance-definition-2026-03-05)
+  - Clarified why compliance platforms provide value even without deep cloud auto-remediation.
+  - Defined compliance and its scope across technical, process, and people controls.
+  - Captured key buyer outcomes: audit readiness, trust acceleration, and governance workflow automation.
+- [Competitor mapping and analysis scope (non-remediation) comparison (2026-03-05)](task_log.md#competitor-mapping-and-analysis-scope-non-remediation-comparison-2026-03-05)
+  - Compared Wiz, Drata, and Vanta on non-remediation capabilities.
+  - Clarified what each platform maps and what analysis outputs they provide.
+  - Anchored comparison to current official product pages.
+- [Phase 3 feature addition: context-driven prioritization + Wiz-inspired fix workflow points (2026-03-05)](task_log.md#phase-3-feature-addition-context-driven-prioritization--wiz-inspired-fix-workflow-points-2026-03-05)
+  - Added a dedicated Phase 3 roadmap extension in `project_status.md` with context for eight requested capability points.
+  - Included context-driven risk prioritization plus ownership, PR automation, integrations, and threat-intel weighting.
+  - Added explicit done criteria for execution-readiness and future acceptance checks.
+- [Wiz-inspired selling points integration shortlist (2026-03-05)](task_log.md#wiz-inspired-selling-points-integration-shortlist-2026-03-05)
+  - Identified transferable Wiz-style product selling points for AWS Security Autopilot.
+  - Prioritized ideas by leverage and implementation complexity.
+  - Anchored recommendations to source-backed Wiz positioning and current project architecture.
+- [Context-driven risk prioritization difficulty assessment (2026-03-05)](task_log.md#context-driven-risk-prioritization-difficulty-assessment-2026-03-05)
+  - Assessed delivery difficulty for context-driven risk prioritization on top of current action engine.
+  - Provided phased effort guidance: MVP weighted scoring vs advanced graph/attack-path model.
+  - Captured implementation dependencies and calibration risks.
+- [Wiz remediation safety model clarification (2026-03-05)](task_log.md#wiz-remediation-safety-model-clarification-2026-03-05)
+  - Clarified how Wiz remediation is designed to reduce architecture-break risk.
+  - Captured source-backed workflow patterns and practical safety implications.
+  - Noted configuration-dependent limits of publicly documented behavior.
+- [Competitive comparison: AWS Security Autopilot vs Drata, Wiz, and Vanta (2026-03-05)](task_log.md#competitive-comparison-aws-security-autopilot-vs-drata-wiz-and-vanta-2026-03-05)
+  - Compared feature focus and value proposition across AWS Security Autopilot, Drata, Wiz, and Vanta.
+  - Verified current pricing visibility from official vendor pricing pages.
+  - Captured positioning guidance by buyer type/use case.
+- [SaaS brief summary for product positioning (2026-03-05)](task_log.md#saas-brief-summary-for-product-positioning-2026-03-05)
+  - Synthesized a concise product brief from source-of-truth project status, docs index, and customer/feature docs.
+  - Captured what the SaaS does, the problem it solves, target audience, and current capabilities.
+  - Anchored language to implemented platform behavior and active positioning copy.
+- [ocypheris.com re-sync redeploy on repeated mismatch report (2026-03-05)](task_log.md#ocypheriscom-re-sync-redeploy-on-repeated-mismatch-report-2026-03-05)
+  - Re-ran full OpenNext build + deploy and published worker version `c24b5644-b561-4a81-91ee-0a1f62ab961f`.
+  - Verified `ocypheris.com` and `frontend.maromaher54.workers.dev` match on `/`, `/faq`, and `/security`.
+  - Confirmed all checked routes return `200` with matching ETags across domain and workers.dev host.
+- [ocypheris.com route lag fixed by rebuild before deploy (2026-03-05)](task_log.md#ocypheriscom-route-lag-fixed-by-rebuild-before-deploy-2026-03-05)
+  - Root cause: prior deploy reused stale `.open-next` build output because build step was skipped.
+  - Rebuilt and redeployed frontend; latest worker version is `ccb46cd1-eb3f-4e84-ac55-d2293ff6dc3d`.
+  - Verified `ocypheris.com` and `frontend.maromaher54.workers.dev` now match on `/faq` and `/security` (`200`, matching ETag).
+- [Frontend commit/push check plus redeploy (2026-03-05)](task_log.md#frontend-commitpush-check-plus-redeploy-2026-03-05)
+  - Verified frontend git working tree on `main` is clean and `git push origin main` is up to date.
+  - Redeployed frontend to Cloudflare Workers with OpenNext deploy command.
+  - Latest deployed version: `7f25aed6-290a-40cd-ad56-c7b0378ea35f` (`HTTP 200` check passed).
+- [Frontend redeploy rerun on user request (2026-03-04)](task_log.md#frontend-redeploy-rerun-on-user-request-2026-03-04)
+  - Rebuilt frontend via OpenNext and redeployed to Cloudflare Workers.
+  - Confirmed live worker URL `https://frontend.maromaher54.workers.dev`.
+  - New deployed version: `ce3e153b-6842-4e18-97f0-529e5447015f` with `HTTP 200` response check.
+- [Cloudflare frontend blank-screen hotfix after OpenNext deploy (2026-03-04)](task_log.md#cloudflare-frontend-blank-screen-hotfix-after-opennext-deploy-2026-03-04)
+  - Fixed production CSP to allow required Next.js inline bootstrap execution (`script-src 'self' 'unsafe-inline'`).
+  - Removed initial SSR hidden state in `PageTransition` (`initial={false}`) so root content is visible even if hydration is delayed.
+  - Added early `window.__name` shim to remove inline runtime error and redeployed Worker version `61ee12bf-bdbb-4085-ab46-44263c8ce76d`.
+- [Cloudflare OpenNext deploy fix runtime switch to nodejs (2026-03-04)](task_log.md#cloudflare-opennext-deploy-fix-runtime-switch-to-nodejs-2026-03-04)
+  - Switched six dynamic app routes from `runtime='edge'` to `runtime='nodejs'` to satisfy OpenNext server-bundle constraints.
+  - Rebuilt and deployed from CLI using `npx opennextjs-cloudflare build` and `npx opennextjs-cloudflare deploy -c wrangler.jsonc`.
+  - Verified live worker serves successfully at `https://frontend.maromaher54.workers.dev` (`HTTP 200`, version `76263247-45a3-45c8-a605-42f7c5f9eda8`).
+- [Phase 2 Interactive Remediation Task 18 exception as first-class choice (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-18-exception-as-first-class-choice-2026-03-04)
+  - Added explicit exception input schema (`exception_duration_days`, `exception_reason`) across exception-only strategies and normalized backend exception-flow mapping from `strategy_inputs`.
+  - Updated remediation modal strategy UX with a dedicated `I need an exception` option, inline duration picker (7/14/30/90), and inline reason capture.
+  - Wired exception selections into the existing `CreateExceptionModal` flow with prefilled reason and computed expiry date; targeted backend/frontend validations passed (`96 passed`, `15 passed`, frontend typecheck pass).
+- [Cloudflare Pages build unblock for ocypheris frontend (2026-03-04)](task_log.md#cloudflare-pages-build-unblock-for-ocypheris-frontend-2026-03-04)
+  - Added `export const runtime = 'edge'` to all Cloudflare-flagged dynamic app routes (`actions/[id]`, admin tenant pages, findings detail, remediation run pages).
+  - Validated local `frontend` production build passes after route changes (`npm run build`).
+  - Committed/pushed targeted fix to `marcoIbrahim0/ocypheris-frontend` on `main` (`2bea607`) for Pages redeploy.
+- [Phase 2 Interactive Remediation Task 17 post-apply change summary card (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-17-post-apply-change-summary-card-2026-03-04)
+  - Added execution-worker `change_summary` artifact persistence on successful apply with schema keys `applied_at`, `applied_by`, `changes[]`, and `run_id`.
+  - Added ActionDetailDrawer artifact parsing and `Latest successful apply` summary card rendering with run deep-link.
+  - Added targeted backend/frontend coverage for artifact generation and drawer rendering; validations passed (`4 passed` worker tests, `1 passed` frontend UI test, frontend typecheck pass).
+- [Frontend repo GitHub publish for Cloudflare Pages onboarding (2026-03-04)](task_log.md#frontend-repo-github-publish-for-cloudflare-pages-onboarding-2026-03-04)
+  - Published the standalone frontend repository to GitHub at `https://github.com/marcoIbrahim0/ocypheris-frontend`.
+  - Created/pushed `main` from local `frontend` repo after committing current snapshot (`7332791`).
+  - Verified `node_modules`, `.next`, and `out` were not tracked/pushed due frontend `.gitignore`.
+- [Phase 2 Interactive Remediation Task 16 "I don't know" escape hatches (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-16-i-dont-know-escape-hatches-2026-03-04)
+  - Added schema-level safe-default metadata (`safe_default_value`, `safe_default_label`) for Task 16 controls: S3.15, EC2.53, Config.1, S3.9, and CloudTrail.1.
+  - Added inline `Not sure? Use safe default` actions in `RemediationModal` with token-aware autofill support (`{{account_id}}`, `{{detected_public_ipv4_cidr}}`).
+  - Added focused frontend tests asserting escape-hatch autofill behavior across all requested control fields; targeted validation passed (`15 passed` + frontend typecheck).
+- [Phase 2 Interactive Remediation Task 15 blast radius indicator (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-15-blast-radius-indicator-2026-03-04)
+  - Added remediation-option strategy metadata for `blast_radius` with enum-safe values and per-control mapping coverage across all 16 controls.
+  - Added API serialization of `blast_radius` in `GET /api/actions/{id}/remediation-options`.
+  - Added modal-header colored blast-radius badge with tooltip and targeted backend/frontend validation pass.
+- [Phase 2 Interactive Remediation Task 14 estimated resolution + trigger re-eval (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-14-estimated-resolution--trigger-re-eval-2026-03-04)
+  - Added remediation-option strategy metadata for `estimated_resolution_time` and `supports_immediate_reeval` with per-control estimates.
+  - Added `POST /api/actions/{id}/trigger-reeval` to enqueue immediate action-scoped reconciliation jobs when strategy support allows it.
+  - Added modal estimate text and direct-fix checkbox to trigger re-evaluation after apply, with targeted backend/frontend validations passing.
+- [Phase 2 Interactive Remediation Task 13 rollback recipe shown upfront (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-13-rollback-recipe-shown-upfront-2026-03-04)
+  - Added rollback command contract support to remediation-options API and frontend option typing (`rollback_command`).
+  - Populated rollback command coverage for all 16 in-scope controls via strategy/action mapping in remediation strategy service.
+  - Added modal UX: collapsed `How to undo this` section with copy affordance and targeted API/frontend validations passing.
+- [Phase 2 Interactive Remediation Task 12 smart defaults from AWS context (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-12-smart-defaults-from-aws-context-2026-03-04)
+  - Added runtime context probes in remediation runtime checks, including `context.kms_key_options` from `kms:ListAliases`.
+  - Added Config/CloudTrail account-context default inputs and exposed strategy `context` via remediation-options API payload.
+  - Added frontend smart-prefill behavior (ipify-based EC2.53 CIDR + context default hydration) with targeted backend/frontend validations passing.
+- [Phase 2 Interactive Remediation Task 11 before/after state simulator (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-11-beforeafter-state-simulator-2026-03-04)
+  - Extended remediation-preview API payloads with `before_state`, `after_state`, and `diff_lines` while preserving existing response behavior.
+  - Added EC2.53/S3.5/Config.1 runtime state capture and predicted-state simulation in backend services.
+  - Updated `RemediationModal` to fetch preview in `pr_only` mode and render a two-column Before/After diff card; targeted validations passed (`7 passed`, frontend typecheck pass).
+- [Domain cutover prep ocypheris.com defaults and docs update (2026-03-04)](task_log.md#domain-cutover-prep-ocypheriscom-defaults-and-docs-update-2026-03-04)
+  - Replaced active `valensjewelry.com` defaults/examples with `ocypheris.com` across env files, deploy scripts, CloudFormation/Terraform defaults, and automation script configs.
+  - Updated operational docs and runbooks to `dev.ocypheris.com` / `api.ocypheris.com` while preserving historical evidence artifacts.
+  - Updated no-UI campaign/client smoke tests for the new API base; targeted validation passed (`14 passed`).
+- [Phase 2 Interactive Remediation Task 10 impact summary in preview (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-10-impact-summary-in-preview-2026-03-04)
+  - Added `get_impact_summary(strategy_id, strategy_inputs)` in `backend/services/remediation_strategy.py` to compose deduplicated impact text from strategy-level, field-level, and selected-option metadata.
+  - Wired `GET /api/actions/{id}/remediation-preview` to return optional `impact_summary` while preserving existing `compliant`/`message`/`will_apply` behavior.
+  - Added remediation-preview tests for `pr_only` selected-choice summaries and `direct_fix` strategy summaries; targeted preview validation passed (`5 passed`).
+- [Phase 2 Interactive Remediation Task 9 remediation modal rendering upgrades (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-9-remediation-modal-rendering-upgrades-2026-03-04)
+  - Upgraded `frontend/src/components/RemediationModal.tsx` to render `select`, `boolean` switch, `cidr`, and `number` fields with metadata-driven behavior.
+  - Added `visible_when` conditional rendering, grouped field sections (`group`), help tooltip icons (`help_text`), and per-group impact preview boxes using `impact_text`.
+  - Added focused UI tests in `frontend/src/components/RemediationModal.test.tsx` covering validation, visibility, grouping, and typed strategy input submission; required frontend validations passed.
+- [Phase 2 Interactive Remediation Task 8 frontend API type extension (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-8-frontend-api-type-extension-2026-03-04)
+  - Extended `frontend/src/lib/api.ts` `StrategyInputSchemaField` `type` union with `select`, `boolean`, `cidr`, and `number` while preserving existing `string` and `string_array`.
+  - Added optional schema metadata typing for guided-input UX: `placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, and `max`.
+  - Added `StrategyInputOption`/`StrategyInputVisibleWhen` interfaces and validated with `cd frontend && npx tsc --noEmit`.
+- [Phase 2 Interactive Remediation Task 7 simple controls impact text (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-7-simple-controls-impact-text-2026-03-04)
+  - Added non-empty strategy-level `impact_text` coverage for SecurityHub.1, GuardDuty.1, SSM.7, EC2.182, and EC2.7 in remediation strategy metadata.
+  - Exposed `impact_text` in remediation-options API strategy payloads and preserved legacy run-create compatibility for optional Security Hub/GuardDuty strategy catalogs.
+  - Added focused remediation-options API tests in `tests/test_remediation_runs_api.py`; targeted validation passed (`8 passed`).
+- [Phase 2 Interactive Remediation Task 6 S3 controls guided schemas (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-6-s3-controls-guided-schemas-2026-03-04)
+  - Completed guided strategy schema coverage for S3.5/S3.9/S3.11/S3.15 and added impact-text coverage for S3.1/S3.2/S3.4.
+  - Wired S3 PR-bundle generation to consume relevant inputs: S3.11 `abort_days`, S3.15 `kms_key_mode` + `kms_key_arn`, and S3.5 `preserve_existing_policy`.
+  - Added focused S3 strategy/wiring test coverage in `tests/test_step7_components.py`; targeted validation passed.
+- [Phase 2 Interactive Remediation Task 5 CloudTrail.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-5-cloudtrail1-guided-choice-schema-2026-03-04)
+  - Added guided CloudTrail.1 schema fields on `cloudtrail_enable_guided`: `trail_name` (default `security-autopilot-trail`), `create_bucket_policy` (boolean default `true`), and `multi_region` (boolean default `true`).
+  - Wired CloudTrail Terraform/CloudFormation generation to resolve guided inputs via `_resolve_cloudtrail_defaults()` and apply them to trail name, multi-region toggle, and bucket-policy creation behavior.
+  - Added focused CloudTrail schema/wiring coverage in `tests/test_step7_components.py`; targeted validation passed (`9 passed`).
+- [Phase 2 Interactive Remediation Task 4 Config.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-4-config1-guided-choice-schema-2026-03-04)
+  - Added guided Config.1 schema fields on `config_enable_centralized_delivery`: `recording_scope`, `delivery_bucket_mode`, conditional `existing_bucket_name`, `encrypt_with_kms`, and conditional `kms_key_arn`.
+  - Wired Config Terraform/CloudFormation generation to resolve guided inputs with legacy-compatible fallbacks via `_resolve_aws_config_defaults()`.
+  - Added focused Config schema/wiring coverage in `tests/test_step7_components.py`; targeted validation passed (`11 passed`).
+- [Phase 2 Interactive Remediation Task 3 IAM.4 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-3-iam4-guided-choice-schema-2026-03-04)
+  - Added IAM.4 `action_mode` select schema (`disable_key` / `delete_key`) with option-level `impact_text` on existing root-key strategies.
+  - Preserved worker compatibility by keeping existing strategy IDs (`iam_root_key_disable`, `iam_root_key_delete`) and adding validation that `action_mode` cannot conflict with selected strategy.
+  - Added IAM strategy-schema assertions and mapping-validation tests in `tests/test_remediation_runs_api.py`; targeted validation passed (`17 passed`).
+- [Phase 2 Interactive Remediation Task 2 EC2.53 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-2-ec253-guided-choice-schema-2026-03-04)
+  - Added `sg_restrict_public_ports` guided strategy schema with `access_mode` select choices, conditional CIDR fields, and option-level `impact_text`.
+  - Wired EC2.53 `strategy_inputs` into SG bundle generation so Terraform/CloudFormation defaults reflect provided CIDRs.
+  - Enforced `remove_existing_public_rules=true` only when `access_mode=close_and_revoke`, with focused SG test coverage and passing targeted validation (`13 passed`).
+- [Emergency hard-delete: ECR repos + RDS databases/snapshots cleanup (eu-north-1) (2026-03-04)](task_log.md#emergency-hard-delete-ecr-repos--rds-databasessnapshots-cleanup-eu-north-1-2026-03-04)
+  - Force-deleted both private ECR repos (`security-autopilot-dev-saas-worker`, `security-autopilot-dev-saas-api`) and verified private/public repo lists are empty.
+  - Hard-deleted both RDS instances (`arch1-claims-db-a2`, `security-autopilot-db-main`) with no final snapshot and automated-backup deletion.
+  - Verified RDS state is fully clean in region: no DB instances, no DB snapshots, no DB cluster snapshots, no automated backups.
+- [ECR private/public registry verification for refund shutdown (eu-north-1) (2026-03-04)](task_log.md#ecr-privatepublic-registry-verification-for-refund-shutdown-eu-north-1-2026-03-04)
+  - Verified linked ECR console scope: private registry has 2 repos in `eu-north-1`; public registry has none.
+  - Measured stored images: `70` (worker) and `71` (api), total about `31.48 GiB` in private ECR storage.
+  - Confirmed ECR is storage-only (not active runtime), but can still generate storage charges until images/repos are deleted.
+- [Emergency regional shutdown for billing refund (eu-north-1) (2026-03-04)](task_log.md#emergency-regional-shutdown-for-billing-refund-eu-north-1-2026-03-04)
+  - Stopped active compute/data runtimes in `eu-north-1`: EC2 (`i-0f773def2fade3d15`) and RDS (`arch1-claims-db-a2`, `security-autopilot-db-main`).
+  - Disabled active security/automation services: CloudTrail logging, Config recorder, GuardDuty detector, Security Hub subscription, Lambda event mappings, and SecurityAutopilot EventBridge rules.
+  - Forced Lambda reserved concurrency to `0` for all regional functions and verified no active ECS/EKS/ELB/NAT/ASG/EMR/Redshift/ElastiCache/OpenSearch/SageMaker endpoints remain.
+- [Live AWS CLI emergency stop: ECS service/cluster teardown in eu-north-1 (2026-03-04)](task_log.md#live-aws-cli-emergency-stop-ecs-servicecluster-teardown-in-eu-north-1-2026-03-04)
+  - Verified active AWS account/principal via CLI (`029037611564`, `AutoPilotAdmin`) and identified the `eu-north-1` ECS cluster/service pair.
+  - Executed emergency shutdown path: set service desired count to `0`, deleted service (`--force`), deleted cluster.
+  - Verified final regional state: no ECS clusters and no EKS clusters in `eu-north-1`.
+- [Phase 2 Interactive Remediation Task 1 input schema type expansion (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-1-input-schema-type-expansion-2026-03-04)
+  - Extended `StrategyInputSchemaField` typing with new field types (`select`, `boolean`, `cidr`, `number`) and metadata (`placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, `max`).
+  - Expanded `validate_strategy_inputs()` with strict select/boolean/cidr/number validation, enum/options enforcement, and number bounds checks while preserving existing string/string-array normalization.
+  - Added focused test coverage in `tests/test_remediation_runs_api.py`; targeted validation passed (`8 passed`).
+- [Frontend UX persistence: root landing default + theme/sidebar state persistence (2026-03-04)](task_log.md#frontend-ux-persistence-root-landing-default--themesidebar-state-persistence-2026-03-04)
+  - Verified root route guest default is already `/landing` (not `/login`) in `frontend/src/app/page.tsx`.
+  - Implemented explicit persisted dark/light theme preference (`security-autopilot-theme`) and removed hardcoded `<html className="dark">` override.
+  - Added persisted sidebar expanded/contracted preference via `localStorage` key `security-autopilot-sidebar-pinned`.
+- [Phase 2 Task 11 retroactive verification script for S3.1 CF no-op runs (2026-03-04)](task_log.md#phase-2-task-11-retroactive-verification-script-for-s31-cf-no-op-runs-2026-03-04)
+  - Added `scripts/check_s3_cf_noop_runs.py` to identify legacy S3.1 CloudFormation `completed` runs and mark them `verification_required` with banner flags.
+  - Implemented schema-tolerant safeguards (join/fallback paths, enum compatibility check, idempotent zero-match behavior) and PM-ready JSON summary logging.
+  - Added required unit tests for both match and no-match paths in `tests/test_check_s3_cf_noop_runs.py` (`2 passed`).
+- [Phase 2 Task 10 post-fix access guidance in bundle READMEs (2026-03-04)](task_log.md#phase-2-task-10-post-fix-access-guidance-in-bundle-readmes-2026-03-04)
+  - Added post-fix guidance blocks to Terraform README output for `EC2.53`, `S3.2`, `S3.5`, and `SSM.7` with required sections: `what changes`, `how to access now`, `verify`, `rollback`.
+  - Updated CloudFormation instruction steps for the same controls to include concrete operator commands (`aws ssm start-session`, CloudFront access note, HTTPS-only verification, SSM private-share workflow).
+  - Added Step 7 unit assertions requiring guidance strings per control in README/instruction outputs.
 - [Phase 2 Config.1 robustness patch + Live Test D1/D2 rerun (2026-03-04)](task_log.md#phase-2-config1-robustness-patch--live-test-d1d2-rerun-2026-03-04)
   - Patched Config.1 Terraform generation to use explicit `--region` for bucket create/check and fail closed when centralized delivery bucket is unreachable/stale.
   - Added Step 7 unit coverage for explicit-region and fail-closed centralized-delivery behavior.

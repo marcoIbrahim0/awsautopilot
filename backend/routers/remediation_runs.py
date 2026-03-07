@@ -41,6 +41,7 @@ from backend.services.remediation_runtime_checks import (
 )
 from backend.services.direct_fix_bridge import get_supported_direct_fix_action_types
 from backend.services.remediation_strategy import (
+    map_exception_strategy_inputs,
     map_legacy_variant_to_strategy,
     strategy_required_for_action_type,
     validate_strategy,
@@ -543,6 +544,7 @@ def _raise_exception_only_strategy_selected(
     action_type: str,
     strategy_id: str | None,
     mode: Literal["pr_only", "direct_fix"],
+    strategy_inputs: dict[str, Any] | None = None,
 ) -> NoReturn:
     emit_validation_failure(
         logger,
@@ -552,11 +554,13 @@ def _raise_exception_only_strategy_selected(
         mode=mode,
     )
     strategy_fragment = f" '{strategy_id}'" if strategy_id else ""
+    exception_defaults = map_exception_strategy_inputs(strategy_inputs)
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail={
             "error": EXCEPTION_ONLY_STRATEGY_ERROR,
             "detail": f"Selected strategy{strategy_fragment} is exception-only. {EXCEPTION_ONLY_STRATEGY_DETAIL}",
+            "exception_flow": exception_defaults,
         },
     )
 
@@ -897,7 +901,8 @@ async def create_remediation_run(
     selected_strategy_inputs: dict[str, Any] | None = None
     risk_snapshot: dict[str, Any] | None = None
 
-    if strategy_required_for_action_type(action.action_type):
+    strategy_required = strategy_required_for_action_type(action.action_type)
+    if strategy_required or selected_strategy_id:
         if not selected_strategy_id:
             emit_validation_failure(
                 logger,
@@ -938,6 +943,7 @@ async def create_remediation_run(
                 action_type=action.action_type,
                 strategy_id=selected_strategy_id,
                 mode=body.mode,
+                strategy_inputs=selected_strategy_inputs,
             )
 
         risk_snapshot = evaluate_strategy_impact(
@@ -1009,22 +1015,6 @@ async def create_remediation_run(
                         "risk_snapshot": risk_snapshot,
                     },
                 )
-    elif selected_strategy_id:
-        emit_validation_failure(
-            logger,
-            reason="strategy_not_applicable",
-            action_type=action.action_type,
-            strategy_id=selected_strategy_id,
-            mode=body.mode,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Strategy not applicable",
-                "detail": f"strategy_id is not supported for action_type '{action.action_type}'.",
-            },
-        )
-
     if body.mode == "direct_fix":
         supported_direct_fix_action_types = get_supported_direct_fix_action_types()
         if not supported_direct_fix_action_types:
@@ -1547,7 +1537,8 @@ async def create_group_pr_bundle_run(
     selected_strategy_inputs: dict[str, Any] | None = None
     risk_snapshot: dict[str, Any] | None = None
 
-    if strategy_required_for_action_type(action_type):
+    strategy_required = strategy_required_for_action_type(action_type)
+    if strategy_required or selected_strategy_id:
         if not selected_strategy_id:
             emit_validation_failure(
                 logger,
@@ -1588,6 +1579,7 @@ async def create_group_pr_bundle_run(
                 action_type=action_type,
                 strategy_id=selected_strategy_id,
                 mode="pr_only",
+                strategy_inputs=selected_strategy_inputs,
             )
 
         risk_snapshot = evaluate_strategy_impact(
@@ -1659,22 +1651,6 @@ async def create_group_pr_bundle_run(
                         "risk_snapshot": risk_snapshot,
                     },
                 )
-    elif selected_strategy_id:
-        emit_validation_failure(
-            logger,
-            reason="strategy_not_applicable",
-            action_type=action_type,
-            strategy_id=selected_strategy_id,
-            mode="pr_only",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Strategy not applicable",
-                "detail": f"strategy_id is not supported for action_type '{action_type}'.",
-            },
-        )
-
     group_key = f"{action_type}|{account_id}|{normalized_region or 'global'}|{status_value}"
     pending_result = await db.execute(
         select(RemediationRun).where(

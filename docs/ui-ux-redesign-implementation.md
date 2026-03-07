@@ -43,7 +43,7 @@
 4. Root route behavior:
    - Authenticated + incomplete onboarding -> `/onboarding`
    - Authenticated + complete onboarding -> `/findings`
-   - Unauthenticated -> `/login`
+   - Unauthenticated -> `/landing`
 
 ## 3) Onboarding Redesign
 

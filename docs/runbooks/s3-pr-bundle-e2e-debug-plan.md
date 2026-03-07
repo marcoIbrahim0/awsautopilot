@@ -15,7 +15,7 @@ Primary scripts in scope:
 
 Default live target values currently hardcoded in campaign script:
 
-- `api_base`: `https://api.valensjewelry.com`
+- `api_base`: `https://api.ocypheris.com`
 - `account_id`: `029037611564`
 - `region`: `eu-north-1`
 

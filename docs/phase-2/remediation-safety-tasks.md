@@ -303,28 +303,26 @@ In both Terraform and CloudFormation S3.9 generators:
 
 ### Task 10: Add Post-Fix Access Guidance to Bundle READMEs
 
-**What to do:**
-Add a new section to `_maybe_append_terraform_readme()` (line 580) and equivalent CloudFormation instructions for the following controls. Each section must include: what's lost, how to access the resource now, how to verify, how to roll back.
+**Status:** Completed on 2026-03-04.
+**Implementation:** `backend/services/pr_bundle.py` (`_maybe_append_terraform_readme()`, `_generate_for_s3_bucket_block_public_access()`, `_generate_for_sg_restrict_public_ports()`, `_generate_for_s3_bucket_require_ssl()`, `_generate_for_ssm_block_public_sharing()`)
+**Validation:** `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "post_fix_access_guidance"` (`8 passed`)
 
-| Control | README section to add |
+Terraform README and CloudFormation instruction outputs now include the required post-fix sections (`what changes`, `how to access now`, `verify`, `rollback`) for these controls:
+
+| Control | Implemented post-fix guidance |
 |---|---|
-| EC2.53 | "After apply — accessing your instances": `aws ssm start-session --target <instance-id>`; or connect via VPN + SSH to `<allowed_cidr>` |
-| S3.2 (block public) | "After apply — serving content": use CloudFront domain from output; update all client URLs |
-| S3.5 (SSL enforcement) | "After apply — client updates": all HTTP clients must use HTTPS; test with `aws s3 ls s3://<bucket> --endpoint-url https://s3.amazonaws.com` |
-| SSM.7 (block sharing) | "After apply — internal access": SSM console still works; share with specific accounts via resource policy |
-
-**Files to change:**
-- `backend/services/pr_bundle.py` → `_maybe_append_terraform_readme()` (line 580)
-- `backend/services/pr_bundle.py` → CloudFormation step lists for EC2.53, S3.2, S3.5, SSM.7 generators
-
-**Unit tests:**
-- Generate EC2.53 Terraform bundle README → assert contains "ssm start-session" or "SSM Session Manager"
-- Generate S3.2 CF bundle steps → assert contains "CloudFront domain"
-- Generate S3.5 Terraform README → assert contains "HTTPS" and HTTP client update instruction
+| EC2.53 | SSM Session Manager access command (`aws ssm start-session`), SG-rule verification command, scoped ingress rollback command |
+| S3.2 (block public) | CloudFront usage note for post-fix access path, block-public-access verification command, emergency rollback command |
+| S3.5 (SSL enforcement) | Explicit HTTPS requirement, HTTPS/HTTP curl verification examples, bucket-policy rollback command |
+| SSM.7 (block sharing) | Private-sharing guidance (`aws ssm modify-document-permission`), service-setting verification command, emergency rollback command |
 
 ---
 
 ### Task 11: Retroactive Verification Check (Backend Job)
+
+**Status:** Completed on 2026-03-04.
+**Implementation:** `scripts/check_s3_cf_noop_runs.py`
+**Validation:** `PYTHONPATH=. ./venv/bin/pytest -q tests/test_check_s3_cf_noop_runs.py` (`2 passed`)
 
 **What to do:**
 Write a one-time script (or scheduled job) that:

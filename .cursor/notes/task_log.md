@@ -1,5 +1,1597 @@
 # Task Log
 
+## Coverage mapping: 9 safety/confidence points vs current implementation and Phase 3 plan (2026-03-05)
+
+**Task:** Determine which of the previously defined 9 blast-radius/confidence points are already covered by the project and which are covered by the new Phase 3 roadmap addition.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Mapped each of the 9 points to one of: implemented, partially implemented, planned in Phase 3, or not yet planned.
+- Cross-checked current capability statements against `project_status.md` and relevant implemented-task entries in `task_index.md`.
+- Identified remaining explicit gap: policy-driven control workflows are only partially represented (approvals/exceptions/governance exist, but formal per-control policy engine is not explicitly scoped).
+
+**Validation:**
+- Primary source:
+  - `.cursor/notes/project_status.md` (MVP/steps + Phase 3 addition priorities)
+- Supporting source:
+  - `.cursor/notes/task_index.md` (implemented Phase 2 interactive remediation and safety features)
+
+**Technical debt / gotchas:**
+- Some "covered" points are currently partial by design (for example PR bundle generation without repo-aware PR auto-open, and re-eval/reopen logic without full closed-loop policy engine).
+
+**Open questions / TODOs:**
+- Decide whether to add a dedicated Phase 3 item for explicit per-control workflow policies (required approvals/checklists/hold states) to close the remaining governance gap.
+
+## Competitor-inspired safety architecture blueprint for lower blast radius and higher remediation confidence (2026-03-05)
+
+**Task:** Identify concrete features/architectures/implementations from Wiz, Drata, and Vanta that can be adopted to reduce remediation blast radius and improve confidence in fixes.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed current official vendor pages for risk prioritization, workflow automation, compliance-as-code, and remediation guidance patterns.
+- Translated competitor patterns into a practical architecture blueprint for AWS Security Autopilot.
+- Organized recommendations around safety impact: pre-change prioritization, controlled execution, and post-change confidence verification.
+
+**Validation:**
+- Source references reviewed:
+  - `https://www.wiz.io/lp/wiz-security-graph`
+  - `https://www.wiz.io/platform/wiz-code`
+  - `https://www.wiz.io/integrations/jira`
+  - `https://drata.com/product/compliance-as-code`
+  - `https://docs.drata.com/drata-compliance-as-code/connecting-github-code-to-drata`
+  - `https://help.drata.com/en/articles/12876602-create-workflow-for-control`
+  - `https://help.vanta.com/en/articles/11345520-remediating-cloud-tests-with-terraform`
+  - `https://www.vanta.com/products/risk`
+
+**Technical debt / gotchas:**
+- Competitor patterns improve risk reduction and confidence but do not provide absolute safety guarantees; runtime/environment drift and incomplete context can still cause change failure.
+
+**Open questions / TODOs:**
+- Optional follow-up: convert blueprint into implementation tickets with owner, API/schema deltas, and acceptance-test gates.
+
+## Phase 3 update: explicit Security Graph foundation added (2026-03-05)
+
+**Task:** Explicitly mention Security Graph as part of the new Phase 3 feature-addition plan.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md** - added explicit `Security Graph foundation (explicit)` item under Phase 3 `P1`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Added an explicit Security Graph roadmap point covering:
+  - relationship modeling across resources/identities/exposure/findings/actions,
+  - graph-backed action context for explainability and blast-radius reasoning.
+
+**Validation:**
+- Verified the new Security Graph item appears in `.cursor/notes/project_status.md` under Phase 3 `P1`.
+
+**Technical debt / gotchas:**
+- Full graph utility depends on enrichment completeness and refresh cadence across identity/resource/network signals.
+
+**Open questions / TODOs:**
+- Decide whether Security Graph remains in `P1` or is moved to `P2` if delivery pressure requires a narrower first wave.
+
+## Clarification: risk-reduction vs guarantee for Phase 3 safety/prioritization features (2026-03-05)
+
+**Task:** Clarify whether implementing the new Phase 3 features guarantees lower blast radius and higher confidence during remediation.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Provided explicit answer that guarantees are not realistic in dynamic cloud systems.
+- Clarified that the new features are risk-reduction and confidence-amplification mechanisms when paired with hard execution safety controls.
+- Summarized required guardrails for outcome reliability (approval gates, pre/post checks, rollout controls, rollback readiness, source-of-truth closure checks).
+
+**Validation:**
+- Aligned response with existing project principles already documented in `project_status.md`:
+  - approval-gated remediation,
+  - safe-list direct fixes,
+  - auditability and idempotency requirements.
+
+**Technical debt / gotchas:**
+- Prioritization quality can increase confidence but can also create false confidence if signal freshness/coverage degrades.
+
+**Open questions / TODOs:**
+- Optional follow-up: define measurable safety KPIs (change-failure rate, rollback rate, false-closure rate) for Phase 3 rollout gates.
+
+## Phase 3 feature-addition prioritization (P0/P1/P2) for kickoff sequencing (2026-03-05)
+
+**Task:** Add explicit priority ordering to the newly added Phase 3 feature-addition items so implementation can start with clear sequencing.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md** - converted Phase 3 feature-addition bullets into explicit `P0`/`P1`/`P2` rollout tiers.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Added priority structure:
+  - `P0`: context-driven scoring, toxic-combination prioritization, ownership/SLA routing, shared sec+eng execution workflow.
+  - `P1`: cloud-to-code PR automation, integration-first remediation ops, business impact matrix.
+  - `P2`: threat-intelligence weighting refinement.
+- Preserved existing context/details for each point while making start order explicit.
+
+**Validation:**
+- Verified the updated priority tiers appear in the Phase 3 feature-addition section of `.cursor/notes/project_status.md`.
+
+**Technical debt / gotchas:**
+- Priority order is documented, but detailed acceptance criteria per item still need conversion into implementable step tasks (for example `Step 14.1`…`14.x`).
+
+**Open questions / TODOs:**
+- Decide whether to formalize this priority plan into numbered implementation steps with owner, estimate, and dependency tags.
+
+## Clarification: Drata/Vanta remediation depth vs compliance monitoring (2026-03-05)
+
+**Task:** Clarify whether Drata and Vanta provide real fixes/remediation or mainly compliance monitoring/governance workflows.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed current Drata compliance/risk pages and Vanta product/help pages covering remediation behavior.
+- Distinguished direct infrastructure mutation from guided remediation and workflow automation.
+- Prepared concise capability framing with practical buyer interpretation.
+
+**Validation:**
+- Source references reviewed:
+  - `https://drata.com/compliance`
+  - `https://drata.com/continuous-compliance-data-sheet`
+  - `https://www.vanta.com/products/soc-2`
+  - `https://help.vanta.com/en/articles/11345520-remediating-cloud-tests-with-terraform`
+  - `https://www.vanta.com/resources/improve-security-posture`
+
+**Technical debt / gotchas:**
+- “Automated remediation” language often refers to workflow/API orchestration and guided code snippets, not blanket autonomous infra mutation.
+
+**Open questions / TODOs:**
+- Optional follow-up: produce a strict “direct-fix vs guided-fix vs workflow-fix” rubric for consistent competitor messaging.
+
+## Clarification: Wiz compliance offering scope (2026-03-05)
+
+**Task:** Confirm whether Wiz offers compliance capabilities and clarify scope versus full GRC/compliance-operations platforms.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed Wiz official compliance solution and related documentation pages.
+- Confirmed Wiz provides cloud compliance capabilities (continuous assessments, framework mapping, reporting, heatmaps, and custom frameworks).
+- Clarified practical scope: strong cloud compliance posture management, but not positioned as a complete compliance-operations suite like Drata/Vanta for all audit workflow layers.
+
+**Validation:**
+- Source references:
+  - `https://www.wiz.io/solutions/compliance`
+  - `https://www.wiz.io/academy/cloud-security-audits`
+  - `https://www.wiz.io/academy/compliance/cloud-compliance-fast-track-guide`
+
+**Technical debt / gotchas:**
+- Feature boundaries vary by purchased modules and customer setup; public pages are positioning summaries, not exhaustive contract docs.
+
+**Open questions / TODOs:**
+- Optional follow-up: produce a capability boundary matrix (Wiz vs Drata/Vanta) by audit lifecycle stage.
+
+## Clarification: value of Drata/Vanta without infra auto-fix + compliance definition (2026-03-05)
+
+**Task:** Explain why Drata and Vanta are valuable even when they are not primarily infrastructure auto-remediation tools, and define compliance clearly.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Clarified separation between cloud-fix tooling and compliance/trust-management tooling.
+- Defined compliance as evidence-backed demonstration of control adherence (technical + process + people controls).
+- Summarized why organizations buy Drata/Vanta: audit readiness, continuous evidence, trust center, questionnaires, vendor risk workflows, and reduced audit/sales friction.
+
+**Validation:**
+- Aligned explanation with prior source-backed positioning used in this thread (Drata and Vanta product pages).
+
+**Technical debt / gotchas:**
+- Teams often conflate “secure” with “compliant”; they overlap but are not identical outcomes.
+
+**Open questions / TODOs:**
+- Optional follow-up: produce a simple architecture split doc ("CSPM/Remediation vs GRC/Trust") for sales messaging consistency.
+
+## Competitor mapping and analysis scope (non-remediation) comparison (2026-03-05)
+
+**Task:** Explain what Wiz, Drata, and Vanta do beyond remediation, specifically their mapping and analysis capabilities.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed current official product pages for all three vendors.
+- Extracted source-backed "mapping" layers (what they connect/model) and "analysis" layers (what decisions/insights they produce).
+- Produced concise comparative framing focused on non-remediation value.
+
+**Validation:**
+- Sources reviewed include:
+  - Wiz platform and Wiz Code pages (`wiz.io/platform`, `wiz.io/platform/wiz-code`, `wiz.io/academy/attack-path-analysis`)
+  - Drata compliance/risk/trust/security-assurance pages (`drata.com/compliance`, `drata.com/product/risk-management`, `drata.com/product/trust-center`, `drata.com/security-assurance`)
+  - Vanta GRC/risk/TPRM/trust/questionnaire pages (`vanta.com/products/grc`, `vanta.com/products/risk`, `vanta.com/products/third-party-risk-management`, `vanta.com/products/trust-center`, `vanta.com/products/questionnaire-automation`)
+
+**Technical debt / gotchas:**
+- Vendor marketing pages are high-level; exact behavior can differ by plan/module and customer configuration.
+
+**Open questions / TODOs:**
+- If needed, convert this into a buyer-persona comparison card (CloudSec lead vs GRC lead vs Sales assurance lead).
+
+## Phase 3 feature addition: context-driven prioritization + Wiz-inspired fix workflow points (2026-03-05)
+
+**Task:** Add a new Phase 3 feature addition section that includes context-driven risk prioritization plus the requested Wiz-inspired selling points, with implementation context for each point.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md** - added "Phase 3 — Feature Addition: Context-Driven Prioritization + Fix Workflow Intelligence" with detailed scoped bullets and done criteria.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Added a dedicated Phase 3 extension covering:
+  - context-driven risk prioritization,
+  - toxic-combination / attack-path-lite prioritization,
+  - cloud-to-code remediation PR automation,
+  - ownership-based queues and SLA routing,
+  - business impact matrix,
+  - integration-first remediation ops,
+  - threat-intelligence weighting,
+  - shared security+engineering execution workflow.
+- Added explicit outcome criteria so the addition can be measured beyond feature checklist completion.
+
+**Validation:**
+- Verified the new section appears directly under Phase 3 roadmap in `.cursor/notes/project_status.md`.
+- Verified phrasing remains consistent with existing project scope constraints (approval-gated remediation, fail-closed behavior, explainability).
+
+**Technical debt / gotchas:**
+- This is roadmap/spec text only; delivery will require cross-cutting data model and API contracts (scoring provenance, ownership mapping, integration state sync).
+
+**Open questions / TODOs:**
+- Decide whether to introduce this block as a single new Step (`Step 14`) or split into serial sub-steps for phased execution and acceptance testing.
+
+## Wiz-inspired selling points integration shortlist (2026-03-05)
+
+**Task:** Identify additional Wiz-style selling points that can be integrated into AWS Security Autopilot and prioritize by product leverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed current Wiz platform and Wiz Code positioning pages plus integrations catalog.
+- Extracted source-backed selling-point patterns relevant to AWS Security Autopilot roadmap.
+- Translated those patterns into a pragmatic shortlist aligned with existing findings/action/remediation architecture.
+
+**Validation:**
+- Source pages reviewed:
+  - `https://www.wiz.io/platform`
+  - `https://www.wiz.io/platform/wiz-code`
+  - `https://www.wiz.io/integrations`
+  - `https://www.wiz.io/academy/attack-path-analysis`
+
+**Technical debt / gotchas:**
+- Some high-value differentiators (graph-native attack-path modeling, deep code ownership mapping) are non-trivial and require sustained data-model and enrichment work.
+
+**Open questions / TODOs:**
+- Decide which of the shortlisted items are MVP-priority vs post-MVP (especially graph/ownership vs integration/reporting wins).
+
+## Context-driven risk prioritization difficulty assessment (2026-03-05)
+
+**Task:** Assess implementation difficulty and practical rollout path for context-driven risk prioritization in AWS Security Autopilot.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Mapped requested capability against current platform scope (findings -> actions -> remediation/evidence).
+- Provided staged effort estimate for MVP weighting model vs graph/attack-path level prioritization.
+- Highlighted key implementation dependencies: signal coverage, explainability, calibration loop, and fail-safe defaults.
+
+**Validation:**
+- Grounded assessment in project source of truth:
+  - `.cursor/notes/project_status.md` (action engine and remediation strategy baseline)
+  - existing product positioning and APIs already centered on prioritized actions.
+
+**Technical debt / gotchas:**
+- Priority score quality will degrade quickly if contextual signals (exposure, privilege, asset criticality) are incomplete or stale.
+
+**Open questions / TODOs:**
+- Decide whether to start with deterministic weighted scoring only, or add graph-based attack-path dependencies in a later phase.
+
+## Wiz remediation safety model clarification (2026-03-05)
+
+**Task:** Explain how Wiz performs remediation while reducing risk of breaking customer architecture or production behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed recent Wiz official product pages and blog/academy references for remediation workflow details.
+- Summarized the practical safety model: code-first PR remediation, contextual prioritization, ownership routing, and workflow integrations.
+- Explicitly separated source-backed statements from inferred operational safeguards.
+
+**Validation:**
+- Verified references:
+  - `https://www.wiz.io/platform`
+  - `https://www.wiz.io/platform/wiz-code`
+  - `https://www.wiz.io/blog/introducing-wizextend`
+  - `https://www.wiz.io/academy/attack-path-analysis`
+  - `https://www.wiz.io/solutions/asm`
+
+**Technical debt / gotchas:**
+- Public pages describe architecture and workflow patterns but do not fully enumerate all tenant-specific guardrails; exact behavior can vary by customer configuration and enabled modules.
+
+**Open questions / TODOs:**
+- If needed, create a side-by-side “Wiz safety controls vs AWS Security Autopilot safety controls” battlecard for sales enablement.
+
+## Competitive comparison: AWS Security Autopilot vs Drata, Wiz, and Vanta (2026-03-05)
+
+**Task:** Compare AWS Security Autopilot against Drata, Wiz, and Vanta on feature focus, selling points, and current pricing visibility.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Re-read binding `.cursor` rules and project status/context before analysis.
+- Pulled current official vendor pages for pricing and product positioning for Drata, Wiz, and Vanta.
+- Mapped competitor positioning against current AWS Security Autopilot scope (AWS findings-to-action/remediation/evidence workflow).
+
+**Validation:**
+- Confirmed pricing visibility from official pages:
+  - Drata pricing/plans page (`drata.com/pricing` / plans)
+  - Wiz pricing page (`wiz.io/pricing`)
+  - Vanta pricing page (`vanta.com/pricing`)
+
+**Technical debt / gotchas:**
+- Competitor pricing is mostly quote-based and can vary by scope, modules, and contract length; public pages do not provide consistent list-price numbers.
+
+**Open questions / TODOs:**
+- If needed, produce a follow-up competitor battlecard with scenario-based positioning (SMB founder-led team vs enterprise cloud security team).
+
+## SaaS brief summary for product positioning (2026-03-05)
+
+**Task:** Provide a concise SaaS brief covering what AWS Security Autopilot does, what problem it solves, target audience, and current feature set using project source-of-truth docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reviewed binding project instructions under `.cursor/rules/` and `.cursor/notes/`.
+- Read current project status and docs index, then gathered product-facing language from customer docs, feature docs, and landing/FAQ/security copy.
+- Produced a concise product brief aligned to implemented behavior and current positioning.
+
+**Validation:**
+- Verified brief inputs against:
+  - `.cursor/notes/project_status.md`
+  - `docs/README.md`
+  - `docs/customer-guide/README.md`
+  - `docs/features/communication-governance-layer.md`
+  - `frontend/src/locales/translations.ts`
+
+**Technical debt / gotchas:**
+- Public marketing copy and operator implementation details can drift; keep product-brief language anchored to `project_status.md` + current feature docs.
+
+**Open questions / TODOs:**
+- If needed, convert this brief into a reusable one-pager under `/docs` (sales-facing) to avoid repeated manual synthesis.
+
+## ocypheris.com re-sync redeploy on repeated mismatch report (2026-03-05)
+
+**Task:** Re-run domain sync for `ocypheris.com` after user reported it was again not on latest deployment.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Re-ran fresh OpenNext build and deployed the generated worker bundle.
+- Verified latest worker deployment version now active: `c24b5644-b561-4a81-91ee-0a1f62ab961f`.
+- Confirmed `ocypheris.com` and `frontend.maromaher54.workers.dev` return matching ETags on key routes:
+  - `/` → `etag: "14a4sytcu2w749"`
+  - `/faq` → `etag: "13igdrwl6snkom"`
+  - `/security` → `etag: "wg9f5rvzu8l3h"`
+
+**Validation:**
+- `cd frontend && npx opennextjs-cloudflare build` (pass)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- `curl` checks for `https://ocypheris.com` and `https://frontend.maromaher54.workers.dev` on `/`, `/faq`, `/security` (all `200`, matching ETags)
+- `cd frontend && npx wrangler deployments list --name frontend` (shows latest version `c24b5644-b561-4a81-91ee-0a1f62ab961f` created at `2026-03-05T01:33:00.276Z`)
+
+**Technical debt / gotchas:**
+- Deploy command still emits non-blocking duplicate-key warnings from generated OpenNext handler bundle.
+
+**Open questions / TODOs:**
+- If stale content still appears in browser, check with cache-busting URL query and hard refresh to bypass local/browser cache.
+
+## ocypheris.com route lag fixed by rebuild before deploy (2026-03-05)
+
+**Task:** Fix report that `ocypheris.com` was not pointing to the latest frontend deployment.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Confirmed prior deployment used stale `.open-next` output because deploy was executed without a fresh build.
+- Ran fresh OpenNext build and deployed resulting bundle.
+- Verified route table now includes latest pages (`/about`, `/faq`, `/security`).
+- Verified both custom domain and workers.dev now serve the same latest content (matching status + ETag on test routes).
+- Deployment details:
+  - URL: `https://frontend.maromaher54.workers.dev`
+  - Version: `ccb46cd1-eb3f-4e84-ac55-d2293ff6dc3d`
+
+**Validation:**
+- `cd frontend && npx opennextjs-cloudflare build` (pass; routes include `/faq` and `/security`)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- `curl https://ocypheris.com/faq` and `curl https://frontend.maromaher54.workers.dev/faq` (both `200`, matching ETag)
+- `curl https://ocypheris.com/security` and `curl https://frontend.maromaher54.workers.dev/security` (both `200`, matching ETag)
+
+**Technical debt / gotchas:**
+- Running deploy without build can publish stale `.open-next` artifacts and make domain appear behind current source.
+- `www.ocypheris.com` and `dev.ocypheris.com` currently have no DNS records (`dig +short` returns empty).
+
+**Open questions / TODOs:**
+- If you need `www` or `dev` hostnames, add DNS records and corresponding worker/domain bindings in Cloudflare.
+
+## Frontend commit/push check plus redeploy (2026-03-05)
+
+**Task:** Commit + push frontend changes (if any) and redeploy frontend to Cloudflare Workers.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Checked frontend git status on `main`; working tree was clean (no pending frontend file changes to commit).
+- Executed `git push origin main`; remote already up to date.
+- Redeployed frontend with OpenNext deploy command.
+- Verified live worker endpoint returns `HTTP 200`.
+- Deployment details:
+  - URL: `https://frontend.maromaher54.workers.dev`
+  - Version: `7f25aed6-290a-40cd-ad56-c7b0378ea35f`
+
+**Validation:**
+- `cd frontend && git status -sb` (clean)
+- `cd frontend && git push origin main` (pass: `Everything up-to-date`)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- `curl -sS -D /tmp/frontend_redeploy2.headers -o /tmp/frontend_redeploy2.body -w '%{http_code}' https://frontend.maromaher54.workers.dev` (pass: `200`)
+
+**Technical debt / gotchas:**
+- Deploy still reports non-blocking duplicate-key warnings from generated OpenNext bundle output.
+
+**Open questions / TODOs:**
+- None for this request.
+
+## Moved FAQ to Dedicated Page (2026-03-05)
+
+**Task:** Refactor the landing page FAQ section into a dedicated `/faq` route and replace the section with a summary CTA. Also updated footer social icons.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - Extracted long FAQ list to leave only a short preamble and linked button, updated social icons and footer URLs.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/XIcon.tsx** - Created custom X.com SVG.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/faq/page.tsx** - Created dedicated page mapping the previous React details/summary Neumorphic accordions. 
+
+**What was done (verified):**
+- Extracted `FAQ_ITEMS`.
+- Created a top level hero header for FAQ.
+- Ran successful verifications with Next.js router.
+- Cleaned the footer removing unnecessary anchors and aligning social medias.
+
+**Validation:**
+- `cd frontend && npm run build` (pass: `Generating static pages using 7 workers`)
+
+**Technical debt / gotchas:**
+- The list format can be expanded seamlessly via `FAQ_ITEMS` in `page.tsx`.
+
+**Open questions / TODOs:**
+- None.
+
+
+## Security Whitepaper implementation (2026-03-05)
+
+**Task:** Create `/security` whitepaper page matching Neumorphic UI standards and link it from the landing page.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/security/page.tsx** - Created the static Next.js page showcasing security trust model.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - Replaced empty Calendly link with Next.js inner `Link` to `/security`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+
+**What was done (verified):**
+- Built `/security` with Neumorphic grids, conditional icons, and styling matching the application aesthetic.
+- Switched the landing CTA block under the Trust/Security section to go to the created `/security` route.
+- Performed Next.js build verification without Typescript or runtime lint errs.
+
+**Validation:**
+- `cd frontend && npm run build` (pass: `Generate static pages using 7 workers`)
+
+**Technical debt / gotchas:**
+- Future iterations can augment the whitepaper with actual downloadable PDF or compliance attestation links if needed.
+
+**Open questions / TODOs:**
+- None for Security Whitepaper structure itself.
+
+
+## Frontend redeploy rerun on user request (2026-03-04)
+
+**Task:** Re-run frontend deployment to Cloudflare Workers after the blank-screen hotfix.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Rebuilt frontend with OpenNext.
+- Redeployed with Wrangler/OpenNext CLI.
+- Verified worker endpoint responds `HTTP 200`.
+- Deployment details:
+  - URL: `https://frontend.maromaher54.workers.dev`
+  - Version: `ce3e153b-6842-4e18-97f0-529e5447015f`
+
+**Validation:**
+- `cd frontend && npx opennextjs-cloudflare build` (pass)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- `curl -sS -D /tmp/frontend_redeploy.headers -o /tmp/frontend_redeploy.body -w '%{http_code}' https://frontend.maromaher54.workers.dev` (pass: `200`)
+
+**Technical debt / gotchas:**
+- Deploy still emits non-blocking duplicate-key warnings from generated OpenNext bundle output.
+
+**Open questions / TODOs:**
+- None for redeploy task itself.
+
+## Cloudflare frontend blank-screen hotfix after OpenNext deploy (2026-03-04)
+
+**Task:** Fix post-deploy empty-screen behavior on `https://frontend.maromaher54.workers.dev` where the app rendered a blank gray viewport.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/next.config.ts** - relaxed production CSP `script-src` from `'self'` to `'self' 'unsafe-inline'` so Next.js inline bootstrap scripts can execute.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/PageTransition.tsx** - changed motion initial state from `opacity: 0` to `initial={false}` so SSR content remains visible if hydration is delayed/fails.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/layout.tsx** - added an early `<head>` shim for `window.__name` to prevent `ReferenceError: __name is not defined` emitted by the inline theme bootstrap script.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reproduced the issue with Playwright and captured root console errors:
+  - CSP blocked inline scripts (`script-src 'self'`) causing hydration failure.
+  - Runtime `ReferenceError: __name is not defined` from inline theme bootstrap script.
+- Applied CSP + render-path hardening + helper-shim fixes.
+- Rebuilt and redeployed via OpenNext CLI to Cloudflare Workers.
+- Verified root now resolves to rendered landing content (no blank viewport) and `__name` error no longer appears.
+- Deployment details:
+  - URL: `https://frontend.maromaher54.workers.dev`
+  - Version: `61ee12bf-bdbb-4085-ab46-44263c8ce76d`
+
+**Validation:**
+- `cd frontend && npx tsc --noEmit` (pass)
+- `cd frontend && npx opennextjs-cloudflare build` (pass)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- Playwright (`playwright-cli`) snapshot confirms landing content is visible and interactive.
+- Playwright console no longer shows `ReferenceError: __name is not defined`.
+
+**Technical debt / gotchas:**
+- Remaining workers.dev runtime console errors are API-domain related:
+  - CORS rejection for `https://api.valensjewelry.com/api/auth/me` from origin `https://frontend.maromaher54.workers.dev`.
+  - Non-existent `GET /about` route linked from landing nav currently returns `404`.
+
+**Open questions / TODOs:**
+- For full login/session behavior on workers.dev, either add `https://frontend.maromaher54.workers.dev` to backend `CORS_ORIGINS` or deploy frontend on a domain already whitelisted by backend CORS.
+
+## Cloudflare OpenNext deploy fix runtime switch to nodejs (2026-03-04)
+
+**Task:** Resolve Cloudflare OpenNext deployment failures (`no nodejs_compat` at runtime and `cannot use edge runtime` during bundle generation), deploy from CLI, and verify live worker response.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/[id]/page.tsx** - switched route runtime from `edge` to `nodejs` for OpenNext server bundling compatibility.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx** - switched route runtime from `edge` to `nodejs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/remediation-runs/[id]/page.tsx** - switched route runtime from `edge` to `nodejs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/root-key-remediation-runs/[id]/page.tsx** - switched route runtime from `edge` to `nodejs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/admin/control-plane/[tenantId]/page.tsx** - switched route runtime from `edge` to `nodejs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/admin/tenants/[tenantId]/page.tsx** - switched route runtime from `edge` to `nodejs`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Confirmed `frontend/wrangler.jsonc` includes `compatibility_flags: ["nodejs_compat"]`.
+- Rebuilt frontend with `npx opennextjs-cloudflare build` and generated `.open-next/worker.js` successfully.
+- Deployed with `npx opennextjs-cloudflare deploy -c wrangler.jsonc`.
+- Verified live worker endpoint returns `HTTP 200` and serves Next.js HTML.
+- Deployment details:
+  - URL: `https://frontend.maromaher54.workers.dev`
+  - Version: `76263247-45a3-45c8-a605-42f7c5f9eda8`
+
+**Validation:**
+- `cd frontend && npx opennextjs-cloudflare build` (pass)
+- `cd frontend && npx opennextjs-cloudflare deploy -c wrangler.jsonc` (pass)
+- `curl -sS -D /tmp/frontend_worker.headers -o /tmp/frontend_worker.body -w '%{http_code}' https://frontend.maromaher54.workers.dev` (pass: `200`)
+
+**Technical debt / gotchas:**
+- `@cloudflare/next-on-pages` and OpenNext have different runtime expectations; Cloudflare Pages route guidance to force `edge` conflicts with OpenNext server-function bundling for this app.
+- Wrangler reported duplicate-key warnings in generated `.open-next/server-functions/default/handler.mjs` during deploy; deployment still succeeded.
+
+**Open questions / TODOs:**
+- If Cloudflare Pages remains a target in parallel to Workers/OpenNext, keep separate deployment configs or branch strategy to avoid runtime-configuration churn (`edge` vs `nodejs`).
+
+## Phase 2 Interactive Remediation Task 18 exception as first-class choice (2026-03-04)
+
+**Task:** Implement Task 18 from `docs/phase-2/interactive-remediation-tasks.md` by making exceptions a first-class remediation choice in `RemediationModal`, adding inline duration/reason capture, and mapping exception `strategy_inputs` into the existing exception workflow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added shared exception input schema for exception-only strategies (`exception_duration_days`, `exception_reason`) and `map_exception_strategy_inputs(...)` normalization helper; applied schema to all exception-only strategy entries.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - Extended exception-only preflight rejection payload to include mapped `exception_flow` defaults from provided `strategy_inputs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Added explicit `I need an exception` strategy option at the bottom of the strategy list; added inline exception duration chips (7/14/30/90) + reason textarea; routed exception submissions through `onChooseException` with `strategyInputs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - Updated exception callback handling to consume modal-provided exception inputs and prefill existing exception modal defaults (reason + computed expiry date).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/CreateExceptionModal.tsx** - Added optional `initialExpiryDate` prop and wired modal initialization to respect prefilled expiry values from exception strategy inputs.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added assertions for exception-flow mapping in exception-only run/group preflight rejections and for exception strategy input schema presence in remediation-options response; updated direct-fix contract tests to current strategy-selection/risk-ack behavior.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added focused test coverage for explicit exception option UX, inline duration/reason controls, and callback payload mapping.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 18 checklist complete and recorded validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Exception-only strategies now accept structured exception inputs in backend strategy schemas without changing non-exception strategy behavior.
+- Remediation modal now exposes a first-class exception choice with inline duration/reason inputs instead of treating exception as a hidden fallback strategy label.
+- Existing exception creation flow remains the source of record; Task 18 now pre-populates it from remediation selection data.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py` (pass: `96 passed`)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `15 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Exception duration is normalized and mapped as day-based defaults; final exception expiry is still computed client-side when opening the existing exception modal.
+
+**Open questions / TODOs:**
+- Consider a follow-up API contract that accepts `duration_days` directly on exception create/update so expiry-date computation can move fully server-side.
+
+## Cloudflare Pages build unblock for ocypheris frontend (2026-03-04)
+
+**Task:** Unblock Cloudflare Pages build for `https://github.com/marcoIbrahim0/ocypheris-frontend` by fixing non-edge dynamic route config required by `@cloudflare/next-on-pages`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/[id]/page.tsx** - ensured dynamic route exports `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/admin/control-plane/[tenantId]/page.tsx** - added `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/admin/tenants/[tenantId]/page.tsx** - added `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx** - added `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/remediation-runs/[id]/page.tsx** - added `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/root-key-remediation-runs/[id]/page.tsx** - added `runtime = 'edge'`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Added Edge runtime segment config to all dynamic app routes that Cloudflare Pages flagged as non-edge.
+- Verified app build still succeeds after route config change (`npm run build` in `frontend` passed).
+- Committed and pushed only the route-runtime fixes to frontend remote:
+  - commit `2bea607`
+  - branch `main`
+  - remote `origin` (`marcoIbrahim0/ocypheris-frontend`)
+
+**Validation:**
+- `cd frontend && npm run build` (pass)
+- `cd frontend && npx @cloudflare/next-on-pages@1` (route-runtime error resolved; local run then failed in Vercel CLI with `Cannot read properties of undefined (reading 'fsPath')` under local Node `v25.6.1`)
+
+**Technical debt / gotchas:**
+- `@cloudflare/next-on-pages` is deprecated and sensitive to Node/toolchain versions; Cloudflare build image currently uses Node `22.x` and may behave differently than local Node `25.x`.
+
+**Open questions / TODOs:**
+- Re-run Cloudflare Pages deploy from Git after commit `2bea607` and confirm success with Cloudflare environment defaults.
+
+## Phase 2 Interactive Remediation Task 17 post-apply change summary card (2026-03-04)
+
+**Task:** Implement Task 17 from `docs/phase-2/interactive-remediation-tasks.md` by persisting a `change_summary` artifact after successful apply and rendering that summary card in the action detail drawer when artifacts are present.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py** - Added Task 17 artifact generation on successful apply:
+  - added change-summary helper pipeline (`_change_value_text`, `_change_entries_for_run`, `_resolve_applied_by`, `_write_change_summary_artifact`),
+  - writes `artifacts.change_summary` with keys `applied_at`, `applied_by`, `changes`, and `run_id`,
+  - wired artifact write in successful `apply` phase path before post-apply reconcile enqueue.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_execution.py** - Added worker coverage for change-summary artifact persistence:
+  - asserts `change_summary` exists after successful apply,
+  - validates schema keys and strategy-input-derived change rows.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - Added Task 17 drawer rendering:
+  - added `parseChangeSummaryCard(...)` parser for `artifacts.change_summary`,
+  - fetches run detail artifacts for recent successful runs via `getRemediationRun(...)`,
+  - renders a `Latest successful apply` summary card with timestamp, operator identity, change preview, and `View run` link.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - Added focused rendering test verifying summary card visibility and run link when `change_summary` artifact exists.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 17 checklist complete and recorded executed validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Apply-success worker path now persists a structured `change_summary` artifact directly on `remediation_runs.artifacts`.
+- Action detail drawer now detects and renders the latest available `change_summary` for successful remediation runs.
+- End-to-end UI rendering path is covered with a dedicated component test using mocked run artifacts.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_execution.py` (pass: `4 passed`)
+- `cd frontend && npm run test:ui -- src/components/ActionDetailDrawer.test.tsx` (pass: `1 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Current change entries are generated from stored strategy inputs (or fallback control/outcome text) rather than AWS before/after state evidence.
+
+**Open questions / TODOs:**
+- Consider enriching `change_summary.changes` with before/after simulator data so card text can show concrete resource state transitions.
+
+## Frontend repo GitHub publish for Cloudflare Pages onboarding (2026-03-04)
+
+**Task:** Publish the standalone `frontend` git repository to GitHub so it can be connected to Cloudflare Pages.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/** - Committed current frontend snapshot on `main` (`7332791`) and pushed to a new GitHub remote.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed GitHub auth for account `marcoIbrahim0` via `gh auth status`.
+- Created new private repository: `https://github.com/marcoIbrahim0/ocypheris-frontend`.
+- Added remote `origin` to the frontend repo and pushed branch `main` successfully.
+- Verified downloaded/build directories were not tracked or pushed (`node_modules`, `.next`, `out` are ignored by frontend `.gitignore`).
+
+**Validation:**
+- `git ls-files | rg '^node_modules/|^\\.next/|^out/'` (no matches)
+- `git push -u origin main` (pass)
+
+**Technical debt / gotchas:**
+- Initial push attempt failed with transient GitHub HTTPS timeout (`HTTP 408`); retry succeeded.
+- Snapshot commit is large (`210 files changed`); optional history cleanup can be done later.
+
+**Open questions / TODOs:**
+- Connect `https://github.com/marcoIbrahim0/ocypheris-frontend` to Cloudflare Pages and bind custom domain `ocypheris.com`.
+
+## Phase 2 Interactive Remediation Task 16 "I don't know" escape hatches (2026-03-04)
+
+**Task:** Implement Task 16 from `docs/phase-2/interactive-remediation-tasks.md` by defining safe-default escape-hatch values for key guided inputs and adding inline modal actions that auto-fill those values when users select "Not sure? Use safe default".
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added schema-level Task 16 safe-default metadata on guided fields:
+  - extended `StrategyInputSchemaField` with optional `safe_default_value` and `safe_default_label`,
+  - added escape-hatch defaults for:
+    - `s3_enable_sse_kms_guided.kms_key_mode` (S3.15),
+    - `sg_restrict_public_ports_guided.allowed_cidr` (EC2.53),
+    - `config_enable_centralized_delivery.delivery_bucket` (Config.1),
+    - `s3_enable_access_logging_guided.log_bucket_name` (S3.9),
+    - `cloudtrail_enable_guided.trail_name` (CloudTrail.1).
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Extended `StrategyInputSchemaField` typing with `safe_default_value?` and `safe_default_label?`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Implemented Task 16 escape-hatch UX:
+  - added token-aware safe-default resolver (`{{account_id}}`, `{{detected_public_ipv4_cidr}}`),
+  - added inline `Not sure? Use safe default` action below applicable fields,
+  - wired click behavior to auto-fill field values,
+  - added EC2.53 fallback behavior to switch back to `close_public` when CIDR safe-default token is unavailable.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added focused UI coverage for autofill behavior:
+  - S3.15 key-mode escape hatch,
+  - EC2.53 CIDR escape hatch,
+  - Config.1 delivery-bucket escape hatch,
+  - S3.9 log-bucket escape hatch,
+  - CloudTrail.1 trail-name escape hatch.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 16 checklist complete and recorded required validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Safe-default values are now defined in backend strategy metadata for the Task 16 control set, avoiding hardcoded control defaults in UI logic.
+- `RemediationModal` now renders inline escape-hatch actions only for fields with safe-default metadata and auto-fills the corresponding value on click.
+- Autofill behavior is validated for all requested controls with focused frontend tests.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `15 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- CloudTrail escape-hatch currently targets `trail_name` because the guided schema does not yet expose a separate trail-bucket field; adding that field would require a scoped schema/generator follow-up.
+
+**Open questions / TODOs:**
+- Consider adding backend API contract tests that assert `safe_default_value` coverage for the Task 16 control set to prevent metadata regressions.
+
+## Phase 2 Interactive Remediation Task 15 blast radius indicator (2026-03-04)
+
+**Task:** Implement Task 15 from `docs/phase-2/interactive-remediation-tasks.md` by adding blast-radius metadata to remediation strategies/options, populating coverage across all 16 in-scope controls, and rendering a colored blast-radius badge with tooltip in the remediation modal header.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added Task 15 strategy metadata support:
+  - introduced `BlastRadius` enum typing (`account` / `resource` / `access_changing`) on `RemediationStrategy`,
+  - added `_BLAST_RADIUS_BY_ACTION_TYPE` mapping for all 16 in-scope control action types,
+  - added `get_blast_radius(action_type, strategy_id)` helper with strategy-override + action-type fallback behavior.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Extended remediation-options API contract with `blast_radius` and populated it per strategy in `GET /api/actions/{id}/remediation-options`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added Task 15 backend coverage:
+  - new parametrized remediation-options test asserting valid `blast_radius` enum values and expected mapping for all 16 controls.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Added frontend strategy contract typing:
+  - `RemediationBlastRadius` union type,
+  - optional `RemediationOption.blast_radius`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/Modal.tsx** - Added optional `headerContent` prop to support contextual header badges without changing existing modal callers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Added Task 15 UX:
+  - blast-radius label metadata map (text, colors, tooltip copy),
+  - selected-strategy blast-radius resolution,
+  - colored pill badge rendered in modal header via `headerContent`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Updated modal mock to render `headerContent` and added UI test asserting blast-radius badge label, color class, and tooltip text attribute.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 15 checklist complete and recorded validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Remediation strategy/options contract now includes `blast_radius` metadata with enum-safe values.
+- Blast-radius assignment is populated for all 16 in-scope controls and returned by remediation-options API.
+- Remediation modal now shows a colored blast-radius pill in the modal header with explanatory tooltip text.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_options"` (pass: `44 passed, 52 deselected`)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `10 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Current blast-radius mapping is action-type based; all strategies under a given action type share one blast-radius unless a strategy-specific override is later added.
+
+**Open questions / TODOs:**
+- Consider strategy-level blast-radius overrides for mixed-risk controls if product wants separate badges per strategy/choice.
+
+## Phase 2 Interactive Remediation Task 14 estimated resolution + trigger re-eval (2026-03-04)
+
+**Task:** Implement Task 14 from `docs/phase-2/interactive-remediation-tasks.md` by extending strategy/remediation-option contracts with estimated resolution metadata, adding an immediate re-evaluation trigger endpoint, and wiring modal UX to optionally enqueue re-evaluation after direct-fix apply.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added Task 14 strategy-contract helpers:
+  - `estimated_resolution_time` and `supports_immediate_reeval` keys in `RemediationStrategy` typing,
+  - per-control estimate mapping (`~1 hour`, `1-6 hours`, `12-24 hours`),
+  - `get_estimated_resolution_time(...)` and `supports_immediate_reeval(...)` helper functions with strategy-aware exception-path handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Added Task 14 API contract and endpoint wiring:
+  - extended `RemediationOptionResponse` with `estimated_resolution_time` and `supports_immediate_reeval`,
+  - populated both fields in remediation-options strategy serialization,
+  - added `POST /api/actions/{id}/trigger-reeval` endpoint that validates strategy support and enqueues inventory reconciliation shard jobs for the action scope.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added backend route/contract coverage:
+  - remediation-options assertions for estimate + re-eval metadata,
+  - `trigger-reeval` success path enqueue assertions,
+  - `trigger-reeval` unsupported-control rejection assertions.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Added frontend contract and API client support:
+  - `RemediationOption` fields `estimated_resolution_time?` and `supports_immediate_reeval?`,
+  - `TriggerActionReevaluationResponse` type,
+  - `triggerActionReevaluation(...)` API helper for `POST /api/actions/{id}/trigger-reeval`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Added Task 14 UX:
+  - estimated time text block (`Estimated time to Security Hub PASSED`) from selected strategy metadata,
+  - direct-fix checkbox `Trigger re-evaluation after apply` when strategy supports immediate re-eval,
+  - non-blocking post-submit call to `triggerActionReevaluation(...)` and status notice rendering.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added/updated modal tests for Task 14 fields and direct-fix checkbox-triggered re-evaluation call.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 14 checklist complete and recorded validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Strategy options now include estimated PASSED timing and immediate re-evaluation support flags in backend and frontend contracts.
+- Added `POST /api/actions/{id}/trigger-reeval` for immediate, action-scoped re-evaluation enqueue.
+- Modal now offers an opt-in re-evaluation checkbox for supported direct-fix strategies and triggers enqueue without blocking run creation.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_options or trigger_reeval"` (pass: `30 passed, 50 deselected`)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `9 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- `trigger-reeval` currently enqueues global inventory shard sweeps for the action scope (account + action region/all configured regions) and does not yet narrow to resource-specific target IDs.
+
+**Open questions / TODOs:**
+- Consider adding resource-targeted reconcile payloads for high-volume tenants to reduce immediate re-evaluation queue fan-out.
+
+## Phase 2 Interactive Remediation Task 13 rollback recipe shown upfront (2026-03-04)
+
+**Task:** Implement Task 13 from `docs/phase-2/interactive-remediation-tasks.md` by adding rollback command metadata to remediation-option contracts, populating rollback commands for all 16 in-scope controls, and rendering a collapsed "How to undo this" section with copy affordance in `RemediationModal`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added rollback command catalog coverage for all 16 in-scope action types and a strategy-aware `get_rollback_command(action_type, strategy_id)` helper (including delete-path override for `iam_root_key_delete`).
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Extended remediation-options API contract with `rollback_command` and wired per-strategy rollback command serialization into `GET /api/actions/{id}/remediation-options`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added Task 13 API coverage:
+  - parametric assertion that rollback commands are present across all 16 control action types,
+  - root delete-path assertion that `iam_root_key_delete` returns delete-specific rollback guidance.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Added optional `rollback_command?: string` to frontend `RemediationOption` type.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Added collapsed rollback panel:
+  - `How to undo this` details section for selected strategy,
+  - monospace rollback command rendering,
+  - copy-command affordance with copied/error UI states.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added UI test coverage for rollback panel rendering and copy interaction.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 13 checklist complete and recorded executed validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Remediation options payload now includes a strategy-level `rollback_command` field while preserving prior response fields/behavior.
+- Rollback command catalog covers all 16 in-scope interactive remediation controls.
+- Modal now surfaces rollback guidance before apply in a collapsed section and supports one-click copy.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_options"` (pass: `25 passed, 50 deselected`)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `8 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Rollback commands use placeholders (for example `<BUCKET_NAME>`, `<SECURITY_GROUP_ID>`) and still require operator substitution at execution time.
+
+**Open questions / TODOs:**
+- Consider binding rollback placeholders to detected runtime context values (bucket, SG ID, trail name) in a follow-up task.
+
+## Phase 2 Interactive Remediation Task 12 smart defaults from AWS context (2026-03-04)
+
+**Task:** Implement Task 12 from `docs/phase-2/interactive-remediation-tasks.md` by adding frontend IP-based EC2.53 CIDR prefill, backend KMS alias runtime probe exposure as `context.kms_key_options`, and context-driven default inputs for Config/CloudTrail strategies.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - Added smart-default runtime context probes:
+  - `s3_bucket_encryption_kms`: `kms:ListAliases` probe and `context.kms_key_options` emission.
+  - `cloudtrail_enable_guided`: CloudTrail trail inspection and `context.default_inputs` (`trail_name`, `multi_region`, `create_bucket_policy`) emission.
+  - `config_enable_*`: recorder/channel inspection now feeds `context.default_inputs` (`recording_scope`, `delivery_bucket_mode`, `existing_bucket_name`, `delivery_bucket`) with account-based fallback bucket naming.
+  - Added internal context payload helper and empty-context cleanup handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Extended remediation-options strategy payload with `context` metadata and enabled runtime-signal collection for context-relevant strategies.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** - Added Task 12 runtime-check coverage for:
+  - KMS alias options context emission,
+  - Config default-input context emission,
+  - CloudTrail default-input context emission.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Added `RemediationOptionContext` typing and `RemediationOption.context`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Added smart-default frontend behavior:
+  - Best-effort `api.ipify.org` fetch while modal is open to prefill EC2.53 `allowed_cidr` as `<detected_ip>/32`.
+  - Context-aware default-input hydration from backend `strategy.context.default_inputs`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added frontend tests for:
+  - EC2.53 CIDR prefill from ipify detection,
+  - Config context-driven defaults,
+  - CloudTrail context-driven defaults.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 12 checklist complete and documented executed validations.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added backend strategy context payload support so remediation options can return account-aware defaults and helper option lists (including `context.kms_key_options`).
+- Modal now applies backend-provided context defaults for Config/CloudTrail fields and auto-prefills EC2.53 CIDR from detected public IPv4 when available.
+- Behavior remains backward-compatible when context or ipify lookup is unavailable (falls back to existing schema defaults and manual input).
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runtime_checks.py` (pass: `6 passed`)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `7 passed`)
+- `cd frontend && npx tsc --noEmit` (pass)
+- `./venv/bin/ruff check backend/services/remediation_runtime_checks.py backend/routers/actions.py tests/test_remediation_runtime_checks.py` (pass)
+
+**Technical debt / gotchas:**
+- KMS alias context currently returns alias ARNs from `ListAliases`; deeper key-policy suitability checks are not part of this task.
+- ipify-based CIDR prefill is best-effort and IPv4-only in this implementation; failures are intentionally silent and non-blocking.
+
+**Open questions / TODOs:**
+- Consider rendering `context.kms_key_options` as an explicit dropdown for `kms_key_arn` in a follow-up UI task.
+
+## Phase 2 Interactive Remediation Task 11 before/after state simulator (2026-03-04)
+
+**Task:** Implement Task 11 from `docs/phase-2/interactive-remediation-tasks.md` by extending remediation preview payloads with before/after simulation data, adding EC2.53/S3.5/Config.1 state capture and predicted-state logic, and rendering a before/after diff card in `RemediationModal`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - Added runtime state probes for:
+  - `sg_restrict_public_ports_guided` (security group public SSH/RDP ingress detection),
+  - `s3_enforce_ssl_*` (SSL deny detection in current bucket policy),
+  - `config_enable_*` (Config recorder and delivery channel state snapshot).
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added before/after simulator helpers:
+  - `build_remediation_state_simulation(...)`,
+  - strategy support check and per-control simulation builders for EC2.53, S3.5, and Config.1,
+  - structured `diff_lines` generation with `add`/`remove`/`unchanged`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Extended `RemediationPreviewResponse` with `before_state`, `after_state`, `diff_lines`; wired simulator + runtime signal collection into `GET /api/actions/{id}/remediation-preview` while preserving existing preview semantics and error handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/services/direct_fix.py** - Extended `RemediationPreviewResult` model with defaulted `before_state`, `after_state`, and `diff_lines` fields for backward-compatible preview model parity.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Extended `RemediationPreview` type with `impact_summary`, `before_state`, `after_state`, `diff_lines`; updated `getRemediationPreview()` mode parameter to accept `'pr_only' | 'direct_fix'`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Updated preview-fetch flow to use current modal mode (`pr_only` or `direct_fix`) and rendered a new Before/After simulation card with two-column diff rows (add/remove/unchanged styling).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added/updated preview-route tests to verify simulator output for EC2.53, S3.5, Config.1 and default empty simulator fields for unsupported direct-fix paths.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 11 complete and recorded executed validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added backward-compatible preview response fields so existing callers still receive prior fields while new UI surfaces can consume simulator state.
+- Added targeted runtime evidence capture and deterministic state simulation for the requested controls:
+  - EC2.53 (public admin ingress and restricted CIDR prediction),
+  - S3.5 (HTTPS enforcement state and policy-preservation posture),
+  - Config.1 (recorder/delivery/KMS posture and predicted configuration).
+- Rendered a Before/After diff card in the remediation modal without removing the existing direct-fix pre-check messaging.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_preview"` (pass: `7 passed, 51 deselected`)
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Simulator coverage is intentionally scoped to EC2.53, S3.5, and Config.1; other controls currently return empty simulator payloads.
+- State simulation is best-effort and depends on available ReadRole/runtime probe evidence; missing evidence yields conservative/partial diffs.
+
+**Open questions / TODOs:**
+- Consider adding targeted UI assertions for the new Before/After simulation card once Task 12+ modal work continues.
+
+## Domain cutover prep ocypheris.com defaults and docs update (2026-03-04)
+
+**Task:** Replace `valensjewelry.com` live defaults with `ocypheris.com` across runtime/deploy config, IaC templates, scripts, tests, and active operational docs.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/config/.env.ops** - Updated `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to `ocypheris.com`/`api.ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/.env** - Updated `CORS_ORIGINS` to `dev.ocypheris.com` and `ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/.env** - Updated commented backup `NEXT_PUBLIC_API_URL` example to `https://api.ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-ecs-dev.yaml** - Updated default `FrontendUrl`, `CorsOrigins`, and `ApiDomain` values to `ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml** - Updated default `FrontendUrl`, `CorsOrigins`, and custom-domain example to `api.ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/terraform/saas-ecs-dev/variables.tf** - Updated default `api_domain`, `frontend_url`, and `cors_origins`.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/terraform/saas-ecs-dev/terraform.tfvars.example** - Updated `api_domain` example.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/terraform/saas-ecs-dev/README.md** - Updated API hostname and scheduler base URL guidance.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_ecs_dev.sh** - Updated default `FRONTEND_URL`, `CORS_ORIGINS`, `API_DOMAIN`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh** - Updated default `FRONTEND_URL`, `CORS_ORIGINS`, `API_DOMAIN`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/init_live_e2e_run.sh** - Updated default frontend/backend URLs.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/live_e2e/run_wave7_test26_closure.sh** - Updated default API/UI base URLs.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/run_multi_account_campaign.py** - Updated default API base URL.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/run_s3_controls_campaign.py** - Updated default API base URL.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/config/no_ui_pr_bundle_agent.example.json** - Updated `api_base` example URL.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_multi_account_campaign.py** - Updated API URL fixtures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_no_ui_agent_client.py** - Updated API URL fixtures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_no_ui_pr_bundle_agent_smoke.py** - Updated API URL fixtures.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md** - Updated domain examples, CORS examples, DNS/CSRF troubleshooting strings, and API curl targets.
+- **/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md** - Updated `--saas-api-url` example.
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md** - Updated SMTP verification question to `api.ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/no-ui-pr-bundle-agent.md** - Updated API base/control-plane endpoint examples.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/s3-pr-bundle-e2e-debug-plan.md** - Updated default `api_base`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md** - Updated live frontend/backend targets.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/test-case-template.md** - Updated default frontend/backend URLs.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md** - Updated current environment header to `https://dev.ocypheris.com` (historical dated entries preserved).
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/todo.md** - Updated public dev URL to `https://dev.ocypheris.com`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Replaced active domain defaults/examples from `valensjewelry.com` to `ocypheris.com` (including `api.` and `dev.`) across deployment/runtime config surfaces and operator runbooks.
+- Updated script/test fixtures so local automation defaults now target `https://api.ocypheris.com`.
+- Kept protected `/docs/Production/` and dated evidence artifacts unchanged.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_multi_account_campaign.py tests/test_no_ui_agent_client.py tests/test_no_ui_pr_bundle_agent_smoke.py` (pass: `14 passed`)
+
+**Technical debt / gotchas:**
+- `/docs/Production/deployment.md` still references old `valensjewelry.com` values by design because `/docs/Production/` is protected unless explicitly requested.
+- Historical evidence/artifact files still contain old domain references and were intentionally preserved.
+
+**Open questions / TODOs:**
+- Apply Cloudflare cutover records/certificate validation and confirm proxy mode choices for `@`, `dev`, and `api` hostnames.
+
+## Phase 2 Interactive Remediation Task 10 impact summary in preview (2026-03-04)
+
+**Task:** Implement Task 10 from `docs/phase-2/interactive-remediation-tasks.md` by adding backend impact-summary composition and wiring it into remediation-preview responses without breaking existing preview fields/behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added `get_impact_summary(strategy_id, strategy_inputs)` and supporting helpers:
+  - strategy lookup by `strategy_id`,
+  - default-value + selected-choice resolution,
+  - `visible_when`-aware field impact filtering,
+  - strategy/field/select-option impact text composition with de-duplication.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Wired impact summary into `GET /api/actions/{id}/remediation-preview`:
+  - extended `RemediationPreviewResponse` with optional `impact_summary`,
+  - preserved existing `compliant`, `message`, `will_apply` behavior,
+  - added soft parse for `strategy_inputs` in `pr_only` informational preview path so selected-choice summaries can be surfaced when provided.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added Task 10 preview coverage:
+  - `pr_only` preview includes selected-choice impact summary (`close_and_revoke` path),
+  - `direct_fix` preview includes strategy-level impact summary when `strategy_id` is provided.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 10 checklist complete and recorded the executed validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added a reusable backend summary function that composes impact text from strategy metadata and selected guided-choice inputs.
+- Preview endpoint now returns `impact_summary` while preserving all existing preview semantics for mode handling and pre-check messaging.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_preview"` (pass: `5 passed`)
+
+**Technical debt / gotchas:**
+- `pr_only` preview path still remains informational-only for compliance/pre-check semantics; impact summary now provides choice-aware context but does not simulate apply behavior.
+
+**Open questions / TODOs:**
+- None within Task 10 scope.
+
+## Phase 2 Interactive Remediation Task 9 remediation modal rendering upgrades (2026-03-04)
+
+**Task:** Implement Task 9 from `docs/phase-2/interactive-remediation-tasks.md` by upgrading `RemediationModal` rendering for guided input types and metadata while preserving existing exception/manual workflows.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - Implemented guided input rendering upgrades:
+  - Added rendering for `select`, `boolean` (switch), `cidr`, and `number` field types.
+  - Added `visible_when` conditional rendering support (including list `equals` semantics).
+  - Added grouped field rendering by `group` heading.
+  - Added `help_text` UI via info icon + tooltip.
+  - Added impact preview boxes sourced from field and selected-option `impact_text`.
+  - Added CIDR and number validation feedback and submit gating for invalid inputs.
+  - Updated strategy-input serialization so boolean/number values are sent as typed payloads (not strings), and hidden fields are excluded.
+  - Preserved exception-only and manual-only workflow paths.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - Added UI test coverage for Task 9 behavior:
+  - grouped rendering, `visible_when` conditional reveal, help tooltip trigger presence,
+  - impact preview rendering,
+  - CIDR + number validation error states and disabled submit behavior,
+  - boolean switch interaction and typed `strategy_inputs` payload on submit.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 9 checklist complete and recorded required validation commands.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Upgraded `RemediationModal` input surface from text-only to typed, metadata-driven rendering aligned to Task 9.
+- Ensured backend-facing payload typing compatibility for new schema field types.
+- Kept existing exception/manual-workflow and safety-gate behaviors intact while extending input UX.
+
+**Validation:**
+- `cd frontend && npx tsc --noEmit` (pass)
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx` (pass: `4 passed`)
+
+**Technical debt / gotchas:**
+- CIDR frontend validation is strict and blocks malformed entries before submit; backend validation remains source-of-truth and still performs canonical normalization.
+
+**Open questions / TODOs:**
+- None within Task 9 scope.
+
+## Phase 2 Interactive Remediation Task 8 frontend API type extension (2026-03-04)
+
+**Task:** Implement Task 8 from `docs/phase-2/interactive-remediation-tasks.md` by extending frontend remediation input schema typings in `frontend/src/lib/api.ts`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - Extended `StrategyInputSchemaField` to support Task 8 requirements:
+  - Added new field types to `type` union: `select`, `boolean`, `cidr`, `number` (while keeping `string` and `string_array` compatibility).
+  - Added optional metadata fields: `placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, `max`.
+  - Added helper interfaces `StrategyInputOption` and `StrategyInputVisibleWhen` to type select-option and conditional-visibility metadata.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 8 checklist items complete.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**Validation:**
+- `cd frontend && npx tsc --noEmit` (pass)
+
+**Technical debt / gotchas:**
+- Task 8 updates type contracts only; frontend rendering for these new field types remains pending under Task 9.
+
+**Open questions / TODOs:**
+- None within Task 8 scope.
+
+## Phase 2 Interactive Remediation Task 7 simple controls impact text (2026-03-04)
+
+**Task:** Implement Task 7 from `docs/phase-2/interactive-remediation-tasks.md` by adding non-empty `impact_text` metadata for simple controls and ensuring remediation-options API responses expose it.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added simple-control impact metadata coverage:
+  - Added strategy catalog entries for `enable_security_hub` and `enable_guardduty` (direct-fix + PR-bundle) with non-empty `impact_text`.
+  - Added non-empty `impact_text` to all strategies for `ssm_block_public_sharing`, `ebs_snapshot_block_public_access`, and `ebs_default_encryption`.
+  - Marked Security Hub and GuardDuty strategy catalogs as optional via `OPTIONAL_STRATEGY_ACTION_TYPES` so legacy run-create callers without `strategy_id` remain backward compatible.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - Extended remediation-options strategy response model with `impact_text` and wired payload serialization from strategy registry metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - Preserved compatibility for optional strategy catalogs by validating strategy metadata whenever `strategy_id` is provided, without forcing strategy selection for optional action types.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added Task 7 remediation-options coverage asserting non-empty strategy `impact_text` metadata for `enable_security_hub`, `enable_guardduty`, `ssm_block_public_sharing`, `ebs_snapshot_block_public_access`, and `ebs_default_encryption`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 7 checklist complete and documented validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**Validation:**
+- `./venv/bin/ruff check backend/services/remediation_strategy.py backend/routers/actions.py backend/routers/remediation_runs.py tests/test_remediation_runs_api.py` (pass)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "remediation_options"` (pass: `8 passed, 46 deselected`)
+
+**Technical debt / gotchas:**
+- Security Hub and GuardDuty now expose strategy metadata in remediation-options, but strategy selection remains optional for backward compatibility with legacy API clients.
+
+**Open questions / TODOs:**
+- None within Task 7 scope.
+
+## Phase 2 Interactive Remediation Task 6 S3 controls guided schemas (2026-03-04)
+
+**Task:** Implement Task 6 from `docs/phase-2/interactive-remediation-tasks.md` by completing S3 guided schema coverage and wiring supported `strategy_inputs` in S3 PR-bundle generators.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Completed Task 6 strategy schema coverage:
+  - `s3_bucket_require_ssl`: added `preserve_existing_policy` boolean default `true` with field-level `impact_text` and strategy-level `impact_text`.
+  - `s3_bucket_access_logging`: added required `log_bucket_name` with field-level and strategy-level `impact_text`.
+  - `s3_bucket_lifecycle_configuration`: added `abort_days` number with default `7`, `min=1`, `max=365`, and `impact_text`.
+  - `s3_bucket_encryption_kms`: added `kms_key_mode` select (`aws_managed`, `custom`) and conditional `kms_key_arn`.
+  - Added strategy-level `impact_text` for `s3_block_public_access`, `s3_bucket_block_public_access`, and `s3_bucket_encryption`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Wired S3 generators to consume guided `strategy_inputs`:
+  - S3.11 (`s3_bucket_lifecycle_configuration`): `abort_days` now maps into Terraform and CloudFormation defaults.
+  - S3.15 (`s3_bucket_encryption_kms`): `kms_key_mode` + conditional `kms_key_arn` now map into Terraform/CloudFormation defaults; custom mode now fails closed when ARN is missing.
+  - S3.5 (`s3_bucket_require_ssl`): `preserve_existing_policy` now controls preservation preload/fail-closed behavior and CloudFormation custom-resource preserve toggle.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Added Task 6 coverage:
+  - strategy-schema assertions for S3.1/S3.2/S3.4 impact text, S3.5 preserve toggle, S3.9 log bucket, S3.11 abort days bounds, and S3.15 key mode/conditional ARN.
+  - PR-bundle wiring assertions for S3.11 and S3.15 Terraform/CloudFormation defaults.
+  - fail-closed assertion for S3.15 custom mode without `kms_key_arn`.
+  - S3.5 preserve toggle assertions proving `preserve_existing_policy=false` bypasses preload/fail-closed and sets CF preserve flag.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 6 checklist complete and updated validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "s3"` (pass)
+
+**Technical debt / gotchas:**
+- None within Task 6 scope.
+
+**Open questions / TODOs:**
+- None within Task 6 scope.
+
+## Phase 2 Interactive Remediation Task 5 CloudTrail.1 guided choice schema (2026-03-04)
+
+**Task:** Implement Task 5 from `docs/phase-2/interactive-remediation-tasks.md` by adding guided CloudTrail.1 strategy input fields and wiring those inputs into CloudTrail bundle generation for Terraform and CloudFormation.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added `cloudtrail_enabled` guided strategy (`cloudtrail_enable_guided`) with Task 5 fields: `trail_name` default `security-autopilot-trail`, `create_bucket_policy` boolean default `true`, and `multi_region` boolean default `true`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Added `_resolve_cloudtrail_defaults()` and wired CloudTrail bundle generation to consume `trail_name`, `create_bucket_policy`, and `multi_region` strategy inputs with backward-compatible fallbacks for both Terraform and CloudFormation outputs.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Added CloudTrail schema assertions and new Terraform/CloudFormation wiring tests proving guided inputs drive generated defaults; updated existing CloudTrail structure assertions for `trail_name` and `multi_region` wiring.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 5 checklist items complete and updated validation command to the requested cloudtrail-targeted pytest command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added the requested CloudTrail guided-choice schema defaults in remediation strategy metadata.
+- Updated CloudTrail PR-bundle generation so guided inputs now control:
+  - trail resource name (`trail_name`),
+  - multi-region flag (`multi_region`),
+  - bucket policy creation toggle (`create_bucket_policy`).
+- Preserved legacy behavior when new guided inputs are omitted by defaulting to:
+  - `trail_name="security-autopilot-trail"`,
+  - `multi_region=true`,
+  - `create_bucket_policy=true`.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "cloudtrail"` (pass: `9 passed, 99 deselected`)
+- `./venv/bin/ruff check backend/services/remediation_strategy.py backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- None for Task 5 scope.
+
+**Open questions / TODOs:**
+- None for Task 5 scope.
+
+## Phase 2 Interactive Remediation Task 4 Config.1 guided choice schema (2026-03-04)
+
+**Task:** Implement Task 4 from `docs/phase-2/interactive-remediation-tasks.md` by adding guided Config.1 strategy input fields and wiring those inputs into AWS Config bundle generation for Terraform and CloudFormation.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Expanded `config_enable_centralized_delivery` input schema with guided fields: `recording_scope` (select), `delivery_bucket_mode` (select), conditional `existing_bucket_name`, `encrypt_with_kms` (boolean), and conditional `kms_key_arn` (plus retained existing `delivery_bucket` compatibility field).
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Added `_resolve_aws_config_defaults()` and wired Config bundle generation paths to resolve `recording_scope`, `delivery_bucket_mode`, `existing_bucket_name`, `encrypt_with_kms`, and `kms_key_arn` with strategy/legacy fallbacks for both Terraform and CloudFormation outputs.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Added Config.1 schema assertions for guided fields and new wiring tests proving TF/CF templates honor guided input defaults.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 4 checklist items complete and recorded the executed validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added the requested Config guided-choice schema fields in remediation strategy metadata, including conditional visibility metadata for existing bucket and KMS ARN fields.
+- Updated Config PR-bundle generation so guided inputs now control:
+  - recorder overwrite default (`recording_scope=all_resources` -> overwrite true),
+  - local-bucket creation vs existing-bucket path (`delivery_bucket_mode` + `existing_bucket_name`),
+  - KMS channel encryption toggle (`encrypt_with_kms` + `kms_key_arn`).
+- Preserved legacy generation behavior when new guided inputs are omitted by using strategy-based defaults and existing input keys (`delivery_bucket`, `kms_key_arn`).
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "aws_config_enabled"` (pass: `11 passed, 94 deselected`)
+- `./venv/bin/ruff check backend/services/remediation_strategy.py backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- `config_enable_centralized_delivery` still retains legacy `delivery_bucket` required input for backward API compatibility; guided `existing_bucket_name` is now additionally supported and preferred for delivery-bucket mode flow.
+
+**Open questions / TODOs:**
+- Decide whether to migrate centralized strategy validation from legacy `delivery_bucket` to `existing_bucket_name` as the sole required field in a follow-up once frontend Task 9 guided rendering is complete.
+
+## Phase 2 Interactive Remediation Task 3 IAM.4 guided choice schema (2026-03-04)
+
+**Task:** Implement Task 3 from `docs/phase-2/interactive-remediation-tasks.md` by adding guided `action_mode` schema for `iam_root_access_key_absent` while preserving compatibility with existing strategy IDs used by workers.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added shared IAM root `action_mode` select schema (`disable_key` / `delete_key`) with per-option `impact_text`; attached schema to `iam_root_key_disable` and `iam_root_key_delete`; added validation guard so provided `action_mode` must match the selected existing strategy ID.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added strategy-input tests for IAM `action_mode` match/mismatch behavior and remediation-options schema assertions for IAM strategies.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 3 checklist items complete and updated validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added guided `action_mode` input schema for IAM.4 with select options:
+  - `disable_key` with reversible-impact text.
+  - `delete_key` with irreversible-impact text and MFA requirement note.
+- Kept existing strategy IDs unchanged (`iam_root_key_disable`, `iam_root_key_delete`) so worker and executor logic remains compatible.
+- Added compatibility validation:
+  - `iam_root_key_disable` rejects `strategy_inputs.action_mode=delete_key`.
+  - `iam_root_key_delete` rejects `strategy_inputs.action_mode=disable_key`.
+  - Missing `action_mode` remains accepted for backward compatibility.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "iam_root or strategy"` (pass: `17 passed, 32 deselected`)
+- `./venv/bin/ruff check backend/services/remediation_strategy.py tests/test_remediation_runs_api.py` (pass)
+
+**Technical debt / gotchas:**
+- IAM.4 still exposes two explicit strategies plus an `action_mode` field for guided UX continuity; frontend Task 9 should ensure this is rendered coherently (for example, hide redundant control when strategy already implies mode).
+
+**Open questions / TODOs:**
+- None for Task 3 scope.
+
+## Phase 2 Interactive Remediation Task 2 EC2.53 guided choice schema (2026-03-04)
+
+**Task:** Implement Task 2 from `docs/phase-2/interactive-remediation-tasks.md` by adding EC2.53 guided-choice strategy inputs and wiring those inputs into SG PR-bundle defaults.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added `sg_restrict_public_ports_guided` strategy schema with required `access_mode` select (`close_public`, `close_and_revoke`, `restrict_to_ip`, `restrict_to_cidr`), conditional CIDR fields (`allowed_cidr`, `allowed_cidr_ipv6`), and per-option `impact_text`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - Wired `strategy_inputs` into SG bundle generation: resolved EC2.53 defaults from guided inputs, mapped CIDR values into Terraform/CloudFormation parameter defaults, and set Terraform `remove_existing_public_rules` default to `true` only when `access_mode=close_and_revoke` (with legacy bool fallback when access mode is omitted).
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - Added EC2.53 schema and SG bundle assertions for guided options, impact text, CIDR default mapping, and strict revoke-mode behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 2 checklist items complete and updated validation command.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Added a strategy-catalog entry for `sg_restrict_public_ports` so remediation options now expose guided EC2.53 schema for access-mode selection and conditional CIDR inputs.
+- Added CIDR normalization in SG bundle generation (`ip_network(..., strict=False)`) and mapped normalized values into:
+  - Terraform variable defaults (`allowed_cidr`, `allowed_cidr_ipv6`)
+  - CloudFormation parameter defaults (`AllowedCidr`, `AllowedCidrIpv6`)
+- Enforced revoke-default gating from guided choice:
+  - `close_and_revoke` => Terraform `remove_existing_public_rules` default `true`
+  - all other access modes => default `false`
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py -k "ec2_53 or sg_restrict"` (pass: `13 passed, 89 deselected`)
+- `./venv/bin/ruff check backend/services/remediation_strategy.py backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+
+**Technical debt / gotchas:**
+- `sg_restrict_public_ports_guided` currently uses `risk_level="low"` so unspecialized risk-evaluation fallback does not hard-fail run creation; a dedicated EC2.53 risk-check specialization should be added when broader guided-choice rollout continues.
+- Conditional visibility for `allowed_cidr` and `allowed_cidr_ipv6` uses `visible_when.equals` list semantics (`["restrict_to_ip", "restrict_to_cidr"]`), which frontend rendering must interpret as multi-value match when Task 9 UI work lands.
+
+**Open questions / TODOs:**
+- None for Task 2 scope.
+
+## Emergency hard-delete: ECR repos + RDS databases/snapshots cleanup (eu-north-1) (2026-03-04)
+
+**Task:** On user request for billing refund preparation, force-delete all remaining ECR repositories and fully delete RDS databases (and confirm snapshot cleanup) in `eu-north-1`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this hard-delete task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- ECR cleanup:
+  - Deleted private repository `security-autopilot-dev-saas-worker` with `--force` (all images removed).
+  - Deleted private repository `security-autopilot-dev-saas-api` with `--force` (all images removed).
+  - Verified private repositories list is empty in `eu-north-1`.
+  - Verified ECR public repositories list is empty.
+- RDS cleanup:
+  - Deleted DB instance `arch1-claims-db-a2` with `--skip-final-snapshot --delete-automated-backups`.
+  - Deleted DB instance `security-autopilot-db-main` with `--skip-final-snapshot --delete-automated-backups`.
+  - Polled until both instances returned `DBInstanceNotFound` (fully deleted).
+  - Verified no remaining RDS DB instances in region.
+  - Verified no remaining DB snapshots (`describe-db-snapshots` empty).
+  - Verified no remaining DB cluster snapshots (`describe-db-cluster-snapshots` empty).
+  - Verified no remaining RDS instance automated backups (`describe-db-instance-automated-backups` empty).
+
+**Technical debt / gotchas:**
+- DB instances were deleted without final snapshots by explicit user direction, so point-in-time restore from these specific instances is no longer available.
+
+**Open questions / TODOs:**
+- If refund-support requires absolute zero residual billable artifacts, perform a final pass for non-runtime charge sources in `eu-north-1` (for example, unattached EBS volumes, EBS snapshots, S3 buckets/objects, CloudWatch log retention).
+
+## ECR private/public registry verification for refund shutdown (eu-north-1) (2026-03-04)
+
+**Task:** Validate whether ECR private/public repositories in the linked AWS Console pages represent active running services, and quantify remaining storage exposure in `eu-north-1`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this ECR verification task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Queried ECR Private in `eu-north-1` and found 2 repositories:
+  - `security-autopilot-dev-saas-worker`
+  - `security-autopilot-dev-saas-api`
+- Queried ECR Public registry and found no repositories for this account.
+- Measured ECR private image storage:
+  - `security-autopilot-dev-saas-worker`: `70` images, `16,836,867,219` bytes
+  - `security-autopilot-dev-saas-api`: `71` images, `16,959,486,012` bytes
+- Total ECR private stored image data: `33,796,353,231` bytes (approximately `31.48 GiB`).
+
+**Technical debt / gotchas:**
+- ECR repositories are registry storage and do not indicate active compute/runtime services by themselves.
+- ECR storage can still accrue charges even when all compute/services are stopped.
+
+**Open questions / TODOs:**
+- Confirm whether to force-delete both ECR repositories (and all images) to remove residual ECR storage charges before billing-review follow-up.
+
+## Emergency regional shutdown for billing refund (eu-north-1) (2026-03-04)
+
+**Task:** Stop all active/running services in `eu-north-1` so the account can be presented as inactive for billing-adjustment review.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this shutdown task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Confirmed AWS CLI identity:
+  - Account: `029037611564`
+  - Principal: `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+- Detected active runtime resources before stop:
+  - EC2: `i-0f773def2fade3d15` (`running`)
+  - RDS: `arch1-claims-db-a2` (`available`), `security-autopilot-db-main` (`available`)
+  - CloudTrail trail logging enabled (`management-events`)
+  - AWS Config recorder active (`default`, `recording=true`)
+  - GuardDuty detector enabled
+  - Security Hub subscribed
+  - Lambda SQS event source mappings enabled (4 mappings)
+  - EventBridge SecurityAutopilot rules enabled
+  - Lambda function reserved concurrency included non-zero worker (`security-autopilot-dev-worker=10`)
+- Executed shutdown/disable operations:
+  - EC2: stopped instance `i-0f773def2fade3d15`
+  - RDS: stopped instances `arch1-claims-db-a2` and `security-autopilot-db-main`
+  - CloudTrail: `stop-logging` on `management-events`
+  - AWS Config: `stop-configuration-recorder` on `default`
+  - GuardDuty: detector updated to disabled
+  - Security Hub: disabled subscription in region
+  - Lambda event source mappings: all 4 mappings set to disabled
+  - Lambda concurrency: set reserved concurrency to `0` on all regional functions
+  - EventBridge: disabled `SecurityAutopilotControlPlaneApiCallsRule-eu-north-1`, `SecurityAutopilotReconcileGlobalAllTenants-eu-north-1`, and `creating-events-in-cloudwatch`
+- Final verification (all inactive):
+  - EC2 active states (`pending/running/stopping`): none
+  - RDS non-stopped instances: none (both DBs are `stopped`)
+  - ECS/EKS clusters: none
+  - ELB/NAT/ASG>0/EMR active/Redshift/ElastiCache/OpenSearch/SageMaker active endpoints: none
+  - CloudTrail `IsLogging=false`
+  - Config recorder `recording=false`
+  - GuardDuty status `DISABLED`
+  - Security Hub `DescribeHub` now returns not subscribed
+  - Lambda event source mappings all `Disabled`
+  - Lambda reserved concurrency is `0` for all listed functions
+
+**Technical debt / gotchas:**
+- `stopped` RDS/EC2 resources still exist and can incur storage charges (for example, RDS/EC2 storage) even though active runtime is stopped.
+- AWS managed `DO-NOT-DELETE-AmazonInspector*` EventBridge rules remain enabled by AWS and were not force-disabled; Inspector account status was already reported disabled.
+
+**Open questions / TODOs:**
+- If billing support requires zero residual resource charges (not only zero active runtime), terminate/delete stopped EC2/RDS resources and any retained storage artifacts.
+
+## Live AWS CLI emergency stop: ECS service/cluster teardown in eu-north-1 (2026-03-04)
+
+**Task:** Verify whether ECS/Kubernetes is running in the connected AWS account and immediately stop/delete cost-driving ECS resources in `eu-north-1` on user request.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this emergency stop task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Verified active AWS CLI identity:
+  - Account: `029037611564`
+  - Principal: `arn:aws:iam::029037611564:user/AutoPilotAdmin`
+- Initial multi-region scan found ECS in `eu-north-1` and no discovered EKS clusters in enabled regions.
+- Confirmed `eu-north-1` ECS state before teardown:
+  - Cluster: `arch1_web_ingest_service-cluster`
+  - Service: `arch1_web_ingest_service`
+  - Running tasks: `0`
+  - Desired tasks: `1`
+- Performed immediate shutdown/teardown in `eu-north-1`:
+  - Set ECS service desired count to `0`
+  - Deleted ECS service (`--force`)
+  - Deleted ECS cluster
+- Verified post-delete state:
+  - `aws ecs list-clusters --region eu-north-1` -> no clusters returned
+  - `aws eks list-clusters --region eu-north-1` -> no clusters returned
+
+**Technical debt / gotchas:**
+- Cross-region ECS/EKS scans against non-enabled opt-in regions returned `UnrecognizedClientException` (`security token ... invalid`) and were excluded by rerunning with enabled-region filtering.
+
+**Open questions / TODOs:**
+- If cost-lockdown is desired account-wide, run a broader check for EC2/RDS/Lambda/EKS/ECS across all enabled regions and auto-stop nonessential workloads.
+
+## Phase 2 Interactive Remediation Task 1 input schema type expansion (2026-03-04)
+
+**Task:** Implement Task 1 from `docs/phase-2/interactive-remediation-tasks.md` by extending remediation strategy input schema field types/metadata and expanding `validate_strategy_inputs()` to support new input types with strict validation while preserving existing behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - Added new input field types (`select`, `boolean`, `cidr`, `number`), new optional schema metadata (`placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, `max`), and enhanced `validate_strategy_inputs()` paths for type-safe select/boolean/cidr/number validation with enum/options checks, CIDR parsing, and number bounds enforcement.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - Added focused strategy-input validation coverage for new types (valid and invalid paths), unknown-field rejection, and string/string_array regression behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/interactive-remediation-tasks.md** - Marked Task 1 checklist items complete, set doc status to `In progress`, and recorded the validation command used.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Introduced `StrategyInputSchemaField` metadata needed for guided-input rendering without altering existing registry behavior.
+- Preserved existing string and string-array normalization semantics while adding new validation branches for:
+  - `select`: string-only values with enum/options membership checks.
+  - `boolean`: strict boolean type enforcement.
+  - `cidr`: CIDR syntax validation with canonical network normalization.
+  - `number`: numeric type validation with optional `min`/`max` bounds.
+- Retained existing unknown-field rejection for `strategy_inputs`.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py -k "strategy_input or (invalid and strategy)"` (pass: `8 passed, 39 deselected`)
+- `./venv/bin/ruff check backend/services/remediation_strategy.py tests/test_remediation_runs_api.py` (pass)
+
+**Technical debt / gotchas:**
+- CIDR inputs are canonicalized via `ip_network(..., strict=False)` (for example, `10.0.0.1/24` normalizes to `10.0.0.0/24`), which callers should treat as expected normalized output.
+
+**Open questions / TODOs:**
+- None.
+
+## Frontend UX persistence: root landing default + theme/sidebar state persistence (2026-03-04)
+
+**Task:** Ensure root-domain default entry goes to `/landing` (not `/login`), persist user dark/light preference, and persist navbar (sidebar) expanded/contracted state.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ThemeProvider.tsx** — Made theme persistence explicit via `next-themes` storage key (`security-autopilot-theme`) and enabled browser color-scheme sync.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/layout.tsx** — Removed hardcoded `className="dark"` from `<html>` so persisted theme selection is not overridden by static markup.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/Sidebar.tsx** — Added persisted sidebar pin state using `localStorage` key `security-autopilot-sidebar-pinned`, so expanded/contracted preference survives reloads.
+- **/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md** — Updated root-route UX spec line to match actual behavior (`Unauthenticated -> /landing`).
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Verified root route behavior in `frontend/src/app/page.tsx` is already:
+  - authenticated + onboarding incomplete -> `/onboarding`
+  - authenticated + onboarding complete -> `/findings`
+  - unauthenticated -> `/landing`
+- Implemented durable UI preference persistence:
+  - theme choice now uses explicit, stable local storage key in theme provider.
+  - sidebar expanded/contracted preference is restored from local storage on load and written back on toggle.
+
+**Validation:**
+- `npm --prefix frontend run typecheck` (pass)
+- `npm --prefix frontend run lint -- src/components/ThemeProvider.tsx src/app/layout.tsx src/components/layout/Sidebar.tsx src/app/page.tsx` (pass with pre-existing non-blocking warnings in `Sidebar.tsx` about `<img>` usage and unused `animate` prop)
+
+**Technical debt / gotchas:**
+- Sidebar currently persists the desktop pin state (expanded-by-default vs collapsed-by-default). Mobile drawer open/closed state is intentionally session-ephemeral.
+- Existing `Sidebar.tsx` lint warnings (`@next/next/no-img-element`, unused `animate` prop) remain unchanged and pre-date this task’s behavior changes.
+
+**Open questions / TODOs:**
+- None.
+
+## Phase 2 Task 11 retroactive verification script for S3.1 CF no-op runs (2026-03-04)
+
+**Task:** Implement Task 11 by adding a one-time script that marks legacy S3.1 CloudFormation no-op remediation runs as `verification_required` with a UI-banner flag, and add unit coverage for match/no-match behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/scripts/check_s3_cf_noop_runs.py** - Added retroactive check script with reusable `apply_retroactive_check()` logic, SQL-backed store, schema-tolerant match query (`action_type`, `format`, `status`), run updates (`verification_required` plus banner flags), and PM-friendly JSON/log summary output.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_check_s3_cf_noop_runs.py** - Added required unit tests covering (1) matching runs all updated and (2) zero-match clean exit with no writes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** - Marked Task 11 as completed and added implementation/validation references.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - Added discoverability entry.
+
+**What was done (verified):**
+- Implemented `scripts/check_s3_cf_noop_runs.py` with:
+  - target match criteria `action_type=s3_block_public_access`, `format=cloudformation`, `status=completed`,
+  - update path to set `status=verification_required` when schema supports it,
+  - banner flag marking (dedicated column when present, plus artifact flags for fallback/UI compatibility),
+  - idempotent zero-match behavior and summary output suitable for PM review.
+- Added focused unit tests for required cases:
+  - mock DB with matches -> all runs updated,
+  - mock DB with no matches -> no writes and clean summary.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_check_s3_cf_noop_runs.py` (pass: `2 passed`)
+- `./venv/bin/ruff check scripts/check_s3_cf_noop_runs.py tests/test_check_s3_cf_noop_runs.py` (pass)
+
+**Technical debt / gotchas:**
+- If `remediation_runs.status` is an enum that does not include `verification_required`, script falls back to banner-only marking and logs a warning instead of hard-failing.
+
+**Open questions / TODOs:**
+- Confirm production schema includes `verification_required` in `remediation_runs.status` (or approve banner-only fallback semantics) before enabling automatic scheduled execution.
+
+## Phase 2 Task 10 post-fix access guidance in bundle READMEs (2026-03-04)
+
+**Task:** Implement Task 10 in `backend/services/pr_bundle.py` by adding post-fix operator guidance (`what changes`, `how to access now`, `verify`, `rollback`) for control families `EC2.53`, `S3.2`, `S3.5`, and `SSM.7` in Terraform README content and CloudFormation instruction steps, with concrete command examples.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** — Expanded Terraform README append path with control-specific post-fix guidance blocks for `S3.2`, `EC2.53`, `S3.5`, and `SSM.7`; added concrete commands for SSM Session Manager access, CloudFront usage checks, HTTPS-only validation, and SSM private sharing workflow/rollback. Updated CloudFormation step builders for `S3.2`, `EC2.53`, `S3.5`, and `SSM.7` to include explicit `what changes`, `how to access now`, `verify`, and `rollback` instruction lines.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** — Added required string assertions for post-fix guidance in Terraform README and CloudFormation instructions across `S3.2`, `EC2.53`, `S3.5`, and `SSM.7`; updated existing S3.2 README guardrail assertions to match the new guidance structure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/phase-2/remediation-safety-tasks.md** — Marked Task 10 as completed and replaced implementation TODO text with actual implementation/validation details.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** — Logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** — Added discoverability entry.
+
+**What was done (verified):**
+- Added control-specific README sections for Terraform bundles with the required four-part post-fix guidance format:
+  - `S3.2`: includes CloudFront usage note + public-access-block verify/rollback commands.
+  - `EC2.53`: includes SSM Session Manager access command + SG rule verify/rollback commands.
+  - `S3.5`: includes explicit HTTPS requirement + policy/curl verify/rollback commands.
+  - `SSM.7`: includes private sharing guidance (`modify-document-permission`) + setting verify/rollback commands.
+- Updated CloudFormation instruction steps for the same controls to include the same four guidance categories and command-level operator checks.
+- Added/updated unit tests to enforce these guidance strings per control in both Terraform README and CloudFormation instructions.
+
+**Validation:**
+- `./venv/bin/python -m py_compile backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+- `./venv/bin/ruff check backend/services/pr_bundle.py tests/test_step7_components.py` (pass)
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_step7_components.py` (pass: `98 passed`)
+
+**Technical debt / gotchas:**
+- Guidance commands intentionally use `<...>` placeholders for operator-provided IDs/resources where the bundle cannot reliably infer runtime-specific targets (for example, instance IDs used for SSM session start checks).
+
+**Open questions / TODOs:**
+- None.
+
 ## Phase 2 Config.1 robustness patch + Live Test D1/D2 rerun (2026-03-04)
 
 **Task:** Close the two Live Test D Config.1 robustness gaps by patching `aws_config_enabled` bundle generation (`pr_bundle.py`), adding Step 7 unit tests, and rerunning Live Test D scope `D1`/`D2` only.
@@ -15503,3 +17095,57 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - Decide whether delete endpoint must hard-fail when executor worker is disabled.
 - Decide runtime integration point for closure cycle and policy-preservation enforcement in live path.
+## 2026-03-04: Completed i18n landing page refactoring
+
+## Legal Documents Rewrite + /legal Pages (2026-03-07)
+
+**Task:** Rewrite both draft legal documents (Privacy Policy + Terms & Conditions) from a consulting-firm model to a production-grade SaaS model for Ocypheris Autopilot. Implement /legal/privacy and /legal/terms pages in the Next.js frontend (Phase 3 TODO).
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/legal/layout.tsx` — [NEW] Shared layout for all /legal/* pages (header + nav + footer)
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/legal/privacy/page.tsx` — [NEW] Full Privacy Policy page (13 sections, plain inline styles)
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/legal/terms/page.tsx` — [NEW] Full Terms of Service page (18 sections, plain inline styles, write-access callout)
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/LandingFooter.tsx` — Updated /privacy → /legal/privacy, /terms → /legal/terms
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/signup/page.tsx` — Consent text now links to /legal/terms and /legal/privacy
+- `/Users/marcomaher/AWS Security Autopilot/docs/legal/Ocypheris_Privacy_Policy.docx` — [NEW] Final DOCX export
+- `/Users/marcomaher/AWS Security Autopilot/docs/legal/Ocypheris_Terms_and_Conditions.docx` — [NEW] Final DOCX export
+- `/Users/marcomaher/AWS Security Autopilot/scripts/generate_legal_docs.py` — [NEW] DOCX generation script
+
+**What was done (verified):**
+- Completely rewrote both documents to reflect SaaS model (subscription, self-serve, AWS IAM role access, automated remediations with approval gate, evidence packs)
+- Key changes: Egypt governing law (CRCICA arbitration Cairo), eu-north-1 data residency, bank transfer billing, Write-Role liability clause, GDPR + CCPA rights
+- Implemented /legal/layout.tsx, /legal/privacy, /legal/terms with zero external CSS dependencies (plain inline styles)
+- Updated footer links and signup consent text to point to live /legal pages
+- Completed Phase 3 TODO: Implement Legal Pages
+
+**Validation:**
+- `cd frontend && npx tsc --noEmit` (pass: no errors)
+- `python3 scripts/generate_legal_docs.py` (pass: both .docx files written to docs/legal/)
+
+**Technical debt / gotchas:**
+- Pages use plain inline styles intentionally (Tailwind v4 typography plugin not installed). If @tailwindcss/typography is added in the future, the pages can be migrated to prose classes.
+- Phase 3 todo.md still shows the /legal layout and page items as unchecked — update docs/phase-3/todo.md to mark them complete.
+
+**Open questions / TODOs:**
+- Update docs/phase-3/todo.md to mark /legal pages as complete.
+- Consider deploying to production after reviewing content with a legal professional.
+
+## Cookie Policy Addition (2026-03-07)
+
+**Task:** Create a dedicated Cookie Policy page and document for Ocypheris Autopilot. Update frontend footers to include the link.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/legal/cookies/page.tsx` — [NEW] Full Cookie Policy page
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx` — Added link to FOOTER_LINKS
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/faq/page.tsx` — Added link to FOOTER_LINKS
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/about/page.tsx` — Added link to FOOTER_LINKS
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/security/page.tsx` — Added link to FOOTER_LINKS
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/LandingFooter.tsx` — Added link to FOOTER_LINKS
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/signup/page.tsx` — Added Cookie Policy to signup consent text
+- `/Users/marcomaher/AWS Security Autopilot/scripts/generate_cookie_doc.py` — [NEW] Script to generate DOCX
+- `/Users/marcomaher/AWS Security Autopilot/docs/legal/Ocypheris_Cookie_Policy.docx` — [NEW] Final DOCX export
+
+**What was done:**
+- Written full Cookie Policy explicitly outlining the minimal use of cookies and local storage (focusing on JWTs, CSRF, theme preference, and cloud routing).
+- Mentioned that analytics are currently disabled to reinforce trust.
+- Regenerated the `.docx` document and appended the necessary links across all frontend entry points.

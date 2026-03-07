@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover
     from scripts.lib.no_ui_agent_client import SaaSApiClient
 
 
-DEFAULT_API_BASE = "https://api.valensjewelry.com"
+DEFAULT_API_BASE = "https://api.ocypheris.com"
 DEFAULT_REGION = "eu-north-1"
 DEFAULT_CONTROLS = "Config.1,SSM.7,EC2.7,EC2.182"
 DEFAULT_CLIENT_TIMEOUT_SEC = 30

@@ -40,9 +40,9 @@ LOG_LEVEL="${LOG_LEVEL:-$(read_env_file_value LOG_LEVEL || true)}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
 FRONTEND_URL="${FRONTEND_URL:-$(read_env_file_value FRONTEND_URL || true)}"
-FRONTEND_URL="${FRONTEND_URL:-https://valensjewelry.com}"
+FRONTEND_URL="${FRONTEND_URL:-https://ocypheris.com}"
 CORS_ORIGINS="${CORS_ORIGINS:-$(read_env_file_value CORS_ORIGINS || true)}"
-CORS_ORIGINS="${CORS_ORIGINS:-https://valensjewelry.com,http://localhost:3000}"
+CORS_ORIGINS="${CORS_ORIGINS:-https://ocypheris.com,http://localhost:3000}"
 
 CFN_FORWARDER_TEMPLATE_URL="${CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL:-$(read_env_file_value CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL || true)}"
 SAAS_ADMIN_EMAILS_VALUE="${SAAS_ADMIN_EMAILS:-$(read_env_file_value SAAS_ADMIN_EMAILS || true)}"
@@ -66,7 +66,7 @@ DATABASE_URL="${DATABASE_URL:-$(read_env_file_value DATABASE_URL || true)}"
 JWT_SECRET="${JWT_SECRET:-$(read_env_file_value JWT_SECRET || true)}"
 CONTROL_PLANE_EVENTS_SECRET="${CONTROL_PLANE_EVENTS_SECRET:-$(read_env_file_value CONTROL_PLANE_EVENTS_SECRET || true)}"
 
-API_DOMAIN="${SAAS_API_DOMAIN:-api.valensjewelry.com}"
+API_DOMAIN="${SAAS_API_DOMAIN:-api.ocypheris.com}"
 CERT_ARN="${SAAS_CERTIFICATE_ARN:-}"
 
 ENABLE_WORKER="${SAAS_SERVERLESS_ENABLE_WORKER:-false}"

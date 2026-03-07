@@ -105,7 +105,7 @@ def test_multi_account_campaign_aggregates_per_account_results(tmp_path: Path, m
     exit_code = campaign.main(
         [
             "--api-base",
-            "https://api.valensjewelry.com",
+            "https://api.ocypheris.com",
             "--region",
             "eu-north-1",
             "--controls",
@@ -173,7 +173,7 @@ def test_multi_account_campaign_overall_passed_false_if_any_account_fails(tmp_pa
     exit_code = campaign.main(
         [
             "--api-base",
-            "https://api.valensjewelry.com",
+            "https://api.ocypheris.com",
             "--region",
             "eu-north-1",
             "--controls",

@@ -40,8 +40,16 @@ from backend.services.direct_fix_bridge import (
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
 from backend.services.remediation_strategy import (
+    build_remediation_state_simulation,
+    get_blast_radius,
+    get_estimated_resolution_time,
+    get_rollback_command,
+    get_strategy,
+    get_impact_summary,
     list_mode_options_for_action_type,
     list_strategies_for_action_type,
+    supports_immediate_reeval,
+    strategy_supports_state_simulation,
     validate_strategy,
 )
 from backend.services.root_credentials_workflow import (
@@ -64,6 +72,15 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
         "iam_root_key_delete",
+    }
+)
+
+_RUNTIME_CONTEXT_OPTION_STRATEGIES = frozenset(
+    {
+        "s3_bucket_encryption_kms",
+        "config_enable_account_local_delivery",
+        "config_enable_centralized_delivery",
+        "cloudtrail_enable_guided",
     }
 )
 
@@ -243,6 +260,22 @@ class RemediationPreviewResponse(BaseModel):
     compliant: bool = Field(..., description="True if already compliant; no fix needed")
     message: str = Field(..., description="Human-readable pre-check result")
     will_apply: bool = Field(..., description="True if not compliant and fix would be applied")
+    impact_summary: str | None = Field(
+        default=None,
+        description="Optional human-readable impact summary composed from selected strategy choices.",
+    )
+    before_state: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Best-effort snapshot of relevant resource state before apply.",
+    )
+    after_state: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Best-effort predicted resource state after apply.",
+    )
+    diff_lines: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="Line-by-line before/after delta entries.",
+    )
 
 
 class DependencyCheckResponse(BaseModel):
@@ -267,6 +300,34 @@ class RemediationOptionResponse(BaseModel):
     warnings: list[str]
     supports_exception_flow: bool
     exception_only: bool
+    impact_text: str | None = None
+    rollback_command: str | None = None
+    estimated_resolution_time: str = "12-24 hours"
+    supports_immediate_reeval: bool = False
+    blast_radius: Literal["account", "resource", "access_changing"] = "resource"
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional strategy-specific runtime context for UI defaults and helper options.",
+    )
+
+
+class TriggerReevalRequest(BaseModel):
+    """Optional payload to scope immediate re-evaluation behavior by strategy."""
+
+    strategy_id: str | None = Field(default=None, description="Optional selected strategy ID.")
+
+
+class TriggerReevalResponse(BaseModel):
+    """Response for POST /actions/{id}/trigger-reeval."""
+
+    message: str = "Immediate re-evaluation jobs queued"
+    tenant_id: str
+    action_id: str
+    strategy_id: str | None = None
+    estimated_resolution_time: str
+    supports_immediate_reeval: bool
+    scope: dict[str, str] = Field(default_factory=dict)
+    enqueued_jobs: int
 
 
 class RemediationOptionsResponse(BaseModel):
@@ -916,13 +977,19 @@ async def get_remediation_options(
         # Defensive validation: ensures registry entries stay internally consistent.
         validate_strategy(action.action_type, strategy["strategy_id"], strategy["mode"])
         runtime_signals: dict[str, Any] = {}
-        if strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES:
+        if (
+            strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES
+            or strategy["strategy_id"] in _RUNTIME_CONTEXT_OPTION_STRATEGIES
+        ):
             runtime_signals = collect_runtime_risk_signals(
                 action=action,
                 strategy=strategy,
                 strategy_inputs={},
                 account=account,
             )
+        runtime_context = runtime_signals.get("context")
+        if not isinstance(runtime_context, dict):
+            runtime_context = {}
         risk_snapshot = evaluate_strategy_impact(
             action,
             strategy,
@@ -951,6 +1018,21 @@ async def get_remediation_options(
                 warnings=risk_snapshot["warnings"],
                 supports_exception_flow=strategy["supports_exception_flow"],
                 exception_only=strategy["exception_only"],
+                impact_text=strategy.get("impact_text"),
+                rollback_command=get_rollback_command(action.action_type, strategy["strategy_id"]),
+                estimated_resolution_time=get_estimated_resolution_time(
+                    action.action_type,
+                    strategy["strategy_id"],
+                ),
+                supports_immediate_reeval=supports_immediate_reeval(
+                    action.action_type,
+                    strategy["strategy_id"],
+                ),
+                blast_radius=get_blast_radius(
+                    action.action_type,
+                    strategy["strategy_id"],
+                ),
+                context=runtime_context,
             )
         )
 
@@ -962,6 +1044,157 @@ async def get_remediation_options(
         manual_high_risk=root_required,
         pre_execution_notice=pre_execution_notice,
         runbook_url=runbook_url,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /actions/{id}/trigger-reeval
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{action_id}/trigger-reeval",
+    response_model=TriggerReevalResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger immediate re-evaluation",
+    description=(
+        "Enqueue targeted inventory reconciliation shard jobs for this action so "
+        "security posture/status can be re-evaluated after remediation apply."
+    ),
+    responses={
+        400: {"description": "Invalid action/strategy selection or unsupported control"},
+        404: {"description": "Action or account not found"},
+        503: {"description": "Queue unavailable or SQS send failed"},
+    },
+)
+async def trigger_action_reevaluation(
+    action_id: Annotated[str, Path(description="Action UUID")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+    body: TriggerReevalRequest = Body(default_factory=TriggerReevalRequest),
+) -> TriggerReevalResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+
+    try:
+        action_uuid = uuid.UUID(action_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Invalid action_id", "detail": "action_id must be a valid UUID"},
+        )
+
+    action_result = await db.execute(
+        select(Action).where(Action.id == action_uuid, Action.tenant_id == tenant_uuid)
+    )
+    action = action_result.scalar_one_or_none()
+    if not action:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
+        )
+
+    strategy_id = (body.strategy_id or "").strip() or None
+    if strategy_id and get_strategy(action.action_type, strategy_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Invalid strategy_id",
+                "detail": f"strategy_id '{strategy_id}' is not valid for action_type '{action.action_type}'.",
+            },
+        )
+
+    estimated_resolution_time = get_estimated_resolution_time(action.action_type, strategy_id)
+    supports_reeval = supports_immediate_reeval(action.action_type, strategy_id)
+    if not supports_reeval:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Immediate re-evaluation not supported",
+                "detail": "Immediate re-evaluation is not supported for this remediation strategy.",
+            },
+        )
+
+    if not settings.has_inventory_reconcile_queue:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Action re-evaluation unavailable",
+                "detail": "Queue URL not configured. Set SQS_INVENTORY_RECONCILE_QUEUE_URL.",
+            },
+        )
+
+    account = await get_account_for_tenant(tenant_uuid, action.account_id, db)
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Account not found",
+                "detail": "No AWS account found for this action in the current tenant.",
+            },
+        )
+
+    account_regions = list(account.regions or [])
+    action_region = (action.region or "").strip() or None
+    if action_region is not None and action_region not in set(account_regions):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Action region not configured",
+                "detail": "Action region is not in the account's configured regions.",
+            },
+        )
+
+    target_regions = [action_region] if action_region else (account_regions or [settings.AWS_REGION])
+    services = settings.control_plane_inventory_services_list
+    max_resources = int(settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD or 500)
+
+    queue_url = settings.SQS_INVENTORY_RECONCILE_QUEUE_URL.strip()
+    queue_region = parse_queue_region(queue_url)
+    sqs = boto3.client("sqs", region_name=queue_region)
+    now = datetime.now(timezone.utc).isoformat()
+    enqueued_jobs = 0
+
+    try:
+        for region in target_regions:
+            for service in services:
+                payload = build_reconcile_inventory_shard_job_payload(
+                    tenant_id=tenant_uuid,
+                    account_id=action.account_id,
+                    region=region,
+                    service=service,
+                    created_at=now,
+                    sweep_mode="global",
+                    max_resources=max_resources,
+                )
+                sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+                enqueued_jobs += 1
+    except ClientError as e:
+        logger.exception("SQS send_message failed for trigger_action_reevaluation: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Action re-evaluation unavailable",
+                "detail": "Could not enqueue re-evaluation jobs. Please try again later.",
+            },
+        ) from e
+
+    scope: dict[str, str] = {"account_id": action.account_id}
+    if action_region:
+        scope["region"] = action_region
+
+    return TriggerReevalResponse(
+        message="Immediate re-evaluation jobs queued",
+        tenant_id=str(tenant_uuid),
+        action_id=str(action.id),
+        strategy_id=strategy_id,
+        estimated_resolution_time=estimated_resolution_time,
+        supports_immediate_reeval=supports_reeval,
+        scope=scope,
+        enqueued_jobs=enqueued_jobs,
     )
 
 
@@ -1022,48 +1255,8 @@ async def get_remediation_preview(
             detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
         )
 
-    if mode == "pr_only":
-        return RemediationPreviewResponse(
-            compliant=False,
-            message="Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
-            will_apply=False,
-        )
-
-    supported_direct_fix_action_types = get_supported_direct_fix_action_types()
-    if not supported_direct_fix_action_types:
-        return RemediationPreviewResponse(
-            compliant=False,
-            message="Direct-fix preview is unavailable in this API deployment. Use PR bundle mode.",
-            will_apply=False,
-        )
-    if action.action_type not in supported_direct_fix_action_types:
-        return RemediationPreviewResponse(
-            compliant=False,
-            message=f"Action type '{action.action_type}' does not support direct fix.",
-            will_apply=False,
-        )
-
-    acc_result = await db.execute(
-        select(AwsAccount).where(
-            AwsAccount.tenant_id == tenant_uuid,
-            AwsAccount.account_id == action.account_id,
-        )
-    )
-    account = acc_result.scalar_one_or_none()
-    if not account:
-        return RemediationPreviewResponse(
-            compliant=False,
-            message="AWS account not found for this action.",
-            will_apply=False,
-        )
-    if not account.role_write_arn:
-        return RemediationPreviewResponse(
-            compliant=False,
-            message="WriteRole not configured. Add WriteRole in account settings.",
-            will_apply=False,
-        )
-
     parsed_strategy_inputs: dict[str, Any] | None = None
+    strategy_inputs_error: str | None = None
     if strategy_inputs_json:
         try:
             raw = json.loads(strategy_inputs_json)
@@ -1072,11 +1265,110 @@ async def get_remediation_preview(
             else:
                 raise ValueError("strategy_inputs must be a JSON object")
         except Exception as exc:
-            return RemediationPreviewResponse(
-                compliant=False,
-                message=f"Invalid strategy_inputs: {exc}",
-                will_apply=False,
+            if mode == "pr_only":
+                parsed_strategy_inputs = None
+            else:
+                strategy_inputs_error = str(exc)
+
+    selected_strategy = get_strategy(action.action_type, strategy_id) if strategy_id else None
+    needs_state_simulation = (
+        selected_strategy is not None and strategy_supports_state_simulation(selected_strategy["strategy_id"])
+    )
+
+    account: AwsAccount | None = None
+    if needs_state_simulation:
+        acc_result = await db.execute(
+            select(AwsAccount).where(
+                AwsAccount.tenant_id == tenant_uuid,
+                AwsAccount.account_id == action.account_id,
             )
+        )
+        account = acc_result.scalar_one_or_none()
+
+    runtime_signals: dict[str, Any] = {}
+    if needs_state_simulation and selected_strategy is not None:
+        runtime_signals = collect_runtime_risk_signals(
+            action=action,
+            strategy=selected_strategy,
+            strategy_inputs=parsed_strategy_inputs or {},
+            account=account,
+        )
+
+    state_simulation = build_remediation_state_simulation(
+        strategy_id=strategy_id,
+        strategy_inputs=parsed_strategy_inputs,
+        runtime_signals=runtime_signals,
+    )
+    impact_summary = get_impact_summary(strategy_id, parsed_strategy_inputs) or None
+
+    def _preview_response(
+        *,
+        compliant: bool,
+        message: str,
+        will_apply: bool,
+        before_state: dict[str, Any] | None = None,
+        after_state: dict[str, Any] | None = None,
+        diff_lines: list[dict[str, str]] | None = None,
+    ) -> RemediationPreviewResponse:
+        return RemediationPreviewResponse(
+            compliant=compliant,
+            message=message,
+            will_apply=will_apply,
+            impact_summary=impact_summary,
+            before_state=before_state if isinstance(before_state, dict) else state_simulation["before_state"],
+            after_state=after_state if isinstance(after_state, dict) else state_simulation["after_state"],
+            diff_lines=diff_lines if isinstance(diff_lines, list) else state_simulation["diff_lines"],
+        )
+
+    if strategy_inputs_error:
+        return _preview_response(
+            compliant=False,
+            message=f"Invalid strategy_inputs: {strategy_inputs_error}",
+            will_apply=False,
+        )
+
+    if mode == "pr_only":
+        return _preview_response(
+            compliant=False,
+            message="Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
+            will_apply=False,
+        )
+
+    supported_direct_fix_action_types = get_supported_direct_fix_action_types()
+    if not supported_direct_fix_action_types:
+        return _preview_response(
+            compliant=False,
+            message="Direct-fix preview is unavailable in this API deployment. Use PR bundle mode.",
+            will_apply=False,
+        )
+    if action.action_type not in supported_direct_fix_action_types:
+        return _preview_response(
+            compliant=False,
+            message=f"Action type '{action.action_type}' does not support direct fix.",
+            will_apply=False,
+        )
+
+    if account is None:
+        acc_result = await db.execute(
+            select(AwsAccount).where(
+                AwsAccount.tenant_id == tenant_uuid,
+                AwsAccount.account_id == action.account_id,
+            )
+        )
+        account = acc_result.scalar_one_or_none()
+
+    if not account:
+        return _preview_response(
+            compliant=False,
+            message="AWS account not found for this action.",
+            will_apply=False,
+        )
+    if not account.role_write_arn:
+        return _preview_response(
+            compliant=False,
+            message="WriteRole not configured. Add WriteRole in account settings.",
+            will_apply=False,
+        )
 
     try:
         wr_session = await asyncio.to_thread(
@@ -1093,27 +1385,39 @@ async def get_remediation_preview(
             strategy_id,
             parsed_strategy_inputs,
         )
-        return RemediationPreviewResponse(
+        preview_before = state_simulation["before_state"]
+        preview_after = state_simulation["after_state"]
+        preview_diff_lines = state_simulation["diff_lines"]
+        if isinstance(getattr(preview, "before_state", None), dict) and preview.before_state:
+            preview_before = preview.before_state
+        if isinstance(getattr(preview, "after_state", None), dict) and preview.after_state:
+            preview_after = preview.after_state
+        if isinstance(getattr(preview, "diff_lines", None), list) and preview.diff_lines:
+            preview_diff_lines = preview.diff_lines
+        return _preview_response(
             compliant=preview.compliant,
             message=preview.message,
             will_apply=preview.will_apply,
+            before_state=preview_before,
+            after_state=preview_after,
+            diff_lines=preview_diff_lines,
         )
     except ClientError as e:
         code = e.response.get("Error", {}).get("Code", "Unknown")
-        return RemediationPreviewResponse(
+        return _preview_response(
             compliant=False,
             message=f"Could not assume WriteRole: {code}",
             will_apply=False,
         )
     except DirectFixModuleUnavailable as e:
-        return RemediationPreviewResponse(
+        return _preview_response(
             compliant=False,
             message=str(e),
             will_apply=False,
         )
     except Exception as e:
         logger.exception("Remediation preview failed for action %s: %s", action_id, e)
-        return RemediationPreviewResponse(
+        return _preview_response(
             compliant=False,
             message=f"Preview failed: {e}",
             will_apply=False,

@@ -1,0 +1,6 @@
+[     880ms] ReferenceError: __name is not defined
+    at https://frontend.maromaher54.workers.dev/:10:11
+    at https://frontend.maromaher54.workers.dev/:17:11
+[    2950ms] [ERROR] Access to fetch at 'https://api.valensjewelry.com/api/auth/me' from origin 'https://frontend.maromaher54.workers.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://frontend.maromaher54.workers.dev/:0
+[    2951ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://api.valensjewelry.com/api/auth/me:0
+[    3628ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://frontend.maromaher54.workers.dev/about?_rsc=1txbx:0

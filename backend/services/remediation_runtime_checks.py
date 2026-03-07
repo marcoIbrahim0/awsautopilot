@@ -42,6 +42,7 @@ _KMS_ARN_PATTERN = re.compile(
     r"^arn:(aws|aws-us-gov|aws-cn):kms:[a-z0-9-]+:\d{12}:(key|alias)/[A-Za-z0-9/_+=,.@-]+$"
 )
 _S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
+_SECURITY_GROUP_ID_PATTERN = re.compile(r"\bsg-[0-9a-fA-F]{8,17}\b")
 
 
 def _error_code(exc: ClientError) -> str:
@@ -93,6 +94,106 @@ def _bucket_name_from_target_id(target_id: str | None) -> str | None:
         return candidate or None
 
     return tid
+
+
+def _security_group_id_from_target_id(target_id: str | None) -> str | None:
+    """Extract a security-group ID from an action target identifier."""
+    if not isinstance(target_id, str):
+        return None
+    tid = target_id.strip()
+    if not tid:
+        return None
+    match = _SECURITY_GROUP_ID_PATTERN.search(tid)
+    if match:
+        return match.group(0)
+    return None
+
+
+def _extract_public_admin_ports(permission: dict[str, Any], *, ipv6: bool) -> set[int]:
+    """
+    Return public admin ports (22/3389) exposed by one SG permission block.
+
+    We only consider tcp and all-protocol rules and treat 0.0.0.0/0 or ::/0 as public.
+    """
+    public_marker = "::/0" if ipv6 else "0.0.0.0/0"
+    ranges_key = "Ipv6Ranges" if ipv6 else "IpRanges"
+    ranges = permission.get(ranges_key)
+    if not isinstance(ranges, list):
+        return set()
+
+    has_public = False
+    cidr_key = "CidrIpv6" if ipv6 else "CidrIp"
+    for item in ranges:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get(cidr_key, "")).strip() == public_marker:
+            has_public = True
+            break
+    if not has_public:
+        return set()
+
+    protocol = str(permission.get("IpProtocol", "")).strip().lower()
+    if protocol not in {"tcp", "-1", "all"}:
+        return set()
+
+    # All protocols includes both admin ports by definition.
+    if protocol in {"-1", "all"}:
+        return {22, 3389}
+
+    from_port = _to_int(permission.get("FromPort"))
+    to_port = _to_int(permission.get("ToPort"))
+    if from_port is None or to_port is None:
+        return set()
+    start = min(from_port, to_port)
+    end = max(from_port, to_port)
+    ports: set[int] = set()
+    if start <= 22 <= end:
+        ports.add(22)
+    if start <= 3389 <= end:
+        ports.add(3389)
+    return ports
+
+
+def _policy_enforces_ssl_only(policy_json: str | None) -> bool:
+    """Best-effort check for a deny statement on insecure transport."""
+    normalized = _normalize_bucket_policy_document(policy_json)
+    if not normalized:
+        return False
+    try:
+        parsed = json.loads(normalized)
+    except (TypeError, ValueError):
+        return False
+    statements = parsed.get("Statement", [])
+    if isinstance(statements, dict):
+        statements = [statements]
+    if not isinstance(statements, list):
+        return False
+
+    for statement in statements:
+        if not isinstance(statement, dict):
+            continue
+        if str(statement.get("Effect", "")).lower() != "deny":
+            continue
+        condition = statement.get("Condition")
+        if not isinstance(condition, dict):
+            continue
+        bool_block = condition.get("Bool")
+        if not isinstance(bool_block, dict):
+            continue
+        secure_transport = bool_block.get("aws:SecureTransport")
+        if str(secure_transport).strip().lower() == "false":
+            return True
+    return False
+
+
+def _context_payload(signals: dict[str, Any]) -> dict[str, Any]:
+    """Return mutable context payload for API option rendering metadata."""
+    payload = signals.setdefault("context", {})
+    if isinstance(payload, dict):
+        return payload
+    payload = {}
+    signals["context"] = payload
+    return payload
 
 
 def _estimate_ssl_policy_size_bytes(bucket: str, exempt_principals: list[str]) -> int:
@@ -302,11 +403,185 @@ def collect_runtime_risk_signals(
             else:
                 signals["access_path_evidence_available"] = True
 
-    if strategy_id == "config_enable_centralized_delivery":
+    if strategy_id == "sg_restrict_public_ports_guided":
+        sg_id = _security_group_id_from_target_id(action.target_id)
+        evidence_payload = signals.setdefault("evidence", {})
+        if isinstance(evidence_payload, dict):
+            if sg_id:
+                evidence_payload["security_group_id"] = sg_id
+            else:
+                evidence_payload["security_group_probe_error"] = "Could not derive security group ID from target."
+        if sg_id:
+            session = _get_read_session()
+            if session is not None:
+                ec2 = session.client("ec2", region_name=action.region or None)
+                try:
+                    response = ec2.describe_security_groups(GroupIds=[sg_id])
+                    groups = response.get("SecurityGroups", [])
+                    if isinstance(groups, list) and groups:
+                        permissions = groups[0].get("IpPermissions", [])
+                        if isinstance(permissions, list):
+                            public_ipv4_ports: set[int] = set()
+                            public_ipv6_ports: set[int] = set()
+                            for permission in permissions:
+                                if not isinstance(permission, dict):
+                                    continue
+                                public_ipv4_ports.update(
+                                    _extract_public_admin_ports(permission, ipv6=False)
+                                )
+                                public_ipv6_ports.update(
+                                    _extract_public_admin_ports(permission, ipv6=True)
+                                )
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload["public_admin_ipv4_ports"] = sorted(public_ipv4_ports)
+                                evidence_payload["public_admin_ipv6_ports"] = sorted(public_ipv6_ports)
+                except ClientError as exc:
+                    if isinstance(evidence_payload, dict):
+                        evidence_payload["security_group_probe_error"] = _error_code(exc) or "DescribeSecurityGroupsFailed"
+                except Exception as exc:  # pragma: no cover - defensive
+                    if isinstance(evidence_payload, dict):
+                        evidence_payload["security_group_probe_error"] = f"{type(exc).__name__}"
+
+    if strategy_id == "s3_bucket_encryption_kms":
+        session = _get_read_session()
+        context_payload = _context_payload(signals)
+        if session is None:
+            context_payload["kms_key_options_error"] = read_probe_error or "ReadRole runtime probe unavailable."
+        else:
+            kms = session.client("kms", region_name=action.region or None)
+            options: list[dict[str, str]] = []
+            marker: str | None = None
+            try:
+                while True:
+                    kwargs: dict[str, Any] = {"Limit": 100}
+                    if marker:
+                        kwargs["Marker"] = marker
+                    resp = kms.list_aliases(**kwargs)
+                    aliases = resp.get("Aliases", [])
+                    if isinstance(aliases, list):
+                        for alias in aliases:
+                            if not isinstance(alias, dict):
+                                continue
+                            alias_name = str(alias.get("AliasName", "")).strip()
+                            alias_arn = str(alias.get("AliasArn", "")).strip()
+                            if not alias_name or not alias_arn:
+                                continue
+                            target_key_id = str(alias.get("TargetKeyId", "")).strip()
+                            label = alias_name
+                            if target_key_id:
+                                label = f"{alias_name} ({target_key_id})"
+                            options.append({"value": alias_arn, "label": label})
+                    if not resp.get("Truncated"):
+                        break
+                    marker = str(resp.get("NextMarker", "")).strip() or None
+                    if marker is None:
+                        break
+                # Keep AWS-managed alias first if present, then stable alphabetical order.
+                options.sort(
+                    key=lambda item: (
+                        0 if item["label"].startswith("alias/aws/s3") else 1,
+                        item["label"],
+                    )
+                )
+                if options:
+                    context_payload["kms_key_options"] = options
+            except ClientError as exc:
+                context_payload["kms_key_options_error"] = _error_code(exc) or "ListAliasesFailed"
+
+    if strategy_id == "cloudtrail_enable_guided":
+        context_payload = _context_payload(signals)
+        default_inputs: dict[str, Any] = {}
+        session = _get_read_session()
+        if session is None:
+            context_payload["default_inputs_error"] = read_probe_error or "ReadRole runtime probe unavailable."
+        else:
+            cloudtrail = session.client("cloudtrail", region_name=action.region or None)
+            try:
+                response = cloudtrail.describe_trails(includeShadowTrails=False)
+                trails = response.get("trailList", [])
+                if isinstance(trails, list) and trails:
+                    trail = trails[0] if isinstance(trails[0], dict) else {}
+                    trail_name = str(trail.get("Name", "")).strip()
+                    if trail_name:
+                        default_inputs["trail_name"] = trail_name
+                    if isinstance(trail.get("IsMultiRegionTrail"), bool):
+                        default_inputs["multi_region"] = bool(trail.get("IsMultiRegionTrail"))
+            except ClientError as exc:
+                context_payload["default_inputs_error"] = _error_code(exc) or "DescribeTrailsFailed"
+
+        if "trail_name" not in default_inputs:
+            default_inputs["trail_name"] = "security-autopilot-trail"
+        default_inputs.setdefault("create_bucket_policy", True)
+        default_inputs.setdefault("multi_region", True)
+        context_payload["default_inputs"] = default_inputs
+
+    if strategy_id in ("config_enable_centralized_delivery", "config_enable_account_local_delivery"):
+        session = _get_read_session()
+        context_payload = _context_payload(signals)
+        default_inputs: dict[str, Any] = {}
+        if session is not None:
+            config_client = session.client("config", region_name=action.region or None)
+            evidence_payload = signals.setdefault("evidence", {})
+            if isinstance(evidence_payload, dict):
+                try:
+                    recorder_resp = config_client.describe_configuration_recorders()
+                    recorders = recorder_resp.get("ConfigurationRecorders", [])
+                    if isinstance(recorders, list) and recorders:
+                        recorder = recorders[0] if isinstance(recorders[0], dict) else {}
+                        evidence_payload["config_recorder_exists"] = True
+                        recorder_name = str(recorder.get("name", "")).strip()
+                        if recorder_name:
+                            evidence_payload["config_recorder_name"] = recorder_name
+                        recording_group = recorder.get("recordingGroup", {})
+                        if isinstance(recording_group, dict):
+                            if recording_group.get("allSupported") is True:
+                                evidence_payload["config_recording_scope"] = "all_resources"
+                            elif recording_group:
+                                evidence_payload["config_recording_scope"] = "custom"
+                    else:
+                        evidence_payload["config_recorder_exists"] = False
+                except ClientError as exc:
+                    signals["config_recorder_probe_error"] = _error_code(exc) or "DescribeConfigurationRecordersFailed"
+
+                try:
+                    channel_resp = config_client.describe_delivery_channels()
+                    channels = channel_resp.get("DeliveryChannels", [])
+                    if isinstance(channels, list) and channels:
+                        channel = channels[0] if isinstance(channels[0], dict) else {}
+                        evidence_payload["config_delivery_channel_exists"] = True
+                        bucket_name = str(channel.get("s3BucketName", "")).strip()
+                        if bucket_name:
+                            evidence_payload["config_delivery_bucket_name"] = bucket_name
+                        kms_key_arn = str(channel.get("s3KmsKeyArn", "")).strip()
+                        if kms_key_arn:
+                            evidence_payload["config_delivery_kms_key_arn"] = kms_key_arn
+                    else:
+                        evidence_payload["config_delivery_channel_exists"] = False
+                except ClientError as exc:
+                    signals["config_delivery_channel_probe_error"] = _error_code(exc) or "DescribeDeliveryChannelsFailed"
+        elif account is not None:
+            context_payload["default_inputs_error"] = read_probe_error or "ReadRole runtime probe unavailable."
+
+        evidence_payload = signals.get("evidence")
+        if isinstance(evidence_payload, dict):
+            if evidence_payload.get("config_recorder_exists") is True:
+                default_inputs["recording_scope"] = "keep_existing"
+            elif evidence_payload.get("config_recorder_exists") is False:
+                default_inputs["recording_scope"] = "all_resources"
+
+            existing_bucket = str(evidence_payload.get("config_delivery_bucket_name", "")).strip()
+            fallback_bucket = f"security-autopilot-config-{(action.account_id or '').strip()}"
+            suggested_bucket = existing_bucket or fallback_bucket
+            if suggested_bucket:
+                default_inputs["delivery_bucket"] = suggested_bucket
+                default_inputs["existing_bucket_name"] = suggested_bucket
+                default_inputs["delivery_bucket_mode"] = "use_existing" if existing_bucket else "create_new"
+        if default_inputs:
+            context_payload["default_inputs"] = default_inputs
+
         bucket = str(strategy_inputs.get("delivery_bucket", "")).strip()
         if bucket:
             signals["evidence"]["delivery_bucket"] = bucket
-            session = _get_read_session()
             if session is None:
                 _mark_access_path_unavailable(read_probe_error or "Unable to validate Config delivery bucket.")
             else:
@@ -443,7 +718,9 @@ def collect_runtime_risk_signals(
                             evidence_payload["existing_bucket_policy_statement_count"] = statement_count
                             if statement_count > 0:
                                 evidence_payload["existing_bucket_policy_json"] = normalized_policy
+                            evidence_payload["s3_ssl_deny_present"] = _policy_enforces_ssl_only(normalized_policy)
                         else:
+                            evidence_payload["s3_ssl_deny_present"] = False
                             evidence_payload["existing_bucket_policy_parse_error"] = (
                                 "GetBucketPolicy returned invalid JSON."
                             )
@@ -455,6 +732,7 @@ def collect_runtime_risk_signals(
                         evidence_payload = signals.setdefault("evidence", {})
                         if isinstance(evidence_payload, dict):
                             evidence_payload["existing_bucket_policy_statement_count"] = 0
+                            evidence_payload["s3_ssl_deny_present"] = False
                     else:
                         signals["s3_policy_analysis_possible"] = False
                         signals["s3_policy_analysis_error"] = code or "GetBucketPolicyFailed"
@@ -551,10 +829,13 @@ def collect_runtime_risk_signals(
     evidence = signals.get("evidence")
     if isinstance(evidence, dict) and not evidence:
         signals.pop("evidence", None)
+    context = signals.get("context")
+    if isinstance(context, dict) and not context:
+        signals.pop("context", None)
 
     # If no meaningful signal beyond metadata was produced, return empty.
-    meaningful_keys = set(signals.keys()) - {"collected_at", "strategy_id", "evidence"}
-    if not meaningful_keys and "evidence" not in signals:
+    meaningful_keys = set(signals.keys()) - {"collected_at", "strategy_id", "evidence", "context"}
+    if not meaningful_keys and "evidence" not in signals and "context" not in signals:
         return {}
 
     # Include policy size threshold for evaluator diagnostics.

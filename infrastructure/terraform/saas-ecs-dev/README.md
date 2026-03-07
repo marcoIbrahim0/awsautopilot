@@ -49,12 +49,12 @@ After apply, Terraform prints the ALB DNS name and ALB ARN.
 
 ## 3) DNS + TLS (recommended)
 
-Recommended hostname: `api.valensjewelry.com`.
+Recommended hostname: `api.ocypheris.com`.
 
-1. Request an ACM cert in `eu-north-1` for `api.valensjewelry.com` (DNS validation).
+1. Request an ACM cert in `eu-north-1` for `api.ocypheris.com` (DNS validation).
 2. Add the ACM validation CNAME in your DNS provider.
 3. Add a CNAME:
-   - `api.valensjewelry.com` -> `<alb_dns_name>`
+   - `api.ocypheris.com` -> `<alb_dns_name>`
 4. Set `certificate_arn` in `terraform.tfvars` and re-apply to enable the 443 listener + HTTP->HTTPS redirect.
 
 ## 4) Attach WAF (SEC-010)
@@ -68,6 +68,6 @@ bash /Users/marcomaher/AWS Security Autopilot/scripts/deploy_phase3_security.sh 
 
 ## 5) Update reconcile scheduler to stop calling ngrok
 
-Update `security-autopilot-reconcile-scheduler` so `SaaSBaseUrl=https://api.valensjewelry.com` and
+Update `security-autopilot-reconcile-scheduler` so `SaaSBaseUrl=https://api.ocypheris.com` and
 `ControlPlaneSecret` matches your API env `CONTROL_PLANE_EVENTS_SECRET`.
 

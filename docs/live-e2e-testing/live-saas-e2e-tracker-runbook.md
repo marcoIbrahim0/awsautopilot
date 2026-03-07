@@ -5,8 +5,8 @@ This runbook operationalizes end-to-end live testing for AWS Security Autopilot 
 ## Scope and Source of Truth
 
 - Primary tracker: `docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`
-- Live frontend target: `https://dev.valensjewelry.com`
-- Live backend target: `https://api.valensjewelry.com`
+- Live frontend target: `https://dev.ocypheris.com`
+- Live backend target: `https://api.ocypheris.com`
 - Required execution order: Wave 1 -> Wave 9 (Tests 01 -> 35)
 
 ## Artifacts Produced Per Run

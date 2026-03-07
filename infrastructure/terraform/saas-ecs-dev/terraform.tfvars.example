@@ -12,5 +12,5 @@ control_plane_events_secret = "replace-with-strong-random-secret"
 certificate_arn = ""
 
 # Optional: if you want API_PUBLIC_URL to be https://<api_domain>
-api_domain = "api.valensjewelry.com"
+api_domain = "api.ocypheris.com"
 

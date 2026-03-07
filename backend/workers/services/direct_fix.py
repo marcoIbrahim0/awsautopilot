@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
@@ -69,6 +70,9 @@ class RemediationPreviewResult:
     compliant: bool
     message: str
     will_apply: bool
+    before_state: dict[str, Any] = field(default_factory=dict)
+    after_state: dict[str, Any] = field(default_factory=dict)
+    diff_lines: list[dict[str, str]] = field(default_factory=list)
 
 
 def run_direct_fix(

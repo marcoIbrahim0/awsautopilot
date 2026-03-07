@@ -29,12 +29,12 @@ Parameters:
 
   FrontendUrl:
     Type: String
-    Default: https://valensjewelry.com
+    Default: https://ocypheris.com
     Description: FRONTEND_URL env var.
 
   CorsOrigins:
     Type: String
-    Default: https://valensjewelry.com
+    Default: https://ocypheris.com
     Description: CORS_ORIGINS env var (comma-separated).
 
   WorkerPool:
@@ -68,7 +68,7 @@ Parameters:
   # TLS (optional)
   ApiDomain:
     Type: String
-    Default: api.valensjewelry.com
+    Default: api.ocypheris.com
     Description: Public API hostname used for API_PUBLIC_URL when CertificateArn is set.
 
   CertificateArn:

@@ -31,7 +31,7 @@ Automated verification script (console-free):
   --stack-name SecurityAutopilotControlPlaneForwarder \
   --account-id 029037611564 \
   --region eu-north-1 \
-  --saas-api-url https://api.valensjewelry.com \
+  --saas-api-url https://api.ocypheris.com \
   --saas-token <YOUR_SAAS_BEARER_TOKEN_HERE>
 ```
 

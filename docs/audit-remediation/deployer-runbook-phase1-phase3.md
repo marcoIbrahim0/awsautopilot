@@ -50,7 +50,7 @@ flowchart TD
 ## Request Flow
 ```mermaid
 flowchart LR
-  FE["Frontend (dev.valensjewelry.com / valensjewelry.com)"] --> API["API Gateway + Lambda API (security-autopilot-dev-api)"]
+  FE["Frontend (dev.ocypheris.com / ocypheris.com)"] --> API["API Gateway + Lambda API (security-autopilot-dev-api)"]
   API --> DB["PostgreSQL (DATABASE_URL)"]
   API --> Q["SQS queues (ingest/events/inventory/export)"]
   Q --> WK["Lambda worker (security-autopilot-dev-worker)"]
@@ -62,7 +62,7 @@ flowchart LR
 ### Accounts and IAM
 - SaaS AWS account configured (current repo live account: `029037611564`).
 - IAM principal with deployment privileges for CloudFormation, Lambda, API Gateway, SQS, IAM, S3, ECR, CodeBuild, ACM, CloudWatch, Route53 (if used).
-- DNS hosted in Cloudflare for the target domain (for this repo: `valensjewelry.com`).
+- DNS hosted in Cloudflare for the target domain (for this repo: `ocypheris.com`).
 
 ### Tooling checks (`aws`, `gh`, `cloudflared`, deploy tooling)
 ```bash
@@ -91,8 +91,8 @@ LOG_LEVEL="INFO"
 AWS_REGION="eu-north-1"
 SAAS_AWS_ACCOUNT_ID="029037611564"
 ROLE_SESSION_NAME="security-autopilot-session"
-FRONTEND_URL="https://valensjewelry.com"
-CORS_ORIGINS="https://dev.valensjewelry.com,https://valensjewelry.com,http://localhost:3000,http://127.0.0.1:3000"
+FRONTEND_URL="https://ocypheris.com"
+CORS_ORIGINS="https://dev.ocypheris.com,https://ocypheris.com,http://localhost:3000,http://127.0.0.1:3000"
 
 DATABASE_URL="<YOUR_DATABASE_URL_ASYNCPG>"
 DATABASE_URL_SYNC="<YOUR_DATABASE_URL_PSYCOPG2>"
@@ -195,7 +195,7 @@ aws cloudformation describe-stacks \
 
 ### 6.1 Request ACM certificate (`eu-north-1`)
 ```bash
-export API_DOMAIN="api.valensjewelry.com"
+export API_DOMAIN="api.ocypheris.com"
 
 CERT_ARN=$(aws acm request-certificate \
   --region "$AWS_REGION" \
@@ -273,8 +273,8 @@ curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_rec
 
 Verify DNS + endpoint:
 ```bash
-dig +short api.valensjewelry.com CNAME
-curl -sS -i https://api.valensjewelry.com/health
+dig +short api.ocypheris.com CNAME
+curl -sS -i https://api.ocypheris.com/health
 ```
 
 > ⚠️ Status: Planned — not yet implemented
@@ -325,20 +325,20 @@ aws logs tail "/aws/lambda/${NAME_PREFIX}-worker" --since 30m --follow
 
 ### CORS OPTIONS test
 ```bash
-curl -sS -i -X OPTIONS "https://api.valensjewelry.com/api/auth/login" \
-  -H "Origin: https://dev.valensjewelry.com" \
+curl -sS -i -X OPTIONS "https://api.ocypheris.com/api/auth/login" \
+  -H "Origin: https://dev.ocypheris.com" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: content-type,x-csrf-token,authorization,accept"
 ```
 
 Expected:
 - HTTP `200`/`204`
-- `access-control-allow-origin: https://dev.valensjewelry.com`
+- `access-control-allow-origin: https://dev.ocypheris.com`
 - `access-control-allow-credentials: true`
 
 ### Auth login/me curl tests
 ```bash
-export API_BASE="https://api.valensjewelry.com"
+export API_BASE="https://api.ocypheris.com"
 export TEST_EMAIL="<YOUR_TEST_EMAIL>"
 export TEST_PASSWORD="<YOUR_TEST_PASSWORD>"
 
@@ -357,7 +357,7 @@ curl -sS "$API_BASE/api/auth/me" \
 
 Readiness check:
 ```bash
-curl -sS -i "https://api.valensjewelry.com/ready"
+curl -sS -i "https://api.ocypheris.com/ready"
 ```
 
 Queue depth/age quick check:
@@ -403,9 +403,9 @@ Expected success response:
 | `alembic` mismatch / startup fails | DB not at head revision | Run `alembic upgrade head` and `python3 scripts/check_migration_gate.py` |
 | Browser shows `CORS error` with preflight/login 500 | API Lambda cold-start crash (migration guard fail) despite correct CORS config | Check `/aws/lambda/<name>-api` for `database revision is not at Alembic head`; run migrations from the same deployed code lineage. For emergency availability restore, temporarily set `DB_REVISION_GUARD_ENABLED=false`, then reconcile revision lineage and re-enable. |
 | Browser login fails with CORS despite OPTIONS success | CORS origins/headers mismatch for credentialed requests | Ensure `CORS_ORIGINS` includes frontend origins and API stack has explicit allow methods/headers |
-| `CSRF validation failed` on cross-subdomain | CSRF cookie domain not shared across subdomains | Ensure `FRONTEND_URL` is set correctly and/or set `CSRF_COOKIE_DOMAIN=.valensjewelry.com` |
+| `CSRF validation failed` on cross-subdomain | CSRF cookie domain not shared across subdomains | Ensure `FRONTEND_URL` is set correctly and/or set `CSRF_COOKIE_DOMAIN=.ocypheris.com` |
 | `ApiMapping CREATE_FAILED` on custom domain | Domain/certificate mapping race or invalid domain/cert | Verify `ApiDomainName` + `ApiCertificateArn` values, certificate status `ISSUED`, then redeploy runtime |
-| `curl: Could not resolve host api.valensjewelry.com` | DNS propagation or Cloudflare record issue | Verify Cloudflare CNAME points to `ApiCustomDomainTarget`, wait propagation, keep proxy off initially |
+| `curl: Could not resolve host api.ocypheris.com` | DNS propagation or Cloudflare record issue | Verify Cloudflare CNAME points to `ApiCustomDomainTarget`, wait propagation, keep proxy off initially |
 | Runs stuck queued after enqueue error | Queue send failed at API time | Check API logs, fix queue config, then retry using `/api/remediation-runs/{run_id}/resend` |
 | `/ready` returns degraded | DB/SQS readiness issue | Validate DB connectivity, queue URLs in `config/.env.ops`, and queue attributes via `aws sqs get-queue-attributes` |
 
@@ -516,7 +516,7 @@ Compliance maturity controls active (dependency-aware readiness, DR/edge control
 ### Practical verification
 - `/ready` returns expected status for healthy dependencies.
 - `ApiBaseUrl` and `ApiCustomDomainTarget` outputs are populated.
-- `curl https://api.valensjewelry.com/health` succeeds.
+- `curl https://api.ocypheris.com/health` succeeds.
 - Remediation resend check works for pending runs.
 - API and worker logs show successful processing after deploy.
 

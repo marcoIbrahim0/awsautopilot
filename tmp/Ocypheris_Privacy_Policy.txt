@@ -1,0 +1,92 @@
+Ocypheris
+Privacy Policy
+Effective Date: March 7, 2026
+
+
+1. Introduction
+Ocypheris ("we," "us," or "our") is committed to protecting the privacy of our clients and website visitors. This Privacy Policy describes how we collect, use, share, and protect personal information in connection with our services and website at ocypheris.com. It applies to clients in the United States and the European Union, including under the General Data Protection Regulation (GDPR).
+
+2. Who We Are
+Ocypheris is a cybersecurity company specializing in AWS cloud security assessments and remediation guidance. We are the data controller for personal information collected through our website and in the course of delivering our Services. For GDPR purposes, our representative can be reached at: legal@ocypheris.com
+
+3. Information We Collect
+3.1 Account and Contact Information
+We collect information you provide when you engage with us, including:
+	•	Name, job title, and company name
+	•	Email address, phone number, and mailing address
+	•	Billing and payment information (processed by our third-party payment processor)
+	•	Communications you send us (emails, forms, support requests)
+3.2 AWS Environment Access Data
+To perform security assessments, we may be granted read-only access to your AWS account. This may involve exposure to:
+	•	AWS resource configurations, IAM policies, security group rules, and service metadata
+	•	Log data, audit trails, and compliance reports within your AWS environment
+	•	No personally identifiable information of your end-users is intentionally collected
+We access only what is necessary to perform the agreed assessment. We do not retain your AWS credentials or raw environment data beyond the engagement period.
+3.3 Website Usage Data
+When you visit our website, we may collect standard analytics data such as IP address, browser type, pages visited, and referral source, typically through cookies or similar technologies.
+
+4. Legal Bases for Processing (GDPR)
+For clients in the European Union, we process personal data under the following legal bases:
+	•	Contractual necessity: Processing required to deliver the Services you have contracted with us for.
+	•	Legitimate interests: Analytics and service improvement, where such interests are not overridden by your rights.
+	•	Legal obligation: Compliance with applicable laws and regulations.
+	•	Consent: Where we have obtained your explicit consent (e.g., marketing communications), which you may withdraw at any time.
+
+5. How We Use Your Information
+We use the information we collect to:
+	•	Deliver, manage, and improve the Services
+	•	Communicate with you about engagements, reports, and support
+	•	Process payments and manage billing
+	•	Comply with legal obligations and enforce our agreements
+	•	Conduct internal analytics to improve our service quality
+We do not sell, rent, or share your personal information with third parties for their own marketing purposes.
+
+6. Data Sharing and Third Parties
+We may share your information with:
+	•	Service providers: Trusted third parties who assist in operating our business (e.g., cloud storage, payment processors, communication tools), bound by confidentiality obligations.
+	•	Legal authorities: When required to do so by law, court order, or regulatory authority.
+	•	Business transfers: In connection with a merger, acquisition, or sale of assets, subject to confidentiality protections.
+We do not transfer your personal data outside the EEA without appropriate safeguards (e.g., Standard Contractual Clauses) in place.
+
+7. Data Retention
+We retain personal data only as long as necessary for the purposes described in this Policy:
+	•	Client account and contact data: Duration of the business relationship plus 3 years
+	•	AWS environment data and findings: Duration of the engagement plus 90 days, unless otherwise agreed
+	•	Financial records: 7 years as required by applicable tax and accounting laws
+	•	Website analytics: 12 months
+After the applicable retention period, data is securely deleted or anonymized.
+
+8. Data Security
+We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, loss, or disclosure. These include:
+	•	Encryption in transit (TLS) and at rest
+	•	Access controls and least-privilege principles for internal systems
+	•	Regular internal security reviews
+Despite our efforts, no system is completely secure. We encourage you to use strong credentials and to promptly notify us of any suspected security incidents involving your engagement with us.
+
+9. Your Rights
+9.1 Rights for All Clients
+You have the right to access, correct, or request deletion of personal information we hold about you. To exercise these rights, contact us at legal@ocypheris.com.
+9.2 Additional Rights Under GDPR (EU Clients)
+If you are located in the European Union, you also have the right to:
+	•	Data portability: Receive your data in a structured, machine-readable format
+	•	Restriction of processing: Request that we limit how we use your data
+	•	Object to processing: Object to processing based on legitimate interests
+	•	Withdraw consent: Where processing is based on consent, withdraw it at any time
+	•	Lodge a complaint: With your local data protection authority (DPA)
+We will respond to all requests within 30 days (or as required by applicable law).
+
+10. Cookies
+Our website may use cookies and similar tracking technologies for functionality and analytics. You may control cookie preferences through your browser settings. By continuing to use our website, you consent to our use of cookies as described here.
+
+11. Children's Privacy
+Our Services are not directed at individuals under the age of 18. We do not knowingly collect personal information from minors. If you believe we have inadvertently collected such information, please contact us and we will delete it promptly.
+
+12. Changes to This Privacy Policy
+We may update this Privacy Policy periodically to reflect changes in our practices or legal requirements. We will notify you of material changes by email or by posting a notice on ocypheris.com. The updated Policy will be effective upon posting.
+
+13. Contact Us
+If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact:
+Ocypheris
+Email: legal@ocypheris.com
+Website: ocypheris.com
+For EU clients: You may also contact your local data protection supervisory authority if you believe your rights have not been respected.

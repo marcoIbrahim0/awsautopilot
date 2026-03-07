@@ -282,6 +282,75 @@ def _append_run_log(run: RemediationRun, message: str) -> None:
         run.logs = message
 
 
+def _change_value_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, list):
+        parts = [_change_value_text(item) for item in value]
+        cleaned = [item for item in parts if item]
+        return ", ".join(cleaned)
+    if isinstance(value, dict):
+        try:
+            return json.dumps(value, sort_keys=True)
+        except Exception:
+            return str(value).strip()
+    return str(value).strip()
+
+
+def _change_entries_for_run(run: RemediationRun) -> list[dict[str, str]]:
+    artifacts = run.artifacts if isinstance(run.artifacts, dict) else {}
+    raw_inputs = artifacts.get("strategy_inputs")
+    changes: list[dict[str, str]] = []
+    if isinstance(raw_inputs, dict):
+        for key, value in raw_inputs.items():
+            value_text = _change_value_text(value)
+            if not value_text:
+                continue
+            changes.append(
+                {
+                    "field": key.replace("_", " ").strip(),
+                    "before": "unspecified",
+                    "after": value_text,
+                }
+            )
+    if changes:
+        return changes[:6]
+    field_name = run.action.control_id if run.action and run.action.control_id else "remediation"
+    outcome = str(run.outcome or "Applied remediation").strip() or "Applied remediation"
+    return [{"field": field_name, "before": "failing", "after": outcome}]
+
+
+def _resolve_applied_by(run: RemediationRun) -> str:
+    approved_by = getattr(run, "approved_by", None)
+    email = getattr(approved_by, "email", None)
+    if isinstance(email, str) and email.strip():
+        return email.strip()
+    approved_by_user_id = getattr(run, "approved_by_user_id", None)
+    if isinstance(approved_by_user_id, uuid.UUID):
+        return str(approved_by_user_id)
+    return "system"
+
+
+def _write_change_summary_artifact(run: RemediationRun, *, applied_at: datetime | None = None) -> None:
+    artifacts: dict[str, object] = {}
+    if isinstance(run.artifacts, dict):
+        artifacts.update(run.artifacts)
+    applied_at_iso = (applied_at or datetime.now(timezone.utc)).isoformat()
+    artifacts["change_summary"] = {
+        "applied_at": applied_at_iso,
+        "applied_by": _resolve_applied_by(run),
+        "changes": _change_entries_for_run(run),
+        "run_id": str(run.id),
+    }
+    run.artifacts = artifacts
+
+
 def _mark_manual_high_risk(run: RemediationRun) -> None:
     """Persist root-credential manual/high-risk marker on run artifacts."""
     artifacts: dict[str, object] = {}
@@ -742,6 +811,7 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                         run.status = RemediationRunStatus.success
                         run.outcome = "SaaS apply completed successfully."
                         _append_run_log(run, "SaaS apply completed successfully.")
+                        _write_change_summary_artifact(run, applied_at=execution.completed_at)
                         try:
                             enqueue_post_apply_reconcile(session, run)
                         except Exception as exc:  # pragma: no cover - defensive, helper is best-effort

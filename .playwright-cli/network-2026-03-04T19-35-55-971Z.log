@@ -1,0 +1,16 @@
+[GET] https://api.valensjewelry.com/api/auth/me => [FAILED] net::ERR_FAILED
+[GET] https://api.valensjewelry.com/api/auth/me => [FAILED] net::ERR_FAILED
+[GET] https://frontend.maromaher54.workers.dev/landing?_rsc=vusbg => [200] 
+[GET] https://frontend.maromaher54.workers.dev/landing?_rsc=1txbx => [200] 
+[GET] https://frontend.maromaher54.workers.dev/login?_rsc=1txbx => [200] 
+[GET] https://frontend.maromaher54.workers.dev/?_rsc=1txbx => [200] 
+[GET] https://frontend.maromaher54.workers.dev/about?_rsc=1txbx => [404] 
+[GET] https://frontend.maromaher54.workers.dev/?_rsc=1n95f => [200] 
+[GET] https://frontend.maromaher54.workers.dev/?_rsc=pu9se => [200] 
+[GET] https://frontend.maromaher54.workers.dev/landing?_rsc=1n95f => [200] 
+[GET] https://frontend.maromaher54.workers.dev/landing?_rsc=8t6cy => [200] 
+[GET] https://frontend.maromaher54.workers.dev/landing?_rsc=1wgvm => [200] 
+[GET] https://frontend.maromaher54.workers.dev/login?_rsc=1n95f => [200] 
+[GET] https://frontend.maromaher54.workers.dev/login?_rsc=1izmi => [200] 
+[GET] https://frontend.maromaher54.workers.dev/login?_rsc=1ysuk => [200] 
+[GET] https://frontend.maromaher54.workers.dev/?_rsc=1xpjk => [200] 

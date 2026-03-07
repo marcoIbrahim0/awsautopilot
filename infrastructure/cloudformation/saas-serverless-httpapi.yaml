@@ -37,12 +37,12 @@ Parameters:
 
   FrontendUrl:
     Type: String
-    Default: https://valensjewelry.com
+    Default: https://ocypheris.com
     Description: Frontend base URL for invites/redirects.
 
   CorsOrigins:
     Type: String
-    Default: https://valensjewelry.com,http://localhost:3000
+    Default: https://ocypheris.com,http://localhost:3000
     Description: Comma-separated CORS origins for the API.
 
   # --- Optional feature/config flags (non-secret) ---
@@ -207,7 +207,7 @@ Parameters:
   ApiDomainName:
     Type: String
     Default: ""
-    Description: Optional custom API domain (e.g. api.valensjewelry.com).
+    Description: Optional custom API domain (e.g. api.ocypheris.com).
   ApiCertificateArn:
     Type: String
     Default: ""

@@ -195,3 +195,36 @@ def test_apply_success_prereq_fail_skips_enqueue_and_keeps_apply_success() -> No
     )
 
     assert mock_sqs.send_message.call_count == 0
+
+
+def test_apply_success_persists_change_summary_artifact() -> None:
+    run, execution, mock_session, job = _build_apply_execution(
+        "sg_restrict_public_ports",
+        target_id="sg-1234",
+        resource_id="sg-1234",
+    )
+    run.approved_by = SimpleNamespace(email="ops@example.com")
+    run.artifacts["strategy_inputs"] = {
+        "access_mode": "close_and_revoke",
+        "allowed_cidr": "10.0.0.0/24",
+    }
+
+    _run_apply_job(
+        run,
+        execution,
+        mock_session,
+        job,
+        reconcile_mode="targeted_then_global",
+        prereq_result={"ok": True, "reasons": [], "snapshot": {}},
+    )
+
+    assert isinstance(run.artifacts, dict)
+    summary = run.artifacts.get("change_summary")
+    assert isinstance(summary, dict)
+    assert summary.get("run_id") == str(run.id)
+    assert summary.get("applied_by") == "ops@example.com"
+    assert isinstance(summary.get("applied_at"), str)
+    changes = summary.get("changes")
+    assert isinstance(changes, list)
+    assert any(change.get("field") == "access mode" and change.get("after") == "close_and_revoke" for change in changes)
+    assert any(change.get("field") == "allowed cidr" and change.get("after") == "10.0.0.0/24" for change in changes)

@@ -1,0 +1,73 @@
+Ocypheris
+Terms & Conditions
+Effective Date: March 7, 2026
+
+
+1. Introduction
+These Terms and Conditions ("Terms") govern your access to and use of the services provided by Ocypheris ("we," "us," or "our") through ocypheris.com and any related platforms (collectively, the "Services"). By accessing or using our Services, you agree to be bound by these Terms. If you do not agree, please do not use our Services.
+
+2. Definitions
+	•	"Client" means any individual, business, or organization that accesses or uses the Services.
+	•	"Services" means the AWS architecture security assessment, remediation, and advisory services provided by Ocypheris.
+	•	"AWS Environment" means the Amazon Web Services infrastructure, accounts, and configurations belonging to the Client.
+	•	"Findings" means the security vulnerabilities, misconfigurations, or risks identified during a Services engagement.
+	•	"Deliverables" means reports, recommendations, documentation, and other outputs produced as part of the Services.
+
+3. Scope of Services
+Ocypheris provides cloud security services focused on AWS architectures, including but not limited to:
+	•	Read-only security assessments and audits of AWS environments
+	•	Identification of misconfigurations, vulnerabilities, and compliance gaps
+	•	Remediation guidance, architectural recommendations, and best practice documentation
+	•	Ongoing advisory and monitoring support as agreed in writing
+All Services are performed pursuant to a separately executed Statement of Work (SOW) or service agreement. These Terms apply to all such engagements unless explicitly superseded in writing.
+
+4. Access to Client AWS Environments
+To perform the Services, Ocypheris may require read-only access to your AWS account(s). By granting such access, you represent and warrant that:
+	•	You have the authority to grant such access on behalf of your organization.
+	•	The access credentials provided are accurate, and you will promptly revoke access upon completion of the engagement.
+	•	You understand that Ocypheris will not make any modifications to your AWS environment without your explicit written consent.
+Ocypheris will not store, retain, or use your AWS credentials beyond what is strictly necessary to perform the agreed Services.
+
+5. Client Responsibilities
+You agree to:
+	•	Provide accurate and complete information necessary for the performance of the Services.
+	•	Ensure that Ocypheris has appropriate access permissions to conduct the assessment.
+	•	Review and implement remediation recommendations at your sole discretion and risk.
+	•	Maintain backups and disaster recovery plans independently of any Ocypheris engagement.
+	•	Comply with all applicable laws, including those related to data protection and cybersecurity.
+
+6. Deliverables and Intellectual Property
+6.1 Deliverables
+Upon full payment, Ocypheris grants you a non-exclusive, non-transferable license to use the Deliverables for your internal business purposes. Deliverables are confidential and may not be shared with third parties without prior written consent from Ocypheris.
+6.2 Ocypheris IP
+All methodologies, tools, frameworks, templates, and proprietary processes used in the delivery of the Services remain the exclusive intellectual property of Ocypheris. Nothing in these Terms transfers ownership of any Ocypheris IP to you.
+
+7. Fees and Payment
+Fees for Services are as agreed in the applicable SOW or order form. Unless otherwise stated:
+	•	Invoices are due within 30 days of the invoice date.
+	•	Late payments may accrue interest at 1.5% per month or the maximum rate permitted by law, whichever is lower.
+	•	Ocypheris reserves the right to suspend Services for overdue accounts.
+
+8. Confidentiality
+Each party agrees to keep confidential all non-public information disclosed by the other party in connection with the Services, including but not limited to security Findings, technical data, and business information. Confidential information shall not be disclosed to third parties without prior written consent, except as required by law. This obligation survives termination of the engagement for a period of three (3) years.
+
+9. Disclaimer of Warranties
+THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE." OCYPHERIS MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. OCYPHERIS DOES NOT GUARANTEE THAT THE SERVICES WILL IDENTIFY ALL SECURITY VULNERABILITIES OR THAT IMPLEMENTING RECOMMENDATIONS WILL PREVENT ALL SECURITY INCIDENTS.
+
+10. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, OCYPHERIS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, DATA, OR BUSINESS OPPORTUNITY ARISING OUT OF OR IN CONNECTION WITH THE SERVICES. OCYPHERIS'S TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED THE TOTAL FEES PAID BY YOU TO OCYPHERIS IN THE THREE (3) MONTHS PRECEDING THE CLAIM.
+
+11. Indemnification
+You agree to indemnify, defend, and hold harmless Ocypheris and its officers, employees, and contractors from any claims, damages, or expenses (including reasonable attorneys' fees) arising out of: (a) your use of the Services; (b) your violation of these Terms; or (c) your violation of any applicable law or third-party rights.
+
+12. Term and Termination
+These Terms remain in effect for the duration of any active engagement. Either party may terminate an engagement for material breach with 14 days' written notice, if such breach is not cured within that period. Upon termination, you shall immediately revoke any access granted to Ocypheris, and all outstanding fees become due.
+
+13. Governing Law and Dispute Resolution
+These Terms are governed by the laws of the State of Delaware, without regard to its conflict of law provisions. Any disputes shall be resolved by binding arbitration under the rules of the American Arbitration Association. Nothing herein prevents either party from seeking injunctive relief in a court of competent jurisdiction.
+
+14. Changes to These Terms
+Ocypheris reserves the right to update these Terms at any time. We will notify active clients of material changes by email or through ocypheris.com. Continued use of the Services after changes take effect constitutes acceptance of the revised Terms.
+
+15. Contact
+For questions regarding these Terms, contact us at: legal@ocypheris.com | ocypheris.com

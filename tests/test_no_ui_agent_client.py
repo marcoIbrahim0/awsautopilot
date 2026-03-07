@@ -46,7 +46,7 @@ class _FakeResponse:
 def _http_error(code: int, payload: dict | None = None) -> HTTPError:
     fp = io.BytesIO(json.dumps(payload or {}).encode("utf-8"))
     return HTTPError(
-        url="https://api.valensjewelry.com/api/test",
+        url="https://api.ocypheris.com/api/test",
         code=code,
         msg=f"HTTP {code}",
         hdrs=None,
@@ -67,7 +67,7 @@ def test_client_retries_transient_urlerror_then_succeeds(monkeypatch) -> None:
     monkeypatch.setattr(client_mod, "urlopen", fake_urlopen)
     monkeypatch.setattr(client_mod.time, "sleep", lambda *_: None)
 
-    client = SaaSApiClient("https://api.valensjewelry.com", retries=3, retry_backoff_sec=0.1)
+    client = SaaSApiClient("https://api.ocypheris.com", retries=3, retry_backoff_sec=0.1)
     payload = client._request_json("GET", "/api/test", include_auth=False)
 
     assert payload == {}
@@ -86,7 +86,7 @@ def test_client_retries_transient_http_error_then_raises(monkeypatch) -> None:
     monkeypatch.setattr(client_mod, "urlopen", fake_urlopen)
     monkeypatch.setattr(client_mod.time, "sleep", lambda *_: None)
 
-    client = SaaSApiClient("https://api.valensjewelry.com", retries=2, retry_backoff_sec=0.1)
+    client = SaaSApiClient("https://api.ocypheris.com", retries=2, retry_backoff_sec=0.1)
 
     try:
         client._request_json("GET", "/api/test", include_auth=False)

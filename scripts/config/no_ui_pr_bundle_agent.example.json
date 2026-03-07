@@ -1,5 +1,5 @@
 {
-  "api_base": "https://api.valensjewelry.com",
+  "api_base": "https://api.ocypheris.com",
   "account_id": "029037611564",
   "region": "eu-north-1",
   "control_preference": "EC2.53,S3.2",
