@@ -4,6 +4,18 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Landing-page mobile animation restore: remove global mobile motion clamp (2026-03-07)](task_log.md#landing-page-mobile-animation-restore-remove-global-mobile-motion-clamp-2026-03-07)
+  - Removed the global `max-width: 768px` animation/transition clamp that disabled motion on mobile.
+  - Kept reduced-motion accessibility behavior while restoring hero and scroll reveal animation paths on phone.
+  - Added reduced-motion fail-open opacity for landing animated sections.
+- [Landing-page mobile hero motion restore while keeping scroll reveals (2026-03-07)](task_log.md#landing-page-mobile-hero-motion-restore-while-keeping-scroll-reveals-2026-03-07)
+  - Removed the static mobile hero branch and restored staged hero entrance motion on phone.
+  - Kept the existing section reveal-on-scroll animation behavior unchanged across the landing page.
+  - Build intentionally not run for this pass, per request.
+- [Landing-page phone animation rollback: restore mobile carousel + static hero (2026-03-07)](task_log.md#landing-page-phone-animation-rollback-restore-mobile-carousel--static-hero-2026-03-07)
+  - Reverted the phone proof section to the prior horizontal swipe carousel with arrow controls.
+  - Removed the added phone hero entrance animation while keeping the animated hero on larger breakpoints.
+  - Verified in a mobile browser at `390x844` and with a successful frontend production build.
 - [Landing-page mobile animation parity: proof scroll sync + hero entrance (2026-03-07)](task_log.md#landing-page-mobile-animation-parity-proof-scroll-sync--hero-entrance-2026-03-07)
   - Replaced the mobile proof carousel with a vertical sticky-card flow that updates on scroll like the desktop section.
   - Added explicit hero entrance animation so the phone hero visibly animates on load.

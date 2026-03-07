@@ -1,5 +1,77 @@
 # Task Log
 
+## Landing-page mobile animation restore: remove global mobile motion clamp (2026-03-07)
+
+**Task:** Fix missing mobile hero and section reveal animations by removing the global CSS rule that disabled transitions/animations on all viewports up to `768px`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/globals.css** - narrowed the global animation clamp to `prefers-reduced-motion` only and added fail-open opacity for landing animated sections in reduced-motion mode.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Changed the global rule from `@media (prefers-reduced-motion: reduce), (max-width: 768px)` to only `@media (prefers-reduced-motion: reduce)`.
+- Preserved animation disabling for accessibility users who explicitly request reduced motion.
+- Added explicit `opacity: 1` fail-open behavior for `html.landing-animations-ready [data-landing-animate]` in reduced-motion mode so sections cannot remain hidden.
+
+**Validation:**
+- Build intentionally not run in this pass.
+
+**Technical debt / gotchas:**
+- Performance tuning for low-end phones should be done with targeted component-level optimizations, not a global mobile animation kill switch.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page mobile hero motion restore while keeping scroll reveals (2026-03-07)
+
+**Task:** Keep mobile landing animations for both the hero and section reveal flow by restoring hero entrance motion on phone without changing the current scroll-reveal behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - removed the mobile-only static hero render path and switched to a shared animated hero block so phone and desktop both run the staged entrance animations.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the split hero rendering (`sm:hidden` static block + `hidden sm:contents` animated block).
+- Kept the existing motion sequence (logo, headline, subtitle, CTA) and applied it to all breakpoints, including mobile.
+- Left section reveal-on-scroll behavior unchanged (`SectionAnimator` + `data-landing-animate`), so landing sections still animate in while scrolling.
+
+**Validation:**
+- Build intentionally not run, per request.
+
+**Technical debt / gotchas:**
+- Hero content now has one shared animation path across breakpoints, reducing duplication and risk of mobile/desktop hero drift.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page phone animation rollback: restore mobile carousel + static hero (2026-03-07)
+
+**Task:** Revert the last phone-only landing animation changes while keeping the desktop proof section and desktop hero motion intact.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - restored the previous mobile swipe carousel and arrow controls for the `Maximize Security. Minimize Effort.` section, while leaving the current desktop sticky-scroll behavior unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - removed the hero entrance animation on phone screens by restoring a static mobile render path and keeping the animated hero only for `sm` and above.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this rollback task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reverted the mobile proof section from scroll-synced sticky visuals back to the prior horizontal card carousel.
+- Restored the previous mobile arrow controls and scroll-state behavior for the proof cards.
+- Removed the added phone hero entrance animation while preserving the existing animated hero experience on larger breakpoints.
+- Left the desktop proof timing, spacing, and sticky-card tuning untouched.
+
+**Validation:**
+- Playwright browser verification on `http://127.0.0.1:3000/landing` at `390x844` confirmed the proof section is back to the swipe-card layout on phone.
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- The hero now intentionally follows two responsive render paths: static on phone and animated on `sm` and above, so future hero copy/layout changes should be checked at both breakpoint groups.
+
+**Open questions / TODOs:**
+- None.
+
 ## Landing-page mobile animation parity: proof scroll sync + hero entrance (2026-03-07)
 
 **Task:** Make the landing page animate properly on phone by giving the `Maximize Security. Minimize Effort.` section a scroll-driven mobile experience and adding an explicit hero entrance animation on mobile load.
