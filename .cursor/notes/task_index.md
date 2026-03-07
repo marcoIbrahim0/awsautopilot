@@ -4,14 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
-- [Landing-page proof section fix: revert mobile tweak and repair desktop sticky card transitions (2026-03-07)](task_log.md#landing-page-proof-section-fix-revert-mobile-tweak-and-repair-desktop-sticky-card-transitions-2026-03-07)
-  - Reverted the previous mobile-only card-width change.
-  - Replaced desktop proof-section sticky-card activation with scroll-position syncing so all three states appear reliably.
-  - Verified the corrected desktop sequence in-browser and with a successful frontend build.
-- [Landing-page UX fix: improve Maximize Security mobile carousel card visibility (2026-03-07)](task_log.md#landing-page-ux-fix-improve-maximize-security-mobile-carousel-card-visibility-2026-03-07)
-  - Reduced the mobile card width so the next card visibly peeks into the viewport.
-  - Added more carousel padding so the horizontal scroll affordance reads clearly.
-  - Verified the change in-browser on a mobile viewport and with a successful frontend build.
+- [Landing-page proof/services final retune and history cleanup (2026-03-07)](task_log.md#landing-page-proofservices-final-retune-and-history-cleanup-2026-03-07)
+  - Moved `Comprehensive Security Services` down by `49px` on desktop.
+  - Kept the current `Absolute Control` proof-card depth and removed the redundant iterative history for this section.
+  - Build intentionally not run for this pass, per request.
 - [Landing-page regression fix: fail-open section animation visibility (2026-03-07)](task_log.md#landing-page-regression-fix-fail-open-section-animation-visibility-2026-03-07)
   - Fixed the disappearing landing sections by making animation-gated content visible by default.
   - Added a root readiness class so staggered animations only activate after the animator initializes.

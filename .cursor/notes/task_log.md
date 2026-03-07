@@ -1,52 +1,26 @@
 # Task Log
 
-## Landing-page proof section fix: revert mobile tweak and repair desktop sticky card transitions (2026-03-07)
+## Landing-page proof/services final retune and history cleanup (2026-03-07)
 
-**Task:** Revert the prior mobile-carousel width change and fix the actual desktop issue in `Maximize Security. Minimize Effort.` where the sticky visual state was not reliably showing every card while scrolling.
-
-**Files modified:**
-- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - reverted the mobile card-width tweak and replaced desktop `onViewportEnter` state changes with deterministic scroll-position syncing based on the closest feature block to the viewport center.
-- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
-- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
-
-**What was done (verified):**
-- Reverted the mobile-only carousel sizing change from the previous edit.
-- Verified in-browser that the desktop sticky visual was skipping or delaying the middle state because `onViewportEnter` was too coarse for this scroll layout.
-- Switched the desktop active-card logic to a scroll/resize sync that selects the feature block nearest the viewport midpoint, which makes all three sticky visuals appear reliably.
-
-**Validation:**
-- Playwright browser check on `http://localhost:3000/landing` confirmed the sticky panel now progresses through:
-  - `Connect Securely in 5 Minutes`
-  - `Instant Visibility`
-  - `Absolute Control`
-- `cd frontend && npm run build` (pass)
-
-**Technical debt / gotchas:**
-- The desktop proof-section state is now scroll-position driven, which is more reliable than viewport-enter hooks for this layout but should still be retested if section heights or sticky offsets change substantially.
-
-**Open questions / TODOs:**
-- None.
-
-## Landing-page UX fix: improve Maximize Security mobile carousel card visibility (2026-03-07)
-
-**Task:** Make the horizontally scrolling cards in the `Maximize Security. Minimize Effort.` section visibly discoverable on mobile so additional cards do not appear missing.
+**Task:** Move `Comprehensive Security Services` down by `49px` on desktop, keep the latest `Absolute Control` proof-card depth, and remove the redundant iterative task-history entries for this landing-page section.
 
 **Files modified:**
-- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - reduced mobile card width slightly and increased scroller end padding so the next card peeks into view and the last card has breathing room.
-- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
-- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - reduced the desktop negative top margin on the `services` section by exactly `49px` at both desktop breakpoints.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - replaced the many iterative proof/services entries with one current summary entry.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - removed the redundant proof/services index entries and kept one discoverable summary entry.
 
-**What was done (verified):**
-- Confirmed in a real browser that the mobile carousel was rendering cards too wide, leaving only a tiny sliver of the next card visible.
-- Tightened the mobile card width and adjusted carousel spacing/padding so the scroll affordance is obvious.
-- Rechecked the live layout after the patch; on a `390px` viewport the next card now peeks by roughly `42px` instead of about `10px`.
+**What was done:**
+- Moved the desktop `services` section down by changing:
+  - `lg:-mt-20` to `lg:-mt-[31px]`
+  - `xl:-mt-24` to `xl:-mt-[47px]`
+- Left the current desktop `Absolute Control` proof-card tuning intact.
+- Removed the older iterative task-log/index entries for this proof/services area so only the latest summary remains.
 
 **Validation:**
-- Browser verification with Playwright on `http://localhost:3000/landing` (mobile viewport `390x844`) confirmed the next card is visibly exposed.
-- `cd frontend && npm run build` (pass)
+- Build intentionally not run, per request.
 
 **Technical debt / gotchas:**
-- The mobile carousel still relies on horizontal scrolling plus arrow controls; if discoverability remains weak, the next step would be adding visible pagination dots or a drag hint.
+- The proof-to-services handoff is still a manually tuned desktop overlap, so later copy or card-size changes should recheck the visual spacing.
 
 **Open questions / TODOs:**
 - None.
