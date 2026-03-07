@@ -4,6 +4,31 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Landing-page proof section fix: revert mobile tweak and repair desktop sticky card transitions (2026-03-07)](task_log.md#landing-page-proof-section-fix-revert-mobile-tweak-and-repair-desktop-sticky-card-transitions-2026-03-07)
+  - Reverted the previous mobile-only card-width change.
+  - Replaced desktop proof-section sticky-card activation with scroll-position syncing so all three states appear reliably.
+  - Verified the corrected desktop sequence in-browser and with a successful frontend build.
+- [Landing-page UX fix: improve Maximize Security mobile carousel card visibility (2026-03-07)](task_log.md#landing-page-ux-fix-improve-maximize-security-mobile-carousel-card-visibility-2026-03-07)
+  - Reduced the mobile card width so the next card visibly peeks into the viewport.
+  - Added more carousel padding so the horizontal scroll affordance reads clearly.
+  - Verified the change in-browser on a mobile viewport and with a successful frontend build.
+- [Landing-page regression fix: fail-open section animation visibility (2026-03-07)](task_log.md#landing-page-regression-fix-fail-open-section-animation-visibility-2026-03-07)
+  - Fixed the disappearing landing sections by making animation-gated content visible by default.
+  - Added a root readiness class so staggered animations only activate after the animator initializes.
+- [Marketing footer social update: show X.com button for @ocypheris (2026-03-07)](task_log.md#marketing-footer-social-update-show-xcom-button-for-ocypheris-2026-03-07)
+  - Added the shared X.com social entry for `@ocypheris`.
+  - Updated the shared marketing footer so both LinkedIn and X buttons render.
+- [Marketing nav label update: Product -> Autopilot (2026-03-07)](task_log.md#marketing-nav-label-update-product---autopilot-2026-03-07)
+  - Renamed the shared marketing nav label from `Product` to `Autopilot`.
+  - Kept the destination anchored to `/landing#autopilot-explained`.
+- [Landing-page hydration fix: client-only BentoIntroGrid render (2026-03-07)](task_log.md#landing-page-hydration-fix-client-only-bentointrogrid-render-2026-03-07)
+  - Resolved the landing hydration mismatch by moving `BentoIntroGrid` to client-only rendering.
+  - Added a static skeleton fallback so the section keeps its layout without SSR/client markup drift.
+  - Preserved the rest of the landing page as SSR content.
+- [Landing-page IA cleanup: dedicated-page re-evaluation and nav/footer revision (2026-03-07)](task_log.md#landing-page-ia-cleanup-dedicated-page-re-evaluation-and-navfooter-revision-2026-03-07)
+  - Kept `FAQ` and `Security` as dedicated pages, while keeping `Product/Autopilot` as an in-page landing section.
+  - Removed the low-value `Company` link from the public navbar and standardized the primary marketing route set.
+  - Centralized marketing nav/footer links into shared components so future route changes update consistently.
 - [Coverage mapping: 9 safety/confidence points vs current implementation and Phase 3 plan (2026-03-05)](task_log.md#coverage-mapping-9-safetyconfidence-points-vs-current-implementation-and-phase-3-plan-2026-03-05)
   - Mapped all 9 proposed safety/confidence points to current capabilities and Phase 3 scope.
   - Distinguished implemented vs partial vs planned items.

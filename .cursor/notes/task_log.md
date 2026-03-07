@@ -1,5 +1,180 @@
 # Task Log
 
+## Landing-page proof section fix: revert mobile tweak and repair desktop sticky card transitions (2026-03-07)
+
+**Task:** Revert the prior mobile-carousel width change and fix the actual desktop issue in `Maximize Security. Minimize Effort.` where the sticky visual state was not reliably showing every card while scrolling.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - reverted the mobile card-width tweak and replaced desktop `onViewportEnter` state changes with deterministic scroll-position syncing based on the closest feature block to the viewport center.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Reverted the mobile-only carousel sizing change from the previous edit.
+- Verified in-browser that the desktop sticky visual was skipping or delaying the middle state because `onViewportEnter` was too coarse for this scroll layout.
+- Switched the desktop active-card logic to a scroll/resize sync that selects the feature block nearest the viewport midpoint, which makes all three sticky visuals appear reliably.
+
+**Validation:**
+- Playwright browser check on `http://localhost:3000/landing` confirmed the sticky panel now progresses through:
+  - `Connect Securely in 5 Minutes`
+  - `Instant Visibility`
+  - `Absolute Control`
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- The desktop proof-section state is now scroll-position driven, which is more reliable than viewport-enter hooks for this layout but should still be retested if section heights or sticky offsets change substantially.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page UX fix: improve Maximize Security mobile carousel card visibility (2026-03-07)
+
+**Task:** Make the horizontally scrolling cards in the `Maximize Security. Minimize Effort.` section visibly discoverable on mobile so additional cards do not appear missing.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - reduced mobile card width slightly and increased scroller end padding so the next card peeks into view and the last card has breathing room.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Confirmed in a real browser that the mobile carousel was rendering cards too wide, leaving only a tiny sliver of the next card visible.
+- Tightened the mobile card width and adjusted carousel spacing/padding so the scroll affordance is obvious.
+- Rechecked the live layout after the patch; on a `390px` viewport the next card now peeks by roughly `42px` instead of about `10px`.
+
+**Validation:**
+- Browser verification with Playwright on `http://localhost:3000/landing` (mobile viewport `390x844`) confirmed the next card is visibly exposed.
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- The mobile carousel still relies on horizontal scrolling plus arrow controls; if discoverability remains weak, the next step would be adding visible pagination dots or a drag hint.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page regression fix: fail-open section animation visibility (2026-03-07)
+
+**Task:** Restore missing landing-page sections that were hidden when the landing animation initializer did not run successfully.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/SectionAnimator.tsx** - added a `landing-animations-ready` root class and pre-marked in-viewport sections as visible before enabling hide/animate behavior.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/globals.css** - changed landing-section animation CSS to fail open by default so content remains visible unless the animator explicitly activates.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Identified that most missing landing sections shared the `[data-landing-animate]` selector and were being hidden by CSS before the JS animator completed.
+- Changed the animation system so sections render visible by default and only opt into the hidden/animated state after the client animator initializes.
+- Preserved section reveal behavior for active sessions while preventing permanent content loss if the animator fails.
+
+**Validation:**
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- The landing animation system is now resilient to partial JS failure, but it still depends on client runtime for the full staggered reveal effect.
+
+**Open questions / TODOs:**
+- Optional follow-up: run a focused browser regression pass across the landing page to verify reveal timing and scroll behavior after the fail-open change.
+
+## Marketing footer social update: show X.com button for @ocypheris (2026-03-07)
+
+**Task:** Make the X.com footer button visible and point it to the `@ocypheris` account.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/marketingLinks.ts** - added the `@ocypheris` X.com social entry to the shared marketing social list.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MarketingFooter.tsx** - rendered the correct social icon per shared social entry so both LinkedIn and X buttons appear in the footer.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Added a visible X.com footer button for `@ocypheris`.
+- Kept the existing LinkedIn button and reused the shared footer path so all marketing pages update together.
+
+**Validation:**
+- Not run for this footer-only visual change.
+
+**Technical debt / gotchas:**
+- The footer currently chooses icons by social label, which is fine for the current two-entry set but should move to explicit icon metadata if more networks are added.
+
+**Open questions / TODOs:**
+- None.
+
+## Marketing nav label update: Product -> Autopilot (2026-03-07)
+
+**Task:** Rename the public marketing navigation label from `Product` to `Autopilot`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/marketingLinks.ts** - changed the shared primary marketing link label to use `nav.autopilot`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Updated the shared marketing link config so the top navigation now reads `Autopilot` instead of `Product`.
+- Preserved the same `/landing#autopilot-explained` destination.
+
+**Validation:**
+- Not run for this label-only change.
+
+**Technical debt / gotchas:**
+- Because the footer reuses the same shared primary link set, the corresponding footer label also now reads `Autopilot`.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page hydration fix: client-only BentoIntroGrid render (2026-03-07)
+
+**Task:** Resolve the landing-page hydration mismatch triggered by `BentoIntroGrid` in Next.js app-router rendering.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - changed `BentoIntroGrid` dynamic import to `ssr: false` and added a static skeleton fallback so the server and client no longer race on mismatched marketing-card markup.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Isolated the mismatch to the `BentoIntroGrid` subtree from the landing page hydration stack trace.
+- Switched that animated marketing block to client-only rendering because it is non-critical decorative content and does not need SSR.
+- Added a server-safe placeholder layout so the section keeps its visual footprint during load without triggering hydration drift.
+
+**Validation:**
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- This is a targeted mitigation rather than a root-cause fix inside `motion/react` or the dev chunk pipeline; if the team later wants SSR for that section again, the component should be reintroduced incrementally with deterministic markup checks.
+
+**Open questions / TODOs:**
+- Optional follow-up: audit other heavily animated landing components for the same SSR/hydration risk profile and convert only the ones that are truly unstable.
+
+## Landing-page IA cleanup: dedicated-page re-evaluation and nav/footer revision (2026-03-07)
+
+**Task:** Re-evaluate which landing-page topics deserve dedicated routes, remove low-value marketing navigation, and make navbar/footer page links consistent across the public site.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/marketingLinks.ts** - added a shared source of truth for public marketing nav/footer links and social links.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MarketingFooter.tsx** - added a shared marketing footer component with reusable compact/full wave variants.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/site-nav.tsx** - switched navbar links to the shared marketing link set; removed the low-value `Company` link and fixed product anchor targeting.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/landing/page.tsx** - replaced duplicated footer markup with the shared footer component.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/faq/page.tsx** - replaced duplicated footer markup with the shared footer component.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/security/page.tsx** - replaced duplicated footer markup with the shared footer component.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/about/page.tsx** - replaced duplicated footer markup with the shared footer component so dormant page links stay aligned if the page remains accessible.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/locales/translations.ts** - added short nav labels for `Product`, `Security`, and `FAQ` across supported locales.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done (verified):**
+- Kept `FAQ` and `Security` as dedicated pages because they contain enough standalone detail to justify separate routes.
+- Kept `Autopilot/Product` as a landing-page section rather than a standalone page and routed the product nav link to `/landing#autopilot-explained`.
+- Removed the public `Company` nav link from the primary marketing flow and standardized the top-level route set to `Product`, `Security`, `FAQ`, and `Contact`.
+- Unified footer links across landing/FAQ/security/about so public-route changes now come from one shared config instead of four duplicated copies.
+
+**Validation:**
+- `cd frontend && npm run build` (pass)
+
+**Technical debt / gotchas:**
+- `/about` still exists as a routable page but is intentionally no longer part of the primary marketing nav/footer; this avoids breaking the route while reducing navigation noise.
+- Next.js build still emits the pre-existing multiple-lockfile root warning; build output is otherwise clean.
+
+**Open questions / TODOs:**
+- Decide later whether `/about` should be repurposed for a stronger company/trust story or removed entirely if it remains outside the primary acquisition flow.
+
 ## Coverage mapping: 9 safety/confidence points vs current implementation and Phase 3 plan (2026-03-05)
 
 **Task:** Determine which of the previously defined 9 blast-radius/confidence points are already covered by the project and which are covered by the new Phase 3 roadmap addition.
