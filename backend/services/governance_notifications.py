@@ -184,7 +184,7 @@ async def _deliver_channel(
             return STATUS_SKIPPED, "slack_not_configured"
         if not is_valid_slack_webhook_url(webhook):
             raise GovernanceNotificationError("slack_webhook_invalid")
-        payload = {"text": template["title"]}
+        payload = {"text": template["text"]}
         _send_json_payload(webhook, payload)
         return STATUS_SENT, None
 
@@ -212,6 +212,7 @@ async def dispatch_governance_notification(
     action_url: str | None,
     idempotency_key: str,
     channels: list[str] | None = None,
+    escalation_context: dict | None = None,
 ) -> GovernanceDispatchResult:
     """Dispatch tenant-scoped stage notifications with idempotent replay safety."""
     if stage not in GOVERNANCE_STAGES:
@@ -223,6 +224,7 @@ async def dispatch_governance_notification(
         target_label=target_label,
         detail=detail,
         action_url=action_url,
+        escalation_context=escalation_context,
     )
     redacted_payload = _redact_value(template)
     result = GovernanceDispatchResult()

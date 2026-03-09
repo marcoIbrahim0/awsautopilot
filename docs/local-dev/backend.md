@@ -11,6 +11,22 @@ Endpoints:
 - `GET /ready`
 - `GET /health/ready`
 
+Actions owner queues:
+- `GET /api/actions` supports `owner_type`, `owner_key`, and `owner_queue=open|expiring|overdue|expiring_exceptions|blocked_fixes`.
+- Action list/detail payloads now include `owner_type`, `owner_key`, `owner_label`, and additive `sla` metadata.
+- Owner-queue responses include additive `owner_queue_counters` totals for `open`, `expiring`, `overdue`, `blocked_fixes`, and `expiring_exceptions`.
+- Action list/detail payloads include `score`, `score_components`, and `score_factors`; when toxic-combination prioritization is enabled, `score_factors` can include a `toxic_combinations` entry.
+- `GET /api/actions/{id}` also includes additive `context_incomplete` so action detail makes fail-closed toxic-combination gating explicit.
+- `GET /api/actions/{id}` now also includes additive `execution_guidance[]` entries with mode-aware `blast_radius`, `pre_checks`, `expected_outcome`, `post_checks`, and `rollback` guidance per actionable strategy.
+- `GET /api/actions/{id}` now also includes additive `implementation_artifacts[]` entries that deep-link engineering to the latest PR bundle, change summary, or direct-fix record for that action.
+- `GET /api/remediation-runs/{id}` now also includes additive `artifact_metadata` with normalized `implementation_artifacts[]`, `evidence_pointers[]`, and `closure_checklist[]` while preserving the raw `artifacts` payload.
+- Remediation-run deep links now rely on stable anchors in the UI contract: `#run-activity`, `#run-generated-files`, and `#run-closure`.
+
+Toxic-combination config:
+- `ACTIONS_TOXIC_COMBINATIONS_ENABLED`
+- `ACTIONS_TOXIC_COMBINATION_MAX_BOOST`
+- `ACTIONS_TOXIC_COMBINATION_RULES_JSON`
+
 Swagger:
 - `http://localhost:8000/docs`
 

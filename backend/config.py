@@ -250,6 +250,44 @@ class Settings(BaseSettings):
             "for resolved actions without changing stored action status values."
         ),
     )
+    ACTIONS_OWNER_QUEUE_EXPIRING_EXCEPTION_DAYS: int = Field(
+        default=7,
+        description="Days before exception expiry when an action moves into the expiring_exceptions owner queue.",
+    )
+    ACTIONS_OWNER_QUEUE_OVERDUE_CRITICAL_HOURS: int = Field(
+        default=24,
+        description="Hours before score>=90 actions move into the overdue owner queue.",
+    )
+    ACTIONS_OWNER_QUEUE_OVERDUE_HIGH_HOURS: int = Field(
+        default=72,
+        description="Hours before score>=70 actions move into the overdue owner queue.",
+    )
+    ACTIONS_OWNER_QUEUE_OVERDUE_DEFAULT_HOURS: int = Field(
+        default=168,
+        description="Hours before medium-risk (score>=40) actions move into the overdue owner queue.",
+    )
+    ACTIONS_OWNER_QUEUE_OVERDUE_LOW_HOURS: int = Field(
+        default=336,
+        description="Hours before low-risk (score<40) actions move into the overdue owner queue.",
+    )
+    ACTIONS_TOXIC_COMBINATIONS_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Enable conservative toxic-combination scoring boosts for related action neighborhoods."
+        ),
+    )
+    ACTIONS_TOXIC_COMBINATION_RULES_JSON: str = Field(
+        default="",
+        description=(
+            "Optional JSON array overriding the default toxic-combination rules. "
+            "Each rule supports rule_id, label, required_signals, boost_points, anchor_signals, "
+            "require_resource_anchor, and allow_account_scope_support."
+        ),
+    )
+    ACTIONS_TOXIC_COMBINATION_MAX_BOOST: int = Field(
+        default=15,
+        description="Maximum additive toxic-combination boost applied to one action score.",
+    )
     ROOT_KEY_SAFE_REMEDIATION_ENABLED: bool = Field(
         default=False,
         description=(

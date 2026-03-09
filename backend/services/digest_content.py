@@ -14,9 +14,13 @@ DEFAULT_APP_NAME = "AWS Security Autopilot"
 
 # Payload keys (must match worker/jobs/weekly_digest.build_digest_payload)
 KEY_OPEN_ACTION_COUNT = "open_action_count"
+KEY_OVERDUE_ACTION_COUNT = "overdue_action_count"
+KEY_EXPIRING_ACTION_COUNT = "expiring_action_count"
+KEY_ESCALATION_ACTION_COUNT = "escalation_action_count"
 KEY_NEW_FINDINGS_7D = "new_findings_count_7d"
 KEY_EXCEPTIONS_EXPIRING_14D = "exceptions_expiring_14d_count"
 KEY_TOP_ACTIONS = "top_5_actions"
+KEY_ESCALATIONS = "escalations"
 KEY_EXPIRING_EXCEPTIONS = "expiring_exceptions"
 KEY_GENERATED_AT = "generated_at"
 
@@ -50,6 +54,44 @@ def _base_from_view_url(view_in_app_url: str) -> str:
     return u
 
 
+def _escalation_plain_line(view_in_app_url: str, item: dict[str, Any]) -> str:
+    risk_tier = (item.get("risk_tier") or "unknown").upper()
+    sla_state = item.get("sla_state") or "state_unknown"
+    title = (item.get("title") or "Action").replace("\n", " ")[:80]
+    owner = (item.get("owner_label") or "Unassigned").replace("\n", " ")[:60]
+    due_at = item.get("due_at") or "unknown"
+    action_id = item.get("action_id")
+    action_url = get_action_url(_base_from_view_url(view_in_app_url), action_id) if action_id else None
+    suffix = f" — {action_url}" if action_url else ""
+    return f"• [{risk_tier}/{sla_state}] {title} — owner {owner} — due {due_at}{suffix}"
+
+
+def _escalation_html_line(view_in_app_url: str, item: dict[str, Any]) -> str:
+    title = (item.get("title") or "Action").replace("<", "&lt;").replace(">", "&gt;")[:80]
+    risk_tier = (item.get("risk_tier") or "unknown").replace("<", "&lt;").replace(">", "&gt;")
+    sla_state = (item.get("sla_state") or "state_unknown").replace("<", "&lt;").replace(">", "&gt;")
+    owner = (item.get("owner_label") or "Unassigned").replace("<", "&lt;").replace(">", "&gt;")[:60]
+    due_at = (item.get("due_at") or "unknown").replace("<", "&lt;").replace(">", "&gt;")
+    action_id = item.get("action_id")
+    if action_id:
+        action_link = get_action_url(_base_from_view_url(view_in_app_url), action_id)
+        title = f'<a href="{action_link}" style="color:#5B87AD;">{title}</a>'
+    return f'<li style="margin-bottom:6px;color:#C7D0D8;">{title} — {risk_tier}/{sla_state} — owner {owner} — due {due_at}</li>'
+
+
+def _escalation_slack_line(view_in_app_url: str, item: dict[str, Any]) -> str:
+    title = (item.get("title") or "Action").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")[:80]
+    risk_tier = (item.get("risk_tier") or "unknown").upper()
+    sla_state = item.get("sla_state") or "state_unknown"
+    owner = (item.get("owner_label") or "Unassigned").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")[:60]
+    due_at = item.get("due_at") or "unknown"
+    action_id = item.get("action_id")
+    if action_id:
+        action_url = get_action_url(_base_from_view_url(view_in_app_url), action_id)
+        title = f"<{action_url}|{title}>"
+    return f"• {title} — {risk_tier}/{sla_state} — owner {owner} — due {due_at}"
+
+
 def build_email_subject(
     tenant_name: str,
     app_name: str = DEFAULT_APP_NAME,
@@ -67,9 +109,13 @@ def build_email_body_plain(
 ) -> str:
     """Plain-text email body: counts, optional top actions and expiring exceptions, View in app link."""
     open_count = payload.get(KEY_OPEN_ACTION_COUNT, 0) or 0
+    overdue_count = payload.get(KEY_OVERDUE_ACTION_COUNT, 0) or 0
+    expiring_action_count = payload.get(KEY_EXPIRING_ACTION_COUNT, 0) or 0
+    escalation_count = payload.get(KEY_ESCALATION_ACTION_COUNT, 0) or 0
     new_findings = payload.get(KEY_NEW_FINDINGS_7D, 0) or 0
     expiring_count = payload.get(KEY_EXCEPTIONS_EXPIRING_14D, 0) or 0
     top_actions = payload.get(KEY_TOP_ACTIONS) or []
+    escalations = payload.get(KEY_ESCALATIONS) or []
     expiring_list = payload.get(KEY_EXPIRING_EXCEPTIONS) or []
 
     lines = [
@@ -78,6 +124,9 @@ def build_email_body_plain(
         "Summary",
         "-------",
         f"• Open actions: {open_count}",
+        f"• Actions nearing SLA due time: {expiring_action_count}",
+        f"• Overdue actions: {overdue_count}",
+        f"• High-impact escalations: {escalation_count}",
         f"• New or updated findings (last 7 days): {new_findings}",
         f"• Exceptions expiring in the next 14 days: {expiring_count}",
         "",
@@ -101,6 +150,13 @@ def build_email_body_plain(
             lines.append(f"• {label} (expires {expiry})")
         lines.append("")
 
+    if escalations:
+        lines.append("High-impact escalations")
+        lines.append("-----------------------")
+        for item in escalations[:5]:
+            lines.append(_escalation_plain_line(view_in_app_url, item))
+        lines.append("")
+
     lines.extend([
         "View full details and take action in the app:",
         view_in_app_url,
@@ -118,15 +174,22 @@ def build_email_body_html(
 ) -> str:
     """HTML email body: same content as plain, with minimal inline styles for email clients."""
     open_count = payload.get(KEY_OPEN_ACTION_COUNT, 0) or 0
+    overdue_count = payload.get(KEY_OVERDUE_ACTION_COUNT, 0) or 0
+    expiring_action_count = payload.get(KEY_EXPIRING_ACTION_COUNT, 0) or 0
+    escalation_count = payload.get(KEY_ESCALATION_ACTION_COUNT, 0) or 0
     new_findings = payload.get(KEY_NEW_FINDINGS_7D, 0) or 0
     expiring_count = payload.get(KEY_EXCEPTIONS_EXPIRING_14D, 0) or 0
     top_actions = payload.get(KEY_TOP_ACTIONS) or []
+    escalations = payload.get(KEY_ESCALATIONS) or []
     expiring_list = payload.get(KEY_EXPIRING_EXCEPTIONS) or []
 
     name = (tenant_name or "your organization").strip()
 
     summary_rows = [
         ("Open actions", open_count),
+        ("Actions nearing SLA due time", expiring_action_count),
+        ("Overdue actions", overdue_count),
+        ("High-impact escalations", escalation_count),
         ("New or updated findings (last 7 days)", new_findings),
         ("Exceptions expiring in the next 14 days", expiring_count),
     ]
@@ -170,6 +233,14 @@ def build_email_body_html(
             f'<ul style="margin:0 0 16px;padding-left:20px;">{"".join(items)}</ul>'
         )
 
+    escalations_html = ""
+    if escalations:
+        items = [_escalation_html_line(view_in_app_url, item) for item in escalations[:5]]
+        escalations_html = (
+            '<p style="color:#8F9BA6;margin:16px 0 8px;">High-impact escalations</p>'
+            f'<ul style="margin:0 0 16px;padding-left:20px;">{"".join(items)}</ul>'
+        )
+
     return f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -180,6 +251,7 @@ def build_email_body_html(
   <table style="border-collapse:collapse;margin:0 0 20px;">{rows_html}</table>
   {top_actions_html}
   {expiring_html}
+  {escalations_html}
   <p style="margin:24px 0 16px;"><a href="{view_in_app_url}" style="display:inline-block;background:#5B87AD;color:#0f1419;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View in app</a></p>
   <p style="font-size:12px;color:#8F9BA6;margin:24px 0 0;padding-top:16px;border-top:1px solid #1f2a35;">— {app_name}</p>
 </div>
@@ -198,9 +270,13 @@ def build_slack_blocks(
     Structure: header, summary section, optional top actions, optional expiring exceptions, divider, View in app button.
     """
     open_count = payload.get(KEY_OPEN_ACTION_COUNT, 0) or 0
+    overdue_count = payload.get(KEY_OVERDUE_ACTION_COUNT, 0) or 0
+    expiring_action_count = payload.get(KEY_EXPIRING_ACTION_COUNT, 0) or 0
+    escalation_count = payload.get(KEY_ESCALATION_ACTION_COUNT, 0) or 0
     new_findings = payload.get(KEY_NEW_FINDINGS_7D, 0) or 0
     expiring_count = payload.get(KEY_EXCEPTIONS_EXPIRING_14D, 0) or 0
     top_actions = payload.get(KEY_TOP_ACTIONS) or []
+    escalations = payload.get(KEY_ESCALATIONS) or []
     expiring_list = payload.get(KEY_EXPIRING_EXCEPTIONS) or []
 
     name = (tenant_name or "Your organization").strip()
@@ -216,6 +292,9 @@ def build_slack_blocks(
                 "type": "mrkdwn",
                 "text": (
                     f"• *Open actions:* {open_count}\n"
+                    f"• *Actions nearing SLA:* {expiring_action_count}\n"
+                    f"• *Overdue actions:* {overdue_count}\n"
+                    f"• *High-impact escalations:* {escalation_count}\n"
                     f"• *New/updated findings (7d):* {new_findings}\n"
                     f"• *Exceptions expiring (14d):* {expiring_count}"
                 ),
@@ -248,6 +327,13 @@ def build_slack_blocks(
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "*Exceptions expiring soon*\n" + "\n".join(lines)},
+        })
+
+    if escalations:
+        lines = [_escalation_slack_line(view_in_app_url, item) for item in escalations[:5]]
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "*High-impact escalations*\n" + "\n".join(lines)},
         })
 
     blocks.extend([

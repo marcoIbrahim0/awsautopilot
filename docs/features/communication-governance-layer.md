@@ -22,6 +22,8 @@ Delivery contract:
 - Idempotent dedupe key per `(tenant_id, target_type, target_id, stage, idempotency_key, channel)`.
 - Fail-closed dispatch: delivery errors mark row as `failed` and return `503` to callers.
 - Secret-safe persistence/logging: payload redaction and masked webhook logging.
+- Remediation-run Slack and webhook payloads now include additive `escalation` context when the linked action is high-impact and already `expiring` or `overdue`.
+  - Fields: `risk_tier`, `sla_state`, `owner_label`, `due_at`, `escalation_reason`.
 
 ### Exception governance
 
@@ -53,6 +55,17 @@ Returns:
 - open exception counts (`open_total`, `action_required`, `expiring`)
 - SLA breach list for active remediation runs older than threshold
 - compliance closure trend buckets per day
+
+### Weekly digest escalation hooks
+
+The weekly digest worker now computes additive SLA metrics for unresolved actions:
+
+- `overdue_action_count`
+- `expiring_action_count`
+- `escalation_action_count`
+- `escalations[]`
+
+Digest email and Slack content render the bounded `escalations[]` list with direct action links, owner, risk tier, and due timestamp.
 
 ## API surface
 
@@ -109,13 +122,17 @@ flowchart TD
     C --> D["governance_notifications (idempotent event rows)"]
     C --> E["in_app channel"]
     C --> F["email channel"]
-    C --> G["slack channel (optional)"]
-    C --> H["webhook channel (optional)"]
+    C --> G["slack channel (optional, escalation-aware)"]
+    C --> H["webhook channel (optional, escalation-aware)"]
     B --> I["exceptions governance fields"]
     B --> J["dashboard aggregation (actions/runs/exceptions)"]
+    K["weekly_digest job"] --> L["email digest"]
+    K --> M["Slack digest"]
+    K --> N["high-impact SLA escalations"]
 ```
 
 ## Related docs
 
 - [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
+- [Ownership-based risk queues](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/ownership-risk-queues.md)
 - [Weekly digest + Slack settings context](/Users/marcomaher/AWS%20Security%20Autopilot/docs/CHANGELOG.md)

@@ -172,6 +172,9 @@ def test_build_slack_blocks_summary_content() -> None:
     """Slack summary section has open actions, new findings, expiring counts."""
     payload = {
         "open_action_count": 3,
+        "overdue_action_count": 2,
+        "expiring_action_count": 1,
+        "escalation_action_count": 1,
         "new_findings_count_7d": 5,
         "exceptions_expiring_14d_count": 2,
         "top_5_actions": [],
@@ -181,9 +184,12 @@ def test_build_slack_blocks_summary_content() -> None:
     section = next(b for b in blocks if b["type"] == "section")
     text = section["text"]["text"]
     assert "3" in text
-    assert "5" in text
     assert "2" in text
+    assert "1" in text
+    assert "5" in text
     assert "Open actions" in text or "Open" in text
+    assert "Overdue actions" in text
+    assert "High-impact escalations" in text
 
 
 def test_build_slack_blocks_view_in_app_button() -> None:
@@ -221,3 +227,44 @@ def test_build_slack_blocks_with_top_actions_links() -> None:
     assert top_section is not None
     assert "Enable S3" in top_section["text"]["text"]
     assert "https://app.example.com/actions/act-123" in top_section["text"]["text"]
+
+
+def test_build_digest_content_includes_escalation_context() -> None:
+    payload = {
+        "open_action_count": 3,
+        "overdue_action_count": 1,
+        "expiring_action_count": 1,
+        "escalation_action_count": 1,
+        "new_findings_count_7d": 5,
+        "exceptions_expiring_14d_count": 0,
+        "top_5_actions": [],
+        "escalations": [
+            {
+                "action_id": "act-999",
+                "title": "Block public S3 access",
+                "owner_label": "Platform Team",
+                "risk_tier": "critical",
+                "sla_state": "overdue",
+                "due_at": "2026-03-09T08:00:00+00:00",
+            }
+        ],
+        "generated_at": "2026-02-02T09:00:00Z",
+    }
+
+    plain = build_email_body_plain("Acme", payload, "https://app.example.com/top-risks")
+    html = build_email_body_html("Acme", payload, "https://app.example.com/top-risks")
+    blocks = build_slack_blocks("Acme", payload, "https://app.example.com/top-risks")
+
+    assert "High-impact escalations" in plain
+    assert "Platform Team" in plain
+    assert "https://app.example.com/actions/act-999" in plain
+    assert "High-impact escalations" in html
+    assert "critical/overdue" in html
+    escalation_section = next(
+        block for block in blocks
+        if block["type"] == "section"
+        and "High-impact escalations" in block.get("text", {}).get("text", "")
+        and "Platform Team" in block.get("text", {}).get("text", "")
+    )
+    assert "Platform Team" in escalation_section["text"]["text"]
+    assert "https://app.example.com/actions/act-999" in escalation_section["text"]["text"]

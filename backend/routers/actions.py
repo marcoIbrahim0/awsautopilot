@@ -8,7 +8,7 @@ import json
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Literal, Optional
 
 import boto3
@@ -27,15 +27,37 @@ from backend.models.action_finding import ActionFinding
 from backend.models.action_group import ActionGroup
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.aws_account import AwsAccount
+from backend.models.enums import EntityType
+from backend.models.exception import Exception
 from backend.models.finding import Finding
+from backend.models.remediation_run import RemediationRun
 from backend.models.user import User
 from backend.routers.aws_accounts import get_account_for_tenant, get_tenant, resolve_tenant_id
+from backend.services.action_ownership import (
+    UNASSIGNED_OWNER_KEY,
+    UNASSIGNED_OWNER_LABEL,
+    UNASSIGNED_OWNER_TYPE,
+    normalize_owner_lookup_key,
+)
+from backend.services.action_sla import (
+    ActionSLAStatus as ComputedActionSLAStatus,
+    action_sla_expiring_expr,
+    action_sla_overdue_cutoff_expr,
+    action_sla_overdue_expr,
+    compute_action_sla,
+)
 from backend.services.aws import assume_role
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
 from backend.services.direct_fix_bridge import (
     DirectFixModuleUnavailable,
     get_supported_direct_fix_action_types,
     run_remediation_preview_bridge,
+)
+from backend.services.action_scoring import build_score_factors
+from backend.services.action_execution_guidance import build_action_execution_guidance
+from backend.services.remediation_handoff import (
+    ActionImplementationArtifactLink,
+    build_action_implementation_artifacts,
 )
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
@@ -127,6 +149,46 @@ class ReconcileActionsResponse(BaseModel):
 # GET /actions, GET /actions/{id}, PATCH /actions/{id} (Step 5.5)
 # ---------------------------------------------------------------------------
 
+class ActionScoreFactor(BaseModel):
+    """One explainable factor behind an action score."""
+
+    factor_name: str
+    weight: int
+    contribution: int
+    evidence_source: str
+    signals: list[str] = Field(default_factory=list)
+    explanation: str
+
+
+class ActionSLAStatus(BaseModel):
+    """Computed SLA state for one action."""
+
+    risk_tier: Literal["critical", "high", "medium", "low"]
+    due_in_hours: int
+    expiring_in_hours: int
+    due_at: str
+    expiring_at: str
+    state: Literal["on_track", "expiring", "overdue"]
+    is_expiring: bool
+    is_overdue: bool
+    hours_until_due: int | None = None
+    hours_overdue: int | None = None
+    escalation_level: Literal["warning", "breach"] | None = None
+    escalation_eligible: bool = False
+    escalation_reason: str | None = None
+    has_active_exception: bool = False
+
+
+class OwnerQueueCounters(BaseModel):
+    """Owner-queue counts for the current filtered scope."""
+
+    open: int = 0
+    expiring: int = 0
+    overdue: int = 0
+    blocked_fixes: int = 0
+    expiring_exceptions: int = 0
+
+
 class ActionListItem(BaseModel):
     """Single action in list response."""
 
@@ -137,17 +199,24 @@ class ActionListItem(BaseModel):
     target_id: str
     account_id: str
     region: str | None
+    score: int
+    score_components: dict[str, Any] | None = None
+    score_factors: list[ActionScoreFactor] = Field(default_factory=list)
     priority: int
     status: str
     title: str
     control_id: str | None
     resource_id: str | None
+    owner_type: str | None = None
+    owner_key: str | None = None
+    owner_label: str | None = None
     updated_at: str | None
     finding_count: int
     # Step 6.3: exception state (on-read expiry)
     exception_id: str | None = None
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
+    sla: ActionSLAStatus | None = None
     # Optional execution-group fields (group_by=batch)
     is_batch: bool = False
     batch_action_count: int | None = None
@@ -159,6 +228,7 @@ class ActionsListResponse(BaseModel):
 
     items: list[ActionListItem]
     total: int
+    owner_queue_counters: OwnerQueueCounters | None = None
 
 
 class ActionDetailFinding(BaseModel):
@@ -183,6 +253,10 @@ class ActionDetailResponse(BaseModel):
     target_id: str
     account_id: str
     region: str | None
+    score: int
+    score_components: dict[str, Any] | None
+    score_factors: list[ActionScoreFactor] = Field(default_factory=list)
+    context_incomplete: bool = False
     priority: int
     status: str
     title: str
@@ -192,6 +266,9 @@ class ActionDetailResponse(BaseModel):
     control_id: str | None
     resource_id: str | None
     resource_type: str | None
+    owner_type: str
+    owner_key: str
+    owner_label: str
     created_at: str | None
     updated_at: str | None
     findings: list[ActionDetailFinding]
@@ -199,6 +276,40 @@ class ActionDetailResponse(BaseModel):
     exception_id: str | None = None
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
+    sla: ActionSLAStatus | None = None
+    execution_guidance: list["ActionExecutionGuidance"] = Field(default_factory=list)
+    implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
+
+
+class ExecutionGuidanceCheck(BaseModel):
+    """One execution-check item for action detail guidance."""
+
+    code: str
+    status: Literal["pass", "warn", "unknown", "fail", "info"]
+    message: str
+
+
+class ExecutionGuidanceRollback(BaseModel):
+    """Rollback guidance for one action strategy."""
+
+    summary: str
+    command: str
+    notes: list[str] = Field(default_factory=list)
+
+
+class ActionExecutionGuidance(BaseModel):
+    """Execution guidance entry for one actionable remediation strategy."""
+
+    strategy_id: str
+    label: str
+    mode: Literal["pr_only", "direct_fix"]
+    recommended: bool
+    blast_radius: Literal["account", "resource", "access_changing"]
+    blast_radius_summary: str
+    pre_checks: list[ExecutionGuidanceCheck] = Field(default_factory=list)
+    expected_outcome: str
+    post_checks: list[ExecutionGuidanceCheck] = Field(default_factory=list)
+    rollback: ExecutionGuidanceRollback
 
 
 _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
@@ -354,11 +465,216 @@ def _mode_options_for_action(action_type: str) -> list[Literal["pr_only", "direc
     return mode_options
 
 
+def _action_score_value(action: Action) -> int:
+    raw_score = getattr(action, "score", None)
+    if raw_score is None:
+        raw_score = getattr(action, "priority", 0)
+    return int(raw_score or 0)
+
+
+def _score_components_payload(action: Action) -> dict[str, Any] | None:
+    payload = getattr(action, "score_components", None)
+    return payload if isinstance(payload, dict) else None
+
+
+def _score_factors_payload(
+    action: Action | None,
+    *,
+    fallback_score: int | None = None,
+    legacy_source: str = "stored action.score",
+) -> list[ActionScoreFactor]:
+    if action is None:
+        raw_factors = build_score_factors(None, stored_score=fallback_score, legacy_source=legacy_source)
+    else:
+        raw_factors = build_score_factors(
+            _score_components_payload(action),
+            stored_score=_action_score_value(action),
+            legacy_source=legacy_source,
+    )
+    return [ActionScoreFactor(**factor) for factor in raw_factors]
+
+
+def _context_incomplete_payload(action: Action | None) -> bool:
+    components = _score_components_payload(action) if action is not None else None
+    if not isinstance(components, dict):
+        return True
+    marker = components.get("context_incomplete")
+    if isinstance(marker, bool):
+        return marker
+    toxic = components.get("toxic_combinations")
+    if isinstance(toxic, dict):
+        return bool(toxic.get("context_incomplete"))
+    return True
+
+
+def _owner_attr(action: Action, attr_name: str, default: str | None) -> str | None:
+    value = getattr(action, attr_name, default)
+    if isinstance(value, str) and value.strip():
+        return value
+    return default
+
+
+def _has_active_exception(exception_state: dict | None) -> bool:
+    return bool((exception_state or {}).get("exception_id"))
+
+
+def _action_sla_payload(
+    action: Action,
+    *,
+    exception_state: dict | None = None,
+    now: datetime | None = None,
+) -> ActionSLAStatus | None:
+    computed = compute_action_sla(
+        created_at=getattr(action, "created_at", None),
+        score=_action_score_value(action),
+        now=now,
+        has_active_exception=_has_active_exception(exception_state),
+    )
+    if computed is None:
+        return None
+    return _serialize_action_sla(computed)
+
+
+def _serialize_action_sla(sla: ComputedActionSLAStatus) -> ActionSLAStatus:
+    return ActionSLAStatus(
+        risk_tier=sla.risk_tier,
+        due_in_hours=sla.due_in_hours,
+        expiring_in_hours=sla.expiring_in_hours,
+        due_at=sla.due_at.isoformat(),
+        expiring_at=sla.expiring_at.isoformat(),
+        state=sla.state,
+        is_expiring=sla.is_expiring,
+        is_overdue=sla.is_overdue,
+        hours_until_due=sla.hours_until_due,
+        hours_overdue=sla.hours_overdue,
+        escalation_level=sla.escalation_level,
+        escalation_eligible=sla.escalation_eligible,
+        escalation_reason=sla.escalation_reason,
+        has_active_exception=sla.has_active_exception,
+    )
+
+
+def _action_score_sql_expr() -> object:
+    return func.coalesce(Action.score, Action.priority, 0)
+
+
+def _active_action_exception_subquery(tenant_uuid: Any, now: datetime) -> object:
+    return (
+        select(
+            Exception.entity_id.label("action_id"),
+            Exception.expires_at.label("exception_expires_at"),
+        )
+        .where(Exception.tenant_id == tenant_uuid)
+        .where(Exception.entity_type == EntityType.action)
+        .where(Exception.expires_at > now)
+        .subquery()
+    )
+
+
+def _unresolved_action_expr(use_effective_visibility: bool, effective_open_expr: object) -> object:
+    currently_open = or_(Action.status == "open", Action.status == "in_progress")
+    if not use_effective_visibility:
+        return currently_open
+    return or_(currently_open, and_(Action.status == "resolved", effective_open_expr))
+
+
+def _overdue_cutoff_expr(now: datetime) -> object:
+    return action_sla_overdue_cutoff_expr(
+        now=now,
+        score_expr=_action_score_sql_expr(),
+    )
+
+
+def _overdue_action_expr(now: datetime) -> object:
+    return Action.created_at <= _overdue_cutoff_expr(now)
+
+
+def _expiring_action_expr(now: datetime) -> object:
+    return action_sla_expiring_expr(
+        created_at_expr=Action.created_at,
+        now=now,
+        score_expr=_action_score_sql_expr(),
+    )
+
+
+def _expiring_exception_expr(active_exception_sq: object, now: datetime) -> object:
+    return and_(
+        active_exception_sq.c.action_id.is_not(None),
+        active_exception_sq.c.exception_expires_at
+        <= now + timedelta(days=settings.ACTIONS_OWNER_QUEUE_EXPIRING_EXCEPTION_DAYS),
+    )
+
+
+def _owner_queue_filter_expr(
+    owner_queue: str,
+    *,
+    unresolved_expr: object,
+    active_exception_sq: object,
+    now: datetime,
+) -> object:
+    has_active_exception = active_exception_sq.c.action_id.is_not(None)
+    expiring_exception = _expiring_exception_expr(active_exception_sq, now)
+    overdue = _overdue_action_expr(now)
+    expiring = _expiring_action_expr(now)
+    if owner_queue == "expiring_exceptions":
+        return and_(unresolved_expr, expiring_exception)
+    if owner_queue == "blocked_fixes":
+        return and_(unresolved_expr, has_active_exception, ~expiring_exception)
+    if owner_queue == "overdue":
+        return and_(unresolved_expr, ~has_active_exception, overdue)
+    if owner_queue == "expiring":
+        return and_(unresolved_expr, ~has_active_exception, expiring)
+    return and_(unresolved_expr, ~has_active_exception, ~overdue, ~expiring)
+
+
+async def _load_owner_queue_counters(
+    db: AsyncSession,
+    *,
+    scope_filters: list[object],
+    finding_counts: object,
+    active_exception_sq: object,
+    unresolved_expr: object,
+    now: datetime,
+) -> OwnerQueueCounters:
+    has_active_exception = active_exception_sq.c.action_id.is_not(None)
+    expiring_exception = _expiring_exception_expr(active_exception_sq, now)
+    overdue = _overdue_action_expr(now)
+    expiring = _expiring_action_expr(now)
+    open_queue = and_(unresolved_expr, ~has_active_exception, ~overdue, ~expiring)
+    expiring_queue = and_(unresolved_expr, ~has_active_exception, expiring)
+    overdue_queue = and_(unresolved_expr, ~has_active_exception, overdue)
+    blocked_queue = and_(unresolved_expr, has_active_exception, ~expiring_exception)
+    expiring_exception_queue = and_(unresolved_expr, expiring_exception)
+
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(case((open_queue, 1), else_=0)), 0).label("open"),
+            func.coalesce(func.sum(case((expiring_queue, 1), else_=0)), 0).label("expiring"),
+            func.coalesce(func.sum(case((overdue_queue, 1), else_=0)), 0).label("overdue"),
+            func.coalesce(func.sum(case((blocked_queue, 1), else_=0)), 0).label("blocked_fixes"),
+            func.coalesce(func.sum(case((expiring_exception_queue, 1), else_=0)), 0).label("expiring_exceptions"),
+        )
+        .select_from(Action)
+        .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
+        .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+        .where(*scope_filters)
+    )
+    row = result.one()
+    return OwnerQueueCounters(
+        open=int(row.open or 0),
+        expiring=int(row.expiring or 0),
+        overdue=int(row.overdue or 0),
+        blocked_fixes=int(row.blocked_fixes or 0),
+        expiring_exceptions=int(row.expiring_exceptions or 0),
+    )
+
+
 def _action_to_list_item(
     action: Action,
     exception_state: dict | None = None,
     finding_count: int | None = None,
     status_override: str | None = None,
+    now: datetime | None = None,
 ) -> ActionListItem:
     """Build list item from Action; finding_count may be supplied from SQL aggregation."""
     state = exception_state or {}
@@ -371,16 +687,23 @@ def _action_to_list_item(
         target_id=action.target_id,
         account_id=action.account_id,
         region=action.region,
-        priority=action.priority,
+        score=_action_score_value(action),
+        score_components=_score_components_payload(action),
+        score_factors=_score_factors_payload(action),
+        priority=int(getattr(action, "priority", 0) or 0),
         status=status_override or action.status,
         title=action.title,
         control_id=action.control_id,
         resource_id=action.resource_id,
+        owner_type=_owner_attr(action, "owner_type", None),
+        owner_key=_owner_attr(action, "owner_key", None),
+        owner_label=_owner_attr(action, "owner_label", None),
         updated_at=action.updated_at.isoformat() if action.updated_at else None,
         finding_count=resolved_finding_count,
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
+        sla=_action_sla_payload(action, exception_state=state, now=now),
     )
 
 
@@ -450,10 +773,11 @@ def _build_batch_target_id_from_fields(
     return f"batch|{action_type}|{account_id}|{resolved_region}|{status}"
 
 
-def _batch_sort_key(item: ActionListItem) -> tuple[int, str]:
+def _batch_sort_key(item: ActionListItem) -> tuple[int, str, str]:
     return (
-        item.priority,
+        item.score,
         item.updated_at or "",
+        item.id,
     )
 
 
@@ -463,6 +787,29 @@ def _normalize_updated_at(value: datetime | None) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
+
+
+def _representative_action_key(action: Action) -> tuple[int, datetime, str]:
+    return (_action_score_value(action), _normalize_updated_at(action.updated_at), str(action.id))
+
+
+async def _load_batch_representatives(
+    db: AsyncSession,
+    tenant_uuid: uuid.UUID,
+    group_ids: list[str],
+) -> dict[str, Action]:
+    if not group_ids:
+        return {}
+    result = await db.execute(
+        select(ActionGroupMembership.group_id, Action)
+        .join(Action, (Action.id == ActionGroupMembership.action_id) & (Action.tenant_id == ActionGroupMembership.tenant_id))
+        .where(ActionGroupMembership.tenant_id == tenant_uuid)
+        .where(cast(ActionGroupMembership.group_id, String).in_(group_ids))
+    )
+    grouped: defaultdict[str, list[Action]] = defaultdict(list)
+    for group_id, action in result.all():
+        grouped[str(group_id)].append(action)
+    return {group_id: max(actions, key=_representative_action_key) for group_id, actions in grouped.items()}
 
 
 def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
@@ -478,8 +825,8 @@ def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
     items: list[ActionListItem] = []
     for key, group in grouped.items():
         action_type, account_id, region, status = key
-        representative = max(group, key=lambda a: (a.priority, _normalize_updated_at(a.updated_at)))
-        max_priority = max(a.priority for a in group)
+        representative = max(group, key=_representative_action_key)
+        max_score = max(_action_score_value(action) for action in group)
         max_updated_at = max((_normalize_updated_at(a.updated_at) for a in group), default=None)
         total_findings = sum(len(a.action_finding_links or []) for a in group)
         action_count = len(group)
@@ -497,7 +844,10 @@ def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
                 target_id=_build_batch_target_id(representative),
                 account_id=account_id,
                 region=region,
-                priority=max_priority,
+                score=max_score,
+                score_components=None,
+                score_factors=_score_factors_payload(representative),
+                priority=max_score,
                 status=status,
                 title=_batch_title(action_type, action_count),
                 control_id=representative.control_id,
@@ -517,6 +867,9 @@ def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
 def _action_to_detail_response(
     action: Action,
     exception_state: dict | None = None,
+    now: datetime | None = None,
+    account: AwsAccount | None = None,
+    implementation_artifacts: list[ActionImplementationArtifactLink] | None = None,
 ) -> ActionDetailResponse:
     """Build detail response from Action; action_finding_links and finding must be loaded."""
     state = exception_state or {}
@@ -544,7 +897,11 @@ def _action_to_detail_response(
         target_id=action.target_id,
         account_id=action.account_id,
         region=action.region,
-        priority=action.priority,
+        score=_action_score_value(action),
+        score_components=_score_components_payload(action),
+        score_factors=_score_factors_payload(action),
+        context_incomplete=_context_incomplete_payload(action),
+        priority=int(getattr(action, "priority", 0) or 0),
         status=action.status,
         title=action.title,
         description=action.description,
@@ -553,13 +910,38 @@ def _action_to_detail_response(
         control_id=action.control_id,
         resource_id=action.resource_id,
         resource_type=action.resource_type,
+        owner_type=_owner_attr(action, "owner_type", UNASSIGNED_OWNER_TYPE) or UNASSIGNED_OWNER_TYPE,
+        owner_key=_owner_attr(action, "owner_key", UNASSIGNED_OWNER_KEY) or UNASSIGNED_OWNER_KEY,
+        owner_label=_owner_attr(action, "owner_label", UNASSIGNED_OWNER_LABEL) or UNASSIGNED_OWNER_LABEL,
         created_at=action.created_at.isoformat() if action.created_at else None,
         updated_at=action.updated_at.isoformat() if action.updated_at else None,
         findings=findings,
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
+        sla=_action_sla_payload(action, exception_state=state, now=now),
+        execution_guidance=[
+            ActionExecutionGuidance(**guidance)
+            for guidance in build_action_execution_guidance(action, account=account)
+        ],
+        implementation_artifacts=implementation_artifacts or [],
     )
+
+
+async def _load_action_implementation_artifacts(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action: Action,
+) -> list[ActionImplementationArtifactLink]:
+    result = await db.execute(
+        select(RemediationRun)
+        .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.action_id == action.id)
+        .order_by(RemediationRun.created_at.desc())
+        .limit(8)
+    )
+    runs = result.scalars().all()
+    return build_action_implementation_artifacts(runs, action_status=action.status)
 
 
 @router.get("", response_model=ActionsListResponse)
@@ -579,6 +961,15 @@ async def list_actions(
         str | None,
         Query(alias="status", description="Filter by status (open, in_progress, resolved, suppressed)"),
     ] = None,
+    owner_type: Annotated[
+        Literal["user", "team", "service", "unassigned"] | None,
+        Query(description="Filter by resolved owner type."),
+    ] = None,
+    owner_key: Annotated[str | None, Query(description="Filter by normalized owner key.")] = None,
+    owner_queue: Annotated[
+        Literal["open", "expiring", "overdue", "expiring_exceptions", "blocked_fixes"] | None,
+        Query(description="Filter by owner queue bucket."),
+    ] = None,
     group_by: Annotated[
         Literal["resource", "batch"],
         Query(description="List mode: 'resource' for individual actions, 'batch' for execution groups."),
@@ -596,6 +987,7 @@ async def list_actions(
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     await get_tenant(tenant_uuid, db)
+    now = datetime.now(timezone.utc)
 
     finding_counts = (
         select(
@@ -609,34 +1001,68 @@ async def list_actions(
     use_effective_visibility = settings.ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED
     effective_open_expr = _action_has_effective_open_finding_expr(tenant_uuid)
     normalized_status_filter = status_filter.strip().lower() if status_filter is not None else None
+    normalized_owner_type = owner_type.strip().lower() if owner_type is not None else None
+    normalized_owner_key = None
+    if owner_key is not None:
+        normalized_owner_key = normalize_owner_lookup_key(owner_key, normalized_owner_type)
+    normalized_owner_queue = owner_queue.strip().lower() if owner_queue is not None else None
+    active_exception_sq = _active_action_exception_subquery(tenant_uuid, now)
+    unresolved_expr = _unresolved_action_expr(use_effective_visibility, effective_open_expr)
+    status_filter_expr = None
 
-    filters = [Action.tenant_id == tenant_uuid]
+    action_filters = [Action.tenant_id == tenant_uuid]
     if settings.ONLY_IN_SCOPE_CONTROLS:
-        filters.append(Action.action_type != "pr_only")
+        action_filters.append(Action.action_type != "pr_only")
     if account_id is not None:
-        filters.append(Action.account_id == account_id)
+        action_filters.append(Action.account_id == account_id)
     if region is not None:
-        filters.append(Action.region == region)
+        action_filters.append(Action.region == region)
     if control_id is not None:
-        filters.append(Action.control_id == control_id.strip())
+        action_filters.append(Action.control_id == control_id.strip())
     if resource_id is not None:
-        filters.append(Action.resource_id == resource_id.strip())
+        action_filters.append(Action.resource_id == resource_id.strip())
     if action_type is not None:
-        filters.append(Action.action_type == action_type.strip())
+        action_filters.append(Action.action_type == action_type.strip())
+    if normalized_owner_type is not None:
+        action_filters.append(Action.owner_type == normalized_owner_type)
+    if normalized_owner_key is not None:
+        action_filters.append(Action.owner_key == normalized_owner_key)
+    if not include_orphans:
+        action_filters.append(finding_count_expr > 0)
+    queue_scope_filters = list(action_filters)
     if normalized_status_filter is not None:
         if use_effective_visibility and normalized_status_filter == "open":
-            filters.append(
-                or_(
-                    Action.status == "open",
-                    and_(Action.status == "resolved", effective_open_expr),
-                )
+            status_filter_expr = or_(
+                Action.status == "open",
+                and_(Action.status == "resolved", effective_open_expr),
             )
         elif use_effective_visibility and normalized_status_filter == "resolved":
-            filters.append(and_(Action.status == "resolved", ~effective_open_expr))
+            status_filter_expr = and_(Action.status == "resolved", ~effective_open_expr)
         else:
-            filters.append(Action.status == normalized_status_filter)
-    if not include_orphans:
-        filters.append(finding_count_expr > 0)
+            status_filter_expr = Action.status == normalized_status_filter
+    if normalized_owner_queue is not None:
+        action_filters.append(
+            _owner_queue_filter_expr(
+                normalized_owner_queue,
+                unresolved_expr=unresolved_expr,
+                active_exception_sq=active_exception_sq,
+                now=now,
+            )
+        )
+    resource_filters = list(action_filters)
+    if status_filter_expr is not None:
+        resource_filters.append(status_filter_expr)
+
+    owner_queue_counters = None
+    if normalized_owner_queue is not None:
+        owner_queue_counters = await _load_owner_queue_counters(
+            db,
+            scope_filters=queue_scope_filters,
+            finding_counts=finding_counts,
+            active_exception_sq=active_exception_sq,
+            unresolved_expr=unresolved_expr,
+            now=now,
+        )
 
     if group_by == "batch":
         group_filters = [ActionGroup.tenant_id == tenant_uuid]
@@ -680,6 +1106,7 @@ async def list_actions(
                 ActionGroup.action_type.label("action_type"),
                 ActionGroup.account_id.label("account_id"),
                 ActionGroup.region.label("region"),
+                func.max(Action.score).label("score"),
                 func.max(Action.priority).label("priority"),
                 func.max(Action.updated_at).label("updated_at"),
                 func.max(Action.control_id).label("control_id"),
@@ -702,7 +1129,8 @@ async def list_actions(
                 & (Action.tenant_id == ActionGroupMembership.tenant_id),
             )
             .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
-            .where(*group_filters)
+            .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+            .where(*group_filters, *action_filters)
             .group_by(ActionGroup.id, ActionGroup.action_type, ActionGroup.account_id, ActionGroup.region)
         )
 
@@ -734,10 +1162,16 @@ async def list_actions(
         total = total_result.scalar() or 0
 
         grouped_query = grouped_query.order_by(
-            func.max(Action.priority).desc(),
+            func.max(Action.score).desc(),
             func.max(Action.updated_at).desc().nullslast(),
+            cast(ActionGroup.id, String).asc(),
         ).limit(limit).offset(offset)
         rows = (await db.execute(grouped_query)).all()
+        batch_representatives = await _load_batch_representatives(
+            db,
+            tenant_uuid,
+            [str(row.id) for row in rows],
+        )
 
         paged_items = []
         for row in rows:
@@ -757,6 +1191,7 @@ async def list_actions(
                 derived_status = "resolved"
             elif suppressed_count > 0 and suppressed_count == total_actions:
                 derived_status = "suppressed"
+            representative = batch_representatives.get(str(row.id))
 
             paged_items.append(
                 ActionListItem(
@@ -770,7 +1205,14 @@ async def list_actions(
                     ),
                     account_id=row.account_id,
                     region=row.region,
-                    priority=int(row.priority or 0),
+                    score=int(row.score or row.priority or 0),
+                    score_components=None,
+                    score_factors=_score_factors_payload(
+                        representative,
+                        fallback_score=int(row.score or row.priority or 0),
+                        legacy_source="highest member action score in the batch group",
+                    ),
+                    priority=int(row.priority or row.score or 0),
                     status=derived_status,
                     title=_batch_title(row.action_type, total_actions),
                     control_id=row.control_id,
@@ -788,7 +1230,7 @@ async def list_actions(
             tenant_uuid,
             total,
         )
-        return ActionsListResponse(items=paged_items, total=total)
+        return ActionsListResponse(items=paged_items, total=total, owner_queue_counters=owner_queue_counters)
 
     if use_effective_visibility:
         query = (
@@ -798,7 +1240,8 @@ async def list_actions(
                 effective_open_expr.label("has_effective_open_findings"),
             )
             .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
-            .where(*filters)
+            .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+            .where(*resource_filters)
         )
     else:
         query = (
@@ -807,13 +1250,18 @@ async def list_actions(
                 finding_count_expr.label("finding_count"),
             )
             .outerjoin(finding_counts, Action.id == finding_counts.c.action_id)
-            .where(*filters)
+            .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+            .where(*resource_filters)
         )
     count_query = select(func.count()).select_from(query.order_by(None).subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    query = query.order_by(Action.priority.desc(), Action.updated_at.desc().nullslast()).limit(limit).offset(offset)
+    query = query.order_by(
+        Action.score.desc(),
+        Action.updated_at.desc().nullslast(),
+        Action.id.asc(),
+    ).limit(limit).offset(offset)
     result = await db.execute(query)
     rows = result.all()
     actions = [row[0] for row in rows]
@@ -840,11 +1288,12 @@ async def list_actions(
                 and effective_open_by_action.get(action.id, False)
                 else None
             ),
+            now=now,
         )
         for action in actions
     ]
     logger.info("Listed %d actions for tenant %s (total=%d)", len(items), tenant_uuid, total)
-    return ActionsListResponse(items=items, total=total)
+    return ActionsListResponse(items=items, total=total, owner_queue_counters=owner_queue_counters)
 
 
 @router.get("/{action_id}", response_model=ActionDetailResponse)
@@ -900,7 +1349,25 @@ async def get_action(
     exception_state = await get_exception_state_for_response(
         db, tenant_uuid, "action", action.id
     )
-    return _action_to_detail_response(action, exception_state)
+    implementation_artifacts = await _load_action_implementation_artifacts(
+        db,
+        tenant_uuid=tenant_uuid,
+        action=action,
+    )
+    account_result = await db.execute(
+        select(AwsAccount).where(
+            AwsAccount.tenant_id == tenant_uuid,
+            AwsAccount.account_id == action.account_id,
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    return _action_to_detail_response(
+        action,
+        exception_state,
+        now=datetime.now(timezone.utc),
+        account=account,
+        implementation_artifacts=implementation_artifacts,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1501,7 +1968,25 @@ async def patch_action(
     exception_state = await get_exception_state_for_response(
         db, tenant_uuid, "action", action.id
     )
-    return _action_to_detail_response(action, exception_state)
+    implementation_artifacts = await _load_action_implementation_artifacts(
+        db,
+        tenant_uuid=tenant_uuid,
+        action=action,
+    )
+    account_result = await db.execute(
+        select(AwsAccount).where(
+            AwsAccount.tenant_id == tenant_uuid,
+            AwsAccount.account_id == action.account_id,
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    return _action_to_detail_response(
+        action,
+        exception_state,
+        now=datetime.now(timezone.utc),
+        account=account,
+        implementation_artifacts=implementation_artifacts,
+    )
 
 
 # ---------------------------------------------------------------------------

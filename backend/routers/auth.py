@@ -722,7 +722,7 @@ async def send_verification_code(
         current_user.phone_verification_expires_at = expires_at
 
     await db.commit()
-    local_mode_message = "Local mode: email/SMS delivery is disabled."
+    local_mode_message = "Local mode: email/SMS delivery is disabled. Use the debug code in this response."
     return SendVerificationResponse(
         message=local_mode_message if settings.is_local else f"A 6-digit code has been sent to your {verification_type}.",
         debug_code=code if settings.is_local else None,

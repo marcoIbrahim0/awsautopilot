@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -37,7 +38,15 @@ def _mock_run() -> MagicMock:
     run = MagicMock()
     run.id = uuid.UUID("523e4567-e89b-12d3-a456-426614174000")
     run.action = MagicMock()
+    run.action.id = uuid.UUID("623e4567-e89b-12d3-a456-426614174000")
     run.action.title = "Harden S3 policy"
+    run.action.action_type = "s3_bucket_block_public_access"
+    run.action.owner_type = "team"
+    run.action.owner_key = "platform-team"
+    run.action.owner_label = "Platform Team"
+    run.action.created_at = datetime(2026, 3, 1, 0, 0, tzinfo=timezone.utc)
+    run.action.score = 95
+    run.action.priority = 95
     return run
 
 
@@ -72,13 +81,15 @@ def test_notify_remediation_run_stage_success_and_retry_summary() -> None:
         with patch("backend.routers.governance.settings") as mock_settings:
             mock_settings.COMMUNICATION_GOVERNANCE_ENABLED = True
             mock_settings.FRONTEND_URL = "https://app.example.com"
-            with patch("backend.routers.governance.dispatch_governance_notification", new=AsyncMock(return_value=_DispatchSummary())):
-                client = TestClient(app)
-                r = client.post(
-                    "/api/governance/remediation-runs/523e4567-e89b-12d3-a456-426614174000/notifications",
-                    headers={"Idempotency-Key": "notify-1"},
-                    json={"stage": "pre_change", "detail": "Queued for approval."},
-                )
+            with patch("backend.routers.governance.get_exception_state_for_response", new=AsyncMock(return_value={})):
+                mock_dispatch = AsyncMock(return_value=_DispatchSummary())
+                with patch("backend.routers.governance.dispatch_governance_notification", new=mock_dispatch):
+                    client = TestClient(app)
+                    r = client.post(
+                        "/api/governance/remediation-runs/523e4567-e89b-12d3-a456-426614174000/notifications",
+                        headers={"Idempotency-Key": "notify-1"},
+                        json={"stage": "pre_change", "detail": "Queued for approval."},
+                    )
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_current_user, None)
@@ -88,6 +99,8 @@ def test_notify_remediation_run_stage_success_and_retry_summary() -> None:
     assert data["stage"] == "pre_change"
     assert data["summary"]["delivered"] == 1
     assert data["summary"]["replayed"] == 1
+    assert mock_dispatch.await_args.kwargs["escalation_context"]["risk_tier"] == "critical"
+    assert mock_dispatch.await_args.kwargs["escalation_context"]["sla_state"] == "overdue"
 
 
 def test_notify_remediation_run_stage_requires_admin() -> None:

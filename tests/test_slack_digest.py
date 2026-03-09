@@ -74,9 +74,22 @@ def test_send_slack_digest_posts_blocks_and_returns_true() -> None:
     """send_slack_digest POSTs JSON with blocks and returns True on 200."""
     payload = {
         "open_action_count": 2,
+        "overdue_action_count": 1,
+        "expiring_action_count": 1,
+        "escalation_action_count": 1,
         "new_findings_count_7d": 1,
         "exceptions_expiring_14d_count": 0,
         "top_5_actions": [],
+        "escalations": [
+            {
+                "action_id": "act-123",
+                "title": "Restrict public security group rule",
+                "owner_label": "Platform Team",
+                "risk_tier": "high",
+                "sla_state": "overdue",
+                "due_at": "2026-03-09T08:00:00+00:00",
+            }
+        ],
         "generated_at": "2026-02-02T09:00:00Z",
     }
     captured = {}
@@ -108,6 +121,14 @@ def test_send_slack_digest_posts_blocks_and_returns_true() -> None:
     assert ct == "application/json"
     body = json.loads(captured["data"].decode("utf-8"))
     assert "Weekly digest" in str(body["blocks"][0].get("text", {}).get("text", ""))
+    escalation_block = next(
+        block for block in body["blocks"]
+        if block["type"] == "section"
+        and "High-impact escalations" in block.get("text", {}).get("text", "")
+        and "Platform Team" in block.get("text", {}).get("text", "")
+    )
+    assert "Platform Team" in escalation_block["text"]["text"]
+    assert "https://app.example.com/actions/act-123" in escalation_block["text"]["text"]
 
 
 def test_send_slack_digest_http_error_returns_false() -> None:

@@ -1,6 +1,6 @@
 # Baseline Security Report — Content and Format Specification
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Step:** Implementation Plan 13.1 — Report content and format  
 **Purpose:** Single source of truth for the 48h baseline report structure so the generator (Step 13.2) and templates produce a consistent, professional deliverable. This report is the Alpha lead magnet: prospects connect read-only → ingest → request report → receive within 48 hours → propose onboarding.
 
@@ -21,7 +21,7 @@ The report has four sections. Sections 1–3 are mandatory; Section 4 (Appendix)
 | Section | Title | Content | Placement |
 |--------|--------|--------|------------|
 | 1 | Executive summary | Totals, severity breakdown, open vs resolved, optional account/region breakdown, one-paragraph narrative | Page 1 (or first screen) |
-| 2 | Top risks | Top 10–20 findings or aggregated actions, ordered by severity then priority | Section 2 |
+| 2 | Top risks | Top 10–20 findings or aggregated actions, ordered by deterministic context-driven score with stable tie-breakers | Section 2 |
 | 3 | Recommendations | 5–10 bullet recommendations derived from the scan | Section 3 |
 | 4 | Appendix (optional) | Full finding list (truncated, e.g. first 100) or “Available in app after sign-up” | End of report |
 
@@ -73,7 +73,7 @@ To make the report operational (not just informational), the in-app payload and 
 ### 4.1 Content
 
 - **Source:** Findings and/or aggregated actions. Prefer actions when available (deduplicated); otherwise findings.
-- **Ordering:** By severity (Critical first, then High, Medium, Low, Informational), then by priority/exploitability (e.g. `Action.priority` or finding `severity_normalized`).
+- **Ordering:** When actions are available, order by persisted action score (`Action.score`) descending. The score is deterministic and combines severity, internet exposure, privilege level, data sensitivity, exploit signals, and compensating controls. Stable tie-breakers are `updated_at` descending, then action ID ascending. If only raw findings are available, fall back to severity order.
 - **Count:** Top 10–20 items. Upper bound configurable (default 20) to keep the report scannable.
 - **Per item:** Title, resource identifier, control ID, severity, account ID, region, status. Optional: short recommendation line (e.g. “Enable GuardDuty in us-east-1”); optional “View in app” link (URL to app with tenant/finding context for post-sign-up use).
 

@@ -20,6 +20,8 @@ from backend.config import settings
 from backend.models import Action, ActionFinding, AwsAccount, Finding, Tenant
 from backend.models.enums import ActionStatus, FindingStatus
 from backend.services.action_groups import ensure_membership_for_actions
+from backend.services.action_ownership import resolve_action_owner
+from backend.services.action_scoring import score_action_group
 from backend.services.aws import assume_role
 from backend.services.control_scope import (
     action_type_from_control as _action_type_from_control_impl,
@@ -30,6 +32,7 @@ from backend.services.sg_account_scope_resolver import (
     is_account_scoped_sg_control,
     resolve_account_scoped_sg_ids_from_finding,
 )
+from backend.services.toxic_combinations import apply_toxic_combination_overlays
 
 logger = logging.getLogger(__name__)
 
@@ -202,23 +205,11 @@ def _action_type_from_control(control_id: str | None) -> str:
     return _action_type_from_control_impl(control_id)
 
 
-def _priority_for_finding(finding: Finding) -> int:
-    """
-    Priority 0–100: severity_normalized + exploitability (0–10) + exposure (0–10), capped at 100.
-    Exploitability: +5 if title/description mention 'public' or 'unrestricted'.
-    """
-    base = finding.severity_normalized
-    text = f"{(finding.title or '')} {(finding.description or '')}".lower()
-    exploit = 5 if ("public" in text or "unrestricted" in text) else 0
-    exposure = 0  # MVP: optional later from raw_json
-    return min(100, base + exploit + exposure)
-
-
-def _priority_for_group(findings: list[Finding]) -> int:
-    """Max priority across findings in the group."""
-    if not findings:
-        return 0
-    return max(_priority_for_finding(f) for f in findings)
+def _group_score(findings: list[Finding]) -> tuple[int, dict[str, Any], Finding | None]:
+    """Return deterministic group score, persisted component payload, and representative finding."""
+    group_score = score_action_group(findings)
+    representative = group_score.representative_finding if isinstance(group_score.representative_finding, Finding) else None
+    return group_score.score, group_score.components, representative
 
 
 def _action_status_from_findings(findings: list[Finding]) -> str:
@@ -231,13 +222,16 @@ def _action_status_from_findings(findings: list[Finding]) -> str:
     return ActionStatus.resolved.value
 
 
-def _title_and_description_for_group(findings: list[Finding]) -> tuple[str, str | None]:
-    """Human-readable title (max 500) and description from first finding in group."""
-    if not findings:
+def _title_and_description_for_group(
+    findings: list[Finding],
+    representative: Finding | None,
+) -> tuple[str, str | None]:
+    """Human-readable title (max 500) and description from the representative finding."""
+    selected = representative or (findings[0] if findings else None)
+    if selected is None:
         return "Action", None
-    first = findings[0]
-    title = (first.title or "Security finding")[:500]
-    desc = first.description
+    title = (selected.title or "Security finding")[:500]
+    desc = selected.description
     if len(findings) > 1:
         desc = (desc or "") + f" (+{len(findings) - 1} related finding(s))"
     return title, (desc[:65535] if desc else None)
@@ -277,12 +271,13 @@ def _upsert_action_and_sync_links(
     control_id = canonical_control_id_for_action_type(action_type, first_finding.control_id)
     target_id = _build_target_id(account_id, region, resource_id, control_id)
 
-    priority = _priority_for_group(findings)
+    score, score_components, representative = _group_score(findings)
     status = _action_status_from_findings(findings)
-    title, description = _title_and_description_for_group(findings)
+    title, description = _title_and_description_for_group(findings, representative)
     resource_type = first_target.resource_type
     if resource_type and len(resource_type) > 128:
         resource_type = resource_type[:128]
+    owner = resolve_action_owner(findings, action_type=action_type, resource_type=resource_type)
 
     q = session.query(Action).filter(
         Action.tenant_id == tenant_id,
@@ -297,13 +292,18 @@ def _upsert_action_and_sync_links(
     action = q.first()
 
     if action:
-        action.priority = priority
+        action.score = score
+        action.score_components = score_components
+        action.priority = score
         action.status = status
         action.title = title
         action.description = description
         action.resource_id = resource_id
         action.resource_type = resource_type
         action.control_id = control_id
+        action.owner_type = owner.owner_type
+        action.owner_key = owner.owner_key
+        action.owner_label = owner.owner_label
         action.action_finding_links = [ActionFinding(finding=finding) for finding in findings]
         finding_ids = [finding.id for finding in findings]
         allow_multi = any(item.allow_multi_action_links for item in group)
@@ -315,13 +315,18 @@ def _upsert_action_and_sync_links(
         target_id=target_id,
         account_id=account_id,
         region=region,
-        priority=priority,
+        score=score,
+        score_components=score_components,
+        priority=score,
         status=status,
         title=title,
         description=description,
         control_id=control_id,
         resource_id=resource_id,
         resource_type=resource_type,
+        owner_type=owner.owner_type,
+        owner_key=owner.owner_key,
+        owner_label=owner.owner_label,
     )
     action.action_finding_links = [ActionFinding(finding=finding) for finding in findings]
     session.add(action)
@@ -531,6 +536,8 @@ def compute_actions_for_tenant(
             dict(allowed_expanded_action_ids_by_finding),
         )
 
+    toxic_combination_matches = apply_toxic_combination_overlays(actions_touched)
+
     if actions_touched:
         ensure_membership_for_actions(session, actions_touched, source="recompute")
 
@@ -538,7 +545,7 @@ def compute_actions_for_tenant(
     reopened_with_open_findings = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)
 
     logger.info(
-        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d",
+        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d toxic_combination_matches=%d",
         tenant_id,
         account_id,
         region,
@@ -549,6 +556,7 @@ def compute_actions_for_tenant(
         reopened_with_open_findings,
         links_count,
         removed_conflicting_links,
+        toxic_combination_matches,
     )
     return {
         "actions_created": created,
@@ -557,4 +565,5 @@ def compute_actions_for_tenant(
         "actions_reopened_orphaned": reopened_with_open_findings,
         "actions_reopened_with_open_findings": reopened_with_open_findings,
         "action_findings_linked": links_count,
+        "toxic_combination_matches": toxic_combination_matches,
     }

@@ -1,5 +1,503 @@
 # Task Log
 
+## P0.8 handoff-free closure with engineer-executable artifacts implementation (2026-03-09)
+
+**Task:** Implement Phase 3 P0.8 so action detail and remediation-run detail surfaces include engineer-executable artifact references, closure checklist state, and evidence pointers without requiring a separate manual handoff.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_handoff.py** - added the shared normalization layer for implementation artifacts, evidence pointers, and terminal-run closure checklist entries.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended action detail responses with additive `implementation_artifacts[]` derived from linked remediation runs.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - extended remediation-run detail responses with additive `artifact_metadata` and action status context for closure verification.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - enriched successful `direct_fix` artifacts with timestamp, post-check, and log metadata so closure views have stable evidence to render.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced shared frontend contracts for action implementation artifacts and remediation-run artifact metadata.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - replaced the legacy change-summary-only card with normalized implementation artifact rendering sourced directly from action detail.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** - rendered implementation artifacts, closure checklist, evidence pointers, and stable run-detail anchors.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - updated the drawer regression to assert normalized implementation artifact rendering instead of per-run change-summary fetching.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_8_handoff_free_closure.py** - added focused P0.8 regression coverage for PR bundle, direct-fix, legacy/backward-compatible, and action-detail artifact-link behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_7_execution_guidance.py** - updated the existing action-detail API contract test for the new remediation-run lookup and additive `implementation_artifacts[]`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - extended direct action-detail contract coverage to assert the additive `implementation_artifacts[]` default.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - added remediation-run detail coverage for normalized artifact metadata, evidence pointers, and closure checklist state.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - extended direct-fix worker coverage to assert enriched artifact persistence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - documented the new closure contract, normalization rules, UI anchors, and backward-compatibility guarantees.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/shared-execution-guidance.md** - cross-linked the new closure contract from the existing action-detail execution guidance doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - added the new feature doc to the active feature index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the main documentation index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the additive action/remediation closure metadata and stable run-detail anchors.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a dedicated normalization layer so raw remediation artifacts can be consumed as stable UX fields without changing the underlying `artifacts` payload contract.
+- Normalized the current engineer-facing artifact shapes:
+  - `pr_bundle` -> executable bundle reference with format/file-count metadata
+  - `change_summary` -> applied-change reference with `applied_at` / `applied_by`
+  - `direct_fix` -> direct-fix record with `recorded_at`, `post_check_passed`, and log metadata
+- Added terminal-run closure checklist generation for:
+  - implementation artifact recorded
+  - evidence pointers attached
+  - action closure verified
+- Added evidence-pointer generation for implementation artifacts plus:
+  - `risk_snapshot`
+  - `pr_bundle_error`
+  - activity log
+- Wired the normalized contract into both UI surfaces requested by P0.8:
+  - action detail now renders implementation artifact references directly from `GET /api/actions/{id}`
+  - remediation run detail now renders implementation artifacts, closure checklist, evidence pointers, and stable deep-link anchors
+- Preserved backward compatibility:
+  - raw `artifacts` remains unchanged
+  - legacy runs with no artifacts return empty normalized lists
+  - non-terminal runs do not emit closure checklist items yet
+
+**Validation:**
+- `pytest tests/test_phase3_p0_8_handoff_free_closure.py -q` — pass (`4 passed`)
+- `pytest -q` — pass (`1107 passed`, `2 warnings`)
+- `npm run build` (in `/Users/marcomaher/AWS Security Autopilot/frontend`) — pass
+
+**Technical debt / gotchas:**
+- The normalized evidence list intentionally includes implementation artifacts as evidence pointers too, so UI consumers need to handle some conceptual duplication between “artifact” and “evidence” sections.
+
+**Open questions / TODOs:**
+- Decide whether future remediation-run workers should emit richer artifact-specific evidence (for example plan/apply log refs or external PR URLs) so the normalized closure contract can deep-link outside the app as well.
+
+## P0.7 shared Security + Engineering execution guidance implementation (2026-03-09)
+
+**Task:** Implement Phase 3 P0.7 by enriching action detail responses with shared execution guidance for security and engineering, including blast radius, pre-checks, expected outcome, post-checks, and rollback for direct-fix and PR modes while reusing the existing remediation risk/runtime-check stack.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_execution_guidance.py** - added the shared guidance builder that composes actionable strategy entries from existing runtime probes, dependency checks, blast-radius metadata, estimated resolution windows, and rollback commands.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended action detail responses with additive `execution_guidance[]`, loaded account context for detail guidance generation, and kept the contract additive for existing callers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced the shared action detail type with the additive execution-guidance contract.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - hardened remediation-run detail serialization so sparse mocked actions without a concrete `status` string do not fail response validation.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_7_execution_guidance.py** - added focused P0.7 coverage for complete guidance fields across supported action types, explicit `direct_fix` vs `pr_only` mode differences, and the action-detail API contract.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/shared-execution-guidance.md** - documented the new action-detail execution-guidance contract, mode differences, rollback hydration behavior, and builder flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - added the new feature doc to the active feature list.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - updated the local backend notes for the additive action-detail `execution_guidance[]` contract.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added additive `execution_guidance[]` to `GET /api/actions/{id}` so each actionable, non-exception strategy now returns:
+  - `blast_radius`
+  - `blast_radius_summary`
+  - `pre_checks[]`
+  - `expected_outcome`
+  - `post_checks[]`
+  - `rollback`
+- Kept the contract mode-aware:
+  - `direct_fix` guidance warns about immediate AWS mutation, emphasizes run-success verification, and prefers immediate re-evaluation when supported.
+  - `pr_only` guidance emphasizes repo/deployment ownership, bundle review, plan/apply evidence, and rollback through the same IaC delivery path.
+- Reused existing remediation services instead of duplicating logic:
+  - `collect_runtime_risk_signals(...)`
+  - `evaluate_strategy_impact(...)`
+  - shared strategy metadata helpers for blast radius, resolution window, and rollback commands
+- Added conservative rollback-command hydration from known action/runtime context so placeholders are filled when safe values are available and left visible when they are not.
+- Hardened remediation-run detail serialization to tolerate sparse mocked action summaries in tests by treating non-string action-status values as `None`.
+
+**Validation:**
+- `pytest tests/test_phase3_p0_7_execution_guidance.py -q` — pass (`18 passed`)
+- `pytest tests/test_remediation_runs_api.py::test_patch_cancel_pending_run_200 -q` — pass (`1 passed`)
+- `pytest -q` — pass (`1102 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Action detail now runs strategy-level guidance assembly on read, so actions with many strategies will perform multiple best-effort guidance builds even when the UI does not render every entry yet.
+- Rollback hydration intentionally fills only values that can be derived safely from action scope or runtime evidence; some commands still retain placeholders when context is incomplete.
+- The shared frontend API type is updated, but the existing action-detail drawer still relies on the older top-level summary fields and does not yet render `execution_guidance[]`.
+
+**Open questions / TODOs:**
+- Decide whether the next slice should render `execution_guidance[]` directly in the action-detail drawer or remediation modal instead of keeping it backend-only for now.
+- Decide whether later run-creation flows should expose selected-strategy guidance only, or continue returning the full action-level guidance matrix in detail responses.
+
+## P0.4 fail-closed behavior for incomplete relationship context (2026-03-09)
+
+**Task:** Implement Phase 3 P0.4 so toxic-combination promotion stays fail-closed when relationship context is missing or low-confidence, surface an explicit `context_incomplete` marker in action detail responses, and preserve conservative default scoring.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/toxic_combinations.py** - gated toxic-combination overlays on explicit complete/high-confidence relationship context, persisted top-level `context_incomplete`, and kept additive boosts at `0` when context is missing or below threshold.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added additive `context_incomplete` to the action detail response contract and derived it from stored score metadata.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced the shared action detail type with the additive `context_incomplete` field.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_3_toxic_combinations.py** - updated the existing P0.3 coverage so positive toxic-combination matches now provide explicit complete relationship context.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_4_fail_closed_context.py** - added focused P0.4 regression coverage for missing context, low-confidence context, and complete-context promotion.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - extended the action detail contract coverage with the new `context_incomplete` marker.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/toxic-combination-prioritization.md** - documented the complete/high-confidence relationship-context gate, fail-closed default, and additive action-detail marker.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the new detail marker and clarified that toxic-combination score changes now stay at baseline when context is incomplete.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - updated the local backend contract notes for the additive detail marker.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Tightened toxic-combination overlays so they only apply when relationship context is explicitly present and meets the current confidence threshold (`>= 0.75`).
+- Kept the default behavior conservative:
+  - missing relationship payloads do not increase score,
+  - low-confidence relationship payloads do not increase score,
+  - complete/high-confidence payloads still allow the existing toxic-combination rule boost.
+- Persisted explicit fail-closed state on action score metadata:
+  - `score_components["context_incomplete"]`
+  - `score_components["toxic_combinations"]["context_incomplete"]`
+  - `score_before_toxic_combinations` remains the unchanged baseline when the gate blocks promotion.
+- Exposed `context_incomplete` on `GET /api/actions/{id}` so the action detail API makes incomplete relationship context obvious without requiring clients to inspect nested score components.
+- Kept unrelated or out-of-scope actions non-participating in the overlay logic, preserving the existing narrow relationship model and no-overpromotion default.
+
+**Validation:**
+- `pytest tests/test_phase3_p0_4_fail_closed_context.py -q` — pass (`3 passed`)
+- `pytest tests/test_phase3_p0_3_toxic_combinations.py tests/test_phase3_p0_4_fail_closed_context.py tests/test_phase3_p0_2_score_explainability.py tests/test_wave5_action_detail_contract.py -q` — pass (`15 passed`)
+- `pytest -q` — pass (`1084 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Relationship context is still sourced from per-finding raw payload metadata rather than a first-class persisted graph model, so future P1 graph work should replace this with a stronger source of truth instead of widening the heuristic gate.
+- The additive `context_incomplete` field is currently exposed on action detail responses only; list views still rely on `score_factors` / `score_components` if they need the same signal.
+
+**Open questions / TODOs:**
+- Decide whether a future slice should expose a richer relationship-context summary in the action detail payload, or keep the API surface limited to the explicit boolean plus explainable score factors.
+
+## P0.3 toxic-combination / attack-path-lite prioritization implementation (2026-03-09)
+
+**Task:** Implement Phase 3 P0.3 by detecting explicit toxic combinations across related findings/actions, boosting persisted action priority when all required signals are present, keeping the rules configurable with safe defaults, and exposing the result through the existing actions API.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/toxic_combinations.py** - added the conservative rule engine, signal extraction, resource/account neighborhood matching, fail-closed `context incomplete` handling, env-backed rule loading, and score overlay persistence helpers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - added the second-pass toxic-combination overlay step after base action upserts so persisted `score`, `priority`, and `score_components` include the boost.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - extended explainability to emit a first-class `toxic_combinations` factor from stored score metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - added `ACTIONS_TOXIC_COMBINATIONS_ENABLED`, `ACTIONS_TOXIC_COMBINATION_RULES_JSON`, and `ACTIONS_TOXIC_COMBINATION_MAX_BOOST`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_3_toxic_combinations.py** - added focused P0.3 coverage for positive match, partial match, unrelated findings, and batch-mode `/api/actions` visibility.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/toxic-combination-prioritization.md** - documented the rule engine, current default rule, relationship model, API contract, config surface, and fail-closed behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the additive `toxic_combinations` score factor.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - added local backend notes for the toxic-combination factor and env vars.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active docs index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a dedicated toxic-combination evaluator that works from already-grouped action score metadata rather than inventing a new schema.
+- Kept the default rule narrow and explicit:
+  - `public_exposure_privilege_sensitive_data`
+  - required signals: `internet_exposure`, `privilege_weakness`, `sensitive_data`
+  - additive boost: `15`
+- Kept the relationship model fail-closed:
+  - anchor must be a resource-scoped action
+  - related context is limited to same tenant/account, same resource, same region or global/account-scoped support
+  - account-scoped actions can contribute support signals but do not become boosted anchors
+- Persisted the result into the existing score contract:
+  - `actions.score`
+  - `actions.priority`
+  - `actions.score_components["toxic_combinations"]`
+- Exposed the result through existing API behavior:
+  - `GET /api/actions`
+  - `GET /api/actions/{id}`
+  - `GET /api/actions?group_by=batch`
+- Extended explainability so `score_factors` now include a `toxic_combinations` entry with either:
+  - a positive contribution when the rule matches, or
+  - a zero-point explanation for missing signals / `context incomplete`
+- Added env-backed configurability with safe defaults:
+  - `ACTIONS_TOXIC_COMBINATIONS_ENABLED`
+  - `ACTIONS_TOXIC_COMBINATION_RULES_JSON`
+  - `ACTIONS_TOXIC_COMBINATION_MAX_BOOST`
+
+**Validation:**
+- `pytest tests/test_phase3_p0_3_toxic_combinations.py -q` — pass (`4 passed`)
+- `pytest tests/test_phase3_p0_1_scoring.py tests/test_phase3_p0_2_score_explainability.py tests/test_actions_effective_visibility.py tests/test_actions_batch_grouping.py tests/test_wave5_action_detail_contract.py -q` — pass (`19 passed`)
+- `pytest tests/test_action_engine_merge.py -q` — pass (`14 passed`)
+- `pytest -q` — pass (`1081 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Toxic combinations are evaluated from the current recompute scope only; out-of-scope actions are intentionally not inferred into the relationship graph, so the behavior stays fail-closed.
+- The current implementation only boosts via `/api/actions` score ordering and batch grouping; the separate `/api/action-groups` endpoints do not yet expose a dedicated group-level toxic-combination summary field.
+- `ACTIONS_TOXIC_COMBINATION_RULES_JSON` is intentionally permissive and only performs lightweight shape validation before falling back to the default rule set.
+
+**Open questions / TODOs:**
+- Decide whether later P1 graph work should expand the neighborhood beyond same-resource plus account-scoped support, or keep this attack-path-lite layer deliberately narrow.
+- Decide whether `/api/action-groups` should eventually expose explicit group-level combination metadata instead of relying on boosted member priority only.
+
+## P0.6 SLA windows and escalation hooks implementation (2026-03-09)
+
+**Task:** Implement Phase 3 P0.6 by formalizing action SLA policy by risk tier, exposing deterministic due/overdue state on actions, wiring escalation context into weekly digest and governance Slack/webhook pathways, and adding owner-queue counters for expiring/overdue work.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_sla.py** - added the shared deterministic SLA policy, risk-tier mapping, due/expiring windows, escalation eligibility logic, and reusable SQL predicates for overdue/expiring queue selection.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - added `ACTIONS_OWNER_QUEUE_OVERDUE_LOW_HOURS` and clarified the existing default window now represents medium-risk actions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added additive `sla` payloads on action list/detail responses, introduced the `expiring` owner queue, and returned `owner_queue_counters` on owner-queue responses.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/weekly_digest.py** - extended digest payload generation with overdue/expiring/escalation counts plus a bounded list of qualifying escalation items.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/digest_content.py** - rendered the new escalation counts and per-action escalation context in digest email and Slack content.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/governance_templates.py** - added additive escalation context rendering for governance text/html/webhook payloads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/governance_notifications.py** - passed escalation-aware text to Slack and allowed dispatch callers to provide escalation context.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/governance.py** - attached action-derived escalation context to remediation-run governance notifications when the linked action qualifies.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_6_sla_escalation.py** - added focused Phase 3 P0.6 coverage for deterministic SLA math, escalation qualification, and owner-queue response counters.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_5_owner_queues.py** - extended the existing expiring-exception queue regression for additive `owner_queue_counters`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_digest_content.py** - extended digest rendering coverage for escalation counts and actionable escalation lines in plain/HTML/Slack content.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_slack_digest.py** - asserted Slack digest payloads include escalation-specific action context.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_governance_templates.py** - asserted governance template text/webhook payloads include additive escalation context.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_governance_api.py** - extended remediation-run notification coverage to assert computed escalation context is forwarded into governance dispatch.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/ownership-risk-queues.md** - documented the new risk-tier SLA windows, `expiring` queue semantics, escalation eligibility, and `owner_queue_counters`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/communication-governance-layer.md** - documented the weekly-digest escalation payload and escalation-aware governance Slack/webhook contract.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - updated the local backend notes for the new `owner_queue=expiring` filter and additive SLA/counter fields.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Formalized a four-tier SLA policy derived from action score:
+  - `critical` (`score >= 90`) → due in `24h`
+  - `high` (`score >= 70`) → due in `72h`
+  - `medium` (`score >= 40`) → due in `168h`
+  - `low` (`score < 40`) → due in `336h`
+- Derived deterministic warning windows from each due window and exposed per-action SLA state:
+  - `due_at`
+  - `expiring_at`
+  - `state` (`on_track`, `expiring`, `overdue`)
+  - `hours_until_due` / `hours_overdue`
+  - `escalation_eligible`
+- Added a new owner queue bucket:
+  - `expiring` = unresolved, no active exception, inside SLA warning window, not overdue
+- Added additive `owner_queue_counters` so queue views can render:
+  - `open`
+  - `expiring`
+  - `overdue`
+  - `blocked_fixes`
+  - `expiring_exceptions`
+- Kept escalation qualification narrow and deterministic:
+  - unresolved action
+  - risk tier `high` or `critical`
+  - SLA state `expiring` or `overdue`
+  - no active action exception
+- Extended weekly digest payloads and rendering with:
+  - `overdue_action_count`
+  - `expiring_action_count`
+  - `escalation_action_count`
+  - `escalations[]` entries containing owner, due time, risk tier, SLA state, and direct action link context
+- Extended governance remediation-run notification payloads so Slack/webhook consumers receive additive `escalation` context when the linked action already qualifies for escalation.
+
+**Validation:**
+- `./venv/bin/pytest tests/test_phase3_p0_6_sla_escalation.py -q` — pass (`3 passed`)
+- `./venv/bin/pytest tests/test_phase3_p0_5_owner_queues.py tests/test_digest_content.py tests/test_slack_digest.py tests/test_governance_templates.py tests/test_governance_api.py -q` — pass (`37 passed`)
+- `./venv/bin/pytest -q` — pass (`1077 passed`)
+
+**Technical debt / gotchas:**
+- Batch action-group list responses still leave `sla` unset because the new contract is defined per concrete action, not per aggregated batch row.
+- Governance escalation context is currently attached to remediation-run notifications and weekly digest payloads; separate Jira/ServiceNow sync remains future work beyond the current webhook/ticket contract.
+
+**Open questions / TODOs:**
+- Decide whether future queue views should expose group-level SLA summaries for `group_by=batch`, or whether batch rows should remain action-detail drill-through only for SLA state.
+
+## P0.5 ownership-based risk queues implementation (2026-03-09)
+
+**Task:** Implement ownership-based action routing for Phase 3 P0.5 by persisting deterministic owner mapping on actions, adding owner-scoped queues to `GET /api/actions`, keeping unowned work explicit as `unassigned`, and adding regression coverage for resolver behavior, API filtering, and tenant isolation.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action.py** - added persisted `owner_type`, `owner_key`, and `owner_label` fields plus tenant/owner index metadata.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0039_action_owner_queues.py** - added the additive migration for action ownership fields and index creation.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_ownership.py** - added the deterministic owner resolver, normalization helpers, service fallbacks, and explicit `unassigned` constants.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - wired owner resolution into action upsert/update so recomputed actions persist owner metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended action list/detail payloads with owner fields and added `owner_type`, `owner_key`, and `owner_queue` filters for `open`, `overdue`, `expiring_exceptions`, and `blocked_fixes`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - added configurable overdue/expiring-exception windows for owner queues.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced frontend action types and filter params with the additive owner-queue API contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_5_owner_queues.py** - added focused Phase 3 P0.5 tests for resolver precedence, service fallback, `unassigned` behavior, owner-scoped filtering, and expiring-exception queue selection.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/ownership-risk-queues.md** - documented the resolver precedence, queue semantics, default windows, and API examples.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the new `/api/actions` owner queue query params and payload fields.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added persistent action ownership fields with explicit sentinel defaults:
+  - `owner_type=unassigned`
+  - `owner_key=unassigned`
+  - `owner_label=Unassigned`
+- Implemented deterministic resolver precedence:
+  - explicit `user`
+  - explicit `team`
+  - explicit `service`
+  - derived `service` fallback from action/resource type
+  - `unassigned`
+- Read explicit owner hints only from existing stored finding payload data (`ProductFields` and resource tag maps under `Resources[*]`) to avoid inventing new ingestion requirements.
+- Added score-based overdue routing with the approved default windows:
+  - `score >= 90` → `24h`
+  - `score >= 70` → `72h`
+  - lower scores → `168h`
+- Implemented queue semantics requested for this pass:
+  - `open` = unresolved, no active exception, not overdue
+  - `overdue` = unresolved, no active exception, older than SLA window
+  - `expiring_exceptions` = unresolved, active exception expiring within `7` days
+  - `blocked_fixes` = unresolved, active exception present, but not already in `expiring_exceptions`
+- Kept `blocked_fixes` exception-only in this release; missing access, external dependencies, or manual steps are not yet modeled as blocker states.
+- Preserved tenant isolation by keeping owner filters inside the existing tenant-scoped query path rather than introducing any cross-tenant owner lookup.
+
+**Validation:**
+- `pytest tests/test_phase3_p0_5_owner_queues.py -q` — pass (`6 passed`)
+- `pytest tests/test_actions_effective_visibility.py tests/test_actions_batch_grouping.py tests/test_wave5_action_detail_contract.py tests/test_action_engine_account_scoped_sg.py tests/test_action_engine_merge.py -q` — pass (`28 passed`)
+- `pytest -q` — pass (`1072 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Existing persisted actions remain `unassigned` until they are recomputed through the normal action engine path; the migration is additive and does not backfill historical rows by itself.
+- Derived service fallback is intentionally conservative and code-mapped; richer owner sync from Jira/ServiceNow/repo metadata is still future work.
+- `blocked_fixes` is exception-only today, so broader workflow blockers still need a later data model if the product wants a fuller execution-state queue.
+
+**Open questions / TODOs:**
+- Decide whether historical actions should get a one-time recompute/backfill after the migration is applied in a live database.
+- Decide whether a later P0.x/P1 step should expand blocker modeling beyond exceptions (for example missing access, pending approval, or dependency on another team).
+
+## P0.1 rollout follow-up blocked by deleted database target (2026-03-09)
+
+**Task:** Finish the remaining operational rollout steps for P0.1 by applying the action-scoring migration and recomputing persisted actions for historical rows.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this blocked operational follow-up.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md** - documented the stale/deleted database host failure mode for local migration runs.
+
+**What was done:**
+- Verified the intended recompute path is the existing script `scripts/recompute_account_actions.py`, which delegates to `compute_actions_for_tenant(...)`.
+- Attempted to check the live database revision with `alembic current`, using the normal `backend/.env`-driven Alembic configuration.
+- Confirmed the configured database target in `backend/.env` still points to the RDS host `security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com`.
+- Confirmed the migration step is currently blocked because that host no longer resolves from this machine, so Alembic cannot connect.
+- Verified the blocker is infrastructure, not code:
+  - local PostgreSQL is not running on `localhost:5432`,
+  - `aws rds describe-db-instances --region eu-north-1` returned no DB instances,
+  - the project history already records the hard-delete of `security-autopilot-db-main` on `2026-03-04`.
+
+**Technical debt / gotchas:**
+- The P0.1 code and tests are complete, but historical action rows cannot be migrated/backfilled until `backend/.env` is repointed to a live PostgreSQL target.
+- Existing persisted rows in any future restored/recreated database will need both:
+  - `alembic upgrade head`
+  - targeted or full action recomputation so `score_components` and downstream explainability payloads are populated from real scoring inputs.
+
+**Open questions / TODOs:**
+- Decide the replacement database target for local ops:
+  - recreate/provision an RDS instance,
+  - switch `backend/.env` to Neon,
+  - or run a local PostgreSQL instance.
+- After a live database is available, rerun:
+  - `alembic upgrade head`
+  - `python3 scripts/recompute_account_actions.py --tenant-id <TENANT_UUID> --account-id <AWS_ACCOUNT_ID> [--region <REGION>]`
+
+## P0.2 action score explainability factors implementation (2026-03-09)
+
+**Task:** Add auditor-readable, machine-parseable score factor explanations to prioritized actions and expose them in action list/detail API responses without breaking the existing P0.1 score contract.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - added deterministic `score_factors` derivation from persisted `score_components`, including score-consistency adjustment handling and legacy fallback behavior.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added `score_factors` to action list/detail response models and serializers, plus representative-action factor loading for batch list responses.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced shared frontend action types with additive `score`, `score_components`, and `score_factors` fields.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_2_score_explainability.py** - added focused regression coverage for non-empty factor payloads, score-total consistency, secret-safe evidence output, and batch representative-factor behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the explainability contract, current factor weights, safety constraints, and batch-list behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active documentation index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a first-class `score_factors` API field for actions with per-factor:
+  - `factor_name`,
+  - `weight`,
+  - `contribution`,
+  - `evidence_source`,
+  - `signals`,
+  - `explanation`.
+- Kept `score_components` backward-compatible and derived `score_factors` from it at read time so existing persisted actions do not require a schema change.
+- Guaranteed the factor contributions sum to the returned `score`, including explicit bounds/legacy adjustment handling when older payloads are incomplete.
+- Kept evidence secret-safe by emitting only fixed source descriptors and bounded matched-signal labels rather than raw finding payload values.
+- Added batch-list explainability so `group_by=batch` returns factors from the same highest-scoring representative action used for the displayed batch score.
+
+**Validation:**
+- `pytest tests/test_phase3_p0_2_score_explainability.py -q` — pass (`4 passed`)
+- `pytest -q` — pass (`1066 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- `score_factors` are currently derived from persisted `score_components` at response time, so older partial payloads fall back to a legacy factor until the action is recomputed.
+- Batch `score_factors` explain the highest-scoring member action in the group; they are not an aggregate merge across every member action.
+
+**Open questions / TODOs:**
+- Decide whether a future migration should persist `score_factors` directly on write, or whether read-time derivation from `score_components` remains the preferred contract.
+
+## P0.1 context-driven risk prioritization scoring implementation (2026-03-09)
+
+**Task:** Replace severity-only action priority with deterministic context-driven scoring, persist score metadata on actions, expose the new score in the actions API, and add regression coverage for ordering/determinism.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - added the deterministic scoring engine for severity, internet exposure, privilege level, data sensitivity, exploit signals, and compensating controls.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - replaced the old priority calculation with persisted score + normalized score components and representative-finding selection for grouped actions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action.py** - added `score` and `score_components` fields plus a tenant score index.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0039_action_scoring_metadata.py** - added the schema migration for action score persistence.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - exposed score fields in list/detail responses and changed ordering to `score DESC`, `updated_at DESC`, `id ASC`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_1_scoring.py** - added formula, determinism, ranking, and bounds coverage for the new scorer.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_actions_effective_visibility.py** - extended list-contract coverage for score fields and stable score-based ordering.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - extended action detail contract coverage for score fields.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** - tightened the local-mode verification response message so the existing auth verification suite remains green in local test mode.
+- **/Users/marcomaher/AWS Security Autopilot/docs/baseline-report-spec.md** - updated active documentation to describe score-driven top-risk ordering.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a bounded `0-100` action score that combines:
+  - severity,
+  - internet exposure,
+  - privilege level,
+  - data sensitivity,
+  - exploit signals,
+  - compensating controls.
+- Kept the score deterministic by:
+  - using stable heuristics only,
+  - selecting one representative finding per grouped action with explicit tie-breakers,
+  - ordering action list queries by `score DESC`, `updated_at DESC NULLS LAST`, `id ASC`.
+- Persisted both `actions.score` and `actions.score_components`, while continuing to mirror `priority = score` so existing downstream consumers do not regress.
+- Exposed `score` and `score_components` in `/api/actions` list/detail responses.
+- Added focused scoring tests plus action API contract regressions for score fields and ordering.
+
+**Validation:**
+- `pytest tests/test_phase3_p0_1_scoring.py -q` — pass
+- `pytest tests/test_actions_effective_visibility.py tests/test_wave5_action_detail_contract.py tests/test_action_engine_account_scoped_sg.py -q` — pass
+- `pytest tests/test_auth_verification_mfa.py::test_send_and_confirm_email_verification_code -q` — pass
+- `pytest -q` — pass (`1062 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Several score factors still rely on deterministic text/control heuristics because the richer graph/context inputs from later Phase 3 items are not implemented yet.
+- Existing actions are backfilled with `score = priority` at migration time; normalized component payloads are fully refreshed when actions are recomputed.
+
+**Open questions / TODOs:**
+- Decide whether to run a one-off historical action recompute/backfill so all pre-existing actions get first-class `score_components`.
+- Calibrate the factor weights against real tenant data once richer business/asset context becomes available.
+
+## Landing-page proof rhythm alignment: first feature gap matches inter-feature gap (2026-03-07)
+
+**Task:** Align the vertical rhythm in the desktop proof section so the gap above `ZERO AGENTS / Connect Securely in 5 Minutes` matches the visual gap to the next feature (`REAL-TIME TRACING / Instant Visibility`), while preserving right-card sticky behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - increased the desktop lead spacer before the first proof feature block.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Updated the left-column top spacer from `h-[clamp(5rem,11vh,8rem)]` to `h-[clamp(11rem,27vh,18rem)]` to lower the first feature block and match section rhythm.
+- Kept right sticky visual starting behavior unchanged by leaving `desktopStickyTopOffset` and `desktopVisualOffset` untouched.
+
+**Validation:**
+- Build not run in this pass.
+
+**Technical debt / gotchas:**
+- Spacer-based visual rhythm remains manually tuned; major future typography/copy changes may require another spacing calibration.
+
+**Open questions / TODOs:**
+- None.
+
+## Landing-page proof spacing tweak: lower first ZERO AGENTS block on desktop (2026-03-07)
+
+**Task:** Move the first proof feature block (`ZERO AGENTS` + `Connect Securely in 5 Minutes`) downward on desktop because it was visually too close to the section title, while keeping the right sticky card start position unchanged.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/landing/MaximizeSecurityGrid.tsx** - increased the top spacer before the first desktop proof feature block.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Increased the desktop top spacer in the left proof column from `h-[clamp(3rem,8vh,6rem)]` to `h-[clamp(5rem,11vh,8rem)]`.
+- Left the right sticky visual positioning logic unchanged (`desktopStickyTopOffset` and `desktopVisualOffset` untouched), preserving the current card starting position.
+
+**Validation:**
+- Build not run in this pass.
+
+**Technical debt / gotchas:**
+- The proof section relies on tuned spacer values; future copy/typography changes may require another spacing pass.
+
+**Open questions / TODOs:**
+- None.
+
 ## Landing-page mobile animation restore: remove global mobile motion clamp (2026-03-07)
 
 **Task:** Fix missing mobile hero and section reveal animations by removing the global CSS rule that disabled transitions/animations on all viewports up to `768px`.

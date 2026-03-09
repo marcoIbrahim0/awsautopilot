@@ -4,6 +4,50 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [P0.8 handoff-free closure with engineer-executable artifacts implementation (2026-03-09)](task_log.md#p08-handoff-free-closure-with-engineer-executable-artifacts-implementation-2026-03-09)
+  - Added additive `implementation_artifacts[]` on action detail and additive `artifact_metadata` on remediation-run detail without changing the raw `artifacts` payload.
+  - Normalized PR bundle, change-summary, direct-fix, risk-snapshot, and activity-log evidence into stable UI-facing artifact/evidence/checklist structures.
+  - Added focused P0.8 regressions plus remediation-run/action contract updates and verified the full `pytest -q` suite passes.
+- [P0.7 shared Security + Engineering execution guidance implementation (2026-03-09)](task_log.md#p07-shared-security--engineering-execution-guidance-implementation-2026-03-09)
+  - Added additive `execution_guidance[]` on `/api/actions/{id}` with `blast_radius`, `pre_checks`, `expected_outcome`, `post_checks`, and `rollback` per actionable strategy.
+  - Reused the existing remediation runtime-check and risk-evaluation services so `direct_fix` and `pr_only` guidance stays mode-aware without duplicating safety logic.
+  - Added focused P0.7 contract coverage and verified the full `pytest -q` suite passes.
+- [P0.4 fail-closed behavior for incomplete relationship context (2026-03-09)](task_log.md#p04-fail-closed-behavior-for-incomplete-relationship-context-2026-03-09)
+  - Tightened toxic-combination promotion so missing or low-confidence relationship context keeps the baseline score and never adds a boost.
+  - Added additive `context_incomplete` on action detail responses plus persisted fail-closed metadata in `score_components`.
+  - Added focused P0.4 regressions and verified the full `pytest -q` suite passes.
+- [P0.3 toxic-combination / attack-path-lite prioritization implementation (2026-03-09)](task_log.md#p03-toxic-combination--attack-path-lite-prioritization-implementation-2026-03-09)
+  - Added a conservative rule engine that boosts persisted action score/priority only when all required related-risk signals are present.
+  - Exposed the result through existing `/api/actions` list/detail and batch-mode score ordering plus explainable `toxic_combinations` score factors.
+  - Added focused P0.3 regression coverage and verified the full `pytest -q` suite passes.
+- [P0.6 SLA windows and escalation hooks implementation (2026-03-09)](task_log.md#p06-sla-windows-and-escalation-hooks-implementation-2026-03-09)
+  - Added a shared action SLA policy with deterministic `due_at` / `expiring_at` / `state` computation and high-impact escalation eligibility.
+  - Extended `/api/actions` owner queues with the new `expiring` bucket plus additive `owner_queue_counters` and per-action `sla` metadata.
+  - Extended weekly digest and governance Slack/webhook payloads with actionable escalation context and verified the full `pytest -q` suite passes.
+- [P0.5 ownership-based risk queues implementation (2026-03-09)](task_log.md#p05-ownership-based-risk-queues-implementation-2026-03-09)
+  - Persisted deterministic action owner fields (`owner_type`, `owner_key`, `owner_label`) with explicit `unassigned` defaults.
+  - Added owner-scoped `/api/actions` queues for `open`, `overdue`, `expiring_exceptions`, and `blocked_fixes` using the approved score-based overdue windows and exception-only blocker semantics.
+  - Added focused P0.5 regression tests and verified the full `pytest -q` suite passes.
+- [P0.1 rollout follow-up blocked by deleted database target (2026-03-09)](task_log.md#p01-rollout-follow-up-blocked-by-deleted-database-target-2026-03-09)
+  - Attempted to apply the remaining operational P0.1 steps (`alembic` migration and historical action recompute) using the existing local env target.
+  - Confirmed the configured RDS host no longer exists and there are no remaining `eu-north-1` DB instances, so rollout completion is blocked on provisioning or repointing PostgreSQL.
+  - Updated the local environment guide to document the deleted-host migration failure mode.
+- [P0.2 action score explainability factors implementation (2026-03-09)](task_log.md#p02-action-score-explainability-factors-implementation-2026-03-09)
+  - Added additive `score_factors` payloads to `/api/actions` list/detail responses with factor name, weight, contribution, evidence source, signals, and explanation.
+  - Kept total-factor contributions aligned with the persisted action `score`, including legacy fallback handling for older partial payloads.
+  - Added focused P0.2 regression tests and verified the full `pytest -q` suite passes.
+- [P0.1 context-driven risk prioritization scoring implementation (2026-03-09)](task_log.md#p01-context-driven-risk-prioritization-scoring-implementation-2026-03-09)
+  - Replaced severity-only action priority with deterministic weighted scoring across severity, exposure, privilege, data sensitivity, exploit signals, and compensating controls.
+  - Persisted `score` plus normalized component payloads on actions and exposed them in `/api/actions`.
+  - Added score determinism/ranking coverage and verified the full `pytest -q` suite passes.
+- [Landing-page proof rhythm alignment: first feature gap matches inter-feature gap (2026-03-07)](task_log.md#landing-page-proof-rhythm-alignment-first-feature-gap-matches-inter-feature-gap-2026-03-07)
+  - Increased desktop lead spacer before `ZERO AGENTS / Connect Securely in 5 Minutes` to align with the first-to-second feature spacing rhythm.
+  - Kept right sticky card starting position unchanged.
+  - Build not run in this pass.
+- [Landing-page proof spacing tweak: lower first ZERO AGENTS block on desktop (2026-03-07)](task_log.md#landing-page-proof-spacing-tweak-lower-first-zero-agents-block-on-desktop-2026-03-07)
+  - Lowered the first proof text block by increasing the desktop left-column top spacer.
+  - Kept right sticky card start position unchanged by not changing sticky offset/visual offset logic.
+  - Build not run in this pass.
 - [Landing-page mobile animation restore: remove global mobile motion clamp (2026-03-07)](task_log.md#landing-page-mobile-animation-restore-remove-global-mobile-motion-clamp-2026-03-07)
   - Removed the global `max-width: 768px` animation/transition clamp that disabled motion on mobile.
   - Kept reduced-motion accessibility behavior while restoring hero and scroll reveal animation paths on phone.

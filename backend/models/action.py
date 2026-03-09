@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,8 +22,10 @@ class Action(Base):
 
     __table_args__ = (
         Index("idx_actions_tenant_status", "tenant_id", "status"),
+        Index("idx_actions_tenant_score", "tenant_id", "score", postgresql_ops={"score": "DESC"}),
         Index("idx_actions_tenant_priority", "tenant_id", "priority", postgresql_ops={"priority": "DESC"}),
         Index("idx_actions_tenant_account_region", "tenant_id", "account_id", "region"),
+        Index("idx_actions_tenant_owner", "tenant_id", "owner_type", "owner_key"),
         # Dedupe: one action per distinct target per tenant (unique index with COALESCE in migration)
     )
 
@@ -40,6 +42,8 @@ class Action(Base):
     account_id: Mapped[str] = mapped_column(String(12), nullable=False)
     region: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
+    score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    score_components: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     priority: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
 
@@ -48,6 +52,9 @@ class Action(Base):
     control_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     resource_id: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     resource_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    owner_type: Mapped[str] = mapped_column(String(32), nullable=False, default="unassigned", server_default="unassigned")
+    owner_key: Mapped[str] = mapped_column(String(255), nullable=False, default="unassigned", server_default="unassigned")
+    owner_label: Mapped[str] = mapped_column(String(255), nullable=False, default="Unassigned", server_default="Unassigned")
 
     created_at: Mapped[object] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[object] = mapped_column(

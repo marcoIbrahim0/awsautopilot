@@ -421,6 +421,7 @@ aws sqs get-queue-attributes --queue-url $SQS_INGEST_QUEUE_URL --attribute-names
 
 - **SSL errors**: Ensure `sslmode=require` is in `DATABASE_URL` for cloud-hosted databases
 - **Connection refused**: Verify PostgreSQL is running and `DATABASE_URL` host/port are correct
+- **Host not found / `could not translate host name`**: The hostname in `backend/.env` no longer resolves. This usually means the referenced RDS/Neon target was deleted or renamed. Update `DATABASE_URL` and `DATABASE_URL_SYNC` to a live PostgreSQL target before running `alembic current` or `alembic upgrade head`.
 - **Authentication failed**: Check username/password in `DATABASE_URL`
 
 ### AWS Credential Errors

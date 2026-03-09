@@ -11,7 +11,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from backend.config import settings
@@ -21,6 +21,11 @@ from backend.models.exception import Exception as ExceptionModel
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.action_sla import (
+    action_sla_expiring_expr,
+    action_sla_overdue_expr,
+    build_action_escalation_context,
+)
 from backend.services.email import email_service
 from backend.services.slack_digest import is_valid_slack_webhook_url, send_slack_digest
 from backend.workers.database import session_scope
@@ -89,6 +94,66 @@ def build_digest_payload(session, tenant_id: uuid.UUID) -> dict:
     )
     exceptions_expiring_14d_count = expiring_result.scalar() or 0
 
+    active_exception_sq = (
+        select(ExceptionModel.entity_id.label("action_id"))
+        .where(ExceptionModel.tenant_id == tenant_id)
+        .where(ExceptionModel.entity_type == EntityType.action)
+        .where(ExceptionModel.expires_at > now)
+        .subquery()
+    )
+    unresolved_action_expr = Action.status.in_(
+        [ActionStatus.open.value, ActionStatus.in_progress.value]
+    )
+    score_expr = func.coalesce(Action.score, Action.priority, 0)
+    overdue_expr = action_sla_overdue_expr(
+        created_at_expr=Action.created_at,
+        now=now,
+        score_expr=score_expr,
+    )
+    expiring_expr = action_sla_expiring_expr(
+        created_at_expr=Action.created_at,
+        now=now,
+        score_expr=score_expr,
+    )
+    no_active_exception_expr = active_exception_sq.c.action_id.is_(None)
+
+    overdue_count_result = session.execute(
+        select(func.count(Action.id))
+        .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+        .where(
+            Action.tenant_id == tenant_id,
+            unresolved_action_expr,
+            no_active_exception_expr,
+            overdue_expr,
+        )
+    )
+    overdue_action_count = overdue_count_result.scalar() or 0
+
+    expiring_count_result = session.execute(
+        select(func.count(Action.id))
+        .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+        .where(
+            Action.tenant_id == tenant_id,
+            unresolved_action_expr,
+            no_active_exception_expr,
+            expiring_expr,
+        )
+    )
+    expiring_action_count = expiring_count_result.scalar() or 0
+
+    escalation_count_result = session.execute(
+        select(func.count(Action.id))
+        .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+        .where(
+            Action.tenant_id == tenant_id,
+            unresolved_action_expr,
+            no_active_exception_expr,
+            score_expr >= 70,
+            or_(overdue_expr, expiring_expr),
+        )
+    )
+    escalation_action_count = escalation_count_result.scalar() or 0
+
     # Top 5 open actions by priority
     top_actions_result = session.execute(
         select(Action)
@@ -110,6 +175,40 @@ def build_digest_payload(session, tenant_id: uuid.UUID) -> dict:
         }
         for a in top_actions_rows
     ]
+
+    escalation_rows = session.execute(
+        select(Action)
+        .outerjoin(active_exception_sq, active_exception_sq.c.action_id == Action.id)
+        .where(
+            Action.tenant_id == tenant_id,
+            unresolved_action_expr,
+            no_active_exception_expr,
+            score_expr >= 70,
+            or_(overdue_expr, expiring_expr),
+        )
+        .order_by(
+            case((overdue_expr, 1), else_=0).desc(),
+            Action.score.desc(),
+            Action.created_at.asc(),
+        )
+        .limit(5)
+    ).scalars().all()
+    escalations = []
+    for action in escalation_rows:
+        context = build_action_escalation_context(
+            action_id=action.id,
+            action_type=action.action_type,
+            title=action.title,
+            owner_type=action.owner_type,
+            owner_key=action.owner_key,
+            owner_label=action.owner_label,
+            created_at=action.created_at,
+            score=int(getattr(action, "score", None) or getattr(action, "priority", 0) or 0),
+            now=now,
+            has_active_exception=False,
+        )
+        if context is not None:
+            escalations.append(context)
 
     # Exceptions expiring in next 14 days (list for 11.2 content: entity, expiry, link)
     expiring_exceptions_result = session.execute(
@@ -143,9 +242,13 @@ def build_digest_payload(session, tenant_id: uuid.UUID) -> dict:
 
     return {
         "open_action_count": open_action_count,
+        "overdue_action_count": overdue_action_count,
+        "expiring_action_count": expiring_action_count,
+        "escalation_action_count": escalation_action_count,
         "new_findings_count_7d": new_findings_count_7d,
         "exceptions_expiring_14d_count": exceptions_expiring_14d_count,
         "top_5_actions": top_5_actions,
+        "escalations": escalations,
         "expiring_exceptions": expiring_exceptions,
         "generated_at": now.isoformat(),
     }

@@ -123,6 +123,14 @@ def test_direct_fix_success() -> None:
     assert run.status == RemediationRunStatus.success
     assert run.outcome == "S3 Block Public Access enabled at account level"
     assert "Assuming WriteRole" in (run.logs or "")
+    assert isinstance(run.artifacts, dict)
+    direct_fix_artifact = run.artifacts.get("direct_fix")
+    assert isinstance(direct_fix_artifact, dict)
+    assert direct_fix_artifact.get("outcome") == "S3 Block Public Access enabled at account level"
+    assert direct_fix_artifact.get("post_check_passed") is True
+    assert direct_fix_artifact.get("log_count") == 3
+    assert direct_fix_artifact.get("log_excerpt") == ["Pre-check", "Apply", "Post-check"]
+    assert isinstance(direct_fix_artifact.get("recorded_at"), str)
     mock_assume.assert_called_once_with(
         role_arn=account.role_write_arn,
         external_id=account.external_id,
@@ -231,7 +239,7 @@ def test_direct_fix_executor_fails() -> None:
 
 
 def test_direct_fix_already_compliant() -> None:
-    """direct_fix: executor returns success with 'Already compliant' -> run success, no artifacts key."""
+    """direct_fix: executor returns success with 'Already compliant' -> run success, no direct_fix artifact."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
     account = _mock_account()

@@ -1,0 +1,2468 @@
+commit bce07ce6eaa0e54b1a3223e590f36ec4902a7879
+Author: Marco Ibrahim <116677278+marcoIbrahim0@users.noreply.github.com>
+Date:   Thu Mar 5 01:18:50 2026 +0200
+
+    feat(frontend): refactor landing page, add FAQ and Security pages, improve UI components
+
+diff --git a/next.config.ts b/next.config.ts
+index 9948622..c5975b9 100644
+--- a/next.config.ts
++++ b/next.config.ts
+@@ -7,7 +7,7 @@ const contentSecurityPolicy = [
+   "base-uri 'self'",
+   "frame-ancestors 'none'",
+   "object-src 'none'",
+-  `script-src ${isDev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self'"}`,
++  `script-src ${isDev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self' 'unsafe-inline'"}`,
+   "style-src 'self' 'unsafe-inline'",
+   "img-src 'self' data: blob: https:",
+   "font-src 'self' data:",
+diff --git a/src/app/actions/[id]/page.tsx b/src/app/actions/[id]/page.tsx
+index e447cc8..e4a967e 100644
+--- a/src/app/actions/[id]/page.tsx
++++ b/src/app/actions/[id]/page.tsx
+@@ -1,6 +1,6 @@
+ import { redirect } from 'next/navigation';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ export default function ActionDetailRedirect() {
+   redirect('/findings');
+diff --git a/src/app/admin/control-plane/[tenantId]/page.tsx b/src/app/admin/control-plane/[tenantId]/page.tsx
+index 1305c8d..0435b24 100644
+--- a/src/app/admin/control-plane/[tenantId]/page.tsx
++++ b/src/app/admin/control-plane/[tenantId]/page.tsx
+@@ -30,7 +30,7 @@ import {
+   getErrorMessage,
+ } from '@/lib/api';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ const DEFAULT_SERVICES = ['ec2', 's3', 'cloudtrail', 'config', 'iam', 'ebs', 'rds', 'eks', 'ssm'];
+ 
+diff --git a/src/app/admin/tenants/[tenantId]/page.tsx b/src/app/admin/tenants/[tenantId]/page.tsx
+index 71a6fb5..42c8568 100644
+--- a/src/app/admin/tenants/[tenantId]/page.tsx
++++ b/src/app/admin/tenants/[tenantId]/page.tsx
+@@ -35,7 +35,7 @@ import {
+ } from '@/lib/api';
+ import { startNavigationFeedback } from '@/lib/navigation-feedback';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ type TabKey = 'overview' | 'users' | 'accounts' | 'findings' | 'actions' | 'runs' | 'exports' | 'notes' | 'files';
+ 
+diff --git a/src/app/faq/page.tsx b/src/app/faq/page.tsx
+new file mode 100644
+index 0000000..6f1719f
+--- /dev/null
++++ b/src/app/faq/page.tsx
+@@ -0,0 +1,193 @@
++import Link from 'next/link';
++import Image from 'next/image';
++import { Linkedin } from 'lucide-react';
++import { XIcon } from '@/components/ui/XIcon';
++import { SiteNav } from '@/components/site-nav';
++import { SectionAnimator } from '@/components/landing/SectionAnimator';
++
++const FOOTER_LINKS = [
++    { label: 'Autopilot', href: '/landing#autopilot-explained' },
++    { label: 'Security', href: '/security' },
++    { label: 'FAQ', href: '/faq' },
++    { label: 'Contact', href: '/landing#contact' },
++];
++
++const FOOTER_SOCIALS = [
++    { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ocypheris', icon: Linkedin },
++    { label: '@ocypheris', href: 'https://x.com/ocypheris', icon: XIcon },
++];
++
++const FAQ_ITEMS = [
++    {
++        q: 'How fast can we get value?',
++        a: 'Most teams connect an account and see prioritized actions in minutes.',
++    },
++    {
++        q: 'Do you change infrastructure automatically?',
++        a: 'No. Changes are either explicitly approved direct fixes or reviewed PR bundles.',
++    },
++    {
++        q: 'Does this replace Security Hub or GuardDuty?',
++        a: 'No. It operationalizes them by turning findings into a clear, manageable workflow.',
++    },
++    {
++        q: 'What does it cost?',
++        a: "Pricing starts at $399/month for a single AWS account. Multi-account and enterprise plans are available — book a walkthrough and we'll scope it together.",
++    },
++    {
++        q: 'Is my data safe?',
++        a: 'AWS Security Autopilot uses a read-only IAM role — it never writes to your AWS account without explicit approval. We do not store your AWS credentials. All data is encrypted in transit and at rest. A full data handling overview is available in our Security section.',
++    },
++    {
++        q: 'What happens if AWS Security Autopilot goes offline?',
++        a: 'Nothing changes in your AWS account. The product is read-only by default. Remediation actions only execute when you explicitly approve them. Your infrastructure is never touched without your direct action.',
++    },
++    {
++        q: 'How is this different from Wiz, Prowler, or AWS Security Hub?',
++        a: 'Security Hub and Prowler find problems. Wiz maps them. AWS Security Autopilot operationalizes them — it takes you from a list of findings to merged pull requests and a signed evidence pack, without your team spending weeks on manual remediation.',
++    },
++];
++
++export default function FAQPage() {
++    const CURRENT_YEAR = new Date().getFullYear();
++    return (
++        <>
++            <SiteNav />
++            <main className="landing-neumorphic min-h-screen font-sans">
++
++                {/* Hero Section */}
++                <section className="relative z-10 pt-32 pb-16 px-6 text-center">
++                    <div className="max-w-4xl mx-auto">
++                        <div className="mb-4 h-[3px] w-24 rounded-full bg-[var(--accent)] mx-auto" aria-hidden />
++                        <span className="font-semibold tracking-widest uppercase text-sm mb-4 block" style={{ color: 'var(--accent)' }}>Ocypheris Support</span>
++                        <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight" style={{ color: 'var(--nm-text)' }}>
++                            Frequently Asked Questions
++                        </h1>
++                        <p className="text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
++                            Everything you need to know about AWS Security Autopilot.
++                        </p>
++                    </div>
++                </section>
++
++                {/* Content */}
++                <section className="relative z-10 border-0 bg-transparent px-6 py-12">
++                    <div className="mx-auto max-w-4xl space-y-4">
++                        {FAQ_ITEMS.map((item) => (
++                            <details
++                                key={item.q}
++                                className="group nm-raised-sm p-6 sm:p-7"
++                            >
++                                <summary className="flex cursor-pointer list-none items-center gap-4 text-left outline-none marker:content-none [&::-webkit-details-marker]:hidden">
++                                    <span className="nm-icon-well relative flex h-9 w-9 shrink-0 items-center justify-center text-[var(--accent)] transition duration-300 group-open:scale-[1.06]">
++                                        <span className="absolute h-[2px] w-4 rounded-full bg-[var(--accent)] transition-all duration-300 ease-out group-open:w-[18px]" />
++                                        <span className="absolute h-4 w-[2px] rounded-full bg-[var(--accent)] transition-all duration-300 ease-out group-open:scale-y-0 group-open:rotate-90" />
++                                    </span>
++                                    <span className="text-xl font-semibold transition-colors duration-300 sm:text-2xl" style={{ color: 'var(--nm-text)' }}>
++                                        {item.q}
++                                    </span>
++                                </summary>
++                                <div className="faq-panel">
++                                    <div className="overflow-hidden">
++                                        <p className="faq-answer mt-3 text-base sm:text-lg pl-13" style={{ color: 'var(--nm-text-muted)' }}>
++                                            {item.a}
++                                        </p>
++                                    </div>
++                                </div>
++                            </details>
++                        ))}
++
++                        <div className="text-center pt-16 pb-12">
++                            <p className="text-lg text-[var(--nm-text-muted)] mb-8">
++                                Still have questions? Reach out to us at <a href="mailto:support@ocypheris.com" className="text-[var(--accent)] font-semibold hover:underline">support@ocypheris.com</a>
++                            </p>
++                            <Link href="/landing#contact" className="inline-flex items-center justify-center px-8 py-4 rounded-full font-bold transition-all duration-300 nm-raised hover:nm-raised-xl active:nm-inset" style={{ color: 'var(--nm-text)', background: 'var(--nm-base)' }}>
++                                <span className="mr-2 font-mono">←</span> Get In Touch
++                            </Link>
++                        </div>
++                    </div>
++                </section>
++
++                {/* Professional Glowing Edge SVG Wave Transition towards Footer */}
++                <div className="relative w-full h-24 sm:h-32 overflow-hidden bg-[#02040a] pointer-events-none" aria-hidden="true" style={{ marginTop: '-2px' }}>
++                    <svg
++                        className="absolute top-0 left-0 w-full h-full"
++                        preserveAspectRatio="none"
++                        viewBox="0 0 1440 320"
++                    >
++                        <defs>
++                            <linearGradient id="footerGlowGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
++                                <stop offset="0%" stopColor="#dde6f0" stopOpacity="1" />
++                                <stop offset="100%" stopColor="#02040a" stopOpacity="0" />
++                            </linearGradient>
++                        </defs>
++                        <path fill="#dde6f0" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
++                        <path fill="url(#footerGlowGradient2)" opacity="0.6" transform="translate(0, 15) scale(1, 1.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
++                    </svg>
++                </div>
++
++                <footer
++                    className="relative z-10 border-0 bg-transparent"
++                    style={{
++                        backgroundImage:
++                            "linear-gradient(180deg, rgba(2, 4, 10, 0.98) 0%, rgba(2, 4, 10, 0.0) 18%), linear-gradient(180deg, rgba(4, 9, 35, 0.0) 20%, rgba(10, 29, 76, 0.6) 58%, rgba(20, 41, 120, 0.95) 80%, rgba(31, 63, 188, 0.98) 100%), url('/images/footer-gradient.png')",
++                        backgroundSize: 'cover',
++                        backgroundPosition: 'center top',
++                        backgroundBlendMode: 'screen',
++                    }}
++                >
++                    <div className="mx-auto max-w-6xl px-6 pt-20 pb-14 sm:pt-24 sm:pb-20">
++                        <div className="flex flex-col items-center text-center">
++                            <Image
++                                src="/logo/ocypheris-logo.svg"
++                                alt="Ocypheris"
++                                width={220}
++                                height={60}
++                                className="h-12 w-auto"
++                            />
++
++                            <div className="mt-6 max-w-3xl text-center">
++                                <h3 className="text-lg font-semibold text-white">About Ocypheris</h3>
++                                <p className="mt-2 text-sm text-white/70 sm:text-base">
++                                    Ocypheris builds AWS-native security and compliance tooling. Autopilot turns Security Hub and GuardDuty findings into prioritized action, controlled remediation, and audit-ready evidence for teams that need clarity without extra overhead.
++                                </p>
++                            </div>
++                            <nav
++                                aria-label="Footer"
++                                className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-white/80"
++                            >
++                                {FOOTER_LINKS.map((link) => (
++                                    <Link
++                                        key={link.href}
++                                        href={link.href}
++                                        className="transition hover:text-white"
++                                    >
++                                        {link.label}
++                                    </Link>
++                                ))}
++                            </nav>
++                            <div className="mt-8 flex items-center gap-4">
++                                {FOOTER_SOCIALS.map(({ label, href, icon: Icon }) => (
++                                    <Link
++                                        key={label}
++                                        href={href}
++                                        target="_blank"
++                                        rel="noreferrer"
++                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white"
++                                        aria-label={label}
++                                    >
++                                        <Icon className="h-5 w-5" aria-hidden />
++                                    </Link>
++                                ))}
++                            </div>
++                            <p className="mt-8 text-xs text-white/80">
++                                © {CURRENT_YEAR} Ocypheris. All rights reserved.
++                            </p>
++                        </div>
++                    </div>
++                </footer>
++
++                <SectionAnimator />
++            </main>
++        </>
++    );
++}
+diff --git a/src/app/findings/[id]/page.tsx b/src/app/findings/[id]/page.tsx
+index 7d1da32..a9b8d1e 100644
+--- a/src/app/findings/[id]/page.tsx
++++ b/src/app/findings/[id]/page.tsx
+@@ -12,7 +12,7 @@ import { useTenantId } from '@/lib/tenant';
+ import { useAuth } from '@/contexts/AuthContext';
+ import { getSourceLabel } from '@/lib/source';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ interface FindingDetailPageProps {
+   params: Promise<{ id: string }>;
+diff --git a/src/app/globals.css b/src/app/globals.css
+index b2d8de8..fc344a0 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -178,6 +178,20 @@
+       background-position: 350% 50%, 350% 50%;
+     }
+   }
++
++  @keyframes float {
++    0% {
++      transform: translateY(0px);
++    }
++
++    50% {
++      transform: translateY(-10px);
++    }
++
++    100% {
++      transform: translateY(0px);
++    }
++  }
+ }
+ 
+ /* Base styles */
+@@ -266,7 +280,7 @@ body::-webkit-scrollbar {
+ 
+ body.route-loading,
+ body.route-loading * {
+-  cursor: progress !important;
++  cursor: wait !important;
+ }
+ 
+ /* Dropdown / Radix menu enter/leave (smooth transition) */
+diff --git a/src/app/landing/page.tsx b/src/app/landing/page.tsx
+index 50f2ece..4022ac6 100644
+--- a/src/app/landing/page.tsx
++++ b/src/app/landing/page.tsx
+@@ -8,6 +8,7 @@ import {
+   Zap,
+ } from 'lucide-react';
+ import { SiteNav } from '@/components/site-nav';
++import { XIcon } from '@/components/ui/XIcon';
+ import { AuroraBackground } from '@/components/ui/aurora-background';
+ import { CometCard } from '@/components/ui/comet-card';
+ import { BackgroundImageTexture } from '@/components/ui/bg-image-texture';
+@@ -24,17 +25,14 @@ import { BaselineReportHighlight } from '@/components/landing/BaselineReportHigh
+ const CURRENT_YEAR = new Date().getFullYear();
+ const PRIMARY_CTA_URL = 'https://calendly.com/maromaher54/30min';
+ const FOOTER_LINKS = [
+-  { label: 'Proof', href: '/landing#proof' },
+-  { label: 'What You Get', href: '/landing#what-you-get' },
+-  { label: 'From Signal to Action', href: '/landing#how-it-works' },
+-  { label: 'Outcomes', href: '/landing#autopilot-explained' },
++  { label: 'Autopilot', href: '/landing#autopilot-explained' },
+   { label: 'Security', href: '/landing#security-data' },
+-  { label: 'FAQ', href: '/landing#faq' },
++  { label: 'FAQ', href: '/faq' },
+   { label: 'Contact', href: '/landing#contact' },
+-  { label: 'About', href: '/landing#about' },
+ ];
+ const FOOTER_SOCIALS = [
+-  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/111719210/admin/dashboard/', icon: Linkedin },
++  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ocypheris', icon: Linkedin },
++  { label: '@ocypheris', href: 'https://x.com/ocypheris', icon: XIcon },
+ ];
+ const SECURITY_POINTS = [
+   {
+@@ -60,36 +58,7 @@ const SECURITY_POINTS = [
+     needsVerification: true,
+   },
+ ];
+-const FAQ_ITEMS = [
+-  {
+-    q: 'How fast can we get value?',
+-    a: 'Most teams connect an account and see prioritized actions in minutes.',
+-  },
+-  {
+-    q: 'Do you change infrastructure automatically?',
+-    a: 'No. Changes are either explicitly approved direct fixes or reviewed PR bundles.',
+-  },
+-  {
+-    q: 'Does this replace Security Hub or GuardDuty?',
+-    a: 'No. It operationalizes them by turning findings into a clear, manageable workflow.',
+-  },
+-  {
+-    q: 'What does it cost?',
+-    a: "Pricing starts at $399/month for a single AWS account. Multi-account and enterprise plans are available — book a walkthrough and we'll scope it together.",
+-  },
+-  {
+-    q: 'Is my data safe?',
+-    a: 'AWS Security Autopilot uses a read-only IAM role — it never writes to your AWS account without explicit approval. We do not store your AWS credentials. All data is encrypted in transit and at rest. A full data handling overview is available in our Security section.',
+-  },
+-  {
+-    q: 'What happens if AWS Security Autopilot goes offline?',
+-    a: 'Nothing changes in your AWS account. The product is read-only by default. Remediation actions only execute when you explicitly approve them. Your infrastructure is never touched without your direct action.',
+-  },
+-  {
+-    q: 'How is this different from Wiz, Prowler, or AWS Security Hub?',
+-    a: 'Security Hub and Prowler find problems. Wiz maps them. AWS Security Autopilot operationalizes them — it takes you from a list of findings to merged pull requests and a signed evidence pack, without your team spending weeks on manual remediation.',
+-  },
+-];
++
+ 
+ export default function LandingPage() {
+   return (
+@@ -125,12 +94,12 @@ export default function LandingPage() {
+               </div>
+               <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                 <PrimaryCTANeumorphic href={PRIMARY_CTA_URL} text="Book a 20-minute walkthrough" className="nm-raised-lg" />
+-                <Link
++                {/* <Link
+                   href="#autopilot-explained"
+                   className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-transparent px-8 py-3.5 text-[0.95rem] font-semibold text-white transition-all duration-300 hover:border-[var(--accent)] hover:bg-[rgba(10,113,255,0.05)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--accent)] nm-raised"
+                 >
+                   See how it works
+-                </Link>
++                </Link> */}
+               </div>
+             </div>
+           </AuroraBackground>
+@@ -230,13 +199,13 @@ export default function LandingPage() {
+                     </p>
+                   </div>
+                   <div className="shrink-0 mb-[2px]">
+-                    <Link
++                    {/* <Link
+                       href="#how-it-works"
+                       className="nm-btn-secondary"
+                       style={{ fontSize: '0.875rem', padding: '0.625rem 1.5rem' }}
+                     >
+                       See how it works
+-                    </Link>
++                    </Link> */}
+                   </div>
+                 </div>
+ 
+@@ -262,10 +231,10 @@ export default function LandingPage() {
+                 </p>
+ 
+                 {/* Clean Neumorphic Services Cards */}
+-                <div className="relative mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2">
+-                  <div className="nm-raised-lg p-10 flex flex-col justify-between">
++                <div className="relative mt-12 grid grid-cols-1 gap-12 sm:gap-8 sm:grid-cols-2">
++                  <div className="sm:nm-raised-lg border-b-2 sm:border-0 pb-12 sm:p-10 flex flex-col justify-between" style={{ borderColor: 'rgba(166,184,207,0.3)' }}>
+                     <div>
+-                      <div className="mb-6 nm-icon-well h-12 w-12 text-[var(--accent)]">
++                      <div className="mb-6 nm-icon-well h-12 w-12 text-[var(--accent)] flex items-center justify-center rounded-full">
+                         <Shield className="h-6 w-6" aria-hidden />
+                       </div>
+                       <h3 className="mb-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>Manual Security Management</h3>
+@@ -276,9 +245,9 @@ export default function LandingPage() {
+                     </div>
+                   </div>
+ 
+-                  <div className="nm-raised-lg p-10 flex flex-col justify-between">
++                  <div className="sm:nm-raised-lg border-b-2 sm:border-0 pb-12 sm:p-10 flex flex-col justify-between" style={{ borderColor: 'rgba(166,184,207,0.3)' }}>
+                     <div>
+-                      <div className="mb-6 nm-icon-well h-12 w-12 text-[var(--accent)]">
++                      <div className="mb-6 nm-icon-well h-12 w-12 text-[var(--accent)] flex items-center justify-center rounded-full">
+                         <Wrench className="h-6 w-6" aria-hidden />
+                       </div>
+                       <h3 className="mb-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>Secure SaaS Deployment</h3>
+@@ -298,31 +267,120 @@ export default function LandingPage() {
+ 
+             <section
+               id="security-data"
+-              className="relative z-10 px-6 py-16 sm:py-24"
++              className="relative z-10 px-6 py-24 overflow-hidden"
+               aria-labelledby="security-data-title"
+               data-landing-animate
+             >
+-              <div className="mx-auto max-w-4xl text-center">
+-                <div className="mb-4 h-[3px] w-24 rounded-full bg-[var(--accent)] mx-auto" aria-hidden />
+-                <h2 id="security-data-title" className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--nm-text)' }}>
+-                  Security & Data Handling
+-                </h2>
+-                <p className="mt-4 text-lg sm:text-xl" style={{ color: 'var(--nm-text-muted)' }}>
+-                  Trust is our foundation. Here is exactly how we ensure your environments and data stay completely locked down.
+-                </p>
++              <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
++                <div className="nm-raised absolute -top-20 -left-20 w-96 h-96 opacity-40 animate-[float_6s_ease-in-out_infinite] rounded-full" style={{ background: 'var(--nm-base)' }}></div>
++                <div className="nm-raised absolute bottom-20 -right-20 w-64 h-64 opacity-30 rounded-full" style={{ background: 'var(--nm-base)', animation: 'float 6s ease-in-out infinite', animationDelay: '2s' }}></div>
++                <svg className="absolute top-0 left-0 w-full h-full opacity-10" fill="none" viewBox="0 0 1440 800" xmlns="http://www.w3.org/2000/svg">
++                  <path d="M-100 200 C 300 100, 700 600, 1500 400" fill="transparent" stroke="var(--accent)" strokeWidth="2"></path>
++                </svg>
+               </div>
+-              <div className="mx-auto mt-12 grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
+-                {SECURITY_POINTS.map((point) => (
+-                  <div key={point.title} className="nm-raised-lg flex h-full w-full flex-col overflow-hidden p-8">
+-                    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--nm-text)' }}>{point.title}</h3>
+-                    {point.needsVerification && (
+-                      <>
+-                        {/* VERIFY: this claim needs confirmation before launch */}
+-                      </>
+-                    )}
+-                    <p className="mt-3 text-sm sm:text-base leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>{point.detail}</p>
++
++              <div className="max-w-7xl mx-auto relative z-10">
++                <div className="text-center mb-24">
++                  <div className="mb-4 h-[3px] w-24 rounded-full bg-[var(--accent)] mx-auto" aria-hidden />
++                  <span className="font-semibold tracking-widest uppercase text-sm mb-4 block" style={{ color: 'var(--accent)' }}>Trust is our Foundation</span>
++                  <h2 id="security-data-title" className="text-4xl md:text-5xl font-bold mb-6" style={{ color: 'var(--nm-text)' }}>Security & Data Handling</h2>
++                  <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--nm-text-muted)' }}>
++                    Every layer of Ocypheris is designed with a &quot;security-first&quot; mindset, ensuring your AWS environment remains locked down and your data stays private.
++                  </p>
++                </div>
++
++                <div className="relative flex flex-col space-y-32">
++                  {/* 01: Access Model */}
++                  <div className="flex flex-col md:flex-row items-center gap-12 group">
++                    <div className="w-full md:w-1/2 flex justify-center md:justify-end order-2 md:order-1">
++                      <div className="nm-raised-lg p-12 rounded-full w-64 h-64 flex flex-col items-center justify-center text-center transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                        <svg className="w-12 h-12 mb-4" style={{ color: 'var(--accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path></svg>
++                        <span className="text-xs font-bold uppercase tracking-tighter" style={{ color: 'var(--accent)' }}>Verified</span>
++                      </div>
++                    </div>
++                    <div className="w-full md:w-1/2 order-1 md:order-2">
++                      <h3 className="text-3xl font-bold mb-4" style={{ color: 'var(--nm-text)' }}>Access Model</h3>
++                      <p className="leading-relaxed max-w-md" style={{ color: 'var(--nm-text-muted)' }}>
++                        We utilize <span className="font-medium" style={{ color: 'var(--accent)' }}>STS:AssumeRole</span> with External ID and short-lived session credentials. This ensures no permanent keys exist and every action is strictly scoped.
++                      </p>
++                    </div>
+                   </div>
+-                ))}
++
++                  {/* 02: Credentials Handling */}
++                  <div className="flex flex-col md:flex-row items-center gap-12 group">
++                    <div className="w-full md:w-1/2 text-left md:text-right">
++                      <h3 className="text-3xl font-bold mb-4" style={{ color: 'var(--nm-text)' }}>Credentials Handling</h3>
++                      <p className="leading-relaxed max-w-md md:ml-auto" style={{ color: 'var(--nm-text-muted)' }}>
++                        We never store customer AWS access keys or secret keys. Our architecture is designed to function entirely on identity-based roles, eliminating the risk of credential leakage.
++                      </p>
++                    </div>
++                    <div className="w-full md:w-1/2 flex justify-center md:justify-start">
++                      <div className="nm-raised-lg p-12 rounded-[3rem] w-72 h-48 flex flex-col items-center justify-center rotate-3 group-hover:rotate-0 transition-all duration-300 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                        <svg className="w-12 h-12 mb-2" style={{ color: 'var(--accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path></svg>
++                        <div className="h-[2px] w-24 mb-2 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-50"></div>
++                        <span className="text-sm font-medium" style={{ color: 'var(--nm-text)' }}>Zero Storage Policy</span>
++                      </div>
++                    </div>
++                  </div>
++
++                  {/* 03: Tenant Isolation */}
++                  <div className="flex flex-col md:flex-row items-center gap-12 group">
++                    <div className="w-full md:w-1/2 flex justify-center md:justify-end order-2 md:order-1">
++                      <div className="nm-raised-lg p-12 rounded-3xl w-64 h-64 flex flex-col items-center justify-center text-center -rotate-6 group-hover:rotate-0 transition-all duration-300 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                        <div className="relative">
++                          <div className="w-16 h-16 rounded-xl nm-inset mb-4 flex items-center justify-center" style={{ background: 'var(--nm-base)' }}>
++                            <div className="w-8 h-8 rounded shrink-0 nm-raised" style={{ background: 'var(--accent)', opacity: 0.8 }} />
++                          </div>
++                          <div className="absolute -top-2 -right-2 w-16 h-16 border-2 rounded-xl opacity-20 pointer-events-none" style={{ borderColor: 'var(--accent)' }}></div>
++                        </div>
++                        <span className="text-sm font-bold mt-2 hover:opacity-80" style={{ color: 'var(--accent)' }}>Encapsulated</span>
++                      </div>
++                    </div>
++                    <div className="w-full md:w-1/2 order-1 md:order-2">
++                      <h3 className="text-3xl font-bold mb-4" style={{ color: 'var(--nm-text)' }}>Tenant Isolation</h3>
++                      <p className="leading-relaxed max-w-md" style={{ color: 'var(--nm-text-muted)' }}>
++                        Findings, actions, and exceptions are strictly scoped by <span className="italic font-medium" style={{ color: 'var(--accent)' }}>tenant_id</span> at the API and data model levels, preventing any cross-account data exposure.
++                      </p>
++                    </div>
++                  </div>
++
++                  {/* 04: Data Residency & Encryption */}
++                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12">
++                    <div className="nm-raised p-10 rounded-[4rem] group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                      <div className="flex items-start gap-6">
++                        <div className="p-4 rounded-2xl nm-inset shrink-0" style={{ background: 'var(--nm-base)' }}>
++                          <svg className="w-8 h-8" style={{ color: 'var(--accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 012.5 2.5V17m-6 5v-1.5a2.5 2.5 0 012.5-2.5h2.5a2.5 2.5 0 012.5 2.5V22M12 22a10 10 0 100-20 10 10 0 000 20z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path></svg>
++                        </div>
++                        <div>
++                          <h4 className="text-2xl font-bold mb-2" style={{ color: 'var(--nm-text)' }}>Data Residency</h4>
++                          <p style={{ color: 'var(--nm-text-muted)' }}>
++                            Customer data residency is configurable to match your specific regional and compliance requirements.
++                          </p>
++                        </div>
++                      </div>
++                    </div>
++
++                    <div className="nm-raised p-10 rounded-[4rem] group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                      <div className="flex items-start gap-6">
++                        <div className="p-4 rounded-2xl nm-inset shrink-0" style={{ background: 'var(--nm-base)' }}>
++                          <svg className="w-8 h-8" style={{ color: 'var(--accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04M12 21.75c-2.676 0-5.216-.584-7.499-1.632A12.005 12.005 0 013 12c0-5.335 3.468-9.859 8.25-11.417a12.005 12.005 0 019.75 0C20.532 2.141 24 6.665 24 12c0 3.321-1.343 6.328-3.501 8.518A12.005 12.005 0 0112 21.75z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path></svg>
++                        </div>
++                        <div>
++                          <h4 className="text-2xl font-bold mb-2" style={{ color: 'var(--nm-text)' }}>Encryption</h4>
++                          <p style={{ color: 'var(--nm-text-muted)' }}>
++                            Data is encrypted at rest using AES-256 and in transit via TLS 1.3 across the entire platform architecture.
++                          </p>
++                        </div>
++                      </div>
++                    </div>
++                  </div>
++                </div>
++
++                <div className="mt-24 flex justify-center w-full">
++                  <Link href="/security" className="nm-btn-secondary" style={{ padding: '1rem 2rem', fontSize: '1rem' }}>
++                    Explore our Security whitepaper <span className="ml-2 font-mono">→</span>
++                  </Link>
++                </div>
+               </div>
+             </section>
+ 
+@@ -339,33 +397,16 @@ export default function LandingPage() {
+                 <div className="grid gap-10 lg:grid-cols-[1.1fr_1.4fr] lg:items-start">
+                   <div>
+                     <h2 id="faq-title" className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--nm-text)' }}>
+-                      FAQ
++                      Questions about Ocypheris?
+                     </h2>
+-                  </div>
+-                  <div className="space-y-4">
+-                    {FAQ_ITEMS.map((item) => (
+-                      <details
+-                        key={item.q}
+-                        className="group nm-raised-sm p-6 sm:p-7"
+-                      >
+-                        <summary className="flex cursor-pointer list-none items-center gap-4 text-left outline-none marker:content-none [&::-webkit-details-marker]:hidden">
+-                          <span className="nm-icon-well relative flex h-9 w-9 shrink-0 items-center justify-center text-[var(--accent)] transition duration-300 group-open:scale-[1.06]">
+-                            <span className="absolute h-[2px] w-4 rounded-full bg-[var(--accent)] transition-all duration-300 ease-out group-open:w-[18px]" />
+-                            <span className="absolute h-4 w-[2px] rounded-full bg-[var(--accent)] transition-all duration-300 ease-out group-open:scale-y-0 group-open:rotate-90" />
+-                          </span>
+-                          <span className="text-xl font-semibold transition-colors duration-300 sm:text-2xl" style={{ color: 'var(--nm-text)' }}>
+-                            {item.q}
+-                          </span>
+-                        </summary>
+-                        <div className="faq-panel">
+-                          <div className="overflow-hidden">
+-                            <p className="faq-answer mt-3 text-base sm:text-lg pl-13" style={{ color: 'var(--nm-text-muted)' }}>
+-                              {item.a}
+-                            </p>
+-                          </div>
+-                        </div>
+-                      </details>
+-                    ))}
++                    <p className="mt-4 text-lg" style={{ color: 'var(--nm-text-muted)' }}>
++                      We&#39;ve compiled answers to the most common questions on security, pricing, auto-remediation, and integration.
++                    </p>
++                    <div className="mt-8">
++                      <Link href="/faq" className="nm-btn-secondary" style={{ padding: '0.875rem 2rem', fontSize: '1rem' }}>
++                        Read the FAQs
++                      </Link>
++                    </div>
+                   </div>
+                 </div>
+               </div>
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index bea5109..696b696 100644
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -19,6 +19,13 @@ export default function RootLayout({
+ }>) {
+   return (
+     <html lang="en" suppressHydrationWarning>
++      <head>
++        <script
++          dangerouslySetInnerHTML={{
++            __html: "window.__name = window.__name || ((fn) => fn);",
++          }}
++        />
++      </head>
+       <body
+         className="m-0 antialiased min-h-screen bg-bg text-text"
+         suppressHydrationWarning
+diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+index bcd3a00..b0ef398 100644
+--- a/src/app/login/page.tsx
++++ b/src/app/login/page.tsx
+@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/ui';
+ import { AuroraBackground } from '@/components/ui/aurora-background';
+ import { startNavigationFeedback } from '@/lib/navigation-feedback';
+ import { forgotPassword, getErrorMessage } from '@/lib/api';
++import { NeumorphicLoader } from '@/components/ui/NeumorphicLoader';
+ 
+ export default function LoginPage() {
+   const router = useRouter();
+@@ -128,7 +129,7 @@ export default function LoginPage() {
+   if (authLoading) {
+     return (
+       <div className="auth-neumorphic min-h-screen flex items-center justify-center">
+-        <div className="animate-pulse" style={{ color: 'var(--nm-text-muted)' }}>Loading...</div>
++        <NeumorphicLoader />
+       </div>
+     );
+   }
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 426c769..5393918 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -11,6 +11,7 @@
+ import { useEffect } from 'react';
+ import { useRouter } from 'next/navigation';
+ import { useAuth } from '@/contexts/AuthContext';
++import { NeumorphicLoader } from '@/components/ui/NeumorphicLoader';
+ 
+ export default function Home() {
+   const router = useRouter();
+@@ -32,17 +33,11 @@ export default function Home() {
+     }
+   }, [isAuthenticated, isLoading, user, router]);
+ 
++
+   // Loading state
+   return (
+     <div className="min-h-screen bg-bg flex items-center justify-center">
+-      <div className="text-center">
+-        <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+-          <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+-          </svg>
+-        </div>
+-        <p className="text-muted">Loading...</p>
+-      </div>
++      <NeumorphicLoader />
+     </div>
+   );
+ }
+diff --git a/src/app/remediation-runs/[id]/page.tsx b/src/app/remediation-runs/[id]/page.tsx
+index fde39a1..63efcbd 100644
+--- a/src/app/remediation-runs/[id]/page.tsx
++++ b/src/app/remediation-runs/[id]/page.tsx
+@@ -7,7 +7,7 @@ import { RemediationRunProgress } from '@/components/RemediationRunProgress';
+ import { useTenantId } from '@/lib/tenant';
+ import { useAuth } from '@/contexts/AuthContext';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ interface RemediationRunDetailPageProps {
+   params: Promise<{ id: string }>;
+diff --git a/src/app/root-key-remediation-runs/[id]/page.tsx b/src/app/root-key-remediation-runs/[id]/page.tsx
+index 570d991..0cb60ca 100644
+--- a/src/app/root-key-remediation-runs/[id]/page.tsx
++++ b/src/app/root-key-remediation-runs/[id]/page.tsx
+@@ -8,7 +8,7 @@ import { RootKeyRemediationLifecycle } from '@/components/root-key/RootKeyRemedi
+ import { useAuth } from '@/contexts/AuthContext';
+ import { useTenantId } from '@/lib/tenant';
+ 
+-export const runtime = 'edge';
++export const runtime = 'nodejs';
+ 
+ interface RootKeyRemediationRunPageProps {
+   params: Promise<{ id: string }>;
+diff --git a/src/app/security/page.tsx b/src/app/security/page.tsx
+new file mode 100644
+index 0000000..432bf3f
+--- /dev/null
++++ b/src/app/security/page.tsx
+@@ -0,0 +1,237 @@
++import Link from 'next/link';
++import Image from 'next/image';
++import { SiteNav } from '@/components/site-nav';
++import { Shield, Key, Database, Lock, CheckCircle, LayoutDashboard, Search, AlertTriangle, Linkedin } from 'lucide-react';
++import { XIcon } from '@/components/ui/XIcon';
++import { SectionAnimator } from '@/components/landing/SectionAnimator';
++
++const FOOTER_LINKS = [
++  { label: 'Autopilot', href: '/landing#autopilot-explained' },
++  { label: 'Security', href: '/security' },
++  { label: 'FAQ', href: '/faq' },
++  { label: 'Contact', href: '/landing#contact' },
++];
++
++const FOOTER_SOCIALS = [
++  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ocypheris', icon: Linkedin },
++  { label: '@ocypheris', href: 'https://x.com/ocypheris', icon: XIcon },
++];
++
++export default function SecurityWhitepaper() {
++  const CURRENT_YEAR = new Date().getFullYear();
++  return (
++    <>
++      <SiteNav />
++      <main className="landing-neumorphic min-h-screen font-sans">
++
++        {/* Hero Section */}
++        <section className="relative z-10 pt-32 pb-16 px-6 text-center">
++          <div className="max-w-4xl mx-auto">
++            <div className="mb-4 h-[3px] w-24 rounded-full bg-[var(--accent)] mx-auto" aria-hidden />
++            <span className="font-semibold tracking-widest uppercase text-sm mb-4 block" style={{ color: 'var(--accent)' }}>Ocypheris Trust Center</span>
++            <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight" style={{ color: 'var(--nm-text)' }}>
++              Security Whitepaper
++            </h1>
++            <p className="text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
++              How we secure your AWS environment on Autopilot—without compromising your data or credentials.
++            </p>
++          </div>
++        </section>
++
++        {/* Content */}
++        <section className="relative z-10 border-0 bg-transparent px-6 py-12">
++          <div className="max-w-5xl mx-auto space-y-16">
++
++            {/* 1. Executive Summary */}
++            <div className="nm-raised-lg p-8 sm:p-12" style={{ background: 'var(--nm-base)' }}>
++              <div className="flex items-center gap-4 mb-6">
++                <div className="p-3 rounded-full nm-inset" style={{ background: 'var(--nm-base)', color: 'var(--accent)' }}>
++                  <LayoutDashboard className="w-6 h-6" />
++                </div>
++                <h2 className="text-2xl font-bold" style={{ color: 'var(--nm-text)' }}>Executive Summary</h2>
++              </div>
++              <p className="leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
++                Ocypheris (AWS Security Autopilot) is designed with a &quot;security-first, least-privilege&quot; mindset. We operationalize AWS-native security tools by turning findings into prioritized actions and actionable remediation entirely through identity-based access. Our architecture ensures that customer environments remain locked down, credentials are never stored, and every remediation action requires explicit customer approval.
++              </p>
++            </div>
++
++            {/* Grid of core tenets */}
++            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
++              {/* 2. Access Model */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <Key className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Access Model</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  We utilize <strong>STS:AssumeRole</strong> with an External ID and short-lived session credentials. We enforce a strict separation of duties by requiring a <code>ReadRole</code> for ingestion and a separate <code>WriteRole</code> purely scoped to safe remediation actions.
++                </p>
++              </div>
++
++              {/* 3. Zero Credential Storage */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <Shield className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Zero Credential Storage Policy</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  Ocypheris never stores AWS Access Key IDs or Secret Access Keys. All operations function entirely on identity-based roles, eliminating the risk of long-lived credential leakage.
++                </p>
++              </div>
++
++              {/* 4. Tenant Isolation */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <Database className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Tenant Isolation</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  Findings, actions, and exceptions are strictly scoped by <code>tenant_id</code>. This isolation is enforced at both the API routing layer and the database layer, preventing any cross-account data exposure.
++                </p>
++              </div>
++
++              {/* 5. Data Encryption & Residency */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <Lock className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Encryption & Residency</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  Data is encrypted at rest using AES-256 (RDS and S3) and in transit via TLS 1.3 across the entire platform. Customer data residency is configurable to match regional and compliance frameworks.
++                </p>
++              </div>
++
++              {/* 6. Remediation Safety Controls */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <CheckCircle className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Remediation Safety Controls</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  No infrastructure changes occur without explicit customer approval. Ocypheris executes pre-flight checks, gates remediation behind human review, and provides rollback capabilities for all supported direct fixes.
++                </p>
++              </div>
++
++              {/* 7. Least Privilege IAM */}
++              <div className="nm-raised-lg p-8 group transition-all duration-300 hover:-translate-y-1 hover:nm-raised-xl" style={{ background: 'var(--nm-base)' }}>
++                <div className="mb-6 h-12 w-12 rounded-full nm-icon-well flex items-center justify-center text-[var(--accent)]">
++                  <AlertTriangle className="w-6 h-6" />
++                </div>
++                <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--nm-text)' }}>Least Privilege IAM</h3>
++                <p className="leading-relaxed text-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                  Our IAM policies are strictly maintained without wildcards. The <code>WriteRole</code> is scoped exclusively to safe, idempotent automated remediation actions, ensuring unauthorized modifications are impossible.
++                </p>
++              </div>
++            </div>
++
++            {/* 8. Audit Trail & Evidence */}
++            <div className="nm-raised-lg p-8 sm:p-12 border-t-4 border-[var(--accent)]" style={{ background: 'var(--nm-base)' }}>
++              <div className="flex items-center gap-4 mb-6">
++                <div className="p-3 rounded-full nm-inset" style={{ background: 'var(--nm-base)', color: 'var(--accent)' }}>
++                  <Search className="w-6 h-6" />
++                </div>
++                <h2 className="text-2xl font-bold" style={{ color: 'var(--nm-text)' }}>Audit Trail & Compliance Posture</h2>
++              </div>
++              <div className="space-y-4" style={{ color: 'var(--nm-text-muted)' }}>
++                <p className="leading-relaxed">
++                  Every action, exception, and remediation payload is immutably logged. Customers can generate SOC 2 and ISO 27001 readiness evidence packs on demand, mapping specific active configurations to framework requirements. Ocypheris itself operates with a continuous compliance posture ensuring security of our own internal systems.
++                </p>
++                <p className="leading-relaxed">
++                  Vulnerability scanning is integrated into our CI/CD pipelines, and we maintain a 24/7 incident response protocol to address emerging threats rapidly.
++                </p>
++              </div>
++            </div>
++
++            <div className="text-center pt-8 pb-12">
++              <Link href="/landing#security-data" className="inline-flex items-center justify-center px-8 py-4 rounded-full font-bold transition-all duration-300 nm-raised hover:nm-raised-xl active:nm-inset" style={{ color: 'var(--nm-text)', background: 'var(--nm-base)' }}>
++                <span className="mr-2 font-mono">←</span> Back to Product Security
++              </Link>
++            </div>
++
++          </div>
++        </section>
++
++        {/* Professional Glowing Edge SVG Wave Transition towards Footer */}
++        <div className="relative w-full h-24 sm:h-32 overflow-hidden bg-[#02040a] pointer-events-none" aria-hidden="true" style={{ marginTop: '-2px' }}>
++          <svg
++            className="absolute top-0 left-0 w-full h-full"
++            preserveAspectRatio="none"
++            viewBox="0 0 1440 320"
++          >
++            <defs>
++              <linearGradient id="footerGlowGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
++                <stop offset="0%" stopColor="#dde6f0" stopOpacity="1" />
++                <stop offset="100%" stopColor="#02040a" stopOpacity="0" />
++              </linearGradient>
++            </defs>
++            <path fill="#dde6f0" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
++            <path fill="url(#footerGlowGradient2)" opacity="0.6" transform="translate(0, 15) scale(1, 1.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
++          </svg>
++        </div>
++
++        <footer
++          className="relative z-10 border-0 bg-transparent"
++          style={{
++            backgroundImage:
++              "linear-gradient(180deg, rgba(2, 4, 10, 0.98) 0%, rgba(2, 4, 10, 0.0) 18%), linear-gradient(180deg, rgba(4, 9, 35, 0.0) 20%, rgba(10, 29, 76, 0.6) 58%, rgba(20, 41, 120, 0.95) 80%, rgba(31, 63, 188, 0.98) 100%), url('/images/footer-gradient.png')",
++            backgroundSize: 'cover',
++            backgroundPosition: 'center top',
++            backgroundBlendMode: 'screen',
++          }}
++        >
++          <div className="mx-auto max-w-6xl px-6 pt-20 pb-14 sm:pt-24 sm:pb-20">
++            <div className="flex flex-col items-center text-center">
++              <Image
++                src="/logo/ocypheris-logo.svg"
++                alt="Ocypheris"
++                width={220}
++                height={60}
++                className="h-12 w-auto"
++              />
++
++              <div className="mt-6 max-w-3xl text-center">
++                <h3 className="text-lg font-semibold text-white">About Ocypheris</h3>
++                <p className="mt-2 text-sm text-white/70 sm:text-base">
++                  Ocypheris builds AWS-native security and compliance tooling. Autopilot turns Security Hub and GuardDuty findings into prioritized action, controlled remediation, and audit-ready evidence for teams that need clarity without extra overhead.
++                </p>
++              </div>
++              <nav
++                aria-label="Footer"
++                className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-white/80"
++              >
++                {FOOTER_LINKS.map((link) => (
++                  <Link
++                    key={link.href}
++                    href={link.href}
++                    className="transition hover:text-white"
++                  >
++                    {link.label}
++                  </Link>
++                ))}
++              </nav>
++              <div className="mt-8 flex items-center gap-4">
++                {FOOTER_SOCIALS.map(({ label, href, icon: Icon }) => (
++                  <Link
++                    key={label}
++                    href={href}
++                    target="_blank"
++                    rel="noreferrer"
++                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white"
++                    aria-label={label}
++                  >
++                    <Icon className="h-5 w-5" aria-hidden />
++                  </Link>
++                ))}
++              </div>
++              <p className="mt-8 text-xs text-white/80">
++                © {CURRENT_YEAR} Ocypheris. All rights reserved.
++              </p>
++            </div>
++          </div>
++        </footer>
++
++        <SectionAnimator />
++      </main>
++    </>
++  );
++}
+diff --git a/src/app/signup/page.tsx b/src/app/signup/page.tsx
+index 28fc6df..46bd969 100644
+--- a/src/app/signup/page.tsx
++++ b/src/app/signup/page.tsx
+@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
+ import { useAuth } from '@/contexts/AuthContext';
+ import { AuthFormField } from '@/components/auth';
+ import { ThemeToggle } from '@/components/ui';
++import { NeumorphicLoader } from '@/components/ui/NeumorphicLoader';
+ import { startNavigationFeedback } from '@/lib/navigation-feedback';
+ 
+ export default function SignupPage() {
+@@ -47,7 +48,7 @@ export default function SignupPage() {
+   if (authLoading) {
+     return (
+       <div className="auth-neumorphic min-h-screen flex items-center justify-center">
+-        <div className="animate-pulse" style={{ color: 'var(--nm-text-muted)' }}>Loading...</div>
++        <NeumorphicLoader />
+       </div>
+     );
+   }
+diff --git a/src/components/ActionDetailDrawer.test.tsx b/src/components/ActionDetailDrawer.test.tsx
+new file mode 100644
+index 0000000..e3ff7a6
+--- /dev/null
++++ b/src/components/ActionDetailDrawer.test.tsx
+@@ -0,0 +1,256 @@
++import { render, screen, waitFor } from '@testing-library/react';
++import type { ReactNode } from 'react';
++import { vi } from 'vitest';
++
++import { ActionDetailDrawer } from '@/components/ActionDetailDrawer';
++import {
++  getAction,
++  getAccounts,
++  getRemediationOptions,
++  getRemediationRun,
++  listRemediationRuns,
++} from '@/lib/api';
++
++vi.mock('react-dom', () => ({
++  createPortal: (node: ReactNode) => node,
++}));
++
++vi.mock('next/link', () => ({
++  default: ({
++    children,
++    href,
++    ...props
++  }: {
++    children: ReactNode;
++    href: string;
++    [key: string]: unknown;
++  }) => (
++    <a href={href} {...props}>
++      {children}
++    </a>
++  ),
++}));
++
++vi.mock('next/navigation', () => ({
++  useRouter: () => ({ push: vi.fn() }),
++}));
++
++vi.mock('motion/react', () => ({
++  AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
++  motion: {
++    div: ({ children, ...props }: { children: ReactNode; [key: string]: unknown }) => (
++      <div {...props}>{children}</div>
++    ),
++  },
++}));
++
++vi.mock('@/contexts/AuthContext', () => ({
++  useAuth: () => ({ isAuthenticated: true, user: { role: 'admin' } }),
++}));
++
++vi.mock('@/contexts/BackgroundJobsContext', () => ({
++  useBackgroundJobs: () => ({
++    addJob: vi.fn(() => 'job-1'),
++    updateJob: vi.fn(),
++    completeJob: vi.fn(),
++    failJob: vi.fn(),
++  }),
++}));
++
++vi.mock('@/lib/tenant', () => ({
++  useTenantId: () => ({ tenantId: 'tenant-1' }),
++}));
++
++vi.mock('@/components/CreateExceptionModal', () => ({
++  CreateExceptionModal: () => null,
++}));
++
++vi.mock('@/components/RemediationModal', () => ({
++  RemediationModal: () => null,
++}));
++
++vi.mock('@/components/RemediationRunProgress', () => ({
++  RemediationRunProgress: () => <div>Run progress</div>,
++}));
++
++vi.mock('@/components/ui/AnimatedTooltip', () => ({
++  AnimatedTooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
++}));
++
++vi.mock('@/components/ui/Button', () => ({
++  Button: ({
++    children,
++    leftIcon,
++    ...props
++  }: {
++    children: ReactNode;
++    leftIcon?: ReactNode;
++    [key: string]: unknown;
++  }) => (
++    <button {...props}>
++      {leftIcon}
++      {children}
++    </button>
++  ),
++}));
++
++vi.mock('@/components/ui/MajorActionButton', () => ({
++  MajorActionButton: ({ children, ...props }: { children: ReactNode; [key: string]: unknown }) => (
++    <button {...props}>{children}</button>
++  ),
++}));
++
++vi.mock('@/components/ui/Badge', () => ({
++  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
++  getActionStatusBadgeVariant: () => 'default',
++  getSeverityBadgeVariant: () => 'default',
++}));
++
++vi.mock('@/lib/api', () => ({
++  getAction: vi.fn(),
++  getAccounts: vi.fn(),
++  createRootKeyRemediationRun: vi.fn(),
++  getRemediationOptions: vi.fn(),
++  getRemediationRun: vi.fn(),
++  listRemediationRuns: vi.fn(),
++  triggerComputeActions: vi.fn(),
++  getErrorMessage: (error: unknown) => (error instanceof Error ? error.message : 'Request failed'),
++}));
++
++const mockedGetAction = vi.mocked(getAction);
++const mockedGetAccounts = vi.mocked(getAccounts);
++const mockedGetRemediationOptions = vi.mocked(getRemediationOptions);
++const mockedListRemediationRuns = vi.mocked(listRemediationRuns);
++const mockedGetRemediationRun = vi.mocked(getRemediationRun);
++
++describe('ActionDetailDrawer', () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++
++    mockedGetAction.mockResolvedValue({
++      id: 'action-1',
++      tenant_id: 'tenant-1',
++      action_type: 'sg_restrict_public_ports',
++      target_id: 'sg-1234',
++      account_id: '123456789012',
++      region: 'us-east-1',
++      priority: 10,
++      status: 'open',
++      title: 'Restrict public admin ports',
++      description: 'Restrict SSH/RDP access.',
++      what_is_wrong: 'Security group allows public SSH.',
++      what_the_fix_does: 'Restricts ingress to safer CIDRs.',
++      control_id: 'EC2.53',
++      resource_id: 'sg-1234',
++      resource_type: 'AWS::EC2::SecurityGroup',
++      created_at: '2026-03-04T10:00:00Z',
++      updated_at: '2026-03-04T10:05:00Z',
++      findings: [
++        {
++          id: 'finding-1',
++          finding_id: 'finding-1',
++          severity_label: 'HIGH',
++          title: 'Public SSH access',
++          resource_id: 'sg-1234',
++          account_id: '123456789012',
++          region: 'us-east-1',
++          updated_at: '2026-03-04T10:01:00Z',
++        },
++      ],
++      exception_id: null,
++      exception_expires_at: null,
++      exception_expired: false,
++    });
++
++    mockedGetAccounts.mockResolvedValue([
++      {
++        id: 'account-row-1',
++        account_id: '123456789012',
++        role_read_arn: 'arn:aws:iam::123456789012:role/ReadRole',
++        role_write_arn: 'arn:aws:iam::123456789012:role/WriteRole',
++        status: 'validated',
++        last_validated_at: '2026-03-04T10:00:00Z',
++        regions: ['us-east-1'],
++        created_at: '2026-03-04T10:00:00Z',
++        updated_at: '2026-03-04T10:00:00Z',
++      },
++    ]);
++
++    mockedGetRemediationOptions.mockResolvedValue({
++      action_id: 'action-1',
++      action_type: 'sg_restrict_public_ports',
++      mode_options: ['pr_only', 'direct_fix'],
++      strategies: [],
++      manual_workflow: null,
++    });
++
++    mockedListRemediationRuns.mockResolvedValue({
++      items: [
++        {
++          id: 'run-1',
++          action_id: 'action-1',
++          mode: 'pr_only',
++          status: 'success',
++          outcome: 'SaaS apply completed successfully.',
++          started_at: '2026-03-04T10:10:00Z',
++          completed_at: '2026-03-04T10:12:00Z',
++          created_at: '2026-03-04T10:09:00Z',
++          artifacts_summary: 'PR bundle: 2 files',
++          approved_by_user_id: null,
++        },
++      ],
++      total: 1,
++    });
++
++    mockedGetRemediationRun.mockResolvedValue({
++      id: 'run-1',
++      action_id: 'action-1',
++      mode: 'pr_only',
++      status: 'success',
++      outcome: 'SaaS apply completed successfully.',
++      logs: 'done',
++      artifacts: {
++        change_summary: {
++          applied_at: '2026-03-04T10:12:00Z',
++          applied_by: 'ops@example.com',
++          run_id: 'run-1',
++          changes: [
++            {
++              field: 'SSH access',
++              before: '0.0.0.0/0',
++              after: '10.0.0.0/24',
++            },
++          ],
++        },
++      },
++      approved_by_user_id: null,
++      started_at: '2026-03-04T10:10:00Z',
++      completed_at: '2026-03-04T10:12:00Z',
++      created_at: '2026-03-04T10:09:00Z',
++      updated_at: '2026-03-04T10:12:00Z',
++      action: {
++        id: 'action-1',
++        title: 'Restrict public admin ports',
++        account_id: '123456789012',
++        region: 'us-east-1',
++      },
++    });
++  });
++
++  it('renders change summary card when remediation run artifact exists', async () => {
++    render(<ActionDetailDrawer actionId="action-1" isOpen={true} onClose={vi.fn()} />);
++
++    const card = await screen.findByTestId('change-summary-card');
++    expect(card).toBeInTheDocument();
++    expect(screen.getByText(/Fixed on/i)).toBeInTheDocument();
++    expect(screen.getByText(/ops@example.com/i)).toBeInTheDocument();
++    expect(screen.getByText(/SSH access: 0.0.0.0\/0 -> 10.0.0.0\/24/i)).toBeInTheDocument();
++
++    const runLink = screen.getByRole('link', { name: /View run/i });
++    expect(runLink).toHaveAttribute('href', '/remediation-runs/run-1');
++
++    await waitFor(() => {
++      expect(mockedGetRemediationRun).toHaveBeenCalledWith('run-1', undefined);
++    });
++  });
++});
+diff --git a/src/components/ActionDetailDrawer.tsx b/src/components/ActionDetailDrawer.tsx
+index ff1ea73..d14892c 100644
+--- a/src/components/ActionDetailDrawer.tsx
++++ b/src/components/ActionDetailDrawer.tsx
+@@ -11,12 +11,14 @@ import { AnimatedTooltip } from '@/components/ui/AnimatedTooltip';
+ import { Badge, getActionStatusBadgeVariant, getSeverityBadgeVariant } from '@/components/ui/Badge';
+ import { CreateExceptionModal } from '@/components/CreateExceptionModal';
+ import { RemediationModal } from '@/components/RemediationModal';
++import type { ExceptionSelectionPayload } from '@/components/RemediationModal';
+ import { RemediationRunProgress } from '@/components/RemediationRunProgress';
+ import {
+     getAction,
+     getAccounts,
+     createRootKeyRemediationRun,
+     getRemediationOptions,
++    getRemediationRun,
+     listRemediationRuns,
+     triggerComputeActions,
+     ActionDetail,
+@@ -39,6 +41,7 @@ const MAX_POLL_ATTEMPTS = 20;
+ const PR_ONLY_BUNDLE_UNSUPPORTED_MESSAGE =
+     "This action requires a PR. Use 'Create PR Bundle' from the Actions page.";
+ const ROOT_KEY_UI_FLAG = process.env.NEXT_PUBLIC_ROOT_KEY_REMEDIATION_UI_ENABLED;
++const EXCEPTION_DURATION_OPTIONS = new Set([7, 14, 30, 90]);
+ 
+ function isRootKeyUiEnabled(): boolean {
+     const value = (ROOT_KEY_UI_FLAG ?? '').toLowerCase();
+@@ -75,6 +78,76 @@ function formatDate(dateString: string | null) {
+     return new Date(dateString).toLocaleString();
+ }
+ 
++function parseExceptionDurationDays(value: unknown): number | undefined {
++    if (typeof value === 'number' && Number.isFinite(value) && EXCEPTION_DURATION_OPTIONS.has(value)) {
++        return value;
++    }
++    if (typeof value === 'string') {
++        const cleaned = value.trim();
++        if (!cleaned) return undefined;
++        const parsed = Number(cleaned);
++        if (Number.isFinite(parsed) && EXCEPTION_DURATION_OPTIONS.has(parsed)) {
++            return parsed;
++        }
++    }
++    return undefined;
++}
++
++function expiryDateFromDurationDays(days: number): string {
++    const next = new Date();
++    next.setDate(next.getDate() + days);
++    return next.toISOString().split('T')[0];
++}
++
++interface ChangeSummaryChange {
++    field: string;
++    before: string;
++    after: string;
++}
++
++interface ChangeSummaryCardData {
++    runId: string;
++    appliedAt: string | null;
++    appliedBy: string;
++    changes: ChangeSummaryChange[];
++}
++
++function parseChangeSummaryCard(
++    runId: string,
++    artifacts: Record<string, unknown> | null | undefined
++): ChangeSummaryCardData | null {
++    if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts)) return null;
++    const summary = (artifacts as Record<string, unknown>).change_summary;
++    if (!summary || typeof summary !== 'object' || Array.isArray(summary)) return null;
++    const raw = summary as Record<string, unknown>;
++
++    const appliedAt = typeof raw.applied_at === 'string' && raw.applied_at.trim() ? raw.applied_at : null;
++    const appliedBy =
++        typeof raw.applied_by === 'string' && raw.applied_by.trim() ? raw.applied_by.trim() : 'system';
++    const summaryRunId =
++        typeof raw.run_id === 'string' && raw.run_id.trim() ? raw.run_id.trim() : runId;
++    const rawChanges = raw.changes;
++    if (!Array.isArray(rawChanges)) return null;
++
++    const changes: ChangeSummaryChange[] = [];
++    for (const item of rawChanges) {
++        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
++        const change = item as Record<string, unknown>;
++        const field = typeof change.field === 'string' ? change.field.trim() : '';
++        const before = typeof change.before === 'string' ? change.before.trim() : '';
++        const after = typeof change.after === 'string' ? change.after.trim() : '';
++        if (!field || !after) continue;
++        changes.push({ field, before: before || 'unspecified', after });
++    }
++    if (changes.length === 0) return null;
++    return {
++        runId: summaryRunId,
++        appliedAt,
++        appliedBy,
++        changes,
++    };
++}
++
+ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDrawerProps) {
+     const router = useRouter();
+     const drawerRef = useRef<HTMLDivElement | null>(null);
+@@ -92,9 +165,11 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+     const [showExceptionModal, setShowExceptionModal] = useState(false);
+     const [exceptionInitialReason, setExceptionInitialReason] = useState<string | undefined>(undefined);
+     const [exceptionIntroText, setExceptionIntroText] = useState<string | undefined>(undefined);
++    const [exceptionInitialExpiryDate, setExceptionInitialExpiryDate] = useState<string | undefined>(undefined);
+     const [remediationModalMode, setRemediationModalMode] = useState<'pr_only' | 'direct_fix' | null>(null);
+     const [runs, setRuns] = useState<RemediationRunListItem[]>([]);
+     const [runsLoading, setRunsLoading] = useState(false);
++    const [changeSummaryCard, setChangeSummaryCard] = useState<ChangeSummaryCardData | null>(null);
+     const [supportsDirectFixMode, setSupportsDirectFixMode] = useState(false);
+     const [rootLifecycleStarting, setRootLifecycleStarting] = useState(false);
+     const [rootLifecycleError, setRootLifecycleError] = useState<string | null>(null);
+@@ -193,9 +268,10 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+         };
+     }, [isOpen]);
+ 
+-    const openExceptionModal = (opts?: { initialReason?: string; introText?: string }) => {
++    const openExceptionModal = (opts?: { initialReason?: string; introText?: string; initialExpiryDate?: string }) => {
+         setExceptionInitialReason(opts?.initialReason);
+         setExceptionIntroText(opts?.introText);
++        setExceptionInitialExpiryDate(opts?.initialExpiryDate);
+         setShowExceptionModal(true);
+     };
+ 
+@@ -220,6 +296,7 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+                 setAction(null);
+                 setError(null);
+                 setRecomputeSuccess(null);
++                setChangeSummaryCard(null);
+             }, 300); // Clear state after animation
+         }
+     }, [isOpen, fetchAction]);
+@@ -246,6 +323,36 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+         fetchRuns();
+     }, [fetchRuns]);
+ 
++    useEffect(() => {
++        if (!isOpen || !showContent || runs.length === 0) {
++            setChangeSummaryCard(null);
++            return;
++        }
++
++        let cancelled = false;
++        const loadChangeSummary = async () => {
++            for (const run of runs) {
++                if (run.status !== 'success') continue;
++                try {
++                    const detail = await getRemediationRun(run.id, effectiveTenantId);
++                    const parsed = parseChangeSummaryCard(run.id, detail.artifacts);
++                    if (parsed) {
++                        if (!cancelled) setChangeSummaryCard(parsed);
++                        return;
++                    }
++                } catch {
++                    // Best-effort card enrichment; ignore per-run detail fetch failures.
++                }
++            }
++            if (!cancelled) setChangeSummaryCard(null);
++        };
++        void loadChangeSummary();
++
++        return () => {
++            cancelled = true;
++        };
++    }, [runs, isOpen, showContent, effectiveTenantId]);
++
+     useEffect(() => {
+         if (!action || !showContent || !isOpen) {
+             setSupportsDirectFixMode(false);
+@@ -400,6 +507,20 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+         };
+     };
+ 
++    const exceptionDefaultsForSelection = (
++        selection: ExceptionSelectionPayload
++    ): { initialReason: string; introText: string; initialExpiryDate?: string } => {
++        const defaults = exceptionDefaultsForStrategy(selection.strategy.strategy_id);
++        const rawReason = selection.strategyInputs.exception_reason;
++        const reason = typeof rawReason === 'string' ? rawReason.trim() : '';
++        const durationDays = parseExceptionDurationDays(selection.strategyInputs.exception_duration_days);
++        return {
++            initialReason: reason || defaults.initialReason,
++            introText: defaults.introText,
++            initialExpiryDate: durationDays ? expiryDateFromDurationDays(durationDays) : undefined,
++        };
++    };
++
+     const handleStartRootLifecycle = async () => {
+         if (!action || !isAuthenticated) return;
+         setRootLifecycleError(null);
+@@ -723,6 +844,34 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+                                             </div>
+                                         </div>
+ 
++                                        {changeSummaryCard && (
++                                            <div
++                                                data-testid="change-summary-card"
++                                                className="bg-success/10 border border-success/20 rounded-xl p-5"
++                                            >
++                                                <h2 className="text-xs font-semibold text-success uppercase tracking-wider mb-2">
++                                                    Latest successful apply
++                                                </h2>
++                                                <p className="text-sm text-text">
++                                                    Fixed on {formatDate(changeSummaryCard.appliedAt)} by{' '}
++                                                    <span className="font-mono">{changeSummaryCard.appliedBy}</span>
++                                                </p>
++                                                <p className="text-xs text-text mt-2">
++                                                    {changeSummaryCard.changes
++                                                        .slice(0, 2)
++                                                        .map((change) => `${change.field}: ${change.before} -> ${change.after}`)
++                                                        .join(' · ')}
++                                                </p>
++                                                <Link
++                                                    href={`/remediation-runs/${changeSummaryCard.runId}`}
++                                                    onClick={onClose}
++                                                    className="mt-3 inline-flex text-xs text-accent hover:underline"
++                                                >
++                                                    View run →
++                                                </Link>
++                                            </div>
++                                        )}
++
+                                         <div className="space-y-4">
+                                             {action.resource_id && (
+                                                 <div className="bg-bg border border-border rounded-xl p-5">
+@@ -848,6 +997,7 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+                         setShowExceptionModal(false);
+                         setExceptionInitialReason(undefined);
+                         setExceptionIntroText(undefined);
++                        setExceptionInitialExpiryDate(undefined);
+                     }}
+                     entityType="action"
+                     entityId={action.id}
+@@ -855,6 +1005,7 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+                     tenantId={effectiveTenantId}
+                     initialReason={exceptionInitialReason}
+                     introText={exceptionIntroText}
++                    initialExpiryDate={exceptionInitialExpiryDate}
+                 />
+             )}
+ 
+@@ -873,9 +1024,9 @@ export function ActionDetailDrawer({ actionId, isOpen, onClose }: ActionDetailDr
+                     mode={remediationModalMode}
+                     hasWriteRole={!!hasWriteRole}
+                     tenantId={effectiveTenantId}
+-                    onChooseException={(strategy) => {
++                    onChooseException={(selection) => {
+                         setRemediationModalMode(null);
+-                        openExceptionModal(exceptionDefaultsForStrategy(strategy.strategy_id));
++                        openExceptionModal(exceptionDefaultsForSelection(selection));
+                     }}
+                 />
+             )}
+diff --git a/src/components/CreateExceptionModal.tsx b/src/components/CreateExceptionModal.tsx
+index 900a373..5ecd2d6 100644
+--- a/src/components/CreateExceptionModal.tsx
++++ b/src/components/CreateExceptionModal.tsx
+@@ -15,6 +15,7 @@ interface CreateExceptionModalProps {
+   tenantId?: string;
+   initialReason?: string;
+   introText?: string;
++  initialExpiryDate?: string;
+ }
+ 
+ export function CreateExceptionModal({
+@@ -26,6 +27,7 @@ export function CreateExceptionModal({
+   tenantId,
+   initialReason,
+   introText,
++  initialExpiryDate,
+ }: CreateExceptionModalProps) {
+   const [reason, setReason] = useState('');
+   const [expiresAt, setExpiresAt] = useState('');
+@@ -44,12 +46,12 @@ export function CreateExceptionModal({
+     if (!isOpen) return;
+ 
+     if (!expiresAt) {
+-      setExpiresAt(getDefaultExpiryDate());
++      setExpiresAt(initialExpiryDate || getDefaultExpiryDate());
+     }
+     if (initialReason && !reason) {
+       setReason(initialReason);
+     }
+-  }, [isOpen, expiresAt, reason, initialReason]);
++  }, [isOpen, expiresAt, reason, initialReason, initialExpiryDate]);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+diff --git a/src/components/PageTransition.tsx b/src/components/PageTransition.tsx
+index de36038..4f773d7 100644
+--- a/src/components/PageTransition.tsx
++++ b/src/components/PageTransition.tsx
+@@ -12,7 +12,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
+   return (
+     <motion.div
+       key={pathname}
+-      initial={{ opacity: 0 }}
++      initial={false}
+       animate={{ opacity: 1 }}
+       transition={{ duration: 0.2, ease: 'easeOut' }}
+       className="min-h-full"
+diff --git a/src/components/RemediationModal.test.tsx b/src/components/RemediationModal.test.tsx
+index 0d46c6f..c96fd5e 100644
+--- a/src/components/RemediationModal.test.tsx
++++ b/src/components/RemediationModal.test.tsx
+@@ -96,8 +96,30 @@ describe('RemediationModal', () => {
+           mode: 'pr_only',
+           risk_level: 'high',
+           recommended: true,
+-          requires_inputs: false,
+-          input_schema: { fields: [] },
++          requires_inputs: true,
++          input_schema: {
++            fields: [
++              {
++                key: 'exception_duration_days',
++                type: 'select',
++                required: false,
++                description: 'How long should this exception remain active?',
++                default_value: '30',
++                options: [
++                  { value: '7', label: '7 days' },
++                  { value: '14', label: '14 days' },
++                  { value: '30', label: '30 days' },
++                  { value: '90', label: '90 days' },
++                ],
++              },
++              {
++                key: 'exception_reason',
++                type: 'string',
++                required: false,
++                description: "Why can't you apply this fix right now?",
++              },
++            ],
++          },
+           dependency_checks: [
+             {
+               code: 'config_visibility_gap',
+@@ -170,7 +192,7 @@ describe('RemediationModal', () => {
+     vi.unstubAllGlobals();
+   });
+ 
+-  it('routes exception-only strategy to Create exception and skips PR run creation', async () => {
++  it('routes explicit exception option with inline duration/reason and skips PR run creation', async () => {
+     const user = userEvent.setup();
+     const { onChooseException } = renderModal();
+ 
+@@ -178,15 +200,31 @@ describe('RemediationModal', () => {
+       expect(mockedGetRemediationOptions).toHaveBeenCalledWith('action-1', undefined);
+     });
+ 
++    await user.click(screen.getByRole('radio', { name: /I need an exception/i }));
+     expect(screen.getByRole('heading', { name: 'Create exception' })).toBeInTheDocument();
+-    expect(screen.getByText('Use Exception workflow instead of PR bundle.')).toBeInTheDocument();
+-    expect(screen.queryByRole('button', { name: 'Generate PR bundle' })).not.toBeInTheDocument();
++    expect(screen.getByText("I can't apply this fix right now — create a time-limited exception.")).toBeInTheDocument();
++    expect(screen.getByRole('button', { name: '7 days' })).toBeInTheDocument();
++    expect(screen.getByRole('button', { name: '14 days' })).toBeInTheDocument();
++    expect(screen.getByRole('button', { name: '30 days' })).toBeInTheDocument();
++    expect(screen.getByRole('button', { name: '90 days' })).toBeInTheDocument();
++
++    await user.click(screen.getByRole('button', { name: '14 days' }));
++    await user.type(
++      screen.getByLabelText(/Why can't you apply this fix right now/i),
++      'Approved maintenance freeze window for this system.',
++    );
+ 
+     await user.click(screen.getByRole('button', { name: 'Create exception' }));
+ 
+     expect(onChooseException).toHaveBeenCalledTimes(1);
+     expect(onChooseException).toHaveBeenCalledWith(
+-      expect.objectContaining({ strategy_id: 'config_keep_exception', exception_only: true }),
++      expect.objectContaining({
++        strategy: expect.objectContaining({ strategy_id: 'config_keep_exception', exception_only: true }),
++        strategyInputs: expect.objectContaining({
++          exception_duration_days: '14',
++          exception_reason: 'Approved maintenance freeze window for this system.',
++        }),
++      }),
+     );
+     expect(mockedCreateRemediationRun).not.toHaveBeenCalled();
+   });
+diff --git a/src/components/RemediationModal.tsx b/src/components/RemediationModal.tsx
+index 7b521a1..3caa76b 100644
+--- a/src/components/RemediationModal.tsx
++++ b/src/components/RemediationModal.tsx
+@@ -55,6 +55,12 @@ const BLAST_RADIUS_META: Record<
+     tooltip: 'Can change access paths or remove existing permissions. Verify operational access before apply.',
+   },
+ };
++const EXCEPTION_DURATION_OPTIONS = ['7', '14', '30', '90'] as const;
++
++export interface ExceptionSelectionPayload {
++  strategy: RemediationOption;
++  strategyInputs: Record<string, unknown>;
++}
+ 
+ interface RemediationModalProps {
+   isOpen: boolean;
+@@ -67,7 +73,7 @@ interface RemediationModalProps {
+   mode: 'pr_only' | 'direct_fix';
+   hasWriteRole: boolean;
+   tenantId?: string;
+-  onChooseException?: (strategy: RemediationOption) => void;
++  onChooseException?: (selection: ExceptionSelectionPayload) => void;
+ }
+ 
+ function stringifyDefaultValue(value: unknown): string {
+@@ -339,6 +345,14 @@ export function RemediationModal({
+   const strategiesForMode = useMemo(() => {
+     return (options?.strategies ?? []).filter((strategy) => strategy.mode === mode);
+   }, [options, mode]);
++  const nonExceptionStrategiesForMode = useMemo(
++    () => strategiesForMode.filter((strategy) => !strategy.exception_only),
++    [strategiesForMode]
++  );
++  const exceptionStrategyForMode = useMemo(
++    () => strategiesForMode.find((strategy) => strategy.exception_only) ?? null,
++    [strategiesForMode]
++  );
+ 
+   const selectedStrategy = useMemo(() => {
+     if (!selectedStrategyId) return null;
+@@ -352,6 +366,36 @@ export function RemediationModal({
+   const shouldUseExceptionFlow = Boolean(
+     selectedStrategy?.exception_only || selectedStrategy?.supports_exception_flow
+   );
++  const exceptionDurationField = useMemo(() => {
++    if (!selectedStrategy?.exception_only) return null;
++    return selectedStrategy.input_schema?.fields?.find((field) => field.key === 'exception_duration_days') ?? null;
++  }, [selectedStrategy]);
++  const exceptionReasonField = useMemo(() => {
++    if (!selectedStrategy?.exception_only) return null;
++    return selectedStrategy.input_schema?.fields?.find((field) => field.key === 'exception_reason') ?? null;
++  }, [selectedStrategy]);
++  const selectedExceptionDuration = useMemo(() => {
++    if (!selectedStrategy?.exception_only || !exceptionDurationField) return '30';
++    const resolved = resolveRawFieldValue(exceptionDurationField, strategyInputValues).trim();
++    if (EXCEPTION_DURATION_OPTIONS.includes(resolved as (typeof EXCEPTION_DURATION_OPTIONS)[number])) {
++      return resolved;
++    }
++    return '30';
++  }, [exceptionDurationField, selectedStrategy?.exception_only, strategyInputValues]);
++  const exceptionReasonValue = useMemo(() => {
++    if (!selectedStrategy?.exception_only) return '';
++    return (strategyInputValues.exception_reason ?? '').trim();
++  }, [selectedStrategy?.exception_only, strategyInputValues.exception_reason]);
++  const exceptionReasonError = useMemo(() => {
++    if (!selectedStrategy?.exception_only) return null;
++    if (!exceptionReasonValue) {
++      return 'Provide a reason for this exception.';
++    }
++    if (exceptionReasonValue.length < 10) {
++      return 'Reason must be at least 10 characters.';
++    }
++    return null;
++  }, [exceptionReasonValue, selectedStrategy?.exception_only]);
+ 
+   const hasCatalogStrategies = (options?.strategies?.length ?? 0) > 0;
+   const manualWorkflow = options?.manual_workflow ?? null;
+@@ -513,8 +557,9 @@ export function RemediationModal({
+           setStrategyInputValues({});
+           return;
+         }
+-        const recommended = modeStrategies.find((strategy) => strategy.recommended);
+-        const selected = recommended ?? modeStrategies[0];
++        const nonExceptionStrategies = modeStrategies.filter((strategy) => !strategy.exception_only);
++        const recommended = nonExceptionStrategies.find((strategy) => strategy.recommended);
++        const selected = recommended ?? nonExceptionStrategies[0] ?? modeStrategies[0];
+         setSelectedStrategyId(selected.strategy_id);
+         setStrategyInputValues(buildInitialStrategyInputValues(selected));
+         setRiskAcknowledged(false);
+@@ -689,11 +734,25 @@ export function RemediationModal({
+         setSubmitError('Select an exception strategy before continuing.');
+         return;
+       }
++      if (
++        selectedStrategy.exception_only &&
++        !EXCEPTION_DURATION_OPTIONS.includes(selectedExceptionDuration as (typeof EXCEPTION_DURATION_OPTIONS)[number])
++      ) {
++        setSubmitError('Select an exception duration (7, 14, 30, or 90 days).');
++        return;
++      }
++      if (selectedStrategy.exception_only && exceptionReasonError) {
++        setSubmitError(exceptionReasonError);
++        return;
++      }
+       if (!onChooseException) {
+         setSubmitError('Exception flow is unavailable for this action.');
+         return;
+       }
+-      onChooseException(selectedStrategy);
++      onChooseException({
++        strategy: selectedStrategy,
++        strategyInputs,
++      });
+       return;
+     }
+ 
+@@ -902,7 +961,7 @@ export function RemediationModal({
+                     No strategy is available for mode <span className="font-mono">{mode}</span>.
+                   </p>
+                 )}
+-                {strategiesForMode.map((strategy) => (
++                {nonExceptionStrategiesForMode.map((strategy) => (
+                   <label
+                     key={strategy.strategy_id}
+                     className="flex items-start gap-2 cursor-pointer border border-border rounded-xl p-3"
+@@ -926,20 +985,93 @@ export function RemediationModal({
+                       <p className="text-xs text-muted">
+                         Risk: {strategy.risk_level}
+                         {strategy.recommended ? ' · Recommended' : ''}
+-                        {strategy.exception_only ? ' · Exception-only' : ''}
+                       </p>
+                     </div>
+                   </label>
+                 ))}
++                {exceptionStrategyForMode && (
++                  <label
++                    className="flex items-start gap-2 cursor-pointer border border-warning/30 rounded-xl p-3 bg-warning/10"
++                  >
++                    <input
++                      type="radio"
++                      name="strategy"
++                      value={exceptionStrategyForMode.strategy_id}
++                      checked={selectedStrategyId === exceptionStrategyForMode.strategy_id}
++                      onChange={() => {
++                        setSelectedStrategyId(exceptionStrategyForMode.strategy_id);
++                        setStrategyInputValues(
++                          buildInitialStrategyInputValues(exceptionStrategyForMode, detectedPublicIpv4Cidr)
++                        );
++                        setRiskAcknowledged(false);
++                        setTriggerReevalAfterApply(false);
++                        setReevalTriggerNotice(null);
++                      }}
++                      className="mt-0.5 w-4 h-4"
++                    />
++                    <div className="space-y-1">
++                      <p className="text-sm font-medium text-text">I need an exception</p>
++                      <p className="text-xs text-muted">
++                        I can&apos;t apply this fix right now — create a time-limited exception.
++                      </p>
++                    </div>
++                  </label>
++                )}
+               </div>
+             )}
+ 
+             {selectedStrategy?.exception_only && (
+-              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
++              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 space-y-3">
+                 <p className="text-sm text-text">
+                   This strategy creates an exception record and does not generate a PR bundle.
+                 </p>
+-                <p className="text-sm text-text mt-1">Use Exception workflow instead of PR bundle.</p>
++                <p className="text-sm text-text">Use Exception workflow instead of PR bundle.</p>
++                <div>
++                  <p className="text-xs font-semibold uppercase tracking-wide text-warning mb-2">
++                    {exceptionDurationField?.description ?? 'Exception duration'}
++                  </p>
++                  <div className="flex flex-wrap gap-2">
++                    {EXCEPTION_DURATION_OPTIONS.map((days) => (
++                      <button
++                        key={days}
++                        type="button"
++                        onClick={() =>
++                          setStrategyInputValues((prev) => ({
++                            ...prev,
++                            exception_duration_days: days,
++                          }))
++                        }
++                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
++                          selectedExceptionDuration === days
++                            ? 'border-warning bg-warning/20 text-warning'
++                            : 'border-border bg-bg text-muted'
++                        }`}
++                        aria-pressed={selectedExceptionDuration === days}
++                      >
++                        {days} days
++                      </button>
++                    ))}
++                  </div>
++                </div>
++                <div className="space-y-1">
++                  <label className="text-xs text-muted" htmlFor="exception-reason-input">
++                    {exceptionReasonField?.description ?? 'Reason'}
++                  </label>
++                  <textarea
++                    id="exception-reason-input"
++                    value={strategyInputValues.exception_reason ?? ''}
++                    onChange={(event) =>
++                      setStrategyInputValues((prev) => ({ ...prev, exception_reason: event.target.value }))
++                    }
++                    rows={3}
++                    className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm"
++                    placeholder={
++                      exceptionReasonField?.placeholder ||
++                      'Describe why this exception is needed right now.'
++                    }
++                  />
++                  {exceptionReasonError && <p className="text-xs text-danger">{exceptionReasonError}</p>}
++                </div>
+               </div>
+             )}
+ 
+@@ -1023,7 +1155,7 @@ export function RemediationModal({
+               </div>
+             )}
+ 
+-            {selectedStrategy && visibleStrategyFields.length > 0 && (
++            {selectedStrategy && visibleStrategyFields.length > 0 && !selectedStrategy.exception_only && (
+               <div className="space-y-3 p-4 rounded-xl border border-border bg-surface/50">
+                 <h3 className="text-sm font-medium text-text">Strategy inputs</h3>
+                 {groupedStrategyFields.map((group) => (
+@@ -1386,6 +1518,7 @@ export function RemediationModal({
+                   (hasCatalogStrategies && !selectedStrategy) ||
+                   missingRequiredFields.length > 0 ||
+                   hasInputValidationErrors ||
++                  (selectedStrategy?.exception_only && exceptionReasonError !== null) ||
+                   (!shouldUseExceptionFlow && hasFailingChecks) ||
+                   (!shouldUseExceptionFlow && requiresRiskAck && !riskAcknowledged) ||
+                   (mode === 'direct_fix' && !canRunDirectFix)
+diff --git a/src/components/landing/BaselineReportHighlight.tsx b/src/components/landing/BaselineReportHighlight.tsx
+index 4d00836..f0acc93 100644
+--- a/src/components/landing/BaselineReportHighlight.tsx
++++ b/src/components/landing/BaselineReportHighlight.tsx
+@@ -22,8 +22,8 @@ export const BaselineReportHighlight = () => {
+                     </p>
+                 </div>
+ 
+-                {/* Neumorphic card */}
+-                <div className="nm-raised-lg overflow-hidden">
++                {/* Neumorphic container: Edge-to-edge inset well on mobile, raised card on tablet/desktop */}
++                <div className="nm-inset md:nm-raised-lg md:nm-inset-none -mx-6 md:mx-0 rounded-none md:rounded-[1rem] overflow-hidden">
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 relative z-10">
+                         {/* Left Side: Features */}
+                         <div className="p-8 sm:p-12 flex flex-col justify-center" style={{ borderRight: '1px solid rgba(166,184,207,0.3)' }}>
+@@ -35,8 +35,8 @@ export const BaselineReportHighlight = () => {
+                                     { icon: FileJson, title: 'Machine-Readable Artifacts', desc: 'Export raw JSON payloads or formatted CSVs for your GRC tooling.' }
+                                 ].map((feature, i) => (
+                                     <div key={i} className="flex items-start gap-4">
+-                                        {/* Inset icon socket */}
+-                                        <div className="nm-icon-well h-11 w-11 shrink-0">
++                                        {/* Raised icon socket on mobile (since bg is inset), inset on desktop */}
++                                        <div className="nm-icon-well nm-raised md:nm-inset md:nm-raised-none h-11 w-11 shrink-0 flex items-center justify-center rounded-full">
+                                             <feature.icon className="h-5 w-5" style={{ color: 'var(--nm-accent)' }} />
+                                         </div>
+                                         <div>
+@@ -53,13 +53,14 @@ export const BaselineReportHighlight = () => {
+                         </div>
+ 
+                         {/* Right Side: Report graphic */}
+-                        <div className="relative p-8 sm:p-12 flex items-center justify-center min-h-[400px]" style={{ background: 'var(--nm-base-dark)' }}>
+-                            {/* Neumorphic report card */}
+-                            <div className="nm-raised w-full max-w-sm p-6">
++                        {/* On mobile, this will just blend into the inset well. On desktop, it has the base-dark background */}
++                        <div className="relative p-8 sm:p-12 flex items-center justify-center min-h-[400px] md:bg-[var(--nm-base-dark)]" style={{ borderTop: '1px solid rgba(166,184,207,0.3)' }}>
++                            {/* Neumorphic report card - explicitly raised to sit on top of the inset/dark background */}
++                            <div className="nm-raised w-full max-w-sm p-6 bg-[var(--nm-base)]">
+                                 <div className="flex justify-between items-center mb-6">
+                                     <div className="flex items-center gap-2">
+                                         {/* Inset icon */}
+-                                        <div className="nm-icon-well h-9 w-9">
++                                        <div className="nm-icon-well nm-inset h-9 w-9 flex items-center justify-center rounded-full">
+                                             <FileDown className="w-4 h-4 text-green-600" />
+                                         </div>
+                                         <span className="text-sm font-medium" style={{ color: 'var(--nm-text)' }}>Baseline_Report.zip</span>
+@@ -77,17 +78,16 @@ export const BaselineReportHighlight = () => {
+                                 <div className="space-y-5">
+                                     {[1, 2, 3].map((line, i) => (
+                                         <div key={i} className="flex gap-4 items-center">
+-                                            <div className="nm-icon-well h-7 w-7 shrink-0" style={{ borderRadius: '9999px' }}>
++                                            <div className="nm-icon-well nm-inset h-7 w-7 shrink-0 flex items-center justify-center rounded-full">
+                                                 <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--nm-accent)' }} />
+                                             </div>
+                                             <div className="flex-1 space-y-2">
+-                                                <div className="nm-progress-track h-2 w-full">
++                                                <div className="nm-progress-track nm-inset h-2 w-full rounded-full overflow-hidden">
+                                                     <motion.div
+-                                                        className="nm-progress-fill"
++                                                        className="nm-progress-fill h-full bg-[var(--nm-accent)]"
+                                                         initial={{ width: "20%" }}
+                                                         animate={{ width: ["20%", "100%", "100%", "20%"] }}
+                                                         transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, delay: i * 0.2 }}
+-                                                        style={{ height: '100%' }}
+                                                     />
+                                                 </div>
+                                                 <div
+diff --git a/src/components/landing/BentoIntroGrid.tsx b/src/components/landing/BentoIntroGrid.tsx
+index 9e9025e..8200e20 100644
+--- a/src/components/landing/BentoIntroGrid.tsx
++++ b/src/components/landing/BentoIntroGrid.tsx
+@@ -10,7 +10,7 @@ const CALENDLY_URL = 'https://calendly.com/maromaher54/30min';
+ 
+ // Neumorphic visual: signal stream (soft progress bars)
+ const VisualExtraction = () => (
+-    <div className="absolute top-0 right-0 w-[55%] h-full pointer-events-none overflow-hidden opacity-80" style={{ maskImage: 'linear-gradient(to right, transparent, black 35%)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 35%)' }}>
++    <div className="absolute top-0 right-0 w-[55%] h-full pointer-events-none overflow-hidden opacity-80" style={{ maskImage: 'linear-gradient(to right, transparent, black 35%, black 75%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 35%, black 75%, transparent)' }}>
+         <div className="absolute inset-0 flex flex-col justify-center gap-3 pl-8 pr-4 transform rotate-[-8deg] scale-110 translate-x-4 translate-y-2">
+             {[1, 2, 3, 4].map((i) => (
+                 <div key={i} className="flex items-center gap-2">
+@@ -33,7 +33,7 @@ const VisualExtraction = () => (
+ 
+ // Neumorphic visual: code diff
+ const VisualCures = () => (
+-    <div className="absolute top-0 right-0 w-[52%] h-full pointer-events-none overflow-hidden opacity-70" style={{ maskImage: 'linear-gradient(to right, transparent, black 35%)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 35%)' }}>
++    <div className="absolute top-0 right-0 w-[52%] h-full pointer-events-none overflow-hidden opacity-70" style={{ maskImage: 'linear-gradient(to right, transparent, black 35%, black 75%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 35%, black 75%, transparent)' }}>
+         <div className="absolute inset-y-0 right-0 w-full flex flex-col justify-center p-4 font-mono text-[10px] leading-relaxed transform rotate-[4deg] translate-x-2">
+             <div className="text-red-400/60 line-through">- acl = &quot;public-read&quot;</div>
+             <motion.div
+@@ -52,7 +52,7 @@ const VisualCures = () => (
+ 
+ // Neumorphic visual: audit log
+ const VisualAudit = () => (
+-    <div className="absolute top-0 right-0 w-[48%] h-full pointer-events-none overflow-hidden opacity-70" style={{ maskImage: 'linear-gradient(to right, transparent, black 25%)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 25%)' }}>
++    <div className="absolute top-0 right-0 w-[48%] h-full pointer-events-none overflow-hidden opacity-70" style={{ maskImage: 'linear-gradient(to right, transparent, black 25%, black 70%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 25%, black 70%, transparent)' }}>
+         <div className="absolute inset-y-0 right-0 w-full flex flex-col justify-center p-4 font-mono text-[9px] leading-relaxed transform scale-110 translate-x-4">
+             <div style={{ color: 'var(--nm-text-light)' }}>&quot;evidence&quot;: {"{"}</div>
+             <div className="pl-2" style={{ color: 'var(--nm-accent)' }}>&quot;standard&quot;: &quot;SOC2&quot;,</div>
+@@ -84,13 +84,13 @@ export function BentoIntroGrid() {
+                     transition={{ duration: 0.5, delay: 0.1 }}
+                     className="nm-raised-lg relative overflow-hidden p-8 md:col-span-2 lg:col-span-1 min-h-[320px] flex flex-col justify-between"
+                 >
+-                    <div className="relative z-10">
++                    <div className="relative z-10 w-[55%]">
+                         {/* Icon well */}
+                         <div className="mb-6 nm-icon-well h-12 w-12" style={{ color: 'var(--nm-accent)' }}>
+                             <Zap className="h-6 w-6" style={{ color: 'var(--nm-accent)' }} />
+                         </div>
+                         <h3 className="mb-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>Intelligent Signal Extraction</h3>
+-                        <p className="text-base leading-relaxed max-w-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                        <p className="text-base leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
+                             Connect to EventBridge and distill thousands of raw, duplicate Security Hub findings into a single, prioritized queue of root-cause vulnerabilities.
+                         </p>
+                     </div>
+@@ -105,12 +105,12 @@ export function BentoIntroGrid() {
+                     transition={{ duration: 0.5, delay: 0.2 }}
+                     className="nm-raised-lg relative overflow-hidden p-8 min-h-[320px] flex flex-col justify-between"
+                 >
+-                    <div className="relative z-10">
++                    <div className="relative z-10 w-[55%]">
+                         <div className="mb-6 nm-icon-well h-12 w-12">
+                             <Wrench className="h-6 w-6" style={{ color: 'var(--nm-accent)' }} />
+                         </div>
+                         <h3 className="mb-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>Automated Cures</h3>
+-                        <p className="text-base leading-relaxed max-w-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                        <p className="text-base leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
+                             Stop writing manual patches. Autopilot delivers safe, 1-click direct fixes or ready-to-merge Terraform bundles for critical alerts.
+                         </p>
+                     </div>
+@@ -125,12 +125,12 @@ export function BentoIntroGrid() {
+                     transition={{ duration: 0.5, delay: 0.3 }}
+                     className="nm-raised-lg relative overflow-hidden p-8 min-h-[320px] flex flex-col justify-between"
+                 >
+-                    <div className="relative z-10">
++                    <div className="relative z-10 w-[60%]">
+                         <div className="mb-6 nm-icon-well h-12 w-12">
+                             <FileCheck className="h-6 w-6 text-green-600" />
+                         </div>
+                         <h3 className="mb-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>Provable Compliance</h3>
+-                        <p className="text-base leading-relaxed max-w-sm" style={{ color: 'var(--nm-text-muted)' }}>
++                        <p className="text-base leading-relaxed" style={{ color: 'var(--nm-text-muted)' }}>
+                             Every automated remediation creates immutable, board-ready evidence packets seamlessly mapped to your SOC 2 and ISO frameworks.
+                         </p>
+                     </div>
+diff --git a/src/components/landing/MaximizeSecurityGrid.tsx b/src/components/landing/MaximizeSecurityGrid.tsx
+index 4dccf82..4041fbb 100644
+--- a/src/components/landing/MaximizeSecurityGrid.tsx
++++ b/src/components/landing/MaximizeSecurityGrid.tsx
+@@ -1,35 +1,36 @@
+ "use client";
+ 
+-import React, { useState } from "react";
++import React, { useState, useRef } from "react";
+ import { motion, AnimatePresence } from "motion/react";
++import { ChevronRight } from "lucide-react";
+ 
+ const VisualConnect = () => (
+-    <div className="w-full h-full p-4 sm:p-8 flex items-center justify-center">
+-        <div className="w-full max-w-sm nm-raised-lg overflow-hidden">
+-            <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(166,184,207,0.3)] bg-white/40">
+-                <div className="flex items-center gap-2">
+-                    <div className="w-3 h-3 rounded-full bg-red-400" />
+-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+-                    <div className="w-3 h-3 rounded-full bg-green-400" />
+-                    <span className="ml-2 text-xs font-mono" style={{ color: 'var(--nm-text-muted)' }}>iam_policy.json</span>
++    <div className="w-full h-full p-2 sm:p-4 md:p-8 flex items-center justify-center">
++        <div className="w-full max-w-sm nm-raised-lg overflow-hidden min-w-0">
++            <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-[rgba(166,184,207,0.3)] bg-white/40">
++                <div className="flex items-center gap-1.5 sm:gap-2">
++                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400" />
++                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-400" />
++                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400" />
++                    <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs font-mono" style={{ color: 'var(--nm-text-muted)' }}>iam_policy.json</span>
+                 </div>
+-                <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider nm-inset-sm text-green-600">Read-Only</span>
++                <span className="px-1.5 py-0.5 sm:px-2 rounded text-[8px] sm:text-[10px] uppercase font-bold tracking-wider nm-inset-sm text-green-600">Read-Only</span>
+             </div>
+-            <div className="p-4 text-sm font-mono leading-relaxed" style={{ color: 'var(--nm-text)' }}>
++            <div className="p-3 sm:p-4 text-[10px] sm:text-xs md:text-sm font-mono leading-relaxed" style={{ color: 'var(--nm-text)' }}>
+                 <p>{"{"}</p>
+-                <p className="pl-4"><span style={{ color: 'var(--nm-accent)' }}>&quot;Effect&quot;</span>: <span className="text-green-600">&quot;Allow&quot;</span>,</p>
+-                <p className="pl-4"><span style={{ color: 'var(--nm-accent)' }}>&quot;Action&quot;</span>: [</p>
+-                <p className="pl-8 text-amber-600">&quot;securityhub:GetFindings&quot;,</p>
+-                <p className="pl-8 text-amber-600">&quot;guardduty:GetFindings&quot;,</p>
+-                <p className="pl-8 text-amber-600">&quot;ec2:DescribeInstances&quot;</p>
+-                <p className="pl-4">],</p>
+-                <p className="pl-4"><span style={{ color: 'var(--nm-accent)' }}>&quot;Resource&quot;</span>: <span className="text-green-600">&quot;*&quot;</span></p>
++                <p className="pl-1 sm:pl-4"><span style={{ color: 'var(--nm-accent)' }}>&quot;Effect&quot;</span>: <span className="text-green-600">&quot;Allow&quot;</span>,</p>
++                <p className="pl-1 sm:pl-4"><span style={{ color: 'var(--nm-accent)' }}>&quot;Action&quot;</span>: [</p>
++                <p className="pl-2 sm:pl-8 text-amber-600 leading-tight sm:leading-relaxed break-all sm:break-normal">&quot;securityhub:GetFindings&quot;,</p>
++                <p className="pl-2 sm:pl-8 text-amber-600 leading-tight sm:leading-relaxed break-all sm:break-normal">&quot;guardduty:GetFindings&quot;,</p>
++                <p className="pl-2 sm:pl-8 text-amber-600 leading-tight sm:leading-relaxed break-all sm:break-normal">&quot;ec2:DescribeInstances&quot;</p>
++                <p className="pl-1 sm:pl-4">],</p>
++                <p className="pl-1 sm:pl-4 flex flex-wrap"><span style={{ color: 'var(--nm-accent)' }}>&quot;Resource&quot;</span>: <span className="text-green-600">&quot;*&quot;</span></p>
+                 <p>{"}"}</p>
+                 <motion.div
+                     initial={{ width: 0 }}
+                     animate={{ width: "100%" }}
+                     transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+-                    className="mt-4 h-[2px]"
++                    className="mt-3 sm:mt-4 h-[2px]"
+                     style={{ background: 'var(--nm-accent)' }}
+                 />
+             </div>
+@@ -39,7 +40,7 @@ const VisualConnect = () => (
+ 
+ const VisualVisibility = () => (
+     <div className="w-full h-full p-4 sm:p-8 flex items-center justify-center">
+-        <div className="w-full max-w-sm nm-raised-lg overflow-hidden">
++        <div className="w-full max-w-sm nm-raised-lg overflow-hidden min-w-0">
+             <div className="flex items-center gap-2 px-4 py-3 border-b border-[rgba(166,184,207,0.3)] bg-white/40">
+                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--nm-accent)', boxShadow: '0 0 8px var(--nm-accent)' }} />
+                 <span className="ml-2 text-xs font-mono tracking-widest uppercase" style={{ color: 'var(--nm-accent)' }}>EventBridge Data Stream</span>
+@@ -52,13 +53,13 @@ const VisualVisibility = () => (
+                         initial={{ opacity: 0, y: 20 }}
+                         animate={{ opacity: [0, 1, 0.4], y: [20, 0, -20] }}
+                         transition={{ duration: 2, repeat: Infinity, delay: i * 0.5, ease: "linear" }}
+-                        className="flex items-start gap-3 border-l-2 pl-3"
++                        className="flex items-start gap-2 sm:gap-3 border-l-2 pl-2 sm:pl-3"
+                         style={{ borderColor: 'var(--nm-accent)' }}
+                     >
+-                        <span className="text-[10px] font-mono opacity-50 whitespace-nowrap pt-0.5" style={{ color: 'var(--nm-text-muted)' }}>EST {10 + i}:42:0{i}</span>
++                        <span className="text-[8px] sm:text-[10px] font-mono opacity-50 whitespace-nowrap pt-0.5" style={{ color: 'var(--nm-text-muted)' }}>EST {10 + i}:42:0{i}</span>
+                         <div className="flex-1">
+-                            <span className="text-xs font-mono font-bold" style={{ color: 'var(--nm-accent)' }}>INGEST:</span>
+-                            <span className="text-xs font-mono ml-2 font-medium" style={{ color: 'var(--nm-text)' }}>New finding mapped</span>
++                            <span className="text-[10px] sm:text-xs font-mono font-bold" style={{ color: 'var(--nm-accent)' }}>INGEST:</span>
++                            <span className="text-[10px] sm:text-xs font-mono ml-1 sm:ml-2 font-medium" style={{ color: 'var(--nm-text)' }}>New finding mapped</span>
+                         </div>
+                     </motion.div>
+                 ))}
+@@ -68,15 +69,15 @@ const VisualVisibility = () => (
+ );
+ 
+ const VisualControl = () => (
+-    <div className="w-full h-full p-4 sm:p-8 flex items-center justify-center">
+-        <div className="w-full max-w-sm relative p-6 nm-raised-lg flex flex-col gap-6">
++    <div className="w-full h-full p-2 sm:p-4 md:p-8 flex items-center justify-center">
++        <div className="w-full max-w-sm relative p-4 sm:p-6 nm-raised-lg flex flex-col gap-4 sm:gap-6 min-w-0">
+             <div className="flex items-center justify-between">
+                 <div className="flex flex-col">
+-                    <span className="font-semibold text-lg" style={{ color: 'var(--nm-text)' }}>Discovery Mode</span>
+-                    <span className="text-xs mt-1" style={{ color: 'var(--nm-text-muted)' }}>Read-only account mapping</span>
++                    <span className="font-semibold text-sm sm:text-lg" style={{ color: 'var(--nm-text)' }}>Discovery Mode</span>
++                    <span className="text-[10px] sm:text-xs mt-0.5 sm:mt-1" style={{ color: 'var(--nm-text-muted)' }}>Read-only account mapping</span>
+                 </div>
+-                <div className="w-12 h-6 rounded-full nm-inset relative border border-[#c4d4e6] flex items-center shadow-inner">
+-                    <div className="w-4 h-4 ml-1 rounded-full bg-blue-500 shadow-sm transition-all" />
++                <div className="w-10 h-5 sm:w-12 sm:h-6 rounded-full nm-inset relative border border-[#c4d4e6] flex items-center shadow-inner">
++                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 rounded-full bg-blue-500 shadow-sm transition-all" />
+                 </div>
+             </div>
+ 
+@@ -84,13 +85,13 @@ const VisualControl = () => (
+ 
+             <div className="flex items-center justify-between opacity-50">
+                 <div className="flex flex-col">
+-                    <span className="font-semibold flex items-center gap-2 text-lg" style={{ color: 'var(--nm-text)' }}>
+-                        Write Access <span className="text-[10px] uppercase px-1.5 py-0.5 nm-inset-sm font-bold">Disabled</span>
++                    <span className="font-semibold flex items-center gap-1.5 sm:gap-2 text-sm sm:text-lg" style={{ color: 'var(--nm-text)' }}>
++                        Write Access <span className="text-[8px] sm:text-[10px] uppercase px-1 sm:px-1.5 py-0.5 nm-inset-sm font-bold">Disabled</span>
+                     </span>
+-                    <span className="text-xs mt-1" style={{ color: 'var(--nm-text-muted)' }}>Direct infrastructure mutation</span>
++                    <span className="text-[10px] sm:text-xs mt-0.5 sm:mt-1" style={{ color: 'var(--nm-text-muted)' }}>Direct infrastructure mutation</span>
+                 </div>
+-                <div className="w-12 h-6 rounded-full nm-inset relative flex items-center border border-[#d1dee8]">
+-                    <div className="w-4 h-4 ml-7 rounded-full bg-gray-400 shadow-sm transition-all" />
++                <div className="w-10 h-5 sm:w-12 sm:h-6 rounded-full nm-inset relative flex items-center border border-[#d1dee8]">
++                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-5 sm:ml-7 rounded-full bg-gray-400 shadow-sm transition-all" />
+                 </div>
+             </div>
+         </div>
+@@ -132,17 +133,70 @@ const FEATURES = [
+ 
+ export function MaximizeSecurityGrid() {
+     const [activeIndex, setActiveIndex] = useState(0);
++    const scrollContainerRef = useRef<HTMLDivElement>(null);
++
++    const scrollToNext = () => {
++        if (scrollContainerRef.current) {
++            const container = scrollContainerRef.current;
++            const scrollAmount = container.clientWidth * 0.85; // Roughly the width of one mobile card
++            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
++        }
++    };
+ 
+     return (
+         <div className="relative w-full">
+-            <div className="flex flex-col lg:flex-row max-w-7xl mx-auto px-6 lg:px-12 gap-12 lg:gap-24">
++
++            {/* Mobile View: Horizontal Snap Carousel */}
++            <div className="block lg:hidden -mx-6 overflow-hidden py-16 relative">
++                <div
++                    ref={scrollContainerRef}
++                    className="flex overflow-x-auto snap-x snap-mandatory gap-6 px-6 pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
++                    style={{ scrollPaddingLeft: '1.5rem' }}
++                >
++                    {FEATURES.map((feature, i) => (
++                        <div
++                            key={`mobile-${i}`}
++                            className="w-[85vw] sm:w-[400px] flex-shrink-0 snap-start nm-raised-lg flex flex-col p-6 gap-6 overflow-hidden min-w-0"
++                        >
++                            <div className="w-full min-h-[220px] sm:min-h-0 aspect-square sm:aspect-[4/3] rounded-2xl overflow-hidden nm-inset relative flex items-center justify-center" style={{ background: 'var(--nm-base)' }}>
++                                {React.createElement(feature.visual)}
++                            </div>
++                            <div className="flex flex-col gap-4 flex-shrink-0 min-w-0">
++                                {feature.badge && (
++                                    <span className="inline-flex tracking-wider self-start items-center nm-raised-sm px-2.5 py-1 text-[10px] font-bold shadow-sm" style={{ color: 'var(--nm-accent)', borderRadius: '9999px' }}>
++                                        {feature.badge}
++                                    </span>
++                                )}
++                                <h3 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--nm-text)' }}>
++                                    {feature.title}
++                                </h3>
++                                <div className="text-base leading-relaxed font-medium" style={{ color: 'var(--nm-text-muted)' }}>
++                                    {feature.description}
++                                </div>
++                            </div>
++                        </div>
++                    ))}
++                </div>
++
++                {/* Mobile Scroll Indicator Button */}
++                <button
++                    onClick={scrollToNext}
++                    className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-12 h-12 rounded-full nm-raised text-gray-500 hover:text-blue-500 transition-colors z-10 lg:hidden"
++                    aria-label="Scroll to next card"
++                >
++                    <ChevronRight className="w-6 h-6 ml-0.5" />
++                </button>
++            </div>
++
++            {/* Desktop View: Split Pane Sticky Scroll */}
++            <div className="hidden lg:flex flex-row max-w-7xl mx-auto px-12 gap-24">
+ 
+                 {/* Left Column - Scrollable Text */}
+-                <div className="w-full lg:w-[55%] flex flex-col lg:py-[5vh]">
++                <div className="w-[55%] flex flex-col py-[5vh]">
+                     {FEATURES.map((feature, i) => (
+                         <motion.div
+-                            key={i}
+-                            className="min-h-[50vh] lg:min-h-[85vh] flex flex-col justify-center py-16"
++                            key={`desktop-${i}`}
++                            className="min-h-[85vh] flex flex-col justify-center py-16"
+                             initial="hidden"
+                             whileInView="visible"
+                             viewport={{ amount: 0.4, margin: "-10% 0px -10% 0px" }}
+@@ -154,42 +208,25 @@ export function MaximizeSecurityGrid() {
+                         >
+                             <div className="max-w-xl">
+                                 {feature.badge && (
+-                                    <span className="inline-flex tracking-wider items-center nm-raised-sm px-2.5 py-1 text-[10px] md:text-xs font-bold shadow-sm mb-6" style={{ color: 'var(--nm-accent)', borderRadius: '9999px' }}>
++                                    <span className="inline-flex tracking-wider items-center nm-raised-sm px-2.5 py-1 text-xs font-bold shadow-sm mb-6" style={{ color: 'var(--nm-accent)', borderRadius: '9999px' }}>
+                                         {feature.badge}
+                                     </span>
+                                 )}
+-                                <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-6" style={{ color: 'var(--nm-text)' }}>
++                                <h3 className="text-4xl lg:text-5xl font-bold tracking-tight mb-6" style={{ color: 'var(--nm-text)' }}>
+                                     {feature.title}
+                                 </h3>
+-                                <div className="text-lg md:text-xl leading-relaxed font-medium" style={{ color: 'var(--nm-text-muted)' }}>
++                                <div className="text-xl leading-relaxed font-medium" style={{ color: 'var(--nm-text-muted)' }}>
+                                     {feature.description}
+                                 </div>
+                             </div>
+-
+-                            {/* Mobile visual rendering (Hidden on Desktop) */}
+-                            <div
+-                                className="block lg:hidden mt-10 w-full rounded-2xl p-1 overflow-hidden h-[300px]"
+-                                style={{
+-                                    background: 'var(--nm-base)',
+-                                    boxShadow: 'inset 3px 3px 8px var(--nm-shadow-dark), inset -3px -3px 8px var(--nm-shadow-light)'
+-                                }}
+-                            >
+-                                <div className="w-full h-full relative rounded-xl overflow-hidden" style={{ background: 'var(--nm-base)' }}>
+-                                    {React.createElement(feature.visual)}
+-                                </div>
+-                            </div>
+                         </motion.div>
+                     ))}
+                 </div>
+ 
+-                {/* Right Column - Sticky Visual Container (Desktop only) */}
+-                <div className="hidden lg:flex w-[45%] h-screen sticky top-0 items-center justify-center">
++                {/* Right Column - Sticky Visual Container */}
++                <div className="w-[45%] h-screen sticky top-0 flex items-center justify-center">
+                     <div
+-                        className="w-full max-w-[500px] aspect-square rounded-[2rem] p-1 relative backdrop-blur-2xl"
+-                        style={{
+-                            background: 'var(--nm-base)',
+-                            boxShadow: 'inset 5px 5px 12px var(--nm-shadow-dark), inset -5px -5px 12px var(--nm-shadow-light)'
+-                        }}
++                        className="w-full max-w-[500px] aspect-square rounded-[2rem] p-1 relative backdrop-blur-2xl nm-inset"
+                     >
+                         <div className="w-full h-full relative rounded-[1.75rem] overflow-hidden" style={{ background: 'var(--nm-base)' }}>
+                             <AnimatePresence mode="wait">
+@@ -206,8 +243,8 @@ export function MaximizeSecurityGrid() {
+                             </AnimatePresence>
+                         </div>
+                     </div>
+-
+                 </div>
++
+             </div>
+         </div>
+     );
+diff --git a/src/components/landing/SecondaryCTASection.tsx b/src/components/landing/SecondaryCTASection.tsx
+index 9d9a798..b7bae74 100644
+--- a/src/components/landing/SecondaryCTASection.tsx
++++ b/src/components/landing/SecondaryCTASection.tsx
+@@ -46,12 +46,12 @@ export function SecondaryCTASection() {
+           >
+             Get my baseline report
+           </Link>
+-          <Link
++          {/* <Link
+             href="#how-it-works"
+             className="text-accent hover:underline text-sm font-medium"
+           >
+             See how it works
+-          </Link>
++          </Link> */}
+         </motion.div>
+       </div>
+     </section>
+diff --git a/src/components/site-nav.tsx b/src/components/site-nav.tsx
+index 9ce440e..19f2362 100644
+--- a/src/components/site-nav.tsx
++++ b/src/components/site-nav.tsx
+@@ -18,7 +18,6 @@ import {
+   DropdownMenuItem,
+   DropdownMenuTrigger,
+ } from '@/components/ui/DropdownMenu';
+-import { NoiseBackground } from '@/components/ui/NoiseBackground';
+ import { cn } from '@/lib/utils';
+ 
+ const LOCALES = [
+@@ -47,7 +46,10 @@ export function SiteNav() {
+   }, []);
+ 
+   useEffect(() => {
+-    const onScroll = () => setScrolled(window.scrollY > SCROLL_THRESHOLD);
++    const onScroll = () => {
++      const isScrolled = window.scrollY > SCROLL_THRESHOLD;
++      setScrolled((prev) => (prev === isScrolled ? prev : isScrolled));
++    };
+     onScroll();
+     window.addEventListener('scroll', onScroll, { passive: true });
+     return () => window.removeEventListener('scroll', onScroll);
+@@ -87,28 +89,15 @@ export function SiteNav() {
+         </NavigationMenu>
+ 
+         <div className="flex items-center gap-2">
+-          <NoiseBackground
+-            containerClassName="inline-flex rounded-full p-[1px]"
+-            gradientColors={['rgb(62, 140, 255)', 'rgb(42, 114, 235)', 'rgb(35, 98, 210)']}
+-            noiseIntensity={0.34}
+-            speed={0.04}
++          <Link
++            href={CALENDLY_URL}
++            target="_blank"
++            rel="noreferrer"
++            className="nm-btn-primary"
++            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+           >
+-            <NoiseBackground
+-              containerClassName="inline-flex rounded-full p-[5px]"
+-              gradientColors={['rgb(90, 170, 255)', 'rgb(62, 140, 255)', 'rgb(42, 114, 235)']}
+-              noiseIntensity={0.42}
+-              speed={0.04}
+-            >
+-              <Link
+-                href={CALENDLY_URL}
+-                target="_blank"
+-                rel="noreferrer"
+-                className="inline-flex rounded-full bg-black/85 px-4 py-2 text-sm font-medium text-white outline-none backdrop-blur-sm focus:ring-0 focus-visible:ring-0"
+-              >
+-                Book a call
+-              </Link>
+-            </NoiseBackground>
+-          </NoiseBackground>
++            Book a call
++          </Link>
+ 
+           <div className="hidden items-center gap-2 md:flex">
+             {mounted ? (
+@@ -122,7 +111,7 @@ export function SiteNav() {
+                   {LOCALES.map(({ code, label }) => (
+                     <DropdownMenuItem
+                       key={code}
+-                      onSelect={() => {}}
++                      onSelect={() => { }}
+                       className="border-0 outline-none ring-0 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 data-[highlighted]:bg-accent/10 data-[highlighted]:text-accent data-[state=open]:border-0 data-[state=open]:ring-0"
+                     >
+                       {label}
+@@ -138,12 +127,12 @@ export function SiteNav() {
+               </div>
+             )}
+ 
+-            <Link
++            {/* <Link
+               href="/login"
+               className="rounded-md border-0 px-3 py-2 text-sm text-muted ring-0 outline-none transition hover:text-accent focus:ring-0 focus-visible:ring-0"
+             >
+               Sign in
+-            </Link>
++            </Link> */}
+           </div>
+ 
+           <button
+@@ -196,13 +185,13 @@ export function SiteNav() {
+                     {link.label}
+                   </Link>
+                 ))}
+-                <Link
++                {/* <Link
+                   href="/login"
+                   className="rounded-md px-3 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                   onClick={() => setMobileOpen(false)}
+                 >
+                   Sign in
+-                </Link>
++                </Link> */}
+               </nav>
+             </motion.div>
+           </motion.div>
+diff --git a/src/components/ui/NeumorphicLoader.tsx b/src/components/ui/NeumorphicLoader.tsx
+new file mode 100644
+index 0000000..037c348
+--- /dev/null
++++ b/src/components/ui/NeumorphicLoader.tsx
+@@ -0,0 +1,25 @@
++'use client';
++
++import React from 'react';
++import { motion } from 'motion/react';
++
++export function NeumorphicLoader({ text = "Loading..." }: { text?: string }) {
++    return (
++        <div className="flex flex-col items-center justify-center space-y-6">
++            <div
++                className="w-16 h-16 rounded-full nm-inset relative flex items-center justify-center"
++            >
++                <motion.div
++                    className="w-10 h-10 rounded-full nm-raised border-[1px] border-white/20"
++                    animate={{ rotate: 360 }}
++                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
++                >
++                    <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#4a84e8] rounded-full shadow-[0_0_8px_rgba(74,132,232,0.8)]" />
++                </motion.div>
++            </div>
++            <p className="text-sm font-medium tracking-wide" style={{ color: 'var(--nm-text-muted)' }}>
++                {text}
++            </p>
++        </div>
++    );
++}
+diff --git a/src/components/ui/PrimaryCTANeumorphic.tsx b/src/components/ui/PrimaryCTANeumorphic.tsx
+index 53af525..c63533d 100644
+--- a/src/components/ui/PrimaryCTANeumorphic.tsx
++++ b/src/components/ui/PrimaryCTANeumorphic.tsx
+@@ -16,9 +16,9 @@ export function PrimaryCTANeumorphic({
+     className = ""
+ }: PrimaryCTANeumorphicProps) {
+     return (
+-        <div className={`inline-flex shrink-0 ${className}`}>
++        <div className={`group inline-flex shrink-0 transition-all duration-150 ease-out hover:-translate-y-[1px] active:translate-y-[1px] ${className}`}>
+             <NoiseBackground
+-                containerClassName="inline-flex rounded-full p-[1px] nm-raised"
++                containerClassName="inline-flex rounded-full p-[1px] nm-raised transition-all duration-150 group-hover:shadow-[7px_7px_18px_rgba(166,184,207,0.85),-7px_-7px_18px_rgba(255,255,255,0.92)] group-active:shadow-[inset_3px_3px_8px_rgba(166,184,207,0.85),inset_-3px_-3px_8px_rgba(255,255,255,0.92)]"
+                 gradientColors={['rgb(62, 140, 255)', 'rgb(42, 114, 235)', 'rgb(35, 98, 210)']}
+                 noiseIntensity={0.36}
+                 speed={0.04}
+@@ -33,7 +33,8 @@ export function PrimaryCTANeumorphic({
+                         href={href}
+                         target="_blank"
+                         rel="noreferrer"
+-                        className="inline-flex rounded-full border-0 bg-black/85 px-6 py-2.5 text-sm font-semibold text-white outline-none backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#dde6f0] nm-inset"
++                        className="inline-flex rounded-full border-0 px-6 py-2.5 text-sm font-semibold outline-none backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#dde6f0] nm-inset transition-colors hover:text-accent"
++                        style={{ color: 'var(--nm-text)' }}
+                     >
+                         {text}
+                     </Link>
+diff --git a/src/components/ui/XIcon.tsx b/src/components/ui/XIcon.tsx
+new file mode 100644
+index 0000000..0b3b5c4
+--- /dev/null
++++ b/src/components/ui/XIcon.tsx
+@@ -0,0 +1,15 @@
++import React from 'react';
++
++export function XIcon(props: React.SVGProps<SVGSVGElement>) {
++    return (
++        <svg
++            xmlns="http://www.w3.org/2000/svg"
++            viewBox="0 0 24 24"
++            fill="currentColor"
++            stroke="none"
++            {...props}
++        >
++            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
++        </svg>
++    );
++}

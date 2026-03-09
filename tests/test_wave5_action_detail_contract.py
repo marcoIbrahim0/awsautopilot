@@ -24,6 +24,8 @@ def _make_action(*, description: str | None = "Risk details") -> MagicMock:
     action.target_id = "target-1"
     action.account_id = "123456789012"
     action.region = "eu-north-1"
+    action.score = 91
+    action.score_components = {"severity": {"normalized": 1.0, "points": 35}, "score": 91}
     action.priority = 100
     action.status = "open"
     action.title = "Security group allows risky ingress"
@@ -52,9 +54,13 @@ def _make_action(*, description: str | None = "Risk details") -> MagicMock:
 
 def test_action_detail_contract_includes_explanation_fields() -> None:
     response = _action_to_detail_response(_make_action(description="Risk details"))
+    assert response.score == 91
+    assert response.score_components == {"severity": {"normalized": 1.0, "points": 35}, "score": 91}
+    assert response.context_incomplete is True
     assert response.what_is_wrong == "Risk details"
     assert response.what_the_fix_does
     assert "security-group" in response.what_the_fix_does.lower()
+    assert response.implementation_artifacts == []
 
 
 def test_action_detail_contract_uses_title_fallback_when_description_missing() -> None:

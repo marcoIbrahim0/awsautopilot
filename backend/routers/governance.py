@@ -28,10 +28,12 @@ from backend.services.exception_governance import (
     schedule_next_revalidation_at,
     schedule_next_reminder_at,
 )
+from backend.services.exception_service import get_exception_state_for_response
 from backend.services.governance_notifications import (
     GovernanceNotificationError,
     dispatch_governance_notification,
 )
+from backend.services.action_sla import build_action_escalation_context
 
 router = APIRouter(prefix="/governance", tags=["governance"])
 
@@ -329,6 +331,26 @@ async def notify_remediation_run_stage(
 
     target_label = run.action.title if run.action and run.action.title else f"Remediation run {run.id}"
     action_url = (body.action_url or "").strip() or f"{settings.FRONTEND_URL.rstrip('/')}/remediation-runs/{run.id}"
+    escalation_context = None
+    if run.action is not None:
+        exception_state = await get_exception_state_for_response(
+            db,
+            current_user.tenant_id,
+            "action",
+            run.action.id,
+        )
+        escalation_context = build_action_escalation_context(
+            action_id=run.action.id,
+            action_type=run.action.action_type,
+            title=run.action.title,
+            owner_type=run.action.owner_type,
+            owner_key=run.action.owner_key,
+            owner_label=run.action.owner_label,
+            created_at=run.action.created_at,
+            score=int(getattr(run.action, "score", None) or getattr(run.action, "priority", 0) or 0),
+            now=datetime.now(timezone.utc),
+            has_active_exception=bool(exception_state.get("exception_id")),
+        )
 
     try:
         summary = await dispatch_governance_notification(
@@ -342,6 +364,7 @@ async def notify_remediation_run_stage(
             action_url=action_url,
             idempotency_key=idempotency_key,
             channels=_normalize_channel_override(body.channels),
+            escalation_context=escalation_context,
         )
     except GovernanceNotificationError as exc:
         await db.rollback()

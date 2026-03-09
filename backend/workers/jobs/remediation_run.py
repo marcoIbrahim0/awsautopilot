@@ -907,7 +907,18 @@ def _execute_direct_fix(session: Session, run: RemediationRun, log_lines: list[s
     log_lines.extend(result.logs)
     if result.success and result.outcome != "Already compliant; no change needed":
         run.artifacts = run.artifacts or {}
-        run.artifacts["direct_fix"] = {"outcome": result.outcome}
+        run.artifacts["direct_fix"] = _direct_fix_artifact_payload(result)
+
+
+def _direct_fix_artifact_payload(result: object) -> dict[str, object]:
+    logs = list(getattr(result, "logs", []) or [])
+    return {
+        "outcome": str(getattr(result, "outcome", "") or "Direct fix applied"),
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "post_check_passed": bool(getattr(result, "success", False)),
+        "log_count": len(logs),
+        "log_excerpt": logs[-3:],
+    }
 
 
 def _ensure_manual_high_risk_marker(run: RemediationRun, strategy_id: str | None) -> bool:

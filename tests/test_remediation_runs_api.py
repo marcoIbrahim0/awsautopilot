@@ -2267,6 +2267,100 @@ def test_patch_cancel_pending_run_200(client: TestClient) -> None:
     assert data["outcome"] == "Cancelled by user"
 
 
+def test_get_run_detail_includes_artifact_metadata_and_closure_links(client: TestClient) -> None:
+    """GET /remediation-runs/{id} returns normalized artifact metadata for handoff-free closure."""
+    from backend.auth import get_optional_user
+
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("sg_restrict_public_ports")
+    action.id = uuid.uuid4()
+    action.title = "Restrict public admin ports"
+    action.account_id = "123456789012"
+    action.region = "us-east-1"
+    action.status = "resolved"
+
+    run_id = uuid.uuid4()
+    run = MagicMock()
+    run.id = run_id
+    run.tenant_id = tenant.id
+    run.action_id = action.id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.success
+    run.outcome = "SaaS apply completed successfully."
+    run.logs = "generated bundle\napplied change summary"
+    run.started_at = datetime(2026, 3, 4, 10, 10, tzinfo=timezone.utc)
+    run.completed_at = datetime(2026, 3, 4, 10, 12, tzinfo=timezone.utc)
+    run.created_at = datetime(2026, 3, 4, 10, 9, tzinfo=timezone.utc)
+    run.updated_at = datetime(2026, 3, 4, 10, 12, tzinfo=timezone.utc)
+    run.approved_by_user_id = user.id
+    run.action = action
+    run.artifacts = {
+        "pr_bundle": {
+            "format": "terraform",
+            "files": [
+                {"path": "main.tf", "content": 'terraform {}'},
+                {"path": "README.md", "content": "# Review and apply"},
+            ],
+            "steps": ["Review", "Apply"],
+            "metadata": {
+                "generated_action_count": 1,
+                "skipped_action_count": 0,
+            },
+        },
+        "change_summary": {
+            "run_id": str(run_id),
+            "applied_at": "2026-03-04T10:12:00+00:00",
+            "applied_by": "ops@example.com",
+            "changes": [
+                {
+                    "field": "allowed cidr",
+                    "before": "0.0.0.0/0",
+                    "after": "10.0.0.0/24",
+                }
+            ],
+        },
+        "risk_snapshot": {
+            "checks": [{"code": "review_complete", "status": "pass"}],
+            "recommendation": "apply",
+        },
+    }
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        session = _mock_async_session(tenant, run)
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/remediation-runs/{run_id}")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["action"]["status"] == "resolved"
+    implementation_artifacts = data["artifact_metadata"]["implementation_artifacts"]
+    assert [artifact["key"] for artifact in implementation_artifacts] == ["pr_bundle", "change_summary"]
+    assert implementation_artifacts[0]["href"] == f"/remediation-runs/{run_id}#run-generated-files"
+    assert implementation_artifacts[1]["href"] == f"/remediation-runs/{run_id}#run-activity"
+
+    evidence_pointers = {pointer["key"]: pointer for pointer in data["artifact_metadata"]["evidence_pointers"]}
+    assert "activity_log" in evidence_pointers
+    assert "risk_snapshot" in evidence_pointers
+    assert evidence_pointers["risk_snapshot"]["href"] == f"/remediation-runs/{run_id}#run-generated-files"
+
+    checklist = {item["id"]: item for item in data["artifact_metadata"]["closure_checklist"]}
+    assert checklist["artifact_recorded"]["status"] == "complete"
+    assert checklist["evidence_attached"]["status"] == "complete"
+    assert checklist["action_closure_verified"]["status"] == "complete"
+    assert "pr_bundle" in checklist["artifact_recorded"]["evidence_keys"]
+
+
 # ---------------------------------------------------------------------------
 # GET pr-bundle.zip (Step 9.6)
 # ---------------------------------------------------------------------------
