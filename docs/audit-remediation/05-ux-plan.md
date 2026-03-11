@@ -134,8 +134,8 @@ This plan must deliver:
   - Security Hub
   - AWS Config
   - Control-plane readiness
-- Non-critical check moved async:
-  - Access Analyzer verification can continue in background without blocking required gate progression.
+- Access Analyzer onboarding prompt removed for now:
+  - Access Analyzer enablement is intentionally deferred outside onboarding so users do not enable it during the initial connection flow.
 - Code changes:
   - `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx`
   - `/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py`

@@ -1,5 +1,131 @@
 # Task Log
 
+## Onboarding Access Analyzer step removed from initial connection flow (2026-03-11)
+
+**Task:** Remove the Access Analyzer step from onboarding for now so users are not prompted to enable it during initial account connection.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx** - removed the Access Analyzer step from the onboarding step graph, removed the visible prompt/buttons and dead handlers, updated the service-readiness copy to mention only required services, and migrated legacy saved drafts on the removed step to `final-checks`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.test.tsx** - updated onboarding regression expectations for the new post-control-plane destination and added coverage that legacy `access-analyzer` drafts resume at final checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md** - updated the documented onboarding flow and requirement mapping to reflect that Access Analyzer is no longer part of onboarding.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/05-ux-plan.md** - updated UX execution notes to reflect that Access Analyzer enablement is deferred outside onboarding.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the Access Analyzer step from `STEP_ORDER` so onboarding now goes directly from control-plane verification to final checks.
+- Kept backward compatibility for users with saved onboarding drafts by mapping the removed `access-analyzer` step to `final-checks` on load.
+- Removed onboarding copy that told users to create an Access Analyzer and removed the async Access Analyzer CTA from the footer.
+- Kept Access Analyzer support outside onboarding unchanged; only the onboarding prompt and step flow were removed.
+
+**Validation:**
+- `npm --prefix frontend run test:ui -- src/app/onboarding/page.test.tsx` - pass
+- `npm --prefix frontend run lint -- src/app/onboarding/page.tsx src/app/onboarding/page.test.tsx` - pass
+
+**Technical debt / gotchas:**
+- The backend service-readiness API still returns Access Analyzer fields because Access Analyzer remains supported outside onboarding; only the onboarding prompt was removed.
+- Legacy local storage drafts on the removed `access-analyzer` step now resume at final checks instead of welcome, but any stale informational copy cached in the browser will disappear only after the new frontend bundle loads.
+- The Vitest run still emits the pre-existing styled-jsx warning (`Received true for a non-boolean attribute 'jsx'`) when rendering the onboarding page in JSDOM.
+
+**Open questions / TODOs:**
+- None.
+
+## Frontend deploy for onboarding verify-intake fake progress (2026-03-11)
+
+**Task:** Deploy the frontend so the onboarding `Verify Intake` fake-progress feedback is live on `ocypheris.com` and the workers.dev origin.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry for the rollout.
+
+**What was done:**
+- Verified Cloudflare auth with `npx wrangler whoami` in `frontend/` using account `def7cbe05f3cd790ad1f743bb66408d9`.
+- Built the frontend locally with `npm run build` before deployment; build completed successfully.
+- Deployed the frontend with `npm run deploy` from `frontend/`.
+- Confirmed Cloudflare published new Worker versions at `2026-03-11T18:35:42Z` (`a1424656-8370-4fd3-bf16-7d0cbc602da3`) and `2026-03-11T18:36:34Z` (`48addf1e-76f9-4b79-9c4d-6827cc508307`), with the latest active deployment pointing at version `48addf1e-76f9-4b79-9c4d-6827cc508307`.
+
+**Validation:**
+- `npm --prefix frontend run build` - pass
+- `curl -sS -o /dev/null -w '%{http_code}' 'https://ocypheris.com/onboarding?...'` - `200`
+- `curl -sS -o /dev/null -w '%{http_code}' 'https://frontend.maromaher54.workers.dev/onboarding?...'` - `200`
+- `curl -sS -H 'Cache-Control: no-cache' 'https://ocypheris.com/onboarding?...' | rg -o '_next/static/chunks/app/onboarding/page-[^\"< ]+\\.js'` - `_next/static/chunks/app/onboarding/page-0a500a68f2d8fbe8.js`
+- `curl -sS -H 'Cache-Control: no-cache' 'https://frontend.maromaher54.workers.dev/onboarding?...' | rg -o '_next/static/chunks/app/onboarding/page-[^\"< ]+\\.js'` - `_next/static/chunks/app/onboarding/page-0a500a68f2d8fbe8.js`
+- `npx wrangler deployments list --name frontend` - latest deployment created `2026-03-11T18:36:45.908Z`, version `48addf1e-76f9-4b79-9c4d-6827cc508307`
+
+**Technical debt / gotchas:**
+- The nested `frontend` repo contained broader in-progress changes beyond the onboarding verify-intake UI; per the explicit deploy request, this rollout shipped the current frontend tree, not only the isolated onboarding patch.
+- Two local deploy attempts stalled after static-asset upload without printing the final success trailer. Cloudflare still completed the publish; the reliable confirmation was the live chunk hash plus `wrangler deployments list`.
+
+**Open questions / TODOs:**
+- None.
+
+## Onboarding verify-intake fake progress feedback (2026-03-11)
+
+**Task:** Replace the passive spinner on onboarding step `Deploy Control-Plane Forwarder (Required)` with explicit fake loading feedback while `Verify Intake` waits for synthetic-event delivery and readiness polling to finish.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx** - added a control-plane verify progress state machine, inline estimated-progress card, and percentage-based button copy so `Verify Intake` shows visible fake loading instead of only a spinner.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.test.tsx** - added a regression test that holds the readiness poll open and asserts the new fake-progress messaging is rendered during verification.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a lightweight control-plane verify phase model (`sending` -> `polling`) with bounded fake progress that advances until the real verification promise resolves.
+- Replaced the `Verify Intake` spinner-only button state with percentage-based label text (`Verifying intake X%`) and an inline progress panel that explains the current phase.
+- Kept the underlying verification flow unchanged: synthetic event send first, then readiness polling for up to 90 seconds.
+
+**Validation:**
+- `npm --prefix frontend run test:ui -- src/app/onboarding/page.test.tsx` - pass
+- `npm --prefix frontend run lint -- src/app/onboarding/page.tsx src/app/onboarding/page.test.tsx` - no new errors; existing warnings remain in `frontend/src/app/onboarding/page.tsx`
+
+**Technical debt / gotchas:**
+- The fake progress is intentionally non-authoritative and caps below `100%` until the real verification completes; it is UX feedback only, not a reflection of backend polling state.
+- The onboarding page still emits pre-existing ESLint warnings for unused constants/vars unrelated to this change.
+- The Vitest run still prints the pre-existing styled-jsx warning (`Received true for a non-boolean attribute 'jsx'`) from rendering the page component in JSDOM.
+
+**Open questions / TODOs:**
+- None.
+
+## Production frontend + backend deploy for signed-template forwarder fix (2026-03-11)
+
+**Task:** Deploy the frontend and backend production stacks so the signed-template control-plane forwarder launch fix is live on `ocypheris.com` / `api.ocypheris.com`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry for the rollout.
+
+**What was done:**
+- Verified production credentials before rollout:
+  - `npx wrangler whoami` -> authenticated Cloudflare account `def7cbe05f3cd790ad1f743bb66408d9`
+  - `aws sts get-caller-identity` -> account `029037611564`
+- Deployed the frontend with `npm --prefix frontend run deploy`.
+  - Workers.dev URL: `https://frontend.maromaher54.workers.dev`
+  - Version ID: `5548bbe1-f568-4eef-9c6d-8db1edbd36f4`
+  - Verified the onboarding page now serves chunk `page-0032d5726d00d4b1.js` on both workers.dev and `https://ocypheris.com/onboarding`.
+- Deployed the backend with `./scripts/deploy_saas_serverless.sh --region eu-north-1`.
+  - Runtime stack: `security-autopilot-saas-serverless-runtime`
+  - API base output: `https://sybw8x0716.execute-api.eu-north-1.amazonaws.com`
+  - API/worker image tag deployed: `20260311T181012Z`
+  - Post-deploy runtime normalization completed with API reserved concurrency clear, worker reserved concurrency `10`, and all worker mappings enabled.
+
+**Validation:**
+- `curl -sS https://api.ocypheris.com/health` -> `{"status":"ok","app":"AWS Security Autopilot"}`
+- `curl -sS https://api.ocypheris.com/ready` -> `"ready": true`
+- `curl -sS -H 'Cache-Control: no-cache' https://frontend.maromaher54.workers.dev/onboarding?...` -> `page-0032d5726d00d4b1.js`
+- `curl -sS -H 'Cache-Control: no-cache' https://ocypheris.com/onboarding?...` -> `page-0032d5726d00d4b1.js`
+- `curl -sS -o /dev/null -w '%{http_code}' https://ocypheris.com/` -> `200`
+- `curl -sS -o /dev/null -w '%{http_code}' https://frontend.maromaher54.workers.dev/` -> `200`
+- `aws lambda get-function --function-name security-autopilot-dev-api --query 'Code.ImageUri' --output text` -> tag `20260311T181012Z`
+- `aws lambda get-function --function-name security-autopilot-dev-worker --query 'Code.ImageUri' --output text` -> tag `20260311T181012Z`
+
+**Technical debt / gotchas:**
+- Frontend deploy completed with existing Wrangler/OpenNext warnings about duplicate `options` keys in generated `.open-next/server-functions/default/handler.mjs`; deploy still succeeded.
+- Production `/ready` remains green but still includes the pre-existing `cloudwatch:GetMetricStatistics` permission warnings for queue-age metrics on the API Lambda role.
+- I did not perform an authenticated live `/api/auth/me` verification of the new `control_plane_forwarder_launch_stack_url` payload after deploy because no production test session/token was used in this rollout step.
+
+**Open questions / TODOs:**
+- Run one authenticated production onboarding pass and confirm the control-plane forwarder Launch Stack button now opens CloudFormation with a signed `templateURL` instead of the raw private S3 object URL.
+
 ## Control-plane forwarder CloudFormation signed-template launch fix (2026-03-11)
 
 **Task:** Fix the onboarding/control-plane forwarder CloudFormation error where AWS could not retrieve the template from `https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml`, using the same signed-template launch pattern already used for the step-2 read-role flow.
@@ -19852,3 +19978,31 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Decide whether to delete the inactive `security-autopilot-saas-ecs-dev` legacy stack so no dormant AWS resources retain the old domain values.
+
+## Onboarding step 5 Verify Intake refresh fallback and frontend rollout (2026-03-11)
+
+**Task:** Fix onboarding step 5 so `Verify Intake` still works after a refresh when the revealed control-plane token is no longer present in browser state, then redeploy the live frontend.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/onboarding/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Updated onboarding step 5 control-plane verification so it no longer treats a missing revealed token as a dead end after refresh.
+  - If the browser no longer has a revealed token, the UI now sends the synthetic verification event through the authenticated account-scoped backend route (`sendSyntheticControlPlaneEventForAccount(accountId, region)`).
+  - If the direct token-based intake call fails or drops the event, the UI now falls back to the same account-scoped backend route before giving up.
+- Added a regression test covering the refreshed step-5 state with no revealed token, confirming the account-scoped fallback is used and onboarding advances to the Access Analyzer step.
+- Re-ran targeted frontend verification:
+  - `npm --prefix frontend run test:ui -- src/app/onboarding/page.test.tsx` passed.
+  - `npm --prefix frontend run lint -- src/app/onboarding/page.tsx src/app/onboarding/page.test.tsx` passed with the same pre-existing warnings already present in `page.tsx`.
+- Redeployed the frontend to Cloudflare.
+  - Live `/onboarding` now serves onboarding chunk `page-0a500a68f2d8fbe8.js`.
+  - Verified the deployed chunk contains the new account-scoped synthetic-event fallback logic.
+- Deployment note:
+  - `opennextjs-cloudflare deploy` stalled after asset upload from the temp build directory, so the rollout was completed by uploading/promoting worker versions directly with Wrangler.
+  - Wrangler deployments now show the live frontend deployment updated on `2026-03-11` with the new onboarding bundle active on both `https://ocypheris.com/onboarding` and `https://frontend.maromaher54.workers.dev/onboarding`.
+
+**Open questions / TODOs:**
+- Investigate why the standard OpenNext/Cloudflare deploy command can stall after asset upload in this environment even when the resulting worker version can still be uploaded/promoted manually.

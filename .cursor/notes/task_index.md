@@ -4,6 +4,26 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Onboarding Access Analyzer step removed from initial connection flow (2026-03-11)](task_log.md#onboarding-access-analyzer-step-removed-from-initial-connection-flow-2026-03-11)
+  - Removed the Access Analyzer step and CTA from onboarding so initial account connection no longer prompts users to enable it.
+  - Added onboarding regression coverage that old saved drafts on `access-analyzer` now resume at final checks.
+  - Updated onboarding UX docs to reflect that Access Analyzer is deferred outside onboarding.
+
+- [Frontend deploy for onboarding verify-intake fake progress (2026-03-11)](task_log.md#frontend-deploy-for-onboarding-verify-intake-fake-progress-2026-03-11)
+  - Built and deployed the frontend, then verified both `ocypheris.com/onboarding` and `frontend.maromaher54.workers.dev/onboarding` serve onboarding chunk `page-0a500a68f2d8fbe8.js`.
+  - Confirmed the latest active Cloudflare deployment points at Worker version `48addf1e-76f9-4b79-9c4d-6827cc508307`.
+  - Captured the rollout caveat that this shipped the current dirty `frontend/` tree because the deploy was explicitly requested.
+
+- [Onboarding verify-intake fake progress feedback (2026-03-11)](task_log.md#onboarding-verify-intake-fake-progress-feedback-2026-03-11)
+  - Replaced the passive `Verify Intake` spinner with explicit estimated-progress feedback and percentage-based button copy during control-plane verification.
+  - Added an onboarding regression test that keeps readiness polling open and asserts the fake-progress UI is visible while the check is running.
+  - Kept the real verification sequence unchanged: synthetic event send followed by bounded readiness polling.
+
+- [Production frontend + backend deploy for signed-template forwarder fix (2026-03-11)](task_log.md#production-frontend--backend-deploy-for-signed-template-forwarder-fix-2026-03-11)
+  - Deployed the frontend to Cloudflare Workers with version `5548bbe1-f568-4eef-9c6d-8db1edbd36f4` and verified both public origins serve onboarding chunk `page-0032d5726d00d4b1.js`.
+  - Deployed the backend runtime stack with API/worker image tag `20260311T181012Z` and verified live `/health` and `/ready`.
+  - Captured the remaining follow-up: authenticated production verification of the new forwarder launch payload.
+
 - [Control-plane forwarder CloudFormation signed-template launch fix (2026-03-11)](task_log.md#control-plane-forwarder-cloudformation-signed-template-launch-fix-2026-03-11)
   - Added a backend-provided `control_plane_forwarder_launch_stack_url` so the frontend can reuse a signed `templateURL` for forwarder deploys against the private templates bucket.
   - Updated onboarding to stop falling back to the raw private S3 forwarder template URL when building the CloudFormation launch link.
@@ -1399,3 +1419,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Live signup remediation attempt for ocypheris.com (2026-03-09)](task_log.md#live-signup-remediation-attempt-for-ocypheriscom-2026-03-09)
   - Fixed and redeployed the public frontend CSP so `https://ocypheris.com/signup` now renders the signup form.
   - Updated live API env and rebuilt/redeployed the API multiple times, but `https://api.valensjewelry.com/api/auth/me` still omits `Access-Control-Allow-Origin` for `https://ocypheris.com`, leaving live signup blocked on CORS.
+- [Onboarding step 5 Verify Intake refresh fallback and frontend rollout (2026-03-11)](task_log.md#onboarding-step-5-verify-intake-refresh-fallback-and-frontend-rollout-2026-03-11)
+  - Step 5 now reuses the authenticated account-scoped synthetic-event route when a refresh removes the revealed control-plane token from browser state.
+  - Added a regression test for the refreshed/no-token onboarding state and redeployed the frontend bundle live.

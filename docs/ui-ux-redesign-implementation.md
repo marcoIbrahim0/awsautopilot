@@ -55,10 +55,8 @@ Login
 -> Step 3: Verify Inspector (required)
 -> Step 4: Verify Security Hub + AWS Config (required)
 -> Step 5: Verify Control-Plane Forwarder (required)
--> Step 6: Access Analyzer (optional)
--> Step 7: Read Role (optional)
--> Step 8: Final Checks (required, onboarding-only account-read checks)
--> Step 9: Initial Processing (queue ingest + compute)
+-> Step 6: Final Checks (required, onboarding-only account-read checks)
+-> Step 7: Initial Processing (queue ingest + compute)
 -> Findings page progress module:
    - Loading findings
    - Computing actions
@@ -93,18 +91,10 @@ Login
    - Region-specific stack deploy.
    - Explicit test event guidance (e.g., temporary SG ingress change).
    - Verification action blocks progress until pass.
-6. Access Analyzer (optional)
-   - Explicit analyzer type: `Unused access analyzer`.
-   - Account scope default, org scope only when needed.
-   - Verify or skip.
-7. Read Role (optional)
-   - Paste optional ARN.
-   - Client-side validation with account mismatch checks.
-   - Validate and save or skip.
-8. Final Checks (required)
+6. Final Checks (required)
    - Runs all required account-read checks in onboarding only.
    - Fails with explicit missing service/region list.
-9. Initial Processing
+7. Initial Processing
    - Starts ingestion and action computation.
    - Stores first-run handoff state.
    - Redirects to findings with active progress module.
@@ -118,9 +108,8 @@ Login
    - Final checks
    - Reason: required for trusted connection state and baseline remediation confidence.
 2. Optional:
-   - Access Analyzer
-   - Read Role (optional entry step)
-   - Reason: improves insight depth but not required for core connectivity gate.
+   - None in onboarding right now.
+   - Access Analyzer guidance is intentionally deferred to post-onboarding account-management surfaces so users do not enable it during initial connection.
 
 ### 3.4 Permission/Role Setup Guidance (No Gaps)
 1. Where to find role ARN:
@@ -143,18 +132,15 @@ Login
    - No recent control-plane intake -> explain required test event and retry path.
 
 ### 3.5 Cost-Efficient Enablement Guidance
-1. Access Analyzer:
-   - Configure `Unused access analyzer`.
-   - Use ACCOUNT scope unless org-wide governance demands otherwise.
-2. Inspector:
+1. Inspector:
    - Start with EC2 scanning.
    - Enable ECR/Lambda selectively to avoid unnecessary spend.
    - Keep Lambda code scanning disabled by default.
-3. Security Hub + AWS Config:
+2. Security Hub + AWS Config:
    - Enable Config recorder first in monitored regions.
    - Record global IAM resources in one home region.
    - Enable only required resource types in Config where feasible.
-4. Security Hub standards:
+3. Security Hub standards:
    - Safe default: AWS Foundational Security Best Practices.
    - Add CIS/NIST/PCI only when compliance scope requires.
 
@@ -286,7 +272,7 @@ Login
 ### 6.2 Onboarding
 1. Required checks cannot be bypassed.
 2. Inspector is mandatory to complete onboarding.
-3. Access Analyzer and Read Role can be skipped without blocking completion.
+3. Access Analyzer is not shown during onboarding; legacy saved drafts resume at final checks.
 4. Edge cases:
    - Role ARN account mismatch.
    - Region removed after prior service validation.
@@ -365,9 +351,9 @@ Login
 | Requirement | UI location | UX behavior | Backend dependency | Acceptance criteria |
 |---|---|---|---|---|
 | A. Findings actions: Fix + PR bundle group | `/frontend/src/app/findings/FindingCard.tsx`, `/frontend/src/app/findings/[id]/page.tsx` | Two buttons per finding; disabled with reason when unavailable | `/backend/routers/findings.py` returns remediation hints | Both controls always present; routes resolve when mapping exists |
-| B. Onboarding-only account-read checks; Inspector required; Access Analyzer/Read Role optional | `/frontend/src/app/onboarding/page.tsx`, `/frontend/src/app/accounts/AccountServiceStatusCheck.tsx`, `/frontend/src/app/settings/page.tsx` | Required checks executed only in onboarding final checks; non-onboarding surfaces redirect/message | `checkAccountServiceReadiness`, `checkAccountControlPlaneReadiness` | Onboarding cannot complete without Inspector/SecurityHub/Config/control-plane |
+| B. Onboarding-only account-read checks; Inspector required; Access Analyzer deferred from onboarding | `/frontend/src/app/onboarding/page.tsx`, `/frontend/src/app/accounts/AccountServiceStatusCheck.tsx`, `/frontend/src/app/settings/page.tsx` | Required checks executed only in onboarding final checks; Access Analyzer setup is intentionally deferred to non-onboarding surfaces | `checkAccountServiceReadiness`, `checkAccountControlPlaneReadiness` | Onboarding cannot complete without Inspector/SecurityHub/Config/control-plane |
 | C. Explicit deployment steps and ARN handling | `/frontend/src/app/onboarding/page.tsx` | Numbered steps, ARN source locations, app paste targets, validation rules and success confirmation | account register/validate/readiness APIs | New user can complete role setup without undocumented steps |
-| D. Cost-efficient enablement guidance (Access Analyzer, Inspector, Security Hub, Config, standards) | `/frontend/src/app/onboarding/page.tsx` | Prescriptive defaults and scoped recommendations | service-readiness endpoint | Guidance shown before each verify action |
+| D. Cost-efficient enablement guidance (Inspector, Security Hub, Config, standards) | `/frontend/src/app/onboarding/page.tsx` | Prescriptive defaults and scoped recommendations for required services only | service-readiness endpoint | Guidance shown before each required verify action |
 | E. Onboarding persistence + stale handling | `/frontend/src/app/onboarding/page.tsx` | Restore step/inputs/check state; revalidate stale checks | local storage + readiness APIs | Reload/close returns to same onboarding progress |
 | F. First login loading with dual progress + timeout/partial/notify | `/frontend/src/app/findings/page.tsx` | `Loading findings` + `Computing actions` tracks; retry + notify option | findings/actions list APIs + trigger APIs | User remains on findings with transparent progress until ready |
 | G. Global async banner + notification center lifecycle | `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`, `/frontend/src/components/layout/TopBar.tsx`, `/frontend/src/contexts/BackgroundJobsContext.tsx` | Start banner immediate; notification item lifecycle updates; dedupe + retention | frontend job event model | Every tracked action emits banner + notification item |
