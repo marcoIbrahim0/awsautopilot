@@ -20,6 +20,10 @@ from backend.models.tenant_reconcile_run import TenantReconcileRun
 from backend.models.tenant_reconcile_run_shard import TenantReconcileRunShard
 from backend.models.user import User
 from backend.services.aws import assume_role
+from backend.services.aws_config_probe import (
+    CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
+    describe_non_compliant_config_rule_summary,
+)
 from backend.utils.sqs import build_reconcile_inventory_shard_job_payload, parse_queue_region
 
 logger = logging.getLogger(__name__)
@@ -48,7 +52,7 @@ _SERVICE_PERMISSION_HINTS: dict[str, list[str]] = {
         "config:DescribeConfigurationRecorders",
         "config:DescribeDeliveryChannels",
         "config:DescribeConfigRules",
-        "config:DescribeComplianceByConfigRules",
+        CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
         "config:GetComplianceDetailsByConfigRule",
     ],
     "iam": ["iam:ListAccountAliases"],
@@ -259,7 +263,10 @@ async def run_preflight_for_services(
                     config_client.describe_configuration_recorders()
                     config_client.describe_delivery_channels()
                     config_rules = config_client.describe_config_rules().get("ConfigRules") or []
-                    config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+                    compliance_probe = describe_non_compliant_config_rule_summary(config_client, limit=1)
+                    if compliance_probe.unavailable_reason:
+                        service_missing.append(CONFIG_COMPLIANCE_SUMMARY_PERMISSION)
+                        service_warnings.append(compliance_probe.unavailable_reason)
                     if config_rules:
                         first_rule_name = str((config_rules[0] or {}).get("ConfigRuleName") or "").strip()
                         if first_rule_name:

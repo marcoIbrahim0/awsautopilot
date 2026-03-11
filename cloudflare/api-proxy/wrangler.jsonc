@@ -1,0 +1,21 @@
+{
+  "$schema": "../../frontend/node_modules/wrangler/config-schema.json",
+  "name": "api-proxy",
+  "main": "src/index.ts",
+  "account_id": "def7cbe05f3cd790ad1f743bb66408d9",
+  "compatibility_date": "2026-03-09",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "pattern": "api.ocypheris.com",
+      "zone_name": "ocypheris.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "UPSTREAM_API_BASE": "https://sybw8x0716.execute-api.eu-north-1.amazonaws.com"
+  }
+}

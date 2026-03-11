@@ -1,8 +1,7 @@
 # backend/main.py
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
@@ -41,14 +40,50 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
-# CORS middleware for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_KNOWN_BROWSER_ORIGINS = {
+    "https://dev.ocypheris.com",
+    "https://ocypheris.com",
+    "https://www.ocypheris.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+}
+_ALLOWED_CORS_ORIGINS = {
+    *(origin.rstrip("/") for origin in settings.cors_origins_list),
+    *(_KNOWN_BROWSER_ORIGINS),
+}
+
+
+def _set_explicit_cors_headers(request: Request, response: Response) -> Response:
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    if origin not in _ALLOWED_CORS_ORIGINS:
+        return response
+
+    vary = response.headers.get("Vary")
+    if not vary:
+        response.headers["Vary"] = "Origin"
+    elif "Origin" not in {token.strip() for token in vary.split(",")}:
+        response.headers["Vary"] = f"{vary}, Origin"
+
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = request.headers.get(
+        "access-control-request-method",
+        "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT",
+    )
+    response.headers["Access-Control-Allow-Headers"] = request.headers.get(
+        "access-control-request-headers",
+        "*",
+    )
+    return response
+
+
+@app.middleware("http")
+async def explicit_cors_middleware(request: Request, call_next):
+    if request.method == "OPTIONS" and request.headers.get("access-control-request-method"):
+        response = Response(status_code=200)
+    else:
+        response = await call_next(request)
+    return _set_explicit_cors_headers(request, response)
 
 # Mount routers
 app.include_router(auth_router, prefix="/api")

@@ -134,6 +134,29 @@ API_PUBLIC_URL="http://localhost:8000"
 # Or with ngrok: API_PUBLIC_URL="https://your-ngrok-url.ngrok-free.app"
 ```
 
+#### Firebase Email Verification
+
+Leave `FIREBASE_PROJECT_ID` unset to keep the legacy local auto-login signup path. Set the backend and frontend values below only when you want the Firebase-backed pending-verification flow enabled locally.
+
+```bash
+# Backend Firebase gate
+FIREBASE_PROJECT_ID="<YOUR_VALUE_HERE>"
+FIREBASE_SERVICE_ACCOUNT_JSON=""
+FIREBASE_SERVICE_ACCOUNT_PATH="<YOUR_VALUE_HERE>"
+FIREBASE_EMAIL_CONTINUE_URL_BASE="http://localhost:3000"
+
+# Frontend Firebase client
+NEXT_PUBLIC_FIREBASE_API_KEY="<YOUR_VALUE_HERE>"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="<YOUR_VALUE_HERE>"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="<YOUR_VALUE_HERE>"
+NEXT_PUBLIC_FIREBASE_APP_ID="<YOUR_VALUE_HERE>"
+```
+
+Use exactly one backend credential source:
+
+- `FIREBASE_SERVICE_ACCOUNT_JSON` for inline secrets-manager style injection
+- `FIREBASE_SERVICE_ACCOUNT_PATH` for a checked-out local JSON file outside source control
+
 #### S3 Storage
 
 ```bash
@@ -150,10 +173,10 @@ S3_SUPPORT_BUCKET_REGION="eu-north-1"
 
 ```bash
 # Read role template URL (default: project S3 bucket)
-CLOUDFORMATION_READ_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.1.yaml"
+CLOUDFORMATION_READ_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.4.yaml"
 
 # Write role template URL
-CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.0.yaml"
+CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.2.yaml"
 
 # Control-plane forwarder template URL (optional)
 CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml"

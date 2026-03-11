@@ -114,17 +114,17 @@ class Settings(BaseSettings):
 
     # CloudFormation templates (S3; versioned paths)
     CLOUDFORMATION_READ_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.1.yaml",
-        description="Full HTTPS URL to the Read Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.4.yaml",
+        description="Full HTTPS S3 URL to the Read Role template (must be an S3-hosted URL for pre-signed URL generation). Override per environment.",
     )
     CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.0.yaml",
-        description="Full HTTPS URL to the Write Role template. Default: project S3 bucket in eu-north-1. Override for CloudFront or custom domain.",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.2.yaml",
+        description="Full HTTPS S3 URL to the Write Role template (must be an S3-hosted URL for pre-signed URL generation). Override per environment.",
     )
     CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: str = Field(
         default="",
         description=(
-            "Full HTTPS URL to the Control Plane Event Forwarder CloudFormation template. "
+            "Full HTTPS S3 URL to the Control Plane Event Forwarder CloudFormation template. "
             "When set, tenant admins can one-click deploy the EventBridge rule + API Destination."
         ),
     )
@@ -206,6 +206,22 @@ class Settings(BaseSettings):
             "Public base URL for the backend API (scheme + host + optional port). "
             "Used to prefill CloudFormation EventBridge API Destination endpoints."
         ),
+    )
+    FIREBASE_PROJECT_ID: str = Field(
+        default="",
+        description="Firebase project ID enabling email-verification-backed signup when set.",
+    )
+    FIREBASE_SERVICE_ACCOUNT_JSON: str = Field(
+        default="",
+        description="Inline Firebase service account JSON for environments without local files.",
+    )
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = Field(
+        default="",
+        description="Filesystem path to Firebase service account JSON for local/dev use.",
+    )
+    FIREBASE_EMAIL_CONTINUE_URL_BASE: str = Field(
+        default="",
+        description="Frontend base URL used to build /verify-email/callback continue URLs.",
     )
     EMAIL_FROM: str = Field(
         default="noreply@example.com",
@@ -647,6 +663,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENV.lower() == "prod"
+
+    @property
+    def firebase_enabled(self) -> bool:
+        return bool((self.FIREBASE_PROJECT_ID or "").strip())
 
     @property
     def csrf_cookie_domain(self) -> str | None:

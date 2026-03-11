@@ -279,7 +279,7 @@ After a successful PR-bundle `apply` execution:
    - prereq skip log: `post_apply_reconcile_prereq_skip ... reason_codes=[...]`
 
 ## IAM/Trust Hardening
-- ReadRole template rollout target: `v1.5.1`.
+- ReadRole template rollout target: `v1.5.4`.
 - Account validation output now includes:
   - `required_permissions`
   - `authoritative_mode_allowed`

@@ -10,6 +10,12 @@ Endpoints:
 - `GET /health`
 - `GET /ready`
 - `GET /health/ready`
+- `PATCH /api/aws/accounts/{account_id}` now supports `role_read_arn`, `role_write_arn`, `regions`, and `status`; ReadRole/region updates revalidate STS before the account record is persisted.
+- `POST /api/aws/accounts/{account_id}/validate` now fails closed with `200` + structured `warnings` / `authoritative_mode_block_reasons` when a required AWS probe cannot be executed (for example, AWS Config probe/runtime mismatch), instead of raising `500`.
+
+Health semantics:
+- `GET /health` is liveness-only and returns app process status.
+- `GET /ready` and `GET /health/ready` require a successful DB ping plus supported SQS queue attribute reads; queue lag fields are best-effort CloudWatch metrics and do not fail readiness on their own.
 
 Actions owner queues:
 - `GET /api/actions` supports `owner_type`, `owner_key`, and `owner_queue=open|expiring|overdue|expiring_exceptions|blocked_fixes`.
@@ -53,6 +59,13 @@ Swagger:
 
 - Cookie session + CSRF is primary browser mode.
 - Bearer token is supported for API-style calls.
+- Signup has two valid local contracts:
+  - `201 AuthResponse` when `FIREBASE_PROJECT_ID` is unset
+  - `202 SignupPendingResponse` when Firebase email verification is enabled
+- The Firebase flow also adds:
+  - `POST /api/auth/verify/resend`
+  - `POST /api/auth/verify/firebase-sync`
+  - `/verify-email/pending` and `/verify-email/callback` on the frontend
 
 ## Quick API Smoke
 

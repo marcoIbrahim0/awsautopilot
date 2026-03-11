@@ -4,6 +4,201 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Control-plane forwarder CloudFormation signed-template launch fix (2026-03-11)](task_log.md#control-plane-forwarder-cloudformation-signed-template-launch-fix-2026-03-11)
+  - Added a backend-provided `control_plane_forwarder_launch_stack_url` so the frontend can reuse a signed `templateURL` for forwarder deploys against the private templates bucket.
+  - Updated onboarding to stop falling back to the raw private S3 forwarder template URL when building the CloudFormation launch link.
+  - Documented the signed-template forwarder launch path and captured the remaining deploy-from-clean-worktree follow-up.
+
+- [Onboarding refresh hook-order crash fix (2026-03-11)](task_log.md#onboarding-refresh-hook-order-crash-fix-2026-03-11)
+  - Fixed the refresh-only onboarding crash caused by late `useMemo` hooks after the `authLoading` early return.
+  - Added a rerender regression test for the loading-to-authenticated transition on the onboarding page.
+  - Redeployed the frontend and verified both `frontend.maromaher54.workers.dev/onboarding` and `ocypheris.com/onboarding` now serve the new chunk hash.
+
+- [Frontend and backend redeploy after onboarding revalidation fix (2026-03-11)](task_log.md#frontend-and-backend-redeploy-after-onboarding-revalidation-fix-2026-03-11)
+  - Redeployed the frontend to Cloudflare Workers and confirmed the public site and workers.dev origin both return `200`.
+  - Re-ran the serverless backend deploy, removed the duplicate unmanaged `security-autopilot-dev-api-templates-bucket-access` inline policy blocking CloudFormation, and finished with runtime stack `UPDATE_COMPLETE`.
+  - Verified live `https://api.ocypheris.com/health` and `https://api.ocypheris.com/ready` after the redeploy.
+
+- [Onboarding step-2 revalidation uses account update path (2026-03-11)](task_log.md#onboarding-step-2-revalidation-uses-account-update-path-2026-03-11)
+  - Extended `PATCH /api/aws/accounts/{account_id}` to support ReadRole/region updates with STS revalidation while keeping duplicate-account POST semantics unchanged.
+  - Updated onboarding step 2 to revalidate existing accounts instead of calling the create-only registration path, so back-navigation no longer hits duplicate-account `409` and changed regions persist.
+  - Updated the reconnect account modal to use the same PATCH revalidation path for the same existing account.
+
+- [ReadRole step-2 CloudFormation concurrency fix publish (2026-03-11)](task_log.md#readrole-step-2-cloudformation-concurrency-fix-publish-2026-03-11)
+  - Removed the helper Lambda reserved-concurrency pin from both customer-facing role templates.
+  - Published fixed template versions `read-role/v1.5.4.yaml` and `write-role/v1.4.2.yaml`.
+  - Updated latest-version defaults/docs and aligned the runtime helper-normalization script with the no-pin approach.
+
+- [ReadRole template v1.5.3 publish + WriteRole toggle removal (2026-03-11)](task_log.md#readrole-template-v153-publish--writerole-toggle-removal-2026-03-11)
+  - Removed the obsolete `IncludeWriteRole` contract from the canonical ReadRole CloudFormation template and its stack-update API path.
+  - Updated the shared account-connect flow to treat ReadRole and WriteRole as separate deployments while keeping optional WriteRole ARN registration.
+  - Published `cloudformation/read-role/v1.5.3.yaml` to `security-autopilot-templates` and bumped the repo defaults/docs to `v1.5.3`.
+
+- [Repeat local backend restart + ocypheris prod backend redeploy (2026-03-11)](task_log.md#repeat-local-backend-restart--ocypheris-prod-backend-redeploy-2026-03-11)
+  - Repeated the local `uvicorn` restart on `127.0.0.1:8000`.
+  - Re-ran the live `./scripts/deploy_saas_serverless.sh --region eu-north-1` backend deploy successfully.
+  - Verified local `/health`, live `/health`, and live `/ready` again after the second redeploy.
+
+- [Local dev backend restart + ocypheris prod serverless redeploy (2026-03-11)](task_log.md#local-dev-backend-restart--ocypheris-prod-serverless-redeploy-2026-03-11)
+  - Restarted the local `uvicorn` backend on `127.0.0.1:8000` and verified `/health`.
+  - Redeployed `security-autopilot-saas-serverless-runtime` in `eu-north-1` with the standard serverless deploy script.
+  - Verified `https://api.ocypheris.com/health` and `https://api.ocypheris.com/ready` after the redeploy; readiness remains green with the existing CloudWatch metric warning noise.
+
+- [Onboarding read-role template URL fails with CloudFormation fetch 403 (2026-03-11)](task_log.md#onboarding-read-role-template-url-fails-with-cloudformation-fetch-403-2026-03-11)
+  - Confirmed the referenced template object `cloudformation/read-role/v1.5.2.yaml` exists in bucket `security-autopilot-templates`.
+  - Confirmed the onboarding URL returns public `403 Forbidden` because the bucket is non-public and all four S3 public-access-block flags are enabled.
+  - Captured the clean fix direction: move `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` to a publicly fetchable CloudFront URL or explicitly publish the template prefix for public read.
+
+- [Shared Neon database purge to fresh-deploy tenant state (2026-03-11)](task_log.md#shared-neon-database-purge-to-fresh-deploy-tenant-state-2026-03-11)
+  - Confirmed `backend/.env` and `config/.env.ops` currently point at the same shared Neon database target, so local and prod were not isolated.
+  - Queried pre-purge counts (`tenants=8`, `users=8`, `control_mappings=8`), then deleted all tenant rows so tenant-scoped data cascaded away.
+  - Verified `tenants=0`, `users=0`, and `aws_accounts=0` after purge while global `control_mappings=8` remained intact.
+
+- [Signup/account data leak investigation handoff (2026-03-11)](task_log.md#signupaccount-data-leak-investigation-handoff-2026-03-11)
+  - Traced the reported “new signup shows account `029037611564` without login/verification” symptom to stale tenant context rather than confirmed account-link creation.
+  - Identified the primary likely root cause on live prod: Firebase pending-verification signup returns `202` but does not clear any pre-existing auth cookies, so the browser can keep using an older tenant session.
+  - Identified the local-only secondary cause: persisted `dev_tenant_id` plus local-mode unauthenticated tenant fallback can load another tenant’s accounts without login.
+
+- [SES sandbox recipient verified; sender domain still pending (2026-03-11)](task_log.md#ses-sandbox-recipient-verified-sender-domain-still-pending-2026-03-11)
+  - Confirmed `marcoibrahim11@outlook.com` is now `SUCCESS` in SES after the inbox verification link was clicked.
+  - Confirmed `ocypheris.com` is still `PENDING` with stale `HOST_NOT_FOUND`, so the sender side remains blocked.
+  - Verified that the resend endpoint still cannot be treated as end-to-end proof on its own because it returns a generic `200`, and the inbox is already registered in the app.
+
+- [SES production-access API resubmit blocked; sandbox recipient verification sent (2026-03-11)](task_log.md#ses-production-access-api-resubmit-blocked-sandbox-recipient-verification-sent-2026-03-11)
+  - Rechecked SES and confirmed the denied production-access review for `ocypheris.com` is still present under case `177318726300086`.
+  - Attempted a fresh `put-account-details --production-access-enabled` submission and AWS returned `ConflictException`, so a new API-side resubmission is blocked for now.
+  - Created the sandbox recipient identity `marcoibrahim11@outlook.com`, which is now pending inbox verification for immediate resend/signup testing.
+
+- [SES DKIM DNS published in Cloudflare; waiting on SES recheck and production-access follow-up (2026-03-11)](task_log.md#ses-dkim-dns-records-published-ses-verification-still-pending-and-production-access-review-denied-2026-03-11)
+  - Published all three SES DKIM CNAMEs for `ocypheris.com` in Cloudflare and verified they resolve publicly.
+  - Rechecked SES and confirmed the identity is still pending on AWS's side while the most recent production-access review remains `DENIED` under case `177318726300086`.
+  - Narrowed the remaining work to SES re-polling the domain and then revisiting production-access approval before rerunning live resend/signup verification tests.
+
+- [SES SMTP switch deployed; blocked on SES domain verification + sandbox (2026-03-11)](task_log.md#ses-smtp-switch-deployed-blocked-on-ses-domain-verification--sandbox-2026-03-11)
+  - Switched the live SMTP provider from Zoho to SES SMTP in `eu-north-1` and confirmed the Lambda runtime now points at `email-smtp.eu-north-1.amazonaws.com`.
+  - Verified the `ocypheris.com` SES identity exists but is still pending with `HOST_NOT_FOUND`, and confirmed the SES account still has `ProductionAccessEnabled=false`.
+  - Captured the exact remaining manual steps: add the three DKIM CNAME records, request SES production access, and optionally verify a recipient identity for sandbox testing.
+
+- [Zoho SMTP production wiring remains blocked after app-password + primary-mailbox attempt (2026-03-11)](task_log.md#zoho-smtp-production-wiring-remains-blocked-after-app-password--primary-mailbox-attempt-2026-03-11)
+  - Populated the live Zoho SMTP deploy inputs, created the Secrets Manager credential secret, and redeployed the serverless runtime.
+  - Switched from `noreply@ocypheris.com` to the primary mailbox `marco.ibrahim@ocypheris.com` for both SMTP auth and sender identity after the app-specific password was generated.
+  - Confirmed the remaining blocker is still a Zoho SMTP `554 5.7.8 Access Restricted` provider-side rejection, so production remains fail-closed but not yet end-to-end functional.
+
+- [Production verification email fail-closed rollout + SMTP secret wiring (2026-03-11)](task_log.md#production-verification-email-fail-closed-rollout--smtp-secret-wiring-2026-03-11)
+  - Added a Secrets Manager-backed SMTP deploy path to the serverless runtime and injected the email env contract into both API and worker Lambdas.
+  - Made Firebase signup/resend fail closed with `503 verification_email_delivery_unavailable` when non-local verification email delivery is unavailable or a send attempt fails.
+  - Redeployed the live runtime, verified `/health`, and confirmed the live signup API now rejects unavailable delivery instead of returning a false `202`; real end-to-end delivery still needs actual SMTP provider values.
+
+- [Production Firebase signup rollout for ocypheris.com (2026-03-11)](task_log.md#production-firebase-signup-rollout-for-ocypheriscom-2026-03-11)
+  - Enabled the Firebase-backed signup flow on the live `ocypheris.com` stack and added the required Firebase Auth authorized domains for the production hosts.
+  - Switched the API Lambda from inline Admin SDK JSON to a packaged credential file after the first deploy hit the AWS Lambda `5120` byte environment-size limit.
+  - Fixed the frontend production deploy blockers (`Suspense` for `useSearchParams()` and `.env.local` leakage) and verified the live site now talks to `https://api.ocypheris.com`, but found the remaining live blocker: `security-autopilot-dev-api` still has no `EMAIL_FROM` / `EMAIL_SMTP_*` configuration, so real verification emails will not send yet.
+
+- [Firebase console project setup and local env enablement (2026-03-10)](task_log.md#firebase-console-project-setup-and-local-env-enablement-2026-03-10)
+  - Created the dedicated Firebase project `aws-security-autopilot`, enabled Email/Password auth, added `127.0.0.1`, and registered the web app.
+  - Generated and saved a local Admin SDK key outside the repo, then populated `backend/.env` and `frontend/.env.local` with the required Firebase values.
+  - Left the checked-in deployment env file untouched so the change only affects local verification testing.
+
+- [Firebase signup email verification flow implementation (2026-03-10)](task_log.md#firebase-signup-email-verification-flow-implementation-2026-03-10)
+  - Replaced the immediate-auth signup path with a Firebase-backed pending-verification flow when `FIREBASE_PROJECT_ID` is set, while preserving the legacy `201` local-dev fallback when it is unset.
+  - Added unauthenticated resend/sync endpoints, fail-closed login gating, frontend pending/callback screens, and login/settings resend affordances.
+  - Added focused backend tests, a merge-style Alembic revision for the new user fields, and updated docs plus the remaining phone-verification todo.
+
+- [Cloudflare API custom-domain reroute to live serverless backend (2026-03-10)](task_log.md#cloudflare-api-custom-domain-reroute-to-live-serverless-backend-2026-03-10)
+  - Repointed the existing `api.ocypheris.com` Cloudflare Worker proxy from the stale API Gateway hostname to the new live serverless origin.
+  - Used the existing Worker/custom-domain route because the available Cloudflare auth supported Worker deploys/routes but not DNS record edits.
+  - Verified `api.ocypheris.com/health` and `api.ocypheris.com/ready` both succeed after the deploy.
+
+- [Signup email verification root-cause analysis (2026-03-10)](task_log.md#signup-email-verification-root-cause-analysis-2026-03-10)
+  - Confirmed signup creates and authenticates the user immediately without any verification step.
+  - Verified email/phone verification currently exists only under authenticated Settings flows.
+  - Captured the live-delivery caveat that local-mode runtime still uses debug-code verification instead of sending real email/SMS.
+
+- [Live Neon-backed serverless redeploy with readiness fix (2026-03-10)](task_log.md#live-neon-backed-serverless-redeploy-with-readiness-fix-2026-03-10)
+  - Switched the live ops profile from the deleted RDS instance to the verified Neon database and applied all pending Alembic migrations.
+  - Recreated the deleted SQS/build/runtime serverless stacks and refreshed the forwarder and reconcile scheduler to the new API Gateway URL.
+  - Fixed a live readiness regression by extending the API SQS managed policy with `sqs:GetQueueAttributes` after `/ready` initially failed with queue attribute `AccessDenied`.
+
+- [Live WAF removal for all remaining edge protection resources (2026-03-10)](task_log.md#live-waf-removal-for-all-remaining-edge-protection-resources-2026-03-10)
+  - Removed the last remaining WAFv2 Web ACL from `eu-north-1` and confirmed there were no CloudFront or WAF Classic Web ACLs left.
+  - Disassociated the Web ACL from API Gateway stage `brplhu7801/prod` and deleted the `security-autopilot-edge-protection` stack.
+  - Verified the API stage no longer has `webAclArn` and both WAFv2 scopes now return no Web ACLs.
+- [Live serverless max pause + deletion teardown executed in eu-north-1 (2026-03-10)](task_log.md#live-serverless-max-pause--deletion-teardown-executed-in-eu-north-1-2026-03-10)
+  - Executed the live teardown for the serverless runtime, SQS stack, build stack, and RDS instance in `eu-north-1`.
+  - Preserved restore state with the manual snapshot `security-autopilot-db-main-final-20260309t231512z` and a local bundle under `backups/runtime-control/20260309T231512Z/`.
+  - Emptied the remaining app-owned S3 buckets and removed the orphan ECR repositories and Lambda log groups.
+- [Serverless lifecycle cost-control script with reversible pause/delete/redeploy/enable (2026-03-10)](task_log.md#serverless-lifecycle-cost-control-script-with-reversible-pausedeleteredeployenable-2026-03-10)
+  - Added `scripts/serverless_lifecycle.sh` for `status`, `pause`, `delete`, `redeploy`, and `enable` against the current serverless stack defaults.
+  - Added a runbook and doc-index links for the reversible cost-control workflow and bundle model.
+  - Validated shell syntax and CLI help entrypoint locally.
+- [Onboarding step-2 viewport fit without scrolling (2026-03-09)](task_log.md#onboarding-step-2-viewport-fit-without-scrolling-2026-03-09)
+  - Reworked `Connect Core Integration Role` into a denser desktop two-column layout so step 2 fits on one screen.
+  - Reduced desktop padding for that step and changed the desktop action row from sticky to inline bottom placement.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding integration-role cleanup remove template-version and write-role controls (2026-03-09)](task_log.md#onboarding-integration-role-cleanup-remove-template-version-and-write-role-controls-2026-03-09)
+  - Removed the `Template version` chip from the onboarding `Connect Core Integration Role` step.
+  - Removed the write-role checkbox/input from that step and made its logic ignore stale write-role draft state.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding shell integration to remove floating sidebar layout (2026-03-09)](task_log.md#onboarding-shell-integration-to-remove-floating-sidebar-layout-2026-03-09)
+  - Wrapped the desktop onboarding page in a single integrated frame so the sidebar and content no longer appear as separate floating cards.
+  - Removed the desktop gap between the sidebar and main content while preserving the existing onboarding card and flow logic.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding sidebar navbar swap to provided AWS Link layout (2026-03-09)](task_log.md#onboarding-sidebar-navbar-swap-to-provided-aws-link-layout-2026-03-09)
+  - Replaced the onboarding desktop left rail with the provided `AWS Link` navbar structure, branding, and eight-step label set.
+  - Kept live onboarding step state by mapping the real current step index onto the static reference sidebar labels.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding sidebar progress-safety removal (2026-03-09)](task_log.md#onboarding-sidebar-progress-safety-removal-2026-03-09)
+  - Removed the `Progress safety` sidebar card and copy from the onboarding left rail.
+  - Tightened the desktop aside layout so the rail no longer reserves bottom space for the removed block.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding shared sidebar + dashboard theme parity (2026-03-09)](task_log.md#onboarding-shared-sidebar--dashboard-theme-parity-2026-03-09)
+  - Removed the welcome-only onboarding shell so the same left rail and content shell are used across the full onboarding flow.
+  - Converted onboarding-local surfaces and controls to theme-aware variables so the shared dashboard `ThemeToggle` now changes the full onboarding UI.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding theme toggle alignment with dashboard (2026-03-09)](task_log.md#onboarding-theme-toggle-alignment-with-dashboard-2026-03-09)
+  - Replaced the onboarding-specific welcome toggle with the shared `ThemeToggle` used by the dashboard/app shell.
+  - Onboarding now follows the same persisted `next-themes` toggle behavior as the rest of the product on the welcome step.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding welcome-screen viewport fit adjustment (2026-03-09)](task_log.md#onboarding-welcome-screen-viewport-fit-adjustment-2026-03-09)
+  - Reduced the welcome-step desktop height so the first onboarding screen fits within the viewport instead of scrolling.
+  - Tightened sidebar spacing, header sizing, prerequisite-card dimensions, and CTA positioning while keeping the restored left rail and theme toggle.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed.
+- [Onboarding welcome-screen sidebar restoration + theme toggle (2026-03-09)](task_log.md#onboarding-welcome-screen-sidebar-restoration--theme-toggle-2026-03-09)
+  - Corrected the onboarding welcome screen to restore the original left rail / centered card composition from the provided mockup.
+  - Kept a visible dark/light mode toggle on the welcome step while preserving the real onboarding transition behavior.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed; live local browser verification remained blocked by repeated stale `next-server` lock holders during `next dev` restart attempts.
+- [Onboarding frontend neumorphic redesign (2026-03-09)](task_log.md#onboarding-frontend-neumorphic-redesign-2026-03-09)
+  - Restyled the live onboarding flow with the provided deep-blue mockup direction while preserving the real onboarding copy and logic.
+  - Replaced the old layout with a dedicated neumorphic shell, stronger left-rail stepper, custom field/action styling, and animated processing state.
+  - `npm run lint -- src/app/onboarding/page.tsx` passed; repo-wide frontend typecheck remains blocked by an unrelated pre-existing `ActionDetailDrawer.test.tsx` typing issue.
+- [Localhost login host-resolution fix for stale frontend API env (2026-03-09)](task_log.md#localhost-login-host-resolution-fix-for-stale-frontend-api-env-2026-03-09)
+  - Traced localhost login `ERR_NAME_NOT_RESOLVED` to stale compile-time API hosts still being served by a long-running Next dev process.
+  - Added a runtime localhost override shared by auth and the frontend API client so pages served from `localhost` / `127.0.0.1` always call `http://localhost:8000`.
+  - Restarted the frontend dev stack and verified the current `http://localhost:3000/login` page now serves the rebuilt localhost-safe chunk.
+- [Local backend server startup + frontend localhost API routing (2026-03-09)](task_log.md#local-backend-server-startup--frontend-localhost-api-routing-2026-03-09)
+  - Started the backend locally on `localhost:8000` after rerunning `uvicorn` outside the sandbox so it could reach the configured database.
+  - Updated `frontend/.env.local` to use `NEXT_PUBLIC_API_URL=http://localhost:8000` while leaving shared/live frontend defaults unchanged.
+  - Verified `GET /health` and localhost frontend CORS preflight behavior for `http://localhost:3000`.
+- [Ocypheris API domain cutover via Cloudflare proxy and live signup restoration (2026-03-09)](task_log.md#ocypheris-api-domain-cutover-via-cloudflare-proxy-and-live-signup-restoration-2026-03-09)
+  - Deployed `api.ocypheris.com` as a Cloudflare Worker proxy to the live AWS HTTP API and repointed the Cloudflare/OpenNext frontend to the new host.
+  - Cleared the old AWS API Gateway custom domain, updated active internal EventBridge/API-destination stacks to `api.ocypheris.com`, and restored the intended worker live profile (`10` reserved concurrency, `4` enabled mappings).
+  - Verified live browser signup from `https://ocypheris.com/signup` succeeds end-to-end (`POST /api/auth/signup` -> `201`, redirect to `/onboarding`).
+- [SecurityAutopilotReadRole recovery and lambda concurrency hardening (2026-03-09)](task_log.md#securityautopilotreadrole-recovery-and-lambda-concurrency-hardening-2026-03-09)
+  - Recovered `SecurityAutopilotReadRole` from a hung `UPDATE_IN_PROGRESS`, then re-ran both role-stack updates to `UPDATE_COMPLETE` on template versions `v1.5.2` / `v1.4.1`.
+  - Confirmed helper Lambdas execute successfully and now hold reserved concurrency `1`, while runtime state converges to API=`None`, worker=`10`, worker mappings=`Enabled`.
+  - Root cause was blanket stop-flow `put-function-concurrency 0` drift on all Lambdas plus CloudFormation not reconciling unchanged concurrency/mapping properties; deploy-time normalization now repairs that drift automatically.
+- [AWS account validation fail-closed Config probe fix (2026-03-09)](task_log.md#aws-account-validation-fail-closed-config-probe-fix-2026-03-09)
+  - Fixed `POST /api/aws/accounts/{id}/validate` so an unavailable AWS Config probe now returns `200` with structured warnings and authoritative-mode block reasons instead of `500`.
+  - Corrected the repo to the real boto3/botocore method `describe_compliance_by_config_rule` and the real IAM action `config:DescribeComplianceByConfigRule`.
+  - Updated the ReadRole template and added exact regression coverage; `pytest -q` passes.
+- [Readiness endpoint SQS probe fix (2026-03-09)](task_log.md#readiness-endpoint-sqs-probe-fix-2026-03-09)
+  - Removed the invalid `ApproximateAgeOfOldestMessage` `GetQueueAttributes` probe from `/ready` and kept readiness strict on DB + real SQS accessibility.
+  - Moved queue lag collection to best-effort CloudWatch metrics so missing lag data no longer causes false `503` readiness failures.
+  - Added focused readiness regressions for healthy queues, denied/missing queues, and partial lag-metric unavailability.
+- [Live recovery + baseline live test run after teardown (2026-03-09)](task_log.md#live-recovery--baseline-live-test-run-after-teardown-2026-03-09)
+  - Recovered runtime stack from `UPDATE_ROLLBACK_FAILED`, redeployed with the last live profile, and restored active API/worker images on tag `20260309T160947Z`.
+  - Fixed live throttling drift (API reserved concurrency `0`, worker mappings disabled) and revalidated health/CORS/auth smoke contracts on `https://api.valensjewelry.com`.
+  - Identified live blockers: `/ready` degraded due unsupported SQS attribute probe, `validate` endpoint `500` on Config probe method mismatch, and ingest skip when Security Hub is not enabled.
 - [P0.8 handoff-free closure with engineer-executable artifacts implementation (2026-03-09)](task_log.md#p08-handoff-free-closure-with-engineer-executable-artifacts-implementation-2026-03-09)
   - Added additive `implementation_artifacts[]` on action detail and additive `artifact_metadata` on remediation-run detail without changing the raw `artifacts` payload.
   - Normalized PR bundle, change-summary, direct-fix, risk-snapshot, and activity-log evidence into stable UI-facing artifact/evidence/checklist structures.
@@ -1198,3 +1393,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Completed end-to-end audit verification runs for root-key, governance, and secret-migration scopes with explicit test evidence.
   - Documented release blockers: delete-path safety bypass when executor is off, and closure service not wired into runtime path.
   - Captured focused security and fail-closed checks (tenant isolation/auth boundaries/idempotency/safety gates).
+- [Phase 3 P0 live validation run blocked by shadow-state promotion failure (2026-03-09)](task_log.md#phase-3-p0-live-validation-run-blocked-by-shadow-state-promotion-failure-2026-03-09)
+  - Created live run `20260309T173444Z-phase3-p0` and verified live auth/account/ingest/compute/reconcile paths.
+  - Confirmed the current blocker is upstream of P0 features: live shadow states exist, but worker promotion fails with `uq_finding_shadow_states_tenant_source_fingerprint`, leaving `0` findings and `0` actions.
+- [Live signup remediation attempt for ocypheris.com (2026-03-09)](task_log.md#live-signup-remediation-attempt-for-ocypheriscom-2026-03-09)
+  - Fixed and redeployed the public frontend CSP so `https://ocypheris.com/signup` now renders the signup form.
+  - Updated live API env and rebuilt/redeployed the API multiple times, but `https://api.valensjewelry.com/api/auth/me` still omits `Access-Control-Allow-Origin` for `https://ocypheris.com`, leaving live signup blocked on CORS.

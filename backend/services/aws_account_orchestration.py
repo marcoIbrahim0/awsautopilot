@@ -13,6 +13,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.finding import Finding
+from backend.services.aws_config_probe import (
+    CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
+    describe_non_compliant_config_rule_summary,
+)
 
 
 AssumeRoleFn = Callable[..., Any]
@@ -31,6 +35,7 @@ class ValidationProbeResult:
     permissions_ok: bool
     missing_permissions: list[str]
     warnings: list[str]
+    block_reasons: list[str]
 
 
 @dataclass(frozen=True)
@@ -69,6 +74,13 @@ def _client_error_code(error: ClientError) -> str:
 
 def _is_access_denied(code: str) -> bool:
     return code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation", "UnauthorizedAccess"}
+
+
+def _unsupported_probe_messages(required_action: str, probe_label: str) -> tuple[str, str]:
+    return (
+        f"{probe_label} probe is unavailable in this boto3/botocore runtime; unable to verify {required_action}.",
+        f"Unable to verify required ReadRole probe {required_action}; authoritative mode remains blocked.",
+    )
 
 
 def validate_registration_role_accounts(
@@ -133,6 +145,7 @@ def run_validation_probes(
     region = (list(configured_regions or []) or [default_region])[0]
     missing_permissions: list[str] = []
     warnings: list[str] = []
+    block_reasons: list[str] = []
 
     try:
         session.client("securityhub", region_name=region).get_findings(MaxResults=1)
@@ -184,27 +197,42 @@ def run_validation_probes(
             warnings.append(f"AWS Config describe_config_rules probe failed: {code}")
 
     try:
-        config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+        compliance_probe = describe_non_compliant_config_rule_summary(config_client, limit=1)
+        if compliance_probe.unavailable_reason:
+            warnings.append(compliance_probe.unavailable_reason)
+            block_reasons.append(
+                f"Unable to verify required ReadRole probe {CONFIG_COMPLIANCE_SUMMARY_PERMISSION}; "
+                "authoritative mode remains blocked."
+            )
     except ClientError as error:
         code = _client_error_code(error)
         if _is_access_denied(code):
-            missing_permissions.append("config:DescribeComplianceByConfigRules")
+            missing_permissions.append(CONFIG_COMPLIANCE_SUMMARY_PERMISSION)
         else:
-            warnings.append(f"AWS Config describe_compliance_by_config_rules probe failed: {code}")
+            warnings.append(f"AWS Config describe_compliance_by_config_rule probe failed: {code}")
 
     if config_rule_names:
-        try:
-            config_client.get_compliance_details_by_config_rule(
-                ConfigRuleName=config_rule_names[0],
-                ComplianceTypes=["NON_COMPLIANT"],
-                Limit=1,
+        get_compliance_details = getattr(config_client, "get_compliance_details_by_config_rule", None)
+        if not callable(get_compliance_details):
+            warning, block_reason = _unsupported_probe_messages(
+                "config:GetComplianceDetailsByConfigRule",
+                "AWS Config get_compliance_details_by_config_rule",
             )
-        except ClientError as error:
-            code = _client_error_code(error)
-            if _is_access_denied(code):
-                missing_permissions.append("config:GetComplianceDetailsByConfigRule")
-            elif code not in {"NoSuchConfigRuleException", "NoSuchConfigRule"}:
-                warnings.append(f"AWS Config get_compliance_details_by_config_rule probe failed: {code}")
+            warnings.append(warning)
+            block_reasons.append(block_reason)
+        else:
+            try:
+                get_compliance_details(
+                    ConfigRuleName=config_rule_names[0],
+                    ComplianceTypes=["NON_COMPLIANT"],
+                    Limit=1,
+                )
+            except ClientError as error:
+                code = _client_error_code(error)
+                if _is_access_denied(code):
+                    missing_permissions.append("config:GetComplianceDetailsByConfigRule")
+                elif code not in {"NoSuchConfigRuleException", "NoSuchConfigRule"}:
+                    warnings.append(f"AWS Config get_compliance_details_by_config_rule probe failed: {code}")
     else:
         warnings.append("No AWS Config rules found to probe config:GetComplianceDetailsByConfigRule.")
 
@@ -245,10 +273,12 @@ def run_validation_probes(
 
     deduped_missing = _dedup_preserve_order(missing_permissions)
     deduped_warnings = _dedup_preserve_order(warnings)
+    deduped_block_reasons = _dedup_preserve_order(block_reasons)
     return ValidationProbeResult(
-        permissions_ok=len(deduped_missing) == 0,
+        permissions_ok=len(deduped_missing) == 0 and len(deduped_block_reasons) == 0,
         missing_permissions=deduped_missing,
         warnings=deduped_warnings,
+        block_reasons=deduped_block_reasons,
     )
 
 

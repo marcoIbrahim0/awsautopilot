@@ -3,7 +3,7 @@ Dependency-aware health checks for API readiness.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 from typing import Any
 
@@ -21,6 +21,15 @@ REQUIRED_SQS_QUEUE_SETTINGS: tuple[tuple[str, str], ...] = (
     ("inventory_reconcile", "SQS_INVENTORY_RECONCILE_QUEUE_URL"),
     ("export_report", "SQS_EXPORT_REPORT_QUEUE_URL"),
 )
+SUPPORTED_SQS_ATTRIBUTE_NAMES: tuple[str, ...] = (
+    "QueueArn",
+    "ApproximateNumberOfMessages",
+    "ApproximateNumberOfMessagesNotVisible",
+)
+QUEUE_LAG_METRIC_NAMESPACE = "AWS/SQS"
+QUEUE_LAG_METRIC_NAME = "ApproximateAgeOfOldestMessage"
+QUEUE_LAG_METRIC_LOOKBACK_MINUTES = 5
+QUEUE_LAG_METRIC_PERIOD_SECONDS = 60
 
 READINESS_SIMULATION_ENV = "READINESS_SIMULATION_MODE"
 SIM_MODE_FAILURE = "dependency_failure"
@@ -46,13 +55,48 @@ def _parse_int(value: str | None, default: int = 0) -> int:
         return default
 
 
-def _p95(values: list[int]) -> float | None:
+def _p95(values: list[float]) -> float | None:
     if not values:
         return None
     ordered = sorted(values)
     # "Nearest rank" percentile keeps behavior deterministic for small sample sizes.
     rank = int(round((len(ordered) - 1) * 0.95))
     return float(ordered[max(0, min(rank, len(ordered) - 1))])
+
+
+def _queue_name_from_url(queue_url: str) -> str:
+    return (queue_url or "").rstrip("/").rsplit("/", 1)[-1].strip()
+
+
+def _latest_metric_max(datapoints: list[dict[str, Any]]) -> float | None:
+    if not datapoints:
+        return None
+    baseline = datetime.fromtimestamp(0, tz=timezone.utc)
+    latest = max(datapoints, key=lambda item: item.get("Timestamp") or baseline)
+    maximum = latest.get("Maximum")
+    if maximum is None:
+        return None
+    return float(maximum)
+
+
+def _queue_oldest_message_age_seconds(
+    cloudwatch_client: Any,
+    queue_name: str,
+    checked_at: datetime,
+) -> tuple[float | None, str | None]:
+    try:
+        response = cloudwatch_client.get_metric_statistics(
+            Namespace=QUEUE_LAG_METRIC_NAMESPACE,
+            MetricName=QUEUE_LAG_METRIC_NAME,
+            Dimensions=[{"Name": "QueueName", "Value": queue_name}],
+            StartTime=checked_at - timedelta(minutes=QUEUE_LAG_METRIC_LOOKBACK_MINUTES),
+            EndTime=checked_at,
+            Period=QUEUE_LAG_METRIC_PERIOD_SECONDS,
+            Statistics=["Maximum"],
+        )
+    except (ClientError, BotoCoreError, Exception) as exc:
+        return None, str(exc)
+    return _latest_metric_max(response.get("Datapoints") or []), None
 
 
 def _simulation_mode() -> str:
@@ -136,11 +180,13 @@ def _simulated_readiness_report(mode: str, checked_at: str) -> dict[str, Any]:
 
 def _queue_snapshot(
     queue_urls: dict[str, str],
-) -> tuple[dict[str, dict[str, Any]], list[str], list[int]]:
+    checked_at: datetime,
+) -> tuple[dict[str, dict[str, Any]], list[str], list[float]]:
     snapshots: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
-    oldest_message_seconds: list[int] = []
+    oldest_message_seconds: list[float] = []
     sqs_clients: dict[str, Any] = {}
+    cloudwatch_clients: dict[str, Any] = {}
 
     for queue_name, queue_url in queue_urls.items():
         queue_region = parse_queue_region(queue_url)
@@ -153,12 +199,7 @@ def _queue_snapshot(
             attrs = (
                 sqs_client.get_queue_attributes(
                     QueueUrl=queue_url,
-                    AttributeNames=[
-                        "QueueArn",
-                        "ApproximateNumberOfMessages",
-                        "ApproximateNumberOfMessagesNotVisible",
-                        "ApproximateAgeOfOldestMessage",
-                    ],
+                    AttributeNames=list(SUPPORTED_SQS_ATTRIBUTE_NAMES),
                 ).get("Attributes")
                 or {}
             )
@@ -167,13 +208,35 @@ def _queue_snapshot(
                 "ready": False,
                 "queue_url": queue_url,
                 "region": queue_region,
+                "oldest_message_age_seconds": None,
                 "error": str(exc),
             }
             errors.append(f"{queue_name}: {exc}")
             continue
 
-        oldest = _parse_int(attrs.get("ApproximateAgeOfOldestMessage"), 0)
-        oldest_message_seconds.append(oldest)
+        oldest_message_age_seconds: float | None = None
+        oldest_message_age_error: str | None = None
+        metric_queue_name = _queue_name_from_url(queue_url)
+        if metric_queue_name:
+            try:
+                cloudwatch_client = cloudwatch_clients.get(queue_region)
+                if cloudwatch_client is None:
+                    cloudwatch_client = boto3.client("cloudwatch", region_name=queue_region)
+                    cloudwatch_clients[queue_region] = cloudwatch_client
+                (
+                    oldest_message_age_seconds,
+                    oldest_message_age_error,
+                ) = _queue_oldest_message_age_seconds(
+                    cloudwatch_client,
+                    metric_queue_name,
+                    checked_at,
+                )
+            except (ClientError, BotoCoreError, Exception) as exc:
+                oldest_message_age_error = str(exc)
+
+        if oldest_message_age_seconds is not None:
+            oldest_message_seconds.append(oldest_message_age_seconds)
+
         snapshots[queue_name] = {
             "ready": True,
             "queue_url": queue_url,
@@ -181,14 +244,17 @@ def _queue_snapshot(
             "queue_arn": attrs.get("QueueArn"),
             "visible_messages": _parse_int(attrs.get("ApproximateNumberOfMessages"), 0),
             "in_flight_messages": _parse_int(attrs.get("ApproximateNumberOfMessagesNotVisible"), 0),
-            "oldest_message_age_seconds": oldest,
+            "oldest_message_age_seconds": oldest_message_age_seconds,
         }
+        if oldest_message_age_error:
+            snapshots[queue_name]["oldest_message_age_error"] = oldest_message_age_error
 
     return snapshots, errors, oldest_message_seconds
 
 
 async def build_readiness_report() -> dict[str, Any]:
-    checked_at = datetime.now(timezone.utc).isoformat()
+    checked_at_dt = datetime.now(timezone.utc)
+    checked_at = checked_at_dt.isoformat()
     simulation_mode = _simulation_mode()
     if simulation_mode:
         return _simulated_readiness_report(simulation_mode, checked_at)
@@ -198,7 +264,7 @@ async def build_readiness_report() -> dict[str, Any]:
 
     sqs_snapshots: dict[str, dict[str, Any]] = {}
     sqs_errors: list[str] = []
-    oldest_message_seconds: list[int] = []
+    oldest_message_seconds: list[float] = []
 
     if missing_queues:
         sqs_errors.append(
@@ -207,7 +273,10 @@ async def build_readiness_report() -> dict[str, Any]:
         )
 
     if queue_urls:
-        sqs_snapshots, queue_errors, oldest_message_seconds = _queue_snapshot(queue_urls)
+        sqs_snapshots, queue_errors, oldest_message_seconds = _queue_snapshot(
+            queue_urls,
+            checked_at_dt,
+        )
         sqs_errors.extend(queue_errors)
     else:
         sqs_errors.append("No SQS queue URLs configured.")

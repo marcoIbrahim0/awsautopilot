@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::security-autopilot-templates/cloudformation/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::029037611564:distribution/E1N8564DCHGNE9"
+        }
+      }
+    },
+    {
+      "Sid": "AllowLambdaApiRoleGetObject",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::security-autopilot-templates/cloudformation/*"
+    },
+    {
+      "Sid": "AllowLambdaApiRoleListBucket",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+      },
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::security-autopilot-templates",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": "cloudformation/*"
+        }
+      }
+    }
+  ]
+}

@@ -62,10 +62,18 @@ When `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` is set, the API includes `saas_acco
 - Login and signup responses
 - Accept-invite response
 
+The same auth payload family also carries control-plane forwarder launch metadata:
+
+- `control_plane_forwarder_launch_stack_url`
+- `control_plane_forwarder_template_url`
+- `control_plane_ingest_url`
+
 The frontend uses these to show SaaS Account ID, External ID, and the **Deploy Read Role** button on:
 
 - **Onboarding** (step 2: Deploy the Read Role)
 - **Settings → Organization**
+
+For private template buckets, the frontend should treat the launch URL as the source of truth for the signed `templateURL` value and only use the raw template URL as a fallback. This keeps CloudFormation launch links working even when direct anonymous S3 fetch is blocked.
 
 ## Launch Stack URL format
 

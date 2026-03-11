@@ -14,6 +14,11 @@ AWS Security Autopilot uses environment variables for configuration. In producti
   - `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
   - Root `/Users/marcomaher/AWS Security Autopilot/.env` is backup-only and commented out.
 
+For the current serverless production path on `ocypheris.com`:
+- `config/.env.ops` is the deploy-time source for backend/runtime parameters.
+- `frontend/.env` is the checked-in public build-time source for Cloudflare/OpenNext.
+- `frontend/.env.local` is local-only and must not leak into production builds.
+
 ## Environment Variables Reference
 
 ### Required Variables
@@ -33,6 +38,15 @@ AWS Security Autopilot uses environment variables for configuration. In producti
 | `CONTROL_PLANE_EVENTS_SECRET` | Secret for control-plane event ingestion | `your-secret-here` | Secrets Manager |
 | `DIGEST_CRON_SECRET` | Secret for weekly digest cron endpoint | `your-secret-here` | Secrets Manager |
 | `SAAS_ADMIN_EMAILS` | Comma-separated SaaS admin emails | `admin@example.com,admin2@example.com` | CloudFormation parameter |
+
+#### Firebase Email Verification
+
+| Variable | Description | Example | Where Set |
+|----------|-------------|---------|-----------|
+| `FIREBASE_PROJECT_ID` | Firebase project id used for signup verification checks | `aws-security-autopilot` | CloudFormation parameter via `config/.env.ops` |
+| `FIREBASE_EMAIL_CONTINUE_URL_BASE` | Public frontend origin used when generating Firebase email action links | `https://ocypheris.com` | CloudFormation parameter via `config/.env.ops` |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Runtime path to the packaged Firebase Admin SDK credential file | `/var/task/backend/.firebase/firebase-service-account.json` | Lambda environment in `saas-serverless-httpapi.yaml` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Inline Admin SDK JSON credential payload | empty in current live deploy | Not used in the current live deploy |
 
 #### AWS Configuration
 
@@ -68,18 +82,29 @@ AWS Security Autopilot uses environment variables for configuration. In producti
 | `API_PUBLIC_URL` | Public API base URL | `https://api.yourcompany.com` | CloudFormation parameter (derived from ALB/API Gateway) |
 | `WORKER_POOL` | Worker queue pool selector | `all` | CloudFormation parameter |
 
-#### Email Delivery (Optional, required for real verification emails)
+#### Frontend Public Build Variables
 
 | Variable | Description | Example | Where Set |
 |----------|-------------|---------|-----------|
-| `EMAIL_FROM` | From address for outgoing transactional email | `noreply@yourcompany.com` | Runtime environment variable |
-| `EMAIL_SMTP_HOST` | SMTP host for delivery | `smtp.mailgun.org` | Runtime environment variable / Secrets Manager |
-| `EMAIL_SMTP_PORT` | SMTP port | `587` | Runtime environment variable |
-| `EMAIL_SMTP_USER` | SMTP username | `<YOUR_VALUE_HERE>` | Runtime environment variable / Secrets Manager |
-| `EMAIL_SMTP_PASSWORD` | SMTP password | `<YOUR_VALUE_HERE>` | Runtime environment variable / Secrets Manager |
-| `EMAIL_SMTP_STARTTLS` | Use STARTTLS | `true` | Runtime environment variable |
+| `NEXT_PUBLIC_API_URL` | Public API base URL embedded into the frontend build | `https://api.ocypheris.com` | `frontend/.env` |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app API key | `<YOUR_VALUE_HERE>` | `frontend/.env` |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase Auth domain for the web app | `aws-security-autopilot.firebaseapp.com` | `frontend/.env` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project id for the web app | `aws-security-autopilot` | `frontend/.env` |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase web app id | `1:245906784078:web:264d8471a65d655c80681f` | `frontend/.env` |
 
-> ❓ Needs verification: Which SMTP provider and verified sender identity should be used for `api.ocypheris.com` production traffic?
+#### Email Delivery (required for real verification emails)
+
+| Variable | Description | Example | Where Set |
+|----------|-------------|---------|-----------|
+| `EMAIL_FROM` | Verified sender address for outgoing transactional email | `noreply@ocypheris.com` | CloudFormation parameter via `config/.env.ops` |
+| `EMAIL_SMTP_HOST` | SMTP host for delivery | `email-smtp.eu-north-1.amazonaws.com` | CloudFormation parameter via `config/.env.ops` |
+| `EMAIL_SMTP_PORT` | SMTP port | `587` | CloudFormation parameter via `config/.env.ops` |
+| `EMAIL_SMTP_STARTTLS` | Use STARTTLS | `true` | CloudFormation parameter via `config/.env.ops` |
+| `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | Secrets Manager secret id/ARN with JSON `{ "user": "...", "password": "..." }` | `security-autopilot-dev/EMAIL_SMTP` | CloudFormation parameter via `config/.env.ops` |
+| `EMAIL_SMTP_USER` | SMTP username injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
+| `EMAIL_SMTP_PASSWORD` | SMTP password injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
+
+> ❓ Needs verification: As of `2026-03-11`, `security-autopilot-dev-api` is wired to SES SMTP with `EMAIL_FROM=noreply@ocypheris.com`, `EMAIL_SMTP_HOST=email-smtp.eu-north-1.amazonaws.com`, `EMAIL_SMTP_PORT="587"`, `EMAIL_SMTP_STARTTLS="true"`, and credentials from `security-autopilot-dev/EMAIL_SMTP`. The three DKIM CNAMEs are now published in Cloudflare and externally resolvable, and `marcoibrahim11@outlook.com` is verified as a sandbox recipient, but SES still shows `VerificationStatus=PENDING` for `ocypheris.com` until AWS rechecks the sender domain, the SES production-access review still shows `DENIED`, and a fresh `put-account-details --production-access-enabled` attempt currently returns `ConflictException`.
 
 #### S3 Storage
 
@@ -94,13 +119,83 @@ AWS Security Autopilot uses environment variables for configuration. In producti
 
 | Variable | Description | Example | Where Set |
 |----------|-------------|---------|-----------|
-| `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` | Read role template URL | `https://templates.s3.region.amazonaws.com/read-role/v1.5.1.yaml` | CloudFormation parameter |
-| `CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL` | Write role template URL | `https://templates.s3.region.amazonaws.com/write-role/v1.4.0.yaml` | CloudFormation parameter |
+| `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` | Read role template URL | `https://templates.s3.region.amazonaws.com/read-role/v1.5.4.yaml` | CloudFormation parameter |
+| `CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL` | Write role template URL | `https://templates.s3.region.amazonaws.com/write-role/v1.4.2.yaml` | CloudFormation parameter |
 | `CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL` | Control-plane forwarder template URL | `https://templates.s3.region.amazonaws.com/forwarder/v1.0.0.yaml` | CloudFormation parameter (optional) |
 
 ### Optional Variables
 
 See [Local Development Environment Setup](../local-dev/environment.md) for complete list of optional variables with defaults.
+
+## Firebase Production Notes
+
+- Live backend origin: `https://api.ocypheris.com`
+- Live frontend origin: `https://ocypheris.com`
+- Current Firebase project id: `aws-security-autopilot`
+- Firebase Auth authorized domains currently needed by this repo:
+  - `localhost`
+  - `127.0.0.1`
+  - `ocypheris.com`
+  - `www.ocypheris.com`
+  - `dev.ocypheris.com`
+
+### Current credential packaging model
+
+- The live serverless stack does not inject the Firebase Admin SDK JSON through Lambda environment variables.
+- Instead, the deploy/build context includes:
+  - `backend/.firebase/firebase-service-account.json`
+- The runtime then reads it from:
+  - `/var/task/backend/.firebase/firebase-service-account.json`
+- `backend/.firebase/` is ignored in the repo so the credential file is not tracked.
+
+Reason:
+- The initial inline-JSON attempt exceeded AWS Lambda's `UpdateFunctionConfiguration` request-size limit (`5120` bytes).
+
+### Cloudflare/OpenNext build rule
+
+- Keep production-safe public values in `frontend/.env`.
+- Keep workstation overrides in `frontend/.env.local`.
+- Production `preview`, `deploy`, and `upload` scripts now move `.env.local` out of the way before running OpenNext so live builds do not accidentally inherit local values such as `NEXT_PUBLIC_API_URL=http://localhost:8000`.
+
+### Current production blocker
+
+- The API runtime now has:
+  - `EMAIL_FROM=noreply@ocypheris.com`
+  - `EMAIL_SMTP_HOST=email-smtp.eu-north-1.amazonaws.com`
+  - `EMAIL_SMTP_PORT=587`
+  - `EMAIL_SMTP_STARTTLS=true`
+  - `EMAIL_SMTP_USER` and `EMAIL_SMTP_PASSWORD` resolved from the `security-autopilot-dev/EMAIL_SMTP` Secrets Manager secret
+- The serverless deploy path supports:
+  - non-secret SMTP inputs in `config/.env.ops`
+  - a Secrets Manager credential secret referenced by `EMAIL_SMTP_CREDENTIALS_SECRET_ID`
+  - CloudFormation dynamic references that resolve `EMAIL_SMTP_USER` and `EMAIL_SMTP_PASSWORD` into the Lambda environment
+- The remaining blocker is now SES account state, not app wiring:
+  - live signup/resend attempts reach the SMTP provider
+  - `aws sesv2 get-email-identity --region eu-north-1 --email-identity ocypheris.com` returns `VerifiedForSendingStatus=false`, `VerificationStatus=PENDING`, and `VerificationInfo.ErrorType=HOST_NOT_FOUND`
+  - the published DKIM CNAMEs already resolve publicly, so the current `HOST_NOT_FOUND` result is waiting on the next SES verification poll
+  - `aws sesv2 get-account --region eu-north-1` returns `ProductionAccessEnabled=false`
+  - `aws sesv2 get-account --region eu-north-1` also returns `Details.ReviewDetails.Status=DENIED` with case `177318726300086`
+  - a fresh `aws sesv2 put-account-details --region eu-north-1 ... --production-access-enabled` call currently returns `ConflictException`
+  - `aws sesv2 get-email-identity --region eu-north-1 --email-identity marcoibrahim11@outlook.com` now returns `VerificationStatus=SUCCESS` and `VerifiedForSendingStatus=true`
+  - CloudWatch shows SES rejecting sends with `554 Message rejected: Email address is not verified`
+  - `backend/services/email.py` therefore returns delivery failure in `ENV=prod`, and the live signup route rejects the request with `503 verification_email_delivery_unavailable` instead of falsely returning `202`
+
+### Current SES DKIM DNS records
+
+These DKIM records are now published for `ocypheris.com`:
+
+| Name | Type | Value |
+|------|------|-------|
+| `3nnjfxd3pc3ccswvgj5xpfe7ftkdhb3w._domainkey.ocypheris.com` | `CNAME` | `3nnjfxd3pc3ccswvgj5xpfe7ftkdhb3w.dkim.amazonses.com` |
+| `sy2ubheakio36fszurdsdvm4k6cjlcdy._domainkey.ocypheris.com` | `CNAME` | `sy2ubheakio36fszurdsdvm4k6cjlcdy.dkim.amazonses.com` |
+| `oxsp5xif66qvsvn6pq6sqquj2dgsnmb3._domainkey.ocypheris.com` | `CNAME` | `oxsp5xif66qvsvn6pq6sqquj2dgsnmb3.dkim.amazonses.com` |
+
+Next steps after the DNS publish:
+
+- Wait for SES to recheck the domain and clear `VerificationStatus=PENDING`.
+- Revisit production access after domain verification; the current review is `DENIED` under case `177318726300086`, and the current CLI resubmission path returns `ConflictException`.
+- While sandbox is still enabled, both sender and recipient identities must be verified for any live delivery test.
+- `marcoibrahim11@outlook.com` is already verified as a recipient identity in SES; the remaining sandbox blocker is the sender identity for `noreply@ocypheris.com`.
 
 ---
 
@@ -158,6 +253,25 @@ aws secretsmanager create-secret \
   --name security-autopilot-dev/DIGEST_CRON_SECRET \
   --secret-string "your-generated-secret-here" \
   --region eu-north-1
+```
+
+#### 5. EMAIL_SMTP credentials (JSON secret)
+
+```bash
+aws secretsmanager create-secret \
+  --name security-autopilot-dev/EMAIL_SMTP \
+  --secret-string '{"user":"<YOUR_VALUE_HERE>","password":"<YOUR_VALUE_HERE>"}' \
+  --region eu-north-1
+```
+
+Then set these non-secret deploy inputs in `config/.env.ops` before redeploying:
+
+```bash
+EMAIL_FROM="noreply@ocypheris.com"
+EMAIL_SMTP_HOST="email-smtp.eu-north-1.amazonaws.com"
+EMAIL_SMTP_PORT="587"
+EMAIL_SMTP_STARTTLS="true"
+EMAIL_SMTP_CREDENTIALS_SECRET_ID="security-autopilot-dev/EMAIL_SMTP"
 ```
 
 ### Updating Secrets
@@ -245,6 +359,8 @@ NEXT_PUBLIC_API_URL="http://localhost:8000"
 # config/.env.ops (deploy/ops scripts)
 AWS_REGION="eu-north-1"
 SQS_STACK_NAME="security-autopilot-sqs-queues"
+FIREBASE_PROJECT_ID="aws-security-autopilot"
+FIREBASE_EMAIL_CONTINUE_URL_BASE="https://ocypheris.com"
 ```
 
 Root `.env` remains a backup-only commented file and should not be used as a runtime source.
@@ -258,6 +374,7 @@ backend/workers/.env
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+backend/.firebase/
 config/.env.ops
 ```
 

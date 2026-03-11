@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Creates a read-only IAM role in the customer's AWS account for Security Hub findings ingestion.
   Your SaaS assumes this role using STS AssumeRole + ExternalId (no long-lived keys).
-  Optional: can also create the Write Role in the same stack when IncludeWriteRole=true.
   Uses a custom resource so deployment does not fail if roles or policies already exist (idempotent).
 
 Parameters:
@@ -16,17 +15,6 @@ Parameters:
     Type: String
     NoEcho: true
     Description: "Unique per tenant/customer. Must match what your SaaS stores for this tenant."
-
-  IncludeWriteRole:
-    Type: String
-    Default: "false"
-    AllowedValues:
-      - "true"
-      - "false"
-    Description: "Set to true to create SecurityAutopilotWriteRole in the same stack."
-
-Conditions:
-  CreateWriteRole: !Equals [!Ref IncludeWriteRole, "true"]
 
 Resources:
   # Lambda execution role for the custom resource
@@ -91,8 +79,6 @@ Resources:
 
           READ_ROLE_NAME = "SecurityAutopilotReadRole"
           READ_POLICY_NAME = "SecurityAutopilotReadRolePolicy"
-          WRITE_ROLE_NAME = "SecurityAutopilotWriteRole"
-          WRITE_POLICY_NAME = "SecurityAutopilotWriteRolePolicy"
 
           def trust_policy(saas_account_id, external_id, partition="aws"):
               return {
@@ -111,7 +97,7 @@ Resources:
                   "Version": "2012-10-17",
                   "Statement": [
                       {"Sid": "SecurityHubReadFindings", "Effect": "Allow", "Action": ["securityhub:GetFindings", "securityhub:DescribeHub"], "Resource": "*"},
-                      {"Sid": "ConfigReadinessChecks", "Effect": "Allow", "Action": ["config:DescribeConfigurationRecorders", "config:DescribeConfigurationRecorderStatus", "config:DescribeDeliveryChannels", "config:DescribeConfigRules", "config:DescribeComplianceByConfigRules", "config:GetComplianceDetailsByConfigRule"], "Resource": "*"},
+                      {"Sid": "ConfigReadinessChecks", "Effect": "Allow", "Action": ["config:DescribeConfigurationRecorders", "config:DescribeConfigurationRecorderStatus", "config:DescribeDeliveryChannels", "config:DescribeConfigRules", "config:DescribeComplianceByConfigRule", "config:GetComplianceDetailsByConfigRule"], "Resource": "*"},
                       {"Sid": "Ec2SecurityGroupReadChecks", "Effect": "Allow", "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeSecurityGroupRules"], "Resource": "*"},
                       {"Sid": "S3AccessPathReadChecks", "Effect": "Allow", "Action": ["s3:GetBucketPolicyStatus", "s3:GetBucketPolicy", "s3:GetBucketAcl", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation", "s3:GetEncryptionConfiguration", "s3:GetBucketLogging", "s3:GetLifecycleConfiguration"], "Resource": "arn:aws:s3:::*"},
                       {"Sid": "S3InventoryListBuckets", "Effect": "Allow", "Action": ["s3:ListAllMyBuckets"], "Resource": "*"},
@@ -125,45 +111,6 @@ Resources:
                       {"Sid": "AccessAnalyzerReadFindings", "Effect": "Allow", "Action": ["access-analyzer:ListAnalyzers", "access-analyzer:ListFindings", "access-analyzer:GetFinding"], "Resource": "*"},
                       {"Sid": "AutopilotCleanupIAMResources", "Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:DeleteRolePolicy", "iam:DeleteRole", "iam:ListPolicies", "iam:GetPolicy", "iam:ListPolicyVersions", "iam:DeletePolicyVersion", "iam:DeletePolicy"], "Resource": "*"},
                       {"Sid": "Inspector2ReadFindings", "Effect": "Allow", "Action": ["inspector2:ListFindings", "inspector2:BatchGetAccountStatus"], "Resource": "*"}
-                  ]
-              }
-
-          def write_policy_document():
-              return {
-                  "Version": "2012-10-17",
-                  "Statement": [
-                      {
-                          "Sid": "S3BlockPublicAccess",
-                          "Effect": "Allow",
-                          "Action": [
-                              "s3:GetAccountPublicAccessBlock",
-                              "s3:PutAccountPublicAccessBlock"
-                          ],
-                          "Resource": "*"
-                      },
-                      {
-                          "Sid": "SecurityHubEnablement",
-                          "Effect": "Allow",
-                          "Action": [
-                              "securityhub:EnableSecurityHub",
-                              "securityhub:GetEnabledStandards",
-                              "securityhub:DescribeHub"
-                          ],
-                          "Resource": "*"
-                      },
-                      {
-                          "Sid": "GuardDutyEnablement",
-                          "Effect": "Allow",
-                          "Action": [
-                              "guardduty:CreateDetector",
-                              "guardduty:GetDetector",
-                              "guardduty:ListDetectors",
-                              "guardduty:UpdateDetector"
-                          ],
-                          "Resource": "*"
-                      },
-                      {"Sid": "STSIdentityValidation", "Effect": "Allow", "Action": ["sts:GetCallerIdentity"], "Resource": "*"},
-                      {"Sid": "AutopilotCleanupIAMResources", "Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:DeleteRolePolicy", "iam:DeleteRole", "iam:ListPolicies", "iam:GetPolicy", "iam:ListPolicyVersions", "iam:DeletePolicyVersion", "iam:DeletePolicy"], "Resource": "*"}
                   ]
               }
 
@@ -251,20 +198,15 @@ Resources:
               except Exception:
                   pass
 
-          def as_bool(value):
-              return str(value).strip().lower() in ("1", "true", "yes", "y", "on")
-
           def handler(event, context):
               try:
                   request_type = event.get("RequestType", "Create")
                   props = event.get("ResourceProperties", {})
                   saas = props.get("SaaSAccountId", "")
                   external = props.get("ExternalId", "")
-                  include_write_role = as_bool(props.get("IncludeWriteRole", "false"))
                   iam = boto3.client("iam")
 
                   if request_type == "Delete":
-                      delete_role_and_policy(iam, WRITE_ROLE_NAME)
                       delete_role_and_policy(iam, READ_ROLE_NAME)
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, event.get("PhysicalResourceId", "none"))
                       return
@@ -288,23 +230,7 @@ Resources:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Could not get or create role")
                       return
 
-                  data = {"Arn": read_role_arn}
-                  if include_write_role:
-                      write_role_arn = ensure_role_and_policy(
-                          iam=iam,
-                          role_name=WRITE_ROLE_NAME,
-                          policy_name=WRITE_POLICY_NAME,
-                          role_description="Write role for safe direct remediations: S3 Block Public Access, Security Hub, GuardDuty.",
-                          policy_description="Least-privilege permissions for S3 Block Public Access, Security Hub, and GuardDuty enablement.",
-                          trust=trust,
-                          policy_doc=write_policy_document(),
-                      )
-                      if not write_role_arn:
-                          cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Could not get or create write role")
-                          return
-                      data["WriteArn"] = write_role_arn
-
-                  cfnresponse.send(event, context, cfnresponse.SUCCESS, data, read_role_arn)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Arn": read_role_arn}, read_role_arn)
               except Exception as e:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=str(e))
 
@@ -315,14 +241,8 @@ Resources:
       ServiceToken: !GetAtt ReadRoleHelperFunction.Arn
       SaaSAccountId: !Ref SaaSAccountId
       ExternalId: !Ref ExternalId
-      IncludeWriteRole: !Ref IncludeWriteRole
 
 Outputs:
   ReadRoleArn:
     Description: "ARN of the created or existing ReadRole (copy this into your SaaS Connect AWS screen)."
     Value: !Ref ReadRoleCustomResource
-
-  WriteRoleArn:
-    Condition: CreateWriteRole
-    Description: "ARN of the created or existing WriteRole (only when IncludeWriteRole=true)."
-    Value: !GetAtt ReadRoleCustomResource.WriteArn

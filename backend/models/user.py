@@ -50,6 +50,24 @@ class User(Base):
         default=False,
         server_default="false",
     )
+    firebase_uid: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    email_verification_sync_token_hash: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    email_verification_sync_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     mfa_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

@@ -1,0 +1,11 @@
+Tenant: 67256664-3ff2-4456-a7ea-b8e5f4fb8380
+Account: 029037611564
+Open shadow controls observed on 2026-03-09:
+- CLOUDTRAIL.1: 1
+- CONFIG.1: 1
+- EC2.53: 4
+- IAM.4: 1
+- RDS.ENCRYPTION: 1
+- RDS.PUBLIC_ACCESS: 1
+Total shadow states: 29
+Distinct fingerprints: 29

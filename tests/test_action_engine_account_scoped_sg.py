@@ -74,7 +74,7 @@ class _ConfigClientHappy:
             return {"ConfigRules": []}
         return {"ConfigRules": [{"ConfigRuleName": "sg-open-admin-ports"}]}
 
-    def describe_compliance_by_config_rules(self, **kwargs):
+    def describe_compliance_by_config_rule(self, **kwargs):
         return {"ComplianceByConfigRules": [{"Compliance": {"ComplianceType": "NON_COMPLIANT"}}]}
 
     def get_compliance_details_by_config_rule(self, **kwargs):

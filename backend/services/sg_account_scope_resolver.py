@@ -6,6 +6,8 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
+from backend.services.aws_config_probe import describe_non_compliant_config_rule_summary
+
 _SG_ID_PATTERN = re.compile(r"\bsg-[0-9a-fA-F]{8,17}\b")
 _CONFIG_RULE_PATTERN = re.compile(r"config-rule[/:]([A-Za-z0-9_-]{1,256})", re.IGNORECASE)
 _VALID_CONFIG_RULE_NAME = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
@@ -164,16 +166,19 @@ def resolve_account_scoped_sg_ids_from_finding(
         return SGAccountScopeResolution([], None, "config_rule_not_found")
 
     try:
-        compliance = config_client.describe_compliance_by_config_rules(
-            ConfigRuleNames=[config_rule_name],
-            ComplianceTypes=["NON_COMPLIANT"],
+        compliance_probe = describe_non_compliant_config_rule_summary(
+            config_client,
+            config_rule_names=[config_rule_name],
         )
     except ClientError as error:
         code = _error_code(error)
         reason = "config_access_denied" if code in _ACCESS_DENIED_CODES else f"config_api_error:{code}"
         return SGAccountScopeResolution([], config_rule_name, reason)
 
-    compliance_rows = compliance.get("ComplianceByConfigRules") or []
+    if compliance_probe.unavailable_reason:
+        return SGAccountScopeResolution([], config_rule_name, "config_compliance_summary_unavailable")
+
+    compliance_rows = (compliance_probe.response or {}).get("ComplianceByConfigRules") or []
     if not compliance_rows:
         return SGAccountScopeResolution([], config_rule_name, "no_non_compliant_resources")
 

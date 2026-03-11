@@ -61,6 +61,16 @@ ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED_VALUE="${ACTIONS_EFFECTIVE_OPEN_VISIBI
 CONTROL_PLANE_SOURCE_VALUE="${CONTROL_PLANE_SOURCE:-$(read_env_file_value CONTROL_PLANE_SOURCE || true)}"
 CONTROL_PLANE_AUTHORITATIVE_CONTROLS_VALUE="${CONTROL_PLANE_AUTHORITATIVE_CONTROLS:-$(read_env_file_value CONTROL_PLANE_AUTHORITATIVE_CONTROLS || true)}"
 CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES_VALUE="${CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES:-$(read_env_file_value CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES || true)}"
+API_PUBLIC_URL_VALUE="${API_PUBLIC_URL:-$(read_env_file_value API_PUBLIC_URL || true)}"
+FIREBASE_PROJECT_ID_VALUE="${FIREBASE_PROJECT_ID:-$(read_env_file_value FIREBASE_PROJECT_ID || true)}"
+FIREBASE_EMAIL_CONTINUE_URL_BASE_VALUE="${FIREBASE_EMAIL_CONTINUE_URL_BASE:-$(read_env_file_value FIREBASE_EMAIL_CONTINUE_URL_BASE || true)}"
+EMAIL_FROM_VALUE="${EMAIL_FROM:-$(read_env_file_value EMAIL_FROM || true)}"
+EMAIL_SMTP_HOST_VALUE="${EMAIL_SMTP_HOST:-$(read_env_file_value EMAIL_SMTP_HOST || true)}"
+EMAIL_SMTP_PORT_VALUE="${EMAIL_SMTP_PORT:-$(read_env_file_value EMAIL_SMTP_PORT || true)}"
+EMAIL_SMTP_PORT_VALUE="${EMAIL_SMTP_PORT_VALUE:-587}"
+EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS:-$(read_env_file_value EMAIL_SMTP_STARTTLS || true)}"
+EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS_VALUE:-true}"
+EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE="${EMAIL_SMTP_CREDENTIALS_SECRET_ID:-$(read_env_file_value EMAIL_SMTP_CREDENTIALS_SECRET_ID || true)}"
 
 DATABASE_URL="${DATABASE_URL:-$(read_env_file_value DATABASE_URL || true)}"
 JWT_SECRET="${JWT_SECRET:-$(read_env_file_value JWT_SECRET || true)}"
@@ -69,8 +79,10 @@ CONTROL_PLANE_EVENTS_SECRET="${CONTROL_PLANE_EVENTS_SECRET:-$(read_env_file_valu
 API_DOMAIN="${SAAS_API_DOMAIN:-api.ocypheris.com}"
 CERT_ARN="${SAAS_CERTIFICATE_ARN:-}"
 
-ENABLE_WORKER="${SAAS_SERVERLESS_ENABLE_WORKER:-false}"
-WORKER_RESERVED_CONCURRENCY="${SAAS_SERVERLESS_WORKER_RESERVED_CONCURRENCY:-0}"
+ENABLE_WORKER="${SAAS_SERVERLESS_ENABLE_WORKER:-$(read_env_file_value SAAS_SERVERLESS_ENABLE_WORKER || true)}"
+ENABLE_WORKER="${ENABLE_WORKER:-false}"
+WORKER_RESERVED_CONCURRENCY="${SAAS_SERVERLESS_WORKER_RESERVED_CONCURRENCY:-$(read_env_file_value SAAS_SERVERLESS_WORKER_RESERVED_CONCURRENCY || true)}"
+WORKER_RESERVED_CONCURRENCY="${WORKER_RESERVED_CONCURRENCY:-0}"
 INGEST_MAXIMUM_CONCURRENCY="${SAAS_SERVERLESS_INGEST_MAXIMUM_CONCURRENCY:-$(read_env_file_value SAAS_SERVERLESS_INGEST_MAXIMUM_CONCURRENCY || true)}"
 INGEST_MAXIMUM_CONCURRENCY="${INGEST_MAXIMUM_CONCURRENCY:-8}"
 EVENTS_MAXIMUM_CONCURRENCY="${SAAS_SERVERLESS_EVENTS_MAXIMUM_CONCURRENCY:-$(read_env_file_value SAAS_SERVERLESS_EVENTS_MAXIMUM_CONCURRENCY || true)}"
@@ -279,6 +291,7 @@ params=(
   "LogLevel=${LOG_LEVEL}"
   "FrontendUrl=${FRONTEND_URL}"
   "CorsOrigins=${CORS_ORIGINS}"
+  "ApiPublicUrlOverride=${API_PUBLIC_URL_VALUE}"
   "DatabaseUrl=${DATABASE_URL}"
   "JwtSecret=${JWT_SECRET}"
   "ControlPlaneEventsSecret=${CONTROL_PLANE_EVENTS_SECRET}"
@@ -342,12 +355,31 @@ fi
 if [[ -n "$CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES_VALUE" ]]; then
   params+=("ControlPlaneRecentTouchLookbackMinutes=${CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES_VALUE}")
 fi
-
-# Custom domain is optional; only used when both are set.
-if [[ -n "$API_DOMAIN" && -n "$CERT_ARN" ]]; then
-  params+=("ApiDomainName=${API_DOMAIN}")
-  params+=("ApiCertificateArn=${CERT_ARN}")
+if [[ -n "$FIREBASE_PROJECT_ID_VALUE" ]]; then
+  params+=("FirebaseProjectId=${FIREBASE_PROJECT_ID_VALUE}")
 fi
+if [[ -n "$FIREBASE_EMAIL_CONTINUE_URL_BASE_VALUE" ]]; then
+  params+=("FirebaseEmailContinueUrlBase=${FIREBASE_EMAIL_CONTINUE_URL_BASE_VALUE}")
+fi
+if [[ -n "$EMAIL_FROM_VALUE" ]]; then
+  params+=("EmailFrom=${EMAIL_FROM_VALUE}")
+fi
+if [[ -n "$EMAIL_SMTP_HOST_VALUE" ]]; then
+  params+=("EmailSmtpHost=${EMAIL_SMTP_HOST_VALUE}")
+fi
+if [[ -n "$EMAIL_SMTP_PORT_VALUE" ]]; then
+  params+=("EmailSmtpPort=${EMAIL_SMTP_PORT_VALUE}")
+fi
+if [[ -n "$EMAIL_SMTP_STARTTLS_VALUE" ]]; then
+  params+=("EmailSmtpStarttls=${EMAIL_SMTP_STARTTLS_VALUE}")
+fi
+if [[ -n "$EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE" ]]; then
+  params+=("EmailSmtpCredentialsSecretId=${EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE}")
+fi
+
+# Always pass the custom-domain parameters so a prior domain can be cleared.
+params+=("ApiDomainName=${API_DOMAIN}")
+params+=("ApiCertificateArn=${CERT_ARN}")
 
 aws cloudformation deploy \
   --region "$AWS_REGION_EFFECTIVE" \
@@ -356,6 +388,14 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides "${params[@]}" \
   --no-fail-on-empty-changeset
+
+echo ""
+echo "5) Normalizing Lambda runtime/helper state drift..."
+./scripts/normalize_serverless_runtime_state.sh \
+  --region "$AWS_REGION_EFFECTIVE" \
+  --name-prefix "$NAME_PREFIX" \
+  --enable-worker "$ENABLE_WORKER" \
+  --worker-reserved-concurrency "$WORKER_RESERVED_CONCURRENCY"
 
 echo ""
 echo "Deployed: ${RUNTIME_STACK_NAME} (${AWS_REGION_EFFECTIVE})"

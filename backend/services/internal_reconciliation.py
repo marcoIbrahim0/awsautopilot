@@ -10,6 +10,10 @@ from botocore.exceptions import ClientError
 
 from backend.models.aws_account import AwsAccount
 from backend.services.aws import assume_role
+from backend.services.aws_config_probe import (
+    CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
+    describe_non_compliant_config_rule_summary,
+)
 
 
 def extract_error_code(exc: Exception) -> str:
@@ -102,10 +106,12 @@ async def authoritative_permissions_precheck(
                 missing.append("config:DescribeConfigRules")
 
         try:
-            config_client.describe_compliance_by_config_rules(ComplianceTypes=["NON_COMPLIANT"], Limit=1)
+            compliance_probe = describe_non_compliant_config_rule_summary(config_client, limit=1)
+            if compliance_probe.unavailable_reason:
+                missing.append(CONFIG_COMPLIANCE_SUMMARY_PERMISSION)
         except ClientError as exc:
             if is_access_denied_code(extract_error_code(exc)):
-                missing.append("config:DescribeComplianceByConfigRules")
+                missing.append(CONFIG_COMPLIANCE_SUMMARY_PERMISSION)
 
         if config_rule_names:
             try:

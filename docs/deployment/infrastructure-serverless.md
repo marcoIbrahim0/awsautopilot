@@ -10,6 +10,12 @@ Lambda serverless deployment includes:
 - **SQS Triggers** — Lambda triggers for worker queues
 - **ECR** — Container images for Lambda (container image deployment)
 
+The deploy script now normalizes Lambda drift after each runtime deploy:
+- clears stale reserved concurrency from the API Lambda
+- applies the requested worker reserved concurrency
+- re-enables or disables worker event source mappings to match `EnableWorker`
+- clears reserved concurrency from ReadRole/WriteRole helper Lambdas
+
 ## Prerequisites
 
 - ✅ [Prerequisites](prerequisites.md) completed
@@ -34,6 +40,20 @@ export CONTROL_PLANE_EVENTS_SECRET="your-secret"
   --api-image-uri 123456789012.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-app:dev \
   --worker-image-uri 123456789012.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-app:dev
 ```
+
+### Runtime State Drift Recovery
+
+If a stop profile or manual AWS CLI action left the API/worker/helper Lambdas throttled or the worker mappings disabled, run:
+
+```bash
+./scripts/normalize_serverless_runtime_state.sh \
+  --region eu-north-1 \
+  --name-prefix security-autopilot-dev \
+  --enable-worker true \
+  --worker-reserved-concurrency 10
+```
+
+This is required because out-of-band `put-function-concurrency 0` and event-source-mapping state changes are not always reconciled by a later CloudFormation deploy when the template properties themselves are unchanged.
 
 ### Manual Deployment
 

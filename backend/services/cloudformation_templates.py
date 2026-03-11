@@ -1,8 +1,10 @@
 """
-CloudFormation template version detection from S3.
+CloudFormation template version detection and pre-signed URL generation from S3.
 
 Automatically detects the latest version of CloudFormation templates from S3
-by listing objects and comparing semantic versions.
+by listing objects and comparing semantic versions. Generates pre-signed URLs
+so CloudFormation can fetch templates from a private bucket (CloudFormation
+only accepts S3-domain URLs — CloudFront domains are rejected).
 """
 from __future__ import annotations
 
@@ -23,6 +25,9 @@ logger = logging.getLogger(__name__)
 # Cache for latest version (version_string, timestamp)
 _version_cache: dict[str, tuple[str | None, float]] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes
+
+# Pre-signed URL expiry: 7 days (CloudFormation fetches within seconds of the user clicking)
+PRESIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 
 
 def parse_semantic_version(version_str: str) -> tuple[int, int, int] | None:
@@ -213,4 +218,86 @@ def get_latest_template_version(
     except Exception as e:
         logger.exception(f"Unexpected error detecting template version: {e}")
         _version_cache[base_url] = (None, time.time() - (CACHE_TTL_SECONDS - 60))
+        return None
+
+
+def generate_presigned_template_url(
+    base_url: str,
+    expires_in: int = PRESIGNED_URL_EXPIRY_SECONDS,
+) -> str | None:
+    """
+    Resolve the latest template version from S3 and return a pre-signed URL.
+
+    CloudFormation's TemplateURL only accepts S3-domain URLs — CloudFront and
+    other custom domains are rejected with "TemplateURL must be a supported URL".
+    A pre-signed URL uses the S3 hostname (bucket.s3.region.amazonaws.com) and
+    embeds short-lived credentials in query params, so CloudFormation accepts it
+    while the bucket remains fully private.
+
+    Args:
+        base_url: Configured HTTPS S3 URL (CloudFront or S3) for the template.
+                  The S3 bucket and key are extracted from the configured URL.
+        expires_in: Seconds until the pre-signed URL expires (default: 7 days).
+
+    Returns:
+        A pre-signed S3 URL valid for `expires_in` seconds, or None on failure.
+    """
+    # Resolve the configured URL to bucket + region + key.
+    # The configured URL may still be a CloudFront URL (for the config.py default);
+    # we always fall back to the original S3 bucket URL for signing.
+    # First, try to resolve from the configured base_url directly (S3 URL).
+    parsed = extract_bucket_and_key_from_url(base_url)
+
+    if not parsed:
+        # Could be a CloudFront URL — can't extract bucket from it. Cannot sign.
+        logger.warning(
+            "generate_presigned_template_url: cannot extract S3 bucket from URL %s. "
+            "Set CLOUDFORMATION_*_TEMPLATE_URL to an S3 URL (not CloudFront) for pre-signed URL support.",
+            base_url,
+        )
+        return None
+
+    bucket, region, key_prefix = parsed
+
+    # Resolve the latest version key
+    latest_url = get_latest_template_version(base_url)
+    if not latest_url:
+        # Fall back to the base_url key itself
+        latest_url = base_url
+
+    # Re-parse the resolved latest URL to get the exact versioned key
+    latest_parsed = extract_bucket_and_key_from_url(latest_url)
+    if latest_parsed:
+        _, _, resolved_prefix = latest_parsed
+        # The resolved URL ends with /vX.Y.Z.yaml; rebuild the key
+        path = urlparse(latest_url).path.lstrip("/")
+    else:
+        path = urlparse(base_url).path.lstrip("/")
+
+    try:
+        s3_client: S3Client = boto3.client("s3", region_name=region)
+        presigned = s3_client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={"Bucket": bucket, "Key": path},
+            ExpiresIn=expires_in,
+        )
+        logger.debug(
+            "Generated pre-signed template URL for s3://%s/%s (expires in %ds)",
+            bucket,
+            path,
+            expires_in,
+        )
+        return presigned
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        logger.error(
+            "Failed to generate pre-signed URL for s3://%s/%s: %s - %s",
+            bucket,
+            path,
+            error_code,
+            e,
+        )
+        return None
+    except Exception as e:
+        logger.exception("Unexpected error generating pre-signed URL: %s", e)
         return None

@@ -48,6 +48,20 @@ def _mock_account(
     return acc
 
 
+class _ConfigClientMissingComplianceSummaryOperation:
+    def describe_configuration_recorders(self, **kwargs):
+        return {"ConfigurationRecorders": []}
+
+    def describe_delivery_channels(self, **kwargs):
+        return {"DeliveryChannels": []}
+
+    def describe_config_rules(self, **kwargs):
+        return {"ConfigRules": [{"ConfigRuleName": "sg-open-admin-ports"}]}
+
+    def get_compliance_details_by_config_rule(self, **kwargs):
+        return {"EvaluationResults": []}
+
+
 # ---------------------------------------------------------------------------
 # 400 — Invalid tenant_id
 # ---------------------------------------------------------------------------
@@ -229,8 +243,70 @@ def test_validate_200_security_hub_failure(client: TestClient) -> None:
     assert "config:DescribeConfigurationRecorders" in required
     assert "config:DescribeDeliveryChannels" in required
     assert "config:DescribeConfigRules" in required
-    assert "config:DescribeComplianceByConfigRules" in required
+    assert "config:DescribeComplianceByConfigRule" in required
     assert "config:GetComplianceDetailsByConfigRule" in required
+
+
+def test_validate_200_config_probe_unavailable_fail_closed(client: TestClient) -> None:
+    """Unsupported Config SDK probe returns structured warnings instead of a 500."""
+    tenant = MagicMock()
+    tenant.external_id = "ext-123"
+    acc = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        result = MagicMock()
+        result.scalar_one_or_none.side_effect = [tenant, acc]
+        session = MagicMock()
+        session.execute = AsyncMock(return_value=result)
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        yield session
+
+    mock_boto_session = MagicMock()
+    mock_sts = MagicMock()
+    mock_sts.get_caller_identity.return_value = {"Account": "123456789012"}
+    mock_sh = MagicMock()
+    mock_sh.get_findings.return_value = {"Findings": []}
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_security_groups.return_value = {"SecurityGroups": []}
+    mock_s3 = MagicMock()
+    mock_s3.list_buckets.return_value = {"Buckets": []}
+
+    def client_factory(service_name, **kwargs):
+        if service_name == "sts":
+            return mock_sts
+        if service_name == "securityhub":
+            return mock_sh
+        if service_name == "ec2":
+            return mock_ec2
+        if service_name == "s3":
+            return mock_s3
+        if service_name == "config":
+            return _ConfigClientMissingComplianceSummaryOperation()
+        return MagicMock()
+
+    mock_boto_session.client.side_effect = client_factory
+
+    with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
+        app.dependency_overrides[get_db] = mock_get_db
+        try:
+            r = client.post(_validate_url(), params=_params())
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "validated"
+    assert data["permissions_ok"] is False
+    assert data["missing_permissions"] == []
+    assert any("describe_compliance_by_config_rule" in warning for warning in data["warnings"])
+    assert data["authoritative_mode_allowed"] is False
+    assert any(
+        "config:DescribeComplianceByConfigRule" in reason
+        for reason in data["authoritative_mode_block_reasons"]
+    )
+    assert "config:DescribeComplianceByConfigRule" in set(data["required_permissions"])
+    assert acc.status == AwsAccountStatus.validated
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +359,6 @@ def test_validate_200_success(client: TestClient) -> None:
     assert "config:DescribeConfigurationRecorders" in required
     assert "config:DescribeDeliveryChannels" in required
     assert "config:DescribeConfigRules" in required
-    assert "config:DescribeComplianceByConfigRules" in required
+    assert "config:DescribeComplianceByConfigRule" in required
     assert "config:GetComplianceDetailsByConfigRule" in required
     assert acc.status == AwsAccountStatus.validated

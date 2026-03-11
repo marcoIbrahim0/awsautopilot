@@ -254,6 +254,7 @@ Resources:
             Effect: Allow
             Action:
               - sqs:SendMessage
+              - sqs:GetQueueAttributes
             Resource:
               - !GetAtt IngestQueue.Arn
               - !GetAtt EventsFastLaneQueue.Arn

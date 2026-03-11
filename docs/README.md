@@ -17,13 +17,16 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Ownership-based risk queues](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/ownership-risk-queues.md)
 - [Shared Security + Engineering execution guidance](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/shared-execution-guidance.md)
 - [Handoff-free closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/handoff-free-closure.md)
+- [Firebase email verification signup flow](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/firebase-email-verification-signup.md)
 - [Secret migration connectors](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/secret-migration-connectors.md)
 - [Queue contract quarantine runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/queue-contract-quarantine-runbook.md)
+- [Final to-do list](/Users/marcomaher/AWS%20Security%20Autopilot/docs/final-to-do/final-to-do)
 
 ### Operators / SaaS owners
 - [Deployment guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/deployment/README.md)
 - [Production deployment profile](/Users/marcomaher/AWS%20Security%20Autopilot/docs/Production/deployment.md)
 - [Runbooks index](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/README.md)
+- [Serverless lifecycle cost-control runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/serverless-lifecycle-cost-control.md)
 - [Live E2E testing docs](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md)
 - [Post-test logical-solutions backlog](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md)
 - [Root-key safe remediation technical spec (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
@@ -52,6 +55,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - `/docs/prod-readiness/` — production-readiness artifacts and scripts
 - `/docs/audit-remediation/` — audit remediation plans, checklists, evidence references
 - `/docs/features/` — active entrypoint (historical snapshot files archived)
+- `/docs/final-to-do/` — remaining product/UX follow-ups that still need implementation
 - `/docs/archive/` — archived historical docs moved from active navigation
 
 ### Archived snapshots

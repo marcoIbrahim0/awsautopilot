@@ -28,7 +28,10 @@ from sqlalchemy.orm import selectinload
 from backend.config import settings
 from backend.database import get_db
 from backend.models.user import User
-from backend.services.cloudformation_templates import get_latest_template_version
+from backend.services.cloudformation_templates import (
+    generate_presigned_template_url,
+    get_latest_template_version,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +112,7 @@ class AuthResponse(BaseModel):
     control_plane_token_created_at: str | None = None
     control_plane_token_revoked_at: str | None = None
     control_plane_token_active: bool = False
+    control_plane_forwarder_launch_stack_url: str | None = None
     control_plane_forwarder_template_url: str | None = None
     control_plane_ingest_url: str | None = None
     control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
@@ -133,6 +137,7 @@ class MeResponse(BaseModel):
     control_plane_token_created_at: str | None = None
     control_plane_token_revoked_at: str | None = None
     control_plane_token_active: bool = False
+    control_plane_forwarder_launch_stack_url: str | None = None
     control_plane_forwarder_template_url: str | None = None
     control_plane_ingest_url: str | None = None
     control_plane_forwarder_default_stack_name: str = DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME
@@ -575,6 +580,22 @@ def build_write_role_launch_stack_url(
     )
 
 
+def build_control_plane_forwarder_launch_stack_url(
+    template_url: str,
+    region: str,
+    ingest_url: str,
+    stack_name: str | None = None,
+) -> str:
+    base = f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}"
+    name = _sanitize_stack_name(stack_name or "", DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME)
+    params = {
+        "templateURL": template_url.strip(),
+        "stackName": name,
+        "param_SaaSIngestUrl": ingest_url.strip(),
+    }
+    return f"{base}#/stacks/create/template?{urlencode(params)}"
+
+
 def get_saas_and_launch_url(
     external_id: str,
 ) -> tuple[
@@ -586,6 +607,7 @@ def get_saas_and_launch_url(
     str | None,
     str,
     str,
+    str | None,
     str | None,
     str | None,
     str,
@@ -601,6 +623,7 @@ def get_saas_and_launch_url(
       region,
       read_role_default_stack_name,
       write_role_default_stack_name,
+      control_plane_forwarder_launch_stack_url,
       control_plane_forwarder_template_url,
       control_plane_ingest_url,
       control_plane_forwarder_default_stack_name,
@@ -638,6 +661,7 @@ def get_saas_and_launch_url(
 
     read_launch_url: str | None = None
     write_launch_url: str | None = None
+    control_plane_launch_url: str | None = None
 
     if saas_account_id and external_id and read_template_url:
         latest_template_url = get_latest_template_version(read_template_url)
@@ -649,8 +673,16 @@ def get_saas_and_launch_url(
                 f"Failed to detect latest read-role template version, using configured URL: {read_template_url}"
             )
 
+        # Generate a pre-signed URL for the CloudFormation Launch Stack link.
+        # CloudFormation only accepts S3-domain URLs; CloudFront is rejected.
+        # A pre-signed URL uses the S3 hostname with embedded credentials valid for 7 days.
+        presigned_read_url = generate_presigned_template_url(read_template_url)
+        launch_template_url = presigned_read_url or read_template_url
+        if not presigned_read_url:
+            logger.warning("Could not generate pre-signed URL for read-role template; falling back to raw S3 URL")
+
         read_launch_url = build_read_role_launch_stack_url(
-            template_url=read_template_url,
+            template_url=launch_template_url,
             region=region,
             external_id=external_id,
             saas_account_id=saas_account_id,
@@ -667,8 +699,14 @@ def get_saas_and_launch_url(
                 f"Failed to detect latest write-role template version, using configured URL: {write_template_url}"
             )
 
+        # Generate a pre-signed URL for the CloudFormation Launch Stack link.
+        presigned_write_url = generate_presigned_template_url(write_template_url)
+        launch_write_template_url = presigned_write_url or write_template_url
+        if not presigned_write_url:
+            logger.warning("Could not generate pre-signed URL for write-role template; falling back to raw S3 URL")
+
         write_launch_url = build_write_role_launch_stack_url(
-            template_url=write_template_url,
+            template_url=launch_write_template_url,
             region=region,
             external_id=external_id,
             saas_account_id=saas_account_id,
@@ -679,6 +717,19 @@ def get_saas_and_launch_url(
         read_template_url = None
     if not write_template_url:
         write_template_url = None
+    if control_plane_template_url and control_plane_ingest_url:
+        presigned_control_plane_url = generate_presigned_template_url(control_plane_template_url)
+        launch_control_plane_template_url = presigned_control_plane_url or control_plane_template_url
+        if not presigned_control_plane_url:
+            logger.warning(
+                "Could not generate pre-signed URL for control-plane forwarder template; falling back to raw S3 URL"
+            )
+        control_plane_launch_url = build_control_plane_forwarder_launch_stack_url(
+            template_url=launch_control_plane_template_url,
+            region=region,
+            ingest_url=control_plane_ingest_url,
+            stack_name=DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME,
+        )
 
     return (
         saas_account_id,
@@ -689,6 +740,7 @@ def get_saas_and_launch_url(
         region if (read_launch_url or write_launch_url) else None,
         DEFAULT_READ_ROLE_STACK_NAME,
         DEFAULT_WRITE_ROLE_STACK_NAME,
+        control_plane_launch_url,
         control_plane_template_url,
         control_plane_ingest_url,
         DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME,

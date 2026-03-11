@@ -13,6 +13,7 @@ from backend.database import get_db
 from backend.main import app
 from backend.models.audit_log import AuditLog
 from backend.models.tenant import Tenant
+from backend.routers import auth as auth_router
 from backend.routers.auth import get_current_user
 
 
@@ -79,7 +80,10 @@ def test_signup_hashes_control_plane_token_and_reveals_once(client: TestClient) 
         yield session
 
     app.dependency_overrides[get_db] = override_get_db
-    with patch("backend.routers.auth.get_saas_and_launch_url", return_value=_launch_tuple()):
+    with (
+        patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", ""),
+        patch("backend.routers.auth.get_saas_and_launch_url", return_value=_launch_tuple()),
+    ):
         response = client.post(
             "/api/auth/signup",
             json={
@@ -131,7 +135,10 @@ def test_login_never_returns_existing_control_plane_token(client: TestClient) ->
         yield session
 
     app.dependency_overrides[get_db] = override_get_db
-    with patch("backend.routers.auth.get_saas_and_launch_url", return_value=_launch_tuple()):
+    with (
+        patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", ""),
+        patch("backend.routers.auth.get_saas_and_launch_url", return_value=_launch_tuple()),
+    ):
         response = client.post(
             "/api/auth/login",
             json={"email": "admin@acme.com", "password": "supersafepassword"},

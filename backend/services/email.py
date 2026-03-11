@@ -1,8 +1,8 @@
 """
 Email service for sending transactional emails.
 
-Supports SMTP in local/dev and SES in production.
-For MVP, uses a simple SMTP approach; production should use AWS SES (future).
+SMTP is the current delivery path in every environment.
+Local development keeps the historical log-only fallback when SMTP is absent.
 Step 11.3: send_weekly_digest reuses this service and digest_content (11.2).
 """
 from __future__ import annotations
@@ -29,8 +29,8 @@ class EmailService:
     """
     Email service for sending transactional emails.
     
-    In local/dev mode, logs emails instead of sending (unless SMTP is configured).
-    In production, should use AWS SES (future enhancement).
+    In local mode, logs emails instead of sending when SMTP is absent.
+    In non-local environments, delivery requires explicit SMTP configuration.
     """
     
     def __init__(
@@ -62,11 +62,24 @@ class EmailService:
         logging email intent and returning success for developer workflows.
         """
         return settings.is_local and not self.smtp_host
+
+    def _uses_placeholder_from_address(self) -> bool:
+        from_address = (self.from_address or "").strip().lower()
+        return from_address in {"", "noreply@example.com"}
+
+    def can_deliver_transactional_email(self) -> bool:
+        if self._log_only_local():
+            return True
+        return bool(self.smtp_host) and not self._uses_placeholder_from_address()
     
     def _send_smtp(self, to: str, subject: str, html_body: str, text_body: str) -> bool:
         """Send email via SMTP."""
-        if not self.smtp_host:
-            logger.error("SMTP not configured. Cannot deliver email to %s: %s", to, subject)
+        if not self.can_deliver_transactional_email():
+            logger.error(
+                "SMTP delivery is not configured. Cannot deliver email to %s: %s",
+                to,
+                subject,
+            )
             return False
         
         try:
@@ -218,6 +231,56 @@ This reset link expires in 1 hour.
         if self._log_only_local():
             logger.info("[LOCAL MODE] Password reset email for %s", to_email)
             logger.info("  Reset URL: %s", reset_url)
+            return True
+
+        return self._send_smtp(to_email, subject, html_body, text_body)
+
+    def send_verification_link_email(
+        self,
+        *,
+        to_email: str,
+        verification_link: str,
+    ) -> bool:
+        """
+        Send an email-verification CTA link.
+        """
+        subject = "Verify your email - AWS Security Autopilot"
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
+                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
+                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
+                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Verify your email</h1>
+                <p>Click the button below to activate your AWS Security Autopilot account.</p>
+                <a href="{verification_link}" class="button">Verify Email</a>
+                <p>If the button does not work, copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; font-size: 12px;">{verification_link}</p>
+                <div class="footer">
+                    <p>If you did not create this account, you can safely ignore this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        text_body = (
+            "Verify your AWS Security Autopilot email address.\n\n"
+            f"Open this link to activate your account:\n{verification_link}\n\n"
+            "If you did not create this account, you can safely ignore this email."
+        )
+
+        if self._log_only_local():
+            logger.info("[LOCAL MODE] Verification email for %s", to_email)
+            logger.info("  Verify URL: %s", verification_link)
             return True
 
         return self._send_smtp(to_email, subject, html_body, text_body)

@@ -39,7 +39,11 @@ from backend.services.aws_account_orchestration import (
     validate_registration_role_accounts,
 )
 from backend.services.aws import assume_role
-from backend.services.cloudformation_templates import get_latest_template_version
+from backend.services.aws_config_probe import CONFIG_COMPLIANCE_SUMMARY_PERMISSION
+from backend.services.cloudformation_templates import (
+    generate_presigned_template_url,
+    get_latest_template_version,
+)
 from backend.services.control_plane_intake import is_supported_control_plane_event
 from backend.utils.sqs import (
     build_ingest_control_plane_events_job_payload,
@@ -62,6 +66,48 @@ def _validate_role_arn_format(v: str, field_name: str = "role_arn") -> str:
     if not re.match(arn_pattern, v):
         raise ValueError(f"{field_name} must be a valid IAM role ARN (arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME)")
     return v
+
+
+def _validate_regions_list(v: list[str]) -> list[str]:
+    """Validate regions list: 1-5 items, valid region names."""
+    if not v:
+        raise ValueError("regions list cannot be empty. Provide at least one AWS region (e.g., ['us-east-1'])")
+    if len(v) > 5:
+        raise ValueError("At most 5 regions allowed. Provide 1 to 5 AWS regions.")
+    region_pattern = r"^[a-z]{2}-[a-z]+-\d+$"
+    for region in v:
+        if not re.match(region_pattern, region):
+            raise ValueError(f"Invalid region format: {region}. Expected format: us-east-1, eu-west-1, etc.")
+    return v
+
+
+def _assume_role_failure_detail(error_message: str) -> str:
+    return (
+        f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials "
+        "from the SaaS account (SAAS_AWS_ACCOUNT_ID in backend/.env for local runs, or as process "
+        "environment in deployed runtime), (2) that principal has sts:AssumeRole permission on the "
+        "role, (3) the role trust policy allows your SaaS account and the ExternalId matches."
+    )
+
+
+def _set_account_status(acc: AwsAccount, new_status: Literal["disabled", "validated"]) -> None:
+    if new_status == "disabled":
+        acc.status = AwsAccountStatus.disabled
+        return
+    if new_status == "validated":
+        acc.status = AwsAccountStatus.validated
+        return
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="status must be 'disabled' or 'validated'")
+
+
+def _update_requires_revalidation(updates: dict[str, object]) -> bool:
+    return any(field in updates for field in ("role_read_arn", "regions")) or (
+        "role_write_arn" in updates and updates["role_write_arn"] is not None
+    )
+
+
+def _update_validates_write_role(updates: dict[str, object]) -> bool:
+    return "role_write_arn" in updates and updates["role_write_arn"] is not None
 
 
 class AccountRegistrationRequest(BaseModel):
@@ -104,17 +150,7 @@ class AccountRegistrationRequest(BaseModel):
     @field_validator("regions")
     @classmethod
     def validate_regions(cls, v: list[str]) -> list[str]:
-        """Validate regions list: 1–5 items, valid region names."""
-        if not v:
-            raise ValueError("regions list cannot be empty. Provide at least one AWS region (e.g., ['us-east-1'])")
-        if len(v) > 5:
-            raise ValueError("At most 5 regions allowed. Provide 1 to 5 AWS regions.")
-        # Basic validation - AWS region format: us-east-1, eu-west-1, etc.
-        region_pattern = r"^[a-z]{2}-[a-z]+-\d+$"
-        for region in v:
-            if not re.match(region_pattern, region):
-                raise ValueError(f"Invalid region format: {region}. Expected format: us-east-1, eu-west-1, etc.")
-        return v
+        return _validate_regions_list(v)
 
     @field_validator("tenant_id")
     @classmethod
@@ -167,16 +203,31 @@ class ErrorResponse(BaseModel):
 
 
 class AccountUpdateRequest(BaseModel):
-    """Request model for PATCH /aws/accounts/{account_id}. Updates WriteRole and/or status (stop/resume)."""
+    """Request model for PATCH /aws/accounts/{account_id}."""
 
+    role_read_arn: str | None = Field(
+        default=None,
+        description="ReadRole ARN to revalidate or replace.",
+    )
     role_write_arn: str | None = Field(
         default=None,
         description="WriteRole ARN to enable direct fixes, or null to remove.",
+    )
+    regions: list[str] | None = Field(
+        default=None,
+        description="List of AWS regions to monitor.",
     )
     status: Literal["disabled", "validated"] | None = Field(
         default=None,
         description="Set to 'disabled' to stop monitoring, or 'validated' to resume.",
     )
+
+    @field_validator("role_read_arn")
+    @classmethod
+    def validate_role_read_arn_format(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _validate_role_arn_format(v, "role_read_arn")
 
     @field_validator("role_write_arn")
     @classmethod
@@ -184,6 +235,13 @@ class AccountUpdateRequest(BaseModel):
         if v is None:
             return v
         return _validate_role_arn_format(v, "role_write_arn")
+
+    @field_validator("regions")
+    @classmethod
+    def validate_regions(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        return _validate_regions_list(v)
 
 
 class ValidationResponse(BaseModel):
@@ -196,7 +254,7 @@ class ValidationResponse(BaseModel):
         ...,
         description=(
             "True if ReadRole passed baseline permission probes for Phase 1/2 (and Security Hub). "
-            "If false, see missing_permissions/warnings."
+            "If false, see missing_permissions/warnings/authoritative_mode_block_reasons."
         ),
     )
     missing_permissions: list[str] = Field(
@@ -314,10 +372,6 @@ class ReadRoleUpdateRequest(BaseModel):
         default="SecurityAutopilotReadRole",
         description="Existing CloudFormation stack name for the ReadRole deployment.",
     )
-    include_write_role: bool = Field(
-        default=False,
-        description="Whether IncludeWriteRole parameter should be true during update.",
-    )
 
 
 class ReadRoleUpdateResponse(BaseModel):
@@ -354,7 +408,7 @@ _AUTHORITATIVE_MODE_REQUIRED_PERMISSIONS: tuple[str, ...] = (
     "config:DescribeConfigurationRecorders",
     "config:DescribeDeliveryChannels",
     "config:DescribeConfigRules",
-    "config:DescribeComplianceByConfigRules",
+    CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
     "config:GetComplianceDetailsByConfigRule",
     "s3:ListAllMyBuckets",
     "s3:GetBucketPublicAccessBlock",
@@ -859,7 +913,7 @@ async def list_accounts(
     "/{account_id}",
     response_model=AccountListItem,
     status_code=status.HTTP_200_OK,
-    summary="Update AWS account (WriteRole)",
+    summary="Update AWS account",
 )
 async def update_account(
     account_id: Annotated[
@@ -875,14 +929,16 @@ async def update_account(
     ] = None,
 ) -> AccountListItem:
     """
-    Update an AWS account. Supports updating the WriteRole ARN and/or status (stop/resume).
+    Update an AWS account.
 
-    - **role_write_arn**: Required for direct fixes. Set to null for administrative correction only.
+    - **role_read_arn**: Revalidate or replace the stored ReadRole ARN.
+    - **regions**: Replace the monitored AWS region list.
+    - **role_write_arn**: Update or clear the stored WriteRole ARN.
     - **status**: Set to `disabled` to stop monitoring (no ingestion/remediation); set to `validated`
       to resume. Ingestion endpoints require status=validated.
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
-    await get_tenant(tenant_uuid, db)
+    tenant = await get_tenant(tenant_uuid, db)
     acc = await get_account_for_tenant(tenant_uuid, account_id, db)
     if not acc:
         raise HTTPException(
@@ -891,29 +947,82 @@ async def update_account(
         )
 
     updates = request.model_dump(exclude_unset=True)
-    if "role_write_arn" in updates:
-        if updates["role_write_arn"] is not None:
-            arn = updates["role_write_arn"]
-            arn_parts = arn.split(":")
-            if len(arn_parts) < 5 or arn_parts[4] != account_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"role_write_arn account ID must match account_id {account_id}",
+    if not updates:
+        return AccountListItem(
+            id=str(acc.id),
+            account_id=acc.account_id,
+            role_read_arn=acc.role_read_arn,
+            role_write_arn=acc.role_write_arn,
+            regions=acc.regions or [],
+            status=acc.status.value if hasattr(acc.status, "value") else str(acc.status),
+            last_validated_at=acc.last_validated_at,
+            last_synced_at=None,
+            created_at=acc.created_at,
+            updated_at=acc.updated_at,
+        )
+
+    if "role_read_arn" in updates and updates["role_read_arn"] is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="role_read_arn cannot be null")
+    if "regions" in updates and updates["regions"] is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="regions cannot be null")
+
+    next_role_read_arn = updates["role_read_arn"] if "role_read_arn" in updates else acc.role_read_arn
+    next_role_write_arn = updates["role_write_arn"] if "role_write_arn" in updates else acc.role_write_arn
+    next_regions = list(updates["regions"] if "regions" in updates else (acc.regions or []))
+
+    try:
+        validate_registration_role_accounts(
+            account_id=account_id,
+            role_read_arn=next_role_read_arn,
+            role_write_arn=next_role_write_arn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if _update_requires_revalidation(updates):
+        try:
+            assume_and_verify_role_account(
+                role_arn=next_role_read_arn,
+                external_id=tenant.external_id,
+                account_id=account_id,
+                role_label="ReadRole",
+                assume_role_fn=assume_role,
+            )
+            if _update_validates_write_role(updates):
+                assume_and_verify_role_account(
+                    role_arn=str(next_role_write_arn),
+                    external_id=tenant.external_id,
+                    account_id=account_id,
+                    role_label="WriteRole",
+                    assume_role_fn=assume_role,
                 )
-            acc.role_write_arn = arn
-        else:
-            acc.role_write_arn = None
-    if "status" in updates:
-        new_status = updates["status"]
-        if new_status == "disabled":
-            acc.status = AwsAccountStatus.disabled
-        elif new_status == "validated":
-            acc.status = AwsAccountStatus.validated
-        else:
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        except ClientError as exc:
+            error_message = exc.response.get("Error", {}).get("Message", str(exc))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="status must be 'disabled' or 'validated'",
-            )
+                detail=_assume_role_failure_detail(error_message),
+            ) from exc
+        except Exception as exc:
+            logger.exception("Unexpected error updating account %s: %s", account_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred during account update",
+            ) from exc
+
+        acc.role_read_arn = next_role_read_arn
+        acc.regions = next_regions
+        if "role_write_arn" in updates:
+            acc.role_write_arn = next_role_write_arn
+        acc.last_validated_at = datetime.now(timezone.utc)
+        if acc.status != AwsAccountStatus.disabled:
+            acc.status = AwsAccountStatus.validated
+    elif "role_write_arn" in updates:
+        acc.role_write_arn = next_role_write_arn
+
+    if "status" in updates:
+        _set_account_status(acc, updates["status"])
 
     await db.commit()
     await db.refresh(acc)
@@ -1068,9 +1177,10 @@ async def update_read_role_stack(
         )
 
     latest_template_url = get_latest_template_version(configured_template_url) or configured_template_url
+    # CloudFormation update_stack requires an S3-domain TemplateURL; generate a pre-signed URL.
+    presigned_template_url = generate_presigned_template_url(latest_template_url) or latest_template_url
     template_version = _extract_template_version(latest_template_url)
     stack_name = (request.stack_name or "").strip() or "SecurityAutopilotReadRole"
-    include_write_role_value = "true" if request.include_write_role else "false"
 
     try:
         session = assume_role(role_arn=acc.role_read_arn, external_id=tenant.external_id)
@@ -1090,11 +1200,10 @@ async def update_read_role_stack(
     try:
         response = cf.update_stack(
             StackName=stack_name,
-            TemplateURL=latest_template_url,
+            TemplateURL=presigned_template_url,
             Parameters=[
                 {"ParameterKey": "SaaSAccountId", "ParameterValue": saas_account_id},
                 {"ParameterKey": "ExternalId", "ParameterValue": tenant.external_id},
-                {"ParameterKey": "IncludeWriteRole", "ParameterValue": include_write_role_value},
             ],
             Capabilities=["CAPABILITY_NAMED_IAM"],
         )
@@ -1257,12 +1366,12 @@ async def register_account(
     current_user: Annotated[Optional[User], Depends(get_optional_user)],
 ) -> AccountRegistrationResponse:
     """
-    Register a new AWS account or update an existing one.
+    Register a new AWS account.
 
     This endpoint:
     1. Validates the request (account_id format, ARN format, regions)
     2. Gets the tenant from the database
-    3. Creates/updates the aws_accounts record
+    3. Creates the aws_accounts record
     4. Tests the STS assume-role connection
     5. Verifies account_id matches via sts.get_caller_identity()
     6. Updates status to "validated" on success
@@ -1363,26 +1472,6 @@ async def register_account(
         # Set status to error
         account_data["status"] = AwsAccountStatus.error
 
-        # If account doesn't exist yet, we still want to create it with error status
-        # so the user can see what went wrong
-        if existing_account:
-            existing_account.status = AwsAccountStatus.error
-            existing_account.role_read_arn = request.role_read_arn
-            existing_account.role_write_arn = request.role_write_arn
-            existing_account.regions = request.regions
-            await db.commit()
-            await db.refresh(existing_account)
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials "
-                    "from the SaaS account (SAAS_AWS_ACCOUNT_ID in backend/.env for local runs, or as process "
-                    "environment in deployed runtime), (2) that principal has sts:AssumeRole permission on the "
-                    "role, (3) the role trust policy allows your SaaS account and the ExternalId matches."
-                ),
-            )
-
         # Create new account with error status
         new_account = AwsAccount(**account_data)
         db.add(new_account)
@@ -1391,12 +1480,7 @@ async def register_account(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Failed to assume role: {error_message}. Ensure (1) the backend runs with credentials "
-                "from the SaaS account (SAAS_AWS_ACCOUNT_ID in backend/.env for local runs, or as process "
-                "environment in deployed runtime), (2) that principal has sts:AssumeRole permission on the "
-                "role, (3) the role trust policy allows your SaaS account and the ExternalId matches."
-            ),
+            detail=_assume_role_failure_detail(error_message),
         )
 
     except Exception as e:
@@ -1488,11 +1572,10 @@ async def validate_account(
         permissions_ok = probe_result.permissions_ok
         missing_permissions = probe_result.missing_permissions
         warnings = probe_result.warnings
-        authoritative_mode_block_reasons: list[str] = []
-        if missing_permissions:
-            authoritative_mode_block_reasons.append(
-                "Missing required ReadRole permissions for authoritative control-plane mode."
-            )
+        authoritative_mode_block_reasons = list(probe_result.block_reasons)
+        authoritative_mode_block_reasons.extend(
+            f"Missing required ReadRole permission: {permission}" for permission in missing_permissions
+        )
 
         acc.status = AwsAccountStatus.validated
         acc.last_validated_at = now

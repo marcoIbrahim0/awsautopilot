@@ -3,16 +3,19 @@ Auth API endpoints: signup, login, and get current user.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import secrets
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from inspect import isawaitable
 from threading import Lock
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +49,7 @@ from backend.models.enums import UserRole
 from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.email import email_service
+from backend.services import firebase_auth
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +57,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 RESET_PASSWORD_EXPIRY_MINUTES = 60
 FORGOT_PASSWORD_GENERIC_MESSAGE = "If an account exists, a reset link was sent."
 SECURITY_CODE_EXPIRY_MINUTES = 10
+EMAIL_VERIFICATION_SYNC_TTL_HOURS = 24
+VERIFICATION_RESEND_GENERIC_MESSAGE = "If your account exists, a new link was sent."
+VERIFICATION_RESEND_MAX_ATTEMPTS = 3
+VERIFICATION_RESEND_WINDOW_SECONDS = 600
+VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE = "verification_email_delivery_unavailable"
 _LOGIN_FAILURES: dict[str, list[datetime]] = defaultdict(list)
 _LOGIN_FAILURES_LOCK = Lock()
+_VERIFICATION_RESENDS: dict[str, list[datetime]] = defaultdict(list)
+_VERIFICATION_RESENDS_LOCK = Lock()
 
 
 # ============================================
@@ -67,6 +78,11 @@ class SignupRequest(BaseModel):
     email: EmailStr = Field(..., description="User email address")
     name: str = Field(..., min_length=1, max_length=255, description="User's full name")
     password: str = Field(..., min_length=8, max_length=128, description="Password (min 8 chars)")
+
+
+class SignupPendingResponse(BaseModel):
+    message: str
+    email: EmailStr
 
 
 class LoginRequest(BaseModel):
@@ -105,6 +121,23 @@ class SendVerificationResponse(BaseModel):
 class ConfirmVerificationRequest(BaseModel):
     verification_type: Literal["email", "phone"] = Field(..., description="Verification channel type")
     code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$", description="6-digit verification code")
+
+
+class FirebaseSyncRequest(BaseModel):
+    email: EmailStr
+    sync_token: str = Field(..., min_length=1, description="One-time local sync token")
+
+
+class FirebaseSyncResponse(BaseModel):
+    verified: bool = True
+
+
+class VerificationResendRequest(BaseModel):
+    email: EmailStr
+
+
+class VerificationResendResponse(BaseModel):
+    message: str
 
 
 class ResetPasswordRequest(BaseModel):
@@ -254,6 +287,31 @@ def _clear_login_failures(rate_limit_key: str) -> None:
         _LOGIN_FAILURES.pop(rate_limit_key, None)
 
 
+def _verification_resend_key(email: str) -> str:
+    return (email or "").strip().lower()
+
+
+def _verification_resend_retry_after_seconds(rate_limit_key: str) -> int | None:
+    now = datetime.now(timezone.utc)
+    with _VERIFICATION_RESENDS_LOCK:
+        attempts = _VERIFICATION_RESENDS.get(rate_limit_key, [])
+        _trim_login_failures(attempts, now, VERIFICATION_RESEND_WINDOW_SECONDS)
+        if len(attempts) < VERIFICATION_RESEND_MAX_ATTEMPTS:
+            if not attempts and rate_limit_key in _VERIFICATION_RESENDS:
+                _VERIFICATION_RESENDS.pop(rate_limit_key, None)
+            return None
+        retry_at = attempts[0] + timedelta(seconds=VERIFICATION_RESEND_WINDOW_SECONDS)
+    return max(1, int((retry_at - now).total_seconds()))
+
+
+def _record_verification_resend(rate_limit_key: str) -> None:
+    now = datetime.now(timezone.utc)
+    with _VERIFICATION_RESENDS_LOCK:
+        attempts = _VERIFICATION_RESENDS.setdefault(rate_limit_key, [])
+        _trim_login_failures(attempts, now, VERIFICATION_RESEND_WINDOW_SECONDS)
+        attempts.append(now)
+
+
 def _hash_security_token(token: str) -> str:
     normalized = (token or "").strip()
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
@@ -261,6 +319,10 @@ def _hash_security_token(token: str) -> str:
 
 def _generate_security_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _generate_email_sync_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
 def _generate_mfa_ticket() -> str:
@@ -293,6 +355,75 @@ def _clear_mfa_challenge(user: User) -> None:
     user.mfa_challenge_expires_at = None
 
 
+def _clear_email_verification_sync(user: User) -> None:
+    user.email_verification_sync_token_hash = None
+    user.email_verification_sync_expires_at = None
+
+
+def _assign_email_verification_sync(user: User) -> str:
+    token = _generate_email_sync_token()
+    user.email_verification_sync_token_hash = _hash_security_token(token)
+    user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(
+        hours=EMAIL_VERIFICATION_SYNC_TTL_HOURS
+    )
+    return token
+
+
+def _email_verification_continue_url(sync_token: str) -> str:
+    base = (settings.FIREBASE_EMAIL_CONTINUE_URL_BASE or "").strip().rstrip("/")
+    if not base:
+        return ""
+    return f"{base}/verify-email/callback?vt={sync_token}"
+
+
+async def _build_firebase_verification_link(user: User) -> str:
+    sync_token = _assign_email_verification_sync(user)
+    user.firebase_uid = await asyncio.to_thread(firebase_auth.ensure_firebase_user, user.email)
+    return await asyncio.to_thread(
+        firebase_auth.generate_verification_link,
+        user.email,
+        _email_verification_continue_url(sync_token),
+    )
+
+
+def _pending_signup_message(email_sent: bool) -> str:
+    if email_sent:
+        return "We sent a verification link to your email. Click it to activate your account."
+    return "Your account was created. If your verification email did not arrive, request a new link."
+
+
+def _generic_resend_response() -> VerificationResendResponse:
+    return VerificationResendResponse(message=VERIFICATION_RESEND_GENERIC_MESSAGE)
+
+
+def _ensure_verification_email_delivery_available() -> None:
+    if email_service.can_deliver_transactional_email():
+        return
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE,
+    )
+
+
+def _require_verification_email_delivery(*, delivered: bool, email: str, action: str) -> None:
+    if delivered:
+        return
+    logger.warning("%s verification email delivery failed for %s", action, email)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE,
+    )
+
+
+async def _rollback_db(db: AsyncSession) -> None:
+    rollback = getattr(db, "rollback", None)
+    if rollback is None:
+        return
+    result = rollback()
+    if isawaitable(result):
+        await result
+
+
 def _mfa_settings_response(user: User) -> MfaSettingsResponse:
     method = (getattr(user, "mfa_method", None) or None)
     typed_method: Literal["email", "phone"] | None = method if method in {"email", "phone"} else None
@@ -309,12 +440,16 @@ def _mfa_settings_response(user: User) -> MfaSettingsResponse:
 # Endpoints
 # ============================================
 
-@router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/signup",
+    response_model=AuthResponse | SignupPendingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def signup(
     request: SignupRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
-) -> AuthResponse:
+) -> AuthResponse | SignupPendingResponse:
     """
     Create a new tenant and admin user.
     
@@ -329,6 +464,8 @@ async def signup(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already registered",
             )
+        if settings.firebase_enabled:
+            _ensure_verification_email_delivery_available()
         
         # Create tenant with unique external_id + hashed control-plane intake token
         external_id = f"ext-{uuid.uuid4().hex[:16]}"
@@ -354,49 +491,97 @@ async def signup(
             role=UserRole.admin,
         )
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        await db.refresh(tenant)
-        
-        # Create JWT
-        access_token = _issue_access_token(user)
-        set_auth_cookies(response, access_token)
-        
-        logger.info(f"New signup: tenant={tenant.id}, user={user.id}, email={user.email}")
-        
-        (
-            saas_id,
-            read_launch_url,
-            read_template_url,
-            write_launch_url,
-            write_template_url,
-            region,
-            read_default_stack,
-            write_default_stack,
-            control_plane_template_url,
-            control_plane_ingest_url,
-            control_plane_default_stack,
-        ) = get_saas_and_launch_url(tenant.external_id)
-        return AuthResponse(
-            access_token=access_token,
-            user=user_to_response(user),
-            tenant=tenant_to_response(tenant),
-            saas_account_id=saas_id,
-            read_role_launch_stack_url=read_launch_url,
-            read_role_template_url=read_template_url,
-            read_role_region=region,
-            read_role_default_stack_name=read_default_stack,
-            write_role_launch_stack_url=write_launch_url,
-            write_role_template_url=write_template_url,
-            write_role_default_stack_name=write_default_stack,
-            control_plane_forwarder_template_url=control_plane_template_url,
-            control_plane_ingest_url=control_plane_ingest_url,
-            control_plane_forwarder_default_stack_name=control_plane_default_stack,
-            **control_plane_token_response_fields(tenant, token_reveal=control_plane_token),
+
+        if not settings.firebase_enabled:
+            await db.commit()
+            await db.refresh(user)
+            await db.refresh(tenant)
+
+            access_token = _issue_access_token(user)
+            set_auth_cookies(response, access_token)
+            logger.info("New signup: tenant=%s, user=%s, email=%s", tenant.id, user.id, user.email)
+
+            (
+                saas_id,
+                read_launch_url,
+                read_template_url,
+                write_launch_url,
+                write_template_url,
+                region,
+                read_default_stack,
+                write_default_stack,
+                control_plane_launch_url,
+                control_plane_template_url,
+                control_plane_ingest_url,
+                control_plane_default_stack,
+            ) = get_saas_and_launch_url(tenant.external_id)
+            return AuthResponse(
+                access_token=access_token,
+                user=user_to_response(user),
+                tenant=tenant_to_response(tenant),
+                saas_account_id=saas_id,
+                read_role_launch_stack_url=read_launch_url,
+                read_role_template_url=read_template_url,
+                read_role_region=region,
+                read_role_default_stack_name=read_default_stack,
+                write_role_launch_stack_url=write_launch_url,
+                write_role_template_url=write_template_url,
+                write_role_default_stack_name=write_default_stack,
+                control_plane_forwarder_launch_stack_url=control_plane_launch_url,
+                control_plane_forwarder_template_url=control_plane_template_url,
+                control_plane_ingest_url=control_plane_ingest_url,
+                control_plane_forwarder_default_stack_name=control_plane_default_stack,
+                **control_plane_token_response_fields(tenant, token_reveal=control_plane_token),
+            )
+
+        verification_link = await _build_firebase_verification_link(user)
+        firebase_uid = getattr(user, "firebase_uid", None)
+        try:
+            await db.commit()
+        except Exception:
+            await _rollback_db(db)
+            if firebase_uid:
+                await asyncio.to_thread(firebase_auth.delete_firebase_user, firebase_uid)
+            raise
+
+        email_sent = email_service.send_verification_link_email(
+            to_email=user.email,
+            verification_link=verification_link,
         )
+        _require_verification_email_delivery(
+            delivered=email_sent,
+            email=user.email,
+            action="Signup",
+        )
+
+        logger.info(
+            "New signup pending verification: tenant=%s, user=%s, email=%s, firebase_uid=%s",
+            tenant.id,
+            user.id,
+            user.email,
+            user.firebase_uid,
+        )
+        payload = SignupPendingResponse(
+            message=_pending_signup_message(email_sent),
+            email=user.email,
+        )
+        res = JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=payload.model_dump())
+        # Clear any existing session cookies so a previously logged-in user
+        # does not continue accessing the old tenant after signup.
+        clear_auth_cookies(res)
+        return res
+
+    except firebase_auth.FirebaseAuthUnavailableError as exc:
+        await _rollback_db(db)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     except HTTPException:
+        await _rollback_db(db)
         raise
     except Exception as e:
+        await _rollback_db(db)
         correlation_id = uuid.uuid4().hex
         logger.exception("Signup failed [correlation_id=%s]: %s", correlation_id, e)
         raise HTTPException(
@@ -451,6 +636,30 @@ async def login(
         )
 
     _clear_login_failures(rate_limit_key)
+
+    if settings.firebase_enabled and not bool(getattr(user, "email_verified", False)):
+        firebase_uid = (getattr(user, "firebase_uid", None) or "").strip()
+        if not firebase_uid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="email_verification_required",
+            )
+        try:
+            if await asyncio.to_thread(firebase_auth.is_firebase_email_verified, firebase_uid):
+                user.email_verified = True
+                user.email_verified_at = datetime.now(timezone.utc)
+                _clear_email_verification_sync(user)
+                await db.commit()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="email_verification_required",
+                )
+        except firebase_auth.FirebaseAuthUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="email_verification_check_unavailable",
+            ) from exc
 
     mfa_enabled = bool(getattr(user, "mfa_enabled", False))
     mfa_method = ((getattr(user, "mfa_method", "") or "").strip().lower())
@@ -521,6 +730,7 @@ async def login(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_launch_url,
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
@@ -537,6 +747,7 @@ async def login(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_forwarder_launch_stack_url=control_plane_launch_url,
         control_plane_forwarder_template_url=control_plane_template_url,
         control_plane_ingest_url=control_plane_ingest_url,
         control_plane_forwarder_default_stack_name=control_plane_default_stack,
@@ -595,6 +806,7 @@ async def login_with_mfa(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_launch_url,
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
@@ -611,6 +823,7 @@ async def login_with_mfa(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_forwarder_launch_stack_url=control_plane_launch_url,
         control_plane_forwarder_template_url=control_plane_template_url,
         control_plane_ingest_url=control_plane_ingest_url,
         control_plane_forwarder_default_stack_name=control_plane_default_stack,
@@ -676,6 +889,104 @@ async def change_password(
     set_auth_cookies(response, access_token)
 
 
+@router.post("/verify/firebase-sync", response_model=FirebaseSyncResponse)
+async def sync_firebase_email_verification(
+    request: FirebaseSyncRequest,
+    db: AsyncSession = Depends(get_db),
+) -> FirebaseSyncResponse:
+    """Confirm local email verification state after Firebase marks the address verified."""
+    if not settings.firebase_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase email verification is disabled.",
+        )
+
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    token_hash = _hash_security_token(request.sync_token)
+    expected_hash = getattr(user, "email_verification_sync_token_hash", None) if user else None
+    expires_at = getattr(user, "email_verification_sync_expires_at", None) if user else None
+    firebase_uid = (getattr(user, "firebase_uid", None) or "").strip() if user else ""
+
+    if (
+        user is None
+        or not expected_hash
+        or not secrets.compare_digest(expected_hash, token_hash)
+        or not expires_at
+        or expires_at <= now
+        or not firebase_uid
+    ):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_sync_token")
+
+    try:
+        verified = await asyncio.to_thread(firebase_auth.is_firebase_email_verified, firebase_uid)
+    except firebase_auth.FirebaseAuthUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="email_verification_check_unavailable",
+        ) from exc
+
+    if not verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email_not_yet_verified")
+
+    user.email_verified = True
+    user.email_verified_at = now
+    _clear_email_verification_sync(user)
+    await db.commit()
+    return FirebaseSyncResponse(verified=True)
+
+
+@router.post("/verify/resend", response_model=VerificationResendResponse)
+async def resend_email_verification(
+    request: VerificationResendRequest,
+    db: AsyncSession = Depends(get_db),
+) -> VerificationResendResponse:
+    """Resend the email verification link without leaking whether the account exists."""
+    if not settings.firebase_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase email verification is disabled.",
+        )
+    _ensure_verification_email_delivery_available()
+
+    rate_limit_key = _verification_resend_key(request.email)
+    retry_after = _verification_resend_retry_after_seconds(rate_limit_key)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many verification email requests. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    _record_verification_resend(rate_limit_key)
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalar_one_or_none()
+    if user is None or bool(getattr(user, "email_verified", False)):
+        return _generic_resend_response()
+
+    try:
+        verification_link = await _build_firebase_verification_link(user)
+        await db.commit()
+    except firebase_auth.FirebaseAuthUnavailableError as exc:
+        await _rollback_db(db)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    delivered = email_service.send_verification_link_email(
+        to_email=user.email,
+        verification_link=verification_link,
+    )
+    _require_verification_email_delivery(
+        delivered=delivered,
+        email=user.email,
+        action="Resend",
+    )
+    return _generic_resend_response()
+
+
 @router.post("/verify/send", response_model=SendVerificationResponse)
 async def send_verification_code(
     request: SendVerificationRequest,
@@ -683,43 +994,35 @@ async def send_verification_code(
     db: AsyncSession = Depends(get_db),
 ) -> SendVerificationResponse:
     """Send a verification code to the current user's email or phone."""
+    if request.verification_type == "email":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email verification is now handled via magic link. Use POST /api/auth/verify/resend.",
+        )
+
     code = _generate_security_code()
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=SECURITY_CODE_EXPIRY_MINUTES)
     verification_type = request.verification_type
 
-    if verification_type == "email":
-        delivered = email_service.send_security_code_email(
-            to_email=current_user.email,
-            code=code,
-            purpose="email verification",
+    phone_number = (getattr(current_user, "phone_number", None) or "").strip()
+    if not phone_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Add a phone number before requesting phone verification.",
         )
-        if not delivered:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Unable to deliver verification code.",
-            )
-        current_user.email_verification_code_hash = _hash_security_token(code)
-        current_user.email_verification_expires_at = expires_at
-    else:
-        phone_number = (getattr(current_user, "phone_number", None) or "").strip()
-        if not phone_number:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Add a phone number before requesting phone verification.",
-            )
-        delivered = email_service.send_phone_security_code(
-            to_phone=phone_number,
-            code=code,
-            purpose="phone verification",
-            fallback_email=current_user.email,
+    delivered = email_service.send_phone_security_code(
+        to_phone=phone_number,
+        code=code,
+        purpose="phone verification",
+        fallback_email=current_user.email,
+    )
+    if not delivered:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to deliver verification code.",
         )
-        if not delivered:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Unable to deliver verification code.",
-            )
-        current_user.phone_verification_code_hash = _hash_security_token(code)
-        current_user.phone_verification_expires_at = expires_at
+    current_user.phone_verification_code_hash = _hash_security_token(code)
+    current_user.phone_verification_expires_at = expires_at
 
     await db.commit()
     local_mode_message = "Local mode: email/SMS delivery is disabled. Use the debug code in this response."
@@ -736,30 +1039,25 @@ async def confirm_verification_code(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Confirm verification code for email or phone."""
-    now = datetime.now(timezone.utc)
     if request.verification_type == "email":
-        expected_hash = getattr(current_user, "email_verification_code_hash", None)
-        expires_at = getattr(current_user, "email_verification_expires_at", None)
-        if not expected_hash or not expires_at or expires_at < now:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
-        if _hash_security_token(request.code) != expected_hash:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-        current_user.email_verified = True
-        current_user.email_verification_code_hash = None
-        current_user.email_verification_expires_at = None
-    else:
-        expected_hash = getattr(current_user, "phone_verification_code_hash", None)
-        expires_at = getattr(current_user, "phone_verification_expires_at", None)
-        phone_number = (getattr(current_user, "phone_number", None) or "").strip()
-        if not phone_number:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No phone number found on account")
-        if not expected_hash or not expires_at or expires_at < now:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
-        if _hash_security_token(request.code) != expected_hash:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-        current_user.phone_verified = True
-        current_user.phone_verification_code_hash = None
-        current_user.phone_verification_expires_at = None
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email verification is now handled via magic link. Use POST /api/auth/verify/resend.",
+        )
+
+    now = datetime.now(timezone.utc)
+    expected_hash = getattr(current_user, "phone_verification_code_hash", None)
+    expires_at = getattr(current_user, "phone_verification_expires_at", None)
+    phone_number = (getattr(current_user, "phone_number", None) or "").strip()
+    if not phone_number:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No phone number found on account")
+    if not expected_hash or not expires_at or expires_at < now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
+    if _hash_security_token(request.code) != expected_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
+    current_user.phone_verified = True
+    current_user.phone_verification_code_hash = None
+    current_user.phone_verification_expires_at = None
 
     await db.commit()
 
@@ -886,6 +1184,7 @@ async def get_me(
     - tenant: id, name, external_id (for CloudFormation/Settings display)
     - saas_account_id: SaaS AWS account ID (for Launch Stack params)
     - read_role_launch_stack_url: one-click deploy link when template URL is configured
+    - control_plane_forwarder_launch_stack_url: signed-template launch base for forwarder deploys
     """
     tenant = current_user.tenant
     (
@@ -897,6 +1196,7 @@ async def get_me(
         region,
         read_default_stack,
         write_default_stack,
+        control_plane_launch_url,
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
@@ -912,6 +1212,7 @@ async def get_me(
         write_role_launch_stack_url=write_launch_url,
         write_role_template_url=write_template_url,
         write_role_default_stack_name=write_default_stack,
+        control_plane_forwarder_launch_stack_url=control_plane_launch_url,
         control_plane_forwarder_template_url=control_plane_template_url,
         control_plane_ingest_url=control_plane_ingest_url,
         control_plane_forwarder_default_stack_name=control_plane_default_stack,

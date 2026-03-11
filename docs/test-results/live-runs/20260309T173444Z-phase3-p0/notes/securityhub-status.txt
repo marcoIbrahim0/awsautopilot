@@ -1,0 +1,3 @@
+AWS_PROFILE=default aws securityhub get-findings --region eu-north-1 --max-results 20
+Result:
+An error occurred (InvalidAccessException) when calling the GetFindings operation: Account 029037611564 is not subscribed to AWS Security Hub

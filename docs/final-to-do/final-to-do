@@ -1,6 +1,6 @@
 # Final To-Do
 
-1. sign up requires phone number and email verification
+1. require phone verification before MFA enrollment and future sensitive actions (email verification is now enforced at signup via Firebase magic link)
 2. in the onboarding in 2. Connect Core Integration Role remove the hardcoded 029037611564
 3. remove write role from cloudformation and remove optional writerole
 4. check for required security standards being enabled

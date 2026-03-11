@@ -44,8 +44,8 @@ class _ConfigClientMissingDescribe:
     def describe_config_rules(self, **kwargs):
         raise _access_denied("DescribeConfigRules")
 
-    def describe_compliance_by_config_rules(self, **kwargs):
-        raise _access_denied("DescribeComplianceByConfigRules")
+    def describe_compliance_by_config_rule(self, **kwargs):
+        raise _access_denied("DescribeComplianceByConfigRule")
 
 
 class _ConfigClientMissingDetails:
@@ -58,7 +58,7 @@ class _ConfigClientMissingDetails:
     def describe_config_rules(self, **kwargs):
         return {"ConfigRules": [{"ConfigRuleName": "sg-open-admin-ports"}]}
 
-    def describe_compliance_by_config_rules(self, **kwargs):
+    def describe_compliance_by_config_rule(self, **kwargs):
         return {"ComplianceByConfigRules": []}
 
     def get_compliance_details_by_config_rule(self, **kwargs):
@@ -75,8 +75,22 @@ class _ConfigClientMissingRecorderAndDelivery:
     def describe_config_rules(self, **kwargs):
         return {"ConfigRules": []}
 
-    def describe_compliance_by_config_rules(self, **kwargs):
+    def describe_compliance_by_config_rule(self, **kwargs):
         return {"ComplianceByConfigRules": []}
+
+
+class _ConfigClientMissingComplianceSummaryOperation:
+    def describe_configuration_recorders(self, **kwargs):
+        return {"ConfigurationRecorders": []}
+
+    def describe_delivery_channels(self, **kwargs):
+        return {"DeliveryChannels": []}
+
+    def describe_config_rules(self, **kwargs):
+        return {"ConfigRules": [{"ConfigRuleName": "sg-open-admin-ports"}]}
+
+    def get_compliance_details_by_config_rule(self, **kwargs):
+        return {"EvaluationResults": []}
 
 
 class _SessionStub:
@@ -109,7 +123,7 @@ def test_run_validation_probes_surfaces_missing_config_describe_permissions() ->
 
     assert result.permissions_ok is False
     assert "config:DescribeConfigRules" in result.missing_permissions
-    assert "config:DescribeComplianceByConfigRules" in result.missing_permissions
+    assert "config:DescribeComplianceByConfigRule" in result.missing_permissions
 
 
 def test_run_validation_probes_surfaces_missing_config_recorder_delivery_permissions() -> None:
@@ -139,3 +153,21 @@ def test_run_validation_probes_surfaces_missing_config_details_permission() -> N
 
     assert result.permissions_ok is False
     assert "config:GetComplianceDetailsByConfigRule" in result.missing_permissions
+
+
+def test_run_validation_probes_fails_closed_when_config_summary_probe_unavailable() -> None:
+    result = run_validation_probes(
+        account_id="123456789012",
+        role_read_arn="arn:aws:iam::123456789012:role/ReadRole",
+        tenant_external_id="tenant-ext-id",
+        configured_regions=["us-east-1"],
+        default_region="us-east-1",
+        assume_role_fn=lambda **kwargs: _SessionStub(_ConfigClientMissingComplianceSummaryOperation()),
+    )
+
+    assert result.permissions_ok is False
+    assert result.missing_permissions == []
+    assert any("describe_compliance_by_config_rule" in warning for warning in result.warnings)
+    assert result.block_reasons == [
+        "Unable to verify required ReadRole probe config:DescribeComplianceByConfigRule; authoritative mode remains blocked."
+    ]

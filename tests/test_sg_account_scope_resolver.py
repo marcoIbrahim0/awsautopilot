@@ -29,7 +29,7 @@ class _ConfigClientStub:
             return {"ConfigRules": []}
         return {"ConfigRules": list(self._rules)}
 
-    def describe_compliance_by_config_rules(self, **kwargs: Any) -> dict[str, Any]:
+    def describe_compliance_by_config_rule(self, **kwargs: Any) -> dict[str, Any]:
         return {
             "ComplianceByConfigRules": [
                 {"ConfigRuleName": "sg-open-admin-ports", "Compliance": {"ComplianceType": "NON_COMPLIANT"}}

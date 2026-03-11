@@ -45,6 +45,42 @@ Parameters:
     Default: https://ocypheris.com,http://localhost:3000
     Description: Comma-separated CORS origins for the API.
 
+  FirebaseProjectId:
+    Type: String
+    Default: ""
+    Description: Optional Firebase project id used for email verification.
+
+  FirebaseEmailContinueUrlBase:
+    Type: String
+    Default: ""
+    Description: Optional frontend base URL used to build Firebase email verification continue URLs.
+
+  EmailFrom:
+    Type: String
+    Default: ""
+    Description: Verified sender address for transactional email delivery.
+
+  EmailSmtpHost:
+    Type: String
+    Default: ""
+    Description: SMTP host for transactional email delivery.
+
+  EmailSmtpPort:
+    Type: String
+    Default: "587"
+    Description: SMTP port for transactional email delivery.
+
+  EmailSmtpStarttls:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Enable STARTTLS for SMTP delivery.
+
+  EmailSmtpCredentialsSecretId:
+    Type: String
+    Default: ""
+    Description: Optional Secrets Manager secret id or ARN whose JSON contains user and password.
+
   # --- Optional feature/config flags (non-secret) ---
   CloudFormationControlPlaneForwarderTemplateUrl:
     Type: String
@@ -212,11 +248,17 @@ Parameters:
     Type: String
     Default: ""
     Description: ACM certificate ARN in this region (eu-north-1) for ApiDomainName.
+  ApiPublicUrlOverride:
+    Type: String
+    Default: ""
+    Description: Optional public API base URL override (for example https://api.ocypheris.com when proxied through Cloudflare).
 
 Conditions:
   HasCustomDomain: !And
     - !Not [!Equals [!Ref ApiDomainName, ""]]
     - !Not [!Equals [!Ref ApiCertificateArn, ""]]
+  HasApiPublicUrlOverride: !Not [!Equals [!Ref ApiPublicUrlOverride, ""]]
+  HasEmailSmtpCredentialsSecretId: !Not [!Equals [!Ref EmailSmtpCredentialsSecretId, ""]]
   WorkerEnabled: !Equals [!Ref EnableWorker, "true"]
   WorkerDisabled: !Equals [!Ref EnableWorker, "false"]
   WorkerHasReservedConcurrency: !Not [!Equals [!Ref WorkerReservedConcurrency, 0]]
@@ -335,6 +377,24 @@ Resources:
               - s3:ListBucketMultipartUploads
             Resource: !Sub "arn:aws:s3:::${S3SupportBucket}"
 
+  ApiTemplatesBucketAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-api-templates-bucket-access"
+      Roles:
+        - !Ref ApiLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ReadCloudFormationTemplates
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::security-autopilot-templates
+              - arn:aws:s3:::security-autopilot-templates/cloudformation/*
+
   WorkerExportBucketAccess:
     Type: AWS::IAM::Policy
     Condition: HasExportBucket
@@ -442,9 +502,28 @@ Resources:
           FRONTEND_URL: !Ref FrontendUrl
           CORS_ORIGINS: !Ref CorsOrigins
           API_PUBLIC_URL: !If
-            - HasCustomDomain
-            - !Sub "https://${ApiDomainName}"
-            - !GetAtt HttpApi.ApiEndpoint
+            - HasApiPublicUrlOverride
+            - !Ref ApiPublicUrlOverride
+            - !If
+              - HasCustomDomain
+              - !Sub "https://${ApiDomainName}"
+              - !GetAtt HttpApi.ApiEndpoint
+          EMAIL_FROM: !Ref EmailFrom
+          EMAIL_SMTP_HOST: !Ref EmailSmtpHost
+          EMAIL_SMTP_PORT: !Ref EmailSmtpPort
+          EMAIL_SMTP_STARTTLS: !Ref EmailSmtpStarttls
+          EMAIL_SMTP_USER: !If
+            - HasEmailSmtpCredentialsSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:user}}"
+            - ""
+          EMAIL_SMTP_PASSWORD: !If
+            - HasEmailSmtpCredentialsSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:password}}"
+            - ""
+          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+          FIREBASE_SERVICE_ACCOUNT_JSON: ""
+          FIREBASE_SERVICE_ACCOUNT_PATH: /var/task/backend/.firebase/firebase-service-account.json
+          FIREBASE_EMAIL_CONTINUE_URL_BASE: !Ref FirebaseEmailContinueUrlBase
           CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: !Ref CloudFormationControlPlaneForwarderTemplateUrl
           SAAS_ADMIN_EMAILS: !Ref SaasAdminEmails
           S3_EXPORT_BUCKET: !Ref S3ExportBucket
@@ -565,9 +644,24 @@ Resources:
           FRONTEND_URL: !Ref FrontendUrl
           CORS_ORIGINS: !Ref CorsOrigins
           API_PUBLIC_URL: !If
-            - HasCustomDomain
-            - !Sub "https://${ApiDomainName}"
-            - !GetAtt HttpApi.ApiEndpoint
+            - HasApiPublicUrlOverride
+            - !Ref ApiPublicUrlOverride
+            - !If
+              - HasCustomDomain
+              - !Sub "https://${ApiDomainName}"
+              - !GetAtt HttpApi.ApiEndpoint
+          EMAIL_FROM: !Ref EmailFrom
+          EMAIL_SMTP_HOST: !Ref EmailSmtpHost
+          EMAIL_SMTP_PORT: !Ref EmailSmtpPort
+          EMAIL_SMTP_STARTTLS: !Ref EmailSmtpStarttls
+          EMAIL_SMTP_USER: !If
+            - HasEmailSmtpCredentialsSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:user}}"
+            - ""
+          EMAIL_SMTP_PASSWORD: !If
+            - HasEmailSmtpCredentialsSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:password}}"
+            - ""
           CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: !Ref CloudFormationControlPlaneForwarderTemplateUrl
           SAAS_ADMIN_EMAILS: !Ref SaasAdminEmails
           S3_EXPORT_BUCKET: !Ref S3ExportBucket
