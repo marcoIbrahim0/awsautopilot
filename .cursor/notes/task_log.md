@@ -1,5 +1,213 @@
 # Task Log
 
+## Deploy Phase 3.5.1 attack-path view and companion validated slices to Ocypheris prod (2026-03-12)
+
+**Task:** Deploy the newly implemented `attack_path_view` action-detail work to production, verify backend/frontend runtime movement, and keep the live site healthy during rollout.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this deployment task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Confirmed deploy auth before rollout:
+  - `aws sts get-caller-identity` resolved account `029037611564` as `AutoPilotAdmin`
+  - `npx wrangler whoami` resolved Cloudflare account `def7cbe05f3cd790ad1f743bb66408d9`
+- Verified the current runtime/deploy baselines before rollout:
+  - backend Lambdas were still on the pre-rollout runtime from `2026-03-12T17:47:07+0000`
+  - latest Cloudflare frontend deployment before this task was version `77598390-79c6-48f6-96e1-3f2129b03d1a` created `2026-03-12T17:39:45.224Z`
+- Built an isolated frontend release copy and verified it still produced a successful production build.
+- Deployed the backend from an isolated release copy with:
+  - `./scripts/deploy_saas_serverless.sh --region eu-north-1`
+  - new API image tag `20260312T184902Z`
+  - new worker image tag `20260312T184902Z`
+- Attempted the first frontend publish from an isolated temp copy:
+  - Cloudflare version `e498a685-1cbc-49bd-afe9-73aef6fe2587`
+  - this was bad and returned `500` on both `https://ocypheris.com` and `https://frontend.maromaher54.workers.dev`
+- Diagnosed the bad frontend version live with `wrangler tail`:
+  - runtime error was `Dynamic require of "/.next/server/middleware-manifest.json" is not supported`
+- Immediately re-published the frontend from the real `frontend/` workspace instead of the temp copy:
+  - Cloudflare version `951b2fcf-89a5-4d28-963d-1d96f8605274`
+  - public site recovered to `200` on both the custom domain and the workers.dev origin
+- Kept the rollout additive with no DB migration step because this slice is contract/UI only.
+- Important release-scope note:
+  - the backend runtime deploy also shipped the already-validated same-session CloudTrail remediation specialization changes in `backend/services/remediation_risk.py` and `backend/services/remediation_runtime_checks.py`, because those were the only runtime backend file deltas since the prior live backend deploy
+  - the frontend publish also shipped the already-validated same-session remediation-run page redesign files, because those were the only frontend source-file deltas since the prior live frontend deploy beyond the attack-path drawer work
+
+**Validation:**
+- `npm run build` in isolated frontend release copy - pass
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1` from isolated backend release copy - pass
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-api --query '{LastModified:Configuration.LastModified,ImageUri:Code.ImageUri}'` - pass
+  - API runtime now `LastModified=2026-03-12T18:51:27.000+0000`
+  - API image now `029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260312T184902Z`
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-worker --query '{LastModified:Configuration.LastModified,ImageUri:Code.ImageUri}'` - pass
+  - worker runtime now `LastModified=2026-03-12T18:51:27.000+0000`
+  - worker image now `029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260312T184902Z`
+- `curl https://api.ocypheris.com/ready` - pass (`ready: true`) after backend deploy
+- `npm run deploy` in `/Users/marcomaher/AWS Security Autopilot/frontend` - pass after the failed temp-copy publish; final healthy frontend version is `951b2fcf-89a5-4d28-963d-1d96f8605274`
+- `curl https://ocypheris.com` - pass (`200`) after the restoring frontend republish
+- `curl https://frontend.maromaher54.workers.dev` - pass (`200`) after the restoring frontend republish
+- `npx wrangler tail frontend --format pretty` during live probes - pass for the final version; the earlier temp-copy version logged the `middleware-manifest.json` dynamic-require failure and the final version stopped emitting that error
+
+**Technical debt / gotchas:**
+- The first temp-copy frontend publish (`e498a685-1cbc-49bd-afe9-73aef6fe2587`) was unhealthy and should be treated as superseded by `951b2fcf-89a5-4d28-963d-1d96f8605274`.
+- The deploy still emits the same pre-existing OpenNext duplicate `options` warnings in generated `.open-next/server-functions/default/handler.mjs`; those warnings did not block the final healthy publish.
+- An authenticated live feature check for `GET /api/actions/{id}` was not completed in this rollout because the documented fallback token file `/tmp/ocypheris_phase3_p0_token.txt` had expired and no fresh prod session/password was available in-thread.
+
+**Open questions / TODOs:**
+- Mint or supply a fresh prod operator session/token, then run a narrow live authenticated smoke that confirms at least one action detail now returns a non-empty `attack_path_view` and that the live drawer renders the new `Attack Path` section.
+- Decide whether future frontend deploys should avoid temp-copy OpenNext publishes entirely unless the exact temp-build workflow has already been validated for this repo.
+
+## Phase 3.5 deferred roadmap captured after Attack Path View v1 (2026-03-12)
+
+**Task:** Persist the remaining post-`P3.5.1` Phase 3.5 roadmap in the repo so the deferred plan is discoverable later without relying on chat history.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/project_status.md** - added a short `Phase 3.5 — Decision Surfaces + Risk Operations` summary, recorded `P3.5.1` as implemented, and marked `P3.5.2` through `P3.5.7` as planned/deferred.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/phase-3-5-roadmap.md** - added the durable Phase 3.5 roadmap doc covering the deferred `P3.5.2` through `P3.5.7` slices, dependencies, scope boundaries, and resume order.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new roadmap doc from the main docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new roadmap doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this roadmap-capture task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the already-implemented `P3.5.1` task history, and the docs indexes before editing.
+- Added a durable Phase 3.5 roadmap record so the remaining plan is no longer trapped in chat only.
+- Kept the scope explicit:
+  - `P3.5.1` is implemented
+  - `P3.5.2` through `P3.5.7` are planned and intentionally deferred
+- Recorded the recommended resume order and the main scope boundaries so future work does not accidentally expand into a free-form graph explorer or premature campaign work.
+
+**Validation:**
+- Documentation-only change; no code or test execution required.
+
+**Open questions / TODOs:**
+- When Phase 3.5 resumes, decide whether `P3.5.2` Risk Control Tower v1 or `P3.5.4` Hot CVE / Active Exploitation Board should be the next slice after `P3.5.1`.
+- Do not start `P3.5.6` Fix Campaigns until at least one real integration provider is usable live.
+
+## Phase 3.5.1 attack path view v1 on action detail (2026-03-12)
+
+**Task:** Implement a bounded `Attack Path` view on top of the existing Phase 3 P0/P1/P2 action-detail contracts so operators can see how an attacker gets in, what they can reach, why the action is urgent, and what the safest next step is.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_attack_path_view.py** - added the bounded attack-story builder that reuses `graph_context`, `business_impact`, `recommendation`, `score_factors`, `execution_guidance`, `sla`, and existing relationship-context confidence without introducing new traversal or scoring logic.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added additive `attack_path_view` response models, wired the new payload into `GET /api/actions/{id}`, and kept existing action-detail fields unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added typed `attack_path_view` contracts for action detail.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - added the `Attack Path` section, explicit `Actively exploited` / `Business critical` / `Context incomplete` badges, and a new `Why this is prioritized` panel while preserving the current business-impact, explainability, threat-intel, graph-context, and artifact sections.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py** - added focused backend coverage for `available`, `partial`, `unavailable`, and `context_incomplete` states plus one representative action-detail API contract assertion.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - extended the stable fallback action-detail contract assertion for the new additive payload.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - added render coverage for `available`, `partial/truncated`, `unavailable`, and `context_incomplete` drawer states.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented the new bounded attack-path contract, state model, data reuse, and UI behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/graph-backed-action-context.md** - cross-linked the new attack-path view from the graph-context feature doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the main docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new feature doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the additive `attack_path_view` detail contract for local/backend operators.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the requested P0.3/P1.2/P1.7/P1.8/P2.1/P2.2 history, and the relevant docs before editing.
+- Added a dedicated attack-path builder instead of widening `graph_context` into a free-form explorer.
+- Kept the contract additive and backward compatible on `GET /api/actions/{id}` with explicit stable states:
+  - `available`
+  - `partial`
+  - `unavailable`
+  - `context_incomplete`
+- Reused the existing bounded graph/detail contracts rather than introducing a new graph query or second source of truth.
+- Made the attack story fail closed:
+  - `context_incomplete` returns no path nodes or edges
+  - `unavailable` returns an explicit empty visual payload instead of disappearing
+  - `partial` remains bounded and signals truncation or unresolved bounded context explicitly
+- Added a new drawer section that renders the bounded path horizontally and a separate prioritization panel that surfaces score factors, business-impact reasons, threat-intel reasons, and recommendation rationale.
+
+**Validation:**
+- `pytest tests/test_phase3_p3_5_1_attack_path_view.py tests/test_wave5_action_detail_contract.py -q` - pass (`9 passed`)
+- `cd frontend && npm run test:ui -- src/components/ActionDetailDrawer.test.tsx` - pass (`4 passed`)
+- `cd frontend && npm run typecheck` - pass
+- `pytest tests/test_phase3_p0_3_toxic_combinations.py tests/test_phase3_p0_4_fail_closed_context.py tests/test_phase3_p0_7_execution_guidance.py tests/test_phase3_p1_2_graph_backed_action_context.py tests/test_phase3_p1_7_business_impact_matrix.py tests/test_phase3_p1_8_recommendation_mode.py tests/test_phase3_p2_1_threat_intel_weighting.py tests/test_phase3_p2_2_threat_intel_decay_provenance.py tests/test_phase3_p3_5_1_attack_path_view.py tests/test_wave5_action_detail_contract.py -q` - pass (`69 passed`)
+- `pytest -q` - blocked by existing unrelated async/plugin failures in `tests/test_findings_grouped_action_hints.py` (`pytest.mark.asyncio` unsupported in the current environment); all attack-path-related tests passed.
+
+**Technical debt / gotchas:**
+- `attack_path_view.confidence` is derived from the existing relationship-context confidence and bounded-state handling; it is intentionally not a new risk score.
+- `context_incomplete` stays fail-closed and does not attempt to infer a visual path from partial relationship data.
+- The repo-wide backend suite is not currently clean in this environment because the async test plugin required by `tests/test_findings_grouped_action_hints.py` is missing; that issue is outside this task.
+
+**Open questions / TODOs:**
+- Decide whether a future slice should expose a condensed attack-path badge/summary in action lists or owner queues now that the detail contract exists.
+- Decide whether later graph work should enrich `partial` stories with more direct target/entry annotations while still staying inside the current bounded caps.
+
+## Remediation run page hierarchy redesign for clearer operator flow (2026-03-12)
+
+**Task:** Redesign the dedicated remediation-run page so it feels straightforward instead of cluttered, while keeping the embedded progress view stable.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** - redesigned the full-width remediation-run page into a clearer summary -> next action -> closure proof -> technical details flow, added a sticky run snapshot rail with jump links, and moved verbose progress/log/file content into collapsed technical sections.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.test.tsx** - updated the focused UI regression to assert the new dedicated-page hierarchy while preserving the evidence-link safety checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - documented the new dedicated-page structure and how closure/evidence now sit inside the clearer section hierarchy.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant handoff-free-closure history, and `docs/README.md` before editing.
+- Kept the embedded/compact remediation-run view intact and limited the redesign to the dedicated `fullWidth` page.
+- Reorganized the dedicated page into four clear sections:
+  - `Run summary`
+  - `What you need to do`
+  - `Closure proof`
+  - `Technical details`
+- Added a sticky `Run snapshot` side rail with status, timestamps, action context, and in-page jump links so operators can orient themselves quickly.
+- Moved noisy content out of the main reading path:
+  - progress timeline
+  - activity log
+  - execution workspace details
+  - generated files
+  - Terraform apply guide
+- Kept the earlier evidence-link safety behavior intact so the redesigned page still avoids dead anchors and keeps per-evidence fallbacks.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/RemediationRunProgress.test.tsx` - pass (`1 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The dedicated page now has a much clearer operator hierarchy, but the embedded run-progress view still uses the older denser layout; if consistency becomes important, the compact view should get a separate cleanup pass rather than inheriting the full-width structure directly.
+
+**Open questions / TODOs:**
+- Decide whether the jump-link rail should become a shared pattern for other dense detail pages such as action detail and grouped findings.
+
+## CloudTrail guided remediation specialization for PR-bundle risk gating (2026-03-12)
+
+**Task:** Replace the CloudTrail guided strategy's unspecialized hard-fail dependency fallback with explicit CloudTrail checks so PR-bundle creation can proceed through the reviewed risk-ack path.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py** - added a specialized `cloudtrail_enable_guided` branch that emits explicit warn-level checks for cost impact, required log bucket setup, and existing-trail review instead of falling through to `risk_evaluation_not_specialized`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - promoted CloudTrail `DescribeTrails` context into reusable runtime signals/evidence (`cloudtrail_existing_trail_present`, trail name, multi-region state) while preserving existing default-input hydration.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py** - added focused regressions proving CloudTrail now returns reviewed warn-level checks and no longer uses the unspecialized fail fallback.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** - added runtime-signal coverage for both existing-trail and no-trail CloudTrail discovery paths.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - added an API regression proving CloudTrail run creation now lands in `Risk acknowledgement required` instead of `Dependency check failed`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the new CloudTrail dependency-check contract on remediation options.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the current remediation-options/summary-flow history, and `docs/README.md` before patching.
+- Confirmed there is no `aws_constants.py` in this repo, so the change was made against the existing CloudTrail strategy/runtime code paths already in use.
+- Added specialized CloudTrail risk evaluation so `cloudtrail_enable_guided` no longer falls through to the medium-risk unspecialized fallback that promoted `risk_evaluation_not_specialized` to `fail`.
+- Preserved conservative reviewed gating by emitting explicit warn-level checks for:
+  - CloudTrail logging/storage cost impact
+  - the required log-delivery S3 bucket prerequisite because the generated bundle still expects `trail_bucket_name`
+  - existing-trail review when `DescribeTrails` finds an already-present trail
+- Lifted CloudTrail discovery data from runtime context into stable runtime signals/evidence so risk evaluation can use the same observed `DescribeTrails` result the UI uses for default input hydration.
+- Added focused service and API regressions to prove the intended path is now `review_and_acknowledge` rather than `blocked`.
+
+**Validation:**
+- `./venv/bin/pytest tests/test_remediation_risk.py tests/test_remediation_runtime_checks.py tests/test_remediation_runs_api.py -q` - pass (`117 passed`)
+
+**Technical debt / gotchas:**
+- This change unblocks the per-action remediation modal via explicit risk acknowledgment, but it does **not** change the summary/grouped PR-bundle auto-run flow; that client path still fails closed on any non-`pass` dependency check by design.
+- The CloudTrail PR bundle still requires an operator-supplied or pre-existing log bucket (`trail_bucket_name`); this patch only fixes gating, not bundle self-provisioning of that bucket.
+
+**Open questions / TODOs:**
+- If summary/grouped CloudTrail PR-bundle generation should work without dropping into the modal, the summary flow needs a first-class risk-acknowledgement UX instead of its current fully-safe-only auto-run rule.
+
 ## Remediation run page evidence-link cleanup and duplicate artifact-card removal (2026-03-12)
 
 **Task:** Fix the dedicated remediation-run page so closure checklist links and evidence buttons only target sections that actually exist, and remove the duplicate `Implementation artifacts` card from that page.

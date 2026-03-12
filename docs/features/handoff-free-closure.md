@@ -75,10 +75,11 @@ The frontend now renders the normalized contract directly:
 
 - `ActionDetailDrawer` shows an `Implementation artifacts` section sourced from `action.implementation_artifacts`.
 - `RemediationRunProgress` shows:
-  - closure checklist
-  - evidence pointers
-  - activity logs on the dedicated run page as well as embedded views
-- The dedicated remediation-run page intentionally hides the duplicate `Implementation artifacts` card and keeps engineer-facing navigation in the checklist/evidence sections.
+  - a dedicated-page `Run snapshot` rail with jump links
+  - a top-level `What you need to do` section before closure/evidence details
+  - closure checklist and evidence pointers grouped under `Closure proof`
+  - activity logs, progress, execution workspace details, generated files, and the apply guide under `Technical details`
+- The dedicated remediation-run page intentionally hides the duplicate `Implementation artifacts` card and keeps engineer-facing navigation in the summary, next-action, closure-proof, and technical-details flow.
 
 Stable anchors are now part of the run-detail page contract:
 

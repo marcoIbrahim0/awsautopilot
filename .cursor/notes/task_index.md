@@ -4,6 +4,26 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Deploy Phase 3.5.1 attack-path view and companion validated slices to Ocypheris prod (2026-03-12)](task_log.md#deploy-phase-351-attack-path-view-and-companion-validated-slices-to-ocypheris-prod-2026-03-12)
+  - Deployed the backend to image tag `20260312T184902Z` and confirmed both API and worker Lambdas advanced to `2026-03-12T18:51:27+0000`.
+  - First frontend publish from a temp copy broke live with `Dynamic require of "/.next/server/middleware-manifest.json" is not supported`; restoring republish from the real workspace recovered production on Cloudflare version `951b2fcf-89a5-4d28-963d-1d96f8605274`.
+  - Public health recovered to `https://ocypheris.com` `200` and `https://api.ocypheris.com/ready` `ready: true`, but authenticated live `attack_path_view` verification remains blocked pending a fresh prod session/token.
+- [Phase 3.5 deferred roadmap captured after Attack Path View v1 (2026-03-12)](task_log.md#phase-35-deferred-roadmap-captured-after-attack-path-view-v1-2026-03-12)
+  - Added a durable `docs/features/phase-3-5-roadmap.md` record for deferred `P3.5.2` through `P3.5.7` work so the remaining plan is discoverable later.
+  - Updated `project_status.md` to record `P3.5.1` as implemented and the rest of Phase 3.5 as planned/deferred.
+  - Linked the roadmap from the main docs index and the feature-doc index.
+- [Phase 3.5.1 attack path view v1 on action detail (2026-03-12)](task_log.md#phase-351-attack-path-view-v1-on-action-detail-2026-03-12)
+  - Added additive `attack_path_view` on `GET /api/actions/{id}` using the existing graph, business-impact, recommendation, score-factor, execution-guidance, and SLA contracts.
+  - Added a bounded `Attack Path` section plus a `Why this is prioritized` panel in the action detail drawer with explicit `Actively exploited`, `Business critical`, and `Context incomplete` badges.
+  - Added focused backend and frontend coverage for `available`, `partial`, `unavailable`, and `context_incomplete` states; repo-wide `pytest -q` remains blocked by unrelated async test-plugin failures in `tests/test_findings_grouped_action_hints.py`.
+- [Remediation run page hierarchy redesign for clearer operator flow (2026-03-12)](task_log.md#remediation-run-page-hierarchy-redesign-for-clearer-operator-flow-2026-03-12)
+  - Redesigned the dedicated remediation-run page into a clearer summary -> next action -> closure proof -> technical details flow with a sticky run snapshot rail and jump links.
+  - Moved progress, activity, execution workspace details, generated files, and the Terraform apply guide into technical sections so the main page reads more directly.
+  - Kept the earlier evidence-link safety behavior intact and updated the focused UI regression for the new layout.
+- [CloudTrail guided remediation specialization for PR-bundle risk gating (2026-03-12)](task_log.md#cloudtrail-guided-remediation-specialization-for-pr-bundle-risk-gating-2026-03-12)
+  - Replaced the CloudTrail guided strategy's unspecialized hard-fail fallback with explicit reviewed dependency checks for cost impact, required log-bucket setup, and existing-trail review.
+  - Promoted CloudTrail `DescribeTrails` discovery into reusable runtime signals/evidence so risk evaluation and UI default hydration use the same observed trail state.
+  - Added focused service and API regressions proving CloudTrail run creation now returns `Risk acknowledgement required` instead of `Dependency check failed`.
 - [Remediation run page evidence-link cleanup and duplicate artifact-card removal (2026-03-12)](task_log.md#remediation-run-page-evidence-link-cleanup-and-duplicate-artifact-card-removal-2026-03-12)
   - Fixed the dedicated remediation-run page so activity-log links stay valid, generated-files links are only used when that section exists, and checklist chips fall back to per-evidence anchors instead of `/remediation-runs`.
   - Removed the duplicate `Implementation artifacts` card from the full-width remediation-run page without changing the additive `artifact_metadata` API contract.

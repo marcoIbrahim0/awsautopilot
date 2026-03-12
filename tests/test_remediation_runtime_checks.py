@@ -280,3 +280,32 @@ def test_collect_runtime_risk_signals_cloudtrail_sets_contextual_default_inputs(
     assert default_inputs["trail_name"] == "existing-trail"
     assert default_inputs["create_bucket_policy"] is True
     assert default_inputs["multi_region"] is False
+    assert signals["cloudtrail_existing_trail_present"] is True
+    assert signals["cloudtrail_existing_trail_name"] == "existing-trail"
+    assert signals["cloudtrail_existing_trail_multi_region"] is False
+    assert signals["evidence"]["cloudtrail_existing_trail_name"] == "existing-trail"
+
+
+def test_collect_runtime_risk_signals_cloudtrail_marks_absent_trail_when_none_exist(monkeypatch) -> None:
+    class _NoTrailCloudTrailClient:
+        def describe_trails(self, **kwargs) -> dict[str, Any]:
+            return {"trailList": []}
+
+    session = _FakeSession({"cloudtrail": _NoTrailCloudTrailClient()})
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="cloudtrail_enabled"),
+        strategy=_cloudtrail_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    default_inputs = signals["context"]["default_inputs"]
+    assert default_inputs["trail_name"] == "security-autopilot-trail"
+    assert default_inputs["create_bucket_policy"] is True
+    assert default_inputs["multi_region"] is True
+    assert signals["cloudtrail_existing_trail_present"] is False

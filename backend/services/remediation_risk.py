@@ -196,6 +196,40 @@ def evaluate_strategy_impact(
                 "Publicly shared SSM document consumers may lose access after enforcement.",
             )
         )
+    elif strategy_id == "cloudtrail_enable_guided":
+        checks.append(
+            _build_check(
+                "cloudtrail_cost_impact",
+                "warn",
+                "CloudTrail log delivery and retention increase S3 storage and request costs.",
+            )
+        )
+        checks.append(
+            _build_check(
+                "cloudtrail_log_bucket_prereq",
+                "warn",
+                "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply.",
+            )
+        )
+        if runtime_signals.get("cloudtrail_existing_trail_present") is True:
+            trail_name = str(runtime_signals.get("cloudtrail_existing_trail_name") or "").strip()
+            if trail_name:
+                message = (
+                    f"CloudTrail trail '{trail_name}' already exists in this account/region view. "
+                    "Review whether to reuse it, update it, or create a separate trail."
+                )
+            else:
+                message = (
+                    "A CloudTrail trail already exists in this account/region view. "
+                    "Review whether to reuse it, update it, or create a separate trail."
+                )
+            checks.append(
+                _build_check(
+                    "cloudtrail_existing_trail_present",
+                    "warn",
+                    message,
+                )
+            )
     elif strategy_id == "ssm_keep_public_sharing_exception":
         checks.append(
             _build_check(

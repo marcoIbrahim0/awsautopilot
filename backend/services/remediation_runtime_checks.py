@@ -491,6 +491,10 @@ def collect_runtime_risk_signals(
     if strategy_id == "cloudtrail_enable_guided":
         context_payload = _context_payload(signals)
         default_inputs: dict[str, Any] = {}
+        evidence_payload = signals.setdefault("evidence", {})
+        if not isinstance(evidence_payload, dict):
+            evidence_payload = {}
+            signals["evidence"] = evidence_payload
         session = _get_read_session()
         if session is None:
             context_payload["default_inputs_error"] = read_probe_error or "ReadRole runtime probe unavailable."
@@ -501,13 +505,22 @@ def collect_runtime_risk_signals(
                 trails = response.get("trailList", [])
                 if isinstance(trails, list) and trails:
                     trail = trails[0] if isinstance(trails[0], dict) else {}
+                    signals["cloudtrail_existing_trail_present"] = True
                     trail_name = str(trail.get("Name", "")).strip()
                     if trail_name:
+                        signals["cloudtrail_existing_trail_name"] = trail_name
+                        evidence_payload["cloudtrail_existing_trail_name"] = trail_name
                         default_inputs["trail_name"] = trail_name
                     if isinstance(trail.get("IsMultiRegionTrail"), bool):
-                        default_inputs["multi_region"] = bool(trail.get("IsMultiRegionTrail"))
+                        multi_region = bool(trail.get("IsMultiRegionTrail"))
+                        signals["cloudtrail_existing_trail_multi_region"] = multi_region
+                        evidence_payload["cloudtrail_existing_trail_multi_region"] = multi_region
+                        default_inputs["multi_region"] = multi_region
+                else:
+                    signals["cloudtrail_existing_trail_present"] = False
             except ClientError as exc:
                 context_payload["default_inputs_error"] = _error_code(exc) or "DescribeTrailsFailed"
+                signals["cloudtrail_describe_trails_error"] = _error_code(exc) or "DescribeTrailsFailed"
 
         if "trail_name" not in default_inputs:
             default_inputs["trail_name"] = "security-autopilot-trail"

@@ -171,6 +171,46 @@ def test_s3_public_access_dependency_warns_when_probe_data_is_incomplete() -> No
     assert status_map["s3_public_access_dependency"] == "warn"
 
 
+def test_cloudtrail_guided_strategy_requires_review_instead_of_unspecialized_fail() -> None:
+    action = SimpleNamespace(action_type="cloudtrail_enabled")
+    strategy = _fake_strategy(
+        "cloudtrail_enable_guided",
+        action_type="cloudtrail_enabled",
+        risk_level="medium",
+    )
+    snapshot = evaluate_strategy_impact(action, strategy, runtime_signals={})
+
+    status_map = _code_status(snapshot)
+    assert "risk_evaluation_not_specialized" not in status_map
+    assert status_map["cloudtrail_cost_impact"] == "warn"
+    assert status_map["cloudtrail_log_bucket_prereq"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
+def test_cloudtrail_guided_strategy_warns_when_existing_trail_is_present() -> None:
+    action = SimpleNamespace(action_type="cloudtrail_enabled")
+    strategy = _fake_strategy(
+        "cloudtrail_enable_guided",
+        action_type="cloudtrail_enabled",
+        risk_level="medium",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "cloudtrail_existing_trail_present": True,
+            "cloudtrail_existing_trail_name": "existing-org-trail",
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["cloudtrail_existing_trail_present"] == "warn"
+    existing_check = next(
+        check for check in snapshot["checks"] if check["code"] == "cloudtrail_existing_trail_present"
+    )
+    assert "existing-org-trail" in existing_check["message"]
+
+
 def test_iam_root_delete_strategy_blocks_when_root_mfa_not_enrolled() -> None:
     action = SimpleNamespace(action_type="iam_root_access_key_absent")
     strategy = _fake_strategy(

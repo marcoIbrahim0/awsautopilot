@@ -60,6 +60,7 @@ from backend.services.action_business_impact import (
     business_impact_rank,
 )
 from backend.services.action_execution_guidance import build_action_execution_guidance
+from backend.services.action_attack_path_view import build_action_attack_path_view
 from backend.services.action_graph_context import build_action_graph_context
 from backend.services.integration_sync import dispatch_sync_tasks, plan_action_sync_tasks
 from backend.services.action_recommendation import build_action_recommendation
@@ -379,6 +380,7 @@ class ActionDetailResponse(BaseModel):
     execution_guidance: list["ActionExecutionGuidance"] = Field(default_factory=list)
     implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
     graph_context: "ActionGraphContext"
+    attack_path_view: "ActionAttackPathView"
 
 
 class ExecutionGuidanceCheck(BaseModel):
@@ -470,6 +472,41 @@ class ActionGraphContext(BaseModel):
     blast_radius_neighborhood: list[ActionBlastRadiusNeighbor] = Field(default_factory=list)
     truncated_sections: list[str] = Field(default_factory=list)
     limits: ActionGraphLimits
+
+
+class ActionAttackPathNode(BaseModel):
+    """One bounded node in the attack-path story."""
+
+    node_id: str
+    kind: Literal["entry_point", "identity", "target_asset", "business_impact", "next_step"]
+    label: str
+    detail: str | None = None
+    badges: list[str] = Field(default_factory=list)
+
+
+class ActionAttackPathEdge(BaseModel):
+    """One directional connection between attack-path nodes."""
+
+    source_node_id: str
+    target_node_id: str
+    label: str
+
+
+class ActionAttackPathView(BaseModel):
+    """Bounded visual attack story for action detail."""
+
+    status: Literal["available", "partial", "unavailable", "context_incomplete"]
+    summary: str
+    path_nodes: list[ActionAttackPathNode] = Field(default_factory=list)
+    path_edges: list[ActionAttackPathEdge] = Field(default_factory=list)
+    entry_points: list[ActionAttackPathNode] = Field(default_factory=list)
+    target_assets: list[ActionAttackPathNode] = Field(default_factory=list)
+    business_impact_summary: str | None = None
+    risk_reasons: list[str] = Field(default_factory=list)
+    recommendation_summary: str | None = None
+    confidence: float = 0.0
+    truncated: bool = False
+    availability_reason: str | None = None
 
 
 _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
@@ -1113,6 +1150,24 @@ def _action_to_detail_response(
                 updated_at=f.updated_at.isoformat() if f.updated_at else None,
             )
         )
+    score_factors = _score_factors_payload(action)
+    business_impact = _business_impact_payload(action)
+    resolved_sla = _action_sla_payload(action, exception_state=state, now=now)
+    resolved_recommendation = recommendation or _action_recommendation_payload(action)
+    execution_guidance = [
+        ActionExecutionGuidance(**guidance)
+        for guidance in build_action_execution_guidance(action, account=account)
+    ]
+    resolved_graph_context = ActionGraphContext(**(graph_context or _default_graph_context_payload()))
+    attack_path_view = _attack_path_view_payload(
+        action,
+        graph_context=resolved_graph_context,
+        business_impact=business_impact,
+        recommendation=resolved_recommendation,
+        score_factors=score_factors,
+        execution_guidance=execution_guidance,
+        sla=resolved_sla,
+    )
     return ActionDetailResponse(
         id=str(action.id),
         tenant_id=str(action.tenant_id),
@@ -1122,8 +1177,8 @@ def _action_to_detail_response(
         region=action.region,
         score=_action_score_value(action),
         score_components=_score_components_payload(action),
-        score_factors=_score_factors_payload(action),
-        business_impact=_business_impact_payload(action),
+        score_factors=score_factors,
+        business_impact=business_impact,
         context_incomplete=_context_incomplete_payload(action),
         priority=int(getattr(action, "priority", 0) or 0),
         status=action.status,
@@ -1143,15 +1198,35 @@ def _action_to_detail_response(
         exception_id=state.get("exception_id"),
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
-        sla=_action_sla_payload(action, exception_state=state, now=now),
-        recommendation=recommendation or _action_recommendation_payload(action),
-        execution_guidance=[
-            ActionExecutionGuidance(**guidance)
-            for guidance in build_action_execution_guidance(action, account=account)
-        ],
+        sla=resolved_sla,
+        recommendation=resolved_recommendation,
+        execution_guidance=execution_guidance,
         implementation_artifacts=implementation_artifacts or [],
-        graph_context=ActionGraphContext(**(graph_context or _default_graph_context_payload())),
+        graph_context=resolved_graph_context,
+        attack_path_view=attack_path_view,
     )
+
+
+def _attack_path_view_payload(
+    action: Action,
+    *,
+    graph_context: ActionGraphContext,
+    business_impact: ActionBusinessImpact,
+    recommendation: ActionRecommendationResponse,
+    score_factors: list[ActionScoreFactor],
+    execution_guidance: list[ActionExecutionGuidance],
+    sla: ActionSLAStatus | None,
+) -> ActionAttackPathView:
+    payload = build_action_attack_path_view(
+        action,
+        graph_context=graph_context.model_dump(),
+        business_impact=business_impact.model_dump(),
+        recommendation=recommendation.model_dump(),
+        score_factors=[factor.model_dump() for factor in score_factors],
+        execution_guidance=[guidance.model_dump() for guidance in execution_guidance],
+        sla=sla.model_dump() if sla is not None else None,
+    )
+    return ActionAttackPathView(**payload)
 
 
 async def _load_action_implementation_artifacts(

@@ -176,6 +176,41 @@ Priority order for rollout:
 
 **Done when:** top risks are context-ranked with transparent explanations, owner-routed remediation queues are active, PR workflows can be opened directly from prioritized actions, and ticket/chat integrations keep fix status synchronized end-to-end.
 
+### Phase 3.5 — Decision Surfaces + Risk Operations
+
+This phase packages the shipped Phase 3 `P0`, `P1`, and `P2` backend capabilities into clearer operator and leadership surfaces.
+
+Current state:
+
+- `P3.5.1` Attack Path View v1 — implemented on March 12, 2026
+- `P3.5.2` through `P3.5.7` — planned and intentionally deferred until resumed explicitly
+
+Priority order when Phase 3.5 resumes:
+
+- `P3.5.2` Risk Control Tower v1
+  - top-level dashboard for risk x criticality, hot exploited now, owner pressure, and SLA backlog visibility
+- `P3.5.4` Hot CVE / Active Exploitation Board
+  - dedicated surface for trusted threat-intelligence-backed actions and signal freshness/decay
+- `P3.5.5` Owner Command Center
+  - manager-facing backlog by owner, service, queue state, and unresolved pressure
+- `P3.5.3` Choke Points
+  - graph-backed aggregation of repeated risky identities, resources, and business-critical assets
+- `P3.5.7` Closure Timeline
+  - action lifecycle from detection through remediation, verification, drift, and reopen
+- `P3.5.6` Fix Campaigns
+  - grouped remediation waves, batch PR/ticket workflows, and campaign-level closure tracking
+
+Delivery constraints:
+
+- Reuse the existing `P0` / `P1` / `P2` contracts; do not create a second scoring or reporting source of truth.
+- Keep all new API contracts additive and tenant-scoped.
+- Keep graph views bounded; do not jump to a free-form graph explorer before the bounded decision surfaces prove value.
+- Treat `P3.5.2` through `P3.5.7` as deferred roadmap only for now; `P3.5.1` is the only Phase 3.5 slice currently in scope.
+
+Reference:
+
+- [Phase 3.5 roadmap](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/phase-3-5-roadmap.md)
+
 ### Phase 4 — Evidence + Billing
 
 - Evidence pack export to S3

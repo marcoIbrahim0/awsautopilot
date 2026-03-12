@@ -1303,6 +1303,53 @@ def test_create_run_warn_requires_risk_ack_400(client: TestClient) -> None:
     assert "risk_ack_missing" in reasons
 
 
+def test_create_run_cloudtrail_warn_requires_risk_ack_400(client: TestClient) -> None:
+    """CloudTrail guided PR-bundle creation requires risk acknowledgment instead of fail-closed blocking."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="cloudtrail_enabled")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(action, None)
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.emit_strategy_metric") as mock_metric:
+            with patch("backend.routers.remediation_runs.emit_validation_failure") as mock_failure:
+                try:
+                    r = client.post(
+                        "/api/remediation-runs",
+                        json={
+                            "action_id": str(action.id),
+                            "mode": "pr_only",
+                            "strategy_id": "cloudtrail_enable_guided",
+                        },
+                    )
+                finally:
+                    app.dependency_overrides.pop(get_db, None)
+                    app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    assert isinstance(detail, dict)
+    assert detail.get("error") == "Risk acknowledgement required"
+    checks = detail.get("risk_snapshot", {}).get("checks", [])
+    codes = {check.get("code") for check in checks if isinstance(check, dict)}
+    assert "cloudtrail_cost_impact" in codes
+    assert "cloudtrail_log_bucket_prereq" in codes
+    assert "risk_evaluation_not_specialized" not in codes
+    metric_names = [call.args[1] for call in mock_metric.call_args_list if len(call.args) >= 2]
+    assert "risk_ack_required_count" in metric_names
+    assert "risk_ack_missing_rejection_count" in metric_names
+    reasons = [call.kwargs.get("reason") for call in mock_failure.call_args_list]
+    assert "risk_ack_missing" in reasons
+
+
 def test_create_run_legacy_variant_maps_to_strategy_success(client: TestClient) -> None:
     """Legacy pr_bundle_variant is accepted and mapped to strategy_id in queued payload."""
     tenant = _mock_tenant()
