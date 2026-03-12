@@ -170,7 +170,8 @@ The checked-in production frontend values currently map to:
 ### Cloudflare/OpenNext deploy gotcha
 
 - Production frontend deploys must not read `frontend/.env.local`.
-- `frontend/package.json` now temporarily moves `.env.local` out of the way during `preview`, `deploy`, and `upload` so local `http://localhost:8000` overrides do not leak into the live worker build.
+- `frontend/package.json` now routes production-style OpenNext commands through `frontend/scripts/run-opennext-production.mjs`.
+- That wrapper hides `frontend/.env.local`, strips inherited `NEXT_PUBLIC_*` environment variables, and fails the build if `.open-next/cloudflare/next-env.mjs` resolves `production.NEXT_PUBLIC_API_URL` to a local host.
 
 ### Current live blocker
 

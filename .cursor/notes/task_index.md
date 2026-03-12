@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)](task_log.md#production-frontend-localhost-api-regression-fix-and-cloudflare-republish-2026-03-12)
+  - Confirmed live production was serving chunk `/_next/static/chunks/2985-fb203b08305ec2ff.js` with `http://localhost:8000` hardcoded in the auth/API base helper.
+  - Added a fail-closed frontend API-base resolver plus a checked OpenNext production wrapper that strips inherited `NEXT_PUBLIC_*`, hides `.env.local`, and validates `.open-next/cloudflare/next-env.mjs`.
+  - Rebuilt and redeployed the frontend to Cloudflare version `3532c4ba-07c5-4a8c-920e-8ef3b007163a`; live `ocypheris.com` and workers.dev now serve chunk `2985-1a2b6c206e1fd571.js` resolving non-local hosts to `https://api.ocypheris.com`.
 - [Deploy Phase 3.5.1 attack-path view and companion validated slices to Ocypheris prod (2026-03-12)](task_log.md#deploy-phase-351-attack-path-view-and-companion-validated-slices-to-ocypheris-prod-2026-03-12)
   - Deployed the backend to image tag `20260312T184902Z` and confirmed both API and worker Lambdas advanced to `2026-03-12T18:51:27+0000`.
   - First frontend publish from a temp copy broke live with `Dynamic require of "/.next/server/middleware-manifest.json" is not supported`; restoring republish from the real workspace recovered production on Cloudflare version `951b2fcf-89a5-4d28-963d-1d96f8605274`.

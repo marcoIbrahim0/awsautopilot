@@ -1,5 +1,53 @@
 # Task Log
 
+## Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)
+
+**Task:** Stop the live Cloudflare frontend from calling `http://localhost:8000`, harden the OpenNext production build path against local env contamination, and republish the corrected frontend.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api-base-url.ts** - changed the API-base resolver so only `localhost` / `127.0.0.1` pages use the local backend and non-local hosts fail closed instead of silently using a local API URL.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api-base-url.test.ts** - added focused coverage for localhost runtime, non-local production runtime, and fail-closed contaminated/missing env cases.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/scripts/run-opennext-production.mjs** - added a production OpenNext wrapper that strips inherited `NEXT_PUBLIC_*` variables, temporarily hides `.env.local`, validates `.open-next/cloudflare/next-env.mjs`, and only then runs `preview` / `deploy` / `upload`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/package.json** - routed production-style OpenNext scripts through the new wrapper and added `npm run opennext:build:prod`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md** - updated the deployment rule to document the stricter OpenNext production wrapper and validation behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/firebase-email-verification-signup.md** - updated the earlier Cloudflare/OpenNext gotcha note so it reflects the new wrapper instead of only the old temporary-rename guard.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the earlier March 11 production localhost-env incident, the latest March 12 production deploy log, and the docs entrypoint before patching.
+- Confirmed the live production regression directly:
+  - `https://ocypheris.com/_next/static/chunks/2985-fb203b08305ec2ff.js` contained `return "http://localhost:8000"` in the compiled auth/API-base helper.
+  - local generated OpenNext env also showed the contamination pattern: `.open-next/cloudflare/next-env.mjs` had `production.NEXT_PUBLIC_API_URL="http://localhost:8000"` while `frontend/.env` still correctly pointed at `https://api.ocypheris.com`.
+- Added a fail-closed API-base resolver so a non-local host can no longer silently call a local backend even if build-time config is bad.
+- Replaced the fragile shell-only production guard with a real orchestration script that:
+  - removes inherited `NEXT_PUBLIC_*` shell variables from the OpenNext child process,
+  - hides `frontend/.env.local` during the build,
+  - validates the emitted production env map after build, and
+  - aborts before deploy if the build still resolves to a local API host.
+- Rebuilt with the new wrapper and confirmed the corrected artifact now emits:
+  - `.open-next/cloudflare/next-env.mjs` with `production.NEXT_PUBLIC_API_URL="https://api.ocypheris.com"`
+  - compiled chunk `/_next/static/chunks/2985-1a2b6c206e1fd571.js` that resolves non-local hosts to `https://api.ocypheris.com`
+- Redeployed the frontend to Cloudflare and re-verified the public site now serves the corrected chunk hash on both the custom domain and workers.dev origin.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/lib/api-base-url.test.ts` - pass (`4 passed`)
+- `cd frontend && npm run opennext:build:prod` - pass after rerunning outside the sandbox; generated `.open-next/cloudflare/next-env.mjs` now points production at `https://api.ocypheris.com`
+- `cd frontend && npm run deploy` - pass
+  - new Cloudflare version id: `3532c4ba-07c5-4a8c-920e-8ef3b007163a`
+- `curl -sS https://ocypheris.com` - pass; homepage now references `/_next/static/chunks/2985-1a2b6c206e1fd571.js`
+- `curl -sS https://frontend.maromaher54.workers.dev` - pass; workers.dev origin serves the same corrected chunk hash
+- `curl -sS https://ocypheris.com/_next/static/chunks/2985-1a2b6c206e1fd571.js` - pass; compiled helper now embeds `https://api.ocypheris.com` for non-local hosts instead of hard-wiring `http://localhost:8000`
+
+**Technical debt / gotchas:**
+- Raw `npx opennextjs-cloudflare build`, `deploy`, `preview`, or `upload` still bypass the new wrapper; those commands remain risky for live builds unless run with the same env sanitization and validation.
+- The local-only branch still intentionally keeps `http://localhost:8000` for pages served from `localhost` / `127.0.0.1`; the fix is specifically that non-local hosts no longer resolve to that URL.
+- OpenNext / Wrangler still emit the pre-existing duplicate `options` warnings in `.open-next/server-functions/default/handler.mjs`; they did not block the republish.
+
+**Open questions / TODOs:**
+- Decide whether to remove or forbid direct `npx opennextjs-cloudflare ...` usage in any remaining deploy/runbook paths so operators cannot bypass the safer wrapper accidentally.
+- If future staging environments need a different public API host, document the required `frontend/.env` swap or introduce an environment-specific checked-in production env file instead of relying on ad hoc shell overrides.
+
 ## Deploy Phase 3.5.1 attack-path view and companion validated slices to Ocypheris prod (2026-03-12)
 
 **Task:** Deploy the newly implemented `attack_path_view` action-detail work to production, verify backend/frontend runtime movement, and keep the live site healthy during rollout.

@@ -155,7 +155,13 @@ Reason:
 
 - Keep production-safe public values in `frontend/.env`.
 - Keep workstation overrides in `frontend/.env.local`.
-- Production `preview`, `deploy`, and `upload` scripts now move `.env.local` out of the way before running OpenNext so live builds do not accidentally inherit local values such as `NEXT_PUBLIC_API_URL=http://localhost:8000`.
+- Use `npm run opennext:build:prod`, `npm run preview`, `npm run deploy`, or `npm run upload` from `frontend/` for any production-style OpenNext build.
+- Those commands now run `frontend/scripts/run-opennext-production.mjs`, which:
+  - strips inherited `NEXT_PUBLIC_*` shell variables before invoking OpenNext,
+  - temporarily hides `frontend/.env.local`,
+  - validates `.open-next/cloudflare/next-env.mjs` after build, and
+  - fails the build if `production.NEXT_PUBLIC_API_URL` is missing or points at `localhost` / `127.0.0.1`.
+- Do not use raw `npx opennextjs-cloudflare build`, `deploy`, `preview`, or `upload` for live builds unless you intentionally reproduce the same safeguards.
 
 ### Current production blocker
 
