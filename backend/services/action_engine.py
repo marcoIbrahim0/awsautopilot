@@ -19,14 +19,20 @@ from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.models import Action, ActionFinding, AwsAccount, Finding, Tenant
 from backend.models.enums import ActionStatus, FindingStatus
+from backend.services.action_business_impact import (
+    build_business_impact_for_finding,
+    build_business_impact_from_components,
+)
 from backend.services.action_groups import ensure_membership_for_actions
 from backend.services.action_ownership import resolve_action_owner
+from backend.services.action_remediation_sync import apply_canonical_action_status
 from backend.services.action_scoring import score_action_group
 from backend.services.aws import assume_role
 from backend.services.control_scope import (
     action_type_from_control as _action_type_from_control_impl,
     canonical_control_id_for_action_type,
 )
+from backend.services.security_graph import sync_security_graph_for_scope
 from backend.services.sg_account_scope_resolver import (
     SGAccountScopeResolution,
     is_account_scoped_sg_control,
@@ -42,6 +48,19 @@ _CLOSED_STATUSES = (FindingStatus.RESOLVED.value,)
 _SHADOW_CLOSED_STATUSES = frozenset({"RESOLVED", "SOFT_RESOLVED"})
 _SHADOW_OPEN_STATUSES = frozenset({"OPEN"})
 _SG_ACTION_TYPE = "sg_restrict_public_ports"
+
+
+def _sync_existing_action_status(session: Session, action: Action, target_status: str, detail: str) -> None:
+    if not callable(getattr(session, "execute", None)):
+        action.status = target_status
+        return
+    apply_canonical_action_status(
+        session,
+        action=action,
+        target_status=target_status,
+        source="action_engine.recompute",
+        detail=detail,
+    )
 
 
 @dataclass(frozen=True)
@@ -209,7 +228,15 @@ def _group_score(findings: list[Finding]) -> tuple[int, dict[str, Any], Finding 
     """Return deterministic group score, persisted component payload, and representative finding."""
     group_score = score_action_group(findings)
     representative = group_score.representative_finding if isinstance(group_score.representative_finding, Finding) else None
-    return group_score.score, group_score.components, representative
+    components = dict(group_score.components)
+    components["business_impact"] = _business_impact_payload(group_score.score, representative, components)
+    return group_score.score, components, representative
+
+
+def _business_impact_payload(score: int, representative: Finding | None, components: dict[str, Any]) -> dict[str, Any]:
+    if representative is None:
+        return build_business_impact_from_components(components, stored_score=score)
+    return build_business_impact_for_finding(representative, technical_score=score)
 
 
 def _action_status_from_findings(findings: list[Finding]) -> str:
@@ -295,7 +322,8 @@ def _upsert_action_and_sync_links(
         action.score = score
         action.score_components = score_components
         action.priority = score
-        action.status = status
+        if action.status != status:
+            _sync_existing_action_status(session, action, status, "Recomputed canonical action state from linked findings.")
         action.title = title
         action.description = description
         action.resource_id = resource_id
@@ -396,7 +424,9 @@ def _mark_resolved_actions_with_no_open_findings(
     tenant_id: uuid.UUID,
     account_id: str | None,
     region: str | None,
-) -> int:
+    *,
+    return_action_ids: bool = False,
+) -> int | list[uuid.UUID]:
     """
     Mark actions as resolved when all their linked findings are RESOLVED.
     Returns number of actions updated.
@@ -408,11 +438,18 @@ def _mark_resolved_actions_with_no_open_findings(
         q = q.filter(Action.region == region)
     open_actions = q.all()
     resolved_count = 0
+    resolved_ids: list[uuid.UUID] = []
     for action in open_actions:
         unresolved_count = _linked_unresolved_finding_count(action)
         if unresolved_count == 0:
-            action.status = ActionStatus.resolved.value
+            _sync_existing_action_status(session, action, ActionStatus.resolved.value, "Closed action after linked findings resolved.")
             resolved_count += 1
+            if return_action_ids:
+                action_id = getattr(action, "id", None)
+                if action_id is not None:
+                    resolved_ids.append(action_id)
+    if return_action_ids:
+        return resolved_ids
     return resolved_count
 
 
@@ -439,7 +476,9 @@ def _reopen_resolved_orphan_actions(
     tenant_id: uuid.UUID,
     account_id: str | None,
     region: str | None,
-) -> int:
+    *,
+    return_action_ids: bool = False,
+) -> int | list[uuid.UUID]:
     """
     Reopen actions marked resolved when linked unresolved findings still exist.
     """
@@ -453,12 +492,19 @@ def _reopen_resolved_orphan_actions(
         q = q.filter(Action.region == region)
 
     resolved_actions = q.all()
-    reopened = 0
+    reopened_count = 0
+    reopened_ids: list[uuid.UUID] = []
     for action in resolved_actions:
         if _linked_unresolved_finding_count(action) > 0:
-            action.status = ActionStatus.open.value
-            reopened += 1
-    return reopened
+            _sync_existing_action_status(session, action, ActionStatus.open.value, "Reopened action after linked findings regressed.")
+            reopened_count += 1
+            if return_action_ids:
+                action_id = getattr(action, "id", None)
+                if action_id is not None:
+                    reopened_ids.append(action_id)
+    if return_action_ids:
+        return reopened_ids
+    return reopened_count
 
 
 def compute_actions_for_tenant(
@@ -501,6 +547,8 @@ def compute_actions_for_tenant(
     links_count = 0
     removed_conflicting_links = 0
     actions_touched: list[Action] = []
+    created_action_ids: list[str] = []
+    updated_action_ids: list[str] = []
     allowed_expanded_action_ids_by_finding: defaultdict[uuid.UUID, set[uuid.UUID]] = defaultdict(set)
 
     for group in groups.values():
@@ -523,8 +571,10 @@ def compute_actions_for_tenant(
 
         if is_new:
             created += 1
+            created_action_ids.append(str(action.id))
         else:
             updated += 1
+            updated_action_ids.append(str(action.id))
         links_count += len(finding_ids)
 
     for finding_id in expanded_account_scoped_finding_ids:
@@ -541,11 +591,31 @@ def compute_actions_for_tenant(
     if actions_touched:
         ensure_membership_for_actions(session, actions_touched, source="recompute")
 
-    resolved = _mark_resolved_actions_with_no_open_findings(session, tenant_id, account_id, region)
-    reopened_with_open_findings = _reopen_resolved_orphan_actions(session, tenant_id, account_id, region)
+    resolved_action_ids = _mark_resolved_actions_with_no_open_findings(
+        session,
+        tenant_id,
+        account_id,
+        region,
+        return_action_ids=True,
+    )
+    reopened_action_ids = _reopen_resolved_orphan_actions(
+        session,
+        tenant_id,
+        account_id,
+        region,
+        return_action_ids=True,
+    )
+    resolved = len(resolved_action_ids)
+    reopened_with_open_findings = len(reopened_action_ids)
+    graph_counts = sync_security_graph_for_scope(
+        session,
+        tenant_id,
+        account_id=account_id,
+        region=region,
+    )
 
     logger.info(
-        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d toxic_combination_matches=%d",
+        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d toxic_combination_matches=%d graph_nodes_created=%d graph_edges_created=%d graph_nodes_deleted=%d graph_edges_deleted=%d",
         tenant_id,
         account_id,
         region,
@@ -557,6 +627,10 @@ def compute_actions_for_tenant(
         links_count,
         removed_conflicting_links,
         toxic_combination_matches,
+        graph_counts["graph_nodes_created"],
+        graph_counts["graph_edges_created"],
+        graph_counts["graph_nodes_deleted"],
+        graph_counts["graph_edges_deleted"],
     )
     return {
         "actions_created": created,
@@ -565,5 +639,10 @@ def compute_actions_for_tenant(
         "actions_reopened_orphaned": reopened_with_open_findings,
         "actions_reopened_with_open_findings": reopened_with_open_findings,
         "action_findings_linked": links_count,
+        "created_action_ids": created_action_ids,
+        "updated_action_ids": updated_action_ids,
+        "resolved_action_ids": [str(action_id) for action_id in resolved_action_ids],
+        "reopened_action_ids": [str(action_id) for action_id in reopened_action_ids],
         "toxic_combination_matches": toxic_combination_matches,
+        **graph_counts,
     }

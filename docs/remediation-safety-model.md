@@ -56,6 +56,7 @@ Validation includes:
 - strategy input schema validation
 - risk acknowledgement requirement for `warn|unknown`
 - direct-fix WriteRole requirement
+- direct-fix approval metadata stamped only by the approved API create path
 
 Legacy clients can still send `pr_bundle_variant`; server-side mapping converts compatible variants to `strategy_id`.
 
@@ -67,6 +68,7 @@ Run-time safety evidence is stored in `remediation_runs.artifacts`:
 - `strategy_inputs`
 - `risk_snapshot`
 - `risk_acknowledged`
+- `direct_fix_approval` (direct-fix only; includes approver, timestamp, and allowlisted approval path)
 - `legacy_variant_mapped_from` (when applicable)
 
 This evidence is carried through queue payloads and worker processing.
@@ -77,13 +79,17 @@ Direct-fix is intentionally narrow:
 
 - supported for low-risk enablement actions plus `ebs_default_encryption`
 - risky controls remain strategy-gated PR flows
+- worker execution is fail-closed unless the stored run mode is `direct_fix` and `artifacts.direct_fix_approval.approval_path` is in the explicit allowlist
+- `pr_only` automation cannot escalate itself into direct-fix mutation by replaying or spoofing queue payloads
 - worker logs pre-check/apply/post-check phases for auditability
 
 ## Audit Expectations
 
 - Every remediation run records strategy and risk context.
+- Every direct-fix run records explicit approval provenance before mutation is allowed.
 - No strategy path is treated as implicitly safe.
 - Exception-style strategies remain explicit user choices, not silent fallbacks.
+- Blocked unapproved mutation attempts emit an `audit_log` event with `event_type=remediation_mutation_blocked`.
 
 ## Monitoring and Alerts
 

@@ -35,6 +35,7 @@ def _launch_tuple() -> tuple[
     str,
     str | None,
     str | None,
+    str | None,
     str,
 ]:
     return (
@@ -46,6 +47,7 @@ def _launch_tuple() -> tuple[
         "eu-north-1",
         "SecurityAutopilotReadRole",
         "SecurityAutopilotWriteRole",
+        None,
         None,
         None,
         "SecurityAutopilotControlPlaneForwarder",

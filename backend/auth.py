@@ -13,7 +13,7 @@ import hashlib
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Sequence
 from urllib.parse import urlencode
 
 import bcrypt
@@ -745,6 +745,42 @@ def get_saas_and_launch_url(
         control_plane_ingest_url,
         DEFAULT_CONTROL_PLANE_FORWARDER_STACK_NAME,
     )
+
+
+def normalize_saas_launch_url(
+    payload: Sequence[str | None],
+) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str,
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str,
+]:
+    if len(payload) == 12:
+        return tuple(payload)  # type: ignore[return-value]
+    if len(payload) == 11:
+        return (
+            payload[0],
+            payload[1],
+            payload[2],
+            payload[3],
+            payload[4],
+            payload[5],
+            str(payload[6] or ""),
+            str(payload[7] or ""),
+            payload[8],
+            None,
+            payload[9],
+            str(payload[10] or ""),
+        )
+    raise ValueError(f"unexpected saas launch payload length: {len(payload)}")
 
 
 def is_saas_admin_email(email: str | None) -> bool:

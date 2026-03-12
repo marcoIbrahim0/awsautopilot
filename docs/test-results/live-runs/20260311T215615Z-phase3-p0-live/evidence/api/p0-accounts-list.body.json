@@ -1,0 +1,17 @@
+[
+  {
+    "account_id": "696505809372",
+    "created_at": "2026-03-11T14:18:44.163725Z",
+    "id": "537fee33-429d-4b06-9080-7ee490293355",
+    "last_synced_at": "2026-03-11T17:50:31.561410Z",
+    "last_validated_at": "2026-03-11T17:50:13.637648Z",
+    "regions": [
+      "eu-north-1",
+      "us-east-1"
+    ],
+    "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+    "role_write_arn": null,
+    "status": "validated",
+    "updated_at": "2026-03-11T17:50:13.323883Z"
+  }
+]

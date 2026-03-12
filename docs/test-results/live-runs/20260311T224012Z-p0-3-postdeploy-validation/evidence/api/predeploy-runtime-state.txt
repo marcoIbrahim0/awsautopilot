@@ -1,0 +1,36 @@
+# UTC: 2026-03-11T22:41:23Z
+# aws sts get-caller-identity
+{
+    "UserId": "AIDAQNQWGZIWGDV4TV6K2",
+    "Account": "029037611564",
+    "Arn": "arn:aws:iam::029037611564:user/AutoPilotAdmin"
+}
+
+# aws cloudformation describe-stacks security-autopilot-saas-serverless-runtime
+{
+    "LastUpdatedTime": "2026-03-11T18:12:51.963000+00:00",
+    "ApiImage": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260311T181012Z",
+    "WorkerImage": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260311T181012Z",
+    "EnableWorker": "true",
+    "WorkerReservedConcurrency": "10"
+}
+
+# aws lambda get-function security-autopilot-dev-api
+{
+    "FunctionName": "security-autopilot-dev-api",
+    "LastModified": "2026-03-11T18:12:59.000+0000",
+    "State": "Active",
+    "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260311T181012Z",
+    "ResolvedImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api@sha256:7896211aeaa9f53205e0111faa0c11f780ef44c9b1f40b37573c5ccd62cc37b8",
+    "CodeSha256": "7896211aeaa9f53205e0111faa0c11f780ef44c9b1f40b37573c5ccd62cc37b8"
+}
+
+# aws lambda get-function security-autopilot-dev-worker
+{
+    "FunctionName": "security-autopilot-dev-worker",
+    "LastModified": "2026-03-11T18:12:59.000+0000",
+    "State": "Active",
+    "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260311T181012Z",
+    "ResolvedImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker@sha256:2264a5c1f6d3e6089c2458dd736c8fb6e6a0abfb0a9f73c6dfdda41644ef9e3c",
+    "CodeSha256": "2264a5c1f6d3e6089c2458dd736c8fb6e6a0abfb0a9f73c6dfdda41644ef9e3c"
+}

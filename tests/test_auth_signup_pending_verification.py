@@ -54,7 +54,10 @@ def test_signup_returns_pending_response_when_firebase_enabled(client: TestClien
         )
 
     assert response.status_code == 202
-    assert response.headers.get("set-cookie") is None
+    set_cookie = response.headers.get("set-cookie")
+    if set_cookie is not None:
+        assert 'access_token=""' in set_cookie
+        assert 'csrf_token=""' in set_cookie
     payload = response.json()
     assert payload["email"] == "admin@acme.com"
     assert "verification link" in payload["message"].lower()

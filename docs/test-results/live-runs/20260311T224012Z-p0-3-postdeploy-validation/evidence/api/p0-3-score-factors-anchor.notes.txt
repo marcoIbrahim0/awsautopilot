@@ -1,0 +1,1 @@
+Derived from p0-3-action-detail-anchor.body.json for the same GET /api/actions/{id} response.

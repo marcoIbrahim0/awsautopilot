@@ -1,0 +1,9 @@
+Browser path:
+- Fresh Playwright browser context opened `https://ocypheris.com/login`.
+- Live sign-in succeeded and redirected to `/findings`.
+- Screenshot saved at `../ui/01-login-success.png`.
+
+API verification path:
+- `GET /api/auth/me` returned `200`.
+- Auth evidence was captured with the same-operator bearer token file already used in prior live Ocypheris validation runs: `/tmp/ocypheris_phase3_p0_token.txt`.
+- Response confirmed operator `marco.ibrahim@ocypheris.com` in tenant `Valens` (`9f7616d8-af04-43ca-99cd-713625357b70`).

@@ -1,0 +1,7 @@
+README.txt
+ebs_default_encryption.tf
+pr_automation/control_mapping_context.json
+pr_automation/diff_summary.json
+pr_automation/pr_payload.json
+pr_automation/rollback_notes.md
+providers.tf

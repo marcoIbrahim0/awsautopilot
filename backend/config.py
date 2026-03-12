@@ -286,6 +286,13 @@ class Settings(BaseSettings):
         default=336,
         description="Hours before low-risk (score<40) actions move into the overdue owner queue.",
     )
+    ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS: float = Field(
+        default=72.0,
+        description=(
+            "Half-life in hours for decay applied to trusted threat-intelligence exploit signals "
+            "before they are added to exploit_signals scoring."
+        ),
+    )
     ACTIONS_TOXIC_COMBINATIONS_ENABLED: bool = Field(
         default=True,
         description=(

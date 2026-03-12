@@ -1,0 +1,7 @@
+{
+    "FunctionName": "security-autopilot-dev-worker",
+    "LastModified": "2026-03-11T22:44:07.000+0000",
+    "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260311T224136Z",
+    "ResolvedImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker@sha256:d6659b9118125b36341ddc43cc4fb43916897f62846e67152274dcada3abcbf7",
+    "CodeSha256": "d6659b9118125b36341ddc43cc4fb43916897f62846e67152274dcada3abcbf7"
+}

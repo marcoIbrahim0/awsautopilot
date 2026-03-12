@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -20,6 +21,7 @@ from sqlalchemy.orm import Session
 from backend.models import AwsAccount, Finding
 from backend.models.action_finding import ActionFinding
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
+from backend.services.finding_relationship_context import enrich_finding_raw_json
 from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
 from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
@@ -43,6 +45,8 @@ _S3_BUCKET_SCOPED_ACTION_TYPES = {
     "s3_bucket_encryption_kms",
     "s3_bucket_require_ssl",
 }
+_SECURITY_HUB_CONSISTENCY_MAX_FETCH_PASSES = 3
+_SECURITY_HUB_CONSISTENCY_RETRY_SECONDS = 2.0
 
 
 def _is_security_hub_not_enabled_error(exc: ClientError) -> bool:
@@ -90,6 +94,71 @@ def _normalized_finding_status(raw: dict) -> str:
     if workflow_status == "NOTIFIED":
         return "NOTIFIED"
     return "NEW"
+
+
+def _finding_state_token(raw: dict[str, Any]) -> tuple[str, str, str, str, str]:
+    compliance = raw.get("Compliance") or {}
+    workflow = raw.get("Workflow") or {}
+    return (
+        str(raw.get("Id") or ""),
+        str(raw.get("UpdatedAt") or ""),
+        str(compliance.get("Status") or ""),
+        str(workflow.get("Status") or ""),
+        str(raw.get("RecordState") or ""),
+    )
+
+
+def _finding_is_newer_or_changed(current: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    current_updated = _parse_ts(str(current.get("UpdatedAt") or ""))
+    candidate_updated = _parse_ts(str(candidate.get("UpdatedAt") or ""))
+    if current_updated is None:
+        return candidate_updated is not None or _finding_state_token(candidate) != _finding_state_token(current)
+    if candidate_updated is None:
+        return False
+    if candidate_updated > current_updated:
+        return True
+    return candidate_updated == current_updated and _finding_state_token(candidate) != _finding_state_token(current)
+
+
+def _merge_finding_batches(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {
+        finding_id: item for item in existing if (finding_id := str(item.get("Id") or "").strip())
+    }
+    for item in incoming:
+        finding_id = str(item.get("Id") or "").strip()
+        if not finding_id:
+            continue
+        current = merged.get(finding_id)
+        if current is None or _finding_is_newer_or_changed(current, item):
+            merged[finding_id] = item
+    return list(merged.values())
+
+
+def _findings_state_signature(findings: list[dict[str, Any]]) -> tuple[tuple[str, str, str, str, str], ...]:
+    return tuple(sorted(_finding_state_token(item) for item in findings if isinstance(item, dict)))
+
+
+def _fetch_findings_with_consistency_retry(
+    session_boto: Any,
+    *,
+    region: str,
+    account_id: str,
+) -> list[dict[str, Any]]:
+    findings = fetch_all_findings(session_boto, region=region, account_id=account_id)
+    if not findings:
+        return findings
+    previous_signature = _findings_state_signature(findings)
+    for _ in range(_SECURITY_HUB_CONSISTENCY_MAX_FETCH_PASSES - 1):
+        time.sleep(_SECURITY_HUB_CONSISTENCY_RETRY_SECONDS)
+        findings = _merge_finding_batches(
+            findings,
+            fetch_all_findings(session_boto, region=region, account_id=account_id),
+        )
+        current_signature = _findings_state_signature(findings)
+        if current_signature == previous_signature:
+            break
+        previous_signature = current_signature
+    return findings
 
 
 def _resource_id_and_type(resource: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -171,6 +240,14 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         resource_id=str(rid) if rid is not None else None,
         resource_type=str(rtype) if rtype is not None else None,
     )
+    raw_json = enrich_finding_raw_json(
+        make_json_safe(raw),
+        account_id=account_id,
+        region=region,
+        resource_id=_trunc(rid, 2048),
+        resource_type=_trunc(rtype, 256),
+        resource_key=_trunc(resource_key, 512),
+    )
     status = _normalized_finding_status(raw)[:32]
     resolved_at = (last_obs or updated or datetime.now(timezone.utc)) if status == "RESOLVED" else None
 
@@ -196,7 +273,7 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         "first_observed_at": created,
         "last_observed_at": last_obs or updated,
         "sh_updated_at": updated,
-        "raw_json": make_json_safe(raw),
+        "raw_json": raw_json,
     }
 
 
@@ -282,7 +359,11 @@ def execute_ingest_job(job: dict) -> None:
         logger.info("Assuming role for account_id=%s region=%s", account_id, region)
         session_boto = assume_role(role_arn=role_arn, external_id=external_id)
         try:
-            findings_raw = fetch_all_findings(session_boto, region=region, account_id=account_id)
+            findings_raw = _fetch_findings_with_consistency_retry(
+                session_boto,
+                region=region,
+                account_id=account_id,
+            )
         except ClientError as e:
             if _is_security_hub_not_enabled_error(e):
                 logger.warning(

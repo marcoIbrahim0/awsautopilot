@@ -1,9 +1,15 @@
 from logging.config import fileConfig
 
+from sqlalchemy import Column
+from sqlalchemy import MetaData
+from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy import String
+from sqlalchemy import Table
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from alembic.ddl.impl import DefaultImpl
 
 from backend.config import settings
 from backend.models import Base
@@ -22,6 +28,24 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here for 'autogenerate' support
 target_metadata = Base.metadata
+
+
+def _version_table_impl(
+    self, *, version_table: str, version_table_schema: str | None, version_table_pk: bool, **_: object
+) -> Table:
+    # Fresh DBs must accept current revision ids; Alembic's default String(32) is now too short.
+    table = Table(
+        version_table,
+        MetaData(),
+        Column("version_num", String(64), nullable=False),
+        schema=version_table_schema,
+    )
+    if version_table_pk:
+        table.append_constraint(PrimaryKeyConstraint("version_num", name=f"{version_table}_pkc"))
+    return table
+
+
+DefaultImpl.version_table_impl = _version_table_impl
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

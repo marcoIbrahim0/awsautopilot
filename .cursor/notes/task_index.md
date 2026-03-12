@@ -4,6 +4,112 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation run page evidence-link cleanup and duplicate artifact-card removal (2026-03-12)](task_log.md#remediation-run-page-evidence-link-cleanup-and-duplicate-artifact-card-removal-2026-03-12)
+  - Fixed the dedicated remediation-run page so activity-log links stay valid, generated-files links are only used when that section exists, and checklist chips fall back to per-evidence anchors instead of `/remediation-runs`.
+  - Removed the duplicate `Implementation artifacts` card from the full-width remediation-run page without changing the additive `artifact_metadata` API contract.
+  - Added focused UI coverage for the full-width run-page evidence/navigation behavior and updated the handoff-free-closure doc.
+- [PR bundle summary remediation-options preflight and strategy payload fix (2026-03-12)](task_log.md#pr-bundle-summary-remediation-options-preflight-and-strategy-payload-fix-2026-03-12)
+  - Fixed the summary-page PR-bundle flow so it now preflights `GET /api/actions/{id}/remediation-options` before any single or grouped run-create request.
+  - Added conservative client-side auto-selection for recommended non-exception `pr_only` strategies, including derived inputs from schema defaults, `context.default_inputs`, and safely resolvable safe defaults.
+  - Added explicit summary-page failures for non-auto-runnable cases and grouped divergence, plus focused UI regressions covering the new contract.
+- [Phase 3 P2 final live closure on production after grouped-action and grouped-view fixes (2026-03-12)](task_log.md#phase-3-p2-final-live-closure-on-production-after-grouped-action-and-grouped-view-fixes-2026-03-12)
+  - Closed the remaining March 12 P2 production blockers by fixing security-graph node reuse, Security Hub cleanup convergence, grouped findings action-hint scoping, grouped-view stale overwrites, and drawer provenance rendering.
+  - Reproved live production behavior after deploy: standard recompute succeeds, synthetic open actions drop to zero after recompute, the filtered grouped Config card resolves to the correct trusted action, and the live drawer visibly renders `Threat-intel provenance` plus `CVE-2026-9001`, `CISA KEV`, confidence, applied points, and decay.
+  - Final observed Phase 3 P2 status on production is `PASS`, with closure evidence recorded under `docs/test-results/live-runs/20260312T165611Z-phase3-p2-grouped-fix-validation/`.
+- [Phase 3 P2 live rerun proves core API weighting/decay but leaves cleanup and explainability defects (2026-03-12)](task_log.md#phase-3-p2-live-rerun-proves-core-api-weightingdecay-but-leaves-cleanup-and-explainability-defects-2026-03-12)
+  - Proved the production API now exposes the core `P2.1` and `P2.2` contracts on synthetic live actions: trusted config weighting (`26` vs `16`), IAM headroom/cap (`48` vs `46`, `applied=2`), fail-closed low-confidence behavior, and aged zero-point provenance.
+  - Captured a fresh Playwright UI pass showing all six synthetic actions in the live list and a trusted-config action drawer at `Priority 26`, while also proving the UI does not surface the threat-intel provenance contract.
+  - Completed source-side cleanup under the validated import role (`SuccessCount=6`), but post-cleanup app state remained partial: the standard recompute still fails on the production security-graph defect and four archived synthetic actions remained open after ingest plus graph-bypassed recompute.
+- [Phase 3 P2 live validation blocked by missing threat-intel-bearing production data (2026-03-12)](task_log.md#phase-3-p2-live-validation-blocked-by-missing-threat-intel-bearing-production-data-2026-03-12)
+  - Created a dedicated evidence package under `docs/test-results/live-runs/20260312T143138Z-phase3-p2-live/` with fresh auth, discovery payloads, all six live action details, and a blocker-driven notes package.
+  - Confirmed the current live tenant still has only `7` Security Hub configuration findings and `6` configuration/remediation actions for account `696505809372`; no inspected action detail exposes the P2 threat-intel or provenance fields.
+  - Marked `P2.1` and `P2.2` `BLOCKED` pending AWS-side vulnerability/threat-intel scenarios because current production data cannot exercise the live P2 contract.
+
+- [Phase 3 P2.2 threat-intel decay and provenance transparency (2026-03-12)](task_log.md#phase-3-p22-threat-intel-decay-and-provenance-transparency-2026-03-12)
+  - Added a first-class `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS` runtime setting and wired it through the serverless deploy path so trusted exploit-signal scoring now decays predictably over time.
+  - Extended `exploit_signals` explainability so `score_factors[].provenance[]` exposes `source`, `observed_at`, `decay_applied`, `base_contribution`, and `final_contribution`, including zero-point aged-out signals.
+  - Added focused P2.2 regression coverage and kept the repo-wide suite green with `pytest -q` (`1194 passed`).
+
+- [Phase 3 P2.1 threat-intelligence weighting implementation (2026-03-12)](task_log.md#phase-3-p21-threat-intelligence-weighting-implementation-2026-03-12)
+  - Added a trusted-source threat-intel adapter for `cisa_kev` and `high_confidence_exploitability`, including nested vulnerability parsing, confidence gates, and fail-closed handling for missing or untrusted feeds.
+  - Integrated bounded threat-intel scoring into the existing `exploit_signals` factor with explicit `10`-point threat cap, `15`-point exploit-factor cap, and per-signal provenance persisted in `score_components`.
+  - Added focused P2.1 regressions and kept the repo-wide suite green with `pytest -q` (`1190 passed`).
+
+- [Phase 3 P1 live drift recovery, migration repair, and post-deploy smoke validation (2026-03-12)](task_log.md#phase-3-p1-live-drift-recovery-migration-repair-and-post-deploy-smoke-validation-2026-03-12)
+  - Verified the repo already contained `/api/integrations`, the March 12 P1 Alembic revisions, and the startup revision guard, while live prod still ran image tag `20260311T224136Z` and DB revision `0040_firebase_email_verification`.
+  - Redeployed the standard serverless runtime to image tag `20260312T020548Z`, then repaired the live Alembic metadata width (`alembic_version.version_num -> varchar(64)`) so `alembic upgrade heads` could succeed on the existing database.
+  - Fresh post-deploy evidence under `docs/test-results/live-runs/20260312T021444Z-phase3-p1-postdeploy/` now shows P1.1/P1.2/P1.3/P1.4/P1.5 route surface/P1.7/P1.8 live, with only full P1.6 drift reconciliation still blocked by zero configured provider settings.
+
+- [Phase 3 P1 live validation run on Ocypheris prod shows March 11 runtime still lacks most P1 contracts (2026-03-12)](task_log.md#phase-3-p1-live-validation-run-on-ocypheris-prod-shows-march-11-runtime-still-lacks-most-p1-contracts-2026-03-12)
+  - Created a dedicated evidence package under `docs/test-results/live-runs/20260312T013435Z-phase3-p1-live/` with API, UI, DB, and summary artifacts for all `P1.1` through `P1.8` checks.
+  - Proved current live API/worker still run image tag `20260311T224136Z`, while production DB inspection showed the P1 graph/integration/sync tables are missing and `/api/integrations/settings` is `404`.
+  - Final live result: only the externally observable `P1.4` invalid-escalation rejection passed; `P1.1`, `P1.2`, `P1.3`, `P1.5`, `P1.7`, and `P1.8` failed on missing live contracts/artifacts, and `P1.6` remained blocked by the absent integration surface.
+
+- [Phase 3 P1.7 business impact matrix implementation (2026-03-12)](task_log.md#phase-3-p17-business-impact-matrix-implementation-2026-03-12)
+  - Added explicit `business_impact` payloads to action list/detail/batch responses with deterministic matrix coordinates, criticality dimensions, and explicit unknown-criticality handling.
+  - Changed `/api/actions` ordering to use matrix rank first so criticality can rerank technically similar actions without hiding the raw risk score.
+  - Added focused P1.7 regression coverage and kept the repo-wide suite green with `pytest -q` (`1184 passed`).
+
+- [Phase 3 P1.8 recommendation mode from matrix position implementation (2026-03-12)](task_log.md#phase-3-p18-recommendation-mode-from-matrix-position-implementation-2026-03-12)
+  - Added an additive recommendation engine that maps every `risk x business_criticality` matrix cell to exactly one default mode and exposes auditable rationale/evidence.
+  - Wired additive `recommendation` payloads into `GET /api/actions/{id}` and `GET /api/actions/{id}/remediation-options` without changing remediation approval or execution gates.
+  - Added focused P1.8 regression coverage for all matrix paths plus override behavior, then kept the repo-wide suite green with `pytest -q` (`1179 passed`).
+
+- [Phase 3 P1.6 remediation system-of-record sync implementation (2026-03-12)](task_log.md#phase-3-p16-remediation-system-of-record-sync-implementation-2026-03-12)
+  - Made `Action.status` the authoritative remediation-state source of truth and moved external conflict handling into dedicated sync-state and sync-event tables.
+  - Changed inbound provider status handling so conflicting webhook updates preserve internal canonical state, record `preserve_internal_canonical`, and mark external status drift instead of overwriting the action.
+  - Added a dedicated remediation-state reconciliation job plus focused replay/idempotency coverage; `pytest -q` now passes with `1165 passed`.
+
+- [Phase 3 P1.5 bi-directional Jira, ServiceNow, and Slack integrations (2026-03-12)](task_log.md#phase-3-p15-bi-directional-jira-servicenow-and-slack-integrations-2026-03-12)
+  - Added tenant-scoped integration settings, external-link persistence, retry-safe outbound sync tasks, and idempotent inbound webhook receipts.
+  - Added `/api/integrations` plus a dedicated `integration_sync` worker path so actions can create, update, and reopen Jira, ServiceNow, and Slack work without making provider state authoritative.
+  - Added focused P1.5 regression coverage for outbound planning, inbound replay safety, provider failure handling, and reopen-on-regression scheduling; `pytest -q` now passes with `1165 passed`.
+
+- [Phase 3 P1.3 cloud-to-code remediation PR automation implementation (2026-03-12)](task_log.md#phase-3-p13-cloud-to-code-remediation-pr-automation-implementation-2026-03-12)
+  - Added additive `repo_target` support and provider-agnostic PR payload artifacts with repo/branch/path mapping, reproducible diff metadata, rollback notes, and control-mapping context.
+  - Enriched successful PR bundle runs with `pr_automation/` bundle files plus normalized run/action artifact metadata without coupling the worker to a specific VCS vendor.
+  - Added focused P1.3 regression coverage and snapshot fixtures; `pytest -q` now passes with `1150 passed`.
+
+- [Phase 3 P1.4 strict approval gate for production mutation (2026-03-12)](task_log.md#phase-3-p14-strict-approval-gate-for-production-mutation-2026-03-12)
+  - Added explicit `direct_fix_approval` metadata and a worker-side allowlisted approval-path check so `pr_only` automation cannot escalate into direct AWS mutation.
+  - Added `audit_log.event_type=remediation_mutation_blocked` for blocked unapproved mutation attempts and kept the normal remediation completion audit trail intact.
+  - Added focused P1.4 regressions plus updated remediation worker fixtures; targeted P1.4 and remediation worker pytest scopes pass.
+
+- [Phase 3 P1.2 graph-backed action detail context implementation (2026-03-12)](task_log.md#phase-3-p12-graph-backed-action-detail-context-implementation-2026-03-12)
+  - Added additive `graph_context` to `GET /api/actions/{id}` with bounded `connected_assets[]`, `identity_path[]`, `blast_radius_neighborhood[]`, explicit fallback state, and `truncated_sections[]` for capped views.
+  - Added `backend/services/action_graph_context.py`, wired the action router/frontend drawer to render graph-backed detail context, and kept the payload stable when graph data is absent.
+  - Added focused P1.2 regression coverage plus action-detail/UI contract assertions, then kept the full suite green with `pytest -q` (`1141 passed`).
+
+- [Phase 3 P1.1 security graph foundation implementation (2026-03-12)](task_log.md#phase-3-p11-security-graph-foundation-implementation-2026-03-12)
+  - Added tenant-scoped `security_graph_nodes` / `security_graph_edges` models plus migration `0041_security_graph_foundation.py` with stable unique graph keys for rerun-safe upserts.
+  - Added `backend/services/security_graph.py` and shared `backend/services/risk_signals.py`, then wired graph sync into `compute_actions_for_tenant` so recomputes now populate resource/identity/exposure/finding/action graph state.
+  - Added focused P1.1 regression coverage and kept the repo-wide suite green by normalizing legacy auth launch-tuple contracts; `pytest -q` now passes with `1141 passed`.
+
+- [P0.8 PR-only live validation pass without WriteRole (2026-03-12)](task_log.md#p08-pr-only-live-validation-pass-without-writerole-2026-03-12)
+  - Created a dedicated evidence package under `docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/` and revalidated live auth via the same-operator bearer fallback after the supplied password again returned `401`.
+  - Created live remediation run `88e08e11-0b86-4f7d-bf4e-fd24a5870ad1` for action `0ca64b94-9dcb-4a97-91b0-27b0341865bc` in `pr_only` mode with strategy `ebs_enable_default_encryption_aws_managed_kms_pr_bundle`, then confirmed terminal `success`.
+  - Confirmed live PASS evidence for P0.8 without `WriteRole`: action detail now exposes executable `implementation_artifacts[]`, run detail exposes populated `artifact_metadata` plus closure/evidence metadata, and the downloadable PR bundle zip contains the expected Terraform files.
+
+- [P0.3 post-deploy live validation pass after producer-path rollout (2026-03-12)](task_log.md#p03-post-deploy-live-validation-pass-after-producer-path-rollout-2026-03-12)
+  - Deployed the standard serverless runtime so both live Lambdas moved from image tag `20260311T181012Z` to `20260311T224136Z`, with `LastModified` advancing from `2026-03-11T18:12:59.000+0000` to `2026-03-11T22:44:07.000+0000`.
+  - Ran the scoped `relationship_context` dry-run plus live backfill/recompute for tenant `9f7616d8-af04-43ca-99cd-713625357b70`, account `696505809372`, region `us-east-1`; both runs reported `26` scanned / `26` updated and the live run recomputed actions.
+  - Confirmed live PASS evidence for P0.3: findings `720d2ebe-07d3-4564-834b-b27736727a90` (`EC2.182`) and `cc4e2b7a-a2d1-443d-9bd6-5fb0ac2d7e25` (`SSM.7`) now expose complete `relationship_context`, and anchor action `442e46ac-f31c-4242-82ca-9e47081a3adb` shows `context_incomplete=false`, toxic-combination `+15`, and explainable score promotion from `69` to `84`.
+
+- [P0.3 live validation blocked pending producer-path deploy (2026-03-12)](task_log.md#p03-live-validation-blocked-pending-producer-path-deploy-2026-03-12)
+  - Created a dedicated evidence package under `docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/` and confirmed the scoped live dataset is non-empty (`26` findings would be updated) via backfill dry-run.
+  - Proved the production API and worker Lambdas still run image tag `20260311T181012Z`, which predates the March 12 relationship-context producer-path implementation.
+  - Stopped before live backfill/recompute, marked P0.3 `BLOCKED`, and recorded the exact redeploy-first next steps plus the repeated live login `401`.
+
+- [Phase 3 P0.3 live relationship-context producer fix for toxic-combination validation (2026-03-12)](task_log.md#phase-3-p03-live-relationship-context-producer-fix-for-toxic-combination-validation-2026-03-12)
+  - Added the authoritative Security Hub producer for `finding.raw_json.relationship_context` using canonical finding metadata already persisted on each row.
+  - Added a scoped idempotent backfill script so existing Security Hub findings can be enriched and actions recomputed without re-fetching from AWS.
+  - Added explicit regressions for producer-backed promotion, account-scoped anchor fail-closed behavior, and mixed same-resource/account-support toxic-combination matching.
+
+- [Phase 3 P0 live validation run on Ocypheris prod partially validated via bearer-token fallback (2026-03-11)](task_log.md#phase-3-p0-live-validation-run-on-ocypheris-prod-partially-validated-via-bearer-token-fallback-2026-03-11)
+  - Created a dedicated production evidence package under `docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/` and captured live auth, account, finding, action, queue, remediation-run, and UI artifacts.
+  - Confirmed current live prod can directly validate `P0.1`, `P0.2`, `P0.4`, `P0.5`, `P0.6`, and `P0.7`, while `P0.3` and `P0.8` remain not testable from current live data.
+  - Captured the exact blockers: provided browser password rejected on live, no positive toxic-combination candidate with complete relationship context, no remediation runs/artifacts, and `/actions` UI not exposed in the deployed frontend.
+
 - [Onboarding Access Analyzer step removed from initial connection flow (2026-03-11)](task_log.md#onboarding-access-analyzer-step-removed-from-initial-connection-flow-2026-03-11)
   - Removed the Access Analyzer step and CTA from onboarding so initial account connection no longer prompts users to enable it.
   - Added onboarding regression coverage that old saved drafts on `access-analyzer` now resume at final checks.

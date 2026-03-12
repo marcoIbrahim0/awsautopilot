@@ -41,6 +41,14 @@ export CONTROL_PLANE_EVENTS_SECRET="your-secret"
   --worker-image-uri 123456789012.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-app:dev
 ```
 
+The serverless deploy script updates Lambda images and runtime configuration only. It does **not** apply Alembic migrations. After every runtime deploy, run the DB upgrade separately against the same database used by the stack:
+
+```bash
+/bin/zsh -lc 'set -a; source config/.env.ops; set +a; alembic upgrade heads'
+```
+
+Use `heads`, not `head`: the current repo has two live heads, `0042_bidirectional_integrations` and `0042_action_remediation_system_of_record`.
+
 ### Runtime State Drift Recovery
 
 If a stop profile or manual AWS CLI action left the API/worker/helper Lambdas throttled or the worker mappings disabled, run:
@@ -54,6 +62,12 @@ If a stop profile or manual AWS CLI action left the API/worker/helper Lambdas th
 ```
 
 This is required because out-of-band `put-function-concurrency 0` and event-source-mapping state changes are not always reconciled by a later CloudFormation deploy when the template properties themselves are unchanged.
+
+If `/health` or `/ready` starts failing immediately after a runtime deploy, check the API/worker logs for the migration guard message from [`backend/services/migration_guard.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/migration_guard.py). In this repo, the recovery command is:
+
+```bash
+/bin/zsh -lc 'set -a; source config/.env.ops; set +a; alembic upgrade heads'
+```
 
 ### Manual Deployment
 

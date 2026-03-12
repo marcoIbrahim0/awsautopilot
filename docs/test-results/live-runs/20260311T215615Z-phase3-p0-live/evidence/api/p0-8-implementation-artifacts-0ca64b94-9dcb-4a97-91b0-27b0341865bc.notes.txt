@@ -1,0 +1,2 @@
+Implementation artifacts count: 0
+Current live action detail shows no implementation artifacts.

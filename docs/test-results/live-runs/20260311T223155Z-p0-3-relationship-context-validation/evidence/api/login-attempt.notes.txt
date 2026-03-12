@@ -1,0 +1,3 @@
+URL: https://api.ocypheris.com/api/auth/login
+Email: marco.ibrahim@ocypheris.com
+Body: {"detail":"Invalid email or password"}

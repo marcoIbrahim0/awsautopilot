@@ -1,7 +1,10 @@
 # backend/models/__init__.py
 """Make imports explicit so Alembic can discover models reliably."""
 from backend.models.action import Action
+from backend.models.action_external_link import ActionExternalLink
 from backend.models.action_finding import ActionFinding
+from backend.models.action_remediation_sync_event import ActionRemediationSyncEvent
+from backend.models.action_remediation_sync_state import ActionRemediationSyncState
 from backend.models.action_group import ActionGroup
 from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
@@ -45,6 +48,8 @@ from backend.models.evidence_export import EvidenceExport
 from backend.models.exception import Exception
 from backend.models.finding import Finding
 from backend.models.finding_shadow_state import FindingShadowState
+from backend.models.integration_event_receipt import IntegrationEventReceipt
+from backend.models.integration_sync_task import IntegrationSyncTask
 from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
 from backend.models.root_key_external_task import RootKeyExternalTask
 from backend.models.root_key_remediation_artifact import RootKeyRemediationArtifact
@@ -54,9 +59,12 @@ from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
 from backend.models.secret_migration_run import SecretMigrationRun
 from backend.models.secret_migration_transaction import SecretMigrationTransaction
+from backend.models.security_graph_edge import SecurityGraphEdge
+from backend.models.security_graph_node import SecurityGraphNode
 from backend.models.support_file import SupportFile
 from backend.models.support_note import SupportNote
 from backend.models.tenant import Tenant
+from backend.models.tenant_integration_setting import TenantIntegrationSetting
 from backend.models.tenant_reconcile_run import TenantReconcileRun
 from backend.models.tenant_reconcile_run_shard import TenantReconcileRunShard
 from backend.models.user import User
@@ -64,7 +72,10 @@ from backend.models.user_invite import UserInvite
 
 __all__ = [
     "Action",
+    "ActionExternalLink",
     "ActionFinding",
+    "ActionRemediationSyncEvent",
+    "ActionRemediationSyncState",
     "ActionGroup",
     "ActionGroupActionState",
     "ActionGroupConfirmationSource",
@@ -85,6 +96,8 @@ __all__ = [
     "ControlPlaneEventIngestStatus",
     "ControlPlaneReconcileJob",
     "GovernanceNotification",
+    "IntegrationEventReceipt",
+    "IntegrationSyncTask",
     "InventoryAsset",
     "Base",
     "EntityType",
@@ -108,6 +121,8 @@ __all__ = [
     "SecretMigrationRunStatus",
     "SecretMigrationTransaction",
     "SecretMigrationTransactionStatus",
+    "SecurityGraphEdge",
+    "SecurityGraphNode",
     "RemediationRun",
     "RemediationRunExecution",
     "RemediationRunExecutionPhase",
@@ -117,6 +132,8 @@ __all__ = [
     "SupportFile",
     "SupportNote",
     "Tenant",
+    "TenantIntegrationSetting",
+    "TenantIntegrationSetting",
     "TenantReconcileRun",
     "TenantReconcileRunShard",
     "User",

@@ -1,0 +1,2 @@
+URL: https://api.ocypheris.com/api/findings/720d2ebe-07d3-4564-834b-b27736727a90?include_raw=true
+Auth: Bearer <redacted> from /tmp/ocypheris_phase3_p0_token.txt

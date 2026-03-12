@@ -17,6 +17,7 @@ from backend.routers.exceptions import router as exceptions_router
 from backend.routers.exports import router as exports_router
 from backend.routers.findings import router as findings_router
 from backend.routers.governance import router as governance_router
+from backend.routers.integrations import router as integrations_router
 from backend.routers.internal import router as internal_router
 from backend.routers.meta import router as meta_router
 from backend.routers.reconciliation import router as reconciliation_router
@@ -97,6 +98,7 @@ app.include_router(exceptions_router, prefix="/api")
 app.include_router(exports_router, prefix="/api")
 app.include_router(findings_router, prefix="/api")
 app.include_router(governance_router, prefix="/api")
+app.include_router(integrations_router, prefix="/api")
 app.include_router(control_plane_router, prefix="/api")
 app.include_router(internal_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")

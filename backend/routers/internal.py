@@ -61,6 +61,7 @@ from backend.utils.sqs import (
     build_backfill_finding_keys_job_payload,
     build_compute_actions_job_payload,
     build_ingest_control_plane_events_job_payload,
+    build_reconcile_action_remediation_sync_job_payload,
     build_reconcile_inventory_global_orchestration_job_payload,
     build_reconcile_inventory_shard_job_payload,
     build_reconcile_recently_touched_resources_job_payload,
@@ -160,6 +161,13 @@ class InternalComputeRequest(BaseModel):
     tenant_id: uuid.UUID | None = None
     account_id: str | None = Field(default=None, pattern=r"^\d{12}$")
     region: str | None = Field(default=None, min_length=1, max_length=32)
+
+
+class RemediationSyncReconcileRequest(BaseModel):
+    tenant_id: uuid.UUID | None = None
+    provider: str | None = Field(default=None, min_length=1, max_length=32)
+    action_ids: list[uuid.UUID] | None = None
+    limit: int = Field(default=200, ge=1, le=1000)
 
 
 class GroupRunActionResult(BaseModel):
@@ -1292,4 +1300,43 @@ async def enqueue_backfill_action_groups(
         "chunk_size": body.chunk_size,
         "max_chunks": body.max_chunks,
         "auto_continue": body.auto_continue,
+    }
+
+
+@router.post(
+    "/reconciliation/remediation-state-sync",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue remediation-state drift reconciliation job",
+    description=(
+        "Queues one reconcile_action_remediation_sync job to plan outbound provider updates "
+        "for drifted external remediation statuses."
+    ),
+)
+async def enqueue_remediation_state_sync_reconciliation(
+    body: RemediationSyncReconcileRequest,
+    x_reconciliation_scheduler_secret: Annotated[str | None, Header(alias="X-Reconciliation-Scheduler-Secret")] = None,
+) -> dict:
+    _verify_reconciliation_scheduler_secret(x_reconciliation_scheduler_secret)
+    queue_url = (settings.SQS_INGEST_QUEUE_URL or "").strip()
+    if not queue_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
+        )
+    payload = build_reconcile_action_remediation_sync_job_payload(
+        created_at=datetime.now(timezone.utc).isoformat(),
+        tenant_id=body.tenant_id,
+        provider=body.provider,
+        action_ids=body.action_ids,
+        limit=body.limit,
+    )
+    sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
+    response = sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+    return {
+        "enqueued": 1,
+        "message_id": str(response.get("MessageId") or ""),
+        "tenant_id": str(body.tenant_id) if body.tenant_id else None,
+        "provider": body.provider,
+        "action_count": len(body.action_ids or []),
+        "limit": body.limit,
     }

@@ -23,6 +23,8 @@ WEEKLY_DIGEST_JOB_TYPE = "weekly_digest"
 GENERATE_BASELINE_REPORT_JOB_TYPE = "generate_baseline_report"
 EXECUTE_PR_BUNDLE_PLAN_JOB_TYPE = "execute_pr_bundle_plan"
 EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE = "execute_pr_bundle_apply"
+INTEGRATION_SYNC_JOB_TYPE = "integration_sync"
+RECONCILE_ACTION_REMEDIATION_SYNC_JOB_TYPE = "reconcile_action_remediation_sync"
 QUEUE_PAYLOAD_SCHEMA_VERSION = 1
 
 
@@ -204,6 +206,20 @@ def build_reconcile_recently_touched_resources_job_payload(
     return _with_schema_version(payload)
 
 
+def build_integration_sync_job_payload(
+    task_id: uuid.UUID | str,
+    tenant_id: uuid.UUID | str,
+    created_at: str,
+) -> dict:
+    """Build integration_sync payload for outbound provider synchronization."""
+    return _with_schema_version({
+        "job_type": INTEGRATION_SYNC_JOB_TYPE,
+        "task_id": str(task_id),
+        "tenant_id": str(tenant_id),
+        "created_at": created_at,
+    })
+
+
 def build_backfill_finding_keys_job_payload(
     created_at: str,
     tenant_id: uuid.UUID | None = None,
@@ -293,6 +309,29 @@ def build_compute_actions_job_payload(
     return _with_schema_version(payload)
 
 
+def build_reconcile_action_remediation_sync_job_payload(
+    created_at: str,
+    tenant_id: uuid.UUID | None = None,
+    provider: str | None = None,
+    action_ids: list[uuid.UUID] | list[str] | None = None,
+    limit: int | None = None,
+) -> dict:
+    """Build reconcile_action_remediation_sync payload for drifted external status reconciliation."""
+    payload: dict = {
+        "job_type": RECONCILE_ACTION_REMEDIATION_SYNC_JOB_TYPE,
+        "created_at": created_at,
+    }
+    if tenant_id is not None:
+        payload["tenant_id"] = str(tenant_id)
+    if provider is not None:
+        payload["provider"] = str(provider).strip().lower()
+    if action_ids:
+        payload["action_ids"] = [str(action_id) for action_id in action_ids]
+    if limit is not None:
+        payload["limit"] = int(limit)
+    return _with_schema_version(payload)
+
+
 def build_remediation_run_job_payload(
     run_id: uuid.UUID,
     tenant_id: uuid.UUID,
@@ -304,6 +343,7 @@ def build_remediation_run_job_payload(
     strategy_inputs: dict | None = None,
     risk_acknowledged: bool = False,
     group_action_ids: list[uuid.UUID] | list[str] | None = None,
+    repo_target: dict | None = None,
 ) -> dict:
     """
     Build remediation_run job dict for SQS.
@@ -328,6 +368,8 @@ def build_remediation_run_job_payload(
         payload["risk_acknowledged"] = True
     if group_action_ids:
         payload["group_action_ids"] = [str(action_id) for action_id in group_action_ids]
+    if repo_target:
+        payload["repo_target"] = repo_target
     return _with_schema_version(payload)
 
 

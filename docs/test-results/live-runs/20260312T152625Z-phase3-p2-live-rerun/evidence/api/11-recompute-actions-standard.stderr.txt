@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/scripts/recompute_account_actions.py", line 39, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/scripts/recompute_account_actions.py", line 28, in main
+    result = compute_actions_for_tenant(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py", line 610, in compute_actions_for_tenant
+    graph_counts = sync_security_graph_for_scope(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py", line 124, in sync_security_graph_for_scope
+    edge_counts = _upsert_edges(session, tenant_id, snapshot.edges, node_map)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py", line 182, in _upsert_edges
+    session.add(_new_edge_row(tenant_id, spec, node_map))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py", line 317, in _new_edge_row
+    source_node_id=_node_id(node_map, spec.source_node_key),
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py", line 347, in _node_id
+    raise ValueError(f"security graph node missing for key={node_key}")
+ValueError: security graph node missing for key=action:0ca64b94-9dcb-4a97-91b0-27b0341865bc

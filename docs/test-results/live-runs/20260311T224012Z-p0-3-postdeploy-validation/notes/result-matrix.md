@@ -1,0 +1,8 @@
+# Result Matrix
+
+| Check | Status | Evidence |
+| --- | --- | --- |
+| runtime deployed with producer-path fix | PASS | `../evidence/api/predeploy-runtime-state.txt` shows both Lambdas on tag `20260311T181012Z` with `LastModified=2026-03-11T18:12:59.000+0000`; `../evidence/api/deploy-runtime.txt` captured the standard `./scripts/deploy_saas_serverless.sh --region eu-north-1` rollout; `../evidence/api/postdeploy-runtime-state.txt` shows both Lambdas on tag `20260311T224136Z` with `LastModified=2026-03-11T22:44:07.000+0000`. |
+| relationship_context present on live findings | PASS | `../evidence/api/p0-3-findings-ec2-182.body.json` and `../evidence/api/p0-3-findings-ssm-7.body.json` identified the live findings; `../evidence/api/p0-3-finding-detail-ec2-182.body.json` and `../evidence/api/p0-3-finding-detail-ssm-7.body.json` show `raw_json.relationship_context.complete=true` and `confidence=1.0` on both findings. |
+| anchor toxic-combination promotion active | PASS | `../evidence/api/p0-3-actions-list.body.json` identifies anchor action `442e46ac-f31c-4242-82ca-9e47081a3adb`; `../evidence/api/p0-3-action-detail-anchor.body.json` shows `context_incomplete=false`, `score_components.toxic_combinations.points=15`, `matched_rule_ids=[\"public_exposure_privilege_sensitive_data\"]`, and `score=84` over `score_before_toxic_combinations=69`. |
+| anchor explainability reflects promotion | PASS | `../evidence/api/p0-3-action-detail-anchor.body.json` and `../evidence/api/p0-3-score-factors-anchor.body.json` show `score_factors[]` includes `factor_name=\"toxic_combinations\"` with `contribution=15` plus the positive toxic-combination explanation. |

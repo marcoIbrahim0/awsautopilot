@@ -4,9 +4,12 @@ This feature adds a conservative attack-path-lite boost on top of the existing P
 
 Implemented source files:
 - `backend/services/toxic_combinations.py`
+- `backend/services/finding_relationship_context.py`
 - `backend/services/action_engine.py`
 - `backend/services/action_scoring.py`
 - `backend/routers/actions.py`
+- `backend/workers/jobs/ingest_findings.py`
+- `scripts/backfill_finding_relationship_context.py`
 
 ## Status
 
@@ -53,6 +56,37 @@ Relationship context is considered complete only when one of these payloads is p
 - `finding.raw_json.ProductFields["aws/autopilot/graph_context"]`
 
 If the anchor action is account-scoped, the relationship payload is missing, or the confidence is below threshold, the engine records `context_incomplete` and applies no boost.
+
+### Authoritative producer
+
+Security Hub ingest now writes `finding.raw_json.relationship_context` on every upsert using the same canonical finding metadata already persisted on the row:
+
+- `account_id`
+- `region`
+- `resource_id`
+- `resource_type`
+- `resource_key`
+
+The enriched payload is deterministic and additive:
+
+- `complete`
+- `confidence`
+- `scope`
+- `source`
+- `account_id`
+- `region`
+- `resource_id`
+- `resource_type`
+- `resource_key`
+- `missing_fields`
+
+`backend/services/finding_relationship_context.py` marks the payload `complete=true` with `confidence=1.0` only when the canonical identifiers required for that scope are present:
+
+- resource-scoped findings require `account_id`, `resource_id`, `resource_type`, and `resource_key`
+- account-scoped findings require `account_id`, `resource_type`, and `resource_key`
+- account-region scoped findings require `account_id`, `region`, `resource_type`, and `resource_key`
+
+If the canonical identifiers are incomplete, the payload stays fail-closed with `complete=false`, `confidence=0.0`, and populated `missing_fields`.
 
 ```mermaid
 flowchart TD
@@ -104,12 +138,31 @@ Environment variables:
 
 If the JSON is invalid or empty, the implementation falls back to the default built-in rule.
 
+## Backfill existing findings
+
+Existing Security Hub findings created before this producer shipped will not gain `relationship_context` until they are re-ingested or backfilled.
+
+Safest repo-native backfill:
+
+```bash
+python3 scripts/backfill_finding_relationship_context.py \
+  --tenant-id <YOUR_TENANT_ID_HERE> \
+  --account-id <YOUR_ACCOUNT_ID_HERE> \
+  --region <YOUR_REGION_HERE> \
+  --recompute-actions
+```
+
+`<YOUR_TENANT_ID_HERE>` is environment-specific and should be the tenant you want to refresh. Scope `account_id` and `region` to the narrowest validation slice you need.
+
+If fresh AWS data is preferred, rerun Security Hub ingest for the same account/region and then recompute actions. The persisted producer path is the same because `backend/workers/jobs/ingest_findings.py` writes the authoritative `relationship_context` payload during every upsert.
+
 ## Limitations
 
 - The neighborhood is computed from the current recompute scope, so out-of-scope actions are intentionally not inferred into the path.
 - The current release supports explicit rule-based combinations only; it is not a full security graph.
 - Boosts are capped by `ACTIONS_TOXIC_COMBINATION_MAX_BOOST`.
 - Missing or low-confidence relationship data is conservative by design: no boost is applied, even if the existing same-resource/account heuristics would otherwise have matched.
+- The authoritative producer currently enriches Security Hub findings, which is sufficient for the current in-scope action engine. Non-Security-Hub finding sources remain outside this toxic-combination contract until they become action-producing inputs.
 
 ## Related docs
 

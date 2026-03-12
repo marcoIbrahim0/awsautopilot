@@ -1,0 +1,292 @@
+{
+  "account_id": "696505809372",
+  "action_type": "enable_guardduty",
+  "context_incomplete": true,
+  "control_id": "GuardDuty.1",
+  "created_at": "2026-03-11T17:50:35.462883+00:00",
+  "description": "This AWS control checks whether Amazon GuardDuty is enabled in your AWS account and region.",
+  "exception_expired": null,
+  "exception_expires_at": null,
+  "exception_id": null,
+  "execution_guidance": [
+    {
+      "blast_radius": "account",
+      "blast_radius_summary": "Affects account-wide security posture for account 696505809372.",
+      "expected_outcome": "Direct fix applies the change in AWS immediately: Amazon GuardDuty will be enabled in this region. Security Hub should reflect the remediated state within ~1 hour.",
+      "label": "Enable GuardDuty (direct fix)",
+      "mode": "direct_fix",
+      "post_checks": [
+        {
+          "code": "direct_fix_run_success",
+          "message": "Confirm the remediation run completed successfully and capture the run logs or audit artifacts for change evidence.",
+          "status": "info"
+        },
+        {
+          "code": "scope_verification",
+          "message": "Verify the completed change only affected the intended account scope for AWS::::Account:696505809372.",
+          "status": "info"
+        },
+        {
+          "code": "control_closure_confirmation",
+          "message": "Within ~1 hour, confirm the finding or action moves to PASSED/resolved in Security Hub and the action queue.",
+          "status": "info"
+        }
+      ],
+      "pre_checks": [
+        {
+          "code": "target_scope_confirmed",
+          "message": "Confirm this change is intended for AWS::::Account:696505809372 in account 696505809372 (us-east-1).",
+          "status": "info"
+        },
+        {
+          "code": "direct_fix_change_window",
+          "message": "Direct fix mutates AWS state immediately after approval. Confirm change window and rollback owner before execution.",
+          "status": "info"
+        },
+        {
+          "code": "direct_fix_writerole_missing",
+          "message": "WriteRole is required for direct-fix execution.",
+          "status": "fail"
+        },
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "recommended": true,
+      "rollback": {
+        "command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+        "notes": [
+          "Capture the current state before approval when your operating policy requires a backout snapshot."
+        ],
+        "summary": "Use this rollback command to revert the live AWS change if verification fails or the blast radius is broader than expected."
+      },
+      "strategy_id": "guardduty_enable_direct_fix"
+    },
+    {
+      "blast_radius": "account",
+      "blast_radius_summary": "Affects account-wide security posture for account 696505809372.",
+      "expected_outcome": "PR mode produces a reviewable infrastructure change: Amazon GuardDuty will be enabled in this region. After merge and apply through your IaC path, Security Hub should reflect the remediated state within ~1 hour.",
+      "label": "Enable GuardDuty (PR bundle)",
+      "mode": "pr_only",
+      "post_checks": [
+        {
+          "code": "pr_bundle_review_and_apply",
+          "message": "Review the generated bundle or diff, then capture plan and apply evidence after the change is merged through the normal infrastructure workflow.",
+          "status": "info"
+        },
+        {
+          "code": "scope_verification",
+          "message": "Verify the completed change only affected the intended account scope for AWS::::Account:696505809372.",
+          "status": "info"
+        },
+        {
+          "code": "control_closure_confirmation",
+          "message": "Within ~1 hour, confirm the finding or action moves to PASSED/resolved in Security Hub and the action queue.",
+          "status": "info"
+        }
+      ],
+      "pre_checks": [
+        {
+          "code": "target_scope_confirmed",
+          "message": "Confirm this change is intended for AWS::::Account:696505809372 in account 696505809372 (us-east-1).",
+          "status": "info"
+        },
+        {
+          "code": "pr_bundle_owner_confirmed",
+          "message": "Confirm the repository, deployment path, and approver that own this infrastructure change before generating the PR bundle.",
+          "status": "info"
+        },
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "recommended": false,
+      "rollback": {
+        "command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+        "notes": [
+          "Prefer reverting through version control and your normal deployment pipeline so rollback stays auditable."
+        ],
+        "summary": "Use this rollback path to revert the infrastructure change through the same reviewed delivery workflow."
+      },
+      "strategy_id": "guardduty_enable_pr_bundle"
+    }
+  ],
+  "findings": [
+    {
+      "account_id": "696505809372",
+      "finding_id": "arn:aws:securityhub:us-east-1:696505809372:security-control/GuardDuty.1/finding/2fb0483d-f95f-423e-9589-ef37349fb313",
+      "id": "9fab581b-bc07-4866-b47e-fa0c02ec5278",
+      "region": "us-east-1",
+      "resource_id": "AWS::::Account:696505809372",
+      "severity_label": "HIGH",
+      "title": "GuardDuty should be enabled",
+      "updated_at": "2026-03-11T17:50:31.561410+00:00"
+    }
+  ],
+  "id": "0b8c765a-62b0-4f80-8271-2bb1bbd4b353",
+  "implementation_artifacts": [],
+  "owner_key": "guardduty",
+  "owner_label": "Amazon GuardDuty",
+  "owner_type": "service",
+  "priority": 41,
+  "region": "us-east-1",
+  "resource_id": "AWS::::Account:696505809372",
+  "resource_type": "AwsAccount",
+  "score": 41,
+  "score_components": {
+    "compensating_controls": {
+      "normalized": 0.0,
+      "points": 0,
+      "signals": []
+    },
+    "context_incomplete": true,
+    "data_sensitivity": {
+      "normalized": 0.0,
+      "points": 0,
+      "signals": []
+    },
+    "exploit_signals": {
+      "normalized": 0.0,
+      "points": 0,
+      "signals": []
+    },
+    "internet_exposure": {
+      "normalized": 0.0,
+      "points": 0,
+      "signals": []
+    },
+    "privilege_level": {
+      "normalized": 1.0,
+      "points": 15,
+      "signals": [
+        "keyword:root"
+      ]
+    },
+    "representative_finding_db_id": "9fab581b-bc07-4866-b47e-fa0c02ec5278",
+    "representative_finding_id": "arn:aws:securityhub:us-east-1:696505809372:security-control/GuardDuty.1/finding/2fb0483d-f95f-423e-9589-ef37349fb313",
+    "score": 41,
+    "score_before_toxic_combinations": 41,
+    "severity": {
+      "normalized": 0.75,
+      "points": 26,
+      "signals": [
+        "severity:HIGH"
+      ]
+    },
+    "total_compensating_points": 0,
+    "total_positive_points": 41,
+    "toxic_combinations": {
+      "context_incomplete": true,
+      "context_incomplete_rule_ids": [
+        "public_exposure_privilege_sensitive_data"
+      ],
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "matched_rule_ids": [],
+      "max_boost": 15,
+      "missing_signals": [
+        "internet_exposure",
+        "privilege_weakness",
+        "sensitive_data"
+      ],
+      "points": 0,
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ]
+    },
+    "version": 1
+  },
+  "score_factors": [
+    {
+      "contribution": 26,
+      "evidence_source": "finding.severity_label + finding.severity_normalized",
+      "explanation": "Severity contributed 26 points using: severity:HIGH.",
+      "factor_name": "severity",
+      "signals": [
+        "severity:HIGH"
+      ],
+      "weight": 35
+    },
+    {
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json exposure metadata",
+      "explanation": "Internet exposure contributed 0 points using: no matched signals.",
+      "factor_name": "internet_exposure",
+      "signals": [],
+      "weight": 20
+    },
+    {
+      "contribution": 15,
+      "evidence_source": "finding.title + finding.description + selected raw_json identity metadata",
+      "explanation": "Privilege level contributed 15 points using: keyword:root.",
+      "factor_name": "privilege_level",
+      "signals": [
+        "keyword:root"
+      ],
+      "weight": 15
+    },
+    {
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json data-impact metadata",
+      "explanation": "Data sensitivity contributed 0 points using: no matched signals.",
+      "factor_name": "data_sensitivity",
+      "signals": [],
+      "weight": 15
+    },
+    {
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata",
+      "explanation": "Exploit signals contributed 0 points using: no matched signals.",
+      "factor_name": "exploit_signals",
+      "signals": [],
+      "weight": 15
+    },
+    {
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json mitigating-control metadata",
+      "explanation": "Compensating controls contributed 0 points using: no matched signals.",
+      "factor_name": "compensating_controls",
+      "signals": [],
+      "weight": 15
+    },
+    {
+      "contribution": 0,
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "factor_name": "toxic_combinations",
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "weight": 15
+    }
+  ],
+  "sla": {
+    "due_at": "2026-03-18T17:50:35.462883+00:00",
+    "due_in_hours": 168,
+    "escalation_eligible": false,
+    "escalation_level": null,
+    "escalation_reason": null,
+    "expiring_at": "2026-03-16T09:50:35.462883+00:00",
+    "expiring_in_hours": 56,
+    "has_active_exception": false,
+    "hours_overdue": null,
+    "hours_until_due": 164,
+    "is_expiring": false,
+    "is_overdue": false,
+    "risk_tier": "medium",
+    "state": "on_track"
+  },
+  "status": "open",
+  "target_id": "696505809372|us-east-1|AWS::::Account:696505809372|GuardDuty.1",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "title": "GuardDuty should be enabled",
+  "updated_at": "2026-03-11T17:50:35.462883+00:00",
+  "what_is_wrong": "This AWS control checks whether Amazon GuardDuty is enabled in your AWS account and region.",
+  "what_the_fix_does": "Enables GuardDuty detector coverage in the target region."
+}

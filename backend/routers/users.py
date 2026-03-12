@@ -20,6 +20,7 @@ from backend.auth import (
     create_access_token,
     get_current_user,
     get_saas_and_launch_url,
+    normalize_saas_launch_url,
     hash_password,
     set_auth_cookies,
     tenant_to_response,
@@ -41,6 +42,23 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # Invite expiry duration
 INVITE_EXPIRY_DAYS = 7
+
+
+def _launch_context(external_id: str) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str,
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str,
+]:
+    return normalize_saas_launch_url(get_saas_and_launch_url(external_id))
 
 
 # ============================================
@@ -444,7 +462,7 @@ async def accept_invite(
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
-    ) = get_saas_and_launch_url(tenant.external_id)
+    ) = _launch_context(tenant.external_id)
     return AuthResponse(
         access_token=access_token,
         user=user_to_response(user),

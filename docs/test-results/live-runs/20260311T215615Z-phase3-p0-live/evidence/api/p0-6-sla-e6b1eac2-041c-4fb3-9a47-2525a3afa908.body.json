@@ -1,0 +1,21 @@
+{
+  "id": "e6b1eac2-041c-4fb3-9a47-2525a3afa908",
+  "score": 76,
+  "sla": {
+    "due_at": "2026-03-14T17:50:35.462883+00:00",
+    "due_in_hours": 72,
+    "escalation_eligible": false,
+    "escalation_level": null,
+    "escalation_reason": null,
+    "expiring_at": "2026-03-13T17:50:35.462883+00:00",
+    "expiring_in_hours": 24,
+    "has_active_exception": false,
+    "hours_overdue": null,
+    "hours_until_due": 68,
+    "is_expiring": false,
+    "is_overdue": false,
+    "risk_tier": "high",
+    "state": "on_track"
+  },
+  "title": "SSM documents should have the block public sharing setting enabled"
+}

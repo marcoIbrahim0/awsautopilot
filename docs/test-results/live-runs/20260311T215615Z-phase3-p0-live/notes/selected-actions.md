@@ -1,0 +1,6 @@
+## Selected Actions
+
+- [`e6b1eac2-041c-4fb3-9a47-2525a3afa908`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/api/raw-action-detail-e6b1eac2-041c-4fb3-9a47-2525a3afa908.body.json) — highest live score (`76`), top-ranked ordering candidate, explicit `context_incomplete=true`.
+- [`442e46ac-f31c-4242-82ca-9e47081a3adb`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/api/raw-action-detail-442e46ac-f31c-4242-82ca-9e47081a3adb.body.json) — richest live score-factor mix for public exposure plus sensitive-data signals; owner queue candidate for Amazon EBS.
+- [`0ca64b94-9dcb-4a97-91b0-27b0341865bc`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/api/raw-action-detail-0ca64b94-9dcb-4a97-91b0-27b0341865bc.body.json) — richest `execution_guidance[]` sample with both `direct_fix` and `pr_only` guidance variants.
+- [`0b8c765a-62b0-4f80-8271-2bb1bbd4b353`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/api/raw-action-detail-0b8c765a-62b0-4f80-8271-2bb1bbd4b353.body.json) — direct-fix-capable GuardDuty action used to confirm live guidance plus the current absence of `implementation_artifacts[]`.

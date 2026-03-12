@@ -14,6 +14,36 @@ from backend.main import app
 from backend.routers import auth as auth_router
 
 
+def _launch_tuple() -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str,
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str,
+]:
+    return (
+        "029037611564",
+        None,
+        None,
+        None,
+        None,
+        "eu-north-1",
+        "SecurityAutopilotReadRole",
+        "SecurityAutopilotWriteRole",
+        None,
+        None,
+        None,
+        "SecurityAutopilotControlPlaneForwarder",
+    )
+
+
 def _mock_user() -> SimpleNamespace:
     tenant = SimpleNamespace(
         id=uuid.uuid4(),
@@ -85,7 +115,9 @@ def test_login_success_clears_failed_attempt_window(client: TestClient) -> None:
         patch.object(settings, "AUTH_LOGIN_RATE_LIMIT_ENABLED", True),
         patch.object(settings, "AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 2),
         patch.object(settings, "AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS", 3600),
+        patch.object(settings, "FIREBASE_PROJECT_ID", ""),
         patch("backend.routers.auth.verify_password", side_effect=[False, True, False]),
+        patch("backend.routers.auth.get_saas_and_launch_url", return_value=_launch_tuple()),
     ):
         first_fail = client.post(
             "/api/auth/login",

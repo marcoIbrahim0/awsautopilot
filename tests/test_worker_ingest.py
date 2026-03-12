@@ -18,6 +18,8 @@ import pytest
 
 from backend.workers.jobs.ingest_findings import (
     _extract_finding_fields,
+    _fetch_findings_with_consistency_retry,
+    _merge_finding_batches,
     _normalized_finding_status,
     _parse_ts,
     _trunc,
@@ -109,6 +111,10 @@ def test_extract_finding_fields_basic() -> None:
     assert fields["control_id"] == "S3.4"
     assert fields["status"] == "NEW"
     assert fields["resolved_at"] is None
+    assert fields["raw_json"]["relationship_context"]["complete"] is True
+    assert fields["raw_json"]["relationship_context"]["confidence"] == 1.0
+    assert fields["raw_json"]["relationship_context"]["scope"] == "resource"
+    assert fields["raw_json"]["relationship_context"]["resource_key"] == fields["resource_key"]
 
 
 def test_extract_finding_fields_sets_resolved_at_when_compliance_passed() -> None:
@@ -187,6 +193,9 @@ def test_extract_finding_fields_missing_optional() -> None:
     assert fields["resource_id"] is None
     assert fields["resource_type"] is None
     assert fields["control_id"] is None
+    assert fields["raw_json"]["relationship_context"]["complete"] is False
+    assert fields["raw_json"]["relationship_context"]["confidence"] == 0.0
+    assert fields["raw_json"]["relationship_context"]["scope"] == "unknown"
 
 
 def test_extract_finding_fields_severity_normalized() -> None:
@@ -221,6 +230,71 @@ def test_normalized_finding_status_resolved_workflow_without_passed_stays_open()
         "Compliance": {"Status": "FAILED"},
     }
     assert _normalized_finding_status(raw) == "NEW"
+
+
+def test_merge_finding_batches_prefers_later_state_when_updated_at_matches() -> None:
+    """Later fetches win when Security Hub changes state without advancing UpdatedAt."""
+    initial = [
+        {
+            "Id": "finding-1",
+            "UpdatedAt": "2026-03-12T16:30:00Z",
+            "Compliance": {"Status": "FAILED"},
+            "Workflow": {"Status": "RESOLVED"},
+            "RecordState": "ACTIVE",
+        }
+    ]
+    converged = [
+        {
+            "Id": "finding-1",
+            "UpdatedAt": "2026-03-12T16:30:00Z",
+            "Compliance": {"Status": "PASSED"},
+            "Workflow": {"Status": "NEW"},
+            "RecordState": "ARCHIVED",
+        }
+    ]
+
+    merged = _merge_finding_batches(initial, converged)
+
+    assert len(merged) == 1
+    assert merged[0]["Compliance"]["Status"] == "PASSED"
+    assert merged[0]["RecordState"] == "ARCHIVED"
+
+
+def test_fetch_findings_with_consistency_retry_merges_fresher_security_hub_state() -> None:
+    """Bounded retries keep the latest state when Security Hub converges after the first fetch."""
+    initial = [
+        {
+            "Id": "finding-1",
+            "UpdatedAt": "2026-03-12T15:27:00Z",
+            "Compliance": {"Status": "FAILED"},
+            "Workflow": {"Status": "NEW"},
+            "RecordState": "ACTIVE",
+        }
+    ]
+    converged = [
+        {
+            "Id": "finding-1",
+            "UpdatedAt": "2026-03-12T16:30:00Z",
+            "Compliance": {"Status": "PASSED"},
+            "Workflow": {"Status": "NEW"},
+            "RecordState": "ARCHIVED",
+        }
+    ]
+
+    with patch("backend.workers.jobs.ingest_findings.time.sleep"):
+        with patch(
+            "backend.workers.jobs.ingest_findings.fetch_all_findings",
+            side_effect=[initial, converged, converged],
+        ) as mock_fetch:
+            findings = _fetch_findings_with_consistency_retry(
+                MagicMock(),
+                region="us-east-1",
+                account_id="123456789012",
+            )
+
+    assert findings[0]["Compliance"]["Status"] == "PASSED"
+    assert findings[0]["RecordState"] == "ARCHIVED"
+    assert mock_fetch.call_count == 3
 
 
 # ---------------------------------------------------------------------------

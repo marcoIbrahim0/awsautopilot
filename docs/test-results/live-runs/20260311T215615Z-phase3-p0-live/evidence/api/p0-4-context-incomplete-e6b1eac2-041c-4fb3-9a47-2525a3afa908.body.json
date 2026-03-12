@@ -1,0 +1,42 @@
+{
+  "context_incomplete": true,
+  "id": "e6b1eac2-041c-4fb3-9a47-2525a3afa908",
+  "score_components": {
+    "context_incomplete": true,
+    "score_before_toxic_combinations": 76,
+    "toxic_combinations": {
+      "context_incomplete": true,
+      "context_incomplete_rule_ids": [
+        "public_exposure_privilege_sensitive_data"
+      ],
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "matched_rule_ids": [],
+      "max_boost": 15,
+      "missing_signals": [
+        "internet_exposure",
+        "privilege_weakness",
+        "sensitive_data"
+      ],
+      "points": 0,
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ]
+    }
+  },
+  "score_factors": [
+    {
+      "contribution": 0,
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "factor_name": "toxic_combinations",
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "weight": 15
+    }
+  ],
+  "title": "SSM documents should have the block public sharing setting enabled"
+}

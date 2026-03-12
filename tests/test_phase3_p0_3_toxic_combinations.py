@@ -13,6 +13,7 @@ from backend.auth import get_optional_user
 from backend.database import get_db
 from backend.main import app
 from backend.routers import actions as actions_router
+from backend.services.finding_relationship_context import build_finding_relationship_context
 from backend.services.action_scoring import score_action_finding
 from backend.services.toxic_combinations import apply_toxic_combination_overlays, evaluate_toxic_combination_overlay
 
@@ -78,8 +79,21 @@ def _action_from_finding(
     )
 
 
-def _relationship_context(*, confidence: int = 95) -> dict:
-    return {"relationship_context": {"complete": True, "confidence": confidence}}
+def _produced_relationship_context(
+    *,
+    resource_id: str,
+    resource_type: str,
+    account_id: str = "123456789012",
+    region: str | None = "eu-north-1",
+) -> dict:
+    return {
+        "relationship_context": build_finding_relationship_context(
+            account_id=account_id,
+            region=region,
+            resource_id=resource_id,
+            resource_type=resource_type,
+        )
+    }
 
 
 def _public_bucket_action(*, raw_json: dict | None = None) -> SimpleNamespace:
@@ -117,6 +131,40 @@ def _root_key_action(*, raw_json: dict | None = None) -> SimpleNamespace:
     )
 
 
+def _internet_anchor_action(*, raw_json: dict | None = None, resource_id: str = "resource-1") -> SimpleNamespace:
+    return _action_from_finding(
+        _finding(
+            control_id="Custom.1",
+            severity_normalized=75,
+            severity_label="HIGH",
+            title="Internet-facing service is open to 0.0.0.0/0",
+            description="Public network access is enabled for this service endpoint.",
+            finding_id=f"finding-anchor-{resource_id}",
+            resource_id=resource_id,
+            resource_type="CustomResource",
+            raw_json=raw_json,
+        ),
+        action_type="pr_only",
+    )
+
+
+def _same_resource_sensitive_action(*, raw_json: dict | None = None, resource_id: str = "resource-1") -> SimpleNamespace:
+    return _action_from_finding(
+        _finding(
+            control_id="Custom.2",
+            severity_normalized=50,
+            severity_label="MEDIUM",
+            title="Sensitive records are stored without encryption",
+            description="Sensitive customer records require stronger protection.",
+            finding_id=f"finding-sensitive-{resource_id}",
+            resource_id=resource_id,
+            resource_type="CustomResource",
+            raw_json=raw_json,
+        ),
+        action_type="pr_only",
+    )
+
+
 def _unrelated_security_group_action(*, raw_json: dict | None = None) -> SimpleNamespace:
     return _action_from_finding(
         _finding(
@@ -142,8 +190,19 @@ def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
 
 
 def test_toxic_combination_positive_match_boosts_exposed_resource_action() -> None:
-    public_bucket = _public_bucket_action(raw_json=_relationship_context())
-    root_key = _root_key_action(raw_json=_relationship_context())
+    public_bucket = _public_bucket_action(
+        raw_json=_produced_relationship_context(
+            resource_id="arn:aws:s3:::prod-sensitive-bucket",
+            resource_type="AwsS3Bucket",
+        )
+    )
+    root_key = _root_key_action(
+        raw_json=_produced_relationship_context(
+            resource_id="123456789012",
+            resource_type="AwsAccount",
+            region=None,
+        )
+    )
     base_score = public_bucket.score
 
     overlay = evaluate_toxic_combination_overlay(public_bucket, [public_bucket, root_key])
@@ -159,7 +218,12 @@ def test_toxic_combination_positive_match_boosts_exposed_resource_action() -> No
 
 
 def test_toxic_combination_partial_match_requires_all_signals() -> None:
-    public_bucket = _public_bucket_action(raw_json=_relationship_context())
+    public_bucket = _public_bucket_action(
+        raw_json=_produced_relationship_context(
+            resource_id="arn:aws:s3:::prod-sensitive-bucket",
+            resource_type="AwsS3Bucket",
+        )
+    )
     base_score = public_bucket.score
 
     overlay = evaluate_toxic_combination_overlay(public_bucket, [public_bucket])
@@ -173,8 +237,18 @@ def test_toxic_combination_partial_match_requires_all_signals() -> None:
 
 
 def test_toxic_combination_unrelated_findings_do_not_boost() -> None:
-    public_bucket = _public_bucket_action(raw_json=_relationship_context())
-    unrelated_sg = _unrelated_security_group_action(raw_json=_relationship_context())
+    public_bucket = _public_bucket_action(
+        raw_json=_produced_relationship_context(
+            resource_id="arn:aws:s3:::prod-sensitive-bucket",
+            resource_type="AwsS3Bucket",
+        )
+    )
+    unrelated_sg = _unrelated_security_group_action(
+        raw_json=_produced_relationship_context(
+            resource_id="sg-0123456789abcdef0",
+            resource_type="AwsEc2SecurityGroup",
+        )
+    )
     public_bucket_base_score = public_bucket.score
     unrelated_sg_base_score = unrelated_sg.score
 
@@ -187,12 +261,73 @@ def test_toxic_combination_unrelated_findings_do_not_boost() -> None:
     assert "privilege_weakness" in overlay["missing_signals"]
 
 
+def test_toxic_combination_account_scoped_anchor_never_promotes() -> None:
+    public_bucket = _public_bucket_action(
+        raw_json=_produced_relationship_context(
+            resource_id="arn:aws:s3:::prod-sensitive-bucket",
+            resource_type="AwsS3Bucket",
+        )
+    )
+    root_key = _root_key_action(
+        raw_json=_produced_relationship_context(
+            resource_id="123456789012",
+            resource_type="AwsAccount",
+            region=None,
+        )
+    )
+    base_score = root_key.score
+
+    overlay = evaluate_toxic_combination_overlay(root_key, [public_bucket, root_key])
+    apply_toxic_combination_overlays([public_bucket, root_key])
+
+    assert overlay["points"] == 0
+    assert overlay["context_incomplete"] is True
+    assert root_key.score == base_score
+    assert root_key.score_components["toxic_combinations"]["points"] == 0
+
+
+def test_toxic_combination_same_resource_and_account_support_can_promote_anchor() -> None:
+    anchor = _internet_anchor_action(
+        raw_json=_produced_relationship_context(resource_id="resource-1", resource_type="CustomResource")
+    )
+    sensitive = _same_resource_sensitive_action(
+        raw_json=_produced_relationship_context(resource_id="resource-1", resource_type="CustomResource")
+    )
+    root_key = _root_key_action(
+        raw_json=_produced_relationship_context(
+            resource_id="123456789012",
+            resource_type="AwsAccount",
+            region=None,
+        )
+    )
+    base_score = anchor.score
+
+    overlay = evaluate_toxic_combination_overlay(anchor, [anchor, sensitive, root_key])
+    apply_toxic_combination_overlays([anchor, sensitive, root_key])
+
+    assert overlay["points"] == 15
+    assert overlay["context_incomplete"] is False
+    assert overlay["matched_rule_ids"] == ["public_exposure_privilege_sensitive_data"]
+    assert anchor.score == base_score + 15
+
+
 def test_actions_api_batch_view_exposes_boosted_priority(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     group_id = uuid.uuid4()
-    public_bucket = _public_bucket_action(raw_json=_relationship_context())
+    public_bucket = _public_bucket_action(
+        raw_json=_produced_relationship_context(
+            resource_id="arn:aws:s3:::prod-sensitive-bucket",
+            resource_type="AwsS3Bucket",
+        )
+    )
     public_bucket.tenant_id = tenant_id
-    root_key = _root_key_action(raw_json=_relationship_context())
+    root_key = _root_key_action(
+        raw_json=_produced_relationship_context(
+            resource_id="123456789012",
+            resource_type="AwsAccount",
+            region=None,
+        )
+    )
     root_key.tenant_id = tenant_id
     apply_toxic_combination_overlays([public_bucket, root_key])
 

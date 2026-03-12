@@ -91,12 +91,17 @@ postgresql+asyncpg://user:password@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslm
 # Check current revision
 alembic current
 
+# Show repo heads
+alembic heads
+
 # Apply all migrations
-alembic upgrade head
+alembic upgrade heads
 
 # View migration history
 alembic history
 ```
+
+Use `heads`, not `head`: the current migration tree has two heads, `0042_bidirectional_integrations` and `0042_action_remediation_system_of_record`.
 
 ### Migration Guard
 
@@ -107,6 +112,12 @@ The application checks database revision on startup:
 To disable (not recommended):
 ```bash
 DB_REVISION_GUARD_ENABLED=false
+```
+
+When the guard fails, the recovery command for the current repo is:
+
+```bash
+alembic upgrade heads
 ```
 
 ### Create New Migration
@@ -121,7 +132,7 @@ alembic revision --autogenerate -m "description of changes"
 # Edit if needed
 
 # Apply migration
-alembic upgrade head
+alembic upgrade heads
 ```
 
 ---
@@ -245,9 +256,23 @@ Store database credentials in AWS Secrets Manager (see [Secrets & Configuration]
 **Error**: `Migration not found` or `Can't locate revision`
 
 **Solutions**:
-- Verify all migrations are applied: `alembic upgrade head`
+- Verify all migrations are applied: `alembic upgrade heads`
 - Check migration files exist in `alembic/versions/`
 - Verify `DATABASE_URL_SYNC` is set (for Alembic)
+
+
+**Error**: `value too long for type character varying(32)` while inserting into `alembic_version`
+
+**Solutions**:
+- Existing databases created before the March 12, 2026 Alembic env fix may still have `alembic_version.version_num varchar(32)`.
+- Widen the metadata column once, then rerun the upgrade:
+
+```sql
+ALTER TABLE alembic_version
+ALTER COLUMN version_num TYPE varchar(64);
+```
+
+- Re-run `alembic upgrade heads`.
 
 ---
 

@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from backend.services.control_scope import action_type_from_control
+from backend.services.threat_intelligence import ThreatIntelSignal, collect_threat_intel_signals
 
 _SCORE_WEIGHTS = {
     "severity": 35,
@@ -15,6 +17,7 @@ _SCORE_WEIGHTS = {
     "exploit_signals": 15,
     "compensating_controls": 15,
 }
+_THREAT_INTEL_MAX_POINTS = 10
 
 _HIGH_EXPOSURE_ACTIONS = {
     "ebs_snapshot_block_public_access": 0.85,
@@ -88,8 +91,6 @@ _MEDIUM_DATA_KEYWORDS = ("audit", "bucket", "encryption", "log", "snapshot", "tl
 _HIGH_EXPLOIT_KEYWORDS = (
     "actively exploited",
     "cisa kev",
-    "cve-",
-    "exploit",
     "public rdp",
     "public ssh",
     "root access key",
@@ -129,7 +130,7 @@ _FACTOR_EVIDENCE_SOURCES = {
     "internet_exposure": "finding.title + finding.description + selected raw_json exposure metadata",
     "privilege_level": "finding.title + finding.description + selected raw_json identity metadata",
     "data_sensitivity": "finding.title + finding.description + selected raw_json data-impact metadata",
-    "exploit_signals": "finding.title + finding.description + selected raw_json exploit metadata",
+    "exploit_signals": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
     "compensating_controls": "finding.title + finding.description + selected raw_json mitigating-control metadata",
     _TOXIC_COMBINATIONS_FACTOR: "related action neighborhoods (same resource plus account-scoped context)",
 }
@@ -150,38 +151,59 @@ class _ComponentScore:
 
 
 @dataclass(frozen=True)
+class _ExploitScore:
+    component: _ComponentScore
+    heuristic_points: int
+    requested_threat_intel_points: int
+    applied_threat_intel_points: int
+    applied_threat_signals: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class _ThreatIntelApplication:
+    requested_points: int
+    applied_points: int
+    applied_signals: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True)
 class _ScoredFinding:
     finding: Any
     score: ActionScore
     tie_breaker: tuple[Any, ...]
 
 
-def score_action_finding(finding: Any) -> ActionScore:
+def score_action_finding(finding: Any, *, now: datetime | None = None) -> ActionScore:
     action_type = action_type_from_control(getattr(finding, "control_id", None))
     text = _finding_text(finding)
     severity = _severity_component(finding)
     exposure = _internet_exposure_component(action_type, text)
     privilege = _privilege_component(action_type, text)
     data_sensitivity = _data_sensitivity_component(action_type, text)
-    exploit = _exploit_component(action_type, text)
+    exploit = _exploit_component(action_type, text, finding, now=now)
     compensating = _compensating_controls_component(text)
     score = _clamp_score(
-        severity.points + exposure.points + privilege.points + data_sensitivity.points + exploit.points - compensating.points
+        severity.points
+        + exposure.points
+        + privilege.points
+        + data_sensitivity.points
+        + exploit.component.points
+        - compensating.points
     )
     components = _build_components(score, finding, severity, exposure, privilege, data_sensitivity, exploit, compensating)
     return ActionScore(score=score, components=components, representative_finding=finding)
 
 
-def score_action_group(findings: list[Any]) -> ActionScore:
+def score_action_group(findings: list[Any], *, now: datetime | None = None) -> ActionScore:
     if not findings:
         return ActionScore(score=0, components=_empty_components(), representative_finding=None)
-    scored = [_score_entry(finding) for finding in findings]
+    scored = [_score_entry(finding, now=now) for finding in findings]
     scored.sort(key=lambda item: item.tie_breaker, reverse=True)
     return scored[0].score
 
 
-def _score_entry(finding: Any) -> _ScoredFinding:
-    score = score_action_finding(finding)
+def _score_entry(finding: Any, *, now: datetime | None = None) -> _ScoredFinding:
+    score = score_action_finding(finding, now=now)
     tie_breaker = (
         score.score,
         _component_points(score.components, "severity"),
@@ -254,14 +276,24 @@ def _data_sensitivity_component(action_type: str, text: str) -> _ComponentScore:
     )
 
 
-def _exploit_component(action_type: str, text: str) -> _ComponentScore:
-    return _keyword_or_action_component(
+def _exploit_component(action_type: str, text: str, finding: Any, *, now: datetime | None = None) -> _ExploitScore:
+    heuristic = _keyword_or_action_component(
         action_type,
         text,
         _HIGH_EXPLOIT_KEYWORDS,
         _MEDIUM_EXPLOIT_KEYWORDS,
         _EXPLOIT_ACTIONS,
         "exploit_signals",
+    )
+    threat_application = _apply_threat_intel_points(heuristic.points, collect_threat_intel_signals(finding, now=now))
+    total_points = heuristic.points + threat_application.applied_points
+    component = _component_from_points(total_points, _SCORE_WEIGHTS["exploit_signals"], _exploit_signals(heuristic, threat_application))
+    return _ExploitScore(
+        component=component,
+        heuristic_points=heuristic.points,
+        requested_threat_intel_points=threat_application.requested_points,
+        applied_threat_intel_points=threat_application.applied_points,
+        applied_threat_signals=threat_application.applied_signals,
     )
 
 
@@ -306,6 +338,52 @@ def _component_score(normalized: float, weight: int, signals: tuple[str, ...]) -
     return _ComponentScore(normalized=round(clamped, 4), points=points, signals=signals)
 
 
+def _component_from_points(points: int, weight: int, signals: tuple[str, ...]) -> _ComponentScore:
+    bounded = max(0, min(weight, int(points)))
+    return _ComponentScore(normalized=round(bounded / weight, 4), points=bounded, signals=signals)
+
+
+def _apply_threat_intel_points(heuristic_points: int, signals: tuple[ThreatIntelSignal, ...]) -> _ThreatIntelApplication:
+    allowed_points = min(_THREAT_INTEL_MAX_POINTS, max(0, _SCORE_WEIGHTS["exploit_signals"] - heuristic_points))
+    requested_points = 0
+    applied_points = 0
+    applied_signals: list[dict[str, Any]] = []
+    for signal in signals:
+        requested_points += signal.requested_points
+        grant = min(signal.requested_points, max(0, allowed_points - applied_points))
+        applied_signals.append(_applied_threat_signal(signal, grant))
+        if grant <= 0:
+            continue
+        applied_points += grant
+    return _ThreatIntelApplication(requested_points, applied_points, tuple(applied_signals))
+
+
+def _applied_threat_signal(signal: ThreatIntelSignal, applied_points: int) -> dict[str, Any]:
+    return {
+        "source": signal.source,
+        "source_label": signal.source_label,
+        "signal_type": signal.signal_type,
+        "identifier": signal.identifier,
+        "cve_id": signal.cve_id,
+        "timestamp": signal.timestamp,
+        "confidence": signal.confidence,
+        "decay_applied": signal.decay_applied,
+        "base_points": signal.base_points,
+        "requested_points": signal.requested_points,
+        "applied_points": applied_points,
+        "final_contribution": applied_points,
+        "capped": applied_points < signal.requested_points,
+    }
+
+
+def _exploit_signals(heuristic: _ComponentScore, application: _ThreatIntelApplication) -> tuple[str, ...]:
+    threat_signals = [
+        f"threat_intel:{item['source']}:{item.get('cve_id') or item['identifier']}"
+        for item in application.applied_signals
+    ]
+    return tuple((threat_signals + list(heuristic.signals))[:6])
+
+
 def _build_components(
     score: int,
     finding: Any,
@@ -313,9 +391,21 @@ def _build_components(
     exposure: _ComponentScore,
     privilege: _ComponentScore,
     data_sensitivity: _ComponentScore,
-    exploit: _ComponentScore,
+    exploit: _ExploitScore,
     compensating: _ComponentScore,
 ) -> dict[str, Any]:
+    exploit_payload = _component_payload(exploit.component)
+    exploit_payload.update(
+        {
+            "heuristic_points": exploit.heuristic_points,
+            "threat_intel_points_requested": exploit.requested_threat_intel_points,
+            "threat_intel_points_applied": exploit.applied_threat_intel_points,
+            "threat_intel_max_points": _THREAT_INTEL_MAX_POINTS,
+            "factor_max_points": _SCORE_WEIGHTS["exploit_signals"],
+            "applied_threat_signals": list(exploit.applied_threat_signals),
+            "evidence_source": _FACTOR_EVIDENCE_SOURCES["exploit_signals"],
+        }
+    )
     return {
         "version": 1,
         "representative_finding_id": str(getattr(finding, "finding_id", "") or ""),
@@ -324,10 +414,16 @@ def _build_components(
         "internet_exposure": _component_payload(exposure),
         "privilege_level": _component_payload(privilege),
         "data_sensitivity": _component_payload(data_sensitivity),
-        "exploit_signals": _component_payload(exploit),
+        "exploit_signals": exploit_payload,
         "compensating_controls": _component_payload(compensating, negative=True),
         "score": score,
-        "total_positive_points": severity.points + exposure.points + privilege.points + data_sensitivity.points + exploit.points,
+        "total_positive_points": (
+            severity.points
+            + exposure.points
+            + privilege.points
+            + data_sensitivity.points
+            + exploit.component.points
+        ),
         "total_compensating_points": compensating.points,
     }
 
@@ -354,6 +450,17 @@ def _finding_recency_token(finding: Any) -> str:
 
 
 def _empty_components() -> dict[str, Any]:
+    empty_exploit = _component_payload(_component_score(0.0, _SCORE_WEIGHTS["exploit_signals"], ()))
+    empty_exploit.update(
+        {
+            "heuristic_points": 0,
+            "threat_intel_points_requested": 0,
+            "threat_intel_points_applied": 0,
+            "threat_intel_max_points": _THREAT_INTEL_MAX_POINTS,
+            "factor_max_points": _SCORE_WEIGHTS["exploit_signals"],
+            "applied_threat_signals": [],
+        }
+    )
     return {
         "version": 1,
         "representative_finding_id": "",
@@ -362,7 +469,7 @@ def _empty_components() -> dict[str, Any]:
         "internet_exposure": _component_payload(_component_score(0.0, _SCORE_WEIGHTS["internet_exposure"], ())),
         "privilege_level": _component_payload(_component_score(0.0, _SCORE_WEIGHTS["privilege_level"], ())),
         "data_sensitivity": _component_payload(_component_score(0.0, _SCORE_WEIGHTS["data_sensitivity"], ())),
-        "exploit_signals": _component_payload(_component_score(0.0, _SCORE_WEIGHTS["exploit_signals"], ())),
+        "exploit_signals": empty_exploit,
         "compensating_controls": _component_payload(
             _component_score(0.0, _SCORE_WEIGHTS["compensating_controls"], ()),
             negative=True,
@@ -416,10 +523,13 @@ def _legacy_score_factor(score: int, evidence_source: str) -> dict[str, Any]:
         "evidence_source": evidence_source,
         "signals": [],
         "explanation": "Stored score is available, but granular factor evidence has not been persisted for this action.",
+        "provenance": [],
     }
 
 
 def _factor_payload(name: str, components: dict[str, Any]) -> dict[str, Any]:
+    if name == "exploit_signals":
+        return _exploit_factor_payload(components)
     if name == _TOXIC_COMBINATIONS_FACTOR:
         return _toxic_combination_factor_payload(components)
     payload = components.get(name) if isinstance(components, dict) else {}
@@ -432,6 +542,7 @@ def _factor_payload(name: str, components: dict[str, Any]) -> dict[str, Any]:
         "evidence_source": _FACTOR_EVIDENCE_SOURCES[name],
         "signals": signals,
         "explanation": _factor_explanation(name, contribution, signals),
+        "provenance": [],
     }
 
 
@@ -456,6 +567,7 @@ def _toxic_combination_factor_payload(components: dict[str, Any]) -> dict[str, A
         "evidence_source": evidence_source,
         "signals": signals,
         "explanation": explanation,
+        "provenance": [],
     }
 
 
@@ -465,11 +577,85 @@ def _safe_signals(raw_signals: Any) -> list[str]:
     return [str(signal).strip()[:120] for signal in raw_signals if str(signal).strip()][:3]
 
 
+def _safe_provenance(raw_signals: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_signals, (list, tuple)):
+        return []
+    items: list[dict[str, Any]] = []
+    for item in raw_signals:
+        if not isinstance(item, dict):
+            continue
+        source = str(item.get("source") or "").strip()[:120]
+        if not source:
+            continue
+        observed_at = str(item.get("timestamp") or item.get("observed_at") or "").strip()[:64] or None
+        items.append(
+            {
+                "source": source,
+                "observed_at": observed_at,
+                "decay_applied": round(float(item.get("decay_applied") or 0.0), 4),
+                "base_contribution": max(0, int(item.get("base_points") or 0)),
+                "final_contribution": max(0, int(item.get("final_contribution") or item.get("applied_points") or 0)),
+            }
+        )
+    return items
+
+
+def _exploit_factor_payload(components: dict[str, Any]) -> dict[str, Any]:
+    payload = components.get("exploit_signals") if isinstance(components, dict) else {}
+    contribution = int((payload or {}).get("points") or 0)
+    signals = _safe_signals((payload or {}).get("signals"))
+    provenance = _safe_provenance((payload or {}).get("applied_threat_signals"))
+    threat_points = int((payload or {}).get("threat_intel_points_applied") or 0)
+    heuristic_points_raw = (payload or {}).get("heuristic_points")
+    if heuristic_points_raw is None:
+        heuristic_points = max(0, contribution - threat_points) if threat_points > 0 else contribution
+    else:
+        heuristic_points = max(0, int(heuristic_points_raw))
+    evidence_source = str((payload or {}).get("evidence_source") or _FACTOR_EVIDENCE_SOURCES["exploit_signals"])
+    explanation = _exploit_factor_explanation(
+        contribution=contribution,
+        heuristic_points=heuristic_points,
+        threat_points=threat_points,
+        has_threat_provenance=bool(provenance),
+        signals=signals,
+    )
+    return {
+        "factor_name": "exploit_signals",
+        "weight": _SCORE_WEIGHTS["exploit_signals"],
+        "contribution": contribution,
+        "evidence_source": evidence_source,
+        "signals": signals,
+        "explanation": explanation,
+        "provenance": provenance,
+    }
+
+
 def _factor_explanation(name: str, contribution: int, signals: list[str]) -> str:
     label = _FACTOR_LABELS[name]
     if contribution < 0:
         return f"{label} reduced the score by {abs(contribution)} points using: {_signal_summary(signals)}."
     return f"{label} contributed {contribution} points using: {_signal_summary(signals)}."
+
+
+def _exploit_factor_explanation(
+    *,
+    contribution: int,
+    heuristic_points: int,
+    threat_points: int,
+    has_threat_provenance: bool,
+    signals: list[str],
+) -> str:
+    if not has_threat_provenance:
+        return _factor_explanation("exploit_signals", contribution, signals)
+    if threat_points <= 0:
+        return (
+            "Exploit signals matched threat-intel provenance, but decay/caps reduced the current threat-intel "
+            f"contribution to 0 points; heuristic exploit signals still contributed {heuristic_points} points."
+        )
+    return (
+        f"Exploit signals contributed {contribution} points: {heuristic_points} heuristic points plus "
+        f"{threat_points} decayed threat-intel points using: {_signal_summary(signals)}."
+    )
 
 
 def _signal_summary(signals: list[str]) -> str:
@@ -494,4 +680,5 @@ def _score_adjustment_factor(delta: int) -> dict[str, Any]:
         "evidence_source": "score clamp to the persisted 0-100 action score",
         "signals": [],
         "explanation": f"Score bounds enforcement {verb} {abs(delta)} points to match the persisted action score.",
+        "provenance": [],
     }

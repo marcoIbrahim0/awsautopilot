@@ -1,0 +1,3 @@
+`GET /api/auth/me` returned `200` for operator `marco.ibrahim@ocypheris.com` on tenant `Valens`.
+Fresh browser validation used a clean page session plus the same-operator authenticated token already established for prior same-day live runs.
+No password material was recorded in this evidence package.

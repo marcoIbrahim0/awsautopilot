@@ -13,6 +13,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import boto3
@@ -26,9 +27,16 @@ from backend.models.action_group_run import ActionGroupRun
 from backend.models.aws_account import AwsAccount
 from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.services.compliance_pack_spec import build_control_mapping_rows
+from backend.services.pr_automation import build_pr_automation_artifacts
 from backend.services.remediation_metrics import emit_worker_dispatch_error
 from backend.services.pr_bundle import PRBundleGenerationError, generate_pr_bundle
-from backend.services.remediation_audit import allow_update_outcome, write_remediation_run_audit
+from backend.services.direct_fix_approval import DirectFixApprovalDecision, evaluate_direct_fix_approval
+from backend.services.remediation_audit import (
+    allow_update_outcome,
+    write_blocked_mutation_audit,
+    write_remediation_run_audit,
+)
 from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
     ROOT_CREDENTIALS_REQUIRED_MESSAGE,
@@ -192,6 +200,36 @@ def _parse_group_action_ids(raw_ids: object) -> list[uuid.UUID]:
         seen.add(action_uuid)
         parsed.append(action_uuid)
     return parsed
+
+
+def _selected_repo_target(job: dict, run: RemediationRun) -> dict[str, Any] | None:
+    raw_target = job.get("repo_target")
+    if isinstance(raw_target, dict):
+        return raw_target
+    artifacts = run.artifacts if isinstance(run.artifacts, dict) else {}
+    stored_target = artifacts.get("repo_target")
+    return stored_target if isinstance(stored_target, dict) else None
+
+
+def _apply_pr_automation(
+    *,
+    session: Session,
+    run: RemediationRun,
+    bundle: dict[str, Any],
+    actions: list[Action],
+    repo_target: dict[str, Any] | None,
+    strategy_id: str | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    control_rows = build_control_mapping_rows(session)
+    enriched_bundle, artifacts = build_pr_automation_artifacts(
+        run_id=str(run.id),
+        actions=actions,
+        bundle=bundle,
+        repo_target=repo_target,
+        strategy_id=strategy_id,
+        control_mapping_rows=control_rows,
+    )
+    return enriched_bundle, artifacts
 
 
 def _safe_group_folder_name(action: Action, index: int) -> str:
@@ -910,6 +948,29 @@ def _execute_direct_fix(session: Session, run: RemediationRun, log_lines: list[s
         run.artifacts["direct_fix"] = _direct_fix_artifact_payload(result)
 
 
+def _block_direct_fix_mutation(
+    session: Session,
+    run: RemediationRun,
+    log_lines: list[str],
+    decision: DirectFixApprovalDecision,
+) -> None:
+    """Fail closed before any direct mutation when approval proof is missing or invalid."""
+    approval_path = decision.approval_path or "missing"
+    detail = f"Blocked direct_fix mutation: {decision.reason} ({decision.detail})"
+    run.outcome = detail
+    run.status = RemediationRunStatus.failed
+    log_lines.append(detail)
+    log_lines.append(f"Approval path: {approval_path}.")
+    write_blocked_mutation_audit(
+        session,
+        run,
+        reason=decision.reason,
+        detail=decision.detail,
+        requested_mode="direct_fix",
+        approval_path=decision.approval_path,
+    )
+
+
 def _direct_fix_artifact_payload(result: object) -> dict[str, object]:
     logs = list(getattr(result, "logs", []) or [])
     return {
@@ -1108,6 +1169,7 @@ def execute_remediation_run_job(job: dict) -> None:
                         stored_risk = run.artifacts.get("risk_snapshot")
                         if isinstance(stored_risk, dict):
                             selected_risk_snapshot = stored_risk
+                    repo_target = _selected_repo_target(job, run)
                     if _ensure_manual_high_risk_marker(run, selected_strategy_id):
                         log_lines.append(
                             f"{MANUAL_HIGH_RISK_MARKER}: {ROOT_CREDENTIALS_REQUIRED_MESSAGE} "
@@ -1154,6 +1216,14 @@ def execute_remediation_run_job(job: dict) -> None:
                                 callback_url=group_reporting_callback_url,
                                 report_token=group_reporting_token,
                             )
+                            pr_bundle, automation_artifacts = _apply_pr_automation(
+                                session=session,
+                                run=run,
+                                bundle=pr_bundle,
+                                actions=ordered_actions,
+                                repo_target=repo_target,
+                                strategy_id=selected_strategy_id,
+                            )
                             artifacts: dict = {}
                             if isinstance(run.artifacts, dict):
                                 artifacts.update(run.artifacts)
@@ -1165,6 +1235,7 @@ def execute_remediation_run_job(job: dict) -> None:
                                 artifacts["strategy_inputs"] = selected_strategy_inputs
                             if risk_acknowledged:
                                 artifacts["risk_acknowledged"] = True
+                            artifacts.update(automation_artifacts)
                             group_bundle = artifacts.get("group_bundle")
                             if not isinstance(group_bundle, dict):
                                 # Ensure grouped runs always persist a canonical group bundle payload,
@@ -1198,6 +1269,17 @@ def execute_remediation_run_job(job: dict) -> None:
                                         group_bundle["skipped_action_count"] = skipped_count
                                     if isinstance(skipped_actions, list):
                                         group_bundle["skipped_actions"] = skipped_actions
+                                    for key in (
+                                        "diff_fingerprint_sha256",
+                                        "repo_target_configured",
+                                        "repo_repository",
+                                        "repo_base_branch",
+                                        "repo_head_branch",
+                                        "repo_root_path",
+                                    ):
+                                        value = metadata.get(key)
+                                        if isinstance(value, (str, bool)):
+                                            group_bundle[key] = value
                             artifacts["pr_bundle"] = pr_bundle
                             run.artifacts = artifacts
                             generated_count = len(ordered_actions)
@@ -1242,6 +1324,11 @@ def execute_remediation_run_job(job: dict) -> None:
                                 log_lines.append(
                                     f"Skipped {skipped_generation_count} action(s) with generation errors."
                                 )
+                            if repo_target:
+                                log_lines.append(
+                                    "Provider-agnostic PR payload attached for "
+                                    f"{repo_target.get('repository', 'configured repository')}."
+                                )
                     else:
                         pr_bundle = generate_pr_bundle(
                             action,
@@ -1250,6 +1337,14 @@ def execute_remediation_run_job(job: dict) -> None:
                             strategy_inputs=selected_strategy_inputs,
                             risk_snapshot=selected_risk_snapshot,
                             variant=effective_variant,
+                        )
+                        pr_bundle, automation_artifacts = _apply_pr_automation(
+                            session=session,
+                            run=run,
+                            bundle=pr_bundle,
+                            actions=[action],
+                            repo_target=repo_target,
+                            strategy_id=selected_strategy_id,
                         )
                         artifacts: dict = {}
                         if isinstance(run.artifacts, dict):
@@ -1262,6 +1357,7 @@ def execute_remediation_run_job(job: dict) -> None:
                             artifacts["strategy_inputs"] = selected_strategy_inputs
                         if risk_acknowledged:
                             artifacts["risk_acknowledged"] = True
+                        artifacts.update(automation_artifacts)
                         artifacts["pr_bundle"] = pr_bundle
                         run.artifacts = artifacts
                         run.outcome = "PR bundle generated"
@@ -1279,6 +1375,11 @@ def execute_remediation_run_job(job: dict) -> None:
                         else:
                             log_lines.append(
                                 f"PR bundle generated for action_type={action.action_type}."
+                            )
+                        if repo_target:
+                            log_lines.append(
+                                "Provider-agnostic PR payload attached for "
+                                f"{repo_target.get('repository', 'configured repository')}."
                             )
             except PRBundleGenerationError as error:
                 error_code = _apply_pr_bundle_error(run, error=error, log_lines=log_lines)
@@ -1306,7 +1407,19 @@ def execute_remediation_run_job(job: dict) -> None:
                 worker_error_emitted = True
         else:
             # direct_fix (Step 8.3): load action, account, assume WriteRole, run executor
-            _execute_direct_fix(session, run, log_lines)
+            decision = evaluate_direct_fix_approval(run, requested_mode=mode_str)
+            if decision.allowed:
+                _execute_direct_fix(session, run, log_lines)
+            else:
+                _block_direct_fix_mutation(session, run, log_lines, decision)
+                emit_worker_dispatch_error(
+                    logger,
+                    phase="direct_fix_approval_gate_failed",
+                    run_id=run_id_str,
+                    action_type=run.action.action_type if run.action else None,
+                    mode=mode_str,
+                )
+                worker_error_emitted = True
 
         if run.status == RemediationRunStatus.failed and not worker_error_emitted:
             selected_strategy_id = None

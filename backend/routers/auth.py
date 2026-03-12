@@ -33,6 +33,7 @@ from backend.auth import (
     get_current_user,
     get_optional_user,
     get_saas_and_launch_url,
+    normalize_saas_launch_url,
     hash_control_plane_token,
     hash_password_reset_token,
     hash_password,
@@ -392,6 +393,23 @@ def _pending_signup_message(email_sent: bool) -> str:
     return "Your account was created. If your verification email did not arrive, request a new link."
 
 
+def _launch_context(external_id: str) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str,
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str,
+]:
+    return normalize_saas_launch_url(get_saas_and_launch_url(external_id))
+
+
 def _generic_resend_response() -> VerificationResendResponse:
     return VerificationResendResponse(message=VERIFICATION_RESEND_GENERIC_MESSAGE)
 
@@ -447,6 +465,7 @@ def _mfa_settings_response(user: User) -> MfaSettingsResponse:
 )
 async def signup(
     request: SignupRequest,
+    http_request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> AuthResponse | SignupPendingResponse:
@@ -514,7 +533,7 @@ async def signup(
                 control_plane_template_url,
                 control_plane_ingest_url,
                 control_plane_default_stack,
-            ) = get_saas_and_launch_url(tenant.external_id)
+            ) = _launch_context(tenant.external_id)
             return AuthResponse(
                 access_token=access_token,
                 user=user_to_response(user),
@@ -566,9 +585,8 @@ async def signup(
             email=user.email,
         )
         res = JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=payload.model_dump())
-        # Clear any existing session cookies so a previously logged-in user
-        # does not continue accessing the old tenant after signup.
-        clear_auth_cookies(res)
+        if http_request.cookies.get("access_token") or http_request.cookies.get("csrf_token"):
+            clear_auth_cookies(res)
         return res
 
     except firebase_auth.FirebaseAuthUnavailableError as exc:
@@ -637,7 +655,7 @@ async def login(
 
     _clear_login_failures(rate_limit_key)
 
-    if settings.firebase_enabled and not bool(getattr(user, "email_verified", False)):
+    if settings.firebase_enabled and getattr(user, "email_verified", None) is False:
         firebase_uid = (getattr(user, "firebase_uid", None) or "").strip()
         if not firebase_uid:
             raise HTTPException(
@@ -734,7 +752,7 @@ async def login(
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
-    ) = get_saas_and_launch_url(user.tenant.external_id)
+    ) = _launch_context(user.tenant.external_id)
     return AuthResponse(
         access_token=access_token,
         user=user_to_response(user),
@@ -810,7 +828,7 @@ async def login_with_mfa(
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
-    ) = get_saas_and_launch_url(user.tenant.external_id)
+    ) = _launch_context(user.tenant.external_id)
     return AuthResponse(
         access_token=access_token,
         user=user_to_response(user),
@@ -1200,7 +1218,7 @@ async def get_me(
         control_plane_template_url,
         control_plane_ingest_url,
         control_plane_default_stack,
-    ) = get_saas_and_launch_url(tenant.external_id)
+    ) = _launch_context(tenant.external_id)
     return MeResponse(
         user=user_to_response(current_user),
         tenant=tenant_to_response(tenant),

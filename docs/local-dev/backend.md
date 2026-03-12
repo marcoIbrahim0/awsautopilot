@@ -21,17 +21,53 @@ Actions owner queues:
 - `GET /api/actions` supports `owner_type`, `owner_key`, and `owner_queue=open|expiring|overdue|expiring_exceptions|blocked_fixes`.
 - Action list/detail payloads now include `owner_type`, `owner_key`, `owner_label`, and additive `sla` metadata.
 - Owner-queue responses include additive `owner_queue_counters` totals for `open`, `expiring`, `overdue`, `blocked_fixes`, and `expiring_exceptions`.
-- Action list/detail payloads include `score`, `score_components`, and `score_factors`; when toxic-combination prioritization is enabled, `score_factors` can include a `toxic_combinations` entry.
+- Action list/detail payloads include `score`, `score_components`, and `score_factors`; `exploit_signals` can now carry additive threat-intel `provenance[]`, and toxic-combination prioritization can add a separate `toxic_combinations` factor.
 - `GET /api/actions/{id}` also includes additive `context_incomplete` so action detail makes fail-closed toxic-combination gating explicit.
 - `GET /api/actions/{id}` now also includes additive `execution_guidance[]` entries with mode-aware `blast_radius`, `pre_checks`, `expected_outcome`, `post_checks`, and `rollback` guidance per actionable strategy.
 - `GET /api/actions/{id}` now also includes additive `implementation_artifacts[]` entries that deep-link engineering to the latest PR bundle, change summary, or direct-fix record for that action.
+- `GET /api/actions/{id}` now also includes additive `graph_context` with explicit `available` / `unavailable` status, bounded `connected_assets[]`, `identity_path[]`, `blast_radius_neighborhood[]`, and `truncated_sections[]` when conservative graph traversal caps are hit.
+- `GET /api/actions/{id}` and `GET /api/actions/{id}/remediation-options` now also include additive `recommendation` with matrix-derived `default_mode`, effective `mode`, `advisory`, `enforced_by_policy`, `rationale`, `matrix_position`, and auditable `evidence`.
+- `Action.status` is now the canonical remediation state system of record for platform actions; external systems cannot overwrite it directly.
+- External provider drift now persists in `action_remediation_sync_states` and `action_remediation_sync_events`, with `sync_status` of `in_sync` or `drifted` plus source-aware audit decisions.
+- `POST /api/internal/reconciliation/remediation-state-sync` enqueues `reconcile_action_remediation_sync` jobs so drifted Jira, ServiceNow, or Slack statuses can be reconciled back to the internal canonical state through the existing integration-sync queue.
 - `GET /api/remediation-runs/{id}` now also includes additive `artifact_metadata` with normalized `implementation_artifacts[]`, `evidence_pointers[]`, and `closure_checklist[]` while preserving the raw `artifacts` payload.
 - Remediation-run deep links now rely on stable anchors in the UI contract: `#run-activity`, `#run-generated-files`, and `#run-closure`.
+- `POST /api/remediation-runs` and `POST /api/remediation-runs/group-pr-bundle` now accept additive optional `repo_target` metadata with `provider`, `repository`, `base_branch`, optional `head_branch`, and optional `root_path` for provider-agnostic PR payload generation.
+- Strategy-backed `pr_only` run creation is now an observed client contract: frontend callers preflight `GET /api/actions/{id}/remediation-options`, choose a valid non-exception `pr_only` strategy from that payload, and send `strategy_id` plus any safely derivable `strategy_inputs` on `POST /api/remediation-runs` or `POST /api/remediation-runs/group-pr-bundle`.
+- Summary/grouped PR-bundle flows now fail closed on the client side when dependency checks require manual review, required inputs cannot be derived safely, or grouped actions do not converge on the same derived strategy payload.
+- Successful PR-bundle runs now attach additive `diff_summary`, `rollback_notes`, and `control_mapping_context` artifacts; when `repo_target` is configured they also attach `pr_payload`.
+- Downloaded PR bundle zips now include `pr_automation/diff_summary.json`, `pr_automation/rollback_notes.md`, `pr_automation/control_mapping_context.json`, and `pr_automation/pr_payload.json` when repository metadata is present.
+- `POST /api/remediation-runs` now stamps direct-fix runs with additive `artifacts.direct_fix_approval` metadata; the worker fails closed unless the stored run mode is `direct_fix` and the approval path is in the explicit allowlist.
+- Blocked unapproved direct-mutation attempts write `audit_log.event_type=remediation_mutation_blocked` before the run is finalized as failed.
+
+Integration-first remediation ops:
+- `GET /api/integrations/settings` lists the tenant's current provider settings for `jira`, `servicenow`, and `slack`, with `secret_configured` / `webhook_configured` booleans instead of raw secrets.
+- `PATCH /api/integrations/settings/{provider}` accepts additive provider settings fields: `enabled`, `outbound_enabled`, `inbound_enabled`, `auto_create`, `reopen_on_regression`, `config`, `secret_config`, and `clear_secret_config`.
+- `POST /api/integrations/actions/{id}/sync` plans a tenant-scoped outbound sync task for one action and enqueues `job_type=integration_sync` on the ingest queue.
+- `POST /api/integrations/webhooks/{provider}` requires `X-Integration-Webhook-Token` and optional `X-External-Event-Id`; inbound events are receipt-key idempotent, can sync assignee metadata, and record external status drift without overwriting canonical `Action.status`.
+- Provider links and sync persistence now live in tenant-scoped tables: `tenant_integration_settings`, `action_external_links`, `integration_sync_tasks`, `integration_event_receipts`, `action_remediation_sync_states`, and `action_remediation_sync_events`.
 
 Toxic-combination config:
 - `ACTIONS_TOXIC_COMBINATIONS_ENABLED`
 - `ACTIONS_TOXIC_COMBINATION_MAX_BOOST`
 - `ACTIONS_TOXIC_COMBINATION_RULES_JSON`
+
+Threat-intelligence decay config:
+- `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS`
+
+`ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS` controls decay for trusted exploit-signal weighting and defaults to `72` hours.
+
+- Security Hub ingest now persists `finding.raw_json.relationship_context` from canonical finding metadata, and `scripts/backfill_finding_relationship_context.py` can enrich older Security Hub rows before a scoped action recompute:
+
+```bash
+python3 scripts/backfill_finding_relationship_context.py \
+  --tenant-id <YOUR_TENANT_ID_HERE> \
+  --account-id <YOUR_ACCOUNT_ID_HERE> \
+  --region <YOUR_REGION_HERE> \
+  --recompute-actions
+```
+
+`<YOUR_TENANT_ID_HERE>` is environment-specific; use the tenant you want to refresh.
 
 Swagger:
 - `http://localhost:8000/docs`
@@ -50,6 +86,7 @@ Swagger:
 - `/api/users`
 - `/api/reconciliation`
 - `/api/control-plane`
+- `/api/integrations`
 - `/api/internal`
 - `/api/saas`
 - `/api/support-files`
@@ -92,3 +129,8 @@ Startup enforces DB head revision by default via `DB_REVISION_GUARD_ENABLED=true
 
 - [Environment setup](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/environment.md)
 - [Worker development](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/worker.md)
+- [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md)
+- [Repo-aware PR automation](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/repo-aware-pr-automation.md)
+- [Remediation system-of-record sync](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/remediation-system-of-record-sync.md)
+- [Recommendation mode matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/recommendation-mode-matrix.md)
+- [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md)

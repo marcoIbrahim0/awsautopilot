@@ -1,0 +1,42 @@
+{
+  "files": [
+    {
+      "content": "# provider\n",
+      "path": "providers.tf"
+    },
+    {
+      "content": "resource \"aws_security_group_rule\" \"lockdown\" {}\n",
+      "path": "sg_restrict_public_ports.tf"
+    },
+    {
+      "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 2,\n  \"files\": [\n    {\n      \"bundle_path\": \"providers.tf\",\n      \"byte_count\": 11,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"671f5c53748559a2eb7b958e4579e20900aef2619e29536242039b875fb79eb1\",\n      \"line_count\": 1,\n      \"repo_path\": \"terraform/network/security/providers.tf\"\n    },\n    {\n      \"bundle_path\": \"sg_restrict_public_ports.tf\",\n      \"byte_count\": 49,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"531651f36ab58a71ebcc7c12ef63a6d287e8f33ec98fe80fca52a2f97b94b625\",\n      \"line_count\": 1,\n      \"repo_path\": \"terraform/network/security/sg_restrict_public_ports.tf\"\n    }\n  ],\n  \"fingerprint_sha256\": \"a74750d5c9b9bd453abc37b248ed08f042019d0bf017b8eb72f7d3c40f71763b\",\n  \"repo_target_configured\": true,\n  \"summary_lines\": [\n    \"`terraform/network/security/providers.tf` <- `providers.tf` (1 lines, sha256:671f5c537485)\",\n    \"`terraform/network/security/sg_restrict_public_ports.tf` <- `sg_restrict_public_ports.tf` (1 lines, sha256:531651f36ab5)\"\n  ],\n  \"version\": 1\n}\n",
+      "path": "pr_automation/diff_summary.json"
+    },
+    {
+      "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## Restrict public admin ports\n- Action ID: `11111111-1111-1111-1111-111111111111`\n- Control ID: `EC2.53`\n- Target: `sg-0abc1234def567890`\n- Rollback command: `aws ec2 authorize-security-group-ingress --group-id sg-0abc1234def567890 --ip-permissions '[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]},{\"IpProtocol\":\"tcp\",\"FromPort\":3389,\"ToPort\":3389,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]}]'`\n",
+      "path": "pr_automation/rollback_notes.md"
+    },
+    {
+      "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"EC2.53\"\n  ],\n  \"mapped_control_ids\": [\n    \"EC2.53\"\n  ],\n  \"mappings\": [\n    {\n      \"control_id\": \"EC2.53\",\n      \"control_title\": \"Ensure no security groups allow ingress from 0.0.0.0/0 to remote server administration ports\",\n      \"description\": \"Restrict SSH and RDP exposure to trusted networks only.\",\n      \"framework_control_code\": \"5.2\",\n      \"framework_name\": \"CIS AWS Foundations Benchmark\"\n    },\n    {\n      \"control_id\": \"EC2.53\",\n      \"control_title\": \"Logical access restrictions\",\n      \"description\": \"Network access to administrative interfaces is restricted and reviewed.\",\n      \"framework_control_code\": \"CC6.6\",\n      \"framework_name\": \"SOC 2\"\n    }\n  ],\n  \"unmapped_control_ids\": [],\n  \"version\": 1\n}\n",
+      "path": "pr_automation/control_mapping_context.json"
+    },
+    {
+      "content": "{\n  \"artifact_type\": \"provider_agnostic_pr_payload\",\n  \"body_markdown\": \"## Summary\\n\\n- Repository: `acme/infrastructure-live`\\n- Base branch: `main`\\n- Head branch: `autopilot/ec2-53-fix`\\n- Repo root path: `terraform/network/security`\\n- Action: `EC2.53` \\u00b7 `123456789012` \\u00b7 `sg-0abc1234def567890`\\n\\n## Generated diff\\n\\n- Fingerprint: `a74750d5c9b9bd453abc37b248ed08f042019d0bf017b8eb72f7d3c40f71763b`\\n- File count: `2`\\n- `terraform/network/security/providers.tf` <- `providers.tf` (1 lines, sha256:671f5c537485)\\n- `terraform/network/security/sg_restrict_public_ports.tf` <- `sg_restrict_public_ports.tf` (1 lines, sha256:531651f36ab5)\\n\\n## Rollback\\n\\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\\n- Restrict public admin ports: `aws ec2 authorize-security-group-ingress --group-id sg-0abc1234def567890 --ip-permissions '[{\\\"IpProtocol\\\":\\\"tcp\\\",\\\"FromPort\\\":22,\\\"ToPort\\\":22,\\\"IpRanges\\\":[{\\\"CidrIp\\\":\\\"0.0.0.0/0\\\"}]},{\\\"IpProtocol\\\":\\\"tcp\\\",\\\"FromPort\\\":3389,\\\"ToPort\\\":3389,\\\"IpRanges\\\":[{\\\"CidrIp\\\":\\\"0.0.0.0/0\\\"}]}]'`\\n\\n## Control mapping context\\n\\n- Control IDs: `EC2.53`\\n- `EC2.53` -> `CIS AWS Foundations Benchmark` `5.2`\\n- `EC2.53` -> `SOC 2` `CC6.6`\",\n  \"commit_message\": \"Apply AWS Security Autopilot remediation for EC2.53\",\n  \"diff_metadata\": {\n    \"artifact_type\": \"generated_diff_summary\",\n    \"file_count\": 2,\n    \"files\": [\n      {\n        \"bundle_path\": \"providers.tf\",\n        \"byte_count\": 11,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"671f5c53748559a2eb7b958e4579e20900aef2619e29536242039b875fb79eb1\",\n        \"line_count\": 1,\n        \"repo_path\": \"terraform/network/security/providers.tf\"\n      },\n      {\n        \"bundle_path\": \"sg_restrict_public_ports.tf\",\n        \"byte_count\": 49,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"531651f36ab58a71ebcc7c12ef63a6d287e8f33ec98fe80fca52a2f97b94b625\",\n        \"line_count\": 1,\n        \"repo_path\": \"terraform/network/security/sg_restrict_public_ports.tf\"\n      }\n    ],\n    \"fingerprint_sha256\": \"a74750d5c9b9bd453abc37b248ed08f042019d0bf017b8eb72f7d3c40f71763b\",\n    \"repo_target_configured\": true,\n    \"summary_lines\": [\n      \"`terraform/network/security/providers.tf` <- `providers.tf` (1 lines, sha256:671f5c537485)\",\n      \"`terraform/network/security/sg_restrict_public_ports.tf` <- `sg_restrict_public_ports.tf` (1 lines, sha256:531651f36ab5)\"\n    ],\n    \"version\": 1\n  },\n  \"provider_agnostic\": true,\n  \"repo_target\": {\n    \"base_branch\": \"main\",\n    \"head_branch\": \"autopilot/ec2-53-fix\",\n    \"provider\": \"gitlab\",\n    \"repository\": \"acme/infrastructure-live\",\n    \"root_path\": \"terraform/network/security\"\n  },\n  \"rollback_notes\": {\n    \"artifact_type\": \"rollback_notes\",\n    \"entries\": [\n      {\n        \"action_id\": \"11111111-1111-1111-1111-111111111111\",\n        \"action_type\": \"sg_restrict_public_ports\",\n        \"control_id\": \"EC2.53\",\n        \"rollback_command\": \"aws ec2 authorize-security-group-ingress --group-id sg-0abc1234def567890 --ip-permissions '[{\\\"IpProtocol\\\":\\\"tcp\\\",\\\"FromPort\\\":22,\\\"ToPort\\\":22,\\\"IpRanges\\\":[{\\\"CidrIp\\\":\\\"0.0.0.0/0\\\"}]},{\\\"IpProtocol\\\":\\\"tcp\\\",\\\"FromPort\\\":3389,\\\"ToPort\\\":3389,\\\"IpRanges\\\":[{\\\"CidrIp\\\":\\\"0.0.0.0/0\\\"}]}]'\",\n        \"target_id\": \"sg-0abc1234def567890\",\n        \"title\": \"Restrict public admin ports\"\n      }\n    ],\n    \"entry_count\": 1,\n    \"recommended_path\": \"Prefer reverting through version control and the same reviewed deployment workflow.\",\n    \"version\": 1\n  },\n  \"title\": \"Apply AWS Security Autopilot remediation for EC2.53\",\n  \"version\": 1\n}\n",
+      "path": "pr_automation/pr_payload.json"
+    }
+  ],
+  "format": "terraform",
+  "metadata": {
+    "automation_file_count": 4,
+    "diff_fingerprint_sha256": "a74750d5c9b9bd453abc37b248ed08f042019d0bf017b8eb72f7d3c40f71763b",
+    "repo_base_branch": "main",
+    "repo_head_branch": "autopilot/ec2-53-fix",
+    "repo_repository": "acme/infrastructure-live",
+    "repo_root_path": "terraform/network/security",
+    "repo_target_configured": true
+  },
+  "steps": [
+    "review",
+    "apply"
+  ]
+}

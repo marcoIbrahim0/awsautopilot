@@ -1,0 +1,7 @@
+{
+    "FunctionName": "security-autopilot-dev-api",
+    "LastModified": "2026-03-11T22:44:07.000+0000",
+    "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260311T224136Z",
+    "ResolvedImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api@sha256:34aecef25bcdde2ccbf057e6b7f028749de5fcabd0764f7f7ea708361a3c333c",
+    "CodeSha256": "34aecef25bcdde2ccbf057e6b7f028749de5fcabd0764f7f7ea708361a3c333c"
+}

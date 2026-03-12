@@ -66,7 +66,7 @@ def assert_database_revision_at_head(*, component: str) -> None:
     message = (
         f"Refusing to start {component}: database revision is not at Alembic head. "
         f"current={current} expected_head={expected}. "
-        "Run 'alembic upgrade head' before restarting API/workers."
+        "Run 'alembic upgrade heads' before restarting API/workers."
     )
     logger.critical(message)
     raise RuntimeError(message)

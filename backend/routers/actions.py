@@ -15,7 +15,7 @@ import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, and_, case, cast, exists, func, or_, select
+from sqlalchemy import Integer, String, and_, case, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -39,6 +39,7 @@ from backend.services.action_ownership import (
     UNASSIGNED_OWNER_TYPE,
     normalize_owner_lookup_key,
 )
+from backend.services.action_remediation_sync import apply_canonical_action_status
 from backend.services.action_sla import (
     ActionSLAStatus as ComputedActionSLAStatus,
     action_sla_expiring_expr,
@@ -54,7 +55,14 @@ from backend.services.direct_fix_bridge import (
     run_remediation_preview_bridge,
 )
 from backend.services.action_scoring import build_score_factors
+from backend.services.action_business_impact import (
+    build_business_impact_from_components,
+    business_impact_rank,
+)
 from backend.services.action_execution_guidance import build_action_execution_guidance
+from backend.services.action_graph_context import build_action_graph_context
+from backend.services.integration_sync import dispatch_sync_tasks, plan_action_sync_tasks
+from backend.services.action_recommendation import build_action_recommendation
 from backend.services.remediation_handoff import (
     ActionImplementationArtifactLink,
     build_action_implementation_artifacts,
@@ -149,6 +157,16 @@ class ReconcileActionsResponse(BaseModel):
 # GET /actions, GET /actions/{id}, PATCH /actions/{id} (Step 5.5)
 # ---------------------------------------------------------------------------
 
+class ActionScoreFactorProvenance(BaseModel):
+    """One provenance record behind a score-factor shift."""
+
+    source: str
+    observed_at: str | None = None
+    decay_applied: float
+    final_contribution: int
+    base_contribution: int | None = None
+
+
 class ActionScoreFactor(BaseModel):
     """One explainable factor behind an action score."""
 
@@ -158,6 +176,52 @@ class ActionScoreFactor(BaseModel):
     evidence_source: str
     signals: list[str] = Field(default_factory=list)
     explanation: str
+    provenance: list[ActionScoreFactorProvenance] = Field(default_factory=list)
+
+
+class ActionCriticalityDimension(BaseModel):
+    """One explicit business-criticality dimension."""
+
+    dimension: str
+    label: str
+    weight: int
+    matched: bool
+    contribution: int
+    signals: list[str] = Field(default_factory=list)
+    explanation: str
+
+
+class ActionCriticality(BaseModel):
+    """Resolved business-criticality state for one action."""
+
+    status: Literal["known", "unknown"]
+    score: int
+    tier: Literal["critical", "high", "medium", "unknown"]
+    weight: int
+    dimensions: list[ActionCriticalityDimension] = Field(default_factory=list)
+    explanation: str
+
+
+class ActionBusinessImpactMatrixPosition(BaseModel):
+    """Matrix coordinates used for business-impact ranking."""
+
+    row: Literal["critical", "high", "medium", "low"]
+    column: Literal["critical", "high", "medium", "unknown"]
+    cell: str
+    risk_weight: int
+    criticality_weight: int
+    rank: int
+    explanation: str
+
+
+class ActionBusinessImpact(BaseModel):
+    """Transparent risk x criticality payload."""
+
+    technical_risk_score: int
+    technical_risk_tier: Literal["critical", "high", "medium", "low"]
+    criticality: ActionCriticality
+    matrix_position: ActionBusinessImpactMatrixPosition
+    summary: str
 
 
 class ActionSLAStatus(BaseModel):
@@ -202,6 +266,7 @@ class ActionListItem(BaseModel):
     score: int
     score_components: dict[str, Any] | None = None
     score_factors: list[ActionScoreFactor] = Field(default_factory=list)
+    business_impact: ActionBusinessImpact
     priority: int
     status: str
     title: str
@@ -244,6 +309,38 @@ class ActionDetailFinding(BaseModel):
     updated_at: str | None
 
 
+class ActionRecommendationMatrixPosition(BaseModel):
+    """Matrix location used to derive the recommendation mode."""
+
+    risk_tier: Literal["low", "medium", "high"]
+    business_criticality: Literal["low", "medium", "high"]
+    cell: str
+
+
+class ActionRecommendationEvidence(BaseModel):
+    """Auditable evidence used to derive the recommendation."""
+
+    score: int
+    context_incomplete: bool
+    data_sensitivity: float
+    internet_exposure: float
+    privilege_level: float
+    exploit_signals: float
+    matched_signals: list[str] = Field(default_factory=list)
+
+
+class ActionRecommendationResponse(BaseModel):
+    """Recommendation mode derived from the risk x criticality matrix."""
+
+    mode: Literal["direct_fix_candidate", "pr_only", "exception_review"]
+    default_mode: Literal["direct_fix_candidate", "pr_only", "exception_review"]
+    advisory: bool
+    enforced_by_policy: str | None = None
+    rationale: str
+    matrix_position: ActionRecommendationMatrixPosition
+    evidence: ActionRecommendationEvidence
+
+
 class ActionDetailResponse(BaseModel):
     """Full action with linked findings."""
 
@@ -256,6 +353,7 @@ class ActionDetailResponse(BaseModel):
     score: int
     score_components: dict[str, Any] | None
     score_factors: list[ActionScoreFactor] = Field(default_factory=list)
+    business_impact: ActionBusinessImpact
     context_incomplete: bool = False
     priority: int
     status: str
@@ -277,8 +375,10 @@ class ActionDetailResponse(BaseModel):
     exception_expires_at: str | None = None
     exception_expired: bool | None = None
     sla: ActionSLAStatus | None = None
+    recommendation: ActionRecommendationResponse
     execution_guidance: list["ActionExecutionGuidance"] = Field(default_factory=list)
     implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
+    graph_context: "ActionGraphContext"
 
 
 class ExecutionGuidanceCheck(BaseModel):
@@ -310,6 +410,66 @@ class ActionExecutionGuidance(BaseModel):
     expected_outcome: str
     post_checks: list[ExecutionGuidanceCheck] = Field(default_factory=list)
     rollback: ExecutionGuidanceRollback
+
+
+class ActionGraphLimits(BaseModel):
+    """Bounded graph-traversal limits applied to action detail context."""
+
+    max_related_findings: int
+    max_related_actions: int
+    max_inventory_assets: int
+    max_connected_assets: int
+    max_identity_nodes: int
+    max_blast_radius_neighbors: int
+
+
+class ActionGraphAsset(BaseModel):
+    """One graph-connected asset related to the anchor action."""
+
+    label: str
+    resource_id: str | None = None
+    resource_type: str | None = None
+    resource_key: str | None = None
+    relationship: str
+    finding_count: int = 0
+    action_count: int = 0
+    inventory_services: list[str] = Field(default_factory=list)
+
+
+class ActionGraphIdentityNode(BaseModel):
+    """One node in the graph-derived identity path."""
+
+    node_type: Literal["principal", "account", "resource"]
+    label: str
+    value: str
+    source: str
+
+
+class ActionBlastRadiusNeighbor(BaseModel):
+    """One bounded blast-radius neighborhood summary item."""
+
+    scope: Literal["anchor", "account", "related"]
+    label: str
+    resource_id: str | None = None
+    resource_type: str | None = None
+    resource_key: str | None = None
+    finding_count: int = 0
+    open_action_count: int = 0
+    inventory_service_count: int = 0
+    controls: list[str] = Field(default_factory=list)
+
+
+class ActionGraphContext(BaseModel):
+    """Additive graph-backed action detail context."""
+
+    status: Literal["available", "unavailable"]
+    availability_reason: str | None = None
+    source: str
+    connected_assets: list[ActionGraphAsset] = Field(default_factory=list)
+    identity_path: list[ActionGraphIdentityNode] = Field(default_factory=list)
+    blast_radius_neighborhood: list[ActionBlastRadiusNeighbor] = Field(default_factory=list)
+    truncated_sections: list[str] = Field(default_factory=list)
+    limits: ActionGraphLimits
 
 
 _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
@@ -363,6 +523,28 @@ class PatchActionRequest(BaseModel):
     """Request body for PATCH /actions/{id}."""
 
     status: Literal["in_progress", "resolved", "suppressed"] = Field(..., description="New workflow status")
+
+
+def _patch_action_status_sync(
+    session,
+    *,
+    tenant_id: uuid.UUID,
+    action_id: uuid.UUID,
+    target_status: str,
+    actor_user_id: uuid.UUID | None,
+) -> None:
+    result = session.execute(select(Action).where(Action.id == action_id, Action.tenant_id == tenant_id))
+    action = result.scalar_one_or_none()
+    if action is None:
+        raise ValueError(f"Action not found: {action_id}")
+    apply_canonical_action_status(
+        session,
+        action=action,
+        target_status=target_status,
+        source="api.actions.patch",
+        actor_user_id=actor_user_id,
+        detail="Canonical action state updated via PATCH /api/actions/{id}.",
+    )
 
 
 class RemediationPreviewResponse(BaseModel):
@@ -448,6 +630,7 @@ class RemediationOptionsResponse(BaseModel):
     action_type: str
     mode_options: list[Literal["pr_only", "direct_fix"]]
     strategies: list[RemediationOptionResponse]
+    recommendation: ActionRecommendationResponse
     manual_high_risk: bool = False
     pre_execution_notice: str | None = None
     runbook_url: str | None = None
@@ -507,6 +690,20 @@ def _context_incomplete_payload(action: Action | None) -> bool:
     return True
 
 
+def _action_recommendation_payload(
+    action: Action,
+    *,
+    mode_options: list[Literal["pr_only", "direct_fix"]] | None = None,
+    manual_high_risk: bool = False,
+) -> ActionRecommendationResponse:
+    payload = build_action_recommendation(
+        action,
+        mode_options=list(mode_options or []),
+        manual_high_risk=manual_high_risk,
+    )
+    return ActionRecommendationResponse(**payload)
+
+
 def _owner_attr(action: Action, attr_name: str, default: str | None) -> str | None:
     value = getattr(action, attr_name, default)
     if isinstance(value, str) and value.strip():
@@ -556,6 +753,28 @@ def _serialize_action_sla(sla: ComputedActionSLAStatus) -> ActionSLAStatus:
 
 def _action_score_sql_expr() -> object:
     return func.coalesce(Action.score, Action.priority, 0)
+
+
+def _business_impact_json_int(*keys: str) -> object:
+    expr = Action.score_components
+    for key in keys:
+        expr = expr[key]
+    return cast(expr.astext, Integer)
+
+
+def _risk_weight_sql_expr(score_expr: object | None = None) -> object:
+    resolved_score = score_expr if score_expr is not None else _action_score_sql_expr()
+    fallback = case((resolved_score >= 85, 4), (resolved_score >= 65, 3), (resolved_score >= 40, 2), else_=1)
+    return func.coalesce(_business_impact_json_int("business_impact", "matrix_position", "risk_weight"), fallback)
+
+
+def _criticality_weight_sql_expr() -> object:
+    return func.coalesce(_business_impact_json_int("business_impact", "matrix_position", "criticality_weight"), 1)
+
+
+def _business_impact_rank_sql_expr(score_expr: object | None = None) -> object:
+    resolved_score = score_expr if score_expr is not None else _action_score_sql_expr()
+    return (_risk_weight_sql_expr(resolved_score) * 10000) + (_criticality_weight_sql_expr() * 100) + resolved_score
 
 
 def _active_action_exception_subquery(tenant_uuid: Any, now: datetime) -> object:
@@ -690,6 +909,7 @@ def _action_to_list_item(
         score=_action_score_value(action),
         score_components=_score_components_payload(action),
         score_factors=_score_factors_payload(action),
+        business_impact=_business_impact_payload(action),
         priority=int(getattr(action, "priority", 0) or 0),
         status=status_override or action.status,
         title=action.title,
@@ -775,7 +995,7 @@ def _build_batch_target_id_from_fields(
 
 def _batch_sort_key(item: ActionListItem) -> tuple[int, str, str]:
     return (
-        item.score,
+        item.business_impact.matrix_position.rank,
         item.updated_at or "",
         item.id,
     )
@@ -790,7 +1010,7 @@ def _normalize_updated_at(value: datetime | None) -> datetime:
 
 
 def _representative_action_key(action: Action) -> tuple[int, datetime, str]:
-    return (_action_score_value(action), _normalize_updated_at(action.updated_at), str(action.id))
+    return (_business_impact_rank_value(action), _normalize_updated_at(action.updated_at), str(action.id))
 
 
 async def _load_batch_representatives(
@@ -847,6 +1067,7 @@ def _group_actions_into_batches(actions: list[Action]) -> list[ActionListItem]:
                 score=max_score,
                 score_components=None,
                 score_factors=_score_factors_payload(representative),
+                business_impact=_business_impact_payload(representative, fallback_score=max_score),
                 priority=max_score,
                 status=status,
                 title=_batch_title(action_type, action_count),
@@ -869,7 +1090,9 @@ def _action_to_detail_response(
     exception_state: dict | None = None,
     now: datetime | None = None,
     account: AwsAccount | None = None,
+    recommendation: ActionRecommendationResponse | None = None,
     implementation_artifacts: list[ActionImplementationArtifactLink] | None = None,
+    graph_context: dict[str, Any] | None = None,
 ) -> ActionDetailResponse:
     """Build detail response from Action; action_finding_links and finding must be loaded."""
     state = exception_state or {}
@@ -900,6 +1123,7 @@ def _action_to_detail_response(
         score=_action_score_value(action),
         score_components=_score_components_payload(action),
         score_factors=_score_factors_payload(action),
+        business_impact=_business_impact_payload(action),
         context_incomplete=_context_incomplete_payload(action),
         priority=int(getattr(action, "priority", 0) or 0),
         status=action.status,
@@ -920,11 +1144,13 @@ def _action_to_detail_response(
         exception_expires_at=state.get("exception_expires_at"),
         exception_expired=state.get("exception_expired"),
         sla=_action_sla_payload(action, exception_state=state, now=now),
+        recommendation=recommendation or _action_recommendation_payload(action),
         execution_guidance=[
             ActionExecutionGuidance(**guidance)
             for guidance in build_action_execution_guidance(action, account=account)
         ],
         implementation_artifacts=implementation_artifacts or [],
+        graph_context=ActionGraphContext(**(graph_context or _default_graph_context_payload())),
     )
 
 
@@ -942,6 +1168,56 @@ async def _load_action_implementation_artifacts(
     )
     runs = result.scalars().all()
     return build_action_implementation_artifacts(runs, action_status=action.status)
+
+
+async def _load_action_graph_context(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action: Action,
+) -> dict[str, Any]:
+    return await build_action_graph_context(db, tenant_id=tenant_uuid, action=action)
+
+
+def _default_graph_context_payload() -> dict[str, Any]:
+    return {
+        "status": "unavailable",
+        "availability_reason": "relationship_context_unavailable",
+        "source": "finding_relationship_context+inventory_assets",
+        "connected_assets": [],
+        "identity_path": [],
+        "blast_radius_neighborhood": [],
+        "truncated_sections": [],
+        "limits": {
+            "max_related_findings": 24,
+            "max_related_actions": 24,
+            "max_inventory_assets": 24,
+            "max_connected_assets": 6,
+            "max_identity_nodes": 6,
+            "max_blast_radius_neighbors": 6,
+        },
+    }
+
+
+def _business_impact_payload(
+    action: Action | None,
+    *,
+    fallback_score: int | None = None,
+) -> ActionBusinessImpact:
+    if action is None:
+        payload = build_business_impact_from_components(None, stored_score=fallback_score)
+    else:
+        payload = build_business_impact_from_components(
+            _score_components_payload(action),
+            stored_score=_action_score_value(action),
+        )
+    return ActionBusinessImpact(**payload)
+
+
+def _business_impact_rank_value(action: Action | None, *, fallback_score: int | None = None) -> int:
+    if action is None:
+        return business_impact_rank(None, stored_score=fallback_score)
+    return business_impact_rank(_score_components_payload(action), stored_score=_action_score_value(action))
 
 
 @router.get("", response_model=ActionsListResponse)
@@ -1108,6 +1384,7 @@ async def list_actions(
                 ActionGroup.region.label("region"),
                 func.max(Action.score).label("score"),
                 func.max(Action.priority).label("priority"),
+                func.max(_business_impact_rank_sql_expr()).label("business_rank"),
                 func.max(Action.updated_at).label("updated_at"),
                 func.max(Action.control_id).label("control_id"),
                 func.count(Action.id).label("action_count"),
@@ -1162,6 +1439,7 @@ async def list_actions(
         total = total_result.scalar() or 0
 
         grouped_query = grouped_query.order_by(
+            func.max(_business_impact_rank_sql_expr()).desc(),
             func.max(Action.score).desc(),
             func.max(Action.updated_at).desc().nullslast(),
             cast(ActionGroup.id, String).asc(),
@@ -1212,6 +1490,10 @@ async def list_actions(
                         fallback_score=int(row.score or row.priority or 0),
                         legacy_source="highest member action score in the batch group",
                     ),
+                    business_impact=_business_impact_payload(
+                        representative,
+                        fallback_score=int(row.score or row.priority or 0),
+                    ),
                     priority=int(row.priority or row.score or 0),
                     status=derived_status,
                     title=_batch_title(row.action_type, total_actions),
@@ -1258,6 +1540,7 @@ async def list_actions(
     total = total_result.scalar() or 0
 
     query = query.order_by(
+        _business_impact_rank_sql_expr().desc(),
         Action.score.desc(),
         Action.updated_at.desc().nullslast(),
         Action.id.asc(),
@@ -1333,9 +1616,12 @@ async def get_action(
                 Finding.severity_label,
                 Finding.title,
                 Finding.resource_id,
+                Finding.resource_type,
+                Finding.resource_key,
                 Finding.account_id,
                 Finding.region,
                 Finding.updated_at,
+                Finding.raw_json,
             ),
         )
     )
@@ -1354,6 +1640,11 @@ async def get_action(
         tenant_uuid=tenant_uuid,
         action=action,
     )
+    graph_context = await _load_action_graph_context(
+        db,
+        tenant_uuid=tenant_uuid,
+        action=action,
+    )
     account_result = await db.execute(
         select(AwsAccount).where(
             AwsAccount.tenant_id == tenant_uuid,
@@ -1361,12 +1652,19 @@ async def get_action(
         )
     )
     account = account_result.scalar_one_or_none()
+    recommendation = _action_recommendation_payload(
+        action,
+        mode_options=_mode_options_for_action(action.action_type),
+        manual_high_risk=is_root_credentials_required_action(action.action_type),
+    )
     return _action_to_detail_response(
         action,
         exception_state,
         now=datetime.now(timezone.utc),
         account=account,
+        recommendation=recommendation,
         implementation_artifacts=implementation_artifacts,
+        graph_context=graph_context,
     )
 
 
@@ -1428,12 +1726,18 @@ async def get_remediation_options(
     pre_execution_notice = ROOT_CREDENTIALS_REQUIRED_MESSAGE if root_required else None
     runbook_url = ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH if root_required else None
     mode_options = _mode_options_for_action(action.action_type)
+    recommendation = _action_recommendation_payload(
+        action,
+        mode_options=mode_options,
+        manual_high_risk=root_required,
+    )
     if not strategies:
         return RemediationOptionsResponse(
             action_id=str(action.id),
             action_type=action.action_type,
             mode_options=mode_options,
             strategies=[],
+            recommendation=recommendation,
             manual_high_risk=root_required,
             pre_execution_notice=pre_execution_notice,
             runbook_url=runbook_url,
@@ -1508,6 +1812,7 @@ async def get_remediation_options(
         action_type=action.action_type,
         mode_options=mode_options,
         strategies=option_items,
+        recommendation=recommendation,
         manual_high_risk=root_required,
         pre_execution_notice=pre_execution_notice,
         runbook_url=runbook_url,
@@ -1929,9 +2234,12 @@ async def patch_action(
                 Finding.severity_label,
                 Finding.title,
                 Finding.resource_id,
+                Finding.resource_type,
+                Finding.resource_key,
                 Finding.account_id,
                 Finding.region,
                 Finding.updated_at,
+                Finding.raw_json,
             ),
         )
     )
@@ -1942,8 +2250,26 @@ async def patch_action(
             detail={"error": "Action not found", "detail": f"No action found with ID {action_id}"},
         )
 
-    action.status = body.status
+    await db.run_sync(
+        lambda session: _patch_action_status_sync(
+            session,
+            tenant_id=tenant_uuid,
+            action_id=action_uuid,
+            target_status=body.status,
+            actor_user_id=getattr(current_user, "id", None),
+        )
+    )
+    sync_task_ids = await db.run_sync(
+        lambda session: plan_action_sync_tasks(
+            session,
+            tenant_id=tenant_uuid,
+            action_ids=[action_uuid],
+            reopened_action_ids={action_uuid} if body.status in {"open", "in_progress"} else set(),
+            trigger="api.patch_action",
+        )
+    )
     await db.commit()
+    dispatch_sync_tasks(sync_task_ids, tenant_id=tenant_uuid)
 
     # Re-query with relationships so response has findings
     result2 = await db.execute(
@@ -1958,9 +2284,12 @@ async def patch_action(
                 Finding.severity_label,
                 Finding.title,
                 Finding.resource_id,
+                Finding.resource_type,
+                Finding.resource_key,
                 Finding.account_id,
                 Finding.region,
                 Finding.updated_at,
+                Finding.raw_json,
             ),
         )
     )
@@ -1969,6 +2298,11 @@ async def patch_action(
         db, tenant_uuid, "action", action.id
     )
     implementation_artifacts = await _load_action_implementation_artifacts(
+        db,
+        tenant_uuid=tenant_uuid,
+        action=action,
+    )
+    graph_context = await _load_action_graph_context(
         db,
         tenant_uuid=tenant_uuid,
         action=action,
@@ -1986,6 +2320,7 @@ async def patch_action(
         now=datetime.now(timezone.utc),
         account=account,
         implementation_artifacts=implementation_artifacts,
+        graph_context=graph_context,
     )
 
 

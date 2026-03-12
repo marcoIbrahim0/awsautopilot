@@ -462,45 +462,65 @@ def _build_severity_distribution(row: object) -> dict[str, int]:
     }
 
 
-async def _fetch_action_hints_for_controls(
+def _group_hint_key(control_id: str | None, resource_type: str | None) -> tuple[str, str]:
+    return (str(control_id or ""), str(resource_type or ""))
+
+
+async def _fetch_action_hints_for_group_rows(
     db: AsyncSession,
     tenant_id: uuid.UUID,
-    control_ids: list[str],
-) -> dict[str, dict]:
-    """
-    Return one action hint per control_id (first action found).
-    Reuses the Action/ActionFinding join already used by get_remediation_hints_for_findings.
-    """
-    if not control_ids:
+    rows: list[object],
+) -> dict[tuple[str, str], dict]:
+    """Return one executable remediation action hint per grouped findings row."""
+    if not rows:
         return {}
+
+    finding_to_group: dict[uuid.UUID, tuple[str, str]] = {}
+    for row in rows:
+        group_key = _group_hint_key(getattr(row, "control_id", None), getattr(row, "resource_type", None))
+        for finding_id in getattr(row, "finding_ids", []) or []:
+            if finding_id is None:
+                continue
+            finding_to_group[finding_id] = group_key
+
+    if not finding_to_group:
+        return {}
+
     rows_result = await db.execute(
         select(
-            Finding.control_id,
+            ActionFinding.finding_id,
             Action.id,
             Action.action_type,
             Action.status,
+            Action.account_id,
+            Action.region,
             Action.target_id,
             Action.resource_id,
         )
-        .join(ActionFinding, ActionFinding.finding_id == Finding.id)
         .join(Action, Action.id == ActionFinding.action_id)
         .where(
-            Finding.tenant_id == tenant_id,
-            Finding.control_id.in_(control_ids),
+            ActionFinding.finding_id.in_(list(finding_to_group.keys())),
             Action.tenant_id == tenant_id,
         )
-        .order_by(Action.updated_at.desc().nullslast())
+        .order_by(Action.updated_at.desc().nullslast(), Action.created_at.desc().nullslast())
     )
-    hints: dict[str, dict] = {}
-    for control_id, action_id, action_type, action_status, target_id, resource_id in rows_result.all():
+
+    hints: dict[tuple[str, str], dict] = {}
+    for finding_id, action_id, action_type, action_status, account_id, region, target_id, resource_id in rows_result.all():
+        group_key = finding_to_group.get(finding_id)
+        if group_key is None:
+            continue
         if not _is_executable_action_target(action_type, target_id, resource_id):
             continue
-        if control_id not in hints:
-            hints[control_id] = {
-                "remediation_action_id": str(action_id),
-                "remediation_action_type": action_type,
-                "remediation_action_status": action_status,
-            }
+        if group_key in hints:
+            continue
+        hints[group_key] = {
+            "remediation_action_id": str(action_id),
+            "remediation_action_type": action_type,
+            "remediation_action_status": action_status,
+            "remediation_action_account_id": account_id,
+            "remediation_action_region": region,
+        }
     return hints
 
 
@@ -587,11 +607,10 @@ async def list_findings_grouped(
     rows_result = await db.execute(grouped_q.limit(limit).offset(offset))
     rows = rows_result.all()
 
-    control_ids = [r.control_id for r in rows if r.control_id]
-    hints_by_control = await _fetch_action_hints_for_controls(db, tenant_uuid, control_ids)
+    hints_by_group = await _fetch_action_hints_for_group_rows(db, tenant_uuid, rows)
 
     items = [
-        _row_to_group_item(row, hints_by_control.get(row.control_id, {}))
+        _row_to_group_item(row, hints_by_group.get(_group_hint_key(row.control_id, row.resource_type), {}))
         for row in rows
     ]
     logger.info(
@@ -612,6 +631,7 @@ def _build_grouped_select(base_query: object) -> object:
             func.min(f.title).label("rule_title"),
             func.count(f.id).label("finding_count"),
             func.max(f.severity_normalized).label("max_severity_normalized"),
+            func.array_agg(f.id).label("finding_ids"),
             func.array_agg(func.distinct(f.account_id)).label("account_ids"),
             func.array_agg(func.distinct(f.region)).label("regions"),
             func.count(case((f.severity_label == "CRITICAL", 1))).label("cnt_critical"),

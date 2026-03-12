@@ -1,0 +1,1 @@
+POST https://api.ocypheris.com/api/auth/login with marco.ibrahim@ocypheris.com on 2026-03-11T23:19:49Z returned 401. Normal operator login remains invalid; switching to same-operator bearer fallback for API-only validation.

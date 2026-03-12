@@ -1,0 +1,17 @@
+{
+  "poll": 7,
+  "status": "completed",
+  "payload": {
+    "account_id": "696505809372",
+    "source": null,
+    "started_after": "2026-03-12T16:03:48Z",
+    "elapsed_seconds": 53,
+    "status": "completed",
+    "progress": 100,
+    "percent_complete": 100,
+    "estimated_time_remaining": 0,
+    "updated_findings_count": 2,
+    "last_finding_update_at": "2026-03-12T16:03:53.652427Z",
+    "message": "Refresh completed. Findings were updated."
+  }
+}

@@ -1,0 +1,2 @@
+POST /api/remediation-runs created run 88e08e11-0b86-4f7d-bf4e-fd24a5870ad1 for action 0ca64b94-9dcb-4a97-91b0-27b0341865bc in pr_only mode using strategy ebs_enable_default_encryption_aws_managed_kms_pr_bundle.
+Risk acknowledgement was not required by the returned remediation options for this strategy.

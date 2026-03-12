@@ -45,12 +45,12 @@ def main() -> None:
         print("No Alembic heads found; migration setup is invalid.", file=sys.stderr)
         raise SystemExit(1)
     if not current:
-        print("Database has no current Alembic revision; run 'alembic upgrade head'.", file=sys.stderr)
+        print("Database has no current Alembic revision; run 'alembic upgrade heads'.", file=sys.stderr)
         raise SystemExit(1)
     if current != heads:
         print(
             "Migration gate failed: database revision is not at Alembic head "
-            f"(current={current}, heads={heads}).",
+            f"(current={current}, heads={heads}). Run 'alembic upgrade heads'.",
             file=sys.stderr,
         )
         raise SystemExit(1)

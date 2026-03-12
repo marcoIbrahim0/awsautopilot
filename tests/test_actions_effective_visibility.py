@@ -138,8 +138,8 @@ def test_actions_list_keeps_stored_status_when_effective_visibility_disabled(cli
     assert not any("shadow_status_normalized" in sql for sql in executed_sql)
 
 
-def test_actions_list_orders_by_score_with_stable_tie_breakers(client: TestClient) -> None:
-    """List queries should order by score, then updated_at, then action ID."""
+def test_actions_list_orders_by_business_impact_with_stable_tie_breakers(client: TestClient) -> None:
+    """List queries should order by business-impact rank, then score, then stable tie-breakers."""
     tenant_id = uuid.uuid4()
     user = _mock_user(tenant_id)
     high_score = _mock_action(tenant_id=tenant_id, status="open", score=92, suffix="1")
@@ -178,5 +178,5 @@ def test_actions_list_orders_by_score_with_stable_tie_breakers(client: TestClien
     body = response.json()
     assert [item["id"] for item in body["items"]] == [str(high_score.id), str(tied_score.id)]
     assert body["items"][0]["score"] == 92
-    assert any("ORDER BY actions.score DESC" in sql for sql in executed_sql)
+    assert any("actions.score DESC" in sql for sql in executed_sql)
     assert any("actions.id ASC" in sql for sql in executed_sql)

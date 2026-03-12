@@ -1,0 +1,2 @@
+URL: https://api.ocypheris.com/api/auth/me
+Auth: Bearer <redacted> from /tmp/ocypheris_phase3_p0_token.txt

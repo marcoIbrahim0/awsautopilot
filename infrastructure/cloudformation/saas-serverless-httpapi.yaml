@@ -150,6 +150,12 @@ Parameters:
     Default: "false"
     AllowedValues: ["true", "false"]
     Description: "Enable effective/shadow reopen visibility for /api/actions status=open|resolved filters."
+  ActionsThreatIntelligenceHalfLifeHours:
+    Type: Number
+    Default: 72
+    MinValue: 1
+    MaxValue: 8760
+    Description: "Half-life in hours for threat-intelligence exploit-signal decay."
   ControlPlaneSource:
     Type: String
     Default: event_monitor_shadow
@@ -538,6 +544,7 @@ Resources:
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
           ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED: !Ref ActionsEffectiveOpenVisibilityEnabled
+          ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS: !Ref ActionsThreatIntelligenceHalfLifeHours
           CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
@@ -676,6 +683,7 @@ Resources:
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
           ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED: !Ref ActionsEffectiveOpenVisibilityEnabled
+          ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS: !Ref ActionsThreatIntelligenceHalfLifeHours
           CONTROL_PLANE_SOURCE: !Ref ControlPlaneSource
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes

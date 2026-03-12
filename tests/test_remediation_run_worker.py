@@ -22,6 +22,10 @@ from backend.models.enums import (
     RemediationRunMode,
     RemediationRunStatus,
 )
+from backend.services.direct_fix_approval import (
+    DIRECT_FIX_APPROVAL_ARTIFACT_KEY,
+    build_direct_fix_approval_metadata,
+)
 from backend.services.pr_bundle import PRBundleGenerationError
 from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
@@ -52,6 +56,7 @@ def _mock_run_with_action(action_type: str = "s3_block_public_access") -> MagicM
     run.outcome = None
     run.logs = None
     run.artifacts = None
+    run.approved_by_user_id = None
     run.completed_at = None
     run.started_at = None
 
@@ -69,6 +74,17 @@ def _mock_run_with_action(action_type: str = "s3_block_public_access") -> MagicM
     return run
 
 
+def _grant_direct_fix_approval(run: MagicMock) -> None:
+    approver_id = uuid.uuid4()
+    run.mode = RemediationRunMode.direct_fix
+    run.approved_by_user_id = approver_id
+    run.artifacts = {
+        DIRECT_FIX_APPROVAL_ARTIFACT_KEY: build_direct_fix_approval_metadata(
+            approved_by_user_id=approver_id,
+        )
+    }
+
+
 def _mock_account(role_write_arn: str | None = "arn:aws:iam::123456789012:role/WriteRole") -> MagicMock:
     acc = MagicMock()
     acc.role_write_arn = role_write_arn
@@ -84,13 +100,15 @@ def _stub_download_bundle_group_run_sync():
     Group-run lifecycle sync is covered separately and adds extra execute() calls.
     """
     with patch("backend.workers.jobs.remediation_run._sync_download_bundle_group_runs", return_value=None):
-        yield
+        with patch("backend.workers.jobs.remediation_run.build_control_mapping_rows", return_value=[]):
+            yield
 
 
 def test_direct_fix_success() -> None:
     """direct_fix: WriteRole present, assume + executor succeed, run updated to success."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action("s3_block_public_access")
+    _grant_direct_fix_approval(run)
     account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
 
     result1 = MagicMock()
@@ -141,6 +159,7 @@ def test_direct_fix_no_write_role() -> None:
     """direct_fix: role_write_arn is None -> run failed with clear message."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
+    _grant_direct_fix_approval(run)
     account = _mock_account(role_write_arn=None)
 
     result1 = MagicMock()
@@ -170,6 +189,7 @@ def test_direct_fix_assume_role_fails() -> None:
     """direct_fix: assume_role raises ClientError -> run failed."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
+    _grant_direct_fix_approval(run)
     account = _mock_account()
 
     result1 = MagicMock()
@@ -207,6 +227,7 @@ def test_direct_fix_executor_fails() -> None:
     """direct_fix: run_direct_fix returns success=False -> run failed."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
+    _grant_direct_fix_approval(run)
     account = _mock_account()
 
     result1 = MagicMock()
@@ -242,6 +263,7 @@ def test_direct_fix_already_compliant() -> None:
     """direct_fix: executor returns success with 'Already compliant' -> run success, no direct_fix artifact."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
+    _grant_direct_fix_approval(run)
     account = _mock_account()
 
     result1 = MagicMock()
@@ -279,6 +301,7 @@ def test_direct_fix_account_not_found() -> None:
     """direct_fix: AWS account not found -> run failed."""
     job = _make_job(mode="direct_fix")
     run = _mock_run_with_action()
+    _grant_direct_fix_approval(run)
 
     result1 = MagicMock()
     result1.scalar_one_or_none.return_value = run

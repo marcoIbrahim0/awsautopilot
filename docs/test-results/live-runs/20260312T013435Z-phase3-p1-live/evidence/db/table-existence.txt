@@ -1,0 +1,8 @@
+security_graph_nodes=<missing>
+security_graph_edges=<missing>
+tenant_integration_settings=<missing>
+action_external_links=<missing>
+integration_sync_tasks=<missing>
+integration_event_receipts=<missing>
+action_remediation_sync_states=<missing>
+action_remediation_sync_events=<missing>

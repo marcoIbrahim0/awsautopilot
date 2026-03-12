@@ -1,0 +1,53 @@
+{
+  "ordered_items": [
+    {
+      "action_type": "ssm_block_public_sharing",
+      "id": "e6b1eac2-041c-4fb3-9a47-2525a3afa908",
+      "priority": 76,
+      "rank": 1,
+      "score": 76,
+      "title": "SSM documents should have the block public sharing setting enabled"
+    },
+    {
+      "action_type": "ebs_snapshot_block_public_access",
+      "id": "442e46ac-f31c-4242-82ca-9e47081a3adb",
+      "priority": 69,
+      "rank": 2,
+      "score": 69,
+      "title": "Amazon EBS Snapshots should not be publicly accessible"
+    },
+    {
+      "action_type": "s3_block_public_access",
+      "id": "caf5dc54-aef7-4df2-9480-1fdbfcfc507a",
+      "priority": 69,
+      "rank": 3,
+      "score": 69,
+      "title": "S3 general purpose buckets should have block public access settings enabled"
+    },
+    {
+      "action_type": "cloudtrail_enabled",
+      "id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+      "priority": 49,
+      "rank": 4,
+      "score": 49,
+      "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events"
+    },
+    {
+      "action_type": "ebs_default_encryption",
+      "id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+      "priority": 44,
+      "rank": 5,
+      "score": 44,
+      "title": "EBS default encryption should be enabled"
+    },
+    {
+      "action_type": "enable_guardduty",
+      "id": "0b8c765a-62b0-4f80-8271-2bb1bbd4b353",
+      "priority": 41,
+      "rank": 6,
+      "score": 41,
+      "title": "GuardDuty should be enabled"
+    }
+  ],
+  "total": 6
+}

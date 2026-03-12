@@ -1,0 +1,111 @@
+{
+  "execution_guidance": [
+    {
+      "blast_radius": "account",
+      "blast_radius_summary": "Affects account-wide security posture for account 696505809372.",
+      "expected_outcome": "Direct fix applies the change in AWS immediately: Amazon GuardDuty will be enabled in this region. Security Hub should reflect the remediated state within ~1 hour.",
+      "label": "Enable GuardDuty (direct fix)",
+      "mode": "direct_fix",
+      "post_checks": [
+        {
+          "code": "direct_fix_run_success",
+          "message": "Confirm the remediation run completed successfully and capture the run logs or audit artifacts for change evidence.",
+          "status": "info"
+        },
+        {
+          "code": "scope_verification",
+          "message": "Verify the completed change only affected the intended account scope for AWS::::Account:696505809372.",
+          "status": "info"
+        },
+        {
+          "code": "control_closure_confirmation",
+          "message": "Within ~1 hour, confirm the finding or action moves to PASSED/resolved in Security Hub and the action queue.",
+          "status": "info"
+        }
+      ],
+      "pre_checks": [
+        {
+          "code": "target_scope_confirmed",
+          "message": "Confirm this change is intended for AWS::::Account:696505809372 in account 696505809372 (us-east-1).",
+          "status": "info"
+        },
+        {
+          "code": "direct_fix_change_window",
+          "message": "Direct fix mutates AWS state immediately after approval. Confirm change window and rollback owner before execution.",
+          "status": "info"
+        },
+        {
+          "code": "direct_fix_writerole_missing",
+          "message": "WriteRole is required for direct-fix execution.",
+          "status": "fail"
+        },
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "recommended": true,
+      "rollback": {
+        "command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+        "notes": [
+          "Capture the current state before approval when your operating policy requires a backout snapshot."
+        ],
+        "summary": "Use this rollback command to revert the live AWS change if verification fails or the blast radius is broader than expected."
+      },
+      "strategy_id": "guardduty_enable_direct_fix"
+    },
+    {
+      "blast_radius": "account",
+      "blast_radius_summary": "Affects account-wide security posture for account 696505809372.",
+      "expected_outcome": "PR mode produces a reviewable infrastructure change: Amazon GuardDuty will be enabled in this region. After merge and apply through your IaC path, Security Hub should reflect the remediated state within ~1 hour.",
+      "label": "Enable GuardDuty (PR bundle)",
+      "mode": "pr_only",
+      "post_checks": [
+        {
+          "code": "pr_bundle_review_and_apply",
+          "message": "Review the generated bundle or diff, then capture plan and apply evidence after the change is merged through the normal infrastructure workflow.",
+          "status": "info"
+        },
+        {
+          "code": "scope_verification",
+          "message": "Verify the completed change only affected the intended account scope for AWS::::Account:696505809372.",
+          "status": "info"
+        },
+        {
+          "code": "control_closure_confirmation",
+          "message": "Within ~1 hour, confirm the finding or action moves to PASSED/resolved in Security Hub and the action queue.",
+          "status": "info"
+        }
+      ],
+      "pre_checks": [
+        {
+          "code": "target_scope_confirmed",
+          "message": "Confirm this change is intended for AWS::::Account:696505809372 in account 696505809372 (us-east-1).",
+          "status": "info"
+        },
+        {
+          "code": "pr_bundle_owner_confirmed",
+          "message": "Confirm the repository, deployment path, and approver that own this infrastructure change before generating the PR bundle.",
+          "status": "info"
+        },
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "recommended": false,
+      "rollback": {
+        "command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+        "notes": [
+          "Prefer reverting through version control and your normal deployment pipeline so rollback stays auditable."
+        ],
+        "summary": "Use this rollback path to revert the infrastructure change through the same reviewed delivery workflow."
+      },
+      "strategy_id": "guardduty_enable_pr_bundle"
+    }
+  ],
+  "id": "0b8c765a-62b0-4f80-8271-2bb1bbd4b353",
+  "title": "GuardDuty should be enabled"
+}

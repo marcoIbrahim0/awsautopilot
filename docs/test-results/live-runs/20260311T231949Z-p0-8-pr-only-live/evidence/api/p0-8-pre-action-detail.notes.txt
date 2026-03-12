@@ -1,0 +1,3 @@
+Preferred action exists and is open.
+Selected strategy: ebs_enable_default_encryption_aws_managed_kms_pr_bundle (pr_only).
+Pre-run implementation_artifacts: []

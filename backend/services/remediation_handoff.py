@@ -130,6 +130,43 @@ def _bundle_artifact(run_id: str, artifacts: dict[str, Any]) -> ImplementationAr
     )
 
 
+def _pr_payload_metadata(artifacts: dict[str, Any]) -> dict[str, Any]:
+    payload = _safe_dict(artifacts.get("pr_payload"))
+    repo_target = _safe_dict(payload.get("repo_target"))
+    diff_metadata = _safe_dict(payload.get("diff_metadata"))
+    return {
+        "provider": _string(repo_target.get("provider")) or "generic_git",
+        "repository": _string(repo_target.get("repository")),
+        "base_branch": _string(repo_target.get("base_branch")),
+        "head_branch": _string(repo_target.get("head_branch")),
+        "root_path": _string(repo_target.get("root_path")),
+        "file_count": diff_metadata.get("file_count"),
+        "fingerprint_sha256": _string(diff_metadata.get("fingerprint_sha256")),
+    }
+
+
+def _pr_payload_artifact(run_id: str, artifacts: dict[str, Any]) -> ImplementationArtifactLink | None:
+    payload = _safe_dict(artifacts.get("pr_payload"))
+    if not payload:
+        return None
+    metadata = _pr_payload_metadata(artifacts)
+    repository = _string(metadata.get("repository")) or "configured repository"
+    base_branch = _string(metadata.get("base_branch")) or "default branch"
+    file_count = int(metadata.get("file_count") or 0)
+    return ImplementationArtifactLink(
+        key="pr_payload",
+        kind="pr_payload",
+        label="Provider-agnostic PR payload",
+        description=(
+            f"Draft PR payload for {repository} -> {base_branch} "
+            f"covering {file_count} mapped file{'s' if file_count != 1 else ''}."
+        ),
+        href=_run_route(run_id, "run-generated-files"),
+        executable=False,
+        metadata=metadata,
+    )
+
+
 def _change_summary_metadata(artifacts: dict[str, Any]) -> dict[str, Any]:
     summary = _safe_dict(artifacts.get("change_summary"))
     changes = _safe_list(summary.get("changes"))
@@ -205,6 +242,53 @@ def _risk_snapshot_pointer(run_id: str, artifacts: dict[str, Any]) -> EvidencePo
     )
 
 
+def _diff_summary_pointer(run_id: str, artifacts: dict[str, Any]) -> EvidencePointer | None:
+    summary = _safe_dict(artifacts.get("diff_summary"))
+    if not summary:
+        return None
+    return EvidencePointer(
+        key="diff_summary",
+        kind="diff_summary",
+        label="Generated diff summary",
+        description=f"{int(summary.get('file_count') or 0)} mapped file(s) captured with reproducible hashes.",
+        href=_run_route(run_id, "run-generated-files"),
+        metadata={
+            "file_count": int(summary.get("file_count") or 0),
+            "fingerprint_sha256": _string(summary.get("fingerprint_sha256")),
+        },
+    )
+
+
+def _rollback_notes_pointer(run_id: str, artifacts: dict[str, Any]) -> EvidencePointer | None:
+    notes = _safe_dict(artifacts.get("rollback_notes"))
+    if not notes:
+        return None
+    return EvidencePointer(
+        key="rollback_notes",
+        kind="rollback_notes",
+        label="Rollback notes",
+        description=f"{int(notes.get('entry_count') or 0)} rollback note(s) prepared for this run.",
+        href=_run_route(run_id, "run-generated-files"),
+        metadata={"entry_count": int(notes.get("entry_count") or 0)},
+    )
+
+
+def _control_mapping_pointer(run_id: str, artifacts: dict[str, Any]) -> EvidencePointer | None:
+    context = _safe_dict(artifacts.get("control_mapping_context"))
+    if not context:
+        return None
+    control_ids = _safe_list(context.get("control_ids"))
+    mappings = _safe_list(context.get("mappings"))
+    return EvidencePointer(
+        key="control_mapping_context",
+        kind="control_mapping_context",
+        label="Control mapping context",
+        description=f"{len(control_ids)} control ID(s) and {len(mappings)} framework mapping row(s) attached.",
+        href=_run_route(run_id, "run-generated-files"),
+        metadata={"control_count": len(control_ids), "mapping_count": len(mappings)},
+    )
+
+
 def _bundle_error_pointer(run_id: str, artifacts: dict[str, Any]) -> EvidencePointer | None:
     payload = _safe_dict(artifacts.get("pr_bundle_error"))
     detail = _string(payload.get("detail"))
@@ -253,7 +337,11 @@ def _implementation_artifacts(
     artifacts: dict[str, Any],
     outcome: str | None,
 ) -> list[ImplementationArtifactLink]:
-    items = [_bundle_artifact(run_id, artifacts), _change_summary_artifact(run_id, artifacts)]
+    items = [
+        _bundle_artifact(run_id, artifacts),
+        _pr_payload_artifact(run_id, artifacts),
+        _change_summary_artifact(run_id, artifacts),
+    ]
     if mode == "direct_fix":
         items.append(_direct_fix_artifact(run_id, artifacts, outcome))
     return [item for item in items if item is not None]
@@ -272,6 +360,9 @@ def _evidence_pointers(
     pointers.extend(
         [
             _risk_snapshot_pointer(run_id, artifacts),
+            _diff_summary_pointer(run_id, artifacts),
+            _rollback_notes_pointer(run_id, artifacts),
+            _control_mapping_pointer(run_id, artifacts),
             _bundle_error_pointer(run_id, artifacts),
             _activity_log_pointer(run_id, logs),
         ]

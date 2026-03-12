@@ -7,17 +7,13 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 from backend.config import settings
+from backend.services.action_business_impact import build_business_impact_from_components
+from backend.services.risk_signals import component_points, signals_from_score_components
 
 logger = logging.getLogger(__name__)
 
 TOXIC_COMBINATIONS_COMPONENT = "toxic_combinations"
 _TOXIC_EVIDENCE_SOURCE = "related action neighborhoods (same resource plus account-scoped context)"
-_SIGNAL_COMPONENTS = {
-    "internet_exposure": ("internet_exposure", 15),
-    "privilege_weakness": ("privilege_level", 12),
-    "sensitive_data": ("data_sensitivity", 12),
-    "exploit_signals": ("exploit_signals", 10),
-}
 _RELATIONSHIP_CONTEXT_KEYS = (
     "relationship_context",
     "RelationshipContext",
@@ -181,6 +177,7 @@ def _persist_overlay(action: Any, overlay: dict[str, Any]) -> None:
     components["score"] = final_score
     components["context_incomplete"] = bool(overlay.get("context_incomplete"))
     components[TOXIC_COMBINATIONS_COMPONENT] = overlay
+    components["business_impact"] = build_business_impact_from_components(components, stored_score=final_score)
     action.score_components = components
     action.score = final_score
     action.priority = final_score
@@ -211,7 +208,7 @@ def _signal_view(action: Any) -> _ActionSignalView:
         account_id=str(getattr(action, "account_id", "") or ""),
         region=getattr(action, "region", None),
         resource_id=resource_id,
-        signals=frozenset(_signals_from_components(getattr(action, "score_components", None))),
+        signals=frozenset(signals_from_score_components(getattr(action, "score_components", None))),
         account_scoped=_is_account_scoped_action(action, resource_id),
         relationship_context_complete=relationship_complete,
         relationship_confidence=relationship_confidence,
@@ -319,20 +316,8 @@ def _coerce_bool(value: Any) -> bool | None:
         return False
     return None
 
-
-def _signals_from_components(components: dict[str, Any] | None) -> set[str]:
-    signals: set[str] = set()
-    for signal_name, (component_name, minimum_points) in _SIGNAL_COMPONENTS.items():
-        if _component_points(components, component_name) >= minimum_points:
-            signals.add(signal_name)
-    return signals
-
-
 def _component_points(components: dict[str, Any] | None, key: str) -> int:
-    payload = components.get(key) if isinstance(components, dict) else None
-    if not isinstance(payload, dict):
-        return 0
-    return int(payload.get("points") or 0)
+    return component_points(components, key)
 
 
 def _is_account_scoped_action(action: Any, resource_id: str | None) -> bool:

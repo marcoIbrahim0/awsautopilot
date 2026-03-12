@@ -1,0 +1,2 @@
+Execution guidance entries: 2
+Live detail includes blast radius, pre-checks, expected outcome, post-checks, and rollback.

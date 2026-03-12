@@ -1,0 +1,4 @@
+URL: https://api.ocypheris.com/api/auth/me
+Status: 200
+Tenant ID: 9f7616d8-af04-43ca-99cd-713625357b70
+Tenant name: Valens

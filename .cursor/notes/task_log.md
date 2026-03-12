@@ -1,5 +1,1204 @@
 # Task Log
 
+## Remediation run page evidence-link cleanup and duplicate artifact-card removal (2026-03-12)
+
+**Task:** Fix the dedicated remediation-run page so closure checklist links and evidence buttons only target sections that actually exist, and remove the duplicate `Implementation artifacts` card from that page.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** - kept the activity section visible on the full-width run page, hid the duplicate implementation-artifacts card only on that page, and resolved checklist/evidence navigation against real sections with safe fallbacks.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/remediationRunLinks.ts** - added shared helpers for evidence-card anchors and dead-link suppression when `#run-generated-files` is not rendered.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.test.tsx** - added focused UI coverage for the full-width run page so dead evidence buttons stay hidden while checklist chips still land on valid anchors.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - updated the run-page navigation contract to document the dedicated-page activity anchor, conditional generated-files anchor, and per-evidence fallback anchors.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant P0.8 handoff-free-closure history, and `docs/README.md` before editing.
+- Confirmed the dedicated remediation-run page (`fullWidth`) hid `#run-activity`, which made valid activity-log and change-summary links land on missing anchors.
+- Added shared frontend link-resolution helpers so:
+  - `#run-generated-files` links are only used when the generated-files section is actually rendered
+  - closure-checklist evidence chips fall back to the matching evidence card anchor instead of `/remediation-runs`
+  - evidence cards only show `Open evidence` when a deeper section really exists
+- Removed the duplicate `Implementation artifacts` card from the dedicated remediation-run page while leaving the underlying `artifact_metadata` contract untouched for action detail and other consumers.
+- Added per-evidence anchors (`#run-evidence-{pointer.key}`) so unresolved deep links still land on the correct evidence card on the run page.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/RemediationRunProgress.test.tsx` - pass (`1 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Evidence types such as `risk_snapshot` still render only normalized summaries on the run page; if operators need deeper raw payload views later, the page will need dedicated artifact sections rather than anchor fallbacks.
+
+**Open questions / TODOs:**
+- Decide whether non-file evidence types (`risk_snapshot`, `control_mapping_context`, `rollback_notes`) should eventually get dedicated expandable raw-detail sections instead of summary-only cards.
+
+## PR bundle summary remediation-options preflight and strategy payload fix (2026-03-12)
+
+**Task:** Fix the PR bundle summary flow so strategy-backed PR bundle generation uses the remediation-options contract before run creation, sends `strategy_id` plus safely derivable `strategy_inputs`, and fails explicitly in the UI when auto-run prerequisites are not met.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationAutoSelection.ts** - added shared frontend helpers for strategy selection, context/default hydration, safe-default resolution, required-input detection, and conservative PR-only auto-selection.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - switched the modal to the shared helper functions so its selection/default behavior stays aligned with the summary page.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx** - added remediation-options preflight per selected action, best-effort public IPv4 lookup for safe defaults, grouped convergence checks, explicit pre-create failure handling, and strategy payload propagation into single/group PR-bundle create calls.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.test.tsx** - added focused UI regressions for single-action success, grouped success, non-derivable required-input failure, and grouped input-divergence failure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the observed client contract for strategy-backed PR-only run creation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant Phase 3 P2 closure history, the remediation-options/strategy-selection task-log entries, and `docs/README.md` before editing.
+- Re-verified the reported defect directly from code:
+  - the summary page called `createRemediationRun` / `createGroupPrBundleRun` without preflighting remediation options or sending strategy payloads
+  - backend run creation still intentionally rejects missing `strategy_id` for strategy-backed action types
+  - only `enable_security_hub` and `enable_guardduty` remain optional-strategy action types
+  - the existing remediation modal already contained the working frontend logic for recommended-strategy selection plus context/default input hydration
+- Extracted the modal’s reusable strategy/input logic into a shared frontend helper and kept the modal on that shared path instead of creating a second implementation.
+- Changed the summary page to:
+  - fetch remediation options for each selected action before any run-create request
+  - auto-select the recommended non-exception `pr_only` strategy when available
+  - derive strategy inputs from `default_value`, `context.default_inputs`, and safely resolvable `safe_default_value`
+  - fail explicitly before `POST /api/remediation-runs*` when PR-only mode is unavailable, only exception/manual flows are available, dependency checks require manual review, or required inputs remain non-derivable
+  - allow grouped generation only when every action in the execution group converges on the same derived `strategy_id` and `strategy_inputs`
+- Left backend validation unchanged; the fix stays on the client side and continues to rely on the remediation-options contract.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- --run src/app/pr-bundles/create/summary/page.test.tsx src/components/RemediationModal.test.tsx` - pass (`19 passed`)
+
+**Technical debt / gotchas:**
+- The summary page intentionally auto-runs only fully safe `pr_only` cases. Any `warn` / `unknown` dependency check result still stops in the summary flow and requires the operator to use the per-action remediation modal where risk acknowledgment is explicit.
+- Grouped PR-bundle generation now fails closed when actions in the same execution group derive different strategy payloads. That is conservative by design because the current backend group-create path still accepts only one strategy/input set for the whole group.
+
+**Open questions / TODOs:**
+- If operators want summary-page support for warning-bearing strategies, the page needs an explicit risk-acknowledgement UX rather than silently setting `risk_acknowledged=true`.
+- If grouped runs should support heterogeneous strategy inputs per action, that needs a backend contract change; the current group-create API is intentionally single-payload.
+
+## Phase 3 P2 final live closure on production after grouped-action and grouped-view fixes (2026-03-12)
+
+**Task:** Debug and close the remaining production blockers preventing Phase 3 `P2` from reaching a strict live-PASS result, using only observed code behavior and observed production behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py** - stopped re-querying unflushed graph nodes during sync and reused the in-memory node map for edge creation.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - fixed the explainability fallback so `heuristic_points=0` stays `0` instead of being overwritten by contribution.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py** - added bounded Security Hub consistency retry/merge logic so newer changed finding states win across consecutive fetch passes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py** - fixed grouped findings remediation hints so grouped cards resolve actions from each row’s actual `finding_ids` instead of the tenant-wide `control_id`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - added visible risk explainability and threat-intel provenance rendering for score factors and applied threat signals.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added typed threat-intel score-component shapes for drawer rendering.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.tsx** - guarded grouped requests against stale overwrites and made grouped-mode refresh reload grouped cards.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_1_security_graph_foundation.py** - added the autoflush-disabled security-graph regression.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p2_1_threat_intel_weighting.py** - added the `heuristic_points=0` explainability regression.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_worker_ingest.py** - added Security Hub consistency merge/retry regressions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py** - added grouped findings action-hint regressions.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - verified provenance is rendered in the drawer.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.test.tsx** - verified grouped stale responses are ignored and grouped-mode refresh refetches groups.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T163257Z-phase3-p2-fix-validation/** - captured the first post-fix live rerun showing standard recompute, cleanup, and explanation closure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T165611Z-phase3-p2-grouped-fix-validation/** - captured the grouped-action, grouped-view, recompute, and live drawer provenance closure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the final March 12 P2 closure run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/threat-intelligence-weighting.md** - added the live validation status and closure evidence links.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this closure task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant March 12 P2/P1 live-validation history, `docs/README.md`, `docs/features/threat-intelligence-weighting.md`, and the prior live rerun summary before continuing.
+- Confirmed the original remaining blockers directly from code and production evidence:
+  - security-graph sync re-queried nodes inside autoflush-disabled sessions, which matched the live `security graph node missing` recompute failure
+  - ingest had no bounded convergence pass after Security Hub accepted cleanup, which matched the stale archived/open mismatch
+  - `heuristic_points=0` was being overwritten by a truthy fallback in explainability text
+  - the drawer had typed provenance data available but rendered none of it
+- Implemented and tested the first closure set:
+  - graph sync now uses the in-memory node map from `_upsert_nodes`
+  - ingest now retries Security Hub fetches and keeps the fresher changed state
+  - exploit explainability keeps an explicit `0` heuristic score
+  - the drawer now renders `Risk explainability` and `Threat-intel provenance`
+- Deployed the backend (`20260312T162953Z`), then revalidated production:
+  - standard recompute succeeded
+  - synthetic open actions disappeared from the post-recompute open list
+  - trusted Config action detail showed the corrected `0 heuristic points plus 10 decayed threat-intel points`
+- During live UI validation, found one additional production blocker:
+  - `/api/findings/grouped` resolved grouped remediation hints by `control_id` only, so the exact trusted Config filtered group pointed at the wrong open action
+  - the Findings grouped view also allowed stale grouped responses to overwrite filtered state, and grouped-mode `Refresh` only refreshed flat findings
+- Implemented and tested the second closure set:
+  - grouped findings hints now resolve from each grouped row’s actual `finding_ids`
+  - grouped-mode stale responses are ignored
+  - grouped-mode refresh refetches grouped cards
+- Deployed the backend again (`20260312T165238Z`) and redeployed the frontend (Cloudflare version `9f0fe8fb-fd15-4f72-a095-c18028982e7d`).
+- Captured the final production closure evidence:
+  - filtered grouped findings API returns the exact trusted Config group with `remediation_action_id=73097c11-174c-4597-85a2-9af793842e8d`
+  - direct cold navigation to the filtered grouped Findings URL renders `LOW 1 group · 1 findings` and the trusted Config group without the earlier stale grouped-card mismatch
+  - clicking the grouped `resolved` button opens the trusted Config drawer
+  - the live drawer visibly renders `Threat-intel provenance`, `CVE-2026-9001`, `CISA KEV`, `Confidence 1.00`, `Requested 10 pts`, `Applied 10 pts`, and `Decay 0.9957`
+  - a fresh standard recompute after the final deploy succeeds
+  - a fresh live open-actions fetch after recompute shows `0` synthetic `ocypheris-p2` open actions
+
+**Validation:**
+- `./venv/bin/pytest tests/test_phase3_p1_1_security_graph_foundation.py tests/test_phase3_p2_1_threat_intel_weighting.py tests/test_worker_ingest.py -q` - pass (`37 passed`)
+- `./venv/bin/pytest tests/test_findings_grouped_action_hints.py -q` - pass (`2 passed`)
+- `npm run test:ui -- --run src/components/ActionDetailDrawer.test.tsx` - pass
+- `npm run test:ui -- --run src/app/findings/page.test.tsx src/components/ActionDetailDrawer.test.tsx` - pass (`3 tests`)
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1` - pass (image tags `20260312T162953Z` then `20260312T165238Z`)
+- `npm run deploy` in `frontend/` - pass (Cloudflare version `9f0fe8fb-fd15-4f72-a095-c18028982e7d`)
+- Live production evidence:
+  - filtered grouped API now returns the correct trusted action ID
+  - trusted action detail shows corrected explanation and provenance
+  - standard recompute succeeds
+  - post-recompute open actions contain zero synthetic actions
+  - live drawer visibly renders the provenance contract
+
+**Technical debt / gotchas:**
+- The frontend deploy still emits the same pre-existing OpenNext duplicate `"options"` warnings in generated `.open-next/server-functions/default/handler.mjs`; the deploy completed successfully and the warnings did not block release.
+- The local sandbox cannot reliably resolve the live API host or production Neon host, so the final live API summaries were captured through an active browser-authenticated production session and the final recompute used one escalated run against the live database.
+
+**Open questions / TODOs:**
+- None for Phase 3 `P2` closure. Final observed live status is `PASS`.
+
+## Phase 3 P2 live rerun proves core API weighting/decay but leaves cleanup and explainability defects (2026-03-12)
+
+**Task:** Continue the strict live Phase 3 `P2.1` / `P2.2` rerun on `https://ocypheris.com` / `https://api.ocypheris.com`, prove the synthetic threat-intel scenarios only from observed production behavior, perform the requested cleanup, and record any remaining live defects instead of inferring PASS.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T152625Z-phase3-p2-live-rerun/** - added the completed rerun notes package plus fresh API/UI cleanup artifacts (`07` through `12`).
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the March 12 P2 rerun and its partial live outcome.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this rerun continuation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant P2.1/P2.2/P1 live-recovery history, `docs/README.md`, and `docs/features/threat-intelligence-weighting.md` before continuing the live rerun.
+- Pulled the current live `/api/actions` list and confirmed:
+  - `13` open actions before cleanup
+  - all `7` `created_action_ids` from the earlier graph-bypassed recompute are present on live
+  - `6` of those `7` are the intended synthetic P2 candidates
+  - the extra created action `202e02c7-f2c1-4c24-b81a-11168acad054` is an unrelated real `AWS Config should be enabled...` action, not a synthetic candidate
+- Fetched all six synthetic action-detail payloads and proved the production API behavior:
+  - trusted config case `73097c11-174c-4597-85a2-9af793842e8d` scored `26` and applied `10` trusted threat-intel points from `cisa_kev` / `CVE-2026-9001`
+  - config no-signal case `a3d1ad9b-8cb7-47cc-b271-cb15f26dffd1` stayed at `16` with zero threat-intel points
+  - IAM capped case `e7764c6c-1c56-426b-8373-deacb9277c30` scored `48` vs IAM no-signal `8d5a0c7d-92d8-4a35-bcbf-07a49fbe8f13` at `46`, with `heuristic_points=13`, `requested=10`, `applied=2`, and `capped=true`
+  - low-confidence config case `5acc7d0e-e361-474f-9efa-c200a0358f0d` stayed fail-closed at `16` with no threat-intel contribution or provenance
+  - aged config case `18de803d-b7cd-4df8-ad30-1604dcb05cd5` preserved zero-point provenance with `source`, `observed_at`, `decay_applied`, `base_contribution=10`, and `final_contribution=0`
+- Captured a fresh Playwright browser session for UI evidence:
+  - actions list surface shows all six synthetic actions live
+  - trusted-config action drawer opens and shows the live title and `Priority 26`
+  - the UI does **not** surface the API provenance contract (`CVE`, source label, decay, or `score_factors[].provenance[]`)
+  - because live credentials were not available in-thread, this UI verification used fresh browser state plus cookie injection fallback instead of a typed password login
+- Recorded a live explainability defect:
+  - the fresh trusted-config action has correct numeric threat-intel fields, but its `score_factors[].explanation` string incorrectly says `10 heuristic points` even though `heuristic_points=0`
+- Completed the requested cleanup flow:
+  - validated `/tmp/p2_resolved_findings.json`
+  - initial direct Security Hub import failed under the default SaaS operator identity with `AccessDeniedException`
+  - assumed `arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole` using external ID `ocypheris-p2-e2e-20260312`
+  - reran `batch-import-findings` successfully with `SuccessCount=6`
+  - triggered live ingest again and reached terminal `completed` with `updated_findings_count=2`
+- Re-ran recompute after cleanup:
+  - standard recompute still fails on live production with `ValueError: security graph node missing for key=action:0ca64b94-9dcb-4a97-91b0-27b0341865bc`
+  - reran the same graph-bypass workaround locally against the production DB/session scope
+  - graph-bypassed recompute succeeded and resolved only the two trusted-config actions (`73097...` and `18de...`)
+- Verified post-cleanup residual state:
+  - Security Hub now shows all six synthetic findings as `RecordState=ARCHIVED`
+  - post-cleanup app open-actions list still contains four synthetic actions:
+    - IAM capped
+    - IAM no-signal
+    - config low-confidence
+    - config no-signal
+
+**Validation:**
+- `GET https://api.ocypheris.com/api/actions?limit=200&offset=0` - `200` (`13` open actions; six synthetic P2 candidates plus one unrelated created real action)
+- `GET https://api.ocypheris.com/api/actions/{id}` for all six synthetic action IDs - `200`
+- Playwright fresh browser run:
+  - actions list screenshot saved to `docs/test-results/live-runs/20260312T152625Z-phase3-p2-live-rerun/evidence/ui/01-actions-list.png`
+  - trusted-config action drawer screenshot saved to `docs/test-results/live-runs/20260312T152625Z-phase3-p2-live-rerun/evidence/ui/02-action-detail-trusted-config.png`
+- `aws sts assume-role ... CodexP2SecurityHubImportRole` - pass
+- `aws securityhub batch-import-findings --cli-input-json file:///tmp/p2_resolved_findings.json` under assumed role - pass (`SuccessCount=6`, `FailedCount=0`)
+- `POST https://api.ocypheris.com/api/aws/accounts/696505809372/ingest` - `202`
+- `GET https://api.ocypheris.com/api/aws/accounts/696505809372/ingest-progress?...` - terminal `completed` with `updated_findings_count=2`
+- `./venv/bin/python scripts/recompute_account_actions.py ...` with live env - fail (`ValueError: security graph node missing for key=action:0ca64b94-9dcb-4a97-91b0-27b0341865bc`)
+- graph-bypassed recompute against the same live DB scope - pass (`actions_resolved=2`, `actions_updated=11`, `action_findings_linked=11`)
+- `GET https://api.ocypheris.com/api/actions?limit=200&offset=0&status=open` after cleanup - `200` (`11` open actions; four synthetic actions still open)
+- `aws securityhub get-findings --filters GeneratorId=ocypheris.phase3.p2.live-e2e` under assumed role - pass (all six synthetic findings returned with `RecordState=ARCHIVED`)
+
+**Technical debt / gotchas:**
+- The standard production recompute path is still blocked by the live security-graph defect; this rerun still requires the graph-bypass workaround to finish cleanup.
+- `scripts/recompute_account_actions.py` assumes the repo root is on `PYTHONPATH`; running it directly without `PYTHONPATH` set fails with `ModuleNotFoundError: No module named 'backend'`.
+- Security Hub accepted the cleanup payload, but post-import `get-findings` still reports `Workflow=NEW` while `RecordState=ARCHIVED`, so source-side cleanup did not mirror the requested `RESOLVED/ARCHIVED` state exactly.
+- App-side cleanup is still partial even after ingest plus graph-bypassed recompute; four archived synthetic findings continue to back open actions on live prod.
+- The UI currently does not surface threat-intel provenance fields, so operator-facing transparency still depends on the raw API payload rather than the live drawer UI.
+
+**Open questions / TODOs:**
+- Determine why the trusted-config `exploit_signals` explanation string overstates heuristic points even though the numeric fields are correct.
+- Determine why archived synthetic findings remain attached to four open actions after ingest plus graph-bypassed recompute.
+- Determine why Security Hub preserved `Workflow=NEW` on the archived synthetic findings even though the cleanup payload requested `Workflow.Status=RESOLVED`.
+
+## Phase 3 P2 live validation blocked by missing threat-intel-bearing production data (2026-03-12)
+
+**Task:** Execute a strict, evidence-backed live E2E validation run for implemented Phase 3 `P2.1` and `P2.2` features on the current Ocypheris production environment, but stop early if live findings/actions do not actually contain threat-intel-bearing evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T143138Z-phase3-p2-live/** - created the full live-run evidence package with auth, discovery, all six live action details, UI login proof, and notes artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new Phase 3 P2 live validation run from the live-testing index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant P2 implementation entries, the recent P0/P1 live-validation history, `docs/README.md`, and `docs/features/threat-intelligence-weighting.md` before touching production.
+- Created a fresh evidence package under `docs/test-results/live-runs/20260312T143138Z-phase3-p2-live/`.
+- Opened a fresh browser session, reached authenticated `https://ocypheris.com/findings`, captured `01-login-success.png`, and confirmed the same operator identity through `GET /api/auth/me`.
+- Captured live discovery payloads for:
+  - `GET /api/auth/me`
+  - `GET /api/aws/accounts`
+  - `GET /api/findings?limit=100&offset=0`
+  - `GET /api/actions?limit=100&offset=0`
+- Confirmed the current live tenant context remains:
+  - tenant `Valens` (`9f7616d8-af04-43ca-99cd-713625357b70`)
+  - account `696505809372`
+  - `7` findings
+  - `6` actions
+- Pulled all six live action details to check the actual P2 contract on production.
+- Stopped at the threat-intel candidate availability gate after confirming:
+  - all live findings/actions are configuration/control oriented
+  - no inspected action detail exposes `threat_intel_points_requested`
+  - no inspected action detail exposes `threat_intel_points_applied`
+  - no inspected action detail exposes `applied_threat_signals[]`
+  - no inspected action detail exposes `score_factors[].provenance[]`
+- Marked both `P2.1` and `P2.2` `BLOCKED` because positive threat-intel-bearing live data is absent and the run must not infer PASS from implementation docs or unit tests.
+- Recorded the exact AWS-side scenarios needed next: trusted positive signal, comparable no-signal action, and an older/aged signal for decay plus optional fail-closed fixtures.
+
+**Validation:**
+- Browser: fresh authenticated session reached `https://ocypheris.com/findings`; screenshot saved to `evidence/ui/01-login-success.png`
+- `GET https://api.ocypheris.com/api/auth/me` - `200`
+- `GET https://api.ocypheris.com/api/aws/accounts` - `200` (`1` validated account: `696505809372`)
+- `GET https://api.ocypheris.com/api/findings?limit=100&offset=0` - `200` (`7` findings)
+- `GET https://api.ocypheris.com/api/actions?limit=100&offset=0` - `200` (`6` actions)
+- `GET https://api.ocypheris.com/api/actions/{id}` for all six live actions - `200`
+- Search across all six action details for:
+  - `threat_intel_points_requested`
+  - `threat_intel_points_applied`
+  - `threat_intel_max_points`
+  - `factor_max_points`
+  - `applied_threat_signals`
+  - `decay_applied`
+  - `base_contribution`
+  - `final_contribution`
+  - result: no matches in the current live payloads
+
+**Technical debt / gotchas:**
+- This run is blocked by live data shape, not by inability to authenticate or discover the tenant.
+- Current production evidence is insufficient to distinguish "P2 not deployed" from "P2 deployed but no qualifying live data" because the tenant has no threat-intel-bearing findings/actions to exercise the additive contract.
+- The current live tenant is still dominated by configuration-style Security Hub controls; P2 requires vulnerability-bearing findings with trusted threat-intel metadata to become testable.
+
+**Open questions / TODOs:**
+- Surface or create one live vulnerability-bearing finding/action with trusted `cisa_kev` or `high_confidence_exploitability` evidence for account `696505809372`.
+- Surface or create one comparable vulnerability-bearing action without trusted threat-intel boost for side-by-side weighting comparison.
+- Surface or create one older trusted signal so decay/provenance can be directly validated on live.
+
+## Phase 3 P2.2 threat-intel decay and provenance transparency (2026-03-12)
+
+**Task:** Implement P2.2 so trusted threat-intel weighting decays predictably over time, the half-life is configurable, and score explainability exposes full provenance for every threat-intel score shift.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - kept threat-intel weighting inside `exploit_signals`, added time-travel-friendly scoring hooks, preserved zero-point threat provenance, and surfaced `score_factors[].provenance[]` with decay-aware explanations.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/threat_intelligence.py** - finalized the trusted threat-intel adapter with configurable half-life lookup, decayed requested-point calculation, nested vulnerability parsing, and stable per-signal ordering/deduping.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended the action score-factor schema with additive provenance entries for explainability responses.
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - added `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS` as the first-class runtime setting for decay.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - updated shared action-score factor types so frontend consumers can read provenance metadata.
+- **/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml** - added the serverless runtime parameter/env wiring for `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh** - forwarded the new threat-intel half-life config into the serverless runtime deploy path.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p2_2_threat_intel_decay_provenance.py** - added focused P2.2 regressions for half-life decay, zero-point provenance retention, explainability payload fields, and bounded multi-signal behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the new `score_factors[].provenance[]` contract and the configurable decay model.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/threat-intelligence-weighting.md** - documented the runtime half-life setting and the new explainability provenance behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - added the local/backend runtime note for `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant P0/P1/P2 prioritization history, and `docs/README.md` before editing.
+- Kept the existing P2.1 design direction and completed P2.2 additively instead of introducing a new score schema:
+  - trusted threat intel still contributes through the existing `exploit_signals` factor
+  - heuristic exploit scoring remains deterministic and bounded
+  - trusted threat-intel provenance is now visible in both stored `score_components` and API-facing `score_factors`
+- Added a first-class runtime half-life setting:
+  - `ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS`
+  - default `72`
+  - wired through config plus the serverless deployment surface
+- Preserved non-opaque behavior when decay rounds a trusted signal down to `0`:
+  - zero-point threat-intel provenance is still retained
+  - `score_factors[].explanation` now explicitly says decay/caps reduced the current contribution to `0` instead of looking like a plain no-signal case
+- Added additive explainability provenance fields on `score_factors[]`:
+  - `source`
+  - `observed_at`
+  - `decay_applied`
+  - `base_contribution`
+  - `final_contribution`
+- Added focused P2.2 coverage for:
+  - exact configurable half-life decay
+  - zero-point aged-out signals remaining explainable
+  - detail-response provenance contract
+  - bounded multi-signal threat-intel behavior
+
+**Validation:**
+- `pytest tests/test_phase3_p2_1_threat_intel_weighting.py tests/test_phase3_p2_2_threat_intel_decay_provenance.py -q` - pass (`10 passed`, `2 warnings`)
+- `pytest tests/test_phase3_p2_2_threat_intel_decay_provenance.py -q` - pass (`4 passed`, `2 warnings`)
+- `pytest -q` - pass (`1194 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Threat-intel explainability still rides through the existing `exploit_signals` factor rather than a dedicated top-level `threat_intel` factor, so consumers should inspect `factor_name="exploit_signals"` when looking for provenance.
+- Trusted-source coverage is still intentionally narrow (`cisa_kev` and `high_confidence_exploitability` families from P2.1); expanding sources later should reuse the same decay/provenance contract.
+
+**Open questions / TODOs:**
+- Decide whether the UI should render `score_factors[].provenance[]` directly in action detail/list views instead of relying on typed API support only.
+
+## Phase 3 P2.1 threat-intelligence weighting implementation (2026-03-12)
+
+**Task:** Implement P2.1 threat-intelligence weighting so trusted active-exploitation signals raise action priority in bounded, explainable ways, missing/untrusted feeds fail closed, and applied signal provenance is visible in the actions API.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/threat_intelligence.py** - added the trusted-source adapter for KEV and high-confidence exploitability signals, normalized confidence/timestamp handling, decay-aware requested points, nested vulnerability parsing, and fail-closed source gating.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_scoring.py** - integrated threat-intel weighting into `exploit_signals`, preserved deterministic heuristic scoring, added explicit exploit/threat caps, and persisted per-signal provenance in `score_components`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p2_1_threat_intel_weighting.py** - added focused coverage for no-feed, KEV, high-confidence exploitability, cap behavior, fail-closed malformed/untrusted data, and action-detail API provenance.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/threat-intelligence-weighting.md** - documented the trusted signal families, accepted payload shapes, cap behavior, decay model, and API provenance contract.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the additive exploit-signal provenance and the new bounded threat-intel behavior inside the existing explainability contract.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active documentation index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the P0/P1 prioritization history, and `docs/README.md` before changing the scoring path.
+- Added a dedicated threat-intel adapter that only accepts trusted active-exploitation signal families:
+  - `cisa_kev`
+  - `high_confidence_exploitability`
+- Supported the current raw finding surfaces already present in the repo contract:
+  - top-level `ThreatIntel` / `ThreatIntelligence`
+  - product-field threat-intel keys
+  - nested `Vulnerabilities[].ThreatIntel`
+  - `Vulnerabilities[].KnownExploited`
+- Kept scoring fail closed:
+  - unknown sources are ignored
+  - `trusted=false` is ignored
+  - low-confidence entries are ignored
+  - inactive exploitability-feed entries are ignored
+  - malformed JSON-like fields are ignored
+- Folded the trusted signal contribution into the existing `exploit_signals` factor instead of widening the action schema:
+  - exploit factor still caps at `15`
+  - threat-intel contribution inside that factor caps at `10`
+  - remaining exploit-factor headroom is enforced before any signal contribution is applied
+- Persisted per-signal provenance on the action score metadata under `score_components["exploit_signals"]["applied_threat_signals"]`, including:
+  - `source`
+  - `source_label`
+  - `signal_type`
+  - `identifier`
+  - `cve_id`
+  - `timestamp`
+  - `confidence`
+  - `requested_points`
+  - `applied_points`
+  - `capped`
+- Tightened the legacy exploit heuristic so a plain `CVE-...` string or generic `exploitability` wording does not consume the full exploit factor without trusted active-exploitation evidence.
+
+**Validation:**
+- `pytest tests/test_phase3_p2_1_threat_intel_weighting.py -q` - pass (`6 passed`, `2 warnings`)
+- `pytest -q` - pass (`1190 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Threat-intel decay currently uses the code fallback half-life in `backend/services/threat_intelligence.py` (`72` hours); it is not yet exposed as a first-class config field in `backend/config.py`.
+- Threat provenance currently rides through `score_components["exploit_signals"]` rather than a dedicated top-level API field, which keeps the response additive but requires consumers to inspect nested metadata for the full signal list.
+
+**Open questions / TODOs:**
+- Decide whether the threat-intel half-life and source-point weights should become explicit runtime configuration after real tenant calibration data is available.
+- Decide whether future UI work should render `applied_threat_signals[]` directly in action detail instead of relying on generic score-factor text plus nested metadata.
+
+## Phase 3 P1 live drift recovery, migration repair, and post-deploy smoke validation (2026-03-12)
+
+**Task:** Investigate why live prod still served image tag `20260311T224136Z` and lacked the March 12 P1 contracts, correct the runtime/database drift on production, rerun the P1 live smoke surface, and update the deployment guidance that caused the recovery ambiguity.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/env.py** - widened the Alembic version-table definition for fresh databases from `String(32)` to `String(64)` so current revision IDs fit.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/migration_guard.py** - corrected the operator recovery command from `alembic upgrade head` to `alembic upgrade heads`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/check_migration_gate.py** - corrected the migration-gate recovery messaging for the repo’s multi-head topology.
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/infrastructure-serverless.md** - documented that the serverless deploy script does not run Alembic and now requires a follow-up `alembic upgrade heads`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/deployment/database.md** - updated the migration instructions to `heads`, documented the two current heads, and added the one-time `alembic_version` width recovery note.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T021444Z-phase3-p1-postdeploy/** - created the fresh post-deploy evidence package with runtime, DB, and API smoke artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new post-deploy P1 validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the March 12 P1 live validation entry, `docs/README.md`, and the original evidence package under `docs/test-results/live-runs/20260312T013435Z-phase3-p1-live/`.
+- Verified locally that the repo already mounted `/api/integrations` in `backend/main.py`, already contained the March 12 Alembic revisions, and already enforced a DB-revision startup guard.
+- Re-checked live runtime and DB state and confirmed:
+  - API Lambda still ran image tag `20260311T224136Z`
+  - worker Lambda still ran image tag `20260311T224136Z`
+  - live DB still reported `0040_firebase_email_verification`
+  - live P1 graph/integration/sync tables were absent
+- Inspected the current serverless deploy path and confirmed the root operational gap:
+  - `./scripts/deploy_saas_serverless.sh` deploys images/runtime state only
+  - the documented serverless flow did not require a follow-up Alembic migration step
+  - `backend/services/migration_guard.py` and `scripts/check_migration_gate.py` still told operators to run `alembic upgrade head` even though the repo now has multiple heads
+- Ran the minimal live redeploy:
+  - `./scripts/deploy_saas_serverless.sh --region eu-north-1`
+  - verified both Lambdas advanced to image tag `20260312T020548Z`
+- Started DB recovery:
+  - `alembic upgrade head` failed because the repo has two heads
+  - `alembic upgrade heads` then failed because the existing live `alembic_version.version_num` column was still `varchar(32)` and could not store `0042_action_remediation_system_of_record`
+- Applied the one-time live metadata repair:
+  - `ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(64);`
+  - re-ran `alembic upgrade heads` successfully
+- Re-verified live DB state:
+  - `alembic current` now returns both `0042_bidirectional_integrations` and `0042_action_remediation_system_of_record`
+  - all previously missing P1 graph/integration/sync tables now exist
+- Captured fresh post-deploy smoke evidence under `docs/test-results/live-runs/20260312T021444Z-phase3-p1-postdeploy/` and confirmed:
+  - `P1.1` pass: DB tables and heads present
+  - `P1.2` pass: `graph_context` now returned on action detail
+  - `P1.3` pass: remediation run `2378802b-0704-4a5e-8509-927fcb905a74` completed `success`, returned additive repo-aware artifacts, and the bundle zip now contains `pr_automation/` files
+  - `P1.4` pass: invalid `direct_fix` escalation still rejected
+  - `P1.5` pass at route-surface level: `/api/integrations/settings` now returns `200 {"items":[]}`
+  - `P1.7` pass: additive `business_impact` now present on list, batch, and detail
+  - `P1.8` pass: additive `recommendation` now present on detail and remediation-options
+  - `P1.6` remains blocked for full end-to-end proof because the live tenant currently has zero configured integration settings, so no actual provider drift/reconciliation path was exercised
+
+**Validation:**
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-api ...` - pass (`ImageUri` now `...:20260312T020548Z`, `LastModified=2026-03-12T02:08:10.000+0000`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-worker ...` - pass (`ImageUri` now `...:20260312T020548Z`, `LastModified=2026-03-12T02:08:10.000+0000`)
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1` - pass
+- `alembic upgrade head` - expected fail on live because repo now has multiple heads
+- `alembic upgrade heads` - initial fail exposed live `alembic_version.version_num varchar(32)` limit
+- `ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(64);` - pass
+- `alembic upgrade heads` - pass
+- `alembic current` - pass (`0042_bidirectional_integrations`, `0042_action_remediation_system_of_record`)
+- `GET https://api.ocypheris.com/api/actions?limit=100&offset=0` - `200` (items now include additive `business_impact`)
+- `GET https://api.ocypheris.com/api/actions?group_by=batch&limit=100&offset=0` - `200` (batch rows now include additive `business_impact`)
+- `GET https://api.ocypheris.com/api/actions/442e46ac-f31c-4242-82ca-9e47081a3adb` - `200` (`graph_context` present, `business_impact` present, `recommendation` present)
+- `GET https://api.ocypheris.com/api/actions/3301b44c-8846-49c2-9f27-823e6a77e559` - `200` (`graph_context` present)
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc` - `200` (`business_impact` and `recommendation` present)
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc/remediation-options` - `200` (top-level additive `recommendation` present)
+- `GET https://api.ocypheris.com/api/integrations/settings` - `200` (`{"items":[]}`)
+- `POST https://api.ocypheris.com/api/remediation-runs` with additive `repo_target` - `201` (`id=2378802b-0704-4a5e-8509-927fcb905a74`)
+- `GET https://api.ocypheris.com/api/remediation-runs/2378802b-0704-4a5e-8509-927fcb905a74` - `200` (`success`, additive `pr_payload`, `diff_summary`, `rollback_notes`, `control_mapping_context`)
+- `GET https://api.ocypheris.com/api/remediation-runs/2378802b-0704-4a5e-8509-927fcb905a74/pr-bundle.zip` - `200` (zip now includes `pr_automation/control_mapping_context.json`, `pr_automation/diff_summary.json`, `pr_automation/pr_payload.json`, `pr_automation/rollback_notes.md`)
+- `POST https://api.ocypheris.com/api/remediation-runs` with forced `direct_fix` on `snapshot_block_all_sharing` - `400` (`Invalid strategy selection`)
+
+**Technical debt / gotchas:**
+- The repo’s multi-head Alembic topology means operator-facing recovery text must now say `alembic upgrade heads`; `head` is no longer valid for live recovery.
+- Existing databases created before the March 12, 2026 Alembic env fix can still carry `alembic_version.version_num varchar(32)` and will require the one-time metadata widen before they can record longer revision IDs.
+- The live tenant used for this validation still has zero configured integration settings, so `P1.6` cannot be treated as end-to-end proven yet even though the tables/routes are now deployed.
+
+**Open questions / TODOs:**
+- Configure at least one sandbox/test integration provider if you want live end-to-end reconciliation proof for `P1.6`.
+- Optional cleanup: the earlier aborted capture folder `docs/test-results/live-runs/20260312T021356Z-phase3-p1-postdeploy/` is unlinked and can be ignored unless you want the failed capture removed later.
+
+## Phase 3 P1 live validation run on Ocypheris prod shows March 11 runtime still lacks most P1 contracts (2026-03-12)
+
+**Task:** Execute a strict, evidence-backed live validation run for all implemented Phase 3 P1 slices on the current `https://ocypheris.com` / `https://api.ocypheris.com` production environment, capture API/UI/DB evidence, and stop each slice at the first concrete live blocker.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260312T013435Z-phase3-p1-live/** - created the full live-run evidence package with API, UI, DB, and notes artifacts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new Phase 3 P1 live validation run from the live-testing index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Loaded the binding `.cursor/` rules, Phase 3 P1 implementation history, docs index, and the relevant feature docs before touching production.
+- Created a fresh evidence package under `docs/test-results/live-runs/20260312T013435Z-phase3-p1-live/`.
+- Verified live auth two ways:
+  - fresh Playwright browser login succeeded and reached authenticated `/findings`
+  - repeatable API evidence capture used the same-operator bearer token file already established in prior Ocypheris live runs
+- Captured live tenant/account/action discovery and confirmed the dataset is non-empty:
+  - tenant `Valens` (`9f7616d8-af04-43ca-99cd-713625357b70`)
+  - account `696505809372`
+  - `7` findings
+  - `6` actions
+- Proved the current live runtime still exposes the March 11 API/worker images:
+  - API image tag `20260311T224136Z`
+  - worker image tag `20260311T224136Z`
+- Ran read-only production DB checks and confirmed all major P1 persistence tables are missing on live:
+  - `security_graph_nodes`
+  - `security_graph_edges`
+  - `tenant_integration_settings`
+  - `action_external_links`
+  - `integration_sync_tasks`
+  - `integration_event_receipts`
+  - `action_remediation_sync_states`
+  - `action_remediation_sync_events`
+- Validated the current live behavior of each requested P1 slice:
+  - `P1.1` fail: graph tables missing
+  - `P1.2` fail: live action detail returns `graph_context: null`
+  - `P1.3` fail: live accepted `repo_target` but still generated only the old three-file PR bundle with no repo-aware artifacts
+  - `P1.4` pass at externally observable behavior level: invalid `pr_only -> direct_fix` escalation was rejected and valid PR path remained available
+  - `P1.5` fail: `/api/integrations/settings` returned `404`
+  - `P1.6` blocked: could not exercise drift/reconciliation because the integration/sync surface is absent on live
+  - `P1.7` fail: no `business_impact` payload or matrix UI surfaced on live
+  - `P1.8` fail: no additive `recommendation` payload surfaced on live
+
+**Validation:**
+- `GET https://api.ocypheris.com/api/auth/me` - `200`
+- `GET https://api.ocypheris.com/api/aws/accounts` - `200` (`1` validated account)
+- `GET https://api.ocypheris.com/api/findings?limit=100&offset=0` - `200` (`7` findings)
+- `GET https://api.ocypheris.com/api/actions?limit=100&offset=0` - `200` (`6` actions; no additive `business_impact`)
+- `GET https://api.ocypheris.com/api/actions/442e46ac-f31c-4242-82ca-9e47081a3adb` - `200` (`context_incomplete=false`, `graph_context=null`, `business_impact=null`, `recommendation=null`)
+- `GET https://api.ocypheris.com/api/actions/3301b44c-8846-49c2-9f27-823e6a77e559` - `200` (`context_incomplete=true`, `graph_context=null`)
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc/remediation-options` - `200` (still no additive `recommendation`)
+- `POST https://api.ocypheris.com/api/remediation-runs` with additive `repo_target` - `201` (`id=9e193ab2-7e08-457a-9db4-b90969a33ec8`)
+- `GET https://api.ocypheris.com/api/remediation-runs/9e193ab2-7e08-457a-9db4-b90969a33ec8` - `200` (`success`, but no `diff_summary` / `rollback_notes` / `control_mapping_context` / `pr_payload`)
+- `GET https://api.ocypheris.com/api/remediation-runs/9e193ab2-7e08-457a-9db4-b90969a33ec8/pr-bundle.zip` - `200` (zip contains only `README.txt`, `ebs_default_encryption.tf`, `providers.tf`)
+- `POST https://api.ocypheris.com/api/remediation-runs` with forced `direct_fix` on `snapshot_block_all_sharing` - `400` (`Invalid strategy selection`)
+- `GET https://api.ocypheris.com/api/integrations/settings` - `404`
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-api ...` - pass (`ImageUri` tag `20260311T224136Z`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-worker ...` - pass (`ImageUri` tag `20260311T224136Z`)
+- Read-only Neon `psql` inspection - pass (confirmed P1 graph/integration/sync tables are missing on live)
+
+**Technical debt / gotchas:**
+- The current live production runtime is observably behind the documented March 12 P1 contract surface: the DB schema, routes, and additive response fields are missing even though the implementation docs exist locally.
+- `Create PR Bundle` pages are reachable on live and still render the older column set, which makes the missing P1.7/P1.8 UI surface directly observable without needing deeper feature flags or hidden routes.
+- The existing live dataset is sufficient for P1 discovery and safe PR-only validation, so the main blocker is deployment/state mismatch, not missing AWS findings.
+
+**Open questions / TODOs:**
+- Deploy an API/worker image that includes the March 12 P1 migrations, routes, and worker logic, then rerun this same validation package.
+- After deploy, configure at least one sandbox/test provider (`jira`, `servicenow`, or `slack`) if full `P1.5` / `P1.6` end-to-end drift and reconciliation proof is required.
+
+## Phase 3 P1.7 business impact matrix implementation (2026-03-12)
+
+**Task:** Implement P1.7 so actions carry an explicit `risk x criticality` business-impact matrix, list/detail ordering reranks deterministically when criticality changes, and missing criticality remains explicit rather than silently defaulted.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_business_impact.py** - added the dedicated criticality model, deterministic matrix placement logic, explicit unknown-criticality handling, and read-time fallback normalization.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - persisted additive `score_components["business_impact"]` during action recompute using the representative finding.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/toxic_combinations.py** - refreshed persisted business-impact payloads after toxic-combination score promotion so matrix rows stay aligned with the final technical score.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added additive business-impact response models, surfaced `business_impact` on action list/detail and batch views, and changed list ordering to matrix-rank-first with stable tie-breakers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added typed `ActionBusinessImpact` contracts for action list/detail payloads.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - rendered a dedicated `Business impact matrix` card plus condensed matrix badges in the action header.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - updated the drawer contract test to cover business-impact rendering.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/page.tsx** - exposed condensed matrix labels in the PR-bundle action selection list.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx** - exposed matrix columns plus a `By matrix cell` summary block in the PR-bundle summary view.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/ActionCard.tsx** - updated the reusable action card to show matrix context alongside the technical risk score.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_7_business_impact_matrix.py** - added focused P1.7 coverage for deterministic placement, explicit unknown criticality, reranking, and additive API contract fields.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_actions_effective_visibility.py** - updated the list-order regression wording so it matches matrix-first ordering.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - documented the criticality model, matrix thresholds, explicit unknown handling, ordering rules, and UI surfaces.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - cross-linked the new matrix payload from the existing score explainability doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new P1.7 feature doc from the main docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new P1.7 feature doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a separate business-impact service so P1.7 criticality logic stays out of the existing technical scorer and remains easy to audit.
+- Modeled business criticality across explicit dimensions:
+  - `customer_facing`
+  - `revenue_path`
+  - `regulated_data`
+  - `identity_boundary`
+  - `production_environment`
+- Persisted additive `business_impact` metadata inside `actions.score_components` so existing rows remain backward-compatible and older rows still fall back to deterministic `unknown` criticality at read time.
+- Made action list ordering use matrix rank first, then technical score, then the existing stable tie-breakers, so criticality changes can rerank equally risky actions without hiding the raw risk score.
+- Exposed additive `business_impact` payloads on:
+  - `GET /api/actions`
+  - `GET /api/actions?group_by=batch`
+  - `GET /api/actions/{id}`
+- Kept missing criticality explicit:
+  - `criticality.status = "unknown"`
+  - `criticality.tier = "unknown"`
+  - matrix column becomes `unknown`
+  - summary text says the action has explicit unknown criticality
+- Added matrix visibility to the current operator summary surfaces used in the app:
+  - action detail drawer
+  - PR-bundle action selection
+  - PR-bundle summary
+
+**Validation:**
+- `pytest tests/test_phase3_p1_7_business_impact_matrix.py -q` - pass (`5 passed`)
+- `pytest -q` - pass (`1184 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Matrix ordering currently applies to the `/api/actions` list and batch views; member ordering in other action-adjacent views that still sort by legacy `priority` may need a later follow-up if they become primary operator surfaces.
+- Phase 3 P1.8 recommendation mode still uses its own matrix-specific heuristics, so a later alignment pass may be warranted if product wants one shared business-criticality model across ranking and recommendation.
+
+**Open questions / TODOs:**
+- Decide whether tenant-defined asset criticality should eventually replace or augment the current bounded keyword/action-type heuristics.
+- Decide whether action-group member APIs should expose the same additive `business_impact` payload if those views become first-class remediation queues.
+
+## Phase 3 P1.8 recommendation mode from matrix position implementation (2026-03-12)
+
+**Task:** Implement P1.8 so action decision surfaces derive a deterministic default recommendation mode from matrix position, expose auditable rationale/evidence in the action APIs, and keep the recommendation advisory unless an explicit existing policy forces an override.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_recommendation.py** - added the additive recommendation engine, risk/criticality matrix mapping, explicit policy-override handling, and rationale/evidence generation.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added response models for recommendation payloads and wired additive `recommendation` into `GET /api/actions/{id}` and `GET /api/actions/{id}/remediation-options`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added typed `ActionRecommendation` contracts for action detail and remediation-options responses.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_8_recommendation_mode.py** - added focused P1.8 regressions for all nine matrix cells, advisory-only behavior, explicit policy overrides, and API response coverage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/recommendation-mode-matrix.md** - documented the matrix mapping, additive API contract, derivation heuristics, and override semantics.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new P1.8 feature doc from the main docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new P1.8 feature doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the additive recommendation contract on action detail and remediation-options endpoints.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a dedicated recommendation service that maps a 3x3 `risk x business_criticality` matrix to exactly one default recommendation mode per cell:
+  - `direct_fix_candidate`
+  - `pr_only`
+  - `exception_review`
+- Derived matrix risk tier from the existing action score bands and derived business criticality from additive heuristics over persisted action metadata:
+  - `score_components.data_sensitivity`
+  - `score_components.privilege_level`
+  - action-type defaults for high-impact controls
+  - conservative business-criticality keyword matches in title/description/resource metadata
+- Exposed additive `recommendation` on both decision surfaces:
+  - `GET /api/actions/{id}`
+  - `GET /api/actions/{id}/remediation-options`
+- Kept the recommendation advisory by default even when the current runtime does not expose a matching execution mode; for example, `direct_fix_candidate` remains advisory when `mode_options=["pr_only"]`.
+- Added explicit policy overrides only for already-enforced platform constraints:
+  - manual-high-risk root-credential actions force `exception_review`
+  - unmapped `pr_only` actions force `exception_review`
+- Included auditable recommendation evidence in the API contract so operators can see the score, component-normalized signals, matched business keywords, context completeness, matrix cell, and final rationale.
+- Left remediation creation, direct-fix approval gating, and existing execution-mode enforcement unchanged.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_8_recommendation_mode.py -q` - pass (`14 passed`)
+- `pytest -q` - pass (`1179 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- The platform still does not persist first-class business-criticality metadata on actions or findings, so P1.8 currently derives `business_criticality` from existing score components and conservative heuristics.
+- `direct_fix_candidate` is intentionally a recommendation-mode label, not an execution permission; callers must continue to rely on `mode_options`, remediation-run validation, and the P1.4 approval gate for actual execution decisions.
+
+**Open questions / TODOs:**
+- Decide whether a later slice should persist tenant-defined business criticality directly on assets/actions instead of continuing to infer it from action metadata.
+- Decide whether the action list or owner-queue views should surface a condensed recommendation badge once operators validate the detail/remediation-options contract in daily use.
+
+## Phase 3 P1.6 remediation system-of-record sync implementation (2026-03-12)
+
+**Task:** Implement P1.6 so the platform becomes the authoritative remediation-state system of record, external provider conflicts are resolved in favor of internal canonical action state with traceable audit events, and drifted external status can be reconciled through a dedicated job path.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action_remediation_sync_state.py** - added the per-action, per-provider remediation sync snapshot model with canonical/internal/external status fields, sync status, source, and reconciliation metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action_remediation_sync_event.py** - added the immutable remediation sync audit-event model with idempotency keys, source, status before/after values, and resolution decisions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** - registered the remediation sync models for model discovery.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_remediation_state_machine.py** - defined the authoritative canonical remediation states, provider inbound mapping table, preferred outbound statuses, and conflict-resolution decisions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_remediation_sync.py** - added canonical status application, external observation recording, reconciliation completion, drift scanning, replay-safe idempotency guards, and sync-event persistence helpers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/integration_sync.py** - changed inbound provider processing so webhooks record observations and drift instead of mutating canonical `Action.status`, and record successful outbound reconciliations back into the sync ledger.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - routed action recompute reopen/resolve transitions through the canonical remediation sync service while keeping fake-session unit tests compatible.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - routed `PATCH /api/actions/{id}` status changes through the canonical remediation sync service before outbound provider sync planning.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py** - added `POST /api/internal/reconciliation/remediation-state-sync` so the internal scheduler can enqueue remediation-state drift reconciliation jobs.
+- **/Users/marcomaher/AWS Security Autopilot/backend/utils/sqs.py** - added the `reconcile_action_remediation_sync` queue job contract builder.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_action_remediation_sync.py** - added the worker job that scans drifted sync-state rows, plans outbound provider updates, and dispatches resulting sync tasks.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/__init__.py** - registered the new reconciliation job handler.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/main.py** - added queue-schema validation and dispatch support for `reconcile_action_remediation_sync`.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0042_action_remediation_system_of_record.py** - added the migration for `action_remediation_sync_states` and `action_remediation_sync_events`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_6_system_of_record_sync.py** - added focused P1.6 regressions for canonical conflict handling, audit decisions, replay/idempotency, reconciliation planning, and worker dispatch.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-system-of-record-sync.md** - documented the canonical remediation state machine, provider mappings, audit trail, and reconciliation job flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new P1.6 feature doc from the main documentation index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new P1.6 feature doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the canonical action-state source-of-truth rule and the internal reconciliation endpoint.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Made `Action.status` the authoritative remediation-state source of truth for platform actions, with canonical states `open`, `in_progress`, `resolved`, and `suppressed`.
+- Added provider mapping tables so Jira, ServiceNow, Slack, and generic external statuses normalize into internal canonical states and deterministic preferred outbound statuses.
+- Added `action_remediation_sync_states` as the durable current snapshot for each linked provider and `action_remediation_sync_events` as the immutable audit trail for internal transitions, external observations, queued reconciliations, and completed reconciliations.
+- Changed inbound provider processing so conflicting external statuses no longer overwrite canonical action state; instead the system records the observation, marks the provider row `drifted`, and records `preserve_internal_canonical` in the audit trail.
+- Added replay-safe idempotency guards so repeated inbound or reconciliation events with the same idempotency key do not mutate sync snapshots twice.
+- Added a drift reconciliation job path that scans `drifted` provider rows, queues outbound provider updates through the existing integration sync task rail, and records `reconciliation_queued` / `reconciliation_applied` audit events.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_6_system_of_record_sync.py -q` - pass (`8 passed`)
+- `pytest -q` - pass (`1165 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- The reconciliation job is available through the internal scheduler endpoint and worker path, but the cadence for running it continuously is still an operational configuration decision rather than a hard-coded schedule in repo code.
+- Inbound provider events can still update link metadata such as assignee and external status, so operators should use the new sync-state/event tables rather than `action_external_links` alone when auditing remediation-state conflicts.
+
+**Open questions / TODOs:**
+- Decide the default production cadence and scoping strategy for `POST /api/internal/reconciliation/remediation-state-sync` so drift repair runs often enough without creating unnecessary provider churn.
+- Decide whether `/api/actions/{id}` or the integrations UI should surface sync drift and reconciliation history directly from the new remediation sync tables.
+
+## Phase 3 P1.5 bi-directional Jira, ServiceNow, and Slack integrations (2026-03-12)
+
+**Task:** Implement P1.5 so Jira, ServiceNow, and Slack work items can be created and updated from platform actions, inbound status and assignee changes can sync back into canonical action state, regressions can reopen external work, and retry/idempotency protections keep failures from corrupting remediation state.
+
+> Note: Phase 3 P1.6 superseded the inbound canonical-state overwrite behavior. Inbound status observations now preserve internal canonical `Action.status`, record drift in the remediation sync ledger, and reconcile providers back to the platform state.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/tenant_integration_setting.py** - added the tenant-scoped provider settings and isolated secret storage model.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/action_external_link.py** - added the tenant-scoped action-to-provider link model for external IDs, keys, assignees, and last inbound/outbound metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/integration_sync_task.py** - added the retry-safe outbound sync task model with unique request signatures and attempt tracking.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/integration_event_receipt.py** - added the inbound webhook receipt model for idempotent provider event handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** - registered the new integration models for metadata and Alembic discovery.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0042_bidirectional_integrations.py** - added the additive schema for tenant integration settings, external links, outbound sync tasks, and inbound receipts.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/integration_adapters.py** - added provider adapters for Jira, ServiceNow, and Slack create/update/reopen sync payloads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/integration_sync.py** - added tenant-scoped settings management, outbound task planning/dispatch, inbound webhook normalization, idempotent receipt claiming, external status/assignee sync, and external link updates.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/integrations.py** - added the integration settings, manual sync trigger, and inbound webhook API surface.
+- **/Users/marcomaher/AWS Security Autopilot/backend/main.py** - mounted the new `/api/integrations` router.
+- **/Users/marcomaher/AWS Security Autopilot/backend/utils/sqs.py** - added the `integration_sync` queue payload builder and job type constant.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/main.py** - registered the new queue contract fields for `job_type=integration_sync`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/integration_sync.py** - added the outbound provider sync worker with retryable vs non-retryable error handling.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/__init__.py** - registered the integration sync worker handler.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/compute_actions.py** - planned outbound sync work for created, updated, resolved, and reopened actions after recompute.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - planned outbound integration sync work after canonical action status changes from `PATCH /api/actions/{id}`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - added optional reopened/resolved action ID returns without breaking existing count-based callers.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_5_integrations_bidirectional.py** - added focused P1.5 regression coverage for outbound planning, inbound webhook sync, duplicate receipt replay, retry-safe worker failures, and regression reopen scheduling.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/integration-first-remediation-operations.md** - documented the new API contract, persistence model, default status mappings, and retry/idempotency behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new feature doc from the feature index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the `/api/integrations` routes, webhook headers, queue job type, and tenant-scoped persistence tables.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added tenant-scoped integration configuration and secret isolation through `tenant_integration_settings`, while keeping provider credentials out of action and remediation state rows.
+- Added retry-safe outbound sync planning through `integration_sync_tasks`, deduped by tenant/request signature, and routed those tasks through a dedicated `integration_sync` worker job.
+- Added provider adapters for Jira, ServiceNow, and Slack so external work can be created, updated, or reopened with provider-specific payloads while preserving a common internal contract.
+- Added `action_external_links` so the platform can persist stable provider references, assignee snapshots, and the last inbound/outbound sync markers per action/provider pair.
+- Added inbound webhook processing that:
+  - authenticates with `X-Integration-Webhook-Token`,
+  - claims a unique receipt before applying mutations,
+  - ignores stale events,
+  - syncs mapped external status changes back into canonical action state,
+  - syncs assignee changes back into the action owner fields.
+- Wired recompute and action-status mutations to enqueue sync work for created, updated, resolved, and reopened actions so regression events can reopen external work when `reopen_on_regression=true`.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_5_integrations_bidirectional.py -q` — pass (`7 passed`)
+- `pytest -q` — pass (`1165 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- Provider-native signed webhook verification is not implemented; inbound auth currently relies on the shared `X-Integration-Webhook-Token` contract.
+- Slack inbound sync currently expects event metadata that already contains normalized `status` and assignee fields; richer interactive Slack action translation remains future work.
+- Manual sync currently reuses the worker/task safety model rather than exposing a separate provider-specific retry UI contract.
+
+**Open questions / TODOs:**
+- Decide whether later slices should add provider-native webhook signature validation in addition to the tenant-scoped shared webhook token.
+- Decide whether the frontend should expose provider-specific transition/status-map configuration, or keep that operator contract API-only.
+
+## Phase 3 P1.3 cloud-to-code remediation PR automation implementation (2026-03-12)
+
+**Task:** Implement P1.3 so remediation PR bundle generation becomes repo-aware, emits provider-agnostic PR automation metadata, and carries deterministic diff, rollback, and control-mapping context without breaking the existing non-repo bundle flow.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_automation.py** - added provider-agnostic PR automation artifact generation, repo-target normalization, deterministic diff metadata, rollback note assembly, and control-mapping context packaging.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - added additive `repo_target` request models for single-action and group PR-bundle runs, persisted repo metadata, and extended duplicate-run checks to include repo targeting.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - enriched successful PR bundle runs with repo-aware automation artifacts and persisted those artifacts onto both single-action and grouped run records.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_handoff.py** - normalized `pr_payload` into implementation artifacts and surfaced `diff_summary`, `rollback_notes`, and `control_mapping_context` as evidence pointers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/utils/sqs.py** - extended the remediation-run job payload contract to carry optional `repo_target` metadata to workers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added the additive frontend request typing for `repo_target` on remediation-run and grouped PR-bundle creation requests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_3_repo_aware_pr_automation.py** - added focused P1.3 regressions covering queue payloads, snapshots, worker persistence, handoff metadata, and backward-compatible non-repo flows.
+- **/Users/marcomaher/AWS Security Autopilot/tests/fixtures/phase3_p1_3_pr_payload_snapshot.json** - captured the expected provider-agnostic PR payload snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/tests/fixtures/phase3_p1_3_artifact_bundle_snapshot.json** - captured the expected enriched artifact bundle snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/repo-aware-pr-automation.md** - documented the repo-target contract, generated artifacts, deterministic diff semantics, and provider-agnostic design.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - updated the normalized implementation-artifact and evidence-pointer contract to include the new PR automation metadata.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new feature doc from the features index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the additive `repo_target` request contract and the new `pr_automation/` bundle files.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added an additive optional `repo_target` contract so PR-bundle remediation runs can carry repository, branch, and repo-root mapping metadata into the worker.
+- Kept the implementation provider-agnostic by generating a stable `pr_payload` artifact instead of calling GitHub, GitLab, or Bitbucket APIs directly.
+- Enriched successful PR bundles with `pr_automation/` files containing deterministic diff metadata, rollback notes, and control-mapping context, plus `pr_payload` when repo targeting is configured.
+- Extended remediation handoff normalization so action detail and run detail expose the new PR payload and evidence metadata without changing the raw `artifacts` contract.
+- Preserved the existing non-repo bundle flow; runs without `repo_target` still generate the base bundle and now omit only the optional `pr_payload`.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_3_repo_aware_pr_automation.py -q` - pass (`5 passed`)
+- `pytest -q` - pass (`1150 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- The generated diff metadata is deterministic bundle metadata based on emitted file contents; it is not a live Git diff against a checked-out repository.
+- `control_mapping_context.unmapped_control_ids` can remain non-empty when a bundled control has no matching framework rows in the current mapping dataset.
+- The frontend API client now supports `repo_target`, but the current UI does not yet collect repository-target inputs from operators.
+
+**Open questions / TODOs:**
+- Decide whether a later slice should take the provider-agnostic `pr_payload` artifact and post it to external VCS APIs.
+- Decide whether future repo mapping should support collision strategies beyond simple `root_path + bundle path` path construction.
+
+## Phase 3 P1.4 strict approval gate for production mutation (2026-03-12)
+
+**Task:** Implement P1.4 so autonomous PR automation cannot cross into direct-fix mutation, direct-fix execution is limited to explicit approved allowlist paths, and blocked unapproved mutation attempts are audit logged.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/direct_fix_approval.py** - added the explicit direct-fix approval artifact contract, the allowlisted approval path set, and the worker decision helper that fails closed on missing/mismatched approval proof.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - stamped new `direct_fix` runs with persisted approval metadata from the approved API create path.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_audit.py** - added explicit `remediation_mutation_blocked` audit events for blocked unapproved mutation attempts while preserving the existing completion audit event.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - enforced the direct-fix approval gate before `assume_role` / `run_direct_fix`, blocked spoofed or unallowlisted mutations, and emitted a specific worker-dispatch error phase for gate failures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_4_approval_gate_enforcement.py** - added focused P1.4 regressions for approval stamping, spoofed `pr_only` -> `direct_fix` escalation attempts, unallowlisted approval paths, and the happy-path allowlisted direct-fix execution.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - updated existing worker fixtures so direct-fix tests carry explicit approval metadata and PR-bundle tests stub the current control-mapping lookup used during PR automation enrichment.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-safety-model.md** - documented the persisted `direct_fix_approval` evidence, the explicit allowlisted approval-path check, and the new blocked-mutation audit event.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the new direct-fix approval artifact and fail-closed audit behavior for local/backend operators.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a dedicated approval-gate helper so direct-fix execution now requires persisted proof that the run was created by an explicit approved path.
+- Limited the current allowlist to the authenticated `POST /api/remediation-runs` direct-fix create path, which means `pr_only` runs and forged queue payloads cannot self-upgrade into direct mutation.
+- Hardened the remediation worker to compare the queued mode against the stored run mode and direct-fix approval artifact before any AWS mutation call occurs.
+- Added explicit `audit_log` rows with `event_type=remediation_mutation_blocked` whenever the worker blocks an unapproved direct-mutation attempt.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_4_approval_gate_enforcement.py -q` — pass (`4 passed`)
+- `pytest tests/test_remediation_run_worker.py -q` — pass (`23 passed`)
+
+**Technical debt / gotchas:**
+- The allowlist currently contains a single direct-fix approval path identifier (`api.remediation_runs.create_direct_fix`). Any future approved mutation entrypoint must explicitly add a new allowlist token and corresponding tests before it can execute.
+
+**Open questions / TODOs:**
+- Decide whether future operator-only mutation flows should reuse this artifact contract or introduce a separate approval artifact type so human-reviewed backoffice paths stay distinguishable in audit output.
+
+## Phase 3 P1.2 graph-backed action detail context implementation (2026-03-12)
+
+**Task:** Implement P1.2 graph-backed action detail context so `/api/actions/{id}` exposes connected assets, identity path, and blast-radius neighborhood data with conservative traversal guards and an explicit fallback when graph context is unavailable.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_graph_context.py** - added bounded graph-context assembly helpers that derive action-detail context from persisted relationship metadata, linked findings/actions, and inventory assets.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - added additive `graph_context` response models, loaded the extra finding fields needed for graph assembly, and wired graph-context loading into action detail responses.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added the typed `graph_context` contract for action detail payloads.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx** - rendered a dedicated `Graph-backed context` card with explicit available/unavailable states, connected assets, identity path, blast-radius neighbors, and truncation messaging.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.test.tsx** - updated the drawer contract test to cover graph-context rendering.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_2_graph_backed_action_context.py** - added focused backend coverage for available graph context, explicit fallback behavior, traversal caps, and API contract shape.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - asserted the additive action-detail fallback shape remains stable when graph data is unavailable.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_login_rate_limit.py** - refreshed the auth helper patching so the repo-wide suite matches the current 12-field launch tuple and Firebase-gated login flow.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_signup_pending_verification.py** - updated pending-signup cookie assertions to tolerate the current explicit cookie-clearing behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_auth_verification_mfa.py** - normalized the mocked launch tuple to the current helper contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_token_lifecycle.py** - normalized the mocked launch tuple to the current helper contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_invite_contract_wave3.py** - normalized the mocked launch tuple to the current helper contract.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/graph-backed-action-context.md** - documented the new payload, bounded traversal model, explicit fallback contract, and UI render flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/security-graph-foundation.md** - cross-linked the new P1.2 action-detail feature from the graph-foundation doc and clarified the current graph-consumption limitations.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new feature doc from the active docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new feature doc from the features index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the additive `graph_context` action-detail contract for local/backend operators.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added `backend/services/action_graph_context.py` so action detail can build a conservative graph-backed neighborhood from already-persisted data instead of issuing free-form graph exploration queries.
+- Exposed additive `graph_context` on `GET /api/actions/{id}` with:
+  - `status`
+  - `availability_reason`
+  - `source`
+  - `connected_assets[]`
+  - `identity_path[]`
+  - `blast_radius_neighborhood[]`
+  - `truncated_sections[]`
+  - `limits`
+- Kept the API fail-closed and stable when graph data is missing or incomplete:
+  - fallback payload is explicit,
+  - graph-backed sections return empty arrays instead of disappearing,
+  - unavailable graph context does not fail the action-detail request.
+- Added conservative traversal caps for related findings, related actions, inventory assets, connected assets, identity nodes, and blast-radius neighbors so the detail view stays bounded and explainable.
+- Wired the frontend drawer to show the new graph-backed context card and explain unavailable/truncated states directly in the UI.
+- Added focused P1.2 tests plus action-detail/UI contract assertions to prove:
+  - graph-enabled tenants see populated graph context,
+  - non-graph-ready actions get the explicit fallback shape,
+  - bounded traversal guards prevent unbounded neighborhoods.
+- Refreshed several stale auth/invite tests so the current repo-wide suite remains compatible with the newer launch-tuple and signup/login contracts while validating this slice.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_2_graph_backed_action_context.py -q` - pass (`4 passed`)
+- `pytest tests/test_wave5_action_detail_contract.py tests/test_phase3_p0_7_execution_guidance.py -q` - pass
+- `npm run test:ui -- src/components/ActionDetailDrawer.test.tsx` - pass
+- `npm run typecheck` - pass
+- `pytest -q` - pass (`1141 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- P1.2 currently derives action-detail context from persisted relationship metadata and `inventory_assets` rows; it does not yet traverse `security_graph_nodes` / `security_graph_edges` directly.
+- `identity_path` depends on identity/principal hints already present in finding payloads, so some graph-enabled actions will still show no identity chain.
+- The repo-wide test pass required refreshing several stale auth/invite test helpers that were still patching older launch-tuple and cookie assumptions unrelated to graph context.
+
+**Open questions / TODOs:**
+- Decide whether the next graph slice should read directly from the persisted graph tables instead of rebuilding the neighborhood from relationship metadata.
+- Decide whether list views or owner queues should expose a condensed graph summary once the detail contract is established.
+
+## Phase 3 P1.1 security graph foundation implementation (2026-03-12)
+
+**Task:** Implement P1.1 Security Graph foundation with tenant-scoped graph nodes/edges, a graph-population pipeline from existing finding/action data, idempotent rerun-safe upserts, and the requested focused regression coverage.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/security_graph_node.py** - added the tenant-scoped graph-node ORM model, unique node key constraint, and graph-node indexes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/security_graph_edge.py** - added the tenant-scoped graph-edge ORM model, unique edge key constraint, and source/target lookup indexes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/__init__.py** - registered the new graph models for Alembic/model discovery.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/risk_signals.py** - extracted shared score-signal thresholds so graph exposure nodes and toxic-combination logic reuse the same semantics.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/security_graph.py** - added graph snapshot derivation, tenant/account/region-scoped graph sync, idempotent node/edge upserts, stale-scope cleanup, and cross-tenant action/finding guardrails.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/toxic_combinations.py** - switched toxic-combination signal extraction to the shared `risk_signals` helper.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py** - wired security-graph sync into `compute_actions_for_tenant` after status reconciliation and returned graph sync counts in the recompute result payload.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0041_security_graph_foundation.py** - added the migration for `security_graph_nodes` and `security_graph_edges`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_1_security_graph_foundation.py** - added model/migration assertions plus focused snapshot, tenant-isolation, and idempotent-rerun tests.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/security-graph-foundation.md** - documented the graph schema, sync flow, node/edge types, idempotency guarantees, and current limitations.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - linked the new Security Graph feature doc from the main docs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/README.md** - linked the new Security Graph feature doc from the features index.
+- **/Users/marcomaher/AWS Security Autopilot/backend/auth.py** - added backward-compatible normalization for legacy 11-field `get_saas_and_launch_url()` tuples so existing auth/control-plane tests keep passing.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py** - normalized launch-tuple handling, made pending-signup cookie clearing conditional on incoming auth cookies, and kept login compatible with legacy user objects that do not carry `email_verified`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** - normalized launch-tuple handling for invite acceptance responses.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added first-class persisted graph tables for:
+  - `resource`
+  - `identity`
+  - `exposure`
+  - `finding`
+  - `action`
+- Chose stable tenant-scoped `node_key` / `edge_key` identifiers so rerunning the same compute scope updates existing graph rows instead of duplicating them.
+- Implemented graph derivation from already-persisted `Action`, `ActionFinding`, and `Finding` rows:
+  - action/finding nodes use persisted row IDs,
+  - resource/identity nodes derive from `resource_id`, `resource_type`, `resource_key`, and `relationship_context`,
+  - exposure nodes reuse the same normalized score-signal thresholds already used by toxic-combination scoring.
+- Wired the graph sync into `compute_actions_for_tenant` so the normal action recompute path now also refreshes graph state for the same tenant/account/region scope.
+- Added explicit tenant/account/region gating on action-to-finding graph expansion so inconsistent cross-tenant links are ignored instead of leaking graph edges across tenants.
+- Added scope cleanup so stale graph edges/nodes for the recomputed tenant/account/region slice are removed during the same sync.
+- Added feature docs with a Mermaid flowchart and linked them from the active docs indexes.
+- Fixed two pre-existing auth/control-plane contract issues that blocked `pytest -q`:
+  - normalized legacy 11-field launch tuples still used in existing tests,
+  - stopped emitting cookie-clearing headers on pending signup responses unless the incoming request actually carried auth cookies.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_1_security_graph_foundation.py -q` - pass (`5 passed`)
+- `pytest tests/test_auth_login_rate_limit.py tests/test_auth_signup_pending_verification.py tests/test_auth_verification_mfa.py tests/test_control_plane_token_lifecycle.py tests/test_invite_contract_wave3.py -q` - pass (`34 passed`)
+- `pytest -q` - pass (`1141 passed`, `2 warnings`)
+
+**Technical debt / gotchas:**
+- P1.1 is persistence/recompute foundation only; graph-backed action-detail payloads such as `connected_assets` and `identity_path` are still not exposed in `/api/actions/{id}`.
+- Region-scoped reruns intentionally clean only the same tenant/account/region slice; account-scoped identity nodes that use `region=None` are refreshed by matching reruns but are only fully pruned by wider-scope recomputes.
+- The launch-tuple normalizer exists because some auth/control-plane tests still patch the older 11-field helper contract; long term the repo should converge on the single 12-field contract.
+
+**Open questions / TODOs:**
+- Decide the additive API contract for graph-backed action detail once P1 moves beyond persistence.
+- Decide whether a dedicated tenant-wide graph backfill/repair command is needed, or if rerunning `compute_actions` remains the only supported rebuild path.
+
+## P0.8 PR-only live validation pass without WriteRole (2026-03-12)
+
+**Task:** Execute a strict live validation run for Phase 3 P0.8 on Ocypheris production using only the PR-only remediation path, proving live `implementation_artifacts[]` and run-level closure metadata without `WriteRole`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/00-run-metadata.md** - created the fresh run scaffold and recorded the auth path actually used.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/evidence/api/** - saved live auth failure/fallback proof, candidate action/remediation-option payloads, run creation evidence, polling timeline, post-run action and run detail payloads, execution payload, and PR bundle download evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/notes/p0-8-matrix.md** - recorded the required PASS matrix for run creation, terminal completion, action artifacts, run artifact metadata, and closure/handoff evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/notes/final-summary.md** - recorded the exact action, strategy, run id, terminal status, and final PASS result.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the successful targeted P0.8 live run from the live-testing index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Loaded the binding `.cursor/` rules, project status, required P0.7/P0.8/live-validation task history, docs index, and the P0.7/P0.8 feature docs before touching production.
+- Created a fresh evidence package under `docs/test-results/live-runs/20260311T231949Z-p0-8-pr-only-live/`.
+- Re-ran the normal live login path for `marco.ibrahim@ocypheris.com`, captured the repeated `401 Invalid email or password`, and then reused the same-operator bearer fallback token already established in prior live runs so the validation could proceed without changing tenant state.
+- Confirmed candidate action `0ca64b94-9dcb-4a97-91b0-27b0341865bc` (`ebs_default_encryption`) still exists, is `open`, exposes the `ebs_enable_default_encryption_aws_managed_kms_pr_bundle` strategy in both `execution_guidance[]` and remediation options, and has empty `implementation_artifacts[]` before the run.
+- Confirmed there were no pre-existing remediation runs for that action, then created a new PR-only run `88e08e11-0b86-4f7d-bf4e-fd24a5870ad1` using strategy `ebs_enable_default_encryption_aws_managed_kms_pr_bundle`.
+- Polled the live run to terminal state and confirmed `status=success`, `outcome="PR bundle generated"`, and execution progress `100%`.
+- Re-fetched both the run detail and parent action detail and confirmed the live P0.8 contract is now present:
+  - action detail `implementation_artifacts[]` contains one executable `pr_bundle` entry linked to the successful run
+  - run detail `artifact_metadata.implementation_artifacts[]` contains the normalized `Engineering PR bundle`
+  - run detail also exposes `artifact_metadata.evidence_pointers[]` and `artifact_metadata.closure_checklist[]`
+- Downloaded the generated PR bundle zip and confirmed it contains the expected three Terraform bundle files (`providers.tf`, `ebs_default_encryption.tf`, `README.txt`).
+- Marked the final live P0.8 result `PASS` without using `WriteRole` or `direct_fix`.
+
+**Validation:**
+- `POST https://api.ocypheris.com/api/auth/login` with `marco.ibrahim@ocypheris.com` / supplied password - `401 {"detail":"Invalid email or password"}`
+- `GET https://api.ocypheris.com/api/auth/me` via same-operator bearer fallback - `200`
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc` - `200` (pre-run candidate exists, `status=open`, `implementation_artifacts=[]`)
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc/remediation-options` - `200` (selected PR-only strategy valid; no required inputs; dependency check `pass`)
+- `GET https://api.ocypheris.com/api/remediation-runs?limit=100&offset=0` - `200` (`0` existing runs before creation)
+- `POST https://api.ocypheris.com/api/remediation-runs` with `{"action_id":"0ca64b94-9dcb-4a97-91b0-27b0341865bc","mode":"pr_only","strategy_id":"ebs_enable_default_encryption_aws_managed_kms_pr_bundle"}` - `201` (`id=88e08e11-0b86-4f7d-bf4e-fd24a5870ad1`)
+- `GET https://api.ocypheris.com/api/remediation-runs/88e08e11-0b86-4f7d-bf4e-fd24a5870ad1` - `200` (`status=success`, `outcome="PR bundle generated"`, populated `artifact_metadata`)
+- `GET https://api.ocypheris.com/api/remediation-runs/88e08e11-0b86-4f7d-bf4e-fd24a5870ad1/execution` - `200` (`status=success`, `progress_percent=100`)
+- `GET https://api.ocypheris.com/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc` - `200` (post-run `implementation_artifacts[]` populated with executable bundle link)
+- `GET https://api.ocypheris.com/api/remediation-runs/88e08e11-0b86-4f7d-bf4e-fd24a5870ad1/pr-bundle.zip` - `200` (zip contains `providers.tf`, `ebs_default_encryption.tf`, `README.txt`)
+
+**Technical debt / gotchas:**
+- The normal browser-login credential for `marco.ibrahim@ocypheris.com` still failed in this run, so validation remained API-led via the same-operator bearer fallback path rather than normal browser auth.
+- For a PR-only run, `closure_checklist[].id="action_closure_verified"` remains `pending` because the bundle has not been merged/applied and the parent action is still `open`; that is expected and does not block the P0.8 contract itself.
+
+**Open questions / TODOs:**
+- Separate operator-access follow-up: restore a working normal browser-login credential for `marco.ibrahim@ocypheris.com` if future live runs must capture browser-authenticated UI evidence.
+
+## P0.3 post-deploy live validation pass after producer-path rollout (2026-03-12)
+
+**Task:** Deploy the March 12 relationship-context producer-path fix to Ocypheris production, prove the live API/worker runtime changed, rerun the scoped backfill/recompute, and validate P0.3 end to end on live with saved evidence.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T224012Z-p0-3-postdeploy-validation/00-run-metadata.md** - created the fresh run scaffold and recorded the final same-operator auth path used for this run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T224012Z-p0-3-postdeploy-validation/evidence/api/** - saved pre/post runtime metadata, full deploy transcript, scoped backfill outputs, fallback auth proof, findings/detail payloads, actions list, and anchor action evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T224012Z-p0-3-postdeploy-validation/notes/result-matrix.md** - recorded the required PASS matrix with exact evidence references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T224012Z-p0-3-postdeploy-validation/notes/final-summary.md** - recorded the final deploy/backfill/findings/action outcome and the final P0.3 PASS.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the successful post-deploy targeted run from the live-testing index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Loaded the binding `.cursor/` rules, project status, required P0.3/P0.4/producer-path task history, docs index, and the toxic-combination feature doc before touching production.
+- Created a fresh evidence package under `docs/test-results/live-runs/20260311T224012Z-p0-3-postdeploy-validation/`.
+- Captured fresh pre-deploy runtime evidence proving both Lambdas still ran image tag `20260311T181012Z` with `LastModified=2026-03-11T18:12:59.000+0000`.
+- Ran the standard production deploy path `./scripts/deploy_saas_serverless.sh --region eu-north-1`, saved the full transcript, and verified both live Lambdas advanced to image tag `20260311T224136Z` with `LastModified=2026-03-11T22:44:07.000+0000`.
+- Ran the scoped dry-run and live `relationship_context` backfill for tenant `9f7616d8-af04-43ca-99cd-713625357b70`, account `696505809372`, region `us-east-1`; both reported `26` scanned / `26` updated and the live run recomputed actions.
+- Reused the same-operator bearer fallback token already documented in the prior live run, confirmed it still resolves `marco.ibrahim@ocypheris.com` on `GET /api/auth/me`, and used it for read-only API validation.
+- Confirmed live findings `720d2ebe-07d3-4564-834b-b27736727a90` (`EC2.182`) and `cc4e2b7a-a2d1-443d-9bd6-5fb0ac2d7e25` (`SSM.7`) now expose `raw_json.relationship_context` with `complete=true` and `confidence=1.0`.
+- Confirmed anchor action `442e46ac-f31c-4242-82ca-9e47081a3adb` (`ebs_snapshot_block_public_access`) now shows the expected P0.3 live behavior:
+  - `context_incomplete=false`
+  - `score_components.toxic_combinations.points=15`
+  - `matched_rule_ids=["public_exposure_privilege_sensitive_data"]`
+  - `score=84`
+  - `score_before_toxic_combinations=69`
+  - positive `score_factors[].factor_name="toxic_combinations"`
+- Marked the final scoped live result `PASS`.
+
+**Validation:**
+- `aws cloudformation describe-stacks --region eu-north-1 --stack-name security-autopilot-saas-serverless-runtime --query 'Stacks[0].{LastUpdatedTime:LastUpdatedTime,ApiImage:(Parameters[?ParameterKey==\`ApiImageUri\`].ParameterValue|[0]),WorkerImage:(Parameters[?ParameterKey==\`WorkerImageUri\`].ParameterValue|[0]),EnableWorker:(Parameters[?ParameterKey==\`EnableWorker\`].ParameterValue|[0]),WorkerReservedConcurrency:(Parameters[?ParameterKey==\`WorkerReservedConcurrency\`].ParameterValue|[0])}' --output json` - pass (before `20260311T181012Z`, after `20260311T224136Z`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-api --query '{FunctionName:Configuration.FunctionName,LastModified:Configuration.LastModified,State:Configuration.State,ImageUri:Code.ImageUri,ResolvedImageUri:Code.ResolvedImageUri,CodeSha256:Configuration.CodeSha256}' --output json` - pass (before `LastModified=2026-03-11T18:12:59.000+0000`, after `2026-03-11T22:44:07.000+0000`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-worker --query '{FunctionName:Configuration.FunctionName,LastModified:Configuration.LastModified,State:Configuration.State,ImageUri:Code.ImageUri,ResolvedImageUri:Code.ResolvedImageUri,CodeSha256:Configuration.CodeSha256}' --output json` - pass (before `LastModified=2026-03-11T18:12:59.000+0000`, after `2026-03-11T22:44:07.000+0000`)
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1` - pass (runtime stack `security-autopilot-saas-serverless-runtime` updated successfully; worker mappings remained enabled)
+- `python3 scripts/backfill_finding_relationship_context.py --tenant-id 9f7616d8-af04-43ca-99cd-713625357b70 --account-id 696505809372 --region us-east-1 --dry-run` - pass (`{"complete":26,"recomputed_actions":false,"scanned":26,"updated":26}`)
+- `python3 scripts/backfill_finding_relationship_context.py --tenant-id 9f7616d8-af04-43ca-99cd-713625357b70 --account-id 696505809372 --region us-east-1 --recompute-actions` - pass (`{"complete":26,"recomputed_actions":true,"scanned":26,"updated":26}`)
+- `GET https://api.ocypheris.com/api/auth/me` via same-operator bearer fallback - `200`
+- `GET https://api.ocypheris.com/api/findings?account_id=696505809372&region=us-east-1&control_id=EC2.182` - `200` (`id=720d2ebe-07d3-4564-834b-b27736727a90`)
+- `GET https://api.ocypheris.com/api/findings?account_id=696505809372&region=us-east-1&control_id=SSM.7` - `200` (`id=cc4e2b7a-a2d1-443d-9bd6-5fb0ac2d7e25`)
+- `GET https://api.ocypheris.com/api/findings/720d2ebe-07d3-4564-834b-b27736727a90?include_raw=true` - `200` (`relationship_context.complete=true`, `confidence=1.0`)
+- `GET https://api.ocypheris.com/api/findings/cc4e2b7a-a2d1-443d-9bd6-5fb0ac2d7e25?include_raw=true` - `200` (`relationship_context.complete=true`, `confidence=1.0`)
+- `GET https://api.ocypheris.com/api/actions?account_id=696505809372&region=us-east-1&limit=100&offset=0` - `200` (anchor action `442e46ac-f31c-4242-82ca-9e47081a3adb`)
+- `GET https://api.ocypheris.com/api/actions/442e46ac-f31c-4242-82ca-9e47081a3adb` - `200` (`context_incomplete=false`, toxic-combination `+15`, score `84 > 69`)
+
+**Technical debt / gotchas:**
+- This run proved the deployed runtime changed and that live findings/actions now expose the expected post-fix fields and score behavior after the scoped backfill/recompute; it did not separately re-trigger a fresh Security Hub ingest cycle, so a worker-ingest-only proof remains optional rather than part of this PASS gate.
+- Validation still relied on the same-operator bearer fallback token because no new working browser-login credential was supplied in this run; if future runs require browser-only proof, the live password issue remains a separate operator-access item.
+- The repo worktree remained dirty during deploy. The runtime build includes the current backend tree (which contained the requested producer-path fix) but not the unrelated docs/test changes.
+
+**Open questions / TODOs:**
+- Optional: run a narrow fresh Security Hub ingest for the same account/region if you want an explicit live ingest-path-only proof in addition to this deployed-runtime + backfill PASS.
+- Separate from P0.3: restore a working normal browser-login credential for `marco.ibrahim@ocypheris.com` if future live runs must avoid bearer fallback.
+
+## P0.3 live validation blocked pending producer-path deploy (2026-03-12)
+
+**Task:** Execute a strict end-to-end live validation of the new P0.3 relationship-context producer path, but stop early if production is not actually deployed with the March 12 fix.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/00-run-metadata.md** - created the run scaffold and recorded the auth-path outcome for this blocked run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/evidence/api/backfill-dry-run.txt** - captured the scoped non-mutating backfill dry-run against the intended live tenant/account/region.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/evidence/api/deployment-check.txt** - captured AWS identity plus live Lambda runtime metadata proving the deployed image tag predates the producer-path fix.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/evidence/api/login-attempt.headers.txt** - captured the repeated live login `401` response headers for the normal operator auth path.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/evidence/api/login-attempt.body.json** - captured the repeated live login `401 {"detail":"Invalid email or password"}` response body.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/evidence/api/login-attempt.notes.txt** - recorded the login-attempt request context without persisting the password.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/notes/blocker-summary.md** - recorded the exact deploy-first blocker and next steps.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/notes/result-matrix.md** - recorded the required `BLOCKED` result matrix for producer presence, toxic-combination promotion, and explainability.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/notes/final-summary.md** - recorded the final blocked outcome, exact deploy state, and rerun instructions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new targeted blocked run from the live-testing docs index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation attempt.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Loaded the binding `.cursor/` rules, project status, relevant P0.3/P0.4/live-validation task-log entries, docs index, and toxic-combination/backend docs before touching production.
+- Created a fresh evidence package under `docs/test-results/live-runs/20260311T223155Z-p0-3-relationship-context-validation/`.
+- Ran the scoped backfill script in `--dry-run` mode against tenant `9f7616d8-af04-43ca-99cd-713625357b70`, account `696505809372`, region `us-east-1` and confirmed the target live scope is non-empty: `26` Security Hub findings scanned, `26` would be updated.
+- Queried live Lambda runtime metadata for `security-autopilot-dev-api` and `security-autopilot-dev-worker` and confirmed both still run image tag `20260311T181012Z` with `LastModified=2026-03-11T18:12:59.000+0000`.
+- Compared that live runtime evidence with the March 12 producer-path implementation entry and concluded the fix is not deployed to production yet.
+- Re-ran the normal operator login path and captured the same `401 Invalid email or password` failure for `marco.ibrahim@ocypheris.com`.
+- Stopped before any live backfill, action recompute, or finding/action-detail validation because mutating the live database before runtime deploy would not prove the new producer path works on live.
+
+**Validation:**
+- `PYTHONPATH=. python3 scripts/backfill_finding_relationship_context.py --tenant-id 9f7616d8-af04-43ca-99cd-713625357b70 --account-id 696505809372 --region us-east-1 --dry-run` - pass (`scanned=26`, `updated=26`, `complete=26`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-api --query '{FunctionName:Configuration.FunctionName,LastModified:Configuration.LastModified,State:Configuration.State,ImageUri:Code.ImageUri,CodeSha256:Configuration.CodeSha256}' --output json` - pass (`ImageUri` tag `20260311T181012Z`)
+- `aws lambda get-function --region eu-north-1 --function-name security-autopilot-dev-worker --query '{FunctionName:Configuration.FunctionName,LastModified:Configuration.LastModified,State:Configuration.State,ImageUri:Code.ImageUri,CodeSha256:Configuration.CodeSha256}' --output json` - pass (`ImageUri` tag `20260311T181012Z`)
+- `POST https://api.ocypheris.com/api/auth/login` with `marco.ibrahim@ocypheris.com` - `401 {"detail":"Invalid email or password"}`
+
+**Technical debt / gotchas:**
+- The current live runtime predates the March 12 producer-path fix, so a local backfill against prod would create ambiguous evidence: data could be mutated, but fresh live ingest would still not be writing authoritative `relationship_context`.
+- The operator password for `marco.ibrahim@ocypheris.com` still fails on live, so even after redeploy the normal auth path remains a separate access issue unless corrected.
+- This repo worktree was already dirty when the run started; this task intentionally avoided touching unrelated code or deploy state and limited production interaction to dry-run inspection plus runtime metadata reads.
+
+**Open questions / TODOs:**
+- Deploy backend and worker runtime that includes `backend/services/finding_relationship_context.py` and the ingest/backfill wiring.
+- After deploy, rerun this same live validation from Step 4 with the same tenant/account/region scope and confirm the intended `EC2.182` + `SSM.7` pair on live.
+- Reset or confirm the correct live password for `marco.ibrahim@ocypheris.com` if normal-login evidence is required for the rerun.
+
+## Phase 3 P0.3 live relationship-context producer fix for toxic-combination validation (2026-03-12)
+
+**Task:** Implement the missing production-safe producer path for `relationship_context`, preserve fail-closed toxic-combination gating, add the required P0.3 validation coverage, and provide a safe backfill path for existing findings/actions.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/finding_relationship_context.py** - added the deterministic canonical-metadata relationship-context builder used by ingest and backfill flows.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py** - enriched every Security Hub finding upsert with authoritative `raw_json.relationship_context`.
+- **/Users/marcomaher/AWS Security Autopilot/scripts/backfill_finding_relationship_context.py** - added an idempotent scoped backfill script for existing Security Hub findings with optional action recompute.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_worker_ingest.py** - added producer-path assertions for complete and fail-closed incomplete relationship-context payloads.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_3_toxic_combinations.py** - updated positive coverage to use the real producer payload and added explicit account-anchor plus same-resource/account-support regressions.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/toxic-combination-prioritization.md** - documented the authoritative producer contract and the exact backfill/re-ingest path for existing findings.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md** - documented the scoped backfill command for local/operator use.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added `backend/services/finding_relationship_context.py` so `relationship_context` is derived from canonical persisted finding metadata instead of ad-hoc hand-written payloads.
+- Wired the producer into Security Hub ingest so every fresh finding upsert now persists:
+  - `complete`
+  - `confidence`
+  - `scope`
+  - `source`
+  - `account_id`
+  - `region`
+  - `resource_id`
+  - `resource_type`
+  - `resource_key`
+  - `missing_fields`
+- Kept fail-closed behavior intact:
+  - only complete canonical scopes receive `confidence=1.0`
+  - incomplete metadata stays `complete=false`, `confidence=0.0`
+  - toxic-combination promotion still requires complete/high-confidence context on every related action in the neighborhood
+- Added `scripts/backfill_finding_relationship_context.py` so existing Security Hub rows can be enriched in place and optionally followed by a scoped action recompute without re-fetching from AWS.
+- Expanded toxic-combination regressions to cover:
+  - positive promotion with producer-generated relationship context
+  - no promotion for account-scoped anchors
+  - mixed same-resource support plus account-scoped support satisfying the rule
+
+**Validation:**
+- `pytest tests/test_worker_ingest.py tests/test_phase3_p0_3_toxic_combinations.py tests/test_phase3_p0_4_fail_closed_context.py -q` - pass (`32 passed`)
+- `python3 scripts/backfill_finding_relationship_context.py --help` - pass
+
+**Technical debt / gotchas:**
+- The authoritative producer currently enriches Security Hub findings only; that matches the current action-producing scope, but any future non-Security-Hub action sources will need to adopt the same producer contract before they can participate in toxic-combination promotion.
+- Existing live findings created before this change remain unchanged until they are re-ingested or backfilled, then actions must be recomputed for the new context to affect scores.
+- The backfill script assumes the runtime environment already points at the intended database target; it does not switch profiles or secrets on its own.
+
+**Open questions / TODOs:**
+- After deployment, run the scoped prod backfill or scoped Security Hub re-ingest for tenant `9f7616d8-af04-43ca-99cd-713625357b70`, account `696505809372`, region `us-east-1`, then recompute actions and revalidate the `EC2.182` + `SSM.7` combination on live.
+
+## Phase 3 P0 live validation run on Ocypheris prod partially validated via bearer-token fallback (2026-03-11)
+
+**Task:** Execute a strict, evidence-backed live validation run for Phase 3 P0 on the current `ocypheris.com` / `api.ocypheris.com` production environment, saving API and UI evidence throughout and identifying exact blockers when live data is insufficient.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/00-run-metadata.md** - created the run scaffold and fixed live scope metadata.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/api/** - saved authenticated discovery payloads, representative action detail payloads, queue checks, remediation-run list evidence, and explicit login-failure evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/evidence/ui/** - saved live UI screenshots for failed login, top-risks rendering, and `/actions` redirect behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/notes/selected-actions.md** - recorded the representative live action IDs used for validation.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/notes/blocker-summary.md** - summarized exact blockers with evidence links.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/notes/ui-observations.md** - recorded the deployed frontend behavior relevant to the run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/notes/p0-matrix.md** - recorded final per-item PASS / NOT TESTABLE statuses with exact evidence references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/notes/final-summary.md** - recorded the final run outcome, blockers, and required follow-up setup.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new targeted Phase 3 P0 run from the live-testing docs parent index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Loaded the binding `.cursor/` rule set, project status, task index, required Phase 3 P0 task-log entries, and docs index before touching production.
+- Created a new evidence package under `docs/test-results/live-runs/20260311T215615Z-phase3-p0-live/`.
+- Attempted the user-supplied browser/API login directly and captured the live `401 Invalid email or password` failure.
+- Confirmed from the live production database that the operator user still exists and that the target tenant currently has live data (`1` validated account, `7` findings, `6` actions, `0` remediation runs), then continued with a bearer-token fallback for the same operator identity so the run could still inspect live payloads without mutating server state.
+- Captured live `/api/auth/me`, `/api/aws/accounts`, `/api/findings`, `/api/actions`, representative `/api/actions/{id}` payloads, owner-queue responses, and `/api/remediation-runs`.
+- Validated live `PASS` evidence for `P0.1`, `P0.2`, `P0.4`, `P0.5`, `P0.6`, and `P0.7`.
+- Marked `P0.3` `NOT TESTABLE` because no live action currently shows a positive toxic-combination boost and all current actions remain `context_incomplete=true`.
+- Marked `P0.8` `NOT TESTABLE` because live remediation runs are empty and inspected actions expose empty `implementation_artifacts[]`.
+- Captured deployed frontend evidence showing `top-risks` renders live tenant data while `/actions` currently redirects to `/findings`, limiting UI validation of action-specific P0 surfaces.
+
+**Validation:**
+- `POST https://api.ocypheris.com/api/auth/login` with the provided password -> `401 {"detail":"Invalid email or password"}`
+- `GET https://api.ocypheris.com/api/auth/me` via bearer-token fallback -> `200`
+- `GET https://api.ocypheris.com/api/aws/accounts` -> `200` (`1` validated account: `696505809372`)
+- `GET https://api.ocypheris.com/api/findings?limit=100&offset=0` -> `200` (`7` findings)
+- `GET https://api.ocypheris.com/api/actions?limit=100&offset=0` -> `200` (`6` actions)
+- `GET https://api.ocypheris.com/api/remediation-runs?limit=100&offset=0` -> `200` (`0` runs)
+- Browser evidence saved for failed login, top-risks UI, and `/actions` redirect behavior.
+
+**Technical debt / gotchas:**
+- The user-facing password for `marco.ibrahim@ocypheris.com` is currently invalid on live, so the standard browser login path is blocked even though the user record still exists.
+- The deployed frontend currently does not expose an `/actions` UI surface for this tenant; `/actions` redirected to `/findings`, so P0 validation is primarily API-contract based.
+- All current live actions expose `context_incomplete=true`, which prevents positive toxic-combination promotion and means current production data is biased toward validating fail-closed behavior rather than matched attack-path-lite boosts.
+- The connected live account has `role_write_arn=null`, so any future direct-fix remediation-run validation will require WriteRole setup first.
+
+**Open questions / TODOs:**
+- Reset or confirm the correct live password for `marco.ibrahim@ocypheris.com` so future production validation can use the normal browser login path.
+- Create or surface one live toxic-combination candidate with complete relationship metadata (`complete=true`, confidence `>= 0.75`) plus `internet_exposure`, `privilege_weakness`, and `sensitive_data` signals so `P0.3` can be positively validated.
+- Create at least one live remediation run so `implementation_artifacts[]` / `artifact_metadata` can be validated for `P0.8`; add WriteRole first if direct-fix evidence is required.
+
 ## Onboarding Access Analyzer step removed from initial connection flow (2026-03-11)
 
 **Task:** Remove the Access Analyzer step from onboarding for now so users are not prompted to enable it during initial account connection.
