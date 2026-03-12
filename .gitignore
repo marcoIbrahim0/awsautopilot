@@ -23,3 +23,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Large Project Folders
+artifacts/
+temp/
+*patch
+*.pyc
+
