@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Annotated
+from typing import Any, Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -190,13 +190,24 @@ class GovernanceSettingsUpdateRequest(BaseModel):
     )
 
 
+SGAccessPathPreference = Literal[
+    "close_public",
+    "restrict_to_detected_public_ip",
+    "restrict_to_approved_admin_cidr",
+    "bastion_sg_reference",
+    "ssm_only",
+]
+ConfigDeliveryMode = Literal["account_local_delivery", "centralized_delivery"]
+S3EncryptionMode = Literal["aws_managed", "customer_managed"]
+
+
 class RemediationCloudTrailSettingsResponse(BaseModel):
     default_bucket_name: str | None = None
     default_kms_key_arn: str | None = None
 
 
 class RemediationConfigSettingsResponse(BaseModel):
-    delivery_mode: str | None = None
+    delivery_mode: ConfigDeliveryMode | None = None
     default_bucket_name: str | None = None
     default_kms_key_arn: str | None = None
 
@@ -206,12 +217,12 @@ class RemediationS3AccessLogsSettingsResponse(BaseModel):
 
 
 class RemediationS3EncryptionSettingsResponse(BaseModel):
-    mode: str | None = None
+    mode: S3EncryptionMode | None = None
     kms_key_arn: str | None = None
 
 
 class RemediationSettingsResponse(BaseModel):
-    sg_access_path_preference: str | None = None
+    sg_access_path_preference: SGAccessPathPreference | None = None
     approved_admin_cidrs: list[str] = Field(default_factory=list)
     approved_bastion_security_group_ids: list[str] = Field(default_factory=list)
     cloudtrail: RemediationCloudTrailSettingsResponse
@@ -245,7 +256,8 @@ async def _tenant_for_user_or_404(current_user: User, db: AsyncSession) -> Tenan
 
 
 def _remediation_settings_response(tenant: Tenant) -> RemediationSettingsResponse:
-    return RemediationSettingsResponse(**normalize_remediation_settings(getattr(tenant, "remediation_settings", None)))
+    settings = normalize_remediation_settings(getattr(tenant, "remediation_settings", None))
+    return RemediationSettingsResponse(**settings)
 
 
 async def _invite_info_response_for_token(

@@ -1,5 +1,54 @@
 # Task Log
 
+## Remediation profile resolution Wave 1 foundation integration (2026-03-14)
+
+**Task:** Integrate the three planned Wave 1 foundations onto the remediation-profile integration branch, add a Wave 1 summary doc, and keep the result strictly inside the Wave 1 boundary.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_resolver.py** - carried the canonical resolver decision contract onto the integration branch as the Wave 1 compatibility baseline.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_resolver.py** - kept focused coverage for resolver decision normalization, compatibility defaults, and JSON-serializable persistence shape.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - added the internal phase-1 profile catalog seed keyed by existing public `strategy_id` values.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - added focused coverage for catalog membership, single-profile compatibility defaults, and deep-copy behavior.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_settings.py** - added the tenant remediation-settings normalization and PATCH merge helpers with Wave 1 enum/value validation.
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0043_tenant_remediation_settings.py** - added the tenant JSONB persistence migration and merged the current `0042` Alembic heads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/tenant.py** - added the `Tenant.remediation_settings` JSONB model field.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** - added `GET/PATCH /api/users/me/remediation-settings` and the additive response contract.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_settings_api.py** - added API coverage for auth, admin-only writes, deep-merge semantics, null clears, validation, and secret-exposure guardrails.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - linked the new Wave 1 summary doc from the remediation-profile folder entrypoint.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-1-foundation-contracts.md** - added the Wave 1 summary doc describing the exact foundation contracts that landed.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this integration task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, docs index, remediation-profile spec, and implementation plan before editing.
+- Resolved the actual Wave 1 branch topology:
+  - `codex/rem-profile-w1-integrate` already contained the resolver contract slice.
+  - `codex/rem-profile-w1-resolver-contracts` actually contained the tenant remediation-settings slice.
+  - the profile-catalog worktree had not landed code yet, so the catalog foundation was implemented directly on the integration branch.
+- Cherry-picked the tenant remediation-settings commit onto `codex/rem-profile-w1-integrate`, then tightened the settings contract so the persisted enum values match the documented Wave 1 plan:
+  - `config.delivery_mode` now uses `account_local_delivery` / `centralized_delivery`
+  - `s3_encryption.mode` now uses `aws_managed` / `customer_managed`
+- Added the internal profile catalog seed for the first Wave 1 strategy families without wiring it into remediation options, remediation preview, remediation run creation, grouped routes, or queue payloads.
+- Added the Wave 1 summary doc and linked it from the remediation-profile README while leaving the top-level docs index unchanged.
+
+**Validation:**
+- `pytest tests/test_remediation_profile_resolver.py tests/test_remediation_profile_catalog.py tests/test_remediation_settings_api.py -q` - pass (`20 passed`, `2 warnings`)
+- `pytest tests/test_digest_settings_api.py tests/test_slack_settings_api.py tests/test_governance_settings_api.py -q` - pass (`19 passed`, `2 warnings`)
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** links **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-1-foundation-contracts.md**.
+- Confirmed the integration diff from the Wave 0 baseline touches only:
+  - resolver contract files
+  - profile catalog files
+  - remediation-settings persistence/API files
+  - remediation-profile Wave 1 docs
+- Confirmed no grouped route, remediation-run route, or queue payload files changed in this wave.
+
+**Technical debt / gotchas:**
+- Wave 1 intentionally stops short of any runtime resolver wiring. The new resolver contract, profile catalog, and tenant defaults are foundations only until later waves connect them to options, preview, run creation, grouped flows, and queue payloads.
+- The Alembic revision `0043_tenant_remediation_settings` now merges the two current `0042` heads while adding the tenant JSONB column, so later migrations should use `0043_tenant_remediation_settings` as the single down-revision target.
+
+**Open questions / TODOs:**
+- Wave 2 still needs to wire these foundations into remediation options, preview, create-run flows, grouped route parity, and queue payload versioning; none of that work started in this integration task.
+
 ## Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)
 
 **Task:** Consolidate the Wave 0 remediation-profile baselines from the three source branches into one mergeable contract-lock doc, wire the doc set into the integration branch, and update project discoverability.

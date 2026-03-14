@@ -45,7 +45,7 @@ class Tenant(Base):
         default=False,
         server_default="false",
     )
-    remediation_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    remediation_settings: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")

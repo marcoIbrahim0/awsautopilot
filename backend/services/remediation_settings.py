@@ -2,23 +2,25 @@ from __future__ import annotations
 
 from copy import deepcopy
 from ipaddress import ip_network
-from typing import Any, TypeVar
-
+from typing import Any, Mapping, TypeVar
 
 T = TypeVar("T")
 
-ALLOWED_SG_ACCESS_PATH_PREFERENCES = {
+
+SG_ACCESS_PATH_PREFERENCES = (
     "close_public",
     "restrict_to_detected_public_ip",
     "restrict_to_approved_admin_cidr",
     "bastion_sg_reference",
     "ssm_only",
-}
+)
+CONFIG_DELIVERY_MODES = ("account_local_delivery", "centralized_delivery")
+S3_ENCRYPTION_MODES = ("aws_managed", "customer_managed")
 
 _DEFAULT_REMEDIATION_SETTINGS = {
     "sg_access_path_preference": None,
-    "approved_admin_cidrs": [],
     "approved_bastion_security_group_ids": [],
+    "approved_admin_cidrs": [],
     "cloudtrail": {
         "default_bucket_name": None,
         "default_kms_key_arn": None,
@@ -47,151 +49,247 @@ def default_remediation_settings() -> dict[str, Any]:
 
 
 def normalize_remediation_settings(raw: Any) -> dict[str, Any]:
-    return _coerce_settings(raw, strict=False)
-
-
-def validate_remediation_settings(raw: Any) -> dict[str, Any]:
-    return _coerce_settings(raw, strict=True)
+    return _normalize_settings(raw, strict=False)
 
 
 def merge_remediation_settings(current: Any, patch: Any) -> dict[str, Any]:
-    if not isinstance(patch, dict):
+    if not isinstance(patch, Mapping):
         raise RemediationSettingsValidationError("Request body must be a JSON object.")
-    merged = normalize_remediation_settings(current)
-    _merge_branch(merged, patch, _DEFAULT_REMEDIATION_SETTINGS)
-    return validate_remediation_settings(merged)
+    merged = _deep_merge(normalize_remediation_settings(current), patch)
+    return _normalize_settings(merged, strict=True)
 
 
-def _coerce_settings(raw: Any, *, strict: bool) -> dict[str, Any]:
+def _normalize_settings(raw: Any, *, strict: bool) -> dict[str, Any]:
     if raw is None:
         raw = {}
-    if not isinstance(raw, dict):
-        return _error_or_default(strict, "Remediation settings must be a JSON object.", default_remediation_settings())
-    if strict:
-        _reject_unknown_keys(raw, _DEFAULT_REMEDIATION_SETTINGS)
-    settings = default_remediation_settings()
-    settings["sg_access_path_preference"] = _normalize_access_preference(raw.get("sg_access_path_preference"), strict)
-    settings["approved_admin_cidrs"] = _normalize_cidrs(raw.get("approved_admin_cidrs"), strict)
-    settings["approved_bastion_security_group_ids"] = _normalize_string_list(
-        raw.get("approved_bastion_security_group_ids"),
-        "approved_bastion_security_group_ids",
-        strict,
+    if not isinstance(raw, Mapping):
+        return _error_or_default(
+            strict,
+            "Remediation settings must be a JSON object.",
+            default_remediation_settings(),
+        )
+    _reject_unknown_keys(raw, _DEFAULT_REMEDIATION_SETTINGS, field_name="remediation_settings", strict=strict)
+    return {
+        "sg_access_path_preference": _normalize_optional_enum(
+            raw.get("sg_access_path_preference"),
+            field_name="sg_access_path_preference",
+            allowed_values=SG_ACCESS_PATH_PREFERENCES,
+            strict=strict,
+        ),
+        "approved_bastion_security_group_ids": _normalize_string_list(
+            raw.get("approved_bastion_security_group_ids"),
+            field_name="approved_bastion_security_group_ids",
+            strict=strict,
+        ),
+        "approved_admin_cidrs": _normalize_cidrs(
+            raw.get("approved_admin_cidrs"),
+            field_name="approved_admin_cidrs",
+            strict=strict,
+        ),
+        "cloudtrail": _normalize_cloudtrail(raw.get("cloudtrail"), strict=strict),
+        "config": _normalize_config(raw.get("config"), strict=strict),
+        "s3_access_logs": _normalize_s3_access_logs(raw.get("s3_access_logs"), strict=strict),
+        "s3_encryption": _normalize_s3_encryption(raw.get("s3_encryption"), strict=strict),
+    }
+
+
+def _normalize_cloudtrail(value: Any, *, strict: bool) -> dict[str, str | None]:
+    branch = _normalize_branch(
+        value,
+        branch_name="cloudtrail",
+        strict=strict,
     )
-    settings["cloudtrail"] = _normalize_string_branch(raw.get("cloudtrail"), "cloudtrail", strict)
-    settings["config"] = _normalize_string_branch(raw.get("config"), "config", strict)
-    settings["s3_access_logs"] = _normalize_string_branch(raw.get("s3_access_logs"), "s3_access_logs", strict)
-    settings["s3_encryption"] = _normalize_string_branch(raw.get("s3_encryption"), "s3_encryption", strict)
-    return settings
+    return {
+        "default_bucket_name": _normalize_optional_text(
+            branch.get("default_bucket_name"),
+            field_name="cloudtrail.default_bucket_name",
+            strict=strict,
+        ),
+        "default_kms_key_arn": _normalize_optional_text(
+            branch.get("default_kms_key_arn"),
+            field_name="cloudtrail.default_kms_key_arn",
+            strict=strict,
+        ),
+    }
 
 
-def _merge_branch(current: dict[str, Any], patch: dict[str, Any], schema: dict[str, Any], path: str = "") -> None:
-    for key, value in patch.items():
-        if key not in schema:
-            raise RemediationSettingsValidationError(f"Unknown remediation settings key: {_path(path, key)}")
-        schema_value = schema[key]
-        if isinstance(schema_value, dict):
-            if value is None:
-                current[key] = deepcopy(schema_value)
-            elif isinstance(value, dict):
-                _merge_branch(current[key], value, schema_value, _path(path, key))
-            else:
-                raise RemediationSettingsValidationError(f"{_path(path, key)} must be an object or null.")
-            continue
-        if isinstance(schema_value, list) and not isinstance(value, list):
-            raise RemediationSettingsValidationError(f"{_path(path, key)} must be an array.")
-        current[key] = value
+def _normalize_config(value: Any, *, strict: bool) -> dict[str, str | None]:
+    branch = _normalize_branch(
+        value,
+        branch_name="config",
+        strict=strict,
+    )
+    return {
+        "delivery_mode": _normalize_optional_enum(
+            branch.get("delivery_mode"),
+            field_name="config.delivery_mode",
+            allowed_values=CONFIG_DELIVERY_MODES,
+            strict=strict,
+        ),
+        "default_bucket_name": _normalize_optional_text(
+            branch.get("default_bucket_name"),
+            field_name="config.default_bucket_name",
+            strict=strict,
+        ),
+        "default_kms_key_arn": _normalize_optional_text(
+            branch.get("default_kms_key_arn"),
+            field_name="config.default_kms_key_arn",
+            strict=strict,
+        ),
+    }
 
 
-def _reject_unknown_keys(raw: dict[str, Any], schema: dict[str, Any], path: str = "") -> None:
-    for key in raw:
-        if key in schema:
-            continue
-        raise RemediationSettingsValidationError(f"Unknown remediation settings key: {_path(path, key)}")
+def _normalize_s3_access_logs(value: Any, *, strict: bool) -> dict[str, str | None]:
+    branch = _normalize_branch(
+        value,
+        branch_name="s3_access_logs",
+        strict=strict,
+    )
+    return {
+        "default_target_bucket_name": _normalize_optional_text(
+            branch.get("default_target_bucket_name"),
+            field_name="s3_access_logs.default_target_bucket_name",
+            strict=strict,
+        )
+    }
 
 
-def _normalize_access_preference(value: Any, strict: bool) -> str | None:
-    normalized = _normalize_optional_string(value, "sg_access_path_preference", strict)
-    if normalized is None or normalized in ALLOWED_SG_ACCESS_PATH_PREFERENCES:
+def _normalize_s3_encryption(value: Any, *, strict: bool) -> dict[str, str | None]:
+    branch = _normalize_branch(
+        value,
+        branch_name="s3_encryption",
+        strict=strict,
+    )
+    return {
+        "mode": _normalize_optional_enum(
+            branch.get("mode"),
+            field_name="s3_encryption.mode",
+            allowed_values=S3_ENCRYPTION_MODES,
+            strict=strict,
+        ),
+        "kms_key_arn": _normalize_optional_text(
+            branch.get("kms_key_arn"),
+            field_name="s3_encryption.kms_key_arn",
+            strict=strict,
+        ),
+    }
+
+
+def _normalize_branch(
+    value: Any,
+    *,
+    branch_name: str,
+    strict: bool,
+) -> dict[str, Any]:
+    defaults = deepcopy(_DEFAULT_REMEDIATION_SETTINGS[branch_name])
+    if value is None:
+        return defaults
+    if not isinstance(value, Mapping):
+        return _error_or_default(
+            strict,
+            f"{branch_name} must be an object or null.",
+            defaults,
+        )
+    _reject_unknown_keys(value, defaults, field_name=branch_name, strict=strict)
+    return dict(value)
+
+
+def _reject_unknown_keys(
+    value: Mapping[str, Any],
+    allowed_shape: Mapping[str, Any],
+    *,
+    field_name: str,
+    strict: bool,
+) -> None:
+    unknown_keys = [key for key in value if key not in allowed_shape]
+    if not unknown_keys and strict:
+        return
+    if not unknown_keys:
+        return
+    message = f"Unknown remediation settings key: {field_name}.{unknown_keys[0]}"
+    _error_or_default(strict, message, None)
+
+
+def _normalize_optional_enum(
+    value: Any,
+    *,
+    field_name: str,
+    allowed_values: tuple[str, ...],
+    strict: bool,
+) -> str | None:
+    normalized = _normalize_optional_text(value, field_name=field_name, strict=strict)
+    if normalized is None or normalized in allowed_values:
         return normalized
+    joined_values = ", ".join(allowed_values)
     return _error_or_default(
         strict,
-        "sg_access_path_preference must be one of: "
-        "close_public, restrict_to_detected_public_ip, restrict_to_approved_admin_cidr, "
-        "bastion_sg_reference, ssm_only.",
+        f"{field_name} must be one of: {joined_values}.",
         None,
     )
 
 
-def _normalize_cidrs(value: Any, strict: bool) -> list[str]:
-    if value is None:
-        return []
-    if not isinstance(value, list):
-        return _error_or_default(strict, "approved_admin_cidrs must be an array.", [])
-    normalized: list[str] = []
-    for item in value:
-        cidr = _normalize_required_string(item, "approved_admin_cidrs", strict)
-        if cidr is None or "/" not in cidr:
-            return _error_or_default(strict, "approved_admin_cidrs entries must be valid CIDR strings.", [])
-        try:
-            normalized.append(str(ip_network(cidr, strict=False)))
-        except ValueError:
-            return _error_or_default(strict, "approved_admin_cidrs entries must be valid CIDR strings.", [])
-    return normalized
-
-
-def _normalize_string_list(value: Any, path: str, strict: bool) -> list[str]:
-    if value is None:
-        return []
-    if not isinstance(value, list):
-        return _error_or_default(strict, f"{path} must be an array.", [])
-    normalized: list[str] = []
-    for item in value:
-        text = _normalize_required_string(item, path, strict)
-        if text is None:
-            return []
-        normalized.append(text)
-    return normalized
-
-
-def _normalize_string_branch(value: Any, branch: str, strict: bool) -> dict[str, str | None]:
-    defaults = _DEFAULT_REMEDIATION_SETTINGS[branch]
-    if value is None:
-        return deepcopy(defaults)
-    if not isinstance(value, dict):
-        return _error_or_default(strict, f"{branch} must be an object or null.", deepcopy(defaults))
-    if strict:
-        _reject_unknown_keys(value, defaults, branch)
-    normalized = deepcopy(defaults)
-    for key in defaults:
-        normalized[key] = _normalize_optional_string(value.get(key), _path(branch, key), strict)
-    return normalized
-
-
-def _normalize_optional_string(value: Any, path: str, strict: bool) -> str | None:
+def _normalize_optional_text(value: Any, *, field_name: str, strict: bool) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        return _error_or_default(strict, f"{path} must be a string or null.", None)
-    trimmed = value.strip()
-    if trimmed:
-        return trimmed
-    return _error_or_default(strict, f"{path} must be a non-empty string or null.", None)
+        return _error_or_default(strict, f"{field_name} must be a string or null.", None)
+    normalized = value.strip()
+    if normalized:
+        return normalized
+    return _error_or_default(
+        strict,
+        f"{field_name} must be a non-empty string or null.",
+        None,
+    )
 
 
-def _normalize_required_string(value: Any, path: str, strict: bool) -> str | None:
-    if not isinstance(value, str):
-        return _error_or_default(strict, f"{path} entries must be non-empty strings.", None)
-    trimmed = value.strip()
-    if trimmed:
-        return trimmed
-    return _error_or_default(strict, f"{path} entries must be non-empty strings.", None)
+def _normalize_string_list(value: Any, *, field_name: str, strict: bool) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return _error_or_default(strict, f"{field_name} must be an array.", [])
+    normalized_items: list[str] = []
+    for item in value:
+        normalized = _normalize_optional_text(item, field_name=field_name, strict=strict)
+        if normalized is None:
+            return _error_or_default(
+                strict,
+                f"{field_name} entries must be non-empty strings.",
+                [],
+            )
+        normalized_items.append(normalized)
+    return normalized_items
+
+
+def _normalize_cidrs(value: Any, *, field_name: str, strict: bool) -> list[str]:
+    normalized_items = _normalize_string_list(value, field_name=field_name, strict=strict)
+    cidrs: list[str] = []
+    for cidr in normalized_items:
+        try:
+            cidrs.append(str(ip_network(cidr, strict=False)))
+        except ValueError:
+            return _error_or_default(
+                strict,
+                f"{field_name} entries must be valid CIDR strings.",
+                [],
+            )
+    return cidrs
+
+
+def _deep_merge(current: dict[str, Any], patch: Mapping[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(current)
+    for key, value in patch.items():
+        merged[key] = _merged_value(merged.get(key), value)
+    return merged
+
+
+def _merged_value(current: Any, patch_value: Any) -> Any:
+    if isinstance(current, Mapping) and isinstance(patch_value, Mapping):
+        return _deep_merge(dict(current), patch_value)
+    return deepcopy(patch_value)
 
 
 def _error_or_default(strict: bool, message: str, default: T) -> T:
     if strict:
         raise RemediationSettingsValidationError(message)
     return default
-
-
-def _path(prefix: str, key: str) -> str:
-    return f"{prefix}.{key}" if prefix else key

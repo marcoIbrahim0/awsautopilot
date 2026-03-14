@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 1 foundation integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-1-foundation-integration-2026-03-14)
+  - Integrated the Wave 1 resolver contract and tenant remediation-settings branches onto the Wave 0 remediation-profile baseline, then added the missing internal profile catalog seed on the integration branch.
+  - Added `docs/remediation-profile-resolution/wave-1-foundation-contracts.md` and linked it from the remediation-profile README without widening the docs index or starting Wave 2 wiring.
+  - Validated the new Wave 1 suites plus digest/slack/governance settings regressions, and confirmed no grouped route, remediation-run route, or queue payload files changed in this wave.
 - [Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-contract-lock-integration-2026-03-14)
   - Added the remediation-profile-resolution doc set to the integration branch, including the Wave 0 contract lock and the three source baseline docs collected from the Wave 0 source branches.
   - Updated the remediation-profile README, implementation plan navigation, top-level docs index, and task history so the merged Wave 0 baseline is discoverable.

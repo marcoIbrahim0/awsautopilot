@@ -130,12 +130,15 @@ def test_patch_remediation_settings_writes_and_get_returns_values() -> None:
                 "default_kms_key_arn": " arn:aws:kms:us-east-1:123:key/abc ",
             },
             "config": {
-                "delivery_mode": " account_local ",
+                "delivery_mode": " account_local_delivery ",
                 "default_bucket_name": " config-bucket ",
                 "default_kms_key_arn": " arn:aws:kms:us-east-1:123:key/config ",
             },
             "s3_access_logs": {"default_target_bucket_name": " access-logs "},
-            "s3_encryption": {"mode": " kms ", "kms_key_arn": " arn:aws:kms:us-east-1:123:key/s3 "},
+            "s3_encryption": {
+                "mode": " customer_managed ",
+                "kms_key_arn": " arn:aws:kms:us-east-1:123:key/s3 ",
+            },
         }
         patch_response = client.patch("/api/users/me/remediation-settings", json=payload)
         get_response = client.get("/api/users/me/remediation-settings")
@@ -151,13 +154,13 @@ def test_patch_remediation_settings_writes_and_get_returns_values() -> None:
             "default_kms_key_arn": "arn:aws:kms:us-east-1:123:key/abc",
         },
         "config": {
-            "delivery_mode": "account_local",
+            "delivery_mode": "account_local_delivery",
             "default_bucket_name": "config-bucket",
             "default_kms_key_arn": "arn:aws:kms:us-east-1:123:key/config",
         },
         "s3_access_logs": {"default_target_bucket_name": "access-logs"},
         "s3_encryption": {
-            "mode": "kms",
+            "mode": "customer_managed",
             "kms_key_arn": "arn:aws:kms:us-east-1:123:key/s3",
         },
     }
@@ -183,12 +186,15 @@ def test_patch_remediation_settings_omitted_fields_remain_unchanged() -> None:
                 "default_kms_key_arn": "arn:aws:kms:trail",
             },
             "config": {
-                "delivery_mode": "account_local",
+                "delivery_mode": "account_local_delivery",
                 "default_bucket_name": "config-bucket",
                 "default_kms_key_arn": "arn:aws:kms:config",
             },
             "s3_access_logs": {"default_target_bucket_name": "logs-bucket"},
-            "s3_encryption": {"mode": "kms", "kms_key_arn": "arn:aws:kms:s3"},
+            "s3_encryption": {
+                "mode": "customer_managed",
+                "kms_key_arn": "arn:aws:kms:s3",
+            },
         },
     )
 
@@ -204,14 +210,14 @@ def test_patch_remediation_settings_omitted_fields_remain_unchanged() -> None:
         client = TestClient(app)
         response = client.patch(
             "/api/users/me/remediation-settings",
-            json={"config": {"delivery_mode": "organization_aggregator"}},
+            json={"config": {"delivery_mode": "centralized_delivery"}},
         )
     finally:
         _clear_overrides()
 
     assert response.status_code == 200
     data = response.json()
-    assert data["config"]["delivery_mode"] == "organization_aggregator"
+    assert data["config"]["delivery_mode"] == "centralized_delivery"
     assert data["config"]["default_bucket_name"] == "config-bucket"
     assert data["sg_access_path_preference"] == "close_public"
     assert data["approved_admin_cidrs"] == ["10.0.0.0/24"]

@@ -26,8 +26,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column(
         "tenants",
-        sa.Column("remediation_settings", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "remediation_settings",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
     )
+    op.alter_column("tenants", "remediation_settings", server_default=None)
 
 
 def downgrade() -> None:
