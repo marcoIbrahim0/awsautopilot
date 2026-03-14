@@ -515,6 +515,70 @@ def test_create_run_identical_pr_bundle_rate_limit_returns_429(client: TestClien
     assert session.commit.await_count == 0
 
 
+def test_create_run_different_profile_id_not_treated_as_identical_duplicate(client: TestClient) -> None:
+    """Profile-aware duplicate signatures should not collapse different canonical profiles."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="cloudtrail_enabled")
+    action.tenant_id = tenant.id
+    existing_runs = [
+        _mock_existing_run(
+            action,
+            status=RemediationRunStatus.success,
+            artifacts={
+                "selected_strategy": "cloudtrail_enable_guided",
+                "resolution": {
+                    "strategy_id": "cloudtrail_enable_guided",
+                    "profile_id": f"legacy-profile-{idx}",
+                },
+            },
+        )
+        for idx in range(3)
+    ]
+    session = _mock_async_session(action, None, existing_runs)
+
+    async def _refresh(run_obj: MagicMock) -> None:
+        run_obj.created_at = datetime.now(timezone.utc)
+        run_obj.updated_at = datetime.now(timezone.utc)
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-profile-aware"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch("backend.routers.remediation_runs.collect_runtime_risk_signals", return_value={}):
+                try:
+                    r = client.post(
+                        "/api/remediation-runs",
+                        json={
+                            "action_id": str(action.id),
+                            "mode": "pr_only",
+                            "strategy_id": "cloudtrail_enable_guided",
+                            "profile_id": "cloudtrail_enable_guided",
+                            "risk_acknowledged": True,
+                        },
+                    )
+                finally:
+                    app.dependency_overrides.pop(get_db, None)
+                    app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert session.commit.await_count == 1
+    assert mock_sqs.send_message.call_count == 1
+
+
 def test_create_run_total_pr_bundle_rate_limit_returns_429(client: TestClient) -> None:
     """Total PR bundle submissions for an action are capped at 6 per 20-minute window."""
     tenant = _mock_tenant()
@@ -1030,6 +1094,227 @@ def test_create_group_pr_bundle_duplicate_pending_guard_still_works(client: Test
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0
+
+
+def test_create_group_pr_bundle_different_override_map_not_duplicate(client: TestClient) -> None:
+    """Grouped duplicate checks should use effective per-action decisions, not only group_key."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    pending_run = MagicMock()
+    pending_run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(action1.id), str(action2.id)],
+            "action_resolutions": [
+                {
+                    "action_id": str(action1.id),
+                    "strategy_id": "config_enable_account_local_delivery",
+                    "profile_id": "config_enable_account_local_delivery",
+                    "strategy_inputs": {},
+                },
+                {
+                    "action_id": str(action2.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                },
+            ],
+        },
+    }
+    session = _mock_group_session([action1, action2], pending_runs=[pending_run])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-group-different-overrides"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                                "action_overrides": [
+                                    {
+                                        "action_id": str(action2.id),
+                                        "strategy_id": "config_enable_account_local_delivery",
+                                    }
+                                ],
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert session.commit.await_count == 1
+    assert mock_sqs.send_message.call_count == 1
+
+
+def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: TestClient) -> None:
+    """Identical grouped effective decisions should still hit the pending duplicate guard."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    canonical_resolutions = [
+        {
+            "action_id": str(action1.id),
+            "strategy_id": "config_enable_account_local_delivery",
+            "profile_id": "config_enable_account_local_delivery",
+            "strategy_inputs": {},
+        },
+        {
+            "action_id": str(action2.id),
+            "strategy_id": "config_enable_centralized_delivery",
+            "profile_id": "config_enable_centralized_delivery",
+            "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        },
+    ]
+    pending_run = MagicMock()
+    pending_run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(action1.id), str(action2.id)],
+            "action_resolutions": canonical_resolutions,
+        },
+    }
+    session = _mock_group_session([action1, action2], pending_runs=[pending_run])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                                "action_overrides": [
+                                    {
+                                        "action_id": str(action1.id),
+                                        "strategy_id": "config_enable_account_local_delivery",
+                                    }
+                                ],
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Duplicate pending run"
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_resend_run_legacy_grouped_artifacts_requeue_schema_v1(client: TestClient) -> None:
+    """Legacy grouped runs should still reconstruct resend payloads without schema-v2 emission."""
+    from backend.auth import get_optional_user
+
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.action_id = uuid.uuid4()
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.pending
+    run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "pr_bundle_variant": "terraform",
+        "risk_acknowledged": True,
+        "repo_target": {"repository": "acme/live", "base_branch": "main"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(uuid.uuid4()), str(uuid.uuid4())],
+        },
+    }
+
+    session = _mock_async_session(tenant, run)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-resend-legacy-group"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.is_local = True
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(f"/api/remediation-runs/{run.id}/resend")
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["schema_version"] == 1
+    assert payload["strategy_id"] == "config_enable_centralized_delivery"
+    assert payload["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
+    assert payload["group_action_ids"] == run.artifacts["group_bundle"]["action_ids"]
+    assert payload["repo_target"] == {"repository": "acme/live", "base_branch": "main"}
+    assert "resolution" not in payload
+    assert "action_resolutions" not in payload
 
 
 def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: TestClient) -> None:

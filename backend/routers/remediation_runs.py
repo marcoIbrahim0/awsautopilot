@@ -57,6 +57,14 @@ from backend.services.remediation_run_resolution import (
     build_single_run_resolution,
     resolve_create_profile_id,
 )
+from backend.services.remediation_run_queue_contract import (
+    grouped_run_signatures_match,
+    normalize_grouped_run_artifact_signature,
+    normalize_grouped_run_request_signature,
+    normalize_single_run_artifact_signature,
+    normalize_single_run_request_signature,
+    reconstruct_resend_queue_inputs,
+)
 from backend.services.remediation_run_resolution_view import build_run_detail_resolution
 from backend.services.remediation_strategy import (
     map_exception_strategy_inputs,
@@ -155,33 +163,27 @@ def _run_matches_request_signature(
     *,
     mode: str,
     strategy_id: str | None,
+    profile_id: str | None,
     strategy_inputs: dict[str, Any] | None,
     pr_bundle_variant: str | None,
     repo_target: dict[str, Any] | None,
 ) -> bool:
-    if _as_mode_value(run.mode) != mode:
+    run_mode = _as_mode_value(run.mode)
+    if run_mode != mode:
         return False
-
-    artifacts = _extract_artifacts(run)
-    run_strategy_id = artifacts.get("selected_strategy")
-    if run_strategy_id != strategy_id:
-        return False
-
-    run_strategy_inputs = _normalize_strategy_inputs(artifacts.get("strategy_inputs"))
-    request_strategy_inputs = _normalize_strategy_inputs(strategy_inputs)
-    if run_strategy_inputs != request_strategy_inputs:
-        return False
-
-    run_variant = artifacts.get("pr_bundle_variant")
-    if run_variant != pr_bundle_variant:
-        return False
-
-    run_repo_target = _normalize_strategy_inputs(artifacts.get("repo_target"))
-    request_repo_target = _normalize_strategy_inputs(repo_target)
-    if run_repo_target != request_repo_target:
-        return False
-
-    return True
+    run_signature = normalize_single_run_artifact_signature(
+        mode=run_mode or mode,
+        artifacts=_extract_artifacts(run),
+    )
+    request_signature = normalize_single_run_request_signature(
+        mode=mode,
+        strategy_id=strategy_id,
+        profile_id=profile_id,
+        strategy_inputs=strategy_inputs,
+        pr_bundle_variant=pr_bundle_variant,
+        repo_target=repo_target,
+    )
+    return run_signature == request_signature
 
 
 def _raise_duplicate_run_conflict(existing_run: RemediationRun, *, reason: str, detail: str) -> NoReturn:
@@ -1433,6 +1435,7 @@ async def create_remediation_run(
                 candidate,
                 mode=body.mode,
                 strategy_id=selected_strategy_id,
+                profile_id=selected_profile_id,
                 strategy_inputs=selected_strategy_inputs,
                 pr_bundle_variant=normalized_variant,
                 repo_target=repo_target_payload,
@@ -1467,6 +1470,7 @@ async def create_remediation_run(
                     candidate,
                     mode=body.mode,
                     strategy_id=selected_strategy_id,
+                    profile_id=selected_profile_id,
                     strategy_inputs=selected_strategy_inputs,
                     pr_bundle_variant=normalized_variant,
                     repo_target=repo_target_payload,
@@ -1817,16 +1821,16 @@ async def create_group_pr_bundle_run(
     for pending in pending_runs:
         if not isinstance(pending.artifacts, dict):
             continue
-        group_bundle = pending.artifacts.get("group_bundle")
-        if not isinstance(group_bundle, dict):
-            continue
-        existing_group_key = group_bundle.get("group_key")
-        existing_repo_target = _normalize_strategy_inputs(pending.artifacts.get("repo_target"))
-        if (
-            isinstance(existing_group_key, str)
-            and existing_group_key == group_key
-            and existing_repo_target == plan.request.repo_target
-        ):
+        existing_signature = normalize_grouped_run_artifact_signature(pending.artifacts)
+        request_signature = normalize_grouped_run_request_signature(
+            group_key=group_key,
+            strategy_id=plan.request.strategy_id,
+            strategy_inputs=plan.request.strategy_inputs,
+            pr_bundle_variant=plan.request.pr_bundle_variant,
+            repo_target=plan.request.repo_target,
+            action_resolutions=plan.action_resolutions,
+        )
+        if grouped_run_signatures_match(existing_signature, request_signature):
             emit_validation_failure(
                 logger,
                 reason="duplicate_pending_group_run",
@@ -3037,37 +3041,22 @@ async def resend_remediation_run(
         )
 
     now = now_dt.isoformat()
-    variant: str | None = None
-    strategy_id: str | None = None
-    strategy_inputs: dict[str, Any] | None = None
-    risk_acknowledged = False
-    group_action_ids: list[str] | None = None
-    if isinstance(run.artifacts, dict):
-        raw_variant = run.artifacts.get("pr_bundle_variant")
-        if isinstance(raw_variant, str) and raw_variant.strip():
-            variant = raw_variant.strip()
-        raw_strategy = run.artifacts.get("selected_strategy")
-        if isinstance(raw_strategy, str) and raw_strategy.strip():
-            strategy_id = raw_strategy.strip()
-        raw_inputs = run.artifacts.get("strategy_inputs")
-        if isinstance(raw_inputs, dict):
-            strategy_inputs = raw_inputs
-        risk_acknowledged = bool(run.artifacts.get("risk_acknowledged"))
-        parsed_group_ids = _parse_group_action_ids_from_artifacts(run.artifacts)
-        if parsed_group_ids:
-            group_action_ids = parsed_group_ids
-
+    queue_inputs = reconstruct_resend_queue_inputs(
+        artifacts=run.artifacts if isinstance(run.artifacts, dict) else None,
+        mode=run.mode.value,
+    )
     payload = build_remediation_run_job_payload(
         run.id,
         run.tenant_id,
         run.action_id,
         run.mode.value,
         now,
-        pr_bundle_variant=variant,
-        strategy_id=strategy_id,
-        strategy_inputs=strategy_inputs,
-        risk_acknowledged=risk_acknowledged,
-        group_action_ids=group_action_ids,
+        pr_bundle_variant=queue_inputs.get("pr_bundle_variant"),
+        strategy_id=queue_inputs.get("strategy_id"),
+        strategy_inputs=queue_inputs.get("strategy_inputs"),
+        risk_acknowledged=bool(queue_inputs.get("risk_acknowledged")),
+        group_action_ids=queue_inputs.get("group_action_ids"),
+        repo_target=queue_inputs.get("repo_target"),
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
