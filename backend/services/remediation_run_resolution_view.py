@@ -37,6 +37,8 @@ def _canonical_resolution(artifacts: Mapping[str, Any]) -> ResolverDecision | No
 def _compat_resolution(*, mode: str | None, artifacts: Mapping[str, Any]) -> ResolverDecision | None:
     if mode != "pr_only":
         return None
+    if _has_group_bundle(artifacts):
+        return None
     strategy_id = _clean_text(artifacts.get("selected_strategy"))
     if strategy_id is None:
         return None
@@ -60,6 +62,10 @@ def _resolved_inputs(value: Any) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         return {}
     return dict(value)
+
+
+def _has_group_bundle(artifacts: Mapping[str, Any]) -> bool:
+    return isinstance(artifacts.get("group_bundle"), Mapping)
 
 
 def _clean_text(value: Any) -> str | None:

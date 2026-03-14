@@ -220,3 +220,32 @@ def test_run_detail_leaves_resolution_null_without_strategy_backed_legacy_data(c
     payload = response.json()
     assert payload["resolution"] is None
     assert payload["artifacts"] == artifacts
+
+
+def test_run_detail_does_not_synthesize_single_resolution_for_group_legacy_runs(client) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action()
+    artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "group_bundle": {
+            "group_key": "config|123456789012|us-east-1|open",
+            "action_ids": [str(action.id)],
+            "action_count": 1,
+        },
+    }
+    run = _mock_run(
+        tenant.id,
+        action,
+        mode=RemediationRunMode.pr_only,
+        status=RemediationRunStatus.success,
+        artifacts=artifacts,
+    )
+
+    response = _get_run_detail(client, tenant, user, run)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["resolution"] is None
+    assert payload["artifacts"] == artifacts
