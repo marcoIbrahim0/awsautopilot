@@ -1,2 +1,0 @@
-front_http_status=200
-front_http_effective=http://dev.valensjewelry.com/

@@ -1,2 +1,0 @@
-
-An error occurred (InvalidParameterValue) when calling the DescribeSecurityGroupRules operation: The filter 'referenced-group-id' is invalid

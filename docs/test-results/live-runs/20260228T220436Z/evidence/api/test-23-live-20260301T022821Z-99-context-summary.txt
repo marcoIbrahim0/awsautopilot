@@ -1,9 +1,0 @@
-prefix=test-23-live-20260301T022821Z
-email=wave7.test23.20260301T022829Z-27232@example.com
-tenant_id=2e65b796-c5f5-4ad6-b680-129222b9d897
-account_id=029037611564
-region=eu-north-1
-a1_bucket=arch1-bucket-website-a1-029037611564-eu-north-1
-b1_bucket=arch1-bucket-evidence-b1-029037611564-eu-north-1
-a1_action_id=
-b1_action_id=

@@ -1,7 +1,0 @@
-{
-  "pre_statement_count": 3,
-  "current_statement_count": 3,
-  "statement_sets_equal": true,
-  "policy_json_equal": true,
-  "note": "Comparison is pre-remediation-attempt vs current state; remediation run remained pending and no Terraform apply occurred."
-}

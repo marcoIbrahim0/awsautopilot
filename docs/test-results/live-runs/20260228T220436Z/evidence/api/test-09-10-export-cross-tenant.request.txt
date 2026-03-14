@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/exports/18785d45-2afb-4c73-bff2-d8d5736a042f
-Authorization: Bearer <tenant_b_token>

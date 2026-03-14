@@ -1,2 +1,0 @@
-POST https://api.valensjewelry.com/api/auth/signup
-{"company_name":"Wave8 Test30 20260302T191037Z","email":"wave8.test30.20260302T191037Z@example.com","name":"Wave8 Test30","password":"Wave8Test30!202603"}

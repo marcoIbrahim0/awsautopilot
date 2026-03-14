@@ -1,2 +1,0 @@
-PATCH https://api.valensjewelry.com/api/users/me/slack-settings
-{"slack_digest_enabled":true}

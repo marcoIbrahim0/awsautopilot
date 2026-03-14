@@ -1,1 +1,0 @@
-An error occurred (AccessDeniedException) when calling the BatchImportFindings operation: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: securityhub:BatchImportFindings on resource: arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default because no resource-based policy allows the securityhub:BatchImportFindings action

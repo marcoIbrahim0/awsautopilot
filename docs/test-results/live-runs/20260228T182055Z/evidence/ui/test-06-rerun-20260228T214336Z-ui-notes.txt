@@ -1,3 +1,0 @@
-Test 06 UI Notes
-Execution mode: API contract checks only.
-Observed: service-readiness payload includes aggregate all_* booleans and per-region service booleans/errors.

@@ -1,2 +1,0 @@
-Live owner queue counters captured from /api/actions owner_queue response.
-Counters: {"blocked_fixes": 0, "expiring": 0, "expiring_exceptions": 0, "open": 2, "overdue": 0}

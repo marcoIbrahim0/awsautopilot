@@ -1,4 +1,0 @@
-aws_s3_bucket_public_access_block.security_autopilot: Creating...
-aws_s3_bucket_public_access_block.security_autopilot: Creation complete after 1s [id=arch1-bucket-evidence-b1-029037611564-eu-north-1]
-
-Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

@@ -1,1 +1,0 @@
-python3: summarize linked finding status/effective/shadow alignment

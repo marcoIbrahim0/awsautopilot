@@ -1,8 +1,0 @@
-{
-  "compute_first_status": "202",
-  "compute_retry_status": "202",
-  "compute_retry_same_status": true,
-  "reconcile_first_status": "405",
-  "reconcile_retry_status": "405",
-  "reconcile_retry_same_status": true
-}

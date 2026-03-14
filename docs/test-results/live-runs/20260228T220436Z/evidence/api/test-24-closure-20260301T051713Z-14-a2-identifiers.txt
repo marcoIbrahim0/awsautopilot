@@ -1,4 +1,0 @@
-SG_A_ID=
-SG_B_ID=
-A2_EC2_IDS=
-A2_RDS_IDS=

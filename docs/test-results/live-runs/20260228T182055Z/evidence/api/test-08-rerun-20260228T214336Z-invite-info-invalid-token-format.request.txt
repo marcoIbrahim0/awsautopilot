@@ -1,1 +1,0 @@
-GET https://api.valensjewelry.com/api/users/invite-info?token=not-a-uuid

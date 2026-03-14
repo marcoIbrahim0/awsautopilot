@@ -1,6 +1,0 @@
-run_id=0b91ccbd-1c39-4cb3-8791-4e3a363c0fcb
-expected_file_count=78
-actual_file_count=78
-placeholder_hit_count=0
-raw_zip_bytes_match=True
-semantic_match=True

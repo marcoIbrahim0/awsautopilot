@@ -1,8 +1,0 @@
-action_primary=9c31f438-1ade-4cc7-91c8-b959870a615b
-action_primary_type=sg_restrict_public_ports
-action_direct=9c31f438-1ade-4cc7-91c8-b959870a615b
-action_pr_only=9c31f438-1ade-4cc7-91c8-b959870a615b
-account_id=029037611564
-region=eu-north-1
-tenant_b_email=wave5test16+20260228T233802Z@example.com
-direct_strategy_id=

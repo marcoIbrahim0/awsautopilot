@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/audit-log?limit=25&offset=25
-Authorization: Bearer <redacted>

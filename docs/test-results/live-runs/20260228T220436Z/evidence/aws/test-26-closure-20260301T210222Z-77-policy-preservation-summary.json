@@ -1,7 +1,0 @@
-{
-  "policy_preservation_pass": false,
-  "statements_unchanged": false,
-  "pre_statement_count": 4,
-  "post_statement_count": 4,
-  "pab_hardened_post_apply": true
-}

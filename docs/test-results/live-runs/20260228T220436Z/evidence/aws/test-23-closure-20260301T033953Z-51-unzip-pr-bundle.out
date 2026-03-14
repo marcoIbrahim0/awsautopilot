@@ -1,4 +1,0 @@
-Archive:  docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-23-closure-20260301T033953Z-50-pr-bundle.zip
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-23-closure-20260301T033953Z-bundle/README.txt  
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-23-closure-20260301T033953Z-bundle/providers.tf  
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-23-closure-20260301T033953Z-bundle/s3_bucket_block_public_access.tf  

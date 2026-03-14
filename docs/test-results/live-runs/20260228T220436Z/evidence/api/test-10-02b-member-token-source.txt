@@ -1,2 +1,0 @@
-source_file=docs/test-results/live-runs/20260228T182055Z/evidence/api/test-08-rerun-postdeploy-accept-invite-valid-token.json
-member_email=wave3acc+20260228T213251Z@example.com

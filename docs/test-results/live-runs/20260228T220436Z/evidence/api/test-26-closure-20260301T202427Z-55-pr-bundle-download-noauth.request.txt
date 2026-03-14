@@ -1,1 +1,0 @@
-GET https://api.valensjewelry.com/api/remediation-runs/0e71b41e-2951-4948-8dad-3b2b43555552/pr-bundle.zip

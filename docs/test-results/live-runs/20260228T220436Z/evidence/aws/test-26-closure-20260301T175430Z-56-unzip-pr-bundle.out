@@ -1,5 +1,0 @@
-Archive:  docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T175430Z-54-pr-bundle.zip
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T175430Z-bundle/README.txt  
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T175430Z-bundle/providers.tf  
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T175430Z-bundle/s3_cloudfront_oac_private_s3.tf  
-  inflating: docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T175430Z-bundle/terraform.auto.tfvars.json  

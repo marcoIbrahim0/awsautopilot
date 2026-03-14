@@ -1,4 +1,0 @@
-Test 06 UI Notes
-Execution mode: API contract validation only (onboarding/readiness endpoints).
-Observed UI behavior: No direct browser interaction executed in this test.
-Relevant UI contract observation: service-readiness payload includes all_* booleans and per-region service flags expected by onboarding/status cards.

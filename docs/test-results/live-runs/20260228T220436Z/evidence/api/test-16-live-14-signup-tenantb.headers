@@ -1,8 +1,0 @@
-HTTP/2 201 
-date: Sat, 28 Feb 2026 23:43:26 GMT
-content-type: application/json
-content-length: 2427
-set-cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZjE2YTc3NS0yMzkxLTQ4NzktYWVmNy01OTlkNjRiZTVjNmQiLCJ0ZW5hbnRfaWQiOiJiZDE2MTMwYi0yZDA2LTQwNzAtODlkYy0yMzVlNDQ3YTI1OWEiLCJ0b2tlbl92ZXJzaW9uIjowLCJleHAiOjE3NzI5MzA2MDZ9.dKX7bikoL8wkKa0c-d3xsyS4Kvv-_jMzUBvyO5v4c6Q; expires=Sun, 08 Mar 2026 00:43:26 GMT; HttpOnly; Max-Age=608400; Path=/; SameSite=lax
-set-cookie: csrf_token=LXnoCBXsl1ztCLUuZjcTlHYmd-ZWPnAwTK_ZRC9xKa4; Domain=.valensjewelry.com; expires=Sun, 08 Mar 2026 00:43:26 GMT; Max-Age=608400; Path=/; SameSite=lax
-apigw-requestid: ZhCQti9pAi0EJ0Q=
-

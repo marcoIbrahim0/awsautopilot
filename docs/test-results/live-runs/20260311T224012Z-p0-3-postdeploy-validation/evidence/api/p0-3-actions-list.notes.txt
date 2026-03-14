@@ -1,2 +1,0 @@
-URL: https://api.ocypheris.com/api/actions?account_id=696505809372&region=us-east-1&limit=100&offset=0
-Auth: Bearer <redacted> from /tmp/ocypheris_phase3_p0_token.txt

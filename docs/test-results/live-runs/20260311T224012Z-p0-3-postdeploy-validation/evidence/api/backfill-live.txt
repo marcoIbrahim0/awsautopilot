@@ -1,6 +1,0 @@
-{
-  "complete": 26,
-  "recomputed_actions": true,
-  "scanned": 26,
-  "updated": 26
-}

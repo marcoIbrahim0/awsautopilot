@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/actions/c6f93201-e8c8-4c0d-bdee-03806bc65cf7/remediation-options
-Authorization: Bearer <token>

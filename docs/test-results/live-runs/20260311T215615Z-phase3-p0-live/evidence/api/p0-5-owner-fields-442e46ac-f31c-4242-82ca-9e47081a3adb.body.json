@@ -1,7 +1,0 @@
-{
-  "id": "442e46ac-f31c-4242-82ca-9e47081a3adb",
-  "owner_key": "ebs",
-  "owner_label": "Amazon EBS",
-  "owner_type": "service",
-  "title": "Amazon EBS Snapshots should not be publicly accessible"
-}

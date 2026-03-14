@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/baseline-report?limit=20&offset=0
-Authorization: Bearer <token>

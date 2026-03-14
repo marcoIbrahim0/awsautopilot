@@ -1,1 +1,0 @@
-GET https://api.valensjewelry.com/api/audit-log?resource_id=b9e50351-02a0-4784-a2f1-473929da696e&limit=25&offset=0

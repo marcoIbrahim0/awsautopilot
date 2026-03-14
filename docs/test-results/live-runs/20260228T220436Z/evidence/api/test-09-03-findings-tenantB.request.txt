@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/findings?limit=20&offset=0
-Authorization: Bearer <tenant_b_token>

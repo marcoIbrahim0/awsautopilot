@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws lambda get-function-configuration --function-name security-autopilot-dev-api --region eu-north-1 --query {FunctionName:FunctionName,LastModified:LastModified,ActionsEffectiveOpenVisibilityEnabled:Environment.Variables.ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED,ControlPlaneShadowMode:Environment.Variables.CONTROL_PLANE_SHADOW_MODE} --output json

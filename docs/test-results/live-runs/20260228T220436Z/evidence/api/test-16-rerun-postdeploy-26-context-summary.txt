@@ -1,6 +1,0 @@
-ACTION_ID=9c31f438-1ade-4cc7-91c8-b959870a615b
-ACTION_TYPE=sg_restrict_public_ports
-ACCOUNT_ID=029037611564
-REGION=eu-north-1
-MODE_OPTION=pr_only
-TENANT_B_EMAIL=wave5.test16.rerun.20260301T000355Z.27402@example.com

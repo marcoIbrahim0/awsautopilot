@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/actions/9c31f438-1ade-4cc7-91c8-b959870a615b
-Authorization: <none>

@@ -1,2 +1,0 @@
-Score factors sum to 69 for returned score 69
-Live detail shows explainable scoring factors with evidence source, signals, and explanation.

@@ -1,1 +1,0 @@
-GET https://api.valensjewelry.com/api/audit-log?resource_type=remediation_run&limit=25&offset=0

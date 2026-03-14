@@ -1,3 +1,0 @@
-Direct credential login attempt using the user-provided password.
-Status: 401
-Body: {"detail": "Invalid email or password"}

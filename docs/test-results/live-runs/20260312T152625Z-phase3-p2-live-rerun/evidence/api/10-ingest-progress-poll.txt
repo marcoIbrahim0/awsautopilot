@@ -1,7 +1,0 @@
-poll=1 status=queued
-poll=2 status=running
-poll=3 status=running
-poll=4 status=running
-poll=5 status=running
-poll=6 status=running
-poll=7 status=completed

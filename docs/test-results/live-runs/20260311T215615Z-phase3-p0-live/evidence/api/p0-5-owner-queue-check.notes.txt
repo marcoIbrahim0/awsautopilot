@@ -1,3 +1,0 @@
-Live owner-queue filter: owner_type=service, owner_key=ebs, owner_queue=open
-Returned 2 items out of total 2
-Counters: {"blocked_fixes": 0, "expiring": 0, "expiring_exceptions": 0, "open": 2, "overdue": 0}

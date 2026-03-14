@@ -1,8 +1,0 @@
-multi_filter_unique_severities=['CRITICAL', 'HIGH']
-multi_filter_total=39
-invalid_filter_body={'items': [], 'total': 0}
-page1_count=50
-page2_count=50
-cross_page_duplicate_ids_count=0
-cross_page_duplicate_ids=[]
-grouped_first20_stable=True

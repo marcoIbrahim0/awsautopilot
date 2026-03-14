@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/remediation-runs?status=pending&limit=200&offset=0
-Authorization: Bearer <admin_token>

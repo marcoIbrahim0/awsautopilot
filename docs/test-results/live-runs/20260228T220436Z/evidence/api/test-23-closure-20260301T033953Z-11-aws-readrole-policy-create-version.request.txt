@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws iam create-policy-version --policy-arn arn:aws:iam::029037611564:policy/SecurityAutopilotReadRolePolicy --policy-document file://docs/test-results/live-runs/20260228T220436Z/evidence/api/test-23-closure-20260301T033953Z-10-readrole-policy-patched-document.json --set-as-default

@@ -1,2 +1,0 @@
-
-An error occurred (ResourceNotFoundException) when calling the GetFunction operation: Function not found: arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-saas-serverless-runtime-api

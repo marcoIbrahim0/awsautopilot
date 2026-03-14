@@ -1,3 +1,0 @@
-POST https://api.valensjewelry.com/api/actions/reconcile
-Authorization: Bearer <REDACTED>
-{"account_id":"029037611564","region":"eu-north-1"}

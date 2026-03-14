@@ -1,2 +1,0 @@
-No UI-visible defects observed in route probes; screenshots not captured.
-Use HTML/header artifacts for contract evidence.

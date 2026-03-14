@@ -1,4 +1,0 @@
-URL: https://api.ocypheris.com/api/findings?limit=100&offset=0
-Status: 200
-Items returned: 7
-Total: 7

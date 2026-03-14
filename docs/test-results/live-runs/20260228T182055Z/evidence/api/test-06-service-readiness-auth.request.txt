@@ -1,2 +1,0 @@
-POST https://api.valensjewelry.com/api/aws/accounts/029037611564/service-readiness
-Authorization: Bearer <admin_token>

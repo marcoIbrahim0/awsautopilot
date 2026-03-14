@@ -1,3 +1,0 @@
-Test 08 UI Notes
-Execution mode: API-based invite contract and token lifecycle verification.
-Observed: invite-info alias responds; valid token accepted once; replay rejected; expired token rejected.

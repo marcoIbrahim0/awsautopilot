@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/actions?status=open&limit=200
-Authorization: Bearer <token>

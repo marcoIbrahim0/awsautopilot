@@ -1,4 +1,0 @@
-Test 05 UI Notes
-Checked URL: https://dev.valensjewelry.com/
-Observed: frontend root returned HTTP 200 and rendered app HTML.
-Screenshot: evidence/screenshots/test-05-rerun-20260228T214336Z-frontend-root.png

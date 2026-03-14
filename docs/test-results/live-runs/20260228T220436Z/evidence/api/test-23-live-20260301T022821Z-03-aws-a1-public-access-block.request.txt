@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws s3api get-public-access-block --bucket arch1-bucket-website-a1-029037611564-eu-north-1 --region eu-north-1 --output json

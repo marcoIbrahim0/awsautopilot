@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/remediation-runs/5f1023b6-8a3a-4939-a45b-b83e6fcb6542/pr-bundle.zip
-Authorization: Bearer <valens_admin_token>

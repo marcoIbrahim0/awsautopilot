@@ -1,6 +1,0 @@
-Test 05 UI Notes
-Timestamp (UTC): 2026-02-28T20:35:54Z
-Checked URL: https://dev.valensjewelry.com/
-Observed: Cloudflare error page returned with HTTP 530 and body "error code: 1033".
-Screenshot: evidence/screenshots/test-05-frontend-root.png
-Impact: Frontend is not reachable for browser-driven onboarding/account/invite flows.

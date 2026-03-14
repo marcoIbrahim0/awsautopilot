@@ -1,1 +1,0 @@
-{"detail":[{"type":"missing","loc":["body","account_id"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","role_read_arn"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","tenant_id"],"msg":"Field required","input":{}}]}

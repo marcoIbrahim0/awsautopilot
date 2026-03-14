@@ -1,2 +1,0 @@
-Top-level context_incomplete=True
-Live detail shows toxic-combination boost suppressed with explicit context_incomplete markers.

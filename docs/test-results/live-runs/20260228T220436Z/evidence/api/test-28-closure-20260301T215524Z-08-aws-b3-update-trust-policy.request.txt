@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws iam update-assume-role-policy --role-name arch2_mixed_policy_role_b3 --policy-document file:///var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T/tmp.m1g9nKx3dp

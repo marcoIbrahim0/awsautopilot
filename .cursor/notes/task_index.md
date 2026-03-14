@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Commit carried evidence-folder deletions on master (2026-03-14)](task_log.md#commit-carried-evidence-folder-deletions-on-master-2026-03-14)
+  - Committed the already-approved tracked deletions for `artifacts/no-ui-agent` and `docs/test-results/live-runs` on `master`.
+  - Preserved the merged remediation-profile Wave 0-2 implementation files by restoring them before the cleanup commit.
+  - Left only local `.DS_Store` noise outside the cleanup scope.
 - [Fast-forward master to the remediation-profile Wave 2 baseline (2026-03-14)](task_log.md#fast-forward-master-to-the-remediation-profile-wave-2-baseline-2026-03-14)
   - Confirmed `master` was an ancestor of `codex/rem-profile-w2-action-detail-hydration-fix`, so the requested merge could be completed as a safe fast-forward.
   - Advanced `master` to the tested remediation-profile Wave 0-2 baseline without touching the large unrelated dirty state in the main `master` worktree.

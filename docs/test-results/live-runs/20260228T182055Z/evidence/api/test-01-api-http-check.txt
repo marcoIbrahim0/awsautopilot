@@ -1,3 +1,0 @@
-api_http_rc=7
-api_http_result=curl: (7) Failed to connect to api.valensjewelry.com port 80 after 4591 ms: Couldn't connect to server
-000 http://api.valensjewelry.com/health

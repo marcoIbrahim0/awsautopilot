@@ -1,4 +1,0 @@
-POST https://api.valensjewelry.com/api/internal/reconciliation/schedule-tick
-Content-Type: application/json
-Authorization: Bearer <admin_token>
-{"dry_run":true,"limit":1}

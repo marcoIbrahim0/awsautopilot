@@ -1,1 +1,0 @@
-cd 'docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T191101Z-bundle' && find . -maxdepth 4 -type f | sort

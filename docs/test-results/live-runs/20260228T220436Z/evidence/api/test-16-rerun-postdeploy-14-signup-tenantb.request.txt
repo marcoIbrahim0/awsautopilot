@@ -1,3 +1,0 @@
-POST https://api.valensjewelry.com/api/auth/signup
-Authorization: <none>
-{"email":"wave5.test16.rerun.20260301T000355Z.27402@example.com","password":"Wave5Test16!Pass123","name":"Wave5 Test16 TenantB","company_name":"Wave5 Test16 TenantB Rerun"}

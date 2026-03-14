@@ -1,1 +1,0 @@
-POST https://api.valensjewelry.com/api/aws/accounts/000000000000/ingest-sync

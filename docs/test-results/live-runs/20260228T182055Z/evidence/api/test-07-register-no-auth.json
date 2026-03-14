@@ -1,1 +1,0 @@
-{"detail":[{"type":"missing","loc":["body","tenant_id"],"msg":"Field required","input":{"account_id":"029037611564","role_read_arn":"arn:aws:iam::029037611564:role/SecurityAutopilotReadRole","role_write_arn":"arn:aws:iam::029037611564:role/SecurityAutopilotWriteRole","regions":["eu-north-1"]}}]}

@@ -1,1 +1,0 @@
-GET https://api.valensjewelry.com/api/aws/accounts/029037611564/ingest-progress?started_after=2026-03-02T18:54:00Z

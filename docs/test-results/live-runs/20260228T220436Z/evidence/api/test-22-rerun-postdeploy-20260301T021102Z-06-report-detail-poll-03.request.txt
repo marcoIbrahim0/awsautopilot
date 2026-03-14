@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/baseline-report/c9c47df8-5688-48ba-bf19-1a498466920e
-Authorization: Bearer <token>

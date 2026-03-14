@@ -1,2 +1,0 @@
-Action detail extracted from live /api/actions/e6b1eac2-041c-4fb3-9a47-2525a3afa908.
-Score=76, priority=76

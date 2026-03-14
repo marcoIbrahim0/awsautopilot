@@ -1,7 +1,0 @@
-{
-    "StackName": "security-autopilot-saas-serverless-runtime",
-    "LastUpdatedTime": "2026-03-01T03:19:34.761000+00:00",
-    "ApiImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260301T031756Z",
-    "WorkerImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260301T031756Z",
-    "ApiBaseUrl": "https://api.valensjewelry.com"
-}

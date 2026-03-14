@@ -1,4 +1,0 @@
-Archive:  /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T191537Z-64-pr-bundle.zip
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T191537Z-bundle/README.txt  
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T191537Z-bundle/providers.tf  
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-33-live-20260302T191537Z-bundle/s3_bucket_block_public_access.tf  

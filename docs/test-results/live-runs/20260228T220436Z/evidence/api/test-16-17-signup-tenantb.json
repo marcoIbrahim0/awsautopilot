@@ -1,1 +1,0 @@
-{"detail":[{"type":"missing","loc":["body","company_name"],"msg":"Field required","input":{"email":"wave5test16+20260228T233802Z@example.com","password":"Wave5T16!Pass123","name":"Wave5 Test16 TenantB"}}]}

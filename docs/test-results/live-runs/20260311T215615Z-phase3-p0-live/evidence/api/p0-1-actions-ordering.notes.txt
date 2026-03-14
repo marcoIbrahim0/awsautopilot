@@ -1,3 +1,0 @@
-Derived from live GET /api/actions ordered response.
-Total live actions: 6
-Observed order is descending by score/priority.

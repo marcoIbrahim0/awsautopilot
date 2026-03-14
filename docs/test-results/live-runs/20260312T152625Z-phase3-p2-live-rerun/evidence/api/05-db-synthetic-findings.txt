@@ -1,6 +1,0 @@
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-config-aged-kev|Config.1|NEW|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-aged-kev
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-config-fresh-kev|Config.1|NEW|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-config-lowconf|Config.1|NEW|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-lowconf
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-config-no-ti|Config.1|NEW|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-no-ti
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-iam-kev-headroom|IAM.4|NEW|arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2HEADROOM
-arn:aws:securityhub:us-east-1:696505809372:product/696505809372/default/finding/ocypheris-p2-iam-no-ti|IAM.4|NEW|arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2BASELINE

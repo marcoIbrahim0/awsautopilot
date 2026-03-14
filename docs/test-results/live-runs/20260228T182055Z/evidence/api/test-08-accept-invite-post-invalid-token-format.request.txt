@@ -1,2 +1,0 @@
-POST https://api.valensjewelry.com/api/users/accept-invite
-{"token":"not-a-uuid","password":"TempPass123!","name":"Wave3 Invite User"}

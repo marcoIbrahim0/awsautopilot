@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws eks describe-cluster --region eu-north-1 --name arch2-eks-cluster-c

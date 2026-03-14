@@ -1,5 +1,0 @@
-{
-    "LastUpdatedTime": "2026-03-01T18:16:15.527000+00:00",
-    "ApiImage": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260301T181435Z",
-    "WorkerImage": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260301T181435Z"
-}

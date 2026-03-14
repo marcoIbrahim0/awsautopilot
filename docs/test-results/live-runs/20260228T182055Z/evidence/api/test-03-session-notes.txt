@@ -1,7 +1,0 @@
-credential_source=.cursor/notes/task_log.md (Pre-live QA Test 04 entry)
-credentials_used=maromaher54@gmail.com / Maher730
-auth_context_used=bearer_token_from_valid_login
-refresh_status=200
-logout_status=204
-post_logout_bearer_auth_me_status=401
-post_logout_bearer_auth_me_body={"detail":"Invalid or expired token"}

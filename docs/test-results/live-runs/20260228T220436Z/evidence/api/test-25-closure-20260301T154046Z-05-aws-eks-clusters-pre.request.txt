@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws eks list-clusters --region eu-north-1

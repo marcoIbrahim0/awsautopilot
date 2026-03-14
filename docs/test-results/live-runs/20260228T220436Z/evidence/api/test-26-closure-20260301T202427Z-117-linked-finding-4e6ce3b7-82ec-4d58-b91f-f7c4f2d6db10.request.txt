@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/findings/4e6ce3b7-82ec-4d58-b91f-f7c4f2d6db10
-Authorization: Bearer <valens_admin_token>

@@ -1,2 +1,0 @@
-Live action SLA payload extracted from /api/actions/{id}.
-Risk tier=high, state=on_track

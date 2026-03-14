@@ -1,4 +1,0 @@
-SG_A_ID=sg-0e5bea6687c7063c1
-SG_B_ID=sg-02813afb4b1337ee4
-A2_EC2_IDS=i-0f773def2fade3d15
-A2_RDS_IDS=arch1-claims-db-a2

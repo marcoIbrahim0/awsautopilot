@@ -1,1 +1,0 @@
-{"detail":[{"type":"value_error","loc":["body","role_read_arn"],"msg":"Value error, role_read_arn must be a valid IAM role ARN (arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME)","input":"bad-arn","ctx":{"error":{}}}]}

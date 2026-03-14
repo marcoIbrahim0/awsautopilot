@@ -1,2 +1,0 @@
-GET https://dev.valensjewelry.com/remediation-runs/216b042f-ee97-4dd4-aeaf-51880e2260df
-No auth header

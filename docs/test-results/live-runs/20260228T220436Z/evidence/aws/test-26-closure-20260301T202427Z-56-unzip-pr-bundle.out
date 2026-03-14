@@ -1,5 +1,0 @@
-Archive:  /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-54-pr-bundle.zip
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-bundle/README.txt  
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-bundle/providers.tf  
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-bundle/s3_cloudfront_oac_private_s3.tf  
-  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260228T220436Z/evidence/aws/test-26-closure-20260301T202427Z-bundle/terraform.auto.tfvars.json  

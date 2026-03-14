@@ -1,6 +1,0 @@
-- run timestamp: 20260311T223155Z
-- frontend URL: https://ocypheris.com
-- API URL: https://api.ocypheris.com
-- purpose: P0.3 relationship_context producer-path validation
-- target tenant/account/region: tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=696505809372 region=us-east-1
-- auth path: normal API login attempt failed with `401 Invalid email or password`; fallback auth was not used because production runtime was proven undeployed for the March 12 producer-path fix

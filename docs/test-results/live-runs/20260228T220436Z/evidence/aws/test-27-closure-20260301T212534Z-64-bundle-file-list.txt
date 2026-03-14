@@ -1,3 +1,0 @@
-./README.txt
-./providers.tf
-./sg_restrict_public_ports.tf

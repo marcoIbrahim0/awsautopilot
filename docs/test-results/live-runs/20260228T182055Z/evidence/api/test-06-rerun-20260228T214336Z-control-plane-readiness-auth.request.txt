@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/aws/accounts/029037611564/control-plane-readiness?stale_after_minutes=30
-Authorization: Bearer <admin_token>

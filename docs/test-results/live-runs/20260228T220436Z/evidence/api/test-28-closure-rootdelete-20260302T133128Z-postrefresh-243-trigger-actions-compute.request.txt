@@ -1,1 +1,0 @@
-POST https://api.valensjewelry.com/api/actions/compute\nAuthorization: Bearer <redacted>\nBody: {"account_id":"029037611564","region":"eu-north-1"}

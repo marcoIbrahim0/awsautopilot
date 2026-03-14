@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/findings?source=security_hub&limit=20&offset=0
-Authorization: Bearer <REDACTED>

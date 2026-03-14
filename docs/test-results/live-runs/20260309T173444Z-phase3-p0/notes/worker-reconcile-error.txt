@@ -1,8 +1,0 @@
-Worker log summary from /aws/lambda/security-autopilot-dev-worker around 2026-03-09T17:39Z:
-- Inventory/shadow evaluation ran for tenant 67256664-3ff2-4456-a7ea-b8e5f4fb8380 and account 029037611564.
-- Multiple shadow overlay updates logged "matched zero rows" for canonical controls, including IAM.4 and S3.2.
-- Reconcile job failed with IntegrityError:
-  duplicate key value violates unique constraint "uq_finding_shadow_states_tenant_source_fingerprint"
-- The failing fingerprint shown in the log was:
-  029037611564|eu-north-1|029037611564|S3.2
-- Because reconcile_inventory_shard failed, the live tenant still had 0 canonical findings and 0 actions after ingest/compute/reconcile.

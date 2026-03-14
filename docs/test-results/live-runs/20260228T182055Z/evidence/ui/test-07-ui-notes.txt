@@ -1,4 +1,0 @@
-Test 07 UI Notes
-Execution mode: API contract validation only (AWS account connection).
-Observed UI behavior: No direct browser interaction executed in this test.
-Relevant UI contract observation: account registration endpoint accepted no-auth requests when tenant_id was supplied, which can affect account-connect flows and security posture.

@@ -1,2 +1,0 @@
-0042_bidirectional_integrations (head)
-0042_action_remediation_system_of_record (head)

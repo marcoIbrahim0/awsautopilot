@@ -1,1 +1,0 @@
-POST https://api.valensjewelry.com/api/exports Authorization: Bearer <REDACTED_ADMIN_TOKEN> {"pack_type":"evidence"}

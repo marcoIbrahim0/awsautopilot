@@ -1,5 +1,30 @@
 # Task Log
 
+## Commit carried evidence-folder deletions on master (2026-03-14)
+
+**Task:** Commit the already-approved local deletions of `artifacts/no-ui-agent` and `docs/test-results/live-runs` on `master` without deleting any remediation-profile Wave 0-2 implementation updates.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/** - committed the existing tracked local deletions for the no-UI agent evidence bundle.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/** - committed the existing tracked local deletions for the live-run evidence bundle.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this cleanup commit on `master`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reconciled the main `master` worktree with the merged remediation-profile Wave 0-2 baseline so none of the newly merged backend, frontend, docs, tests, or migration files remained locally deleted.
+- Kept only the user-approved tracked deletions in place:
+  - `artifacts/no-ui-agent`
+  - `docs/test-results/live-runs`
+- Left local `.DS_Store` noise untouched so this cleanup stayed limited to the approved evidence paths.
+- Committed the deletions on `master` so the branch history now matches the current desired local state instead of carrying the large evidence folders as uncommitted noise.
+
+**Technical debt / gotchas:**
+- This commit removes historical local evidence bundles from the checked-out `master` worktree; the rationale and active-doc caveats were already captured in the earlier remediation-profile cleanup docs now present on `master`.
+- Local `.DS_Store` files are still dirty after this task and can be cleaned separately if needed.
+
+**Open questions / TODOs:**
+- None.
+
 ## Fast-forward master to the remediation-profile Wave 2 baseline (2026-03-14)
 
 **Task:** Move `master` to the tested remediation-profile Wave 0-2 baseline from `codex/rem-profile-w2-action-detail-hydration-fix` without disturbing the unrelated dirty local changes already present in the main `master` worktree.

@@ -1,1 +1,0 @@
-aws ec2 describe-instances --filters Name=instance.group-id\,Values= Name=instance-state-name\,Values=pending\,running\,stopping\,stopped --region eu-north-1 --output json --no-cli-pager 

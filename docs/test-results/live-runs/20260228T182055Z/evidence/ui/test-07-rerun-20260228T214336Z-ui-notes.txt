@@ -1,3 +1,0 @@
-Test 07 UI Notes
-Execution mode: API-only account-registration contract checks.
-Observed: no-auth register rejected and authenticated duplicate returns conflict response.

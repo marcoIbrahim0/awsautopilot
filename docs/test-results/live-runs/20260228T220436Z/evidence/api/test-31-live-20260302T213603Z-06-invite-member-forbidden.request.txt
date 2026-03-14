@@ -1,1 +1,0 @@
-POST https://api.valensjewelry.com/api/users/invite

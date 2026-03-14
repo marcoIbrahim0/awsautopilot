@@ -1,1 +1,0 @@
-AWS_PROFILE=test28-root aws sts get-caller-identity --region eu-north-1

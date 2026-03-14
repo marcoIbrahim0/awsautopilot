@@ -1,3 +1,0 @@
-POST https://api.valensjewelry.com/api/auth/login
-X-Forwarded-For: 203.0.113.10
-{"email":"wave8.test30.20260302T191232Z@example.com","password":"WrongPass!123"}

@@ -1,1 +1,0 @@
-aws s3api get-bucket-policy-status --bucket arch1-bucket-evidence-b1-029037611564-eu-north-1

@@ -1,1 +1,0 @@
-AWS_PROFILE=default aws iam get-account-summary --query 'SummaryMap.{RootKeys:AccountAccessKeysPresent,RootMFA:AccountMFAEnabled}' --output json

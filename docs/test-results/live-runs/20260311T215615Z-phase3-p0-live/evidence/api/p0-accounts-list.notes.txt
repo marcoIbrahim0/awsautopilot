@@ -1,2 +1,0 @@
-URL: https://api.ocypheris.com/api/aws/accounts
-Status: 200

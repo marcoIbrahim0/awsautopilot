@@ -1,2 +1,0 @@
-GET https://api.valensjewelry.com/api/users/me/slack-settings
-Authorization: Bearer <REDACTED_TENANTB_TOKEN>
