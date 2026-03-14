@@ -1,5 +1,43 @@
 # Task Log
 
+## Remediation profile resolution Wave 1 branch-history merge (2026-03-14)
+
+**Task:** Safely unify Wave 1 branch ancestry by merging the remaining remediation-settings branch into the integration branch without changing the already-validated Wave 1 runtime surface.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/alembic/versions/0043_tenant_remediation_settings.py** - resolved merge conflict in favor of the integrate-side non-null JSONB migration shape.
+- **/Users/marcomaher/AWS Security Autopilot/backend/models/tenant.py** - resolved merge conflict in favor of the integrate-side non-null `Tenant.remediation_settings` model field.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/users.py** - resolved merge conflict in favor of the integrate-side typed remediation-settings response contract.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_settings.py** - resolved merge conflict in favor of the integrate-side normalization and enum validation logic.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_settings_api.py** - resolved merge conflict in favor of the integrate-side API expectations and planned enum values.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this branch-history merge.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, task log, docs index, remediation-profile spec, and implementation plan before merging.
+- Confirmed the Wave 1 branch graph:
+  - `codex/rem-profile-w1-resolver-contracts` and `codex/rem-profile-w1-profile-catalog` are already ancestors of `codex/rem-profile-w1-integrate`
+  - only `codex/rem-profile-w1-remediation-settings` still lacked ancestry on the integration branch because its content had been cherry-picked and then tightened on integrate
+- Merged `codex/rem-profile-w1-remediation-settings` into `codex/rem-profile-w1-integrate`.
+- Resolved the resulting conflicts in favor of the integrate-side files because those versions already matched the documented Wave 1 boundary and had stricter, validated semantics:
+  - migration uses non-null JSONB with default `{}` during rollout
+  - model field is non-null `dict`
+  - remediation settings enums remain `account_local_delivery` / `centralized_delivery` and `aws_managed` / `customer_managed`
+  - users API response typing stays explicit
+  - remediation-settings tests keep the documented Wave 1 values
+- Left the unrelated dirty state on the separate `codex/rem-profile-w1-remediation-settings` worktree untouched.
+
+**Validation:**
+- `pytest tests/test_remediation_profile_resolver.py tests/test_remediation_profile_catalog.py tests/test_remediation_settings_api.py -q`
+- `pytest tests/test_digest_settings_api.py tests/test_slack_settings_api.py tests/test_governance_settings_api.py -q`
+
+**Technical debt / gotchas:**
+- The standalone `codex/rem-profile-w1-remediation-settings` worktree still contains unrelated local dirt outside the Wave 1 merge scope (`docs` deletions, `docs/README.md`, `frontend`, `backend.log`). Those were intentionally not pulled into the Wave 1 integration merge.
+- This merge unifies branch ancestry only for the remaining non-ancestor Wave 1 branch. It does not change the already-established Wave 1 scope boundary.
+
+**Open questions / TODOs:**
+- None for the branch-history merge itself.
+
 ## Remediation profile resolution Wave 1 foundation integration (2026-03-14)
 
 **Task:** Integrate the three planned Wave 1 foundations onto the remediation-profile integration branch, add a Wave 1 summary doc, and keep the result strictly inside the Wave 1 boundary.

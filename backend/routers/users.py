@@ -189,7 +189,6 @@ class GovernanceSettingsUpdateRequest(BaseModel):
         description="Optional HTTPS webhook endpoint; set to empty string to clear.",
     )
 
-
 SGAccessPathPreference = Literal[
     "close_public",
     "restrict_to_detected_public_ip",
@@ -199,8 +198,6 @@ SGAccessPathPreference = Literal[
 ]
 ConfigDeliveryMode = Literal["account_local_delivery", "centralized_delivery"]
 S3EncryptionMode = Literal["aws_managed", "customer_managed"]
-
-
 class RemediationCloudTrailSettingsResponse(BaseModel):
     default_bucket_name: str | None = None
     default_kms_key_arn: str | None = None

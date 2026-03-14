@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 1 branch-history merge (2026-03-14)](task_log.md#remediation-profile-resolution-wave-1-branch-history-merge-2026-03-14)
+  - Merged `codex/rem-profile-w1-remediation-settings` into `codex/rem-profile-w1-integrate` after confirming the integrate branch already contained the stricter Wave 1 content through cherry-pick plus follow-up refinement.
+  - Resolved the remediation-settings merge conflicts in favor of the already-validated integrate-side contract so the merge commit preserves ancestry without regressing enum values, nullability, or test expectations.
+  - Re-ran the Wave 1 focused suites and the neighboring digest/slack/governance settings regressions after the merge.
 - [Remediation profile resolution Wave 1 foundation integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-1-foundation-integration-2026-03-14)
   - Integrated the Wave 1 resolver contract and tenant remediation-settings branches onto the Wave 0 remediation-profile baseline, then added the missing internal profile catalog seed on the integration branch.
   - Added `docs/remediation-profile-resolution/wave-1-foundation-contracts.md` and linked it from the remediation-profile README without widening the docs index or starting Wave 2 wiring.
