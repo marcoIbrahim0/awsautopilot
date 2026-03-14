@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 0 branch-history merge (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-branch-history-merge-2026-03-14)
+  - Merged the remaining Wave 0 source-branch ancestry into `codex/rem-profile-w0-integrate` so `codex/rem-profile-w0-api-surface`, `codex/rem-profile-w0-worker-rootkey`, and `codex/rem-profile-w0-legacy-compat` are all ancestors of the Wave 0 integration branch.
+  - Used a content-preserving `ours` merge for `codex/rem-profile-w0-legacy-compat` because that branch tip had drifted beyond Wave 0 and included unrelated later feature work that could not be pulled into the Wave 0 docs baseline safely.
+  - Left the Wave 0 runtime and docs content unchanged aside from task-history notes; this was an ancestry repair only.
 - [Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-contract-lock-integration-2026-03-14)
   - Added the remediation-profile-resolution doc set to the integration branch, including the Wave 0 contract lock and the three source baseline docs collected from the Wave 0 source branches.
   - Updated the remediation-profile README, implementation plan navigation, top-level docs index, and task history so the merged Wave 0 baseline is discoverable.

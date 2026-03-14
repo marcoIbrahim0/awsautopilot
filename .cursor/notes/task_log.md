@@ -1,5 +1,37 @@
 # Task Log
 
+## Remediation profile resolution Wave 0 branch-history merge (2026-03-14)
+
+**Task:** Safely unify Wave 0 branch ancestry so the documented Wave 0 baseline is represented by actual merge history without pulling unrelated later work into the Wave 0 integration branch.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 0 branch-history merge.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, task log, docs index, remediation-profile README, and implementation plan before touching branch history.
+- Confirmed `codex/rem-profile-w0-integrate` was already the content base for the Wave 1 line, but the three Wave 0 source branches were not all ancestors of the Wave 0 integration branch.
+- Merged `codex/rem-profile-w0-api-surface` into `codex/rem-profile-w0-integrate` as a clean ancestry-only merge because the baseline doc content already matched the integrated Wave 0 branch.
+- Confirmed `codex/rem-profile-w0-worker-rootkey` sits in the history of `codex/rem-profile-w0-legacy-compat`, so a merge of the latter can satisfy both remaining ancestry gaps.
+- Inspected `codex/rem-profile-w0-legacy-compat` and found that its tip had drifted beyond Wave 0, carrying unrelated later backend, frontend, docs, and test changes.
+- Merged `codex/rem-profile-w0-legacy-compat` into `codex/rem-profile-w0-integrate` using the `ours` strategy so:
+  - the source branch ancestry is preserved
+  - the current Wave 0 docs-only baseline remains unchanged
+  - no later non-Wave-0 feature work is accidentally imported into the Wave 0 integration branch
+
+**Validation:**
+- Confirmed `codex/rem-profile-w0-api-surface` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed `codex/rem-profile-w0-worker-rootkey` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed `codex/rem-profile-w0-legacy-compat` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed the resulting branch graph keeps the original Wave 0 integration content while adding merge commits for the missing ancestry.
+
+**Technical debt / gotchas:**
+- `codex/rem-profile-w0-legacy-compat` is no longer a Wave 0-only branch tip; its head includes unrelated later feature work, so future ancestry repair on descendant lines must keep using a content-preserving merge strategy unless that branch is intentionally cleaned up.
+- This task repairs branch history only. It does not change the Wave 0 contract-lock content or widen the Wave 0 scope.
+
+**Open questions / TODOs:**
+- Propagate the repaired Wave 0 branch ancestry onto descendant integration branches when needed so the current mergeable branch line also contains the Wave 0 merge commits.
+
 ## Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)
 
 **Task:** Consolidate the Wave 0 remediation-profile baselines from the three source branches into one mergeable contract-lock doc, wire the doc set into the integration branch, and update project discoverability.
