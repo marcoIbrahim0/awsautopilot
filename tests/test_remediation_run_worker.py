@@ -18,6 +18,8 @@ import pytest
 from botocore.exceptions import ClientError
 
 from backend.models.enums import (
+    ActionGroupExecutionStatus,
+    ActionGroupRunStatus,
     RemediationRunExecutionPhase,
     RemediationRunExecutionStatus,
     RemediationRunMode,
@@ -33,7 +35,10 @@ from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
 )
 from backend.workers.jobs.remediation_run import execute_remediation_run_job
-from backend.workers.jobs.remediation_run_execution import execute_pr_bundle_execution_job
+from backend.workers.jobs.remediation_run_execution import (
+    _sync_group_run_results,
+    execute_pr_bundle_execution_job,
+)
 from backend.workers.services.direct_fix import DirectFixResult
 
 
@@ -202,6 +207,14 @@ def _mock_execution_session(
     session.execute.side_effect = side_effects
     session.flush = MagicMock()
     return session
+
+
+def _mock_query_one_or_none(value: object) -> MagicMock:
+    query = MagicMock()
+    filtered = MagicMock()
+    filtered.one_or_none.return_value = value
+    query.filter.return_value = filtered
+    return query
 
 
 @pytest.fixture(autouse=True)
@@ -1185,6 +1198,66 @@ def test_group_pr_bundle_mixed_tier_layout_for_executable_and_review_required_ac
     assert group_bundle.get("execution_root") == "executable/actions"
 
 
+def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+            support_tier="deterministic_bundle",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            support_tier="review_required_bundle",
+            blocked_reasons=["needs approval"],
+        ),
+    ]
+    run.artifacts = {
+        "group_bundle": {
+            "reporting": {
+                "callback_url": "https://api.example.com/api/internal/group-runs/report",
+                "token": "signed-token",
+            }
+        }
+    }
+    mock_session = _mock_group_session(run, [run.action, second_action])
+    bundle = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider"},
+            {"path": "main.tf", "content": "resource \"aws_s3_bucket_public_access_block\" \"this\" {}"},
+        ],
+        "steps": ["step one"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle):
+            execute_remediation_run_job(job)
+
+    files_by_path = _bundle_files_by_path(run)
+    assert "run_all.sh" in files_by_path
+    assert "run_actions.sh" in files_by_path
+    assert "non_executable_results" in files_by_path["run_all.sh"]
+    assert str(second_action.id) in files_by_path["run_all.sh"]
+    assert "review_required_bundle" in files_by_path["run_all.sh"]
+    assert "review_required_metadata_only" in files_by_path["run_all.sh"]
+    assert 'RUNNER="./run_actions.sh"' in files_by_path["run_all.sh"]
+    assert 'EXECUTION_ROOT="executable/actions"' in files_by_path["run_actions.sh"]
+
+
 def test_group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success() -> None:
     job = _make_job(mode="pr_only")
     run = _mock_run_with_action("s3_bucket_block_public_access")
@@ -1508,11 +1581,108 @@ def test_pr_bundle_execution_mixed_tier_plan_executes_only_executable_folders() 
     assert execution.results.get("non_executable_action_count") == 1
     action_results = execution.results.get("action_results")
     assert isinstance(action_results, list)
-    assert any(item.get("action_id") == str(run.action.id) and item.get("status") == "success" for item in action_results)
-    assert any(
-        item.get("action_id") == str(review_action.id) and item.get("reason") == "non_executable_grouped_action"
-        for item in action_results
+    assert action_results == [
+        {
+            "action_id": str(run.action.id),
+            "folder": f"executable/actions/01-{str(run.action.id)[:8]}",
+            "status": "success",
+            "error": None,
+        }
+    ]
+    non_executable_results = execution.results.get("non_executable_results")
+    assert non_executable_results == [
+        {
+            "action_id": str(review_action.id),
+            "folder": f"review_required/actions/02-{str(review_action.id)[:8]}",
+            "support_tier": "review_required_bundle",
+            "profile_id": "",
+            "strategy_id": "",
+            "reason": "review_required_metadata_only",
+            "blocked_reasons": [],
+            "tier": "review_required",
+            "outcome": "review_required_metadata_only",
+        }
+    ]
+
+
+def test_sync_group_run_results_keeps_non_executable_actions_non_failing() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    review_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two review",
     )
+    execution = MagicMock()
+    execution.phase = RemediationRunExecutionPhase.apply
+    execution.status = RemediationRunExecutionStatus.success
+    execution.started_at = datetime.now(timezone.utc)
+    execution.completed_at = datetime.now(timezone.utc)
+    execution.results = {
+        "action_results": [
+            {
+                "action_id": str(run.action.id),
+                "folder": "executable/actions/01-primary",
+                "status": "success",
+                "error": None,
+            }
+        ],
+        "non_executable_results": [
+            {
+                "action_id": str(review_action.id),
+                "folder": "review_required/actions/02-review",
+                "support_tier": "review_required_bundle",
+                "profile_id": "s3_review_profile",
+                "strategy_id": "s3_review_strategy",
+                "reason": "review_required_metadata_only",
+                "blocked_reasons": ["needs approval"],
+            }
+        ],
+    }
+
+    group_run = MagicMock()
+    group_run.id = uuid.uuid4()
+    group_run.status = ActionGroupRunStatus.started
+    session = MagicMock()
+    added_rows = []
+    session.add = MagicMock(side_effect=lambda row: added_rows.append(row))
+    session.query.side_effect = [
+        _mock_query_one_or_none(None),
+        _mock_query_one_or_none(None),
+    ]
+
+    with patch(
+        "backend.workers.jobs.remediation_run_execution._resolve_group_run_for_execution",
+        return_value=(group_run, [run.action.id, review_action.id]),
+    ):
+        with patch("backend.workers.jobs.remediation_run_execution.record_execution_result") as mock_record:
+            with patch("backend.workers.jobs.remediation_run_execution.evaluate_confirmation_for_action") as mock_eval:
+                _sync_group_run_results(
+                    session,
+                    run=run,
+                    execution=execution,
+                    folder_results=[
+                        {
+                            "folder": "executable/actions/01-primary",
+                            "action_id": str(run.action.id),
+                            "status": "success",
+                        }
+                    ],
+                )
+
+    assert group_run.status == ActionGroupRunStatus.finished
+    assert mock_record.call_count == 2
+    assert mock_eval.call_count == 2
+    review_row = next(row for row in added_rows if row.action_id == review_action.id)
+    assert review_row.execution_status == ActionGroupExecutionStatus.unknown
+    assert review_row.execution_error_code is None
+    assert review_row.raw_result == {
+        "action_id": str(review_action.id),
+        "folder": "review_required/actions/02-review",
+        "support_tier": "review_required_bundle",
+        "profile_id": "s3_review_profile",
+        "strategy_id": "s3_review_strategy",
+        "reason": "review_required_metadata_only",
+        "blocked_reasons": ["needs approval"],
+    }
 
 
 def test_pr_bundle_execution_legacy_grouped_bundle_still_executes_actions_root() -> None:
@@ -1913,6 +2083,12 @@ def test_pr_bundle_execution_mixed_tier_zero_executable_fails_precisely() -> Non
     assert isinstance(execution.results, dict)
     assert execution.results.get("folder_count") == 0
     assert execution.results.get("non_executable_action_count") == 2
+    non_executable_results = execution.results.get("non_executable_results")
+    assert isinstance(non_executable_results, list)
+    assert {item.get("reason") for item in non_executable_results} == {
+        "review_required_metadata_only",
+        "manual_guidance_metadata_only",
+    }
 
 
 def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:

@@ -1066,11 +1066,23 @@ def _validate_grouped_bundle_records(
         )
 
 
+def _reporting_non_executable_result(record: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "action_id": str(record.get("action_id") or ""),
+        "support_tier": str(record.get("support_tier") or ""),
+        "profile_id": str(record.get("profile_id") or ""),
+        "strategy_id": str(record.get("strategy_id") or ""),
+        "reason": str(record.get("outcome") or "non_executable_grouped_action"),
+        "blocked_reasons": copy.deepcopy(list(record.get("blocked_reasons") or [])),
+    }
+
+
 def _build_reporting_wrapper_script(
     *,
     callback_url: str,
     report_token: str,
     action_ids: list[uuid.UUID],
+    non_executable_results: Sequence[Mapping[str, Any]] | None = None,
 ) -> str:
     success_results = [
         {
@@ -1088,6 +1100,11 @@ def _build_reporting_wrapper_script(
         }
         for action_id in action_ids
     ]
+    reporting_non_executable_results = [
+        dict(item)
+        for item in (non_executable_results or [])
+        if isinstance(item, Mapping)
+    ]
     started_template = {
         "token": report_token,
         "event": "started",
@@ -1099,12 +1116,16 @@ def _build_reporting_wrapper_script(
         "reporting_source": "bundle_callback",
         "action_results": success_results,
     }
+    if reporting_non_executable_results:
+        finished_success_template["non_executable_results"] = reporting_non_executable_results
     finished_failed_template = {
         "token": report_token,
         "event": "finished",
         "reporting_source": "bundle_callback",
         "action_results": failed_results,
     }
+    if reporting_non_executable_results:
+        finished_failed_template["non_executable_results"] = reporting_non_executable_results
 
     return f"""#!/usr/bin/env bash
 set +e
@@ -1758,6 +1779,11 @@ def _generate_mixed_tier_group_pr_bundle(
         },
     )
     if callback_url and report_token:
+        non_executable_results = [
+            _reporting_non_executable_result(record)
+            for record in records
+            if not bool(record.get("has_runnable_terraform"))
+        ]
         files.insert(0, {"path": "run_actions.sh", "content": runner_script})
         files.insert(
             0,
@@ -1767,6 +1793,7 @@ def _generate_mixed_tier_group_pr_bundle(
                     callback_url=callback_url,
                     report_token=report_token,
                     action_ids=runnable_action_ids,
+                    non_executable_results=non_executable_results,
                 ),
             },
         )
@@ -2173,10 +2200,11 @@ def execute_remediation_run_job(job: dict) -> None:
                     raw_group_action_ids = job.get("group_action_ids")
                     group_reporting_callback_url: str | None = None
                     group_reporting_token: str | None = None
-                    if raw_group_action_ids is None and isinstance(run.artifacts, dict):
+                    if isinstance(run.artifacts, dict):
                         raw_group = run.artifacts.get("group_bundle")
                         if isinstance(raw_group, dict):
-                            raw_group_action_ids = raw_group.get("action_ids")
+                            if raw_group_action_ids is None:
+                                raw_group_action_ids = raw_group.get("action_ids")
                             reporting_config = raw_group.get("reporting")
                             if isinstance(reporting_config, dict):
                                 callback_value = reporting_config.get("callback_url")

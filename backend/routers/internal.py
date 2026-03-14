@@ -14,7 +14,7 @@ from typing import Annotated
 
 import boto3
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -171,6 +171,8 @@ class RemediationSyncReconcileRequest(BaseModel):
 
 
 class GroupRunActionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     action_id: uuid.UUID
     execution_status: str = Field(default="unknown")
     execution_error_code: str | None = Field(default=None, max_length=128)
@@ -180,13 +182,27 @@ class GroupRunActionResult(BaseModel):
     raw_result: dict | None = None
 
 
+class GroupRunNonExecutableResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action_id: uuid.UUID
+    support_tier: str = Field(..., min_length=1, max_length=64)
+    profile_id: str | None = Field(default=None, max_length=255)
+    strategy_id: str | None = Field(default=None, max_length=255)
+    reason: str = Field(..., min_length=1, max_length=255)
+    blocked_reasons: list[str] = Field(default_factory=list)
+
+
 class GroupRunReportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     token: str
     event: str = Field(pattern=r"^(started|finished)$")
     reporting_source: str | None = Field(default="bundle_callback", max_length=64)
     started_at: str | None = None
     finished_at: str | None = None
     action_results: list[GroupRunActionResult] = Field(default_factory=list)
+    non_executable_results: list[GroupRunNonExecutableResult] = Field(default_factory=list)
 
 
 def _verify_digest_cron_secret(x_digest_cron_secret: str | None) -> None:
@@ -309,6 +325,72 @@ def _coerce_execution_status(raw: str) -> ActionGroupExecutionStatus:
         return ActionGroupExecutionStatus(text)
     except ValueError:
         return ActionGroupExecutionStatus.unknown
+
+
+def _validate_finished_group_run_results(
+    *,
+    action_results: list[GroupRunActionResult],
+    non_executable_results: list[GroupRunNonExecutableResult],
+    allowed_action_ids: set[uuid.UUID],
+) -> None:
+    seen: set[uuid.UUID] = set()
+    duplicate_ids: list[str] = []
+    all_ids = [item.action_id for item in action_results]
+    all_ids.extend(item.action_id for item in non_executable_results)
+    for action_id in all_ids:
+        if action_id in seen and str(action_id) not in duplicate_ids:
+            duplicate_ids.append(str(action_id))
+        seen.add(action_id)
+    if duplicate_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Duplicate action_id in finished results: {', '.join(sorted(duplicate_ids))}",
+        )
+    invalid_ids = sorted(str(action_id) for action_id in seen if action_id not in allowed_action_ids)
+    if invalid_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"action_id not allowed by token: {', '.join(invalid_ids)}",
+        )
+    missing_ids = sorted(str(action_id) for action_id in (allowed_action_ids - seen))
+    if missing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Finished event missing results for action_id(s): {', '.join(missing_ids)}",
+        )
+
+
+async def _get_or_create_group_run_result(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_run_id: uuid.UUID,
+    action_id: uuid.UUID,
+) -> ActionGroupRunResult:
+    result_row = (
+        await db.execute(
+            select(ActionGroupRunResult).where(
+                ActionGroupRunResult.tenant_id == tenant_id,
+                ActionGroupRunResult.group_run_id == group_run_id,
+                ActionGroupRunResult.action_id == action_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if result_row is not None:
+        return result_row
+    result_row = ActionGroupRunResult(
+        tenant_id=tenant_id,
+        group_run_id=group_run_id,
+        action_id=action_id,
+    )
+    db.add(result_row)
+    return result_row
+
+
+def _non_executable_raw_result(item: GroupRunNonExecutableResult) -> dict:
+    payload = item.model_dump(mode="json")
+    payload["result_type"] = "non_executable"
+    return payload
 
 
 async def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
@@ -667,45 +749,29 @@ async def report_group_run_event(
     run.finished_at = finished_at
     run.reporting_source = reporting_source
 
-    provided_results = body.action_results or []
-    if provided_results:
-        invalid_ids = [str(item.action_id) for item in provided_results if item.action_id not in allowed_action_ids]
-        if invalid_ids:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"action_id not allowed by token: {', '.join(invalid_ids)}",
-            )
-    else:
-        provided_results = [
-            GroupRunActionResult(action_id=action_id, execution_status=ActionGroupExecutionStatus.unknown.value)
-            for action_id in list(allowed_action_ids)
-        ]
+    action_results = body.action_results or []
+    non_executable_results = body.non_executable_results or []
+    _validate_finished_group_run_results(
+        action_results=action_results,
+        non_executable_results=non_executable_results,
+        allowed_action_ids=allowed_action_ids,
+    )
 
     has_failed = False
     has_cancelled = False
-    for item in provided_results:
+    for item in action_results:
         exec_status = _coerce_execution_status(item.execution_status)
         if exec_status == ActionGroupExecutionStatus.failed:
             has_failed = True
         if exec_status == ActionGroupExecutionStatus.cancelled:
             has_cancelled = True
 
-        result_row = (
-            await db.execute(
-                select(ActionGroupRunResult).where(
-                    ActionGroupRunResult.tenant_id == tenant_id,
-                    ActionGroupRunResult.group_run_id == run.id,
-                    ActionGroupRunResult.action_id == item.action_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if result_row is None:
-            result_row = ActionGroupRunResult(
-                tenant_id=tenant_id,
-                group_run_id=run.id,
-                action_id=item.action_id,
-            )
-            db.add(result_row)
+        result_row = await _get_or_create_group_run_result(
+            db,
+            tenant_id=tenant_id,
+            group_run_id=run.id,
+            action_id=item.action_id,
+        )
 
         result_row.execution_status = exec_status
         result_row.execution_error_code = item.execution_error_code
@@ -726,6 +792,34 @@ async def report_group_run_event(
             db,
             action_id=item.action_id,
             since_run_started=result_row.execution_started_at or run.started_at,
+        )
+
+    for item in non_executable_results:
+        result_row = await _get_or_create_group_run_result(
+            db,
+            tenant_id=tenant_id,
+            group_run_id=run.id,
+            action_id=item.action_id,
+        )
+        result_row.execution_status = ActionGroupExecutionStatus.unknown
+        result_row.execution_error_code = None
+        result_row.execution_error_message = None
+        result_row.execution_started_at = run.started_at
+        result_row.execution_finished_at = finished_at
+        result_row.raw_result = _non_executable_raw_result(item)
+
+        await record_execution_result_async(
+            db,
+            action_id=item.action_id,
+            latest_run_id=run.id,
+            execution_status=ActionGroupExecutionStatus.unknown,
+            attempted_at=run.started_at,
+            finished_at=finished_at,
+        )
+        await evaluate_confirmation_for_action_async(
+            db,
+            action_id=item.action_id,
+            since_run_started=run.started_at,
         )
 
     if has_failed:

@@ -1,5 +1,43 @@
 # Task Log
 
+## Remediation-profile Wave 5 grouped reporting and mixed-tier result semantics on master (2026-03-15)
+
+**Task:** Implement Wave 5 Prompt 3 grouped reporting support for mixed-tier remediation bundles on the current `master` checkout only, preserving the queue-v2 contract, direct-fix behavior, and existing ActionGroupRun/report-token lifecycle.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py** - added additive `non_executable_results[]` callback parsing, strict finished-payload validation across the token’s full allowed action set, safe persistence of metadata-only results into `ActionGroupRunResult.raw_result`, and non-failing status handling for review/manual outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - updated mixed-tier reporting wrapper generation to keep executable actions in `action_results[]`, emit review/manual metadata in `non_executable_results[]`, and always load grouped reporting callback config from persisted `group_bundle.reporting` even when queue-v2 `group_action_ids` are present.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py** - split SaaS executor result payloads into executable `action_results[]` plus additive `non_executable_results[]`, carried support-tier/profile/strategy/blocked-reason metadata forward, and stopped mixed-tier result sync from misclassifying metadata-only actions as execution failures.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py** - added callback regressions for mixed executable + non-executable payload acceptance and invalid non-executable action-id rejection.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - added mixed-tier reporting-wrapper coverage, SaaS executor non-executable sync coverage, and updated execution assertions to expect separated executable/non-executable result arrays.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py** - tightened the existing action-group route coverage to assert the issued reporting token/callback stay linked to persisted `group_bundle.reporting`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 5 Prompt 3 implementation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, current project status, remediation-profile spec/plan/Wave 4 doc, and the relevant task-log entries before patching code.
+- Kept the existing `ActionGroupExecutionStatus` enum and represented non-executable grouped outcomes as `execution_status=unknown` plus structured `raw_result` metadata instead of introducing a migration.
+- Changed the internal finished callback contract so executable and metadata-only grouped actions must collectively cover the token’s `allowed_action_ids`; duplicate, missing, or mismatched action IDs now fail closed with `400`.
+- Kept existing executable callback semantics intact for legacy/executable-only bundles: those bundles still report exclusively through `action_results[]`.
+- Updated mixed-tier bundle wrapper output so:
+  - runnable Terraform folders remain in `action_results[]`
+  - review/manual metadata-only actions go to `non_executable_results[]`
+  - failed wrapper callbacks still include the same metadata-only actions without converting them into execution failures
+- Fixed the grouped worker’s callback-config lookup so queue-v2 grouped runs still generate the reporting wrapper when callback metadata lives only under persisted `artifacts.group_bundle.reporting`.
+- Updated SaaS executor result payloads and sync logic so mixed-tier plan/apply executions no longer fall back to `missing_folder_result` for review/manual actions that intentionally have no runnable folder.
+- Ran the requested validation:
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py -q` -> `4 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q` -> `37 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py -q` -> `7 passed`
+
+**Technical debt / gotchas:**
+- The internal finished callback is now intentionally strict: mixed-tier reporters must account for every token-authorized action across `action_results[]` and `non_executable_results[]`; omitting review/manual actions now fails closed instead of silently writing unknown placeholders.
+- `ActionGroupRunResult.execution_status` for non-executable outcomes remains `unknown` by design. The detailed semantics now live in `raw_result`, so any future UI/reporting work should read `raw_result.result_type/support_tier/reason` before treating `unknown` as an error.
+- SaaS executor results keep both `non_executable_actions` and `non_executable_results` for compatibility during rollout, but new consumers should prefer `non_executable_results`.
+
+**Open questions / TODOs:**
+- The remediation-profile docs prompt should capture the stricter finished-callback completeness rule and the additive `non_executable_results[]` payload shape before this Wave 5 slice is documented publicly.
+
 ## Remediation-profile Wave 4 RPW4-06 blocker rerun and queue-v2 regression closure on master (2026-03-14)
 
 **Task:** Use the current `master` checkout only, rerun `RPW4-06` plus adjacent grouped queue-`v2` regressions `RPW4-04` and `RPW4-05` against a restarted backend that includes commit `7d3cd53a`, refresh the existing Wave 4 run package, and update docs/history with the authoritative gate decision.

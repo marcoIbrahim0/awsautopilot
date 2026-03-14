@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 5 grouped reporting and mixed-tier result semantics on master (2026-03-15)](task_log.md#remediation-profile-wave-5-grouped-reporting-and-mixed-tier-result-semantics-on-master-2026-03-15)
+  - Added additive grouped callback `non_executable_results[]`, strict finished-payload validation against the reporting token action set, and non-failing persistence for review/manual outcomes.
+  - Updated mixed-tier bundle wrapper generation and SaaS executor result-sync so metadata-only grouped actions stay out of executable failure classification while preserving the existing ActionGroupRun/report-token lifecycle.
+  - Added focused regressions for mixed-tier callback acceptance, invalid non-executable IDs, reporting-wrapper payload shape, SaaS executor sync semantics, and reporting-token linkage; the requested three pytest scopes all passed.
 - [Remediation-profile Wave 4 RPW4-06 blocker rerun and queue-v2 regression closure on master (2026-03-14)](task_log.md#remediation-profile-wave-4-rpw4-06-blocker-rerun-and-queue-v2-regression-closure-on-master-2026-03-14)
   - Verified the rerun environment on local `master` actually used `HEAD=7d3cd53a` with a restarted backend on `127.0.0.1:18003` and isolated rerun queues, explicitly avoiding the stale pre-fix `18002` backend.
   - Re-ran only `RPW4-04`, `RPW4-05`, and `RPW4-06`, added rerun-specific raw API/queue/worker evidence under the existing Wave 4 run package, and updated the summary/tests to the latest authoritative outcomes.

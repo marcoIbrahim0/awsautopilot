@@ -49,6 +49,10 @@ logger = logging.getLogger("worker.jobs.remediation_run_execution")
 
 RUN_TIMEOUT_SECONDS = 300
 ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+_NON_EXECUTABLE_REASON_BY_TIER = {
+    "review_required_bundle": "review_required_metadata_only",
+    "manual_guidance_only": "manual_guidance_metadata_only",
+}
 
 
 @dataclass
@@ -155,6 +159,28 @@ def _group_bundle_action_records(manifest: dict[str, Any] | None) -> list[dict[s
     return [record for record in raw_records if isinstance(record, dict)]
 
 
+def _non_executable_reason(*, support_tier: str, outcome: str | None = None) -> str:
+    if isinstance(outcome, str) and outcome.strip():
+        return outcome.strip()
+    return _NON_EXECUTABLE_REASON_BY_TIER.get(support_tier, "non_executable_grouped_action")
+
+
+def _manifest_non_executable_action(record: dict[str, Any]) -> dict[str, object]:
+    support_tier = str(record.get("support_tier") or "").strip()
+    outcome = str(record.get("outcome") or "").strip()
+    return {
+        "action_id": str(record.get("action_id") or ""),
+        "folder": str(record.get("folder") or ""),
+        "support_tier": support_tier,
+        "profile_id": str(record.get("profile_id") or ""),
+        "strategy_id": str(record.get("strategy_id") or ""),
+        "reason": _non_executable_reason(support_tier=support_tier, outcome=outcome),
+        "blocked_reasons": list(record.get("blocked_reasons") or []),
+        "tier": str(record.get("tier") or ""),
+        "outcome": outcome,
+    }
+
+
 def _manifest_target(workspace: Path, manifest: dict[str, Any]) -> _BundleExecutionTarget | None:
     layout_version = manifest.get("layout_version")
     execution_root = manifest.get("execution_root")
@@ -171,16 +197,7 @@ def _manifest_target(workspace: Path, manifest: dict[str, Any]) -> _BundleExecut
             folder_action_ids[folder] = action_id
         if record.get("has_runnable_terraform") is True:
             continue
-        non_executable_actions.append(
-            {
-                "action_id": str(record.get("action_id") or ""),
-                "folder": str(record.get("folder") or ""),
-                "support_tier": str(record.get("support_tier") or ""),
-                "tier": str(record.get("tier") or ""),
-                "outcome": str(record.get("outcome") or ""),
-                "reason": "non_executable_grouped_action",
-            }
-        )
+        non_executable_actions.append(_manifest_non_executable_action(record))
     return _BundleExecutionTarget(
         target_kind="mixed_tier_grouped",
         detected_by="bundle_manifest",
@@ -209,14 +226,18 @@ def _resolution_non_executable_actions(run: RemediationRun) -> list[dict[str, ob
         support_tier = str(resolution.get("support_tier") or "").strip()
         if support_tier == "deterministic_bundle":
             continue
+        reason = _non_executable_reason(support_tier=support_tier)
         actions.append(
             {
                 "action_id": str(entry.get("action_id") or ""),
                 "folder": "",
                 "support_tier": support_tier,
+                "profile_id": str(resolution.get("profile_id") or ""),
+                "strategy_id": str(resolution.get("strategy_id") or ""),
+                "reason": reason,
+                "blocked_reasons": list(resolution.get("blocked_reasons") or []),
                 "tier": "",
-                "outcome": "non_executable_grouped_action",
-                "reason": "non_executable_grouped_action",
+                "outcome": reason,
             }
         )
     return actions
@@ -371,7 +392,7 @@ def _execution_results_payload(
         }
         for item in folder_results
     ]
-    action_results.extend(target.non_executable_actions)
+    non_executable_results = [dict(item) for item in target.non_executable_actions]
     return {
         "folders": folder_results,
         "folder_count": len(folder_results),
@@ -389,8 +410,9 @@ def _execution_results_payload(
             }
             for item in folder_results
         ],
-        "non_executable_actions": target.non_executable_actions,
-        "non_executable_action_count": len(target.non_executable_actions),
+        "non_executable_actions": non_executable_results,
+        "non_executable_results": non_executable_results,
+        "non_executable_action_count": len(non_executable_results),
         "action_results": action_results,
     }
 
@@ -678,6 +700,19 @@ def _to_group_execution_status(status: str | None) -> ActionGroupExecutionStatus
     return ActionGroupExecutionStatus.unknown
 
 
+def _group_result_map(raw_items: object) -> dict[str, dict[str, object]]:
+    if not isinstance(raw_items, list):
+        return {}
+    result: dict[str, dict[str, object]] = {}
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        action_id = str(item.get("action_id") or "").strip()
+        if action_id:
+            result[action_id] = item
+    return result
+
+
 def _sync_group_run_results(
     session: Session,
     *,
@@ -695,16 +730,10 @@ def _sync_group_run_results(
         return
 
     execution_results = execution.results if isinstance(execution.results, dict) else {}
-    action_result_map: dict[str, dict[str, object]] = {}
-    raw_action_results = execution_results.get("action_results")
-    if isinstance(raw_action_results, list):
-        for item in raw_action_results:
-            if not isinstance(item, dict):
-                continue
-            action_id = str(item.get("action_id") or "").strip()
-            if not action_id:
-                continue
-            action_result_map[action_id] = item
+    action_result_map = _group_result_map(execution_results.get("action_results"))
+    non_executable_result_map = _group_result_map(execution_results.get("non_executable_results"))
+    if not non_executable_result_map:
+        non_executable_result_map = _group_result_map(execution_results.get("non_executable_actions"))
 
     ordered_results = folder_results or []
     has_failed = False
@@ -712,10 +741,18 @@ def _sync_group_run_results(
     for index, action_id in enumerate(action_ids):
         action_key = str(action_id)
         action_result = action_result_map.get(action_key)
+        non_executable_result = non_executable_result_map.get(action_key)
         folder_result = ordered_results[index] if index < len(ordered_results) else None
         if isinstance(action_result, dict):
-            exec_status = _to_group_execution_status(str(action_result.get("status") or "unknown"))
+            exec_status = _to_group_execution_status(
+                str(action_result.get("status") or action_result.get("execution_status") or "unknown")
+            )
             raw_result = action_result
+        elif isinstance(non_executable_result, dict):
+            exec_status = _to_group_execution_status(
+                str(non_executable_result.get("status") or non_executable_result.get("execution_status") or "unknown")
+            )
+            raw_result = non_executable_result
         elif folder_result is None:
             exec_status = ActionGroupExecutionStatus.unknown
             raw_result = {"error": "missing_folder_result"}

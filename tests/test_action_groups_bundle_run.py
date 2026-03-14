@@ -213,6 +213,8 @@ def test_create_action_group_bundle_run_preserves_reporting_and_repo_target(clie
         "token": "signed-token",
         "reporting_source": "bundle_callback",
     }
+    assert group_bundle["reporting"]["token"] == payload["reporting_token"]
+    assert group_bundle["reporting"]["callback_url"] == payload["reporting_callback_url"]
     assert group_bundle["action_ids"] == [str(action1.id), str(action2.id)]
 
     resolutions = group_bundle["action_resolutions"]
