@@ -3532,6 +3532,65 @@ def test_execute_pr_bundle_plan_queues_execution(client: TestClient) -> None:
     assert mock_sqs.send_message.call_count == 1
 
 
+def test_execute_pr_bundle_plan_rejects_zero_executable_mixed_tier_bundle(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_block_public_access")
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.success
+    run.outcome = "PR bundle generated"
+    run.artifacts = {
+        "pr_bundle": {
+            "files": [
+                {
+                    "path": "bundle_manifest.json",
+                    "content": json.dumps(
+                        {
+                            "layout_version": "grouped_bundle_mixed_tier/v1",
+                            "execution_root": "executable/actions",
+                        }
+                    ),
+                },
+                {"path": "review_required/actions/a/decision.json", "content": "{}"},
+            ]
+        }
+    }
+    run.action = action
+
+    run_result = MagicMock()
+    run_result.scalar_one_or_none.return_value = run
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[run_result])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "No executable bundle actions"
+        assert detail.get("reason") == "no_executable_bundle"
+        assert detail.get("layout_version") == "grouped_bundle_mixed_tier/v1"
+        assert detail.get("execution_root") == "executable/actions"
+
+
 def test_execute_pr_bundle_plan_root_credentials_required_400(client: TestClient) -> None:
     """SaaS executor must fail fast for root-key runs with explicit root-credentials-required error."""
     tenant = _mock_tenant()
@@ -3792,6 +3851,76 @@ def test_bulk_execute_pr_bundle_plan_rejects_capacity(client: TestClient) -> Non
     assert len(body.get("accepted", [])) == 0
     assert len(body.get("rejected", [])) == 1
     assert body["rejected"][0]["reason"] == "capacity_exceeded"
+
+
+def test_bulk_execute_pr_bundle_plan_rejects_zero_executable_mixed_tier_bundle(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.success
+    run.outcome = "PR bundle generated"
+    run.artifacts = {
+        "pr_bundle": {
+            "files": [
+                {
+                    "path": "bundle_manifest.json",
+                    "content": json.dumps(
+                        {
+                            "layout_version": "grouped_bundle_mixed_tier/v1",
+                            "execution_root": "executable/actions",
+                        }
+                    ),
+                },
+                {"path": "manual_guidance/actions/a/decision.json", "content": "{}"},
+            ]
+        }
+    }
+    run.action = _mock_action(action_type="s3_bucket_block_public_access")
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = 0
+    runs_result = MagicMock()
+    runs_result.scalars.return_value.all.return_value = [run]
+
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[count_result, runs_result])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+    session.commit = AsyncMock()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 6
+        try:
+            r = client.post(
+                "/api/remediation-runs/bulk-execute-pr-bundle",
+                json={
+                    "run_ids": [str(run.id)],
+                    "max_parallel": 3,
+                    "fail_fast": True,
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body.get("accepted", [])) == 0
+    assert len(body.get("rejected", [])) == 1
+    assert body["rejected"][0]["reason"] == "no_executable_bundle"
 
 
 def test_bulk_approve_apply_queues_multiple(client: TestClient) -> None:

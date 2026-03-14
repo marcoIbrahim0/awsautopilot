@@ -178,6 +178,32 @@ def _bundle_files_by_path(run: MagicMock) -> dict[str, str]:
     return result
 
 
+def _mock_execution_session(
+    execution: MagicMock,
+    *,
+    account: MagicMock | None = None,
+    grouped_actions: list[MagicMock] | None = None,
+    claim_rowcount: int = 1,
+) -> MagicMock:
+    exec_result = MagicMock()
+    exec_result.scalar_one_or_none.return_value = execution
+    claim_result = MagicMock()
+    claim_result.rowcount = claim_rowcount
+    side_effects: list[MagicMock] = [exec_result, claim_result]
+    if grouped_actions is not None:
+        group_result = MagicMock()
+        group_result.scalars.return_value.all.return_value = grouped_actions
+        side_effects.append(group_result)
+    if account is not None:
+        account_result = MagicMock()
+        account_result.scalar_one_or_none.return_value = account
+        side_effects.append(account_result)
+    session = MagicMock()
+    session.execute.side_effect = side_effects
+    session.flush = MagicMock()
+    return session
+
+
 @pytest.fixture(autouse=True)
 def _stub_download_bundle_group_run_sync():
     """
@@ -1363,6 +1389,198 @@ def test_pr_bundle_execution_plan_success() -> None:
     assert run.status == RemediationRunStatus.awaiting_approval
     assert isinstance(execution.workspace_manifest, dict)
     assert isinstance(execution.results, dict)
+    assert execution.workspace_manifest.get("target_kind") == "single_run_root"
+    assert execution.workspace_manifest.get("execution_root") is None
+    assert execution.workspace_manifest.get("folders") == ["."]
+    assert execution.results.get("action_results") == [
+        {
+            "action_id": str(run.action.id),
+            "folder": ".",
+            "status": "success",
+            "error": None,
+        }
+    ]
+
+
+def test_pr_bundle_execution_mixed_tier_plan_executes_only_executable_folders() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    review_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two review",
+    )
+    run.artifacts = {
+        "group_bundle": {"action_ids": [str(run.action.id), str(review_action.id)]},
+        "pr_bundle": {
+            "files": [
+                {
+                    "path": "bundle_manifest.json",
+                    "content": json.dumps(
+                        {
+                            "layout_version": "grouped_bundle_mixed_tier/v1",
+                            "execution_root": "executable/actions",
+                            "actions": [
+                                {
+                                    "action_id": str(run.action.id),
+                                    "folder": f"executable/actions/01-{str(run.action.id)[:8]}",
+                                    "support_tier": "deterministic_bundle",
+                                    "tier": "executable",
+                                    "outcome": "executable_bundle_generated",
+                                    "has_runnable_terraform": True,
+                                },
+                                {
+                                    "action_id": str(review_action.id),
+                                    "folder": f"review_required/actions/02-{str(review_action.id)[:8]}",
+                                    "support_tier": "review_required_bundle",
+                                    "tier": "review_required",
+                                    "outcome": "review_required_metadata_only",
+                                    "has_runnable_terraform": False,
+                                },
+                            ],
+                        }
+                    ),
+                },
+                {
+                    "path": f"executable/actions/01-{str(run.action.id)[:8]}/main.tf",
+                    "content": 'terraform {}',
+                },
+                {
+                    "path": f"review_required/actions/02-{str(review_action.id)[:8]}/decision.json",
+                    "content": "{}",
+                },
+            ]
+        },
+    }
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    mock_session = _mock_execution_session(
+        execution,
+        account=account,
+        grouped_actions=[run.action, review_action],
+    )
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._sync_group_run_results", return_value=None):
+                with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                    mock_run_cmd.side_effect = [
+                        {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform show", "returncode": 0, "stdout": "plan", "stderr": ""},
+                    ]
+                    execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 3
+    called_dirs = [str(call.args[1]) for call in mock_run_cmd.call_args_list]
+    assert any("/executable/actions/" in path for path in called_dirs)
+    assert not any("/review_required/actions/" in path for path in called_dirs)
+    assert execution.status == RemediationRunExecutionStatus.awaiting_approval
+    assert isinstance(execution.workspace_manifest, dict)
+    assert execution.workspace_manifest.get("target_kind") == "mixed_tier_grouped"
+    assert execution.workspace_manifest.get("layout_version") == "grouped_bundle_mixed_tier/v1"
+    assert execution.workspace_manifest.get("execution_root") == "executable/actions"
+    assert execution.workspace_manifest.get("non_executable_action_count") == 1
+    assert isinstance(execution.results, dict)
+    assert execution.results.get("folder_count") == 1
+    assert execution.results.get("non_executable_action_count") == 1
+    action_results = execution.results.get("action_results")
+    assert isinstance(action_results, list)
+    assert any(item.get("action_id") == str(run.action.id) and item.get("status") == "success" for item in action_results)
+    assert any(
+        item.get("action_id") == str(review_action.id) and item.get("reason") == "non_executable_grouped_action"
+        for item in action_results
+    )
+
+
+def test_pr_bundle_execution_legacy_grouped_bundle_still_executes_actions_root() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    run.artifacts = {
+        "group_bundle": {"action_ids": [str(run.action.id), str(second_action.id)]},
+        "pr_bundle": {
+            "files": [
+                {"path": "actions/a/main.tf", "content": 'terraform {}'},
+                {"path": "actions/b/main.tf", "content": 'terraform {}'},
+            ]
+        },
+    }
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = {"fail_fast": False}
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    mock_session = _mock_execution_session(
+        execution,
+        account=account,
+        grouped_actions=[run.action, second_action],
+    )
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._sync_group_run_results", return_value=None):
+                with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                    mock_run_cmd.side_effect = [
+                        {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform show", "returncode": 0, "stdout": "plan", "stderr": ""},
+                        {"command": "terraform init", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform plan", "returncode": 0, "stdout": "", "stderr": ""},
+                        {"command": "terraform show", "returncode": 0, "stdout": "plan", "stderr": ""},
+                    ]
+                    execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 6
+    assert execution.status == RemediationRunExecutionStatus.awaiting_approval
+    assert execution.workspace_manifest.get("target_kind") == "legacy_grouped"
+    assert execution.workspace_manifest.get("execution_root") == "actions"
+    assert execution.workspace_manifest.get("folders") == ["actions/a", "actions/b"]
 
 
 def test_pr_bundle_execution_plan_missing_terraform_dependency_fails() -> None:
@@ -1596,6 +1814,107 @@ def test_pr_bundle_execution_root_credentials_required_fails_fast() -> None:
     assert MANUAL_HIGH_RISK_MARKER in str(run.logs or "")
 
 
+def test_pr_bundle_execution_mixed_tier_zero_executable_fails_precisely() -> None:
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.mode = RemediationRunMode.pr_only
+    manual_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two manual guidance",
+    )
+    run.artifacts = {
+        "group_bundle": {"action_ids": [str(run.action.id), str(manual_action.id)]},
+        "pr_bundle": {
+            "files": [
+                {
+                    "path": "bundle_manifest.json",
+                    "content": json.dumps(
+                        {
+                            "layout_version": "grouped_bundle_mixed_tier/v1",
+                            "execution_root": "executable/actions",
+                            "actions": [
+                                {
+                                    "action_id": str(run.action.id),
+                                    "folder": f"review_required/actions/01-{str(run.action.id)[:8]}",
+                                    "support_tier": "review_required_bundle",
+                                    "tier": "review_required",
+                                    "outcome": "review_required_metadata_only",
+                                    "has_runnable_terraform": False,
+                                },
+                                {
+                                    "action_id": str(manual_action.id),
+                                    "folder": f"manual_guidance/actions/02-{str(manual_action.id)[:8]}",
+                                    "support_tier": "manual_guidance_only",
+                                    "tier": "manual_guidance",
+                                    "outcome": "manual_guidance_metadata_only",
+                                    "has_runnable_terraform": False,
+                                },
+                            ],
+                        }
+                    ),
+                },
+                {
+                    "path": f"review_required/actions/01-{str(run.action.id)[:8]}/decision.json",
+                    "content": "{}",
+                },
+                {
+                    "path": f"manual_guidance/actions/02-{str(manual_action.id)[:8]}/decision.json",
+                    "content": "{}",
+                },
+            ]
+        },
+    }
+    execution = MagicMock()
+    execution.id = uuid.uuid4()
+    execution.run = run
+    execution.run_id = run.id
+    execution.tenant_id = run.tenant_id
+    execution.phase = RemediationRunExecutionPhase.plan
+    execution.status = RemediationRunExecutionStatus.queued
+    execution.workspace_manifest = None
+    execution.results = None
+    execution.logs_ref = None
+    execution.error_summary = None
+
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    mock_session = _mock_execution_session(
+        execution,
+        account=account,
+        grouped_actions=[run.action, manual_action],
+    )
+    job = {
+        "job_type": "execute_pr_bundle_plan",
+        "execution_id": str(execution.id),
+        "run_id": str(run.id),
+        "tenant_id": str(run.tenant_id),
+        "phase": "plan",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with patch("backend.workers.jobs.remediation_run_execution.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run_execution.assume_role", return_value=MagicMock()):
+            with patch("backend.workers.jobs.remediation_run_execution._sync_group_run_results", return_value=None):
+                with patch("backend.workers.jobs.remediation_run_execution._run_cmd") as mock_run_cmd:
+                    execute_pr_bundle_execution_job(job)
+
+    assert mock_run_cmd.call_count == 0
+    assert execution.status == RemediationRunExecutionStatus.failed
+    assert "mixed-tier bundle has no executable folders" in str(execution.error_summary or "")
+    assert run.status == RemediationRunStatus.failed
+    assert "mixed-tier bundle has no executable folders" in str(run.outcome or "")
+    assert isinstance(execution.workspace_manifest, dict)
+    assert execution.workspace_manifest.get("layout_version") == "grouped_bundle_mixed_tier/v1"
+    assert execution.workspace_manifest.get("execution_root") == "executable/actions"
+    assert execution.workspace_manifest.get("folders") == []
+    assert execution.workspace_manifest.get("non_executable_action_count") == 2
+    assert isinstance(execution.results, dict)
+    assert execution.results.get("folder_count") == 0
+    assert execution.results.get("non_executable_action_count") == 2
+
+
 def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:
     run = _mock_run_with_action("s3_bucket_block_public_access")
     run.mode = RemediationRunMode.pr_only
@@ -1646,6 +1965,7 @@ def test_pr_bundle_execution_apply_hash_mismatch_fails() -> None:
                 ]
                 execute_pr_bundle_execution_job(job)
 
+    assert mock_run_cmd.call_count == 0
     assert execution.status == RemediationRunExecutionStatus.failed
     assert run.status == RemediationRunStatus.failed
 

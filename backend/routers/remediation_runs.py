@@ -625,6 +625,7 @@ class BulkExecutionRejectedItem(BaseModel):
         "not_found",
         "invalid_mode",
         "missing_bundle",
+        "no_executable_bundle",
         "missing_plan",
         "not_awaiting_approval",
         "already_running",
@@ -683,6 +684,131 @@ def _build_sqs_client():
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
     return boto3.client("sqs", region_name=queue_region), queue_url
+
+
+def _pr_bundle_files_from_run(run: RemediationRun) -> list[dict[str, Any]]:
+    artifacts = run.artifacts if isinstance(run.artifacts, dict) else {}
+    pr_bundle = artifacts.get("pr_bundle")
+    if not isinstance(pr_bundle, dict):
+        return []
+    raw_files = pr_bundle.get("files")
+    if not isinstance(raw_files, list):
+        return []
+    return [item for item in raw_files if isinstance(item, dict)]
+
+
+def _bundle_manifest_from_files(files: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for item in files:
+        path = str(item.get("path") or "").strip()
+        if path != "bundle_manifest.json":
+            continue
+        content = item.get("content")
+        if not isinstance(content, str):
+            return None
+        try:
+            payload = json.loads(content)
+        except ValueError:
+            return None
+        return payload if isinstance(payload, dict) else None
+    return None
+
+
+def _bundle_has_prefix(files: list[dict[str, Any]], prefix: str) -> bool:
+    normalized = prefix.rstrip("/")
+    return any(
+        (path := str(item.get("path") or "").strip()) == normalized or path.startswith(f"{normalized}/")
+        for item in files
+    )
+
+
+def _bundle_executable_folder_count(files: list[dict[str, Any]], execution_root: str) -> int:
+    prefix = f"{execution_root.strip().rstrip('/')}/"
+    folders: set[str] = set()
+    for item in files:
+        path = str(item.get("path") or "").strip()
+        if not path.startswith(prefix) or not path.endswith(".tf"):
+            continue
+        relative = path[len(prefix):]
+        folder = relative.split("/", 1)[0].strip()
+        if folder:
+            folders.add(folder)
+    return len(folders)
+
+
+def _mixed_tier_bundle_summary(run: RemediationRun) -> dict[str, Any] | None:
+    files = _pr_bundle_files_from_run(run)
+    if not files:
+        return None
+    manifest = _bundle_manifest_from_files(files)
+    if isinstance(manifest, dict):
+        layout_version = manifest.get("layout_version")
+        execution_root = manifest.get("execution_root")
+        if isinstance(layout_version, str) and layout_version.strip() and isinstance(execution_root, str) and execution_root.strip():
+            root = execution_root.strip()
+            return {
+                "target_kind": "mixed_tier_grouped",
+                "detected_by": "bundle_manifest",
+                "layout_version": layout_version.strip(),
+                "execution_root": root,
+                "executable_folder_count": _bundle_executable_folder_count(files, root),
+            }
+    heuristic_root = "executable/actions"
+    if _bundle_has_prefix(files, heuristic_root):
+        return {
+            "target_kind": "mixed_tier_grouped",
+            "detected_by": "executable_actions_heuristic",
+            "layout_version": None,
+            "execution_root": heuristic_root,
+            "executable_folder_count": _bundle_executable_folder_count(files, heuristic_root),
+        }
+    return None
+
+
+def _assert_bundle_has_executable_targets(run: RemediationRun) -> dict[str, Any] | None:
+    summary = _mixed_tier_bundle_summary(run)
+    if summary and int(summary.get("executable_folder_count") or 0) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "No executable bundle actions",
+                "reason": "no_executable_bundle",
+                "detail": (
+                    "This mixed-tier grouped bundle has no executable Terraform folders. "
+                    "Review the review_required/manual_guidance artifacts instead of starting SaaS execution."
+                ),
+                "layout_version": summary.get("layout_version"),
+                "execution_root": summary.get("execution_root"),
+            },
+        )
+    return summary
+
+
+def _execution_manifest_seed(
+    *,
+    fail_fast: bool | None = None,
+    max_parallel: int | None = None,
+    batch_key: str | None = None,
+    bundle_summary: dict[str, Any] | None = None,
+    base_manifest: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    manifest = dict(base_manifest or {})
+    if fail_fast is not None:
+        manifest["fail_fast"] = bool(fail_fast)
+    if max_parallel is not None:
+        manifest["max_parallel"] = int(max_parallel)
+    if batch_key is not None:
+        manifest["batch_key"] = batch_key
+    if isinstance(bundle_summary, dict):
+        manifest["target_kind"] = str(bundle_summary.get("target_kind") or "mixed_tier_grouped")
+        manifest["detected_by"] = str(bundle_summary.get("detected_by") or "")
+        execution_root = bundle_summary.get("execution_root")
+        if isinstance(execution_root, str) and execution_root:
+            manifest["execution_root"] = execution_root
+        layout_version = bundle_summary.get("layout_version")
+        if isinstance(layout_version, str) and layout_version:
+            manifest["layout_version"] = layout_version
+        manifest["executable_folder_count"] = int(bundle_summary.get("executable_folder_count") or 0)
+    return manifest
 
 
 def _enqueue_pr_bundle_execution_message(
@@ -2360,6 +2486,17 @@ async def bulk_execute_pr_bundle_plan(
                 )
             )
             continue
+        try:
+            bundle_summary = _assert_bundle_has_executable_targets(run)
+        except HTTPException:
+            response.rejected.append(
+                BulkExecutionRejectedItem(
+                    run_id=value,
+                    reason="no_executable_bundle",
+                    detail="Mixed-tier grouped bundle has no executable Terraform folders.",
+                )
+            )
+            continue
         active_result = await db.execute(
             select(RemediationRunExecution)
             .where(
@@ -2393,11 +2530,12 @@ async def bulk_execute_pr_bundle_plan(
             tenant_id=tenant_uuid,
             phase=RemediationRunExecutionPhase.plan,
             status=RemediationRunExecutionStatus.queued,
-            workspace_manifest={
-                "fail_fast": bool(body.fail_fast),
-                "max_parallel": int(body.max_parallel),
-                "batch_key": batch_key,
-            },
+            workspace_manifest=_execution_manifest_seed(
+                fail_fast=bool(body.fail_fast),
+                max_parallel=int(body.max_parallel),
+                batch_key=batch_key,
+                bundle_summary=bundle_summary,
+            ),
         )
         db.add(execution)
         run.status = RemediationRunStatus.running
@@ -2766,6 +2904,7 @@ async def execute_pr_bundle_plan(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Missing PR bundle", "detail": "Run has no pr_bundle artifacts to execute."},
         )
+    bundle_summary = _assert_bundle_has_executable_targets(run)
 
     active_result = await db.execute(
         select(RemediationRunExecution)
@@ -2787,7 +2926,10 @@ async def execute_pr_bundle_plan(
         tenant_id=tenant_uuid,
         phase=RemediationRunExecutionPhase.plan,
         status=RemediationRunExecutionStatus.queued,
-        workspace_manifest={"fail_fast": bool(fail_fast)},
+        workspace_manifest=_execution_manifest_seed(
+            fail_fast=bool(fail_fast),
+            bundle_summary=bundle_summary,
+        ),
     )
     db.add(execution)
     run.status = RemediationRunStatus.running

@@ -1,6 +1,7 @@
 """Worker job handler for SaaS-managed PR bundle execution (plan/apply)."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import json
 import logging
@@ -11,6 +12,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
@@ -47,6 +49,17 @@ logger = logging.getLogger("worker.jobs.remediation_run_execution")
 
 RUN_TIMEOUT_SECONDS = 300
 ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+
+@dataclass
+class _BundleExecutionTarget:
+    target_kind: str
+    detected_by: str
+    layout_version: str | None
+    execution_root: str | None
+    folders: list[str]
+    folder_action_ids: dict[str, str]
+    non_executable_actions: list[dict[str, object]]
 
 
 def _resolve_fail_fast(execution: RemediationRunExecution) -> bool:
@@ -101,13 +114,165 @@ def _safe_write(base_dir: Path, rel_path: str, content: str) -> None:
     full.write_text(content, encoding="utf-8")
 
 
-def _execution_folders(workspace: Path) -> list[Path]:
-    actions_dir = workspace / "actions"
-    if actions_dir.exists() and actions_dir.is_dir():
-        dirs = sorted([p for p in actions_dir.iterdir() if p.is_dir()], key=lambda p: p.name)
-        if dirs:
-            return dirs
-    return [workspace]
+def _load_bundle_manifest(workspace: Path) -> dict[str, Any] | None:
+    manifest_path = workspace / "bundle_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _workspace_subdir(workspace: Path, rel_path: str) -> Path:
+    rel = Path(rel_path)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"unsafe execution root: {rel_path}")
+    return workspace / rel
+
+
+def _dirs_under_root(workspace: Path, root: str, *, require_terraform: bool) -> list[str]:
+    root_path = _workspace_subdir(workspace, root)
+    if not root_path.exists() or not root_path.is_dir():
+        return []
+    dirs: list[str] = []
+    for path in sorted(root_path.iterdir(), key=lambda item: item.name):
+        if not path.is_dir():
+            continue
+        if require_terraform and not any(child.is_file() and child.suffix == ".tf" for child in path.iterdir()):
+            continue
+        dirs.append(str(path.relative_to(workspace)))
+    return dirs
+
+
+def _group_bundle_action_records(manifest: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(manifest, dict):
+        return []
+    raw_records = manifest.get("actions")
+    if not isinstance(raw_records, list):
+        return []
+    return [record for record in raw_records if isinstance(record, dict)]
+
+
+def _manifest_target(workspace: Path, manifest: dict[str, Any]) -> _BundleExecutionTarget | None:
+    layout_version = manifest.get("layout_version")
+    execution_root = manifest.get("execution_root")
+    if not isinstance(layout_version, str) or not layout_version.strip():
+        return None
+    if not isinstance(execution_root, str) or not execution_root.strip():
+        return None
+    folder_action_ids: dict[str, str] = {}
+    non_executable_actions: list[dict[str, object]] = []
+    for record in _group_bundle_action_records(manifest):
+        folder = record.get("folder")
+        action_id = record.get("action_id")
+        if isinstance(folder, str) and folder and isinstance(action_id, str) and action_id:
+            folder_action_ids[folder] = action_id
+        if record.get("has_runnable_terraform") is True:
+            continue
+        non_executable_actions.append(
+            {
+                "action_id": str(record.get("action_id") or ""),
+                "folder": str(record.get("folder") or ""),
+                "support_tier": str(record.get("support_tier") or ""),
+                "tier": str(record.get("tier") or ""),
+                "outcome": str(record.get("outcome") or ""),
+                "reason": "non_executable_grouped_action",
+            }
+        )
+    return _BundleExecutionTarget(
+        target_kind="mixed_tier_grouped",
+        detected_by="bundle_manifest",
+        layout_version=layout_version.strip(),
+        execution_root=execution_root.strip(),
+        folders=_dirs_under_root(workspace, execution_root.strip(), require_terraform=True),
+        folder_action_ids=folder_action_ids,
+        non_executable_actions=non_executable_actions,
+    )
+
+
+def _resolution_non_executable_actions(run: RemediationRun) -> list[dict[str, object]]:
+    payload = _group_bundle_payload(run)
+    if not isinstance(payload, dict):
+        return []
+    raw_entries = payload.get("action_resolutions")
+    if not isinstance(raw_entries, list):
+        return []
+    actions: list[dict[str, object]] = []
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        resolution = entry.get("resolution")
+        if not isinstance(resolution, dict):
+            continue
+        support_tier = str(resolution.get("support_tier") or "").strip()
+        if support_tier == "deterministic_bundle":
+            continue
+        actions.append(
+            {
+                "action_id": str(entry.get("action_id") or ""),
+                "folder": "",
+                "support_tier": support_tier,
+                "tier": "",
+                "outcome": "non_executable_grouped_action",
+                "reason": "non_executable_grouped_action",
+            }
+        )
+    return actions
+
+
+def _legacy_group_folder_action_ids(run: RemediationRun, folders: list[str]) -> dict[str, str]:
+    action_ids = [str(action_id) for action_id in _group_action_ids_from_payload(_group_bundle_payload(run))]
+    return {
+        folder: action_ids[index]
+        for index, folder in enumerate(folders)
+        if index < len(action_ids)
+    }
+
+
+def _single_run_folder_action_ids(run: RemediationRun) -> dict[str, str]:
+    if run.action and isinstance(run.action.id, uuid.UUID):
+        return {".": str(run.action.id)}
+    return {}
+
+
+def _resolve_execution_target(workspace: Path, run: RemediationRun) -> _BundleExecutionTarget:
+    manifest = _load_bundle_manifest(workspace)
+    if manifest_target := _manifest_target(workspace, manifest or {}):
+        return manifest_target
+    executable_root = "executable/actions"
+    if _workspace_subdir(workspace, executable_root).is_dir():
+        return _BundleExecutionTarget(
+            target_kind="mixed_tier_grouped",
+            detected_by="executable_actions_heuristic",
+            layout_version=None,
+            execution_root=executable_root,
+            folders=_dirs_under_root(workspace, executable_root, require_terraform=True),
+            folder_action_ids={},
+            non_executable_actions=_resolution_non_executable_actions(run),
+        )
+    legacy_root = "actions"
+    if _workspace_subdir(workspace, legacy_root).is_dir():
+        folders = _dirs_under_root(workspace, legacy_root, require_terraform=False)
+        return _BundleExecutionTarget(
+            target_kind="legacy_grouped",
+            detected_by="actions_heuristic",
+            layout_version=None,
+            execution_root=legacy_root,
+            folders=folders,
+            folder_action_ids=_legacy_group_folder_action_ids(run, folders),
+            non_executable_actions=[],
+        )
+    return _BundleExecutionTarget(
+        target_kind="single_run_root",
+        detected_by="workspace_root",
+        layout_version=None,
+        execution_root=None,
+        folders=["."],
+        folder_action_ids=_single_run_folder_action_ids(run),
+        non_executable_actions=[],
+    )
 
 
 def _run_cmd(
@@ -194,14 +359,39 @@ def _execution_results_payload(
     folder_results: list[dict[str, object]],
     *,
     fail_fast: bool,
+    target: _BundleExecutionTarget,
 ) -> dict[str, object]:
     failed_folders = [item for item in folder_results if item.get("status") == "failed"]
+    action_results = [
+        {
+            "action_id": str(item.get("action_id") or ""),
+            "folder": str(item.get("folder") or ""),
+            "status": str(item.get("status") or "unknown"),
+            "error": item.get("error"),
+        }
+        for item in folder_results
+    ]
+    action_results.extend(target.non_executable_actions)
     return {
         "folders": folder_results,
         "folder_count": len(folder_results),
         "failed_folder_count": len(failed_folders),
         "executor": "terraform",
         "fail_fast": fail_fast,
+        "target_kind": target.target_kind,
+        "detected_by": target.detected_by,
+        "layout_version": target.layout_version,
+        "execution_root": target.execution_root,
+        "executed_folders": [
+            {
+                "folder": str(item.get("folder") or ""),
+                "action_id": str(item.get("action_id") or ""),
+            }
+            for item in folder_results
+        ],
+        "non_executable_actions": target.non_executable_actions,
+        "non_executable_action_count": len(target.non_executable_actions),
+        "action_results": action_results,
     }
 
 
@@ -504,12 +694,29 @@ def _sync_group_run_results(
     if group_run is None or not action_ids:
         return
 
+    execution_results = execution.results if isinstance(execution.results, dict) else {}
+    action_result_map: dict[str, dict[str, object]] = {}
+    raw_action_results = execution_results.get("action_results")
+    if isinstance(raw_action_results, list):
+        for item in raw_action_results:
+            if not isinstance(item, dict):
+                continue
+            action_id = str(item.get("action_id") or "").strip()
+            if not action_id:
+                continue
+            action_result_map[action_id] = item
+
     ordered_results = folder_results or []
     has_failed = False
     has_cancelled = False
     for index, action_id in enumerate(action_ids):
+        action_key = str(action_id)
+        action_result = action_result_map.get(action_key)
         folder_result = ordered_results[index] if index < len(ordered_results) else None
-        if folder_result is None:
+        if isinstance(action_result, dict):
+            exec_status = _to_group_execution_status(str(action_result.get("status") or "unknown"))
+            raw_result = action_result
+        elif folder_result is None:
             exec_status = ActionGroupExecutionStatus.unknown
             raw_result = {"error": "missing_folder_result"}
         else:
@@ -544,7 +751,9 @@ def _sync_group_run_results(
         row.raw_result = raw_result if isinstance(raw_result, dict) else None
         if exec_status == ActionGroupExecutionStatus.failed:
             row.execution_error_code = "saas_executor_failed"
-            row.execution_error_message = str(folder_result.get("error") if folder_result else "execution_failed")[:1000]
+            row.execution_error_message = str(
+                (raw_result or {}).get("error") if isinstance(raw_result, dict) else "execution_failed"
+            )[:1000]
         else:
             row.execution_error_code = None
             row.execution_error_message = None
@@ -695,7 +904,7 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                 for item in files:
                     _safe_write(workspace, item["path"], item["content"])
 
-                folders = _execution_folders(workspace)
+                target = _resolve_execution_target(workspace, run)
                 manifest = execution.workspace_manifest if isinstance(execution.workspace_manifest, dict) else {}
                 expected_hash = manifest.get("bundle_hash")
                 if (
@@ -704,10 +913,33 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                     and expected_hash != digest
                 ):
                     raise RuntimeError("bundle hash mismatch; re-run plan before apply")
-                for folder in folders:
-                    rel_folder = str(folder.relative_to(workspace)) if folder != workspace else "."
+                if target.target_kind == "mixed_tier_grouped" and not target.folders:
+                    execution.results = _execution_results_payload(
+                        folder_results=[],
+                        fail_fast=fail_fast,
+                        target=target,
+                    )
+                    execution.workspace_manifest = {
+                        "bundle_hash": digest,
+                        "folders": [],
+                        "executor": "terraform",
+                        "fail_fast": fail_fast,
+                        "target_kind": target.target_kind,
+                        "detected_by": target.detected_by,
+                        "layout_version": target.layout_version,
+                        "execution_root": target.execution_root,
+                        "executed_folders": [],
+                        "non_executable_actions": target.non_executable_actions,
+                        "non_executable_action_count": len(target.non_executable_actions),
+                    }
+                    execution.logs_ref = json.dumps(execution.results)
+                    raise RuntimeError("mixed-tier bundle has no executable folders")
+
+                for rel_folder in target.folders:
+                    folder = workspace if rel_folder == "." else workspace / rel_folder
                     item_results: list[dict[str, object]] = []
                     folder_error: str | None = None
+                    action_id = target.folder_action_ids.get(rel_folder)
 
                     init_result = _run_cmd(["terraform", "init", "-input=false"], folder, env)
                     item_results.append(init_result)
@@ -759,28 +991,57 @@ def execute_pr_bundle_execution_job(job: dict) -> None:
                         folder_results.append(
                             {
                                 "folder": rel_folder,
+                                "action_id": action_id,
                                 "commands": item_results,
                                 "status": "failed",
                                 "error": folder_error,
                             }
                         )
                         if fail_fast:
-                            execution.results = _execution_results_payload(folder_results, fail_fast=fail_fast)
+                            execution.results = _execution_results_payload(
+                                folder_results,
+                                fail_fast=fail_fast,
+                                target=target,
+                            )
                             execution.logs_ref = json.dumps(execution.results)
                             raise RuntimeError(folder_error)
                         continue
 
-                    folder_results.append({"folder": rel_folder, "commands": item_results, "status": "success"})
+                    folder_results.append(
+                        {
+                            "folder": rel_folder,
+                            "action_id": action_id,
+                            "commands": item_results,
+                            "status": "success",
+                        }
+                    )
 
                 failed_folders = [item for item in folder_results if item.get("status") == "failed"]
                 any_failed = bool(failed_folders)
 
-                execution.results = _execution_results_payload(folder_results, fail_fast=fail_fast)
+                execution.results = _execution_results_payload(
+                    folder_results,
+                    fail_fast=fail_fast,
+                    target=target,
+                )
                 execution.workspace_manifest = {
                     "bundle_hash": digest,
-                    "folders": [str(folder.relative_to(workspace)) if folder != workspace else "." for folder in folders],
+                    "folders": list(target.folders),
                     "executor": "terraform",
                     "fail_fast": fail_fast,
+                    "target_kind": target.target_kind,
+                    "detected_by": target.detected_by,
+                    "layout_version": target.layout_version,
+                    "execution_root": target.execution_root,
+                    "executed_folders": [
+                        {
+                            "folder": str(item.get("folder") or ""),
+                            "action_id": str(item.get("action_id") or ""),
+                        }
+                        for item in folder_results
+                    ],
+                    "non_executable_actions": target.non_executable_actions,
+                    "non_executable_action_count": len(target.non_executable_actions),
                 }
                 execution.logs_ref = json.dumps(execution.results)
                 execution.completed_at = datetime.now(timezone.utc)
