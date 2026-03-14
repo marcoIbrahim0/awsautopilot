@@ -120,6 +120,60 @@ def _mock_async_session(*scalar_results: object) -> MagicMock:
     return session
 
 
+def _mock_group_action(
+    *,
+    action_type: str = "s3_bucket_block_public_access",
+    account_id: str = "123456789012",
+    region: str | None = "eu-north-1",
+    status: str = "open",
+    priority: int = 100,
+) -> MagicMock:
+    action = _mock_action(action_type=action_type)
+    action.id = uuid.uuid4()
+    action.account_id = account_id
+    action.region = region
+    action.status = status
+    action.priority = priority
+    return action
+
+
+def _mock_group_query_result(items: list[MagicMock]) -> MagicMock:
+    result = MagicMock()
+    result.scalars.return_value.unique.return_value.all.return_value = items
+    return result
+
+
+def _mock_group_account_result(account: MagicMock | None) -> MagicMock:
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = account
+    return result
+
+
+def _mock_group_session(
+    actions: list[MagicMock],
+    *,
+    account: MagicMock | None = None,
+    pending_runs: list[MagicMock] | None = None,
+) -> MagicMock:
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _mock_group_query_result(actions),
+            _mock_group_account_result(account),
+            _mock_group_query_result(pending_runs or []),
+        ]
+    )
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+
+    async def _refresh(run_obj: MagicMock) -> None:
+        run_obj.created_at = datetime.now(timezone.utc)
+        run_obj.updated_at = datetime.now(timezone.utc)
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+    return session
+
+
 # ---------------------------------------------------------------------------
 # POST create_remediation_run - direct_fix validation (8.4)
 # ---------------------------------------------------------------------------
@@ -606,44 +660,13 @@ def test_resend_run_rate_limited_after_three_attempts_in_window(client: TestClie
 
 
 def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
-    """group-pr-bundle endpoint should queue one run with group_action_ids in payload."""
+    """Legacy top-level grouped requests still succeed and persist Wave 3 action resolutions."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
 
-    action1 = _mock_action(action_type="s3_bucket_block_public_access")
-    action1.id = uuid.uuid4()
-    action1.account_id = "123456789012"
-    action1.region = "eu-north-1"
-    action1.status = "open"
-    action1.priority = 100
-
-    action2 = _mock_action(action_type="s3_bucket_block_public_access")
-    action2.id = uuid.uuid4()
-    action2.account_id = "123456789012"
-    action2.region = "eu-north-1"
-    action2.status = "open"
-    action2.priority = 90
-
-    actions_result = MagicMock()
-    actions_result.scalars.return_value.unique.return_value.all.return_value = [action1, action2]
-
-    account_result = MagicMock()
-    account_result.scalar_one_or_none.return_value = None
-
-    pending_result = MagicMock()
-    pending_result.scalars.return_value.unique.return_value.all.return_value = []
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[actions_result, account_result, pending_result])
-    session.add = MagicMock()
-    session.commit = AsyncMock()
-
-    async def _refresh(run_obj: MagicMock) -> None:
-        from datetime import datetime, timezone
-        run_obj.created_at = datetime.now(timezone.utc)
-        run_obj.updated_at = datetime.now(timezone.utc)
-
-    session.refresh = AsyncMock(side_effect=_refresh)
+    action1 = _mock_group_action(priority=100)
+    action2 = _mock_group_action(priority=90)
+    session = _mock_group_session([action1, action2])
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -660,31 +683,353 @@ def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
     with patch("backend.routers.remediation_runs.settings") as mock_settings:
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
         with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
-            with patch("backend.routers.remediation_runs.emit_strategy_metric") as mock_metric:
-                try:
-                    r = client.post(
-                        "/api/remediation-runs/group-pr-bundle",
-                        json={
-                            "action_type": "s3_bucket_block_public_access",
-                            "account_id": "123456789012",
-                            "region": "eu-north-1",
-                            "status": "open",
-                            "strategy_id": "s3_migrate_cloudfront_oac_private",
-                            "risk_acknowledged": True,
-                        },
-                    )
-                finally:
-                    app.dependency_overrides.pop(get_db, None)
-                    app.dependency_overrides.pop(get_current_user, None)
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    with patch("backend.routers.remediation_runs.emit_strategy_metric") as mock_metric:
+                        try:
+                            r = client.post(
+                                "/api/remediation-runs/group-pr-bundle",
+                                json={
+                                    "action_type": "s3_bucket_block_public_access",
+                                    "account_id": "123456789012",
+                                    "region": "eu-north-1",
+                                    "status": "open",
+                                    "strategy_id": "s3_migrate_cloudfront_oac_private",
+                                    "risk_acknowledged": True,
+                                },
+                            )
+                        finally:
+                            app.dependency_overrides.pop(get_db, None)
+                            app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
     assert mock_sqs.send_message.call_count == 1
     metric_names = [call.args[1] for call in mock_metric.call_args_list if len(call.args) >= 2]
     assert "strategy_selected_count" in metric_names
-    kwargs = mock_sqs.send_message.call_args.kwargs
-    body = kwargs.get("MessageBody", "")
-    assert str(action1.id) in body
-    assert str(action2.id) in body
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["schema_version"] == 1
+    assert payload["action_id"] == str(action1.id)
+    assert payload["strategy_id"] == "s3_migrate_cloudfront_oac_private"
+    assert payload["group_action_ids"] == [str(action1.id), str(action2.id)]
+    assert payload["risk_acknowledged"] is True
+    assert "action_overrides" not in payload
+    assert "action_resolutions" not in payload
+
+    run = session.add.call_args.args[0]
+    assert run.action_id == action1.id
+    assert run.artifacts["selected_strategy"] == "s3_migrate_cloudfront_oac_private"
+    resolutions = run.artifacts["group_bundle"]["action_resolutions"]
+    assert [entry["action_id"] for entry in resolutions] == [str(action1.id), str(action2.id)]
+    assert {entry["strategy_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
+    assert {entry["profile_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
+
+
+def test_create_group_pr_bundle_accepts_action_overrides(client: TestClient) -> None:
+    """Grouped runs accept additive action_overrides[] and persist per-action resolutions."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    session = _mock_group_session([action1, action2])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-override"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                                "action_overrides": [
+                                    {
+                                        "action_id": str(action1.id),
+                                        "strategy_id": "config_enable_account_local_delivery",
+                                    }
+                                ],
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["strategy_id"] == "config_enable_centralized_delivery"
+    assert payload["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
+    assert payload["group_action_ids"] == [str(action1.id), str(action2.id)]
+    assert "action_overrides" not in payload
+
+    run = session.add.call_args.args[0]
+    assert run.artifacts["selected_strategy"] == "config_enable_centralized_delivery"
+    resolutions = {
+        entry["action_id"]: entry
+        for entry in run.artifacts["group_bundle"]["action_resolutions"]
+    }
+    assert resolutions[str(action1.id)]["strategy_id"] == "config_enable_account_local_delivery"
+    assert resolutions[str(action1.id)]["profile_id"] == "config_enable_account_local_delivery"
+    assert resolutions[str(action1.id)]["strategy_inputs"] == {}
+    assert resolutions[str(action2.id)]["strategy_id"] == "config_enable_centralized_delivery"
+    assert resolutions[str(action2.id)]["profile_id"] == "config_enable_centralized_delivery"
+    assert resolutions[str(action2.id)]["strategy_inputs"] == {
+        "delivery_bucket": "central-config-bucket"
+    }
+
+
+def test_create_group_pr_bundle_duplicate_action_overrides_rejected_400(client: TestClient) -> None:
+    """Duplicate grouped override entries are rejected before any run is created."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_group_action(action_type="aws_config_enabled")
+    session = _mock_group_session([action])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            try:
+                r = client.post(
+                    "/api/remediation-runs/group-pr-bundle",
+                    json={
+                        "action_type": "aws_config_enabled",
+                        "account_id": "123456789012",
+                        "region": "eu-north-1",
+                        "status": "open",
+                        "strategy_id": "config_enable_account_local_delivery",
+                        "action_overrides": [
+                            {
+                                "action_id": str(action.id),
+                                "strategy_id": "config_enable_account_local_delivery",
+                            },
+                            {
+                                "action_id": str(action.id),
+                                "strategy_id": "config_enable_account_local_delivery",
+                            },
+                        ],
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Duplicate action_overrides entry"
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_create_group_pr_bundle_override_action_outside_group_rejected_400(client: TestClient) -> None:
+    """Overrides must target actions inside the grouped action set."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_group_action(action_type="aws_config_enabled")
+    session = _mock_group_session([action])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            try:
+                r = client.post(
+                    "/api/remediation-runs/group-pr-bundle",
+                    json={
+                        "action_type": "aws_config_enabled",
+                        "account_id": "123456789012",
+                        "region": "eu-north-1",
+                        "status": "open",
+                        "strategy_id": "config_enable_account_local_delivery",
+                        "action_overrides": [
+                            {
+                                "action_id": str(uuid.uuid4()),
+                                "strategy_id": "config_enable_account_local_delivery",
+                            }
+                        ],
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Invalid action_overrides[].action_id"
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("override", "expected_error"),
+    [
+        (
+            {"strategy_id": "s3_migrate_cloudfront_oac_private"},
+            "Invalid strategy selection",
+        ),
+        (
+            {
+                "strategy_id": "config_enable_account_local_delivery",
+                "profile_id": "not-a-profile",
+            },
+            "Invalid profile_id",
+        ),
+    ],
+)
+def test_create_group_pr_bundle_invalid_action_override_rejected_400(
+    client: TestClient,
+    override: dict[str, str],
+    expected_error: str,
+) -> None:
+    """Invalid override strategy/profile selections are rejected."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_group_action(action_type="aws_config_enabled")
+    session = _mock_group_session([action])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            try:
+                r = client.post(
+                    "/api/remediation-runs/group-pr-bundle",
+                    json={
+                        "action_type": "aws_config_enabled",
+                        "account_id": "123456789012",
+                        "region": "eu-north-1",
+                        "status": "open",
+                        "strategy_id": "config_enable_account_local_delivery",
+                        "action_overrides": [
+                            {
+                                "action_id": str(action.id),
+                                **override,
+                            }
+                        ],
+                    },
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == expected_error
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_create_group_pr_bundle_duplicate_pending_guard_still_works(client: TestClient) -> None:
+    """The grouped duplicate-pending guard remains unchanged for the legacy queue contract."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(priority=100)
+    action2 = _mock_group_action(priority=90)
+    pending_run = MagicMock()
+    pending_run.artifacts = {
+        "group_bundle": {
+            "group_key": "s3_bucket_block_public_access|123456789012|eu-north-1|open"
+        }
+    }
+    session = _mock_group_session([action1, action2], pending_runs=[pending_run])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "s3_bucket_block_public_access",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "s3_migrate_cloudfront_oac_private",
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    detail = r.json().get("detail", {})
+    if isinstance(detail, dict):
+        assert detail.get("error") == "Duplicate pending run"
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
 
 
 def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: TestClient) -> None:

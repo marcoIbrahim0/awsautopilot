@@ -44,6 +44,12 @@ from backend.services.direct_fix_approval import (
     DIRECT_FIX_APPROVAL_ARTIFACT_KEY,
     build_direct_fix_approval_metadata,
 )
+from backend.services.grouped_remediation_runs import (
+    GroupedActionScope,
+    GroupedRemediationRunValidationError,
+    build_grouped_run_persistence_plan,
+    normalize_grouped_request_from_remediation_runs,
+)
 from backend.services.remediation_handoff import RunArtifactMetadata, build_run_artifact_metadata
 from backend.services.remediation_run_resolution import (
     RemediationRunResolutionError,
@@ -327,6 +333,24 @@ class RepoTargetRequest(BaseModel):
     )
 
 
+class GroupedActionOverrideRequest(BaseModel):
+    """Optional per-action grouped override for Wave 3 grouped resolution."""
+
+    action_id: str = Field(..., description="UUID of the grouped action to override.")
+    strategy_id: str | None = Field(
+        None,
+        description="Optional strategy override for this grouped action.",
+    )
+    profile_id: str | None = Field(
+        None,
+        description="Optional remediation profile override for this grouped action.",
+    )
+    strategy_inputs: dict[str, Any] | None = Field(
+        None,
+        description="Optional strategy_inputs override for this grouped action.",
+    )
+
+
 class CreateGroupPrBundleRunRequest(BaseModel):
     """Request body for creating one PR-only remediation run for an execution group."""
 
@@ -351,6 +375,10 @@ class CreateGroupPrBundleRunRequest(BaseModel):
     strategy_inputs: dict[str, Any] | None = Field(
         None,
         description="Optional inputs for the selected strategy (applies to all actions in group).",
+    )
+    action_overrides: list[GroupedActionOverrideRequest] = Field(
+        default_factory=list,
+        description="Optional per-action grouped overrides nested beneath the top-level group defaults.",
     )
     risk_acknowledged: bool = Field(
         False,
@@ -654,6 +682,65 @@ def _raise_exception_only_strategy_selected(
             "exception_flow": exception_defaults,
         },
     )
+
+
+def _raise_grouped_validation_error(
+    exc: GroupedRemediationRunValidationError,
+    *,
+    action_type: str,
+    strategy_id: str | None,
+) -> NoReturn:
+    emit_validation_failure(
+        logger,
+        reason=exc.code,
+        action_type=action_type,
+        strategy_id=strategy_id,
+        mode="pr_only",
+    )
+    if exc.code == "exception_only_strategy":
+        detail = {
+            "error": EXCEPTION_ONLY_STRATEGY_ERROR,
+            "detail": str(exc),
+            "exception_flow": exc.details.get("exception_flow") if isinstance(exc.details, dict) else {},
+        }
+    elif exc.code == "dependency_check_failed":
+        detail = {
+            "error": "Dependency check failed",
+            "detail": "One or more dependency checks blocked this remediation strategy.",
+        }
+        risk_snapshot = exc.details.get("risk_snapshot") if isinstance(exc.details, dict) else None
+        if isinstance(risk_snapshot, dict):
+            detail["risk_snapshot"] = risk_snapshot
+    elif exc.code == "risk_ack_required":
+        detail = {
+            "error": "Risk acknowledgement required",
+            "detail": (
+                "This remediation strategy has warning/unknown dependency checks. "
+                "Set risk_acknowledged=true after review."
+            ),
+        }
+        risk_snapshot = exc.details.get("risk_snapshot") if isinstance(exc.details, dict) else None
+        if isinstance(risk_snapshot, dict):
+            detail["risk_snapshot"] = risk_snapshot
+    elif exc.code == "duplicate_action_override":
+        detail = {"error": "Duplicate action_overrides entry", "detail": str(exc)}
+    elif exc.code == "override_action_not_in_group":
+        detail = {"error": "Invalid action_overrides[].action_id", "detail": str(exc)}
+    elif exc.code == "invalid_override_strategy":
+        detail = {"error": "Invalid strategy selection", "detail": str(exc)}
+    elif exc.code == "invalid_override_profile":
+        detail = {"error": "Invalid profile_id", "detail": str(exc)}
+    elif exc.code == "missing_grouped_strategy_id":
+        detail = {"error": "Missing strategy_id", "detail": str(exc)}
+    elif exc.code == "strategy_conflict":
+        detail = {"error": "Strategy conflict", "detail": str(exc)}
+    elif exc.code == "invalid_pr_bundle_variant":
+        detail = {"error": "Invalid pr_bundle_variant", "detail": str(exc)}
+    else:
+        detail = {"error": "Invalid grouped remediation request", "detail": str(exc), "reason": exc.code}
+        if exc.details:
+            detail["validation_details"] = dict(exc.details)
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
 def _artifacts_summary(artifacts: dict | None) -> str | None:
@@ -1632,48 +1719,34 @@ async def create_group_pr_bundle_run(
                 "detail": "Provide region, or set region_is_null=true for global groups.",
             },
         )
-    selected_strategy_id = (body.strategy_id or "").strip() or None
-    normalized_variant = (body.pr_bundle_variant or "").strip() or None
-    legacy_variant_mapped_from: str | None = None
-    if normalized_variant:
-        mapped_strategy = map_legacy_variant_to_strategy(action_type, normalized_variant)
-        if mapped_strategy is None:
-            emit_validation_failure(
-                logger,
-                reason="invalid_legacy_variant",
-                action_type=action_type,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "Invalid pr_bundle_variant",
-                    "detail": (
-                        f"Unsupported legacy pr_bundle_variant '{normalized_variant}' "
-                        f"for action_type '{action_type}'."
-                    ),
-                },
-            )
-        if selected_strategy_id and selected_strategy_id != mapped_strategy:
-            emit_validation_failure(
-                logger,
-                reason="strategy_conflict",
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "Strategy conflict",
-                    "detail": (
-                        f"strategy_id '{selected_strategy_id}' conflicts with legacy "
-                        f"pr_bundle_variant mapping '{mapped_strategy}'."
-                    ),
-                },
-            )
-        selected_strategy_id = mapped_strategy
-        legacy_variant_mapped_from = normalized_variant
+    try:
+        normalized_request = normalize_grouped_request_from_remediation_runs(body)
+    except GroupedRemediationRunValidationError as exc:
+        _raise_grouped_validation_error(
+            exc,
+            action_type=action_type,
+            strategy_id=(body.strategy_id or "").strip() or None,
+        )
+
+    strategy_required = strategy_required_for_action_type(action_type)
+    has_top_level_group_strategy = bool(normalized_request.strategy_id or normalized_request.pr_bundle_variant)
+    if (strategy_required or normalized_request.action_overrides) and not has_top_level_group_strategy:
+        emit_validation_failure(
+            logger,
+            reason="missing_strategy_id",
+            action_type=action_type,
+            mode="pr_only",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Missing strategy_id",
+                "detail": (
+                    f"strategy_id is required for action_type '{action_type}'. "
+                    "Fetch options via GET /api/actions/{id}/remediation-options."
+                ),
+            },
+        )
 
     query = (
         select(Action)
@@ -1703,7 +1776,7 @@ async def create_group_pr_bundle_run(
             },
         )
 
-    representative = actions[0]
+    group_key = f"{action_type}|{account_id}|{normalized_region or 'global'}|{status_value}"
     account_result = await db.execute(
         select(AwsAccount).where(
             AwsAccount.tenant_id == tenant_uuid,
@@ -1712,126 +1785,27 @@ async def create_group_pr_bundle_run(
     )
     account = account_result.scalar_one_or_none()
 
-    selected_strategy: dict[str, Any] | None = None
-    selected_strategy_inputs: dict[str, Any] | None = None
-    risk_snapshot: dict[str, Any] | None = None
-    repo_target_payload = body.repo_target.model_dump(exclude_none=True) if body.repo_target else None
-
-    strategy_required = strategy_required_for_action_type(action_type)
-    if strategy_required or selected_strategy_id:
-        if not selected_strategy_id:
-            emit_validation_failure(
-                logger,
-                reason="missing_strategy_id",
+    try:
+        plan = build_grouped_run_persistence_plan(
+            request=normalized_request,
+            scope=GroupedActionScope(
                 action_type=action_type,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "Missing strategy_id",
-                    "detail": (
-                        f"strategy_id is required for action_type '{action_type}'. "
-                        "Fetch options via GET /api/actions/{id}/remediation-options."
-                    ),
-                },
-            )
-        try:
-            selected_strategy = validate_strategy(action_type, selected_strategy_id, "pr_only")
-            selected_strategy_inputs = validate_strategy_inputs(selected_strategy, body.strategy_inputs)
-        except ValueError as exc:
-            err_text = str(exc).lower()
-            reason = "strategy_mode_mismatch" if "requires mode" in err_text else "invalid_strategy_selection"
-            emit_validation_failure(
-                logger,
-                reason=reason,
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Invalid strategy selection", "detail": str(exc)},
-            ) from exc
-
-        if selected_strategy.get("exception_only"):
-            _raise_exception_only_strategy_selected(
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-                strategy_inputs=selected_strategy_inputs,
-            )
-
-        risk_snapshot = evaluate_strategy_impact(
-            representative,
-            selected_strategy,
-            strategy_inputs=selected_strategy_inputs,
-            account=account,
-            runtime_signals=collect_runtime_risk_signals(
-                action=representative,
-                strategy=selected_strategy,
-                strategy_inputs=selected_strategy_inputs,
-                account=account,
+                account_id=account_id,
+                region=normalized_region,
+                status=status_value,
+                group_key=group_key,
             ),
+            actions=actions,
+            group_bundle_seed={"group_key": group_key},
+            account=account,
         )
-        if has_failing_checks(risk_snapshot["checks"]):
-            emit_strategy_metric(
-                logger,
-                "dependency_check_fail_count",
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-            )
-            emit_validation_failure(
-                logger,
-                reason="dependency_check_failed",
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "Dependency check failed",
-                    "detail": "One or more dependency checks blocked this remediation strategy.",
-                    "risk_snapshot": risk_snapshot,
-                },
-            )
-        if requires_risk_ack(risk_snapshot["checks"]):
-            emit_strategy_metric(
-                logger,
-                "risk_ack_required_count",
-                action_type=action_type,
-                strategy_id=selected_strategy_id,
-                mode="pr_only",
-            )
-            if not body.risk_acknowledged:
-                emit_strategy_metric(
-                    logger,
-                    "risk_ack_missing_rejection_count",
-                    action_type=action_type,
-                    strategy_id=selected_strategy_id,
-                    mode="pr_only",
-                )
-                emit_validation_failure(
-                    logger,
-                    reason="risk_ack_missing",
-                    action_type=action_type,
-                    strategy_id=selected_strategy_id,
-                    mode="pr_only",
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "error": "Risk acknowledgement required",
-                        "detail": (
-                            "This remediation strategy has warning/unknown dependency checks. "
-                            "Set risk_acknowledged=true after review."
-                        ),
-                        "risk_snapshot": risk_snapshot,
-                    },
-                )
-    group_key = f"{action_type}|{account_id}|{normalized_region or 'global'}|{status_value}"
+    except GroupedRemediationRunValidationError as exc:
+        _raise_grouped_validation_error(
+            exc,
+            action_type=action_type,
+            strategy_id=normalized_request.strategy_id,
+        )
+
     pending_result = await db.execute(
         select(RemediationRun).where(
             RemediationRun.tenant_id == tenant_uuid,
@@ -1851,13 +1825,13 @@ async def create_group_pr_bundle_run(
         if (
             isinstance(existing_group_key, str)
             and existing_group_key == group_key
-            and existing_repo_target == repo_target_payload
+            and existing_repo_target == plan.request.repo_target
         ):
             emit_validation_failure(
                 logger,
                 reason="duplicate_pending_group_run",
                 action_type=action_type,
-                strategy_id=selected_strategy_id,
+                strategy_id=plan.request.strategy_id,
                 mode="pr_only",
             )
             raise HTTPException(
@@ -1868,39 +1842,17 @@ async def create_group_pr_bundle_run(
                 },
             )
 
-    action_ids = [str(action.id) for action in actions]
-
-    artifacts: dict[str, Any] = {
-        "group_bundle": {
-            "group_key": group_key,
-            "action_type": action_type,
-            "account_id": account_id,
-            "region": normalized_region,
-            "status": status_value,
-            "action_count": len(action_ids),
-            "action_ids": action_ids,
-        }
-    }
-    if selected_strategy_id:
-        artifacts["selected_strategy"] = selected_strategy_id
-    if selected_strategy_inputs:
-        artifacts["strategy_inputs"] = selected_strategy_inputs
-    if risk_snapshot:
-        artifacts["risk_snapshot"] = risk_snapshot
-    if body.risk_acknowledged:
-        artifacts["risk_acknowledged"] = True
-    if normalized_variant:
-        artifacts["pr_bundle_variant"] = normalized_variant
-    if legacy_variant_mapped_from:
-        artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
-    if repo_target_payload:
-        artifacts["repo_target"] = repo_target_payload
+    representative_by_id = {str(action.id): action for action in actions}
+    representative = representative_by_id.get(plan.representative_action_id, actions[0])
+    artifacts: dict[str, Any] = dict(plan.artifacts)
+    if plan.request.pr_bundle_variant:
+        artifacts["legacy_variant_mapped_from"] = plan.request.pr_bundle_variant
     root_required, pre_execution_notice, runbook_url = _root_notice(action_type)
     if root_required:
         artifacts = _with_manual_high_risk_marker(
             artifacts,
             approved_by_user_id=current_user.id,
-            strategy_id=selected_strategy_id,
+            strategy_id=plan.request.strategy_id,
             action_type=action_type,
         )
 
@@ -1917,18 +1869,19 @@ async def create_group_pr_bundle_run(
     await db.refresh(run)
 
     now = datetime.now(timezone.utc).isoformat()
+    queue_fields = plan.queue_v1_payload_fields()
     payload = build_remediation_run_job_payload(
         run.id,
         tenant_uuid,
         representative.id,
         run.mode.value,
         now,
-        pr_bundle_variant=normalized_variant,
-        strategy_id=selected_strategy_id,
-        strategy_inputs=selected_strategy_inputs,
-        risk_acknowledged=body.risk_acknowledged,
-        group_action_ids=action_ids,
-        repo_target=repo_target_payload,
+        pr_bundle_variant=queue_fields.get("pr_bundle_variant"),
+        strategy_id=queue_fields.get("strategy_id"),
+        strategy_inputs=queue_fields.get("strategy_inputs"),
+        risk_acknowledged=bool(queue_fields.get("risk_acknowledged")),
+        group_action_ids=queue_fields.get("group_action_ids"),
+        repo_target=queue_fields.get("repo_target"),
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
@@ -1946,19 +1899,19 @@ async def create_group_pr_bundle_run(
             },
         ) from e
 
-    if selected_strategy_id:
+    if plan.request.strategy_id:
         emit_strategy_metric(
             logger,
             "strategy_selected_count",
             action_type=action_type,
-            strategy_id=selected_strategy_id,
+            strategy_id=plan.request.strategy_id,
             mode="pr_only",
         )
 
     logger.info(
         "Created group remediation run %s (%d actions) key=%s by user %s (tenant %s)",
         run.id,
-        len(action_ids),
+        len(plan.action_ids),
         group_key,
         current_user.id,
         tenant_uuid,
