@@ -51,6 +51,7 @@ from backend.services.remediation_run_resolution import (
     build_single_run_resolution,
     resolve_create_profile_id,
 )
+from backend.services.remediation_run_resolution_view import build_run_detail_resolution
 from backend.services.remediation_strategy import (
     map_exception_strategy_inputs,
     map_legacy_variant_to_strategy,
@@ -414,6 +415,27 @@ class ActionSummary(BaseModel):
     status: str | None = None
 
 
+class RemediationRunResolutionResponse(BaseModel):
+    """Normalized remediation resolution view for run detail."""
+
+    strategy_id: str
+    profile_id: str
+    support_tier: Literal[
+        "deterministic_bundle",
+        "review_required_bundle",
+        "manual_guidance_only",
+    ]
+    resolved_inputs: dict[str, Any] = Field(default_factory=dict)
+    missing_inputs: list[str] = Field(default_factory=list)
+    missing_defaults: list[str] = Field(default_factory=list)
+    blocked_reasons: list[str] = Field(default_factory=list)
+    rejected_profiles: list[dict[str, Any]] = Field(default_factory=list)
+    finding_coverage: dict[str, Any] = Field(default_factory=dict)
+    preservation_summary: dict[str, Any] = Field(default_factory=dict)
+    decision_rationale: str = ""
+    decision_version: str
+
+
 class RemediationRunDetailResponse(BaseModel):
     """Full run with action summary and logs/artifacts."""
 
@@ -430,6 +452,7 @@ class RemediationRunDetailResponse(BaseModel):
     created_at: str
     updated_at: str
     action: ActionSummary | None = None
+    resolution: RemediationRunResolutionResponse | None = None
     artifact_metadata: RunArtifactMetadata = Field(default_factory=RunArtifactMetadata)
 
 
@@ -690,6 +713,10 @@ def _run_to_detail_response(run: RemediationRun, action: Action | None = None) -
         logs=run.logs,
         action_status=action_status,
     )
+    resolution = build_run_detail_resolution(
+        mode=run.mode.value,
+        artifacts=run.artifacts,
+    )
     return RemediationRunDetailResponse(
         id=str(run.id),
         action_id=str(run.action_id),
@@ -704,6 +731,7 @@ def _run_to_detail_response(run: RemediationRun, action: Action | None = None) -
         created_at=run.created_at.isoformat(),
         updated_at=run.updated_at.isoformat(),
         action=action_summary,
+        resolution=resolution,
         artifact_metadata=artifact_metadata,
     )
 
