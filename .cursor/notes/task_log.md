@@ -1,5 +1,54 @@
 # Task Log
 
+## Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)
+
+**Task:** Consolidate the Wave 0 remediation-profile baselines from the three source branches into one mergeable contract-lock doc, wire the doc set into the integration branch, and update project discoverability.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - added top-level discoverability links for the remediation-profile-resolution doc set and its folder.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - added the remediation-profile-resolution spec to the integration branch and linked the new Wave 0 contract-lock and source baselines.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - added the implementation plan to the integration branch and kept the minimal Step 1 navigation link to the Wave 0 contract lock.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-api-contract-baseline.md** - imported the current API contract baseline from `codex/rem-profile-w0-api-surface`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-legacy-compat-baseline.md** - imported the legacy mirror, duplicate-detection, and resend baseline from `codex/rem-profile-w0-legacy-compat`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-worker-rootkey-baseline.md** - imported the worker/root-key baseline from `codex/rem-profile-w0-worker-rootkey`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-contract-lock.md** - added the consolidated Wave 0 current-state contract lock.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this integration task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, docs index, remediation-profile-resolution spec, and remediation-profile-resolution implementation plan before editing.
+- Collected the three Wave 0 input artifacts directly from the source branches:
+  - `codex/rem-profile-w0-api-surface`
+  - `codex/rem-profile-w0-legacy-compat`
+  - `codex/rem-profile-w0-worker-rootkey`
+- Added `wave-0-contract-lock.md` to summarize and explicitly lock:
+  - the current generic remediation API contract surface
+  - the legacy artifact mirror fields and live consumers
+  - the current duplicate-detection and resend behavior
+  - the worker schema-version fail-closed baseline
+  - the IAM.4 root-key execution-authority boundary
+  - rollback and validation expectations later waves must preserve
+- Added the existing remediation-profile-resolution spec and implementation-plan docs into the integration branch so the new Wave 0 links resolve cleanly in this branch.
+- Added top-level docs-index discoverability for the remediation-profile-resolution folder.
+- Kept the result documentation-only and did not change runtime code.
+
+**Validation:**
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-contract-lock.md** links all three source baseline docs.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** links the new Wave 0 contract-lock doc.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** includes the Step 1 navigation link to the Wave 0 contract lock.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** and **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** are updated.
+- Confirmed this task stays documentation-only.
+
+**Technical debt / gotchas:**
+- The integration branch tip did not yet contain the remediation-profile-resolution doc set, so this integration carries the existing spec and implementation plan alongside the new Wave 0 lock artifacts.
+- Current grouped remediation creation still has a real route-surface divergence:
+  - `POST /api/remediation-runs/group-pr-bundle` already accepts `repo_target` and enforces richer duplicate/risk checks
+  - `POST /api/action-groups/{group_id}/bundle-run` does not yet match that surface
+- That grouped-route divergence is locked as current state here; it is not resolved by this Wave 0 documentation pass.
+
+**Open questions / TODOs:**
+- None for the Wave 0 integration task itself.
+
 ## Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)
 
 **Task:** Stop the live Cloudflare frontend from calling `http://localhost:8000`, harden the OpenNext production build path against local env contamination, and republish the corrected frontend.

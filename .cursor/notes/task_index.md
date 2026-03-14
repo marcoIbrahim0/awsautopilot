@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-contract-lock-integration-2026-03-14)
+  - Added the remediation-profile-resolution doc set to the integration branch, including the Wave 0 contract lock and the three source baseline docs collected from the Wave 0 source branches.
+  - Updated the remediation-profile README, implementation plan navigation, top-level docs index, and task history so the merged Wave 0 baseline is discoverable.
 - [Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)](task_log.md#production-frontend-localhost-api-regression-fix-and-cloudflare-republish-2026-03-12)
   - Confirmed live production was serving chunk `/_next/static/chunks/2985-fb203b08305ec2ff.js` with `http://localhost:8000` hardcoded in the auth/API base helper.
   - Added a fail-closed frontend API-base resolver plus a checked OpenNext production wrapper that strips inherited `NEXT_PUBLIC_*`, hides `.env.local`, and validates `.open-next/cloudflare/next-env.mjs`.

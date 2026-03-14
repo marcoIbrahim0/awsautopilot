@@ -10,6 +10,8 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Reconciliation quality review](/Users/marcomaher/AWS%20Security%20Autopilot/docs/reconciliation_quality_review.md)
 - [Item 17 medium/low-confidence control coverage plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 - [Remediation safety model](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-safety-model.md)
+- [Remediation profile resolution spec (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md)
+- [Remediation profile resolution implementation plan (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md)
 - [Action score explainability](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/action-score-explainability.md)
 - [Threat-intelligence weighting](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/threat-intelligence-weighting.md)
 - [Toxic-combination prioritization](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/toxic-combination-prioritization.md)
@@ -63,6 +65,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - `/docs/customer-guide/` — customer-facing onboarding and troubleshooting
 - `/docs/runbooks/` — operator runbooks for no-UI and incident workflows
 - `/docs/live-e2e-testing/` — live test tracker, runbook, templates
+- `/docs/remediation-profile-resolution/` — planned remediation profile resolution spec, implementation plan, and Wave 0 contract lock
 - `/docs/prod-readiness/` — production-readiness artifacts and scripts
 - `/docs/audit-remediation/` — audit remediation plans, checklists, evidence references
 - `/docs/features/` — active entrypoint (historical snapshot files archived)
