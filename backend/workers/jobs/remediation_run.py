@@ -7,13 +7,15 @@ if run already success or failed.
 """
 from __future__ import annotations
 
+import copy
 import logging
 import json
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
 import boto3
@@ -36,6 +38,10 @@ from backend.services.remediation_audit import (
     allow_update_outcome,
     write_blocked_mutation_audit,
     write_remediation_run_audit,
+)
+from backend.services.remediation_profile_resolver import (
+    build_compat_resolution_decision,
+    normalize_resolution_decision,
 )
 from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
@@ -202,6 +208,283 @@ def _parse_group_action_ids(raw_ids: object) -> list[uuid.UUID]:
     return parsed
 
 
+@dataclass(frozen=True)
+class _GroupedActionDecision:
+    action_id: uuid.UUID
+    strategy_id: str | None
+    profile_id: str | None
+    strategy_inputs: dict[str, Any]
+    support_tier: str
+
+
+def _grouped_resolution_field(raw_value: object, field_name: str) -> object:
+    if isinstance(raw_value, Mapping):
+        return raw_value.get(field_name)
+    return getattr(raw_value, field_name, None)
+
+
+def _grouped_resolution_text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _grouped_resolution_error(
+    code: str,
+    detail: str,
+    *,
+    action_type: str | None,
+) -> PRBundleGenerationError:
+    return PRBundleGenerationError(
+        {
+            "code": code,
+            "detail": detail,
+            "action_type": action_type or "",
+            "format": "terraform",
+            "strategy_id": "",
+            "variant": "",
+        }
+    )
+
+
+def _raise_invalid_grouped_action_resolutions(detail: str, *, action_type: str | None) -> None:
+    raise _grouped_resolution_error(
+        "invalid_grouped_action_resolutions",
+        detail,
+        action_type=action_type,
+    )
+
+
+def _raise_grouped_support_tier_error(
+    action_id: str,
+    support_tier: str,
+    *,
+    action_type: str | None,
+) -> None:
+    raise _grouped_resolution_error(
+        "grouped_support_tier_not_executable",
+        (
+            "Grouped executable bundle generation requires deterministic per-action decisions. "
+            f"action_id '{action_id}' resolved support_tier '{support_tier}'."
+        ),
+        action_type=action_type,
+    )
+
+
+def _grouped_resolution_source(job: dict, run: RemediationRun) -> tuple[str, object | None]:
+    if "action_resolutions" in job:
+        return "queue_payload", job.get("action_resolutions")
+    artifacts = run.artifacts if isinstance(run.artifacts, dict) else {}
+    group_bundle = artifacts.get("group_bundle")
+    if isinstance(group_bundle, dict) and "action_resolutions" in group_bundle:
+        return "artifacts", group_bundle.get("action_resolutions")
+    return "legacy", None
+
+
+def _grouped_action_decisions(
+    *,
+    job: dict,
+    run: RemediationRun,
+    group_action_ids: Sequence[uuid.UUID],
+    resolved_action_ids: Sequence[uuid.UUID],
+    strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    risk_acknowledged: bool,
+    action_type: str | None,
+) -> tuple[str, list[_GroupedActionDecision]]:
+    source_name, raw_entries = _grouped_resolution_source(job, run)
+    if source_name == "legacy":
+        decisions = _legacy_grouped_action_decisions(
+            action_ids=resolved_action_ids,
+            strategy_id=strategy_id,
+            strategy_inputs=strategy_inputs,
+            risk_acknowledged=risk_acknowledged,
+            action_type=action_type,
+        )
+        return source_name, decisions
+    decisions = _canonical_grouped_action_decisions(
+        raw_entries=raw_entries,
+        group_action_ids=group_action_ids,
+        resolved_action_ids=resolved_action_ids,
+        action_type=action_type,
+    )
+    return source_name, decisions
+
+
+def _legacy_grouped_action_decisions(
+    *,
+    action_ids: Sequence[uuid.UUID],
+    strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    risk_acknowledged: bool,
+    action_type: str | None,
+) -> list[_GroupedActionDecision]:
+    copied_inputs = copy.deepcopy(strategy_inputs or {})
+    support_tier = "review_required_bundle" if risk_acknowledged else "deterministic_bundle"
+    profile_id: str | None = None
+    if strategy_id:
+        resolution = build_compat_resolution_decision(
+            strategy_id=strategy_id,
+            profile_id=strategy_id,
+            support_tier=support_tier,
+            resolved_inputs=copied_inputs,
+        )
+        profile_id = resolution["profile_id"]
+    return [
+        _GroupedActionDecision(
+            action_id=action_id,
+            strategy_id=strategy_id,
+            profile_id=profile_id,
+            strategy_inputs=copy.deepcopy(copied_inputs),
+            support_tier=support_tier,
+        )
+        for action_id in action_ids
+    ]
+
+
+def _canonical_grouped_action_decisions(
+    *,
+    raw_entries: object | None,
+    group_action_ids: Sequence[uuid.UUID],
+    resolved_action_ids: Sequence[uuid.UUID],
+    action_type: str | None,
+) -> list[_GroupedActionDecision]:
+    if not isinstance(raw_entries, (list, tuple)):
+        _raise_invalid_grouped_action_resolutions(
+            "Grouped action_resolutions must be an array.",
+            action_type=action_type,
+        )
+    allowed_action_ids = {str(action_id) for action_id in group_action_ids}
+    decisions = _grouped_action_decision_map(raw_entries, allowed_action_ids, action_type=action_type)
+    missing_ids = [str(action_id) for action_id in resolved_action_ids if str(action_id) not in decisions]
+    if missing_ids:
+        _raise_invalid_grouped_action_resolutions(
+            "Grouped action_resolutions are missing entries for resolved actions: "
+            + ", ".join(missing_ids),
+            action_type=action_type,
+        )
+    return [decisions[str(action_id)] for action_id in resolved_action_ids]
+
+
+def _grouped_action_decision_map(
+    raw_entries: Sequence[object],
+    allowed_action_ids: set[str],
+    *,
+    action_type: str | None,
+) -> dict[str, _GroupedActionDecision]:
+    decisions: dict[str, _GroupedActionDecision] = {}
+    for raw_entry in raw_entries:
+        decision = _canonical_grouped_action_decision(
+            raw_entry,
+            allowed_action_ids=allowed_action_ids,
+            action_type=action_type,
+        )
+        action_key = str(decision.action_id)
+        if action_key in decisions:
+            _raise_invalid_grouped_action_resolutions(
+                f"Duplicate grouped action_resolutions entry for action_id '{action_key}'.",
+                action_type=action_type,
+            )
+        decisions[action_key] = decision
+    return decisions
+
+
+def _canonical_grouped_action_decision(
+    raw_entry: object,
+    *,
+    allowed_action_ids: set[str],
+    action_type: str | None,
+) -> _GroupedActionDecision:
+    action_id = _grouped_resolution_uuid(raw_entry, action_type=action_type)
+    action_key = str(action_id)
+    if action_key not in allowed_action_ids:
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry references action_id '{action_key}' outside group_action_ids.",
+            action_type=action_type,
+        )
+    resolution = _canonical_grouped_resolution(raw_entry, action_id=action_key, action_type=action_type)
+    strategy_id = _grouped_resolution_text(_grouped_resolution_field(raw_entry, "strategy_id")) or resolution["strategy_id"]
+    profile_id = _grouped_resolution_text(_grouped_resolution_field(raw_entry, "profile_id")) or resolution["profile_id"]
+    if strategy_id != resolution["strategy_id"] or profile_id != resolution["profile_id"]:
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry for action_id '{action_key}' conflicts with nested resolution.",
+            action_type=action_type,
+        )
+    strategy_inputs = _grouped_resolution_inputs(raw_entry, action_id=action_key, action_type=action_type)
+    support_tier = resolution["support_tier"]
+    if support_tier != "deterministic_bundle":
+        _raise_grouped_support_tier_error(action_key, support_tier, action_type=action_type)
+    return _GroupedActionDecision(
+        action_id=action_id,
+        strategy_id=strategy_id,
+        profile_id=profile_id,
+        strategy_inputs=strategy_inputs,
+        support_tier=support_tier,
+    )
+
+
+def _grouped_resolution_uuid(raw_entry: object, *, action_type: str | None) -> uuid.UUID:
+    action_id = _grouped_resolution_text(_grouped_resolution_field(raw_entry, "action_id"))
+    if action_id is None:
+        _raise_invalid_grouped_action_resolutions(
+            "Each grouped action_resolutions entry must include action_id.",
+            action_type=action_type,
+        )
+    try:
+        return uuid.UUID(action_id)
+    except ValueError:
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry has invalid action_id '{action_id}'.",
+            action_type=action_type,
+        )
+
+
+def _canonical_grouped_resolution(
+    raw_entry: object,
+    *,
+    action_id: str,
+    action_type: str | None,
+) -> dict[str, Any]:
+    raw_resolution = _grouped_resolution_field(raw_entry, "resolution")
+    if not isinstance(raw_resolution, Mapping):
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry for action_id '{action_id}' is missing a valid resolution object.",
+            action_type=action_type,
+        )
+    try:
+        return normalize_resolution_decision(raw_resolution)
+    except ValueError as exc:
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry for action_id '{action_id}' is invalid: {exc}",
+            action_type=action_type,
+        )
+
+
+def _grouped_resolution_inputs(
+    raw_entry: object,
+    *,
+    action_id: str,
+    action_type: str | None,
+) -> dict[str, Any]:
+    raw_inputs = _grouped_resolution_field(raw_entry, "strategy_inputs")
+    if raw_inputs is None:
+        return {}
+    if not isinstance(raw_inputs, Mapping):
+        _raise_invalid_grouped_action_resolutions(
+            f"Grouped action_resolutions entry for action_id '{action_id}' has invalid strategy_inputs.",
+            action_type=action_type,
+        )
+    return copy.deepcopy(dict(raw_inputs))
+
+
+def _shared_group_strategy_id(action_decisions: Sequence[_GroupedActionDecision]) -> str | None:
+    strategy_ids = {decision.strategy_id for decision in action_decisions}
+    if len(strategy_ids) != 1:
+        return None
+    return next(iter(strategy_ids))
+
+
 def _selected_repo_target(job: dict, run: RemediationRun) -> dict[str, Any] | None:
     raw_target = job.get("repo_target")
     if isinstance(raw_target, dict):
@@ -359,9 +642,9 @@ exit "$RUN_RC"
 
 def _generate_group_pr_bundle(
     actions: list[Action],
+    *,
+    action_decisions: Sequence[_GroupedActionDecision],
     variant: str | None = None,
-    strategy_id: str | None = None,
-    strategy_inputs: dict | None = None,
     callback_url: str | None = None,
     report_token: str | None = None,
 ) -> dict:
@@ -684,15 +967,20 @@ echo "All action folders completed successfully."
         "Included actions:",
     ]
 
-    for index, action in enumerate(actions):
+    if len(actions) != len(action_decisions):
+        raise ValueError("grouped action decision count does not match grouped action count")
+
+    for index, (action, decision) in enumerate(zip(actions, action_decisions)):
+        if decision.action_id != action.id:
+            raise ValueError("grouped action decision order does not match grouped action order")
         folder = _safe_group_folder_name(action, index)
         action_line = f"- {index + 1}. {action.title} | {action.control_id or 'n/a'} | {action.target_id}"
         try:
             per_action_bundle = generate_pr_bundle(
                 action,
                 format="terraform",
-                strategy_id=strategy_id,
-                strategy_inputs=strategy_inputs,
+                strategy_id=decision.strategy_id,
+                strategy_inputs=decision.strategy_inputs,
                 variant=variant,
             )
         except PRBundleGenerationError as error:
@@ -1208,21 +1496,33 @@ def execute_remediation_run_job(job: dict) -> None:
                             run.status = RemediationRunStatus.failed
                             log_lines.append(run.outcome)
                         else:
-                            pr_bundle = _generate_group_pr_bundle(
-                                ordered_actions,
-                                variant=effective_variant,
+                            resolved_action_ids = [grouped.id for grouped in ordered_actions]
+                            decision_source, action_decisions = _grouped_action_decisions(
+                                job=job,
+                                run=run,
+                                group_action_ids=group_action_ids,
+                                resolved_action_ids=resolved_action_ids,
                                 strategy_id=selected_strategy_id,
                                 strategy_inputs=selected_strategy_inputs,
+                                risk_acknowledged=risk_acknowledged,
+                                action_type=action.action_type,
+                            )
+                            pr_bundle = _generate_group_pr_bundle(
+                                ordered_actions,
+                                action_decisions=action_decisions,
+                                variant=effective_variant if decision_source == "legacy" else None,
                                 callback_url=group_reporting_callback_url,
                                 report_token=group_reporting_token,
                             )
+                            grouped_strategy_id = _shared_group_strategy_id(action_decisions)
+                            logged_variant = effective_variant if decision_source == "legacy" else None
                             pr_bundle, automation_artifacts = _apply_pr_automation(
                                 session=session,
                                 run=run,
                                 bundle=pr_bundle,
                                 actions=ordered_actions,
                                 repo_target=repo_target,
-                                strategy_id=selected_strategy_id,
+                                strategy_id=grouped_strategy_id,
                             )
                             artifacts: dict = {}
                             if isinstance(run.artifacts, dict):
@@ -1301,15 +1601,15 @@ def execute_remediation_run_job(job: dict) -> None:
                             else:
                                 run.outcome = f"Group PR bundle generated ({generated_count} actions)"
                             run.status = RemediationRunStatus.success
-                            if effective_variant:
+                            if logged_variant:
                                 log_lines.append(
                                     "Group PR bundle generated "
-                                    f"(actions={generated_count}, variant={effective_variant})."
+                                    f"(actions={generated_count}, variant={logged_variant})."
                                 )
-                            elif selected_strategy_id:
+                            elif grouped_strategy_id:
                                 log_lines.append(
                                     "Group PR bundle generated "
-                                    f"(actions={generated_count}, strategy={selected_strategy_id})."
+                                    f"(actions={generated_count}, strategy={grouped_strategy_id})."
                                 )
                             else:
                                 log_lines.append(

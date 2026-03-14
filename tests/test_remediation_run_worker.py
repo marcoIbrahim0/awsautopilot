@@ -93,6 +93,68 @@ def _mock_account(role_write_arn: str | None = "arn:aws:iam::123456789012:role/W
     return acc
 
 
+def _mock_group_action(
+    *,
+    action_type: str = "s3_bucket_block_public_access",
+    target_id: str,
+    title: str,
+    control_id: str = "S3.2",
+) -> MagicMock:
+    action = MagicMock()
+    action.id = uuid.uuid4()
+    action.action_type = action_type
+    action.account_id = "123456789012"
+    action.region = "us-east-1"
+    action.title = title
+    action.control_id = control_id
+    action.target_id = target_id
+    action.resource_id = target_id
+    return action
+
+
+def _mock_group_session(run: MagicMock, grouped_actions: list[MagicMock]) -> MagicMock:
+    result_run = MagicMock()
+    result_run.scalar_one_or_none.return_value = run
+    result_actions = MagicMock()
+    result_actions.scalars.return_value.all.return_value = grouped_actions
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result_run, result_actions]
+    mock_session.flush = MagicMock()
+    return mock_session
+
+
+def _group_action_resolution_payload(
+    *,
+    action_id: uuid.UUID,
+    strategy_id: str,
+    strategy_inputs: dict | None = None,
+    support_tier: str = "deterministic_bundle",
+    profile_id: str | None = None,
+) -> dict:
+    inputs = dict(strategy_inputs or {})
+    resolved_profile_id = profile_id or strategy_id
+    return {
+        "action_id": str(action_id),
+        "strategy_id": strategy_id,
+        "profile_id": resolved_profile_id,
+        "strategy_inputs": inputs,
+        "resolution": {
+            "strategy_id": strategy_id,
+            "profile_id": resolved_profile_id,
+            "support_tier": support_tier,
+            "resolved_inputs": dict(inputs),
+            "missing_inputs": [],
+            "missing_defaults": [],
+            "blocked_reasons": [],
+            "rejected_profiles": [],
+            "finding_coverage": {},
+            "preservation_summary": {},
+            "decision_rationale": "",
+            "decision_version": "resolver/v1",
+        },
+    }
+
+
 @pytest.fixture(autouse=True)
 def _stub_download_bundle_group_run_sync():
     """
@@ -788,36 +850,253 @@ def test_pr_only_strategy_fields_forwarded_to_generator_and_artifacts() -> None:
     assert isinstance(run.artifacts.get("risk_snapshot"), dict)
 
 
-def test_group_pr_bundle_strategy_fields_forwarded_to_each_action_generation() -> None:
-    """Group PR bundle generation forwards strategy_id/strategy_inputs per action and preserves artifacts."""
+def test_group_pr_bundle_uses_artifact_action_resolutions_when_present() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    run.action.title = "Bucket one hardening"
+
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    job["group_action_ids"] = [str(second_action.id), str(run.action.id)]
+    run.artifacts = {
+        "selected_strategy": "s3_bucket_block_public_access_standard",
+        "strategy_inputs": {"legacy": "ignored"},
+        "group_bundle": {
+            "action_resolutions": [
+                _group_action_resolution_payload(
+                    action_id=run.action.id,
+                    strategy_id="s3_bucket_block_public_access_standard",
+                ),
+                _group_action_resolution_payload(
+                    action_id=second_action.id,
+                    strategy_id="s3_migrate_cloudfront_oac_private",
+                    strategy_inputs={"exempt_principals": ["arn:aws:iam::123456789012:role/cdn"]},
+                ),
+            ]
+        },
+    }
+    mock_session = _mock_group_session(run, [run.action, second_action])
+
+    bundle_one = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# one"}], "steps": ["one"]}
+    bundle_two = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# two"}], "steps": ["two"]}
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert [call.args[0].id for call in mock_generate.call_args_list] == [second_action.id, run.action.id]
+    assert [call.kwargs.get("strategy_id") for call in mock_generate.call_args_list] == [
+        "s3_migrate_cloudfront_oac_private",
+        "s3_bucket_block_public_access_standard",
+    ]
+    assert [call.kwargs.get("strategy_inputs") for call in mock_generate.call_args_list] == [
+        {"exempt_principals": ["arn:aws:iam::123456789012:role/cdn"]},
+        {},
+    ]
+
+
+def test_group_pr_bundle_uses_queue_action_resolutions_when_present() -> None:
     job = _make_job(mode="pr_only")
     run = _mock_run_with_action("s3_bucket_block_public_access")
     run.action.resource_id = "arn:aws:s3:::bucket-one"
     run.action.target_id = "arn:aws:s3:::bucket-one"
 
-    second_action = MagicMock()
-    second_action.id = uuid.uuid4()
-    second_action.action_type = "s3_bucket_block_public_access"
-    second_action.account_id = "123456789012"
-    second_action.region = "us-east-1"
-    second_action.title = "Bucket two hardening"
-    second_action.control_id = "S3.2"
-    second_action.target_id = "arn:aws:s3:::bucket-two"
-    second_action.resource_id = "arn:aws:s3:::bucket-two"
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            strategy_inputs={"exempt_principals": ["arn:aws:iam::123456789012:role/queue"]},
+        ),
+    ]
+    run.artifacts = {
+        "pr_bundle_variant": "cloudfront_oac_private_s3",
+        "selected_strategy": "s3_bucket_block_public_access_standard",
+        "group_bundle": {
+            "action_resolutions": [
+                _group_action_resolution_payload(
+                    action_id=run.action.id,
+                    strategy_id="s3_migrate_cloudfront_oac_private",
+                    strategy_inputs={"exempt_principals": ["arn:aws:iam::123456789012:role/artifact"]},
+                ),
+                _group_action_resolution_payload(
+                    action_id=second_action.id,
+                    strategy_id="s3_bucket_block_public_access_standard",
+                ),
+            ]
+        },
+    }
+    mock_session = _mock_group_session(run, [run.action, second_action])
 
+    bundle_one = {
+        "format": "terraform",
+        "files": [{"path": "providers.tf", "content": "# provider one"}],
+        "steps": ["step one"],
+    }
+    bundle_two = {
+        "format": "terraform",
+        "files": [{"path": "providers.tf", "content": "# provider two"}],
+        "steps": ["step two"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]) as mock_generate:
+            execute_remediation_run_job(job)
+            assert mock_generate.call_count == 2
+
+    assert run.status == RemediationRunStatus.success
+    assert [call.kwargs.get("strategy_id") for call in mock_generate.call_args_list] == [
+        "s3_bucket_block_public_access_standard",
+        "s3_migrate_cloudfront_oac_private",
+    ]
+    assert [call.kwargs.get("strategy_inputs") for call in mock_generate.call_args_list] == [
+        {},
+        {"exempt_principals": ["arn:aws:iam::123456789012:role/queue"]},
+    ]
+    assert [call.kwargs.get("variant") for call in mock_generate.call_args_list] == [None, None]
+
+
+@pytest.mark.parametrize("case_name", ["missing_action_id", "outside_group", "duplicate"])
+def test_group_pr_bundle_malformed_action_resolutions_fail_closed(case_name: str) -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    valid_entries = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+        ),
+    ]
+    if case_name == "missing_action_id":
+        malformed = dict(valid_entries[0])
+        malformed.pop("action_id")
+        job["action_resolutions"] = [malformed, valid_entries[1]]
+    elif case_name == "outside_group":
+        job["action_resolutions"] = [
+            _group_action_resolution_payload(
+                action_id=uuid.uuid4(),
+                strategy_id="s3_bucket_block_public_access_standard",
+            ),
+            valid_entries[1],
+        ]
+    else:
+        job["action_resolutions"] = [valid_entries[0], dict(valid_entries[0])]
+    run.artifacts = {
+        "selected_strategy": "s3_bucket_block_public_access_standard",
+        "group_bundle": {"action_resolutions": valid_entries},
+    }
+    mock_session = _mock_group_session(run, [run.action, second_action])
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle") as mock_generate:
+            execute_remediation_run_job(job)
+            mock_generate.assert_not_called()
+
+    assert run.status == RemediationRunStatus.failed
+    assert run.outcome == "PR bundle generation failed: invalid_grouped_action_resolutions"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle_error = run.artifacts.get("pr_bundle_error")
+    assert isinstance(pr_bundle_error, dict)
+    assert pr_bundle_error.get("code") == "invalid_grouped_action_resolutions"
+
+
+def test_group_pr_bundle_non_deterministic_action_resolution_support_tier_fails_closed() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+            support_tier="review_required_bundle",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+        ),
+    ]
+    run.artifacts = {"selected_strategy": "s3_bucket_block_public_access_standard"}
+    mock_session = _mock_group_session(run, [run.action, second_action])
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle") as mock_generate:
+            execute_remediation_run_job(job)
+            mock_generate.assert_not_called()
+
+    assert run.status == RemediationRunStatus.failed
+    assert run.outcome == "PR bundle generation failed: grouped_support_tier_not_executable"
+    assert isinstance(run.artifacts, dict)
+    pr_bundle_error = run.artifacts.get("pr_bundle_error")
+    assert isinstance(pr_bundle_error, dict)
+    assert pr_bundle_error.get("code") == "grouped_support_tier_not_executable"
+
+
+def test_group_pr_bundle_schema_v1_falls_back_to_top_level_strategy_fields() -> None:
+    """Schema-v1 grouped PR bundle generation keeps using the legacy shared strategy fallback."""
+    job = _make_job(mode="pr_only")
+    job["schema_version"] = 1
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two hardening",
+    )
     job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
     job["strategy_id"] = "s3_migrate_cloudfront_oac_private"
     job["strategy_inputs"] = {"exempt_principals": ["arn:aws:iam::123456789012:role/legacy"]}
     job["risk_acknowledged"] = True
-
-    result_run = MagicMock()
-    result_run.scalar_one_or_none.return_value = run
-    result_actions = MagicMock()
-    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
-
-    mock_session = MagicMock()
-    mock_session.execute.side_effect = [result_run, result_actions]
-    mock_session.flush = MagicMock()
+    mock_session = _mock_group_session(run, [run.action, second_action])
 
     bundle_one = {
         "format": "terraform",
