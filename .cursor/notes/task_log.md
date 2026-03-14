@@ -1,5 +1,47 @@
 # Task Log
 
+## Remediation profile resolution branch/worktree safety finalization (2026-03-14)
+
+**Task:** Finish the remediation-profile branch cleanup by ensuring there is no remaining uncommitted state in the active worktrees and that all Wave 0 and Wave 1 source branches are safely contained by the current integration branch.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged the final branch/worktree safety pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Audited the two active worktrees:
+  - `/Users/marcomaher/AWS Security Autopilot - rem-profile-w1-profile-catalog` on `codex/rem-profile-w1-integrate`
+  - `/Users/marcomaher/AWS Security Autopilot` on `codex/rem-profile-w1-remediation-settings`
+- Confirmed the integration worktree was already clean.
+- Found the remediation-settings worktree still had unrelated local state:
+  - `.cursor` note edits
+  - remediation-profile doc deletions
+  - `docs/README.md` edits
+  - a moved `frontend` submodule pointer
+  - generated cache files and `backend.log`
+- Preserved that superproject state on `codex/rem-profile-w1-remediation-settings-safety-20260314` with commit `d6f40cde` instead of merging those unrelated local changes into the remediation-profile branch line.
+- Inspected the `frontend` submodule, found an untracked `next.log`, preserved that submodule-local state on `codex/frontend-local-safety-20260314` with commit `de2fde6`, then returned the submodule to the recorded commit expected by `codex/rem-profile-w1-remediation-settings`.
+- Left `/Users/marcomaher/AWS Security Autopilot` checked out on the clean committed `codex/rem-profile-w1-remediation-settings` branch and left the clean integration worktree on `codex/rem-profile-w1-integrate`.
+
+**Validation:**
+- Confirmed both active worktrees are clean (`git status --short` returned no output).
+- Confirmed the `frontend` submodule is clean.
+- Confirmed these branches are all ancestors of `codex/rem-profile-w1-integrate`:
+  - `codex/rem-profile-w0-api-surface`
+  - `codex/rem-profile-w0-worker-rootkey`
+  - `codex/rem-profile-w0-legacy-compat`
+  - `codex/rem-profile-w0-integrate`
+  - `codex/rem-profile-w1-resolver-contracts`
+  - `codex/rem-profile-w1-profile-catalog`
+  - `codex/rem-profile-w1-remediation-settings`
+
+**Technical debt / gotchas:**
+- The preserved safety branches intentionally contain unrelated local state and are not merged into the remediation-profile integration line.
+- The repository remains low on free disk space, so additional full worktrees should be avoided unless cleanup happens first.
+
+**Open questions / TODOs:**
+- None.
+
 ## Remediation profile resolution Wave 0 ancestry propagation into Wave 1 integrate (2026-03-14)
 
 **Task:** Bring the repaired Wave 0 branch ancestry forward into the current Wave 1 integration line so the mergeable branch now contains both the Wave 0 and Wave 1 ancestry repairs.

@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution branch/worktree safety finalization (2026-03-14)](task_log.md#remediation-profile-resolution-branchworktree-safety-finalization-2026-03-14)
+  - Preserved the remaining dirty `codex/rem-profile-w1-remediation-settings` worktree state on dedicated safety branches instead of forcing unrelated local changes into the remediation-profile integration line.
+  - Returned both active worktrees to clean committed states and verified every Wave 0 and Wave 1 source branch is contained by `codex/rem-profile-w1-integrate`.
+  - Left the remediation-profile branch content unchanged apart from this task-history record.
 - [Remediation profile resolution Wave 0 ancestry propagation into Wave 1 integrate (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-ancestry-propagation-into-wave-1-integrate-2026-03-14)
   - Merged the repaired `codex/rem-profile-w0-integrate` tip into `codex/rem-profile-w1-integrate` so the current mergeable branch also carries the repaired Wave 0 source-branch ancestry.
   - Resolved `.cursor` note conflicts by keeping both the earlier Wave 1 integration history and the new Wave 0 ancestry-repair notes.
