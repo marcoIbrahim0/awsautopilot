@@ -1,5 +1,61 @@
 # Task Log
 
+## Remediation profile resolution Wave 2 integration (2026-03-14)
+
+**Task:** Integrate the three Wave 2 remediation-profile branches into one mergeable branch, add the Wave 2 summary doc, and keep the result strictly inside the read-path plus single-run boundary.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - integrated Wave 2 additive strategy-profile metadata on remediation options and preview `profile_id` plus `resolution` support.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - integrated single-run create `profile_id` support, canonical `artifacts.resolution` persistence, and additive run-detail `resolution` hydration.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_read_path.py** - added the pure Wave 2 read-path helpers used by remediation options and preview.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py** - added the single-run create-time resolution helpers and legacy mirror persistence helpers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution_view.py** - added canonical-first run-detail hydration plus legacy compatibility fallback with grouped-run guardrails.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added focused Wave 2 options and preview coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - added focused Wave 2 single-run create coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_detail_resolution.py** - added focused Wave 2 run-detail hydration coverage.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - linked the new Wave 2 summary doc from the remediation-profile folder entrypoint.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-2-read-and-single-run-surfaces.md** - added the Wave 2 summary doc describing the integrated read-path and single-run surface changes.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this integration task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, relevant task-log entries, docs index, remediation-profile spec, and implementation plan before integrating.
+- Created `codex/rem-profile-w2-integrate` from `codex/rem-profile-w1-integrate`.
+- Cherry-picked the three Wave 2 branch tips in order:
+  - `codex/rem-profile-w2-options-preview`
+  - `codex/rem-profile-w2-single-run-create`
+  - `codex/rem-profile-w2-run-detail-compat`
+- Resolved the only code conflict in `backend/routers/remediation_runs.py` by keeping both:
+  - Agent B's single-run create-time resolution persistence
+  - Agent C's additive run-detail `resolution` response hydration
+- Preserved the Wave 2 scope boundary:
+  - no grouped route rewrites
+  - no queue schema v2 changes
+  - no worker changes
+  - no root-key route changes
+  - no `direct_fix` behavior changes
+- Added the Wave 2 summary doc and linked it from the remediation-profile README without widening the top-level docs navigation again.
+
+**Validation:**
+- `pytest tests/test_remediation_profile_options_preview.py tests/test_remediation_run_resolution_create.py tests/test_remediation_run_detail_resolution.py -q` - pass (`15 passed`, `2 warnings`)
+- `pytest tests/test_phase3_p0_8_handoff_free_closure.py tests/test_wave5_run_progress_contract.py tests/test_wave5_test16_preview_reconcile.py -q` - pass (`13 passed`, `2 warnings`)
+- `pytest tests/test_remediation_runs_api.py -q tests/test_remediation_runs_api.py::test_create_run_legacy_variant_maps_to_strategy_success tests/test_remediation_runs_api.py::test_remediation_options_marks_exception_only_strategies tests/test_remediation_runs_api.py::test_remediation_preview_pr_only_includes_choice_impact_summary tests/test_remediation_runs_api.py::test_get_run_detail_includes_artifact_metadata_and_closure_links` - pass (`98 passed`, `2 warnings`)
+- Confirmed the integrated diff from `codex/rem-profile-w1-integrate` does not touch:
+  - grouped route files outside the existing Wave 2 surfaces
+  - `backend/utils/sqs.py`
+  - worker code
+  - root-key routes
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** links **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-2-read-and-single-run-surfaces.md**.
+
+**Technical debt / gotchas:**
+- Wave 2 still relies on legacy artifact mirrors (`selected_strategy`, `strategy_inputs`, `pr_bundle_variant`) even when canonical single-run `artifacts.resolution` is present, because existing queue, resend, duplicate-detection, and worker paths still consume those mirrors.
+- Run-detail compatibility hydration intentionally returns `resolution = null` for grouped runs carrying `artifacts.group_bundle`; grouped per-action resolution remains deferred to later work.
+- The current Wave 2 read/create path still assumes Wave 1 single-profile compatibility families (`profile_id == strategy_id`) rather than true multi-profile branching.
+
+**Open questions / TODOs:**
+- Wave 3 should add grouped-route parity and grouped `action_resolutions` without widening the current single-run-only contracts.
+- Wave 4 should add queue payload schema v2 and worker consumption of canonical resolution data before any legacy mirror cleanup.
+
 ## Remediation profile resolution branch/worktree safety finalization (2026-03-14)
 
 **Task:** Finish the remediation-profile branch cleanup by ensuring there is no remaining uncommitted state in the active worktrees and that all Wave 0 and Wave 1 source branches are safely contained by the current integration branch.

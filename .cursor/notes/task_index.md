@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 2 integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-2-integration-2026-03-14)
+  - Integrated `codex/rem-profile-w2-options-preview`, `codex/rem-profile-w2-single-run-create`, and `codex/rem-profile-w2-run-detail-compat` onto one mergeable Wave 2 branch.
+  - Added the Wave 2 summary doc covering resolution-aware options metadata, preview `profile_id`, single-run canonical `artifacts.resolution`, and run-detail compatibility hydration.
+  - Re-ran the Wave 2 focused suites plus neighboring handoff/run-progress/preview regressions and confirmed grouped routes, queue helpers, workers, and root-key routes stayed out of scope.
 - [Remediation profile resolution branch/worktree safety finalization (2026-03-14)](task_log.md#remediation-profile-resolution-branchworktree-safety-finalization-2026-03-14)
   - Preserved the remaining dirty `codex/rem-profile-w1-remediation-settings` worktree state on dedicated safety branches instead of forcing unrelated local changes into the remediation-profile integration line.
   - Returned both active worktrees to clean committed states and verified every Wave 0 and Wave 1 source branch is contained by `codex/rem-profile-w1-integrate`.

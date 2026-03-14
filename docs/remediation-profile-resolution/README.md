@@ -35,6 +35,10 @@ Related docs:
 
 - [Wave 1 foundation contracts](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-1-foundation-contracts.md)
 
+## Wave 2 Read and Single-Run Surfaces
+
+- [Wave 2 read and single-run surfaces](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-2-read-and-single-run-surfaces.md)
+
 ## Scope and Non-Goals
 
 In scope:
