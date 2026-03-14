@@ -1,0 +1,27 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:34Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": null
+    },
+    "json": null,
+    "method": "GET",
+    "params": {
+      "mode": "pr_only",
+      "strategy_id": "cloudtrail_enable_guided"
+    },
+    "url": "http://127.0.0.1:8000/api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided"
+  },
+  "response": {
+    "body": {
+      "detail": "Authentication required or tenant_id must be provided"
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 401
+  },
+  "step": "preview-noauth",
+  "test_id": "RPW2-11"
+}

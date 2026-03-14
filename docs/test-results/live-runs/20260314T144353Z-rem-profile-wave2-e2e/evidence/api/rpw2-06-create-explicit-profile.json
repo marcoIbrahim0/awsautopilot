@@ -1,0 +1,38 @@
+{
+  "recorded_at_utc": "2026-03-14T15:04:32Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": {
+      "action_id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+      "mode": "pr_only",
+      "profile_id": "cloudtrail_enable_guided",
+      "risk_acknowledged": true,
+      "strategy_id": "cloudtrail_enable_guided"
+    },
+    "method": "POST",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/remediation-runs"
+  },
+  "response": {
+    "body": {
+      "action_id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+      "created_at": "2026-03-14T15:04:26.823507+00:00",
+      "id": "624170a6-6c76-43e5-8cee-3c501759cf2d",
+      "manual_high_risk": false,
+      "mode": "pr_only",
+      "pre_execution_notice": null,
+      "runbook_url": null,
+      "status": "pending",
+      "updated_at": "2026-03-14T15:04:26.823507+00:00"
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 201
+  },
+  "step": "create-explicit-profile",
+  "test_id": "RPW2-06"
+}

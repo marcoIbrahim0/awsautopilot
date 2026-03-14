@@ -1,5 +1,124 @@
 # Task Log
 
+## Remediation-profile Wave 2 focused E2E validation (2026-03-14)
+
+**Task:** Execute a focused end-to-end validation for remediation-profile Wave 2 only on branch `codex/rem-profile-w2-integrate`, using the live-E2E documentation format but scoped strictly to the Wave 2 remediation-profile contract surfaces.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/** - created the dedicated Wave 2 run folder with raw API evidence, UI notes, screenshots, per-test markdown, and final summary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/notes/final-summary.md** - recorded environment, verdict, counts, findings, and gate recommendation.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/tests/rpw2-01.md** through **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/tests/rpw2-12.md** - wrote the per-test execution records using the repo's live-E2E test-case format.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/ui/rpw2-ui-observations.md** - documented the authenticated UI spot-check results and the local action-detail hydration failure.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - added a discoverability link for this targeted local Wave 2 run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes and the remediation-profile Wave 2 docs before executing the run.
+- Verified there was no dedicated deployed endpoint for `codex/rem-profile-w2-integrate`, so the runtime was explicitly documented as `local`.
+- Switched back to `codex/rem-profile-w2-integrate`, applied the local DB migration to `0043_tenant_remediation_settings`, and restarted local backend/worker/frontend processes for the branch.
+- Minted local JWTs for the existing main-tenant admin and wrong-tenant admin users so the API could be exercised against real tenant/action data without mutating passwords.
+- Executed the full `RPW2-01` through `RPW2-12` API matrix against the local backend and captured raw request/response payloads under `docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/api/`.
+- Used Playwright to validate the local run-detail UI route and to probe the action-detail route that should expose remediation-options/remediation-preview.
+- Captured a local UI defect on `/actions/[id]`: authenticated network requests for action detail and remediation-options returned `200`, but `ActionDetailDrawer` hit a React hydration mismatch and stayed on a skeleton/blank state.
+- Restored the tenant remediation-settings baseline after the `RPW2-12` settings influence check.
+- Produced per-test docs plus a final summary with counts `PASS=10`, `PARTIAL=2`, `FAIL=0`, `BLOCKED=0`, `SKIP/NA=0`.
+
+**Technical debt / gotchas:**
+- This run validated only the `local` branch runtime; the branch was not verified on staging or a dedicated deployed endpoint.
+- The local action-detail route is currently not usable for visual remediation-options/remediation-preview validation because of the `ActionDetailDrawer` hydration mismatch.
+- The create path proved queue enqueue acceptance (`POST` would have failed with `503` on SQS send failure), but worker pickup/migration was intentionally not used as a release gate because Wave 2 scope excludes queue schema v2 and worker migration validation.
+- The main tenant currently has only one admin user, so the remediation-settings check exercised the documented admin path and read-path influence, not a same-tenant admin/member role matrix.
+
+**Open questions / TODOs:**
+- Fix or explain the local `frontend` hydration mismatch on `/actions/[id]` before using this branch runtime as the Wave 3 UI validation baseline.
+- If a dedicated deployed endpoint for `codex/rem-profile-w2-integrate` becomes available, rerun the targeted Wave 2 UI checks there to determine whether the drawer failure is local-only.
+
+## Safe removal of rem-profile worktree clone (2026-03-14)
+
+**Task:** Determine whether `/Users/marcomaher/AWS Security Autopilot - rem-profile-w1-profile-catalog` was still in active use and, if not, remove it safely to reclaim disk space without deleting the underlying branch.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this worktree-removal task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Verified the path was still registered as a git worktree for branch `codex/rem-profile-w1-integrate`.
+- Verified no running process or open file handles were using that path.
+- Measured the worktree at `37G`.
+- Verified the worktree's only uncommitted state was `.DS_Store` modifications, with no source-file changes.
+- Verified commit `b69678937acbf0c5f870efe0fb82543744608123` from that worktree is contained by both `codex/rem-profile-w1-integrate` and the current `codex/rem-profile-w2-integrate` branch.
+- Removed the worktree safely with `git worktree remove --force '/Users/marcomaher/AWS Security Autopilot - rem-profile-w1-profile-catalog'`.
+- Verified the path is gone, the worktree is no longer registered, and branch `codex/rem-profile-w1-integrate` still exists.
+
+**Technical debt / gotchas:**
+- The removed worktree carried only disposable `.DS_Store` dirt, so `--force` did not discard any project-source changes.
+- Removing the worktree does not delete branch `codex/rem-profile-w1-integrate`; it only removes that extra checkout and its local disk usage.
+
+**Open questions / TODOs:**
+- None.
+
+## Delete local no-ui-agent and live-runs evidence folders (2026-03-14)
+
+**Task:** Delete the local `artifacts/no-ui-agent` and `docs/test-results/live-runs` folders to reclaim disk space, then update active docs and task history so the removed local evidence paths are clearly marked as historical.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - marked deleted `docs/test-results/live-runs/` links as historical local evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md** - clarified that `docs/test-results/live-runs/` remains the canonical output path for future runs even though prior local bundles were purged.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md** - added the same local-evidence caveat for future-run path references.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/no-ui-pr-bundle-agent.md** - marked `artifacts/no-ui-agent/` examples as historical unless regenerated.
+- **/Users/marcomaher/AWS Security Autopilot/docs/runbooks/s3-pr-bundle-e2e-debug-plan.md** - marked `artifacts/no-ui-agent/` path references as historical examples.
+- **/Users/marcomaher/AWS Security Autopilot/docs/reconciliation_quality_review.md** - marked no-UI evidence references as historical provenance after local cleanup.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/threat-intelligence-weighting.md** - marked deleted local `docs/test-results/live-runs/` evidence links as historical.
+- **/Users/marcomaher/AWS Security Autopilot/docs/e2e_no_ui_agent_debug_reference.md** - marked closure artifact paths as historical provenance after local cleanup.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this cleanup task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Deleted `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent`.
+- Deleted `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs`.
+- Verified post-cleanup sizes:
+  - `artifacts` now `2.3M`
+  - `docs/test-results` now `0B`
+  - `docs` now `6.5G`
+- Reclaimed approximately `30.2G` from the working tree based on the pre-delete measured sizes (`20.8G` + `9.4G`).
+- Updated active docs that still referenced those local evidence folders so they explicitly describe the removed bundles as historical/local-only provenance.
+
+**Technical debt / gotchas:**
+- Both deleted folders contained tracked files, so the worktree now contains many git deletions until those removals are either committed or restored.
+- Future test runs and no-UI campaign runs can recreate fresh local output in the same paths, but the older local evidence bundles are gone from this workspace.
+
+**Open questions / TODOs:**
+- None.
+
+## Repository storage audit and cleanup candidates (2026-03-14)
+
+**Task:** Audit repository disk usage, identify the largest local files/directories, and classify which heavy paths are safe generated caches versus tracked historical artifacts or repo metadata.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this storage audit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the relevant generated/vendor exclusion note in the task log, and the docs index before scanning disk usage.
+- Measured top-level repository sizes and drilled into the heaviest subtrees and files.
+- Confirmed the largest local consumers are:
+  - `artifacts/no-ui-agent` at `20.78G`, with `20.65G` coming from `29` Terraform provider directories.
+  - `docs/test-results/live-runs` at `9.40G`, with nearly all of the space coming from `13` committed Terraform provider binaries in evidence bundles.
+  - `docs/audit-remediation/evidence` at `6.49G`, with nearly all of the space coming from `9` committed Terraform provider binaries in evidence bundles.
+  - `frontend/.next` at `2.77G` and `frontend/node_modules` at `1.18G`, both untracked/rebuildable.
+  - `infrastructure/finding-scenarios` at `2.53G`, almost entirely from `4` local `.terraform` directories.
+  - `.git` at `2.5G`, driven by repository history packfiles rather than working-tree source files.
+- Verified that `venv/` (`0.39G`), `.venv/` (`0.30G`), and `backups/aws-security-autopilot.bundle` (`0.11G`) are also tracked in git, so deleting them would reclaim local space but leave tracked deletions until restored.
+
+**Technical debt / gotchas:**
+- This repository currently tracks many large generated binaries and environments, including `51` committed `terraform-provider-aws_*` binaries under `artifacts/` and `docs/`, both virtualenv directories, and the backup bundle.
+- The easiest safe local cleanup is untracked build/install output (`frontend/.next`, `frontend/.open-next`, `frontend/node_modules`, local `.terraform` under `infrastructure/`), but deleting tracked evidence/provider files will dirty the worktree and may remove historical audit material the team expects to keep.
+- Do not try to reclaim `.git` space by manually deleting packfiles; use `git gc` or a fresh/shallow clone if repo history size needs separate cleanup.
+
+**Open questions / TODOs:**
+- Decide whether the committed historical evidence bundles should continue storing Terraform provider binaries inline or be normalized to provider-free evidence plus reproduction instructions.
+
 ## Remediation profile resolution Wave 2 integration (2026-03-14)
 
 **Task:** Integrate the three Wave 2 remediation-profile branches into one mergeable branch, add the Wave 2 summary doc, and keep the result strictly inside the read-path plus single-run boundary.

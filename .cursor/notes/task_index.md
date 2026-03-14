@@ -4,6 +4,22 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 2 focused E2E validation (2026-03-14)](task_log.md#remediation-profile-wave-2-focused-e2e-validation-2026-03-14)
+  - Created `docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/` with raw API evidence, UI observations, screenshots, per-test files, and a final summary for `RPW2-01` through `RPW2-12`.
+  - Verified the Wave 2 API contract on the local `codex/rem-profile-w2-integrate` runtime, including options/preview profile metadata, create-time canonical `artifacts.resolution`, legacy run hydration, direct-fix regression smoke, auth boundaries, duplicate guard, and remediation-settings influence.
+  - Final verdict was `PARTIAL`: API surfaces passed, but the local `/actions/[id]` UI route hit an `ActionDetailDrawer` hydration mismatch that blocked visual remediation-options/remediation-preview validation and kept the gate decision at `stop for fixes`.
+- [Safe removal of rem-profile worktree clone (2026-03-14)](task_log.md#safe-removal-of-rem-profile-worktree-clone-2026-03-14)
+  - Verified `/Users/marcomaher/AWS Security Autopilot - rem-profile-w1-profile-catalog` was a `37G` git worktree on `codex/rem-profile-w1-integrate` with only `.DS_Store` noise.
+  - Confirmed no running process was using the path and that the worktree commit was already contained by both the `w1` and current `w2` integration branches.
+  - Removed the worktree with `git worktree remove --force` while preserving branch `codex/rem-profile-w1-integrate`.
+- [Delete local no-ui-agent and live-runs evidence folders (2026-03-14)](task_log.md#delete-local-no-ui-agent-and-live-runs-evidence-folders-2026-03-14)
+  - Deleted `artifacts/no-ui-agent` and `docs/test-results/live-runs` from the local workspace, reclaiming about `30.2G`.
+  - Verified the remaining top-level sizes dropped to `artifacts=2.3M`, `docs/test-results=0B`, and `docs=6.5G`.
+  - Updated active docs that referenced those paths so the removed bundles are clearly marked as historical local evidence.
+- [Repository storage audit and cleanup candidates (2026-03-14)](task_log.md#repository-storage-audit-and-cleanup-candidates-2026-03-14)
+  - Audited local disk usage and confirmed the repo is dominated by Terraform provider binaries committed under `artifacts/` and `docs/`, plus rebuildable frontend caches.
+  - Quantified the main reclaim paths: `artifacts/no-ui-agent` `20.8G`, `docs/test-results/live-runs` `9.4G`, `docs/audit-remediation/evidence` `6.5G`, `frontend/.next` `2.8G`, and `infrastructure/finding-scenarios` `2.5G`.
+  - Flagged the main caution: `venv/`, `.venv/`, the backup bundle, and many evidence providers are tracked in git, while `.git` history is large but should not be cleaned by deleting packfiles manually.
 - [Remediation profile resolution Wave 2 integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-2-integration-2026-03-14)
   - Integrated `codex/rem-profile-w2-options-preview`, `codex/rem-profile-w2-single-run-create`, and `codex/rem-profile-w2-run-detail-compat` onto one mergeable Wave 2 branch.
   - Added the Wave 2 summary doc covering resolution-aware options metadata, preview `profile_id`, single-run canonical `artifacts.resolution`, and run-detail compatibility hydration.

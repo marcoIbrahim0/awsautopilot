@@ -1,0 +1,30 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:35Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": null,
+    "method": "GET",
+    "params": {
+      "mode": "pr_only",
+      "strategy_id": "cloudtrail_enable_guided"
+    },
+    "url": "http://127.0.0.1:8000/api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided"
+  },
+  "response": {
+    "body": {
+      "detail": {
+        "detail": "No action found with ID 2ea6f141-6134-4dcd-8c82-4f0d0b6e582d",
+        "error": "Action not found"
+      }
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 404
+  },
+  "step": "preview-wrong-tenant",
+  "test_id": "RPW2-11"
+}

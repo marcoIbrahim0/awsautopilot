@@ -1,0 +1,49 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:33Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": {
+      "action_id": "bdc592bd-3165-4e28-9e48-0851fcd59c3d",
+      "mode": "direct_fix",
+      "strategy_id": "guardduty_enable_direct_fix"
+    },
+    "method": "POST",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/remediation-runs"
+  },
+  "response": {
+    "body": {
+      "detail": {
+        "detail": "One or more dependency checks blocked this remediation strategy.",
+        "error": "Dependency check failed",
+        "risk_snapshot": {
+          "checks": [
+            {
+              "code": "direct_fix_writerole_missing",
+              "message": "WriteRole is required for direct-fix execution.",
+              "status": "fail"
+            },
+            {
+              "code": "risk_evaluation_not_specialized",
+              "message": "No specialized dependency checks are available for this strategy yet.",
+              "status": "unknown"
+            }
+          ],
+          "recommendation": "blocked",
+          "warnings": [
+            "GuardDuty detector and data-source coverage can increase service usage charges."
+          ]
+        }
+      }
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 400
+  },
+  "step": "direct-fix-create",
+  "test_id": "RPW2-10"
+}

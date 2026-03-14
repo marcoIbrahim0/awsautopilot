@@ -2,6 +2,8 @@
 
 This folder contains the full documentation set used for tracker-driven live SaaS E2E execution.
 
+> ⚠️ Local evidence note (March 14, 2026): `docs/test-results/live-runs/` was deleted from this workspace to reclaim disk space. Historical run links below may no longer resolve locally; use `.cursor/notes/task_log.md` and `.cursor/notes/task_index.md` for retained run summaries.
+
 ## Files in this Folder
 
 - `00-BASE-ISSUE-TRACKER.md` — Primary issue tracker and go-live gate source of truth
@@ -22,6 +24,7 @@ Execution outputs are stored in:
 
 ## Recent Targeted Runs
 
+- [Remediation-profile Wave 2 focused local validation on March 14, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/notes/final-summary.md) — partial local proof: all targeted Wave 2 API contracts passed on `codex/rem-profile-w2-integrate`, including options/preview profile metadata, create-time canonical `artifacts.resolution`, legacy run hydration, duplicate guard, direct-fix regression smoke, auth boundaries, and remediation-settings influence, but the local `/actions/[id]` UI route hit an `ActionDetailDrawer` hydration mismatch that blocked visual remediation-options/remediation-preview validation and kept the gate decision at `stop for fixes`.
 - [Phase 3 P2 grouped-action + UI closure validation on March 12, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260312T165611Z-phase3-p2-grouped-fix-validation/notes/final-summary.md) — PASS: the remaining March 12 P2 blockers are now closed on production. The filtered grouped findings API maps the trusted synthetic Config finding to the correct action, standard recompute succeeds, no synthetic actions remain open after recompute, and the live drawer visibly renders `Threat-intel provenance`, `CVE-2026-9001`, `CISA KEV`, confidence, applied points, and decay.
 - [Phase 3 P2 live rerun on March 12, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260312T152625Z-phase3-p2-live-rerun/notes/final-summary.md) — partial live proof: the rerun’s synthetic findings proved the core `P2.1` weighting and `P2.2` decay/provenance API contracts on production, and the fresh Playwright session showed all six synthetic actions plus a trusted-config action drawer at `Priority 26`, but the human-readable `exploit_signals` explanation is inaccurate on the trusted-config case, UI provenance is not surfaced, the standard recompute still fails on the production security-graph defect, and post-cleanup app state still retained `4` archived synthetic actions.
 - [Phase 3 P2 live validation on March 12, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260312T143138Z-phase3-p2-live/notes/final-summary.md) — blocked at the threat-intel candidate gate: the live tenant currently has only `7` configuration-style Security Hub findings and `6` config remediation actions, none of the inspected action details exposes the P2 threat-intel or provenance fields, and AWS-side vulnerability/threat-intel scenarios are required before `P2.1` or `P2.2` can be positively validated.

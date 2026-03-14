@@ -1,0 +1,24 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:36Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": null
+    },
+    "json": null,
+    "method": "GET",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/remediation-runs/624170a6-6c76-43e5-8cee-3c501759cf2d"
+  },
+  "response": {
+    "body": {
+      "detail": "Authentication required or tenant_id must be provided"
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 401
+  },
+  "step": "run-detail-noauth",
+  "test_id": "RPW2-11"
+}

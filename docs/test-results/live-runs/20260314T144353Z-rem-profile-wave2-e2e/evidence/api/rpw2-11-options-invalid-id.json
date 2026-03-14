@@ -1,0 +1,27 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:39Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": null,
+    "method": "GET",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/actions/00000000-0000-0000-0000-000000000000/remediation-options"
+  },
+  "response": {
+    "body": {
+      "detail": {
+        "detail": "No action found with ID 00000000-0000-0000-0000-000000000000",
+        "error": "Action not found"
+      }
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 404
+  },
+  "step": "options-invalid-id",
+  "test_id": "RPW2-11"
+}

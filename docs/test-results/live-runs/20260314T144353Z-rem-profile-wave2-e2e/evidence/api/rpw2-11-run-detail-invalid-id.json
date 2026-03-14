@@ -1,0 +1,27 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:38Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": null,
+    "method": "GET",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/remediation-runs/00000000-0000-0000-0000-000000000000"
+  },
+  "response": {
+    "body": {
+      "detail": {
+        "detail": "No run found with ID 00000000-0000-0000-0000-000000000000",
+        "error": "Remediation run not found"
+      }
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 404
+  },
+  "step": "run-detail-invalid-id",
+  "test_id": "RPW2-11"
+}

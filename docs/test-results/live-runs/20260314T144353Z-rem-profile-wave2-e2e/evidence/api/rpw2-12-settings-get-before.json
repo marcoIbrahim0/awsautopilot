@@ -1,0 +1,42 @@
+{
+  "recorded_at_utc": "2026-03-14T15:05:39Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": null,
+    "method": "GET",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/users/me/remediation-settings"
+  },
+  "response": {
+    "body": {
+      "approved_admin_cidrs": [],
+      "approved_bastion_security_group_ids": [],
+      "cloudtrail": {
+        "default_bucket_name": null,
+        "default_kms_key_arn": null
+      },
+      "config": {
+        "default_bucket_name": null,
+        "default_kms_key_arn": null,
+        "delivery_mode": null
+      },
+      "s3_access_logs": {
+        "default_target_bucket_name": null
+      },
+      "s3_encryption": {
+        "kms_key_arn": null,
+        "mode": null
+      },
+      "sg_access_path_preference": null
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 200
+  },
+  "step": "settings-get-before",
+  "test_id": "RPW2-12"
+}

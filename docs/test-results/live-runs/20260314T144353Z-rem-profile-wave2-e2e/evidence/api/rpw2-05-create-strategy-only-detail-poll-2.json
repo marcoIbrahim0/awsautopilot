@@ -1,0 +1,121 @@
+{
+  "recorded_at_utc": "2026-03-14T15:04:09Z",
+  "request": {
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "Bearer <redacted>"
+    },
+    "json": null,
+    "method": "GET",
+    "params": null,
+    "url": "http://127.0.0.1:8000/api/remediation-runs/9ca75043-9533-4bd0-b76e-1c0a4d522461"
+  },
+  "response": {
+    "body": {
+      "action": {
+        "account_id": "696505809372",
+        "id": "2ea6f141-6134-4dcd-8c82-4f0d0b6e582d",
+        "region": "eu-north-1",
+        "status": "open",
+        "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events"
+      },
+      "action_id": "2ea6f141-6134-4dcd-8c82-4f0d0b6e582d",
+      "approved_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "artifact_metadata": {
+        "closure_checklist": [],
+        "evidence_pointers": [
+          {
+            "description": "2 dependency checks captured for this run.",
+            "href": "/remediation-runs/9ca75043-9533-4bd0-b76e-1c0a4d522461#run-generated-files",
+            "key": "risk_snapshot",
+            "kind": "risk_snapshot",
+            "label": "Dependency review snapshot",
+            "metadata": {
+              "check_count": 2,
+              "recommendation": "review_and_acknowledge"
+            }
+          }
+        ],
+        "implementation_artifacts": []
+      },
+      "artifacts": {
+        "resolution": {
+          "blocked_reasons": [],
+          "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 'cloudtrail_enable_guided'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+          "decision_version": "resolver/v1",
+          "finding_coverage": {},
+          "missing_defaults": [],
+          "missing_inputs": [],
+          "preservation_summary": {},
+          "profile_id": "cloudtrail_enable_guided",
+          "rejected_profiles": [],
+          "resolved_inputs": {
+            "create_bucket_policy": true,
+            "multi_region": true,
+            "trail_name": "security-autopilot-trail"
+          },
+          "strategy_id": "cloudtrail_enable_guided",
+          "support_tier": "review_required_bundle"
+        },
+        "risk_acknowledged": true,
+        "risk_snapshot": {
+          "checks": [
+            {
+              "code": "cloudtrail_cost_impact",
+              "message": "CloudTrail log delivery and retention increase S3 storage and request costs.",
+              "status": "warn"
+            },
+            {
+              "code": "cloudtrail_log_bucket_prereq",
+              "message": "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply.",
+              "status": "warn"
+            }
+          ],
+          "evidence": {
+            "collected_at": "2026-03-14T15:03:57.478517+00:00",
+            "strategy_id": "cloudtrail_enable_guided"
+          },
+          "recommendation": "review_and_acknowledge",
+          "warnings": [
+            "CloudTrail log delivery and retention can increase storage costs."
+          ]
+        },
+        "selected_strategy": "cloudtrail_enable_guided",
+        "strategy_inputs": {}
+      },
+      "completed_at": null,
+      "created_at": "2026-03-14T15:03:57.084169+00:00",
+      "id": "9ca75043-9533-4bd0-b76e-1c0a4d522461",
+      "logs": null,
+      "mode": "pr_only",
+      "outcome": null,
+      "resolution": {
+        "blocked_reasons": [],
+        "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 'cloudtrail_enable_guided'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "preservation_summary": {},
+        "profile_id": "cloudtrail_enable_guided",
+        "rejected_profiles": [],
+        "resolved_inputs": {
+          "create_bucket_policy": true,
+          "multi_region": true,
+          "trail_name": "security-autopilot-trail"
+        },
+        "strategy_id": "cloudtrail_enable_guided",
+        "support_tier": "review_required_bundle"
+      },
+      "started_at": null,
+      "status": "pending",
+      "updated_at": "2026-03-14T15:03:57.084169+00:00"
+    },
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status_code": 200
+  },
+  "step": "create-strategy-only-detail-poll-2",
+  "test_id": "RPW2-05"
+}
