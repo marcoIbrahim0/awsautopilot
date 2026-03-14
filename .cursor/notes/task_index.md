@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 4 focused E2E validation on master (2026-03-14)](task_log.md#remediation-profile-wave-4-focused-e2e-validation-on-master-2026-03-14)
+  - Created `docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/` with per-test markdown, direct queue/worker evidence, Playwright UI artifacts, and the scoped final summary for `RPW4-01` through `RPW4-12`.
+  - Directly proved the core Wave 4 queue-contract items on local `master`, including schema `v2` single/grouped create+resend, action-groups route parity, legacy schema `v1` compatibility, future-schema quarantine, direct-fix stability, auth boundaries, and the action-detail remediation UI/preview.
+  - Recorded the blocking `RPW4-06` grouped duplicate regression on current `master` and kept `RPW4-03` explicitly blocked because the local dataset has only one profile per strategy.
 - [Remediation profile resolution Wave 4 queue-contract and worker migration documentation (2026-03-14)](task_log.md#remediation-profile-resolution-wave-4-queue-contract-and-worker-migration-documentation-2026-03-14)
   - Added the missing Wave 4 summary doc for the already-landed queue schema v2, duplicate/resend contract updates, grouped worker per-action decision consumption, and the remaining Step 7/root-key boundaries.
   - Linked the new Wave 4 doc from the remediation-profile README, then re-ran the focused contract/worker suites and recorded the remaining grouped-resend ordering test mismatch.

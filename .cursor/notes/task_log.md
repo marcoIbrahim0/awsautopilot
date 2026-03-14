@@ -1,5 +1,44 @@
 # Task Log
 
+## Remediation-profile Wave 4 focused E2E validation on master (2026-03-14)
+
+**Task:** Execute the focused remediation-profile Wave 4 end-to-end validation on the current `master` checkout only, capture the evidence package under a dedicated live-run folder, and update the docs/task history with the scoped Wave 4 verdict.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/** - created the dedicated Wave 4 run folder with raw API evidence, queue captures, worker logs, Playwright UI artifacts, `notes/final-summary.md`, `notes/rpw4-ui-observations.md`, and `tests/rpw4-01.md` through `tests/rpw4-12.md`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - added the new Wave 4 run summary link under recent targeted runs.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 4 local validation run.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes plus the remediation-profile and live-E2E docs before executing the run.
+- Chose the required `local on master` environment because no dedicated deployed master environment was available in this workspace, then stood up an isolated local backend on `127.0.0.1:18002` with dedicated ingest/quarantine SQS queues captured in `evidence/queue/isolated-queue-setup.json`.
+- Executed the scoped Wave 4 matrix `RPW4-01` through `RPW4-12` and wrote one per-test record for each result.
+- Captured direct queue proof for the core queue-contract items:
+  - single-run create/resend schema `v2`
+  - grouped shared-route create schema `v2`
+  - action-groups parity route schema `v2`
+  - grouped resend schema `v2`
+  - legacy `v1` compatibility
+  - direct-fix `v1` resend
+  - future-schema quarantine
+- Confirmed the current master UI still renders the action-detail remediation surface and PR-bundle preview through the requested Playwright CLI workflow, then stored screenshots, snapshots, console logs, and network logs under the run folder.
+- Found one real blocking Wave 4 backend regression on current `master`:
+  - `RPW4-06` differentiated grouped requests with a changed override map or changed `repo_target` returned `500 Internal Server Error` instead of bypassing identical-duplicate handling
+  - the identical grouped request still correctly returned `409`
+- Marked `RPW4-03` as `BLOCKED` with direct runtime evidence because the local seeded dataset exposes only one profile per strategy, so no valid same-strategy / different-`profile_id` duplicate case exists to execute safely.
+- Kept this task documentation/evidence only; no application code changed.
+
+**Technical debt / gotchas:**
+- The blocking grouped duplicate regression appears to collide with per-action active-run uniqueness after the Wave 4 duplicate-signature expansion; the persisted artifact set shows the `500` responses, while the likely uniqueness-collision root cause was only visible in live backend stderr during the run.
+- The local master frontend still hardcodes `http://localhost:8000` for local API traffic and expects cookie-backed auth. For the scoped UI proof, Playwright had to rewrite those calls to `http://127.0.0.1:18002` and inject the validated tenant bearer to exercise the current master render path without code changes.
+- The local seeded dataset still lacks a same-strategy multi-profile case, which keeps `RPW4-03` blocked even though other Wave 4 contracts were directly proven.
+
+**Open questions / TODOs:**
+- Fix grouped differentiated create handling so override-map and `repo_target` changes create distinct grouped remediation runs instead of tripping the current `500`.
+- Decide how to seed or expose a valid same-strategy multi-profile test case for a future `RPW4-03` rerun.
+- Consider a cleaner local UI auth/bootstrap path for master E2E so Playwright header injection is not required for authenticated route checks.
+
 ## Remediation profile resolution Wave 4 queue-contract and worker migration documentation (2026-03-14)
 
 **Task:** Document the already-landed Wave 4 queue-contract and worker-migration work on `master`, add the missing Wave 4 summary doc, and wire the remediation-profile docs/task history to the completed implementation.

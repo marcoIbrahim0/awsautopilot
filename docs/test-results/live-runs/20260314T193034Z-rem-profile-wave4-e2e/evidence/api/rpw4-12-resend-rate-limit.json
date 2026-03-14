@@ -1,0 +1,1 @@
+{"detail":{"error":"Resend rate limit exceeded","detail":"No more than 3 resend attempts are allowed within 20 minutes for the same run.","limit":3,"window_minutes":20,"retry_after_seconds":1144}}

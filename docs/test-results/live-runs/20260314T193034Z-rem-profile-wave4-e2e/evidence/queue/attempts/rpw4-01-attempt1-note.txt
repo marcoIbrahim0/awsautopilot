@@ -1,0 +1,1 @@
+Initial queue capture attempt consumed a message without returning a body via aws cli; run_id=922bed72-1767-4664-bafb-17b4624536aa remains pending until the 960s SQS visibility timeout expires.

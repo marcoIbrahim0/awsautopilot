@@ -1,0 +1,7 @@
+{
+  "created_at_utc": "2026-03-14T19:41:45Z",
+  "ingest_queue_name": "security-autopilot-rpw4-20260314t194143z-ingest",
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-ingest",
+  "contract_quarantine_queue_name": "security-autopilot-rpw4-20260314t194143z-quarantine",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-quarantine"
+}

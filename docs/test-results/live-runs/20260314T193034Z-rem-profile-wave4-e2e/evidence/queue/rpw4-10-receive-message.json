@@ -1,0 +1,21 @@
+{
+  "attributes": {
+    "ApproximateFirstReceiveTimestamp": "1773518411964",
+    "ApproximateReceiveCount": "1",
+    "SenderId": "AIDAQNQWGZIWGDV4TV6K2",
+    "SentTimestamp": "1773518400424"
+  },
+  "body": {
+    "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+    "created_at": "2026-03-14T19:59:59.697492+00:00",
+    "job_type": "remediation_run",
+    "mode": "direct_fix",
+    "run_id": "3c47f1bb-2d8f-4489-b498-22b72405b315",
+    "schema_version": 1,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70"
+  },
+  "body_raw": "{\"job_type\": \"remediation_run\", \"run_id\": \"3c47f1bb-2d8f-4489-b498-22b72405b315\", \"tenant_id\": \"9f7616d8-af04-43ca-99cd-713625357b70\", \"action_id\": \"0ca64b94-9dcb-4a97-91b0-27b0341865bc\", \"mode\": \"direct_fix\", \"created_at\": \"2026-03-14T19:59:59.697492+00:00\", \"strategy_id\": \"ebs_enable_default_encryption_aws_managed_kms\", \"schema_version\": 1}",
+  "captured_at_utc": "2026-03-14T20:00:11Z",
+  "message_id": "15bd5880-a46d-4e15-ba05-e44f0e778efe"
+}

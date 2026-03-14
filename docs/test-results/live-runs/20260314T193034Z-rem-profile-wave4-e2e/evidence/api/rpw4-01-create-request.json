@@ -1,0 +1,6 @@
+{
+  "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+  "mode": "pr_only",
+  "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+  "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+}

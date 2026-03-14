@@ -1,0 +1,32 @@
+{
+  "captured_at_utc": "2026-03-14T20:01:37.341534+00:00",
+  "message_id": "456fd3cd-d0a4-4f4e-9d84-cdb6b7800e54",
+  "attributes": {
+    "SenderId": "AIDAQNQWGZIWGDV4TV6K2",
+    "ApproximateFirstReceiveTimestamp": "1773518497385",
+    "ApproximateReceiveCount": "1",
+    "SentTimestamp": "1773518465375"
+  },
+  "body_raw": "{\"reason_code\":\"unsupported_schema_version\",\"original_message_id\":\"c691a97a-0d6b-468f-80e0-6eeee5fd26c2\",\"original_queue_name\":\"legacy\",\"original_queue_url\":\"https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-ingest\",\"payload_sha256\":\"6e3d60dd2aedee57e90c7bbd0e47694a29289dc9402b9ee33c594275a8e1e5e4\",\"seen_at\":\"2026-03-14T20:01:05.206913Z\",\"approx_receive_count\":1,\"original_body\":\"{\\\"job_type\\\": \\\"remediation_run\\\", \\\"run_id\\\": \\\"00000000-0000-0000-0000-000000000099\\\", \\\"tenant_id\\\": \\\"9f7616d8-af04-43ca-99cd-713625357b70\\\", \\\"action_id\\\": \\\"d8da3698-230f-44e3-9c11-cc9e4099b7f6\\\", \\\"mode\\\": \\\"pr_only\\\", \\\"created_at\\\": \\\"2026-03-14T20:01:00Z\\\", \\\"strategy_id\\\": \\\"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\\\", \\\"schema_version\\\": 99}\",\"reason_detail\":\"job_type=remediation_run schema_version=99 supported_versions=1,2\",\"parsed_job\":{\"job_type\":\"remediation_run\",\"run_id\":\"00000000-0000-0000-0000-000000000099\",\"tenant_id\":\"9f7616d8-af04-43ca-99cd-713625357b70\",\"action_id\":\"d8da3698-230f-44e3-9c11-cc9e4099b7f6\",\"mode\":\"pr_only\",\"created_at\":\"2026-03-14T20:01:00Z\",\"strategy_id\":\"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\",\"schema_version\":99}}",
+  "body": {
+    "reason_code": "unsupported_schema_version",
+    "original_message_id": "c691a97a-0d6b-468f-80e0-6eeee5fd26c2",
+    "original_queue_name": "legacy",
+    "original_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-ingest",
+    "payload_sha256": "6e3d60dd2aedee57e90c7bbd0e47694a29289dc9402b9ee33c594275a8e1e5e4",
+    "seen_at": "2026-03-14T20:01:05.206913Z",
+    "approx_receive_count": 1,
+    "original_body": "{\"job_type\": \"remediation_run\", \"run_id\": \"00000000-0000-0000-0000-000000000099\", \"tenant_id\": \"9f7616d8-af04-43ca-99cd-713625357b70\", \"action_id\": \"d8da3698-230f-44e3-9c11-cc9e4099b7f6\", \"mode\": \"pr_only\", \"created_at\": \"2026-03-14T20:01:00Z\", \"strategy_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"schema_version\": 99}",
+    "reason_detail": "job_type=remediation_run schema_version=99 supported_versions=1,2",
+    "parsed_job": {
+      "job_type": "remediation_run",
+      "run_id": "00000000-0000-0000-0000-000000000099",
+      "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+      "action_id": "d8da3698-230f-44e3-9c11-cc9e4099b7f6",
+      "mode": "pr_only",
+      "created_at": "2026-03-14T20:01:00Z",
+      "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+      "schema_version": 99
+    }
+  }
+}

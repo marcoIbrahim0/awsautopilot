@@ -1,0 +1,26 @@
+2026-03-14 21:51:19 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-14 21:51:19 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-14 21:51:19 | INFO     | worker | Starting worker pool=legacy queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-ingest region=eu-north-1
+2026-03-14 21:51:19 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-14 21:51:19 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-14 21:51:20 | INFO     | worker | [cb7886b1-decd-494a-81f6-0ec025b521fc] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 21:51:20 | WARNING  | worker | [b484b253-27d2-4e62-bbfb-c1cd25ac5e7f] Retried message queue=legacy receive_count=3 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 21:51:20 | INFO     | worker | [b484b253-27d2-4e62-bbfb-c1cd25ac5e7f] Processing queue=legacy receive_count=3 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 21:51:22 | ERROR    | worker.jobs.remediation_run | remediation_worker_dispatch_error {"action_type": "ebs_snapshot_block_public_access", "event": "remediation_worker_dispatch_error", "mode": "pr_only", "phase": "pr_bundle_generation_error:grouped_support_tier_not_executable", "run_id": "cd22d202-cd43-433b-9dc8-a42f46a29a51", "strategy_id": "snapshot_block_all_sharing", "value": 1}
+2026-03-14 21:51:23 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=c6468c94-e809-460d-b288-bdfb9303f377 action_id=0ca64b94-9dcb-4a97-91b0-27b0341865bc status=success
+2026-03-14 21:51:23 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=cd22d202-cd43-433b-9dc8-a42f46a29a51 action_id=b1c592c0-de9c-43d0-bf40-883d8ae1623d status=failed
+2026-03-14 21:51:24 | INFO     | worker | [b484b253-27d2-4e62-bbfb-c1cd25ac5e7f] Job completed and message deleted.
+2026-03-14 21:51:24 | INFO     | worker | [cb7886b1-decd-494a-81f6-0ec025b521fc] Job completed and message deleted.
+2026-03-14 21:52:21 | INFO     | worker | Queue metrics queue=legacy polls=5 empty_polls=3 empty_poll_rate=0.60 messages_received=2 messages_processed=2 in_flight=0 avg_processing_ms=3696.32 receive_errors=0
+2026-03-14 22:01:03 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-14 22:01:03 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-14 22:01:04 | INFO     | worker | Starting worker pool=legacy queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-ingest region=eu-north-1
+2026-03-14 22:01:04 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-14 22:01:04 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-14 22:01:04 | INFO     | worker | [822a8177-1e0e-4369-b275-42d4da7edbf7] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=1 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 22:01:05 | INFO     | worker | [01b79e95-cb62-4628-8bf1-5a0b53cc8cdc] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 22:01:05 | WARNING  | worker | [c691a97a-0d6b-468f-80e0-6eeee5fd26c2] Contract violation (unsupported_schema_version) quarantined queue=legacy quarantine_queue=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-20260314t194143z-quarantine
+2026-03-14 22:01:07 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=f9737af7-142c-432e-8c21-3b2a3a3022a0 action_id=e8be6f05-0e5e-4bdc-818e-f551cd62ccb5 status=success
+2026-03-14 22:01:08 | INFO     | worker | [822a8177-1e0e-4369-b275-42d4da7edbf7] Job completed and message deleted.
+2026-03-14 22:01:11 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=0557f79e-120a-4ae6-b727-ebc046d7a87e action_id=d8da3698-230f-44e3-9c11-cc9e4099b7f6 status=success
+2026-03-14 22:01:11 | INFO     | worker | [01b79e95-cb62-4628-8bf1-5a0b53cc8cdc] Job completed and message deleted.

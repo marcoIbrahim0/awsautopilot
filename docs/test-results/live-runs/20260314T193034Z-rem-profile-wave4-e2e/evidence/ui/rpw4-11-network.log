@@ -1,0 +1,6 @@
+[GET] http://127.0.0.1:18002/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc
+[GET] http://127.0.0.1:18002/api/aws/accounts => [200] OK
+[GET] http://127.0.0.1:18002/api/auth/me => [200] OK
+[POST] http://127.0.0.1:18002/api/auth/refresh => [200] OK
+[GET] http://127.0.0.1:18002/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc
+[GET] http://127.0.0.1:18002/api/aws/accounts => [200] OK

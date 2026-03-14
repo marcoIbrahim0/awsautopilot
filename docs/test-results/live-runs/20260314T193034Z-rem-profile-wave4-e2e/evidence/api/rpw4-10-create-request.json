@@ -1,0 +1,5 @@
+{
+  "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+  "mode": "direct_fix",
+  "strategy_id": "ebs_enable_default_encryption_aws_managed_kms"
+}

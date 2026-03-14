@@ -1,0 +1,10 @@
+{
+  "job_type": "remediation_run",
+  "run_id": "00000000-0000-0000-0000-000000000099",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "action_id": "d8da3698-230f-44e3-9c11-cc9e4099b7f6",
+  "mode": "pr_only",
+  "created_at": "2026-03-14T20:01:00Z",
+  "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+  "schema_version": 99
+}
