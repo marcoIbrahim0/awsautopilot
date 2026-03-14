@@ -54,3 +54,40 @@
 
 - Recommended gate decision: `stop for fixes`
 - Rationale: the Wave 2 API contract passed across the targeted surfaces, but the only verified runtime for this branch is local and its `/actions/[id]` UI route is currently broken by a hydration mismatch. Wave 3 should wait for that UI regression to be fixed or for a dedicated deployed branch environment to prove the issue is local-only.
+
+## UI Rerun Addendum
+
+- Rerun date (UTC): `2026-03-14`
+- Environment tested: `local on branch codex/rem-profile-w2-action-detail-hydration-fix`
+- Scope rerun: only the blocked UI portion on `/actions/[id]`, plus a shared `ActionDetailDrawer` findings-route smoke check
+
+### Rerun Results
+
+- `RPW2-01` UI surface for remediation-options on `/actions/[id]`: `PASS`
+  - The action-detail drawer now hydrates and renders normally.
+  - The PR-bundle modal opens from the fixed drawer and renders the strategy selector, hydrated defaults, dependency warnings, and enabled-state wiring.
+- `RPW2-02` UI surface for remediation-preview on `/actions/[id]`: `PASS`
+  - Browser-authenticated `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-preview?...` still returned `200`.
+  - The modal rendered preview-driven UI including rollback guidance, dependency warnings, the estimated time-to-pass message, and a live CTA gate behind risk acknowledgement.
+- Shared `ActionDetailDrawer` findings-route regression check: `PASS`
+  - `/findings` -> `View details` opened the shared drawer and rendered action content without the prior hydration mismatch.
+
+### Console / API Status
+
+- The prior hydration mismatch no longer appeared in the browser console on the action-detail route.
+- Console output on the fixed `/actions/[id]` rerun was limited to the expected React DevTools info line and Next.js HMR connected log.
+- Browser-authenticated requests observed during the rerun all succeeded:
+  - `GET /api/auth/me` -> `200`
+  - `POST /api/auth/refresh` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-options` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-preview?...` -> `200`
+
+### Updated Gate Recommendation
+
+- Updated gate decision: `cleared`
+- Wave 2 ready for Wave 3: `yes`
+- Addendum rationale: the only Wave 2 gate blocker from the original focused run was the local `ActionDetailDrawer` hydration failure. That blocker is now closed on the verified local fix branch, and the rerun re-proved the blocked UI surfaces without widening scope.
+- Fresh evidence:
+  - `evidence/ui/rpw2-ui-observations.md`
+  - `evidence/screenshots/rpw2-action-detail-hydration-fixed-local.png`

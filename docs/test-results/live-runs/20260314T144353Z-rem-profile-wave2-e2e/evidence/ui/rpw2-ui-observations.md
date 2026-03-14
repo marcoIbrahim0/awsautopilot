@@ -34,10 +34,42 @@
 ## Follow-up Local Verification On `codex/rem-profile-w2-action-detail-hydration-fix`
 
 - Follow-up date: `2026-03-14`
+- Environment: `local`
+- Frontend URL: `http://localhost:3000`
+- Backend URL: `http://localhost:8000`
+- Branch: `codex/rem-profile-w2-action-detail-hydration-fix`
+
+### Action Detail Rerun
+
+- Route exercised: `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d`
 - Verified local action-detail route after the hydration fix:
-  - `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` now renders the drawer content instead of stalling on the blank/skeleton state.
-  - Console no longer reports a hydration mismatch.
-  - The remediation-options surface remains reachable from the action-detail drawer.
-- Verified shared findings entry point after the same change:
-  - `/findings` -> `View details` still opens `ActionDetailDrawer` and renders action content without console errors.
+  - `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` now renders the drawer content immediately instead of stalling on the blank/skeleton state.
+  - The drawer exposes the expected action metadata, status badges, linked findings, and shared action-detail sections without a hydration abort.
+- Browser-authenticated API requests observed during the rerun all succeeded:
+  - `GET /api/auth/me` -> `200`
+  - `POST /api/auth/refresh` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-options` -> `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-preview?...` -> `200`
+- Console status on the action-detail route: only the expected React DevTools info line plus the Next.js HMR connected log were present; the prior hydration mismatch no longer appeared.
+
+### Remediation Options / Preview UI
+
+- Opened `Generate PR bundle` from the fixed drawer and verified the action-detail modal rendered usable Wave 2 UI instead of remaining blank.
+- `RPW2-01 remediation-options` UI is visible and hydrated:
+  - the recommended PR-bundle strategy renders,
+  - default input values render in the form,
+  - dependency warnings render,
+  - risk acknowledgement remains wired to the CTA state.
+- `RPW2-02 remediation-preview` UI is visible enough to support the Wave 2 contract:
+  - the preview request completed with `200`,
+  - preview-driven surfaces rendered in the modal, including rollback guidance (`aws cloudtrail stop-logging --name <TRAIL_NAME>`), dependency warnings, and the estimated time-to-pass message,
+  - checking the risk acknowledgement enabled the `Generate PR bundle` action button.
 - Fresh screenshot evidence: `../screenshots/rpw2-action-detail-hydration-fixed-local.png`
+
+### Shared Drawer Regression Check
+
+- Shared findings entry point after the same change:
+  - `/findings` initially required the existing local tenant ID entry as before.
+  - After saving tenant `9f7616d8-af04-43ca-99cd-713625357b70`, the grouped findings list loaded normally.
+  - `/findings` -> `View details` still opens `ActionDetailDrawer` and renders full action content with no hydration mismatch or blank drawer regression.

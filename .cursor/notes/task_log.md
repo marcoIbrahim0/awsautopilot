@@ -1,5 +1,50 @@
 # Task Log
 
+## Remediation-profile Wave 2 UI rerun after action-detail hydration fix (2026-03-14)
+
+**Task:** Re-run only the blocked remediation-profile Wave 2 action-detail UI checks on the local `codex/rem-profile-w2-action-detail-hydration-fix` runtime, capture fresh evidence, and update the existing Wave 2 run summary/history without widening scope.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/screenshots/rpw2-action-detail-hydration-fixed-local.png** - refreshed the fixed action-detail drawer screenshot from the rerun.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/ui/rpw2-ui-observations.md** - updated the blocked UI observation note with the successful rerun details, console status, API statuses, and shared findings-route regression check.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/notes/final-summary.md** - added a rerun addendum that clears `RPW2-01` and `RPW2-02`, records the tested environment, and marks Wave 2 ready for Wave 3.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_log.md** - logged this rerun task.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index/log context, and the original Wave 2 summary/UI evidence before running the rerun.
+- Confirmed the local frontend/backend for the fix branch were already serving on `http://localhost:3000` and `http://localhost:8000`.
+- Minted a cookie-backed local admin session for tenant `9f7616d8-af04-43ca-99cd-713625357b70` using the existing local JWT secret so the rerun used the same tenant/action context as the original Wave 2 run without mutating passwords.
+- Re-ran the previously blocked route:
+  - `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d`
+  - confirmed the drawer no longer hits a hydration mismatch and no longer stays blank/skeleton-only
+  - confirmed the route rendered full action-detail content
+- Opened `Generate PR bundle` from the fixed drawer and verified the Wave 2 UI surfaces are usable:
+  - remediation options render with hydrated defaults and dependency warnings
+  - remediation preview requests still return `200`
+  - preview-driven UI renders in the modal (rollback command, estimated time, dependency warnings)
+  - risk acknowledgement still enables the CTA as expected
+- Confirmed browser-authenticated requests still succeeded as before:
+  - `GET /api/auth/me`
+  - `POST /api/auth/refresh`
+  - `GET /api/actions/{id}`
+  - `GET /api/actions/{id}/remediation-options`
+  - `GET /api/actions/{id}/remediation-preview?...`
+- Captured console status on the fixed action-detail route:
+  - only the expected React DevTools info line and HMR connected log were present
+  - the prior hydration mismatch did not reappear
+- Rechecked a findings route that also uses `ActionDetailDrawer`:
+  - after supplying the existing local tenant ID, `/findings` loaded normally
+  - `View details` opened the shared drawer and rendered action content without a hydration mismatch
+- Refreshed the screenshot/UI evidence and added a final-summary addendum that closes the Wave 2 blocker and marks Wave 2 ready for Wave 3.
+
+**Technical debt / gotchas:**
+- The local `/findings` route still depends on the existing tenant-ID bootstrap in this dev runtime before it loads data; that behavior pre-existed this rerun and did not block the shared drawer regression check once the tenant ID was supplied.
+- This rerun intentionally reused the original `20260314T144353Z-rem-profile-wave2-e2e` run folder and original API evidence; only the blocked UI proof and task-history records were refreshed.
+
+**Open questions / TODOs:**
+- None for the Wave 2 action-detail hydration gate blocker.
+
 ## Remediation-profile Wave 2 focused E2E validation (2026-03-14)
 
 **Task:** Execute a focused end-to-end validation for remediation-profile Wave 2 only on branch `codex/rem-profile-w2-integrate`, using the live-E2E documentation format but scoped strictly to the Wave 2 remediation-profile contract surfaces.

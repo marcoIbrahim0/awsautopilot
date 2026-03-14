@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 2 UI rerun after action-detail hydration fix (2026-03-14)](task_log.md#remediation-profile-wave-2-ui-rerun-after-action-detail-hydration-fix-2026-03-14)
+  - Re-ran only the blocked `/actions/[id]` UI surfaces on local branch `codex/rem-profile-w2-action-detail-hydration-fix` and refreshed the existing `20260314T144353Z-rem-profile-wave2-e2e` screenshot, UI observation note, and final summary.
+  - Confirmed `ActionDetailDrawer` no longer hits a hydration mismatch, the remediation-options/remediation-preview modal UI is visible and usable, and `/findings` -> `View details` still opens the shared drawer.
+  - Cleared `RPW2-01` and `RPW2-02` to `PASS` and marked Wave 2 ready for Wave 3.
 - [Remediation-profile Wave 2 focused E2E validation (2026-03-14)](task_log.md#remediation-profile-wave-2-focused-e2e-validation-2026-03-14)
   - Created `docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/` with raw API evidence, UI observations, screenshots, per-test files, and a final summary for `RPW2-01` through `RPW2-12`.
   - Verified the Wave 2 API contract on the local `codex/rem-profile-w2-integrate` runtime, including options/preview profile metadata, create-time canonical `artifacts.resolution`, legacy run hydration, direct-fix regression smoke, auth boundaries, duplicate guard, and remediation-settings influence.
