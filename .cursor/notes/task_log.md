@@ -1,5 +1,30 @@
 # Task Log
 
+## Fast-forward master to the remediation-profile Wave 2 baseline (2026-03-14)
+
+**Task:** Move `master` to the tested remediation-profile Wave 0-2 baseline from `codex/rem-profile-w2-action-detail-hydration-fix` without disturbing the unrelated dirty local changes already present in the main `master` worktree.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_log.md** - logged the safe `master` fast-forward task and its worktree constraints.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes and `docs/README.md` before changing git refs.
+- Confirmed `master` was a strict ancestor of `codex/rem-profile-w2-action-detail-hydration-fix`, so this was a fast-forward update rather than a content merge.
+- Avoided the dirty main worktree at `/Users/marcomaher/AWS Security Autopilot`, which already contains large unrelated local deletions and cache noise.
+- Recorded the merge-to-master handoff from the clean remediation-profile worktree, then advanced `refs/heads/master` to the tested Wave 0-2 branch tip so later work can start from the completed baseline.
+- Preserved the validated remediation-profile state now reachable from `master`, including:
+  - Wave 0 contract-lock and branch-history integration
+  - Wave 1 foundation integration
+  - Wave 2 single-action resolution flow, focused E2E evidence, no-drawer action-detail restoration, and Attack Path modal fix
+
+**Technical debt / gotchas:**
+- The main `master` worktree remains dirty and checked out at `/Users/marcomaher/AWS Security Autopilot`; advancing the branch ref does not rewrite that filesystem state, so it will continue to show unrelated local changes until those are reconciled separately.
+- The nested `frontend` checkout is tracked as a gitlink without a populated `.gitmodules` mapping, so generic `git submodule` commands remain noisy even though the nested repo itself works.
+
+**Open questions / TODOs:**
+- None. Wave 3 can now branch from the updated `master` tip instead of the older pre-Wave-0-2 baseline.
+
 ## Fix action-detail modal Attack Path crash on nodes without facts (2026-03-14)
 
 **Task:** Fix the restored no-drawer action-detail modal so the richer Attack Path view renders again when backend nodes omit `facts[]`, instead of crashing the pop-card UI and making the feature look reverted.

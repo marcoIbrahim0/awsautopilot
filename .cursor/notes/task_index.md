@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Fast-forward master to the remediation-profile Wave 2 baseline (2026-03-14)](task_log.md#fast-forward-master-to-the-remediation-profile-wave-2-baseline-2026-03-14)
+  - Confirmed `master` was an ancestor of `codex/rem-profile-w2-action-detail-hydration-fix`, so the requested merge could be completed as a safe fast-forward.
+  - Advanced `master` to the tested remediation-profile Wave 0-2 baseline without touching the large unrelated dirty state in the main `master` worktree.
+  - Leaves Wave 3 free to start from updated `master` instead of the older pre-remediation-profile baseline.
 - [Fix action-detail modal Attack Path crash on nodes without facts (2026-03-14)](task_log.md#fix-action-detail-modal-attack-path-crash-on-nodes-without-facts-2026-03-14)
   - Fixed the restored pop-card action-detail modal so bounded Attack Path payloads no longer crash when backend nodes omit `facts[]` and the UI can render the real path instead of falling back to an error-broken state.
   - Hardened the frontend attack-path node type/rendering, added a focused node-card regression test, and manually re-verified a real `partial` attack-path action route locally.
