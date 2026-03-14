@@ -4,10 +4,9 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, NoReturn, Optional
 
 import boto3
-from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -20,12 +19,20 @@ from backend.models.action import Action
 from backend.models.action_group import ActionGroup
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
+from backend.models.aws_account import AwsAccount
 from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
 from backend.services.action_groups import get_group_detail, list_groups_with_counters
 from backend.services.bundle_reporting_tokens import issue_group_run_reporting_token
+from backend.services.grouped_remediation_runs import (
+    GroupedActionScope,
+    GroupedRemediationRunValidationError,
+    build_grouped_run_persistence_plan,
+    normalize_grouped_request_from_action_group,
+)
+from backend.services.remediation_strategy import strategy_required_for_action_type
 from backend.utils.sqs import build_remediation_run_job_payload, parse_queue_region
 
 router = APIRouter(prefix="/action-groups", tags=["action-groups"])
@@ -110,11 +117,31 @@ class ActionGroupRunsResponse(BaseModel):
     total: int
 
 
+class ActionGroupRepoTargetRequest(BaseModel):
+    provider: str | None = Field(default=None, min_length=1, max_length=64)
+    repository: str = Field(..., min_length=1, max_length=255)
+    base_branch: str = Field(..., min_length=1, max_length=255)
+    head_branch: str | None = Field(default=None, min_length=1, max_length=255)
+    root_path: str | None = Field(default=None, min_length=1, max_length=512)
+
+
+class ActionGroupActionOverrideRequest(BaseModel):
+    action_id: str = Field(..., description="UUID of the grouped action to override.")
+    strategy_id: str | None = Field(None, description="Optional strategy override for this grouped action.")
+    profile_id: str | None = Field(None, description="Optional remediation profile override for this grouped action.")
+    strategy_inputs: dict[str, Any] | None = Field(
+        None,
+        description="Optional strategy_inputs override for this grouped action.",
+    )
+
+
 class CreateActionGroupBundleRunRequest(BaseModel):
     strategy_id: str | None = None
     strategy_inputs: dict[str, Any] | None = None
+    action_overrides: list[ActionGroupActionOverrideRequest] = Field(default_factory=list)
     risk_acknowledged: bool = False
     pr_bundle_variant: str | None = None
+    repo_target: ActionGroupRepoTargetRequest | None = None
 
 
 class CreateActionGroupBundleRunResponse(BaseModel):
@@ -134,6 +161,269 @@ def _as_iso(value: object | None) -> str | None:
         return str(value)
     except Exception:
         return None
+
+
+def _parse_group_uuid_or_400(group_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(group_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid group_id") from exc
+
+
+def _reporting_callback_url() -> str:
+    return f"{settings.API_PUBLIC_URL.rstrip('/')}/api/internal/group-runs/report"
+
+
+def _raise_action_group_grouped_validation_error(exc: GroupedRemediationRunValidationError) -> NoReturn:
+    if exc.code == "exception_only_strategy":
+        detail = {
+            "error": "Exception-only strategy",
+            "detail": str(exc),
+            "exception_flow": exc.details.get("exception_flow") if isinstance(exc.details, dict) else {},
+        }
+    elif exc.code == "dependency_check_failed":
+        detail = _grouped_risk_error_detail(exc, error="Dependency check failed")
+    elif exc.code == "risk_ack_required":
+        detail = _grouped_risk_error_detail(exc, error="Risk acknowledgement required")
+    elif exc.code == "duplicate_action_override":
+        detail = {"error": "Duplicate action_overrides entry", "detail": str(exc)}
+    elif exc.code == "override_action_not_in_group":
+        detail = {"error": "Invalid action_overrides[].action_id", "detail": str(exc)}
+    elif exc.code == "invalid_override_strategy":
+        detail = {"error": "Invalid strategy selection", "detail": str(exc)}
+    elif exc.code == "invalid_override_profile":
+        detail = {"error": "Invalid profile_id", "detail": str(exc)}
+    elif exc.code == "missing_grouped_strategy_id":
+        detail = {"error": "Missing strategy_id", "detail": str(exc)}
+    elif exc.code == "strategy_conflict":
+        detail = {"error": "Strategy conflict", "detail": str(exc)}
+    elif exc.code == "invalid_pr_bundle_variant":
+        detail = {"error": "Invalid pr_bundle_variant", "detail": str(exc)}
+    else:
+        detail = {"error": "Invalid grouped remediation request", "detail": str(exc), "reason": exc.code}
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def _grouped_risk_error_detail(
+    exc: GroupedRemediationRunValidationError,
+    *,
+    error: str,
+) -> dict[str, Any]:
+    detail: dict[str, Any] = {
+        "error": error,
+        "detail": (
+            "One or more dependency checks blocked this remediation strategy."
+            if error == "Dependency check failed"
+            else "This remediation strategy has warning/unknown dependency checks. Set risk_acknowledged=true after review."
+        ),
+    }
+    risk_snapshot = exc.details.get("risk_snapshot") if isinstance(exc.details, dict) else None
+    if isinstance(risk_snapshot, dict):
+        detail["risk_snapshot"] = risk_snapshot
+    return detail
+
+
+def _normalize_group_request_or_400(body: CreateActionGroupBundleRunRequest, *, action_type: str):
+    try:
+        normalized = normalize_grouped_request_from_action_group(body)
+    except GroupedRemediationRunValidationError as exc:
+        _raise_action_group_grouped_validation_error(exc)
+    has_top_level_strategy = bool(normalized.strategy_id or normalized.pr_bundle_variant)
+    if (strategy_required_for_action_type(action_type) or normalized.action_overrides) and not has_top_level_strategy:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Missing strategy_id",
+                "detail": (
+                    f"strategy_id is required for action_type '{action_type}'. "
+                    "Fetch options via GET /api/actions/{id}/remediation-options."
+                ),
+            },
+        )
+    return normalized
+
+
+async def _load_action_group_or_404(db: AsyncSession, *, group_id: uuid.UUID, tenant_id: uuid.UUID) -> ActionGroup:
+    group = (
+        await db.execute(select(ActionGroup).where(ActionGroup.id == group_id, ActionGroup.tenant_id == tenant_id))
+    ).scalar_one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action group not found")
+    return group
+
+
+async def _load_group_actions_or_404(db: AsyncSession, *, tenant_id: uuid.UUID, group_id: uuid.UUID) -> list[Action]:
+    actions = (
+        await db.execute(
+            select(Action)
+            .join(
+                ActionGroupMembership,
+                (ActionGroupMembership.action_id == Action.id)
+                & (ActionGroupMembership.tenant_id == Action.tenant_id),
+            )
+            .where(ActionGroupMembership.tenant_id == tenant_id, ActionGroupMembership.group_id == group_id)
+            .order_by(Action.priority.desc(), Action.updated_at.desc().nullslast(), Action.created_at.desc())
+        )
+    ).scalars().all()
+    if not actions:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action group has no members")
+    return actions
+
+
+async def _load_group_account(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    account_id: str,
+) -> AwsAccount | None:
+    result = await db.execute(
+        select(AwsAccount).where(AwsAccount.tenant_id == tenant_id, AwsAccount.account_id == account_id)
+    )
+    return result.scalar_one_or_none()
+
+
+def _create_group_run_with_token(
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    group: ActionGroup,
+    action_ids: list[uuid.UUID],
+) -> tuple[ActionGroupRun, str, str]:
+    group_run = ActionGroupRun(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        group_id=group.id,
+        initiated_by_user_id=user_id,
+        mode="download_bundle",
+        status=ActionGroupRunStatus.queued,
+        reporting_source="system",
+    )
+    callback_url = _reporting_callback_url()
+    token, token_jti, _ = issue_group_run_reporting_token(
+        tenant_id=tenant_id,
+        group_run_id=group_run.id,
+        group_id=group.id,
+        allowed_action_ids=action_ids,
+    )
+    group_run.report_token_jti = token_jti
+    return group_run, token, callback_url
+
+
+def _group_bundle_seed(group: ActionGroup, *, group_run: ActionGroupRun, token: str, callback_url: str) -> dict[str, Any]:
+    return {
+        "group_id": str(group.id),
+        "group_key": group.group_key,
+        "group_run_id": str(group_run.id),
+        "reporting": {
+            "callback_url": callback_url,
+            "token": token,
+            "reporting_source": "bundle_callback",
+        },
+    }
+
+
+def _build_action_group_plan_or_400(
+    *,
+    group: ActionGroup,
+    request: Any,
+    actions: list[Action],
+    group_run: ActionGroupRun,
+    token: str,
+    callback_url: str,
+    account: AwsAccount | None,
+):
+    try:
+        return build_grouped_run_persistence_plan(
+            request=request,
+            scope=GroupedActionScope(
+                action_type=group.action_type,
+                account_id=group.account_id,
+                region=group.region,
+                group_id=str(group.id),
+                group_key=group.group_key,
+            ),
+            actions=actions,
+            group_bundle_seed=_group_bundle_seed(group, group_run=group_run, token=token, callback_url=callback_url),
+            account=account,
+        )
+    except GroupedRemediationRunValidationError as exc:
+        _raise_action_group_grouped_validation_error(exc)
+
+
+async def _persist_group_bundle_run(
+    db: AsyncSession,
+    *,
+    group_run: ActionGroupRun,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    representative_action_id: str,
+    artifacts: dict[str, Any],
+) -> RemediationRun:
+    remediation_run = RemediationRun(
+        tenant_id=tenant_id,
+        action_id=uuid.UUID(representative_action_id),
+        mode=RemediationRunMode.pr_only,
+        status=RemediationRunStatus.pending,
+        approved_by_user_id=user_id,
+        artifacts=artifacts,
+    )
+    db.add(group_run)
+    db.add(remediation_run)
+    await db.flush()
+    group_run.remediation_run_id = remediation_run.id
+    await db.commit()
+    await db.refresh(group_run)
+    await db.refresh(remediation_run)
+    return remediation_run
+
+
+async def _mark_group_bundle_run_failed(
+    db: AsyncSession,
+    *,
+    group_run: ActionGroupRun,
+    remediation_run: RemediationRun,
+) -> None:
+    now = datetime.now(timezone.utc)
+    group_run.status = ActionGroupRunStatus.failed
+    group_run.finished_at = now
+    remediation_run.status = RemediationRunStatus.failed
+    remediation_run.outcome = "Queue enqueue failed for bundle generation."
+    await db.commit()
+
+
+async def _enqueue_group_bundle_run_or_503(
+    *,
+    db: AsyncSession,
+    plan: Any,
+    group_run: ActionGroupRun,
+    remediation_run: RemediationRun,
+    tenant_id: uuid.UUID,
+) -> None:
+    queue_fields = plan.queue_v1_payload_fields()
+    payload = build_remediation_run_job_payload(
+        run_id=remediation_run.id,
+        tenant_id=tenant_id,
+        action_id=uuid.UUID(plan.representative_action_id),
+        mode=remediation_run.mode.value,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        pr_bundle_variant=queue_fields.get("pr_bundle_variant"),
+        strategy_id=queue_fields.get("strategy_id"),
+        strategy_inputs=queue_fields.get("strategy_inputs"),
+        risk_acknowledged=bool(queue_fields.get("risk_acknowledged")),
+        group_action_ids=queue_fields.get("group_action_ids"),
+        repo_target=queue_fields.get("repo_target"),
+    )
+    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
+    sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
+    try:
+        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+    except Exception as exc:
+        logger.exception("SQS send_message failed for action group bundle run enqueue: %s", exc)
+        await _mark_group_bundle_run_failed(db, group_run=group_run, remediation_run=remediation_run)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not enqueue group bundle run job.",
+        ) from exc
 
 
 @router.get("", response_model=ActionGroupsListResponse)
@@ -313,130 +603,42 @@ async def create_action_group_bundle_run(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
         )
-    try:
-        group_uuid = uuid.UUID(group_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid group_id") from exc
+    group_uuid = _parse_group_uuid_or_400(group_id)
     request_body = body or CreateActionGroupBundleRunRequest()
-
-    group = (
-        await db.execute(
-            select(ActionGroup).where(ActionGroup.id == group_uuid, ActionGroup.tenant_id == current_user.tenant_id)
-        )
-    ).scalar_one_or_none()
-    if group is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action group not found")
-
-    action_rows = (
-        await db.execute(
-            select(Action)
-            .join(
-                ActionGroupMembership,
-                (ActionGroupMembership.action_id == Action.id)
-                & (ActionGroupMembership.tenant_id == Action.tenant_id),
-            )
-            .where(
-                ActionGroupMembership.tenant_id == current_user.tenant_id,
-                ActionGroupMembership.group_id == group.id,
-            )
-            .order_by(Action.priority.desc(), Action.updated_at.desc().nullslast(), Action.created_at.desc())
-        )
-    ).scalars().all()
-    if not action_rows:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action group has no members")
-
-    representative = action_rows[0]
-    action_ids = [action.id for action in action_rows]
-
-    group_run_id = uuid.uuid4()
-    group_run = ActionGroupRun(
-        id=group_run_id,
+    group = await _load_action_group_or_404(db, group_id=group_uuid, tenant_id=current_user.tenant_id)
+    action_rows = await _load_group_actions_or_404(db, tenant_id=current_user.tenant_id, group_id=group.id)
+    normalized_request = _normalize_group_request_or_400(request_body, action_type=group.action_type)
+    account = await _load_group_account(db, tenant_id=current_user.tenant_id, account_id=group.account_id)
+    group_run, token, callback_url = _create_group_run_with_token(
         tenant_id=current_user.tenant_id,
-        group_id=group.id,
-        initiated_by_user_id=current_user.id,
-        mode="download_bundle",
-        status=ActionGroupRunStatus.queued,
-        reporting_source="system",
+        user_id=current_user.id,
+        group=group,
+        action_ids=[action.id for action in action_rows],
     )
-    callback_url = f"{settings.API_PUBLIC_URL.rstrip('/')}/api/internal/group-runs/report"
-    token, token_jti, _ = issue_group_run_reporting_token(
+    plan = _build_action_group_plan_or_400(
+        group=group,
+        request=normalized_request,
+        actions=action_rows,
+        group_run=group_run,
+        token=token,
+        callback_url=callback_url,
+        account=account,
+    )
+    remediation_run = await _persist_group_bundle_run(
+        db,
+        group_run=group_run,
         tenant_id=current_user.tenant_id,
-        group_run_id=group_run.id,
-        group_id=group.id,
-        allowed_action_ids=action_ids,
+        user_id=current_user.id,
+        representative_action_id=plan.representative_action_id,
+        artifacts=dict(plan.artifacts),
     )
-    group_run.report_token_jti = token_jti
-
-    artifacts: dict[str, Any] = {
-        "group_bundle": {
-            "group_id": str(group.id),
-            "group_key": group.group_key,
-            "action_type": group.action_type,
-            "account_id": group.account_id,
-            "region": group.region,
-            "action_count": len(action_ids),
-            "action_ids": [str(action_id) for action_id in action_ids],
-            "group_run_id": str(group_run.id),
-            "reporting": {
-                "callback_url": callback_url,
-                "token": token,
-                "reporting_source": "bundle_callback",
-            },
-        }
-    }
-    if request_body.strategy_id:
-        artifacts["selected_strategy"] = request_body.strategy_id
-    if request_body.strategy_inputs:
-        artifacts["strategy_inputs"] = request_body.strategy_inputs
-    if request_body.risk_acknowledged:
-        artifacts["risk_acknowledged"] = True
-    if request_body.pr_bundle_variant:
-        artifacts["pr_bundle_variant"] = request_body.pr_bundle_variant
-
-    remediation_run = RemediationRun(
+    await _enqueue_group_bundle_run_or_503(
+        db=db,
+        plan=plan,
+        group_run=group_run,
+        remediation_run=remediation_run,
         tenant_id=current_user.tenant_id,
-        action_id=representative.id,
-        mode=RemediationRunMode.pr_only,
-        status=RemediationRunStatus.pending,
-        approved_by_user_id=current_user.id,
-        artifacts=artifacts,
     )
-    db.add(group_run)
-    db.add(remediation_run)
-    await db.flush()
-    group_run.remediation_run_id = remediation_run.id
-    await db.commit()
-    await db.refresh(group_run)
-    await db.refresh(remediation_run)
-
-    payload = build_remediation_run_job_payload(
-        run_id=remediation_run.id,
-        tenant_id=current_user.tenant_id,
-        action_id=representative.id,
-        mode=remediation_run.mode.value,
-        created_at=datetime.now(timezone.utc).isoformat(),
-        pr_bundle_variant=request_body.pr_bundle_variant,
-        strategy_id=request_body.strategy_id,
-        strategy_inputs=request_body.strategy_inputs,
-        risk_acknowledged=request_body.risk_acknowledged,
-        group_action_ids=action_ids,
-    )
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
-    sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
-    try:
-        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-    except Exception as exc:
-        logger.exception("SQS send_message failed for action group bundle run enqueue: %s", exc)
-        now = datetime.now(timezone.utc)
-        group_run.status = ActionGroupRunStatus.failed
-        group_run.finished_at = now
-        remediation_run.status = RemediationRunStatus.failed
-        remediation_run.outcome = "Queue enqueue failed for bundle generation."
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not enqueue group bundle run job.",
-        ) from exc
 
     return CreateActionGroupBundleRunResponse(
         group_run_id=str(group_run.id),
