@@ -4,6 +4,12 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 4 queue-contract and worker migration documentation (2026-03-14)](task_log.md#remediation-profile-resolution-wave-4-queue-contract-and-worker-migration-documentation-2026-03-14)
+  - Added the missing Wave 4 summary doc for the already-landed queue schema v2, duplicate/resend contract updates, grouped worker per-action decision consumption, and the remaining Step 7/root-key boundaries.
+  - Linked the new Wave 4 doc from the remediation-profile README, then re-ran the focused contract/worker suites and recorded the remaining grouped-resend ordering test mismatch.
+- [Remediation profile resolution Wave 3 grouped-run integration documentation (2026-03-14)](task_log.md#remediation-profile-resolution-wave-3-grouped-run-integration-documentation-2026-03-14)
+  - Recorded the already-merged Wave 3 grouped runtime on `master` with a dedicated summary doc for the shared grouped-run service, grouped `action_overrides[]`, action-groups route parity, and queue-v1 compatibility boundaries.
+  - Linked the new Wave 3 summary from the remediation-profile README and restored Wave 3 discoverability without a separate integration branch.
 - [Commit carried evidence-folder deletions on master (2026-03-14)](task_log.md#commit-carried-evidence-folder-deletions-on-master-2026-03-14)
   - Committed the already-approved tracked deletions for `artifacts/no-ui-agent` and `docs/test-results/live-runs` on `master`.
   - Preserved the merged remediation-profile Wave 0-2 implementation files by restoring them before the cleanup commit.

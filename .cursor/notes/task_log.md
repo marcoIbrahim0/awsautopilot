@@ -1,5 +1,78 @@
 # Task Log
 
+## Remediation profile resolution Wave 4 queue-contract and worker migration documentation (2026-03-14)
+
+**Task:** Document the already-landed Wave 4 queue-contract and worker-migration work on `master`, add the missing Wave 4 summary doc, and wire the remediation-profile docs/task history to the completed implementation.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-4-queue-contract-and-worker-migration.md** - added the Wave 4 summary doc covering remediation-run schema v2 support, duplicate/resend behavior, grouped worker migration, and the remaining Step 7/root-key boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - linked the new Wave 4 summary doc from the remediation-profile doc entrypoint.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 4 documentation pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Verified the landed Wave 4 code paths before writing docs:
+  - `backend/utils/sqs.py`
+  - `backend/routers/remediation_runs.py`
+  - `backend/routers/action_groups.py`
+  - `backend/services/remediation_run_queue_contract.py`
+  - `backend/workers/main.py`
+  - `backend/workers/jobs/remediation_run.py`
+- Recorded only implemented behavior in the new Wave 4 doc:
+  - remediation-run queue schema `v2` support is live
+  - schema `v1` remains runnable
+  - worker unknown-schema fail-closed quarantine remains in place
+  - duplicate detection now keys correctly on canonical `profile_id`, grouped effective decisions, and `repo_target`
+  - resend reconstructs schema-aware payloads from canonical artifacts when available
+  - grouped worker generation now consumes per-action decisions instead of one shared grouped strategy
+- Captured the still-deferred boundaries explicitly instead of describing them as shipped work:
+  - Step 7 mixed-tier grouped layout is not implemented yet
+  - reporting callback schema changes are not implemented yet
+  - root-key execution authority still stays outside the generic remediation-run queue path
+  - `direct_fix` remains unchanged and out of scope
+- Re-ran focused Wave 4 contract/worker tests after the doc pass:
+  - `pytest -q tests/test_sqs_utils.py tests/test_worker_main_contract_quarantine.py` -> `42 passed`
+  - `pytest -q tests/test_remediation_run_worker.py -k 'group_pr_bundle_uses_artifact_action_resolutions_when_present or group_pr_bundle_uses_queue_action_resolutions_when_present or group_pr_bundle_malformed_action_resolutions_fail_closed or group_pr_bundle_non_deterministic_action_resolution_support_tier_fails_closed or group_pr_bundle_schema_v1_falls_back_to_top_level_strategy_fields'` -> `7 passed`
+  - `pytest -q tests/test_remediation_runs_api.py -k 'create_run_different_profile_id_not_treated_as_identical_duplicate or create_group_pr_bundle_run_success or create_group_pr_bundle_accepts_action_overrides or create_group_pr_bundle_different_override_map_not_duplicate or create_group_pr_bundle_identical_override_map_still_duplicate or resend_run_legacy_grouped_artifacts_requeue_schema_v1 or resend_run_canonical_single_resolution_requeues_schema_v2 or resend_run_canonical_grouped_resolutions_requeue_schema_v2'` -> `7 passed`, `1 failed`
+- Kept this pass documentation-only; no runtime code changed.
+
+**Technical debt / gotchas:**
+- Single-run schema `v2` is a landed queue-contract/persistence compatibility feature, but the worker still relies on the preserved top-level mirror fields for actual single-action PR bundle generation. The new doc calls this out so later waves do not over-claim single-run worker branching.
+- The remaining focused failure is `tests/test_remediation_runs_api.py::test_resend_run_canonical_grouped_resolutions_requeue_schema_v2`: landed resend logic normalizes grouped `action_resolutions` order through the queue-contract helper, so the test's strict list-order expectation no longer matches the current runtime contract.
+- The main `master` worktree is still locally dirty in cache/noise files and already-edited docs/history files; this pass added only the Wave 4 doc/history deltas on top of that state.
+
+**Open questions / TODOs:**
+- Reconcile the remaining grouped-resend test expectation versus the landed canonical ordering behavior before calling Wave 4 fully gate-ready for the focused E2E pass.
+
+## Remediation profile resolution Wave 3 grouped-run integration documentation (2026-03-14)
+
+**Task:** Record the already-merged Wave 3 grouped-run runtime integration on `master`, add the missing Wave 3 summary doc, and link it from the remediation-profile docs so the grouped-route work is discoverable without a separate integration branch.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-3-grouped-run-orchestration.md** - added the Wave 3 grouped-run summary doc describing the shared grouped-run service, grouped override validation, route parity, grouped artifact persistence, and queue-compatibility boundary.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - linked the new Wave 3 summary doc from the remediation-profile doc entrypoint.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 3 D-lite documentation pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Verified `master` already contains the substantive Wave 3 runtime integration:
+  - shared grouped-run service in `backend/services/grouped_remediation_runs.py`
+  - grouped remediation-runs route wired to the shared service
+  - action-groups bundle-run route wired to the shared service with `repo_target` parity and `action_overrides[]`
+- Confirmed the focused grouped Wave 3 tests pass on `master`:
+  - `tests/test_grouped_remediation_run_service.py`
+  - `tests/test_action_groups_bundle_run.py`
+  - grouped `tests/test_remediation_runs_api.py` subset
+- Added the missing Wave 3 documentation layer so the merged code is discoverable from the remediation-profile doc set.
+- Kept this pass documentation-only; no runtime code changed.
+
+**Technical debt / gotchas:**
+- The main worktree on `master` still has local `.DS_Store` and `__pycache__` noise, but those files are unrelated to the Wave 3 grouped-run integration and were intentionally left untouched.
+- The remediation-profile root spec remains marked as planned because later waves are still pending; the new Wave 3 doc records only the implemented grouped orchestration slice.
+
+**Open questions / TODOs:**
+- Wave 4 still needs queue payload v2, resend/dedup expansion, and worker consumption of grouped per-action resolutions.
+
 ## Commit carried evidence-folder deletions on master (2026-03-14)
 
 **Task:** Commit the already-approved local deletions of `artifacts/no-ui-agent` and `docs/test-results/live-runs` on `master` without deleting any remediation-profile Wave 0-2 implementation updates.

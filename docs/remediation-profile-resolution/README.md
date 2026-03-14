@@ -39,6 +39,14 @@ Related docs:
 
 - [Wave 2 read and single-run surfaces](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-2-read-and-single-run-surfaces.md)
 
+## Wave 3 Grouped-Run Orchestration
+
+- [Wave 3 grouped-run orchestration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-3-grouped-run-orchestration.md)
+
+## Wave 4 Queue Contract and Worker Migration
+
+- [Wave 4 queue contract and worker migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-4-queue-contract-and-worker-migration.md)
+
 ## Scope and Non-Goals
 
 In scope:
