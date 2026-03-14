@@ -1,5 +1,43 @@
 # Task Log
 
+## Fix action-detail modal Attack Path crash on nodes without facts (2026-03-14)
+
+**Task:** Fix the restored no-drawer action-detail modal so the richer Attack Path view renders again when backend nodes omit `facts[]`, instead of crashing the pop-card UI and making the feature look reverted.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailAttackPathNodeCard.tsx** - hardened the Attack Path node renderer to treat missing `facts` and `badges` as empty arrays instead of crashing on valid backend payloads.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailAttackPathNodeCard.test.tsx** - added a regression test that renders a backend-valid node without `facts`/`badges` and confirms the card still renders safely.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/lib/api.ts** - relaxed the frontend attack-path node type so it matches the backend payload shape where `facts` are optional/omitted.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_log.md** - logged this Attack Path regression fix.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reproduced the reported regression on the restored pop-card branch and confirmed the symptom was not a backend revert: the API still returned a real bounded Attack Path payload for action `b1c592c0-de9c-43d0-bf40-883d8ae1623d`.
+- Found the actual frontend crash in `ActionDetailAttackPathNodeCard.tsx`: the component called `node.facts.length` even though the backend `ActionAttackPathNode` model does not define `facts`, so valid payloads could arrive without that array.
+- Confirmed the failing runtime error in the browser console:
+  - `TypeError: Cannot read properties of undefined (reading 'length')`
+  - component: `ActionDetailAttackPathNodeCard`
+- Fixed the node-card renderer to default missing `facts` and `badges` to empty arrays and updated the frontend type definition to match the backend payload shape.
+- Added a focused regression test that exercises the real omission case directly in the node-card component.
+- Revalidated the real affected action route locally after the patch:
+  - `/actions/b1c592c0-de9c-43d0-bf40-883d8ae1623d`
+  - the pop-card modal now renders the `Attack Path` section with `partial` status, visible path nodes, and `Block all public snapshot sharing`
+  - the prior client-side crash no longer appears in the browser console
+
+**Validation:**
+- `npm --prefix frontend run test:ui -- --run src/components/ActionDetailAttackPathNodeCard.test.tsx src/components/ActionDetailModal.test.tsx src/app/findings/page.test.tsx src/components/ui/AnimatedTooltip.test.tsx` - pass (`19 passed`)
+- Manual Playwright re-check on `http://localhost:3000/actions/b1c592c0-de9c-43d0-bf40-883d8ae1623d` - pass
+  - Attack Path heading renders
+  - real bounded path content renders (`Exploitable path`, `Block all public snapshot sharing`)
+  - browser console shows no error
+
+**Technical debt / gotchas:**
+- The modal test file mocks `ActionDetailAttackPathNodeCard`, so integration-level coverage for this bug only existed in the browser until the dedicated node-card regression test was added.
+- The frontend attack-path type had drifted from the backend response model; backend nodes guarantee `badges` but do not currently define `facts`.
+
+**Open questions / TODOs:**
+- None.
+
 ## Restore the no-drawer action-detail modal on the remediation-profile fix branch (2026-03-14)
 
 **Task:** Restore the March 14 no-drawer action-detail redesign on local branch `codex/rem-profile-w2-action-detail-hydration-fix`, keep the pop-card/modal UX instead of the old drawer, and fix any branch-local regression needed to make the restored modal render correctly.

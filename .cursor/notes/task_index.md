@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Fix action-detail modal Attack Path crash on nodes without facts (2026-03-14)](task_log.md#fix-action-detail-modal-attack-path-crash-on-nodes-without-facts-2026-03-14)
+  - Fixed the restored pop-card action-detail modal so bounded Attack Path payloads no longer crash when backend nodes omit `facts[]` and the UI can render the real path instead of falling back to an error-broken state.
+  - Hardened the frontend attack-path node type/rendering, added a focused node-card regression test, and manually re-verified a real `partial` attack-path action route locally.
+  - Confirmed the backend/API already still returned real Attack Path data; the regression was frontend-only in the restored modal path.
 - [Restore the no-drawer action-detail modal on the remediation-profile fix branch (2026-03-14)](task_log.md#restore-the-no-drawer-action-detail-modal-on-the-remediation-profile-fix-branch-2026-03-14)
   - Replayed the March 14 action-detail redesign onto `codex/rem-profile-w2-action-detail-hydration-fix`, keeping the no-drawer pop-card/modal flow and removing the reverted `ActionDetailDrawer` path from this branch.
   - Fixed the modal's own server/client portal hydration divergence, added a hydration regression test, and revalidated `/actions/[id]`, hover explainers, PR-bundle entry, and `/findings` -> `View details` locally.
