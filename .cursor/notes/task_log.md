@@ -1,5 +1,38 @@
 # Task Log
 
+## Remediation profile resolution Wave 0 ancestry propagation into Wave 1 integrate (2026-03-14)
+
+**Task:** Bring the repaired Wave 0 branch ancestry forward into the current Wave 1 integration line so the mergeable branch now contains both the Wave 0 and Wave 1 ancestry repairs.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - reconciled the Wave 0 and Wave 1 task-history entries after merging the updated Wave 0 branch into the Wave 1 integration branch.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry for the Wave 0 ancestry propagation step.
+
+**What was done:**
+- Switched from `codex/rem-profile-w1-integrate` to `codex/rem-profile-w0-integrate` in the clean worktree because a second temporary worktree hit disk-space limits in this repository.
+- Repaired Wave 0 ancestry on `codex/rem-profile-w0-integrate` by:
+  - merging `codex/rem-profile-w0-api-surface` as a clean ancestry-only merge
+  - merging `codex/rem-profile-w0-legacy-compat` with the `ours` strategy because its tip had drifted beyond Wave 0 and included unrelated later work
+  - relying on that `legacy-compat` merge to bring `codex/rem-profile-w0-worker-rootkey` in transitively
+- Switched back to `codex/rem-profile-w1-integrate` and merged the updated `codex/rem-profile-w0-integrate` tip into the Wave 1 branch.
+- Resolved the resulting note-only conflicts in `.cursor/notes/task_log.md` and `.cursor/notes/task_index.md` by keeping both the existing Wave 1 entries and the new Wave 0 ancestry-repair history.
+- Kept the Wave 1 runtime and remediation-profile docs content unchanged aside from task-history note harmonization.
+
+**Validation:**
+- Confirmed `codex/rem-profile-w0-api-surface` is an ancestor of `codex/rem-profile-w1-integrate`.
+- Confirmed `codex/rem-profile-w0-worker-rootkey` is an ancestor of `codex/rem-profile-w1-integrate`.
+- Confirmed `codex/rem-profile-w0-legacy-compat` is an ancestor of `codex/rem-profile-w1-integrate`.
+- Confirmed `codex/rem-profile-w0-integrate` is an ancestor of `codex/rem-profile-w1-integrate`.
+- Confirmed the Wave 1 source branches remain ancestors of `codex/rem-profile-w1-integrate`.
+- Confirmed the merge conflicts were limited to `.cursor` task-history files.
+
+**Technical debt / gotchas:**
+- The repository currently has limited free disk space, which prevented creating an additional full worktree for the Wave 0 repair.
+- `codex/rem-profile-w0-legacy-compat` is not a Wave 0-only branch tip anymore, so future ancestry repairs elsewhere should continue using a content-preserving merge approach unless that branch is intentionally cleaned up.
+
+**Open questions / TODOs:**
+- None.
+
 ## Remediation profile resolution Wave 1 branch-history merge (2026-03-14)
 
 **Task:** Safely unify Wave 1 branch ancestry by merging the remaining remediation-settings branch into the integration branch without changing the already-validated Wave 1 runtime surface.
@@ -86,6 +119,38 @@
 
 **Open questions / TODOs:**
 - Wave 2 still needs to wire these foundations into remediation options, preview, create-run flows, grouped route parity, and queue payload versioning; none of that work started in this integration task.
+
+## Remediation profile resolution Wave 0 branch-history merge (2026-03-14)
+
+**Task:** Safely unify Wave 0 branch ancestry so the documented Wave 0 baseline is represented by actual merge history without pulling unrelated later work into the Wave 0 integration branch.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 0 branch-history merge.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, task log, docs index, remediation-profile README, and implementation plan before touching branch history.
+- Confirmed `codex/rem-profile-w0-integrate` was already the content base for the Wave 1 line, but the three Wave 0 source branches were not all ancestors of the Wave 0 integration branch.
+- Merged `codex/rem-profile-w0-api-surface` into `codex/rem-profile-w0-integrate` as a clean ancestry-only merge because the baseline doc content already matched the integrated Wave 0 branch.
+- Confirmed `codex/rem-profile-w0-worker-rootkey` sits in the history of `codex/rem-profile-w0-legacy-compat`, so a merge of the latter can satisfy both remaining ancestry gaps.
+- Inspected `codex/rem-profile-w0-legacy-compat` and found that its tip had drifted beyond Wave 0, carrying unrelated later backend, frontend, docs, and test changes.
+- Merged `codex/rem-profile-w0-legacy-compat` into `codex/rem-profile-w0-integrate` using the `ours` strategy so:
+  - the source branch ancestry is preserved
+  - the current Wave 0 docs-only baseline remains unchanged
+  - no later non-Wave-0 feature work is accidentally imported into the Wave 0 integration branch
+
+**Validation:**
+- Confirmed `codex/rem-profile-w0-api-surface` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed `codex/rem-profile-w0-worker-rootkey` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed `codex/rem-profile-w0-legacy-compat` is an ancestor of `codex/rem-profile-w0-integrate`.
+- Confirmed the resulting branch graph keeps the original Wave 0 integration content while adding merge commits for the missing ancestry.
+
+**Technical debt / gotchas:**
+- `codex/rem-profile-w0-legacy-compat` is no longer a Wave 0-only branch tip; its head includes unrelated later feature work, so future ancestry repair on descendant lines must keep using a content-preserving merge strategy unless that branch is intentionally cleaned up.
+- This task repairs branch history only. It does not change the Wave 0 contract-lock content or widen the Wave 0 scope.
+
+**Open questions / TODOs:**
+- None for the Wave 0 integration branch itself.
 
 ## Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)
 

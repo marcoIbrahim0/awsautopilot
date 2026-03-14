@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 0 ancestry propagation into Wave 1 integrate (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-ancestry-propagation-into-wave-1-integrate-2026-03-14)
+  - Merged the repaired `codex/rem-profile-w0-integrate` tip into `codex/rem-profile-w1-integrate` so the current mergeable branch also carries the repaired Wave 0 source-branch ancestry.
+  - Resolved `.cursor` note conflicts by keeping both the earlier Wave 1 integration history and the new Wave 0 ancestry-repair notes.
+  - Confirmed all Wave 0 source branches are now ancestors of the current Wave 1 integration branch.
 - [Remediation profile resolution Wave 1 branch-history merge (2026-03-14)](task_log.md#remediation-profile-resolution-wave-1-branch-history-merge-2026-03-14)
   - Merged `codex/rem-profile-w1-remediation-settings` into `codex/rem-profile-w1-integrate` after confirming the integrate branch already contained the stricter Wave 1 content through cherry-pick plus follow-up refinement.
   - Resolved the remediation-settings merge conflicts in favor of the already-validated integrate-side contract so the merge commit preserves ancestry without regressing enum values, nullability, or test expectations.
@@ -12,6 +16,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Integrated the Wave 1 resolver contract and tenant remediation-settings branches onto the Wave 0 remediation-profile baseline, then added the missing internal profile catalog seed on the integration branch.
   - Added `docs/remediation-profile-resolution/wave-1-foundation-contracts.md` and linked it from the remediation-profile README without widening the docs index or starting Wave 2 wiring.
   - Validated the new Wave 1 suites plus digest/slack/governance settings regressions, and confirmed no grouped route, remediation-run route, or queue payload files changed in this wave.
+- [Remediation profile resolution Wave 0 branch-history merge (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-branch-history-merge-2026-03-14)
+  - Merged the remaining Wave 0 source-branch ancestry into `codex/rem-profile-w0-integrate` so `codex/rem-profile-w0-api-surface`, `codex/rem-profile-w0-worker-rootkey`, and `codex/rem-profile-w0-legacy-compat` are all ancestors of the Wave 0 integration branch.
+  - Used a content-preserving `ours` merge for `codex/rem-profile-w0-legacy-compat` because that branch tip had drifted beyond Wave 0 and included unrelated later feature work that could not be pulled into the Wave 0 docs baseline safely.
+  - Left the Wave 0 runtime and docs content unchanged aside from task-history notes; this was an ancestry repair only.
 - [Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-contract-lock-integration-2026-03-14)
   - Added the remediation-profile-resolution doc set to the integration branch, including the Wave 0 contract lock and the three source baseline docs collected from the Wave 0 source branches.
   - Updated the remediation-profile README, implementation plan navigation, top-level docs index, and task history so the merged Wave 0 baseline is discoverable.
