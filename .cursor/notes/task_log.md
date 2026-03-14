@@ -21879,3 +21879,42 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Investigate why the standard OpenNext/Cloudflare deploy command can stall after asset upload in this environment even when the resulting worker version can still be uploaded/promoted manually.
+
+## Wave 2 action-detail hydration mismatch fix (2026-03-14)
+
+**Task:** Fix the Wave 2 UI gate blocker where the local action-detail route (`/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d`) hit a React hydration mismatch, leaving the drawer stuck blank even though authenticated API calls succeeded.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailDrawer.tsx`
+- `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailDrawer.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/screenshots/rpw2-action-detail-hydration-fixed-local.png`
+- `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reproduced the local failure on `codex/rem-profile-w2-action-detail-hydration-fix` in a real browser after authenticating with the remediation-profile Wave 2 test account.
+- Confirmed the backend/API contract was healthy during the failing route load:
+  - `GET /api/auth/me` returned `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` returned `200`
+  - `GET /api/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d/remediation-options` returned `200`
+- Identified the actual root cause from the browser hydration error:
+  - `ActionDetailDrawer` rendered `null` on the server via `if (typeof window === 'undefined') return null`
+  - the first client render immediately produced the full drawer DOM and portaled it into `document.body`
+  - React therefore hydrated against different initial trees and aborted, which left the route stuck in the blank/skeleton state
+- Fixed the drawer without widening scope:
+  - removed the server-only `return null` divergence
+  - rendered the same drawer shell on the server and the first client pass
+  - deferred the `document.body` portal target until after mount
+  - kept the route non-blank during auth bootstrap by using a hydration-safe loading shell
+- Added a focused regression test that simulates the server render plus client hydration path and asserts:
+  - server output is not blank
+  - hydration does not emit a mismatch
+  - the action and remediation-options fetch paths still run
+- Manually verified both shared entry points in the browser after the fix:
+  - `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` now renders the drawer content instead of stalling blank
+  - `/findings` -> `View details` still opens the shared `ActionDetailDrawer` correctly with no console errors
+- Captured fresh local evidence:
+  - `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/test-results/live-runs/20260314T144353Z-rem-profile-wave2-e2e/evidence/screenshots/rpw2-action-detail-hydration-fixed-local.png`
+
+**Open questions / TODOs:**
+- None for this blocker. The branch is ready for a Wave 2 UI rerun from the action-detail hydration perspective.

@@ -1595,3 +1595,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Onboarding step 5 Verify Intake refresh fallback and frontend rollout (2026-03-11)](task_log.md#onboarding-step-5-verify-intake-refresh-fallback-and-frontend-rollout-2026-03-11)
   - Step 5 now reuses the authenticated account-scoped synthetic-event route when a refresh removes the revealed control-plane token from browser state.
   - Added a regression test for the refreshed/no-token onboarding state and redeployed the frontend bundle live.
+- [Wave 2 action-detail hydration mismatch fix (2026-03-14)](task_log.md#wave-2-action-detail-hydration-mismatch-fix-2026-03-14)
+  - Fixed the local `/actions/[id]` hydration blocker by removing the server-null/client-portal first-render divergence in `ActionDetailDrawer`.
+  - Added a hydration regression test, manually re-verified both `/actions/[id]` and findings-entry drawer usage, and stored fresh screenshot evidence in the Wave 2 run folder.
