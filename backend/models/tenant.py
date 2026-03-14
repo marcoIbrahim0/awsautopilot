@@ -1,7 +1,7 @@
 # backend/models/tenant.py
 import uuid
 from sqlalchemy import Boolean, DateTime, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import Base
@@ -45,6 +45,7 @@ class Tenant(Base):
         default=False,
         server_default="false",
     )
+    remediation_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")

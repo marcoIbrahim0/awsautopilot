@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Any, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -34,6 +34,11 @@ from backend.models.user import User
 from backend.models.user_invite import UserInvite
 from backend.services.email import email_service
 from backend.services.governance_notifications import is_valid_governance_webhook_url
+from backend.services.remediation_settings import (
+    RemediationSettingsValidationError,
+    merge_remediation_settings,
+    normalize_remediation_settings,
+)
 from backend.services.slack_digest import is_valid_slack_webhook_url
 
 logger = logging.getLogger(__name__)
@@ -185,6 +190,36 @@ class GovernanceSettingsUpdateRequest(BaseModel):
     )
 
 
+class RemediationCloudTrailSettingsResponse(BaseModel):
+    default_bucket_name: str | None = None
+    default_kms_key_arn: str | None = None
+
+
+class RemediationConfigSettingsResponse(BaseModel):
+    delivery_mode: str | None = None
+    default_bucket_name: str | None = None
+    default_kms_key_arn: str | None = None
+
+
+class RemediationS3AccessLogsSettingsResponse(BaseModel):
+    default_target_bucket_name: str | None = None
+
+
+class RemediationS3EncryptionSettingsResponse(BaseModel):
+    mode: str | None = None
+    kms_key_arn: str | None = None
+
+
+class RemediationSettingsResponse(BaseModel):
+    sg_access_path_preference: str | None = None
+    approved_admin_cidrs: list[str] = Field(default_factory=list)
+    approved_bastion_security_group_ids: list[str] = Field(default_factory=list)
+    cloudtrail: RemediationCloudTrailSettingsResponse
+    config: RemediationConfigSettingsResponse
+    s3_access_logs: RemediationS3AccessLogsSettingsResponse
+    s3_encryption: RemediationS3EncryptionSettingsResponse
+
+
 # ============================================
 # Endpoints
 # ============================================
@@ -199,6 +234,18 @@ def _parse_invite_token_or_400(token: str) -> uuid.UUID:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid invite token format",
         ) from exc
+
+
+async def _tenant_for_user_or_404(current_user: User, db: AsyncSession) -> Tenant:
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
+    tenant = result.scalar_one_or_none()
+    if tenant:
+        return tenant
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+
+
+def _remediation_settings_response(tenant: Tenant) -> RemediationSettingsResponse:
+    return RemediationSettingsResponse(**normalize_remediation_settings(getattr(tenant, "remediation_settings", None)))
 
 
 async def _invite_info_response_for_token(
@@ -735,6 +782,36 @@ async def update_governance_settings(
         governance_notifications_enabled=bool(getattr(tenant, "governance_notifications_enabled", False)),
         governance_webhook_configured=bool(webhook),
     )
+
+
+@router.get("/me/remediation-settings", response_model=RemediationSettingsResponse)
+async def get_remediation_settings(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> RemediationSettingsResponse:
+    tenant = await _tenant_for_user_or_404(current_user, db)
+    return _remediation_settings_response(tenant)
+
+
+@router.patch("/me/remediation-settings", response_model=RemediationSettingsResponse)
+async def update_remediation_settings(
+    payload: dict[str, Any],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> RemediationSettingsResponse:
+    if getattr(current_user.role, "value", current_user.role) != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can update remediation settings",
+        )
+    tenant = await _tenant_for_user_or_404(current_user, db)
+    try:
+        tenant.remediation_settings = merge_remediation_settings(tenant.remediation_settings, payload)
+    except RemediationSettingsValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    await db.commit()
+    await db.refresh(tenant)
+    return _remediation_settings_response(tenant)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
