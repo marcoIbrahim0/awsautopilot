@@ -26,12 +26,38 @@ EXECUTE_PR_BUNDLE_APPLY_JOB_TYPE = "execute_pr_bundle_apply"
 INTEGRATION_SYNC_JOB_TYPE = "integration_sync"
 RECONCILE_ACTION_REMEDIATION_SYNC_JOB_TYPE = "reconcile_action_remediation_sync"
 QUEUE_PAYLOAD_SCHEMA_VERSION = 1
+REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1 = QUEUE_PAYLOAD_SCHEMA_VERSION
+REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2 = 2
+SUPPORTED_REMEDIATION_RUN_QUEUE_SCHEMA_VERSIONS = frozenset({
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+})
 
 
-def _with_schema_version(payload: dict) -> dict:
+def _with_schema_version(payload: dict, *, schema_version: int = QUEUE_PAYLOAD_SCHEMA_VERSION) -> dict:
     """Attach the current queue payload schema version to outbound jobs."""
-    payload["schema_version"] = QUEUE_PAYLOAD_SCHEMA_VERSION
+    payload["schema_version"] = schema_version
     return payload
+
+
+def _with_remediation_run_schema_version(
+    payload: dict,
+    *,
+    schema_version: int,
+    resolution: dict | None,
+    action_resolutions: list[dict] | None,
+) -> dict:
+    if schema_version not in SUPPORTED_REMEDIATION_RUN_QUEUE_SCHEMA_VERSIONS:
+        raise ValueError(f"Unsupported remediation_run schema_version={schema_version}")
+    if schema_version == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1:
+        if resolution is not None or action_resolutions is not None:
+            raise ValueError("remediation_run resolution fields require schema_version=2")
+        return _with_schema_version(payload, schema_version=schema_version)
+    if resolution is not None:
+        payload["resolution"] = resolution
+    if action_resolutions is not None:
+        payload["action_resolutions"] = action_resolutions
+    return _with_schema_version(payload, schema_version=schema_version)
 
 
 def parse_queue_region(queue_url: str) -> str:
@@ -344,6 +370,9 @@ def build_remediation_run_job_payload(
     risk_acknowledged: bool = False,
     group_action_ids: list[uuid.UUID] | list[str] | None = None,
     repo_target: dict | None = None,
+    resolution: dict | None = None,
+    action_resolutions: list[dict] | None = None,
+    schema_version: int = REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
 ) -> dict:
     """
     Build remediation_run job dict for SQS.
@@ -370,7 +399,12 @@ def build_remediation_run_job_payload(
         payload["group_action_ids"] = [str(action_id) for action_id in group_action_ids]
     if repo_target:
         payload["repo_target"] = repo_target
-    return _with_schema_version(payload)
+    return _with_remediation_run_schema_version(
+        payload,
+        schema_version=schema_version,
+        resolution=resolution,
+        action_resolutions=action_resolutions,
+    )
 
 
 def build_generate_export_job_payload(

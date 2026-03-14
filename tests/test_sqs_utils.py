@@ -7,6 +7,7 @@ Tests cover:
 """
 from __future__ import annotations
 
+import pytest
 import uuid
 from unittest.mock import patch
 
@@ -22,6 +23,9 @@ from backend.utils.sqs import (
     RECONCILE_INVENTORY_SHARD_JOB_TYPE,
     RECONCILE_INVENTORY_GLOBAL_ORCHESTRATION_JOB_TYPE,
     RECONCILE_RECENTLY_TOUCHED_RESOURCES_JOB_TYPE,
+    REMEDIATION_RUN_JOB_TYPE,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
     WEEKLY_DIGEST_JOB_TYPE,
     QUEUE_PAYLOAD_SCHEMA_VERSION,
     build_compute_actions_job_payload,
@@ -410,6 +414,102 @@ def test_build_backfill_action_groups_job_payload() -> None:
     assert payload["max_chunks"] == 7
     assert payload["auto_continue"] is True
     assert payload["start_after_action_id"] == "00000000-0000-0000-0000-000000000002"
+
+
+def test_build_remediation_run_job_payload_defaults_to_legacy_schema_v1() -> None:
+    payload = build_remediation_run_job_payload(
+        run_id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        action_id=uuid.uuid4(),
+        mode="pr_only",
+        created_at="2026-02-11T10:00:00Z",
+    )
+
+    assert payload["job_type"] == REMEDIATION_RUN_JOB_TYPE
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
+    assert "resolution" not in payload
+    assert "action_resolutions" not in payload
+
+
+def test_build_remediation_run_job_payload_can_emit_schema_v2_single_run_resolution() -> None:
+    resolution = {
+        "strategy_id": "s3_bucket_block_public_access",
+        "profile_id": "s3_bucket_block_public_access",
+        "decision_version": "resolver/v1",
+    }
+
+    payload = build_remediation_run_job_payload(
+        run_id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        action_id=uuid.uuid4(),
+        mode="pr_only",
+        created_at="2026-02-11T10:00:00Z",
+        strategy_id="s3_bucket_block_public_access",
+        strategy_inputs={"scope": "bucket"},
+        resolution=resolution,
+        schema_version=REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+    )
+
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["strategy_id"] == "s3_bucket_block_public_access"
+    assert payload["strategy_inputs"] == {"scope": "bucket"}
+    assert payload["resolution"] == resolution
+    assert "action_resolutions" not in payload
+
+
+def test_build_remediation_run_job_payload_can_emit_schema_v2_grouped_resolution_fields() -> None:
+    action_one = uuid.uuid4()
+    action_two = uuid.uuid4()
+    repo_target = {"repository": "acme/infrastructure-live", "base_branch": "main"}
+    action_resolutions = [
+        {
+            "action_id": str(action_one),
+            "strategy_id": "config_enable_centralized_delivery",
+            "profile_id": "config_enable_centralized_delivery",
+            "strategy_inputs": {"delivery_channel_name": "org-config"},
+            "resolution": {"decision_version": "resolver/v1"},
+        },
+        {
+            "action_id": str(action_two),
+            "strategy_id": "config_enable_centralized_delivery",
+            "profile_id": "config_enable_centralized_delivery",
+            "strategy_inputs": {"delivery_channel_name": "org-config"},
+            "resolution": {"decision_version": "resolver/v1"},
+        },
+    ]
+
+    payload = build_remediation_run_job_payload(
+        run_id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        action_id=action_one,
+        mode="pr_only",
+        created_at="2026-02-11T10:00:00Z",
+        pr_bundle_variant="terraform",
+        strategy_id="config_enable_centralized_delivery",
+        strategy_inputs={"delivery_channel_name": "org-config"},
+        group_action_ids=[action_one, action_two],
+        repo_target=repo_target,
+        action_resolutions=action_resolutions,
+        schema_version=REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+    )
+
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["pr_bundle_variant"] == "terraform"
+    assert payload["group_action_ids"] == [str(action_one), str(action_two)]
+    assert payload["repo_target"] == repo_target
+    assert payload["action_resolutions"] == action_resolutions
+
+
+def test_build_remediation_run_job_payload_rejects_v2_fields_on_schema_v1() -> None:
+    with pytest.raises(ValueError, match="schema_version=2"):
+        build_remediation_run_job_payload(
+            run_id=uuid.uuid4(),
+            tenant_id=uuid.uuid4(),
+            action_id=uuid.uuid4(),
+            mode="pr_only",
+            created_at="2026-02-11T10:00:00Z",
+            resolution={"strategy_id": "s3_bucket_block_public_access"},
+        )
 
 
 def test_all_queue_payload_builders_include_schema_version() -> None:

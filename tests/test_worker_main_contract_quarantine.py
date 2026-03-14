@@ -192,6 +192,82 @@ def test_process_message_invalid_schema_version_quarantines(monkeypatch) -> None
     sqs.delete_message.assert_called_once_with(QueueUrl=source_url, ReceiptHandle="receipt-1")
 
 
+def test_process_message_remediation_run_schema_v2_is_accepted(monkeypatch) -> None:
+    source_url = "https://sqs.us-east-1.amazonaws.com/123/ingest"
+    monkeypatch.setattr(worker_main.settings, "SQS_CONTRACT_QUARANTINE_QUEUE_URL", "", raising=False)
+
+    handler = MagicMock()
+    monkeypatch.setattr(worker_main, "get_job_handler", lambda _job_type: handler)
+
+    sqs = MagicMock()
+    body = json.dumps(
+        {
+            "job_type": worker_main.REMEDIATION_RUN_JOB_TYPE,
+            "run_id": "run-1",
+            "tenant_id": "tenant-1",
+            "action_id": "action-1",
+            "mode": "pr_only",
+            "created_at": "2026-03-14T10:00:00Z",
+            "schema_version": worker_main.REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+            "resolution": {
+                "strategy_id": "config_enable_centralized_delivery",
+                "profile_id": "config_enable_centralized_delivery",
+                "decision_version": "resolver/v1",
+            },
+            "action_resolutions": [
+                {
+                    "action_id": "action-1",
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                }
+            ],
+            "repo_target": {
+                "repository": "acme/infrastructure-live",
+                "base_branch": "main",
+            },
+        }
+    )
+
+    worker_main._process_message(sqs, source_url, _message(body), queue_name="legacy")
+
+    handler.assert_called_once()
+    forwarded_job = handler.call_args.args[0]
+    assert forwarded_job["schema_version"] == worker_main.REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert forwarded_job["resolution"]["strategy_id"] == "config_enable_centralized_delivery"
+    assert forwarded_job["repo_target"]["repository"] == "acme/infrastructure-live"
+    sqs.send_message.assert_not_called()
+    sqs.delete_message.assert_called_once_with(QueueUrl=source_url, ReceiptHandle="receipt-1")
+
+
+def test_process_message_non_remediation_schema_v2_still_quarantines(monkeypatch) -> None:
+    quarantine_url = "https://sqs.us-east-1.amazonaws.com/123/contract-quarantine"
+    source_url = "https://sqs.us-east-1.amazonaws.com/123/ingest"
+    monkeypatch.setattr(worker_main.settings, "SQS_CONTRACT_QUARANTINE_QUEUE_URL", quarantine_url, raising=False)
+
+    handler = MagicMock()
+    monkeypatch.setattr(worker_main, "get_job_handler", lambda _job_type: handler)
+
+    sqs = MagicMock()
+    body = json.dumps(
+        {
+            "tenant_id": "tenant-1",
+            "account_id": "123456789012",
+            "region": "us-east-1",
+            "job_type": "ingest_findings",
+            "schema_version": worker_main.REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+        }
+    )
+
+    worker_main._process_message(sqs, source_url, _message(body), queue_name="legacy")
+
+    handler.assert_not_called()
+    sqs.send_message.assert_called_once()
+    envelope = json.loads(sqs.send_message.call_args.kwargs["MessageBody"])
+    assert envelope["reason_code"] == worker_main.CONTRACT_VIOLATION_UNSUPPORTED_SCHEMA_VERSION
+    assert "supported_versions=1" in envelope.get("reason_detail", "")
+    sqs.delete_message.assert_called_once_with(QueueUrl=source_url, ReceiptHandle="receipt-1")
+
+
 def test_process_message_missing_schema_version_defaults_to_legacy(monkeypatch) -> None:
     source_url = "https://sqs.us-east-1.amazonaws.com/123/ingest"
     monkeypatch.setattr(worker_main.settings, "SQS_CONTRACT_QUARANTINE_QUEUE_URL", "", raising=False)
