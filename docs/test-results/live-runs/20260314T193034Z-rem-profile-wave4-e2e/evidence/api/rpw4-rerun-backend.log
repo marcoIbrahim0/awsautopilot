@@ -1,0 +1,18 @@
+INFO:     Started server process [74685]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18003 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52633 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52634 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52649 - "POST /api/remediation-runs/group-pr-bundle HTTP/1.1" 201 Created
+remediation_validation_failure {"action_type": "ebs_snapshot_block_public_access", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "duplicate_pending_group_run", "strategy_id": "snapshot_block_all_sharing", "value": 1}
+INFO:     127.0.0.1:52659 - "POST /api/remediation-runs/group-pr-bundle HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:52664 - "POST /api/remediation-runs/group-pr-bundle HTTP/1.1" 201 Created
+remediation_validation_failure {"action_type": "ebs_snapshot_block_public_access", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "grouped_active_run_conflict", "strategy_id": "snapshot_block_all_sharing", "value": 1}
+INFO:     127.0.0.1:52670 - "POST /api/remediation-runs/group-pr-bundle HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:52675 - "POST /api/action-groups/10013c66-d03d-48e2-9d85-d06f4f90e277/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52681 - "GET /api/action-groups/10013c66-d03d-48e2-9d85-d06f4f90e277/runs?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52694 - "GET /api/remediation-runs/1aef9c68-30ba-44bc-9e53-dd9fbff764e6?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52695 - "GET /api/remediation-runs/3ac8641b-a98e-4634-98ae-ca6f807631ba?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52696 - "GET /api/remediation-runs/9c16746d-099c-4191-9661-26a4fc1b99ea?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52697 - "GET /api/action-groups/10013c66-d03d-48e2-9d85-d06f4f90e277/runs?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 HTTP/1.1" 200 OK

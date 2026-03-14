@@ -1,0 +1,15 @@
+{
+  "detail": {
+    "error": "Active grouped run conflict",
+    "detail": "Every action in this execution group already anchors an active remediation run. Wait for an existing run to complete before creating another differentiated grouped request.",
+    "reason": "grouped_active_run_conflict",
+    "conflicting_action_ids": [
+      "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+      "b1c592c0-de9c-43d0-bf40-883d8ae1623d"
+    ],
+    "existing_run_ids": [
+      "1aef9c68-30ba-44bc-9e53-dd9fbff764e6",
+      "9c16746d-099c-4191-9661-26a4fc1b99ea"
+    ]
+  }
+}

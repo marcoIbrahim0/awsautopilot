@@ -1,0 +1,70 @@
+{
+  "environment": "local on master with restarted backend",
+  "backend_url": "http://127.0.0.1:18003",
+  "started_at_utc": "2026-03-14T20:59:23Z",
+  "results": {
+    "rpw4-04-rerun-create": {
+      "timestamp_utc": "2026-03-14T20:59:23Z",
+      "status_code": 201,
+      "endpoint": "/api/remediation-runs/group-pr-bundle",
+      "request_artifact": "evidence/api/rpw4-04-rerun-create-request.json",
+      "response_artifact": "evidence/api/rpw4-04-rerun-create-response.json",
+      "run_id": "1aef9c68-30ba-44bc-9e53-dd9fbff764e6"
+    },
+    "rpw4-06-rerun-identical": {
+      "timestamp_utc": "2026-03-14T20:59:58Z",
+      "status_code": 409,
+      "endpoint": "/api/remediation-runs/group-pr-bundle",
+      "request_artifact": "evidence/api/rpw4-06-rerun-identical-request.json",
+      "response_artifact": "evidence/api/rpw4-06-rerun-identical-response.json",
+      "detail": {
+        "error": "Duplicate pending run",
+        "detail": "A pending group PR bundle run already exists for this execution group."
+      }
+    },
+    "rpw4-06-rerun-override-different": {
+      "timestamp_utc": "2026-03-14T21:00:06Z",
+      "status_code": 201,
+      "endpoint": "/api/remediation-runs/group-pr-bundle",
+      "request_artifact": "evidence/api/rpw4-06-rerun-override-different-request.json",
+      "response_artifact": "evidence/api/rpw4-06-rerun-override-different-response.json",
+      "run_id": "9c16746d-099c-4191-9661-26a4fc1b99ea",
+      "queue_artifact": "evidence/queue/rpw4-06-rerun-override-different-receive-message.json"
+    },
+    "rpw4-06-rerun-repo-target-different": {
+      "timestamp_utc": "2026-03-14T21:00:17Z",
+      "status_code": 409,
+      "endpoint": "/api/remediation-runs/group-pr-bundle",
+      "request_artifact": "evidence/api/rpw4-06-rerun-repo-target-different-request.json",
+      "response_artifact": "evidence/api/rpw4-06-rerun-repo-target-different-response.json",
+      "detail": {
+        "error": "Active grouped run conflict",
+        "detail": "Every action in this execution group already anchors an active remediation run. Wait for an existing run to complete before creating another differentiated grouped request.",
+        "reason": "grouped_active_run_conflict",
+        "conflicting_action_ids": [
+          "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+          "b1c592c0-de9c-43d0-bf40-883d8ae1623d"
+        ],
+        "existing_run_ids": [
+          "1aef9c68-30ba-44bc-9e53-dd9fbff764e6",
+          "9c16746d-099c-4191-9661-26a4fc1b99ea"
+        ]
+      }
+    },
+    "rpw4-05-rerun-create": {
+      "timestamp_utc": "2026-03-14T21:00:27Z",
+      "status_code": 201,
+      "endpoint": "/api/action-groups/10013c66-d03d-48e2-9d85-d06f4f90e277/bundle-run",
+      "request_artifact": "evidence/api/rpw4-05-rerun-create-request.json",
+      "response_artifact": "evidence/api/rpw4-05-rerun-create-response.json",
+      "remediation_run_id": "3ac8641b-a98e-4634-98ae-ca6f807631ba",
+      "group_run_id": "e8da3d0b-21f5-4099-9fad-acc797918638"
+    },
+    "rpw4-05-rerun-group-runs": {
+      "timestamp_utc": "2026-03-14T21:00:53Z",
+      "status_code": 200,
+      "endpoint": "/api/action-groups/10013c66-d03d-48e2-9d85-d06f4f90e277/runs",
+      "response_artifact": "evidence/api/rpw4-05-rerun-group-runs-response.json"
+    }
+  }
+}

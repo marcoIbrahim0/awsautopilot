@@ -1,0 +1,22 @@
+2026-03-14 22:56:55 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-14 22:56:55 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-14 22:56:55 | INFO     | worker | Starting worker pool=legacy queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-rerun-20260314t205542z-ingest region=eu-north-1
+2026-03-14 22:56:55 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-14 22:56:55 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-14 23:01:15 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-14 23:01:15 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-14 23:01:17 | INFO     | worker | Starting worker pool=legacy queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-rerun-20260314t205542z-ingest region=eu-north-1
+2026-03-14 23:01:17 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-14 23:01:17 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-14 23:01:31 | INFO     | worker | [7e918222-a2d4-45fe-bc83-6ded8bb5b9fd] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 23:01:31 | INFO     | worker | [db6f74dd-aff1-4d8a-814a-6d1ac4d283a1] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 23:01:32 | INFO     | worker | [76f14245-d48d-4219-a079-c539b9852e2f] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=9f7616d8-af04-43ca-99cd-713625357b70 account=None region=None
+2026-03-14 23:01:37 | ERROR    | worker.jobs.remediation_run | remediation_worker_dispatch_error {"action_type": "ebs_snapshot_block_public_access", "event": "remediation_worker_dispatch_error", "mode": "pr_only", "phase": "pr_bundle_generation_error:grouped_support_tier_not_executable", "run_id": "1aef9c68-30ba-44bc-9e53-dd9fbff764e6", "strategy_id": "snapshot_block_all_sharing", "value": 1}
+2026-03-14 23:01:37 | ERROR    | worker.jobs.remediation_run | remediation_worker_dispatch_error {"action_type": "ebs_snapshot_block_public_access", "event": "remediation_worker_dispatch_error", "mode": "pr_only", "phase": "pr_bundle_generation_error:grouped_support_tier_not_executable", "run_id": "9c16746d-099c-4191-9661-26a4fc1b99ea", "strategy_id": "snapshot_block_all_sharing", "value": 1}
+2026-03-14 23:01:37 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=1aef9c68-30ba-44bc-9e53-dd9fbff764e6 action_id=b1c592c0-de9c-43d0-bf40-883d8ae1623d status=failed
+2026-03-14 23:01:38 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=9c16746d-099c-4191-9661-26a4fc1b99ea action_id=3eeb0195-44e3-4df6-9ae3-78e020348e42 status=failed
+2026-03-14 23:01:39 | INFO     | worker | [7e918222-a2d4-45fe-bc83-6ded8bb5b9fd] Job completed and message deleted.
+2026-03-14 23:01:40 | INFO     | worker | [db6f74dd-aff1-4d8a-814a-6d1ac4d283a1] Job completed and message deleted.
+2026-03-14 23:01:45 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=3ac8641b-a98e-4634-98ae-ca6f807631ba action_id=d8da3698-230f-44e3-9c11-cc9e4099b7f6 status=success
+2026-03-14 23:01:46 | INFO     | worker | [76f14245-d48d-4219-a079-c539b9852e2f] Job completed and message deleted.
+2026-03-14 23:02:32 | INFO     | worker | Queue metrics queue=legacy polls=6 empty_polls=3 empty_poll_rate=0.50 messages_received=3 messages_processed=3 in_flight=0 avg_processing_ms=10320.96 receive_errors=0

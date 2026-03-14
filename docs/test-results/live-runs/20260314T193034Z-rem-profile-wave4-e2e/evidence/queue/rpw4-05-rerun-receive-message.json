@@ -1,0 +1,52 @@
+{
+  "message_id": "94673640-6554-4ba0-941a-18a1a7ed80ff",
+  "captured_at_utc": "2026-03-14T21:00:53Z",
+  "attributes": {
+    "SenderId": "AIDAQNQWGZIWGDV4TV6K2",
+    "ApproximateFirstReceiveTimestamp": "1773522053538",
+    "ApproximateReceiveCount": "1",
+    "SentTimestamp": "1773522053392"
+  },
+  "body": {
+    "job_type": "remediation_run",
+    "run_id": "3ac8641b-a98e-4634-98ae-ca6f807631ba",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "action_id": "d8da3698-230f-44e3-9c11-cc9e4099b7f6",
+    "mode": "pr_only",
+    "created_at": "2026-03-14T21:00:52.721174+00:00",
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+    "group_action_ids": [
+      "d8da3698-230f-44e3-9c11-cc9e4099b7f6"
+    ],
+    "repo_target": {
+      "repository": "security-autopilot/remediation-bundles",
+      "base_branch": "main",
+      "provider": "generic_git",
+      "head_branch": "rpw4-ebs-group-route"
+    },
+    "action_resolutions": [
+      {
+        "action_id": "d8da3698-230f-44e3-9c11-cc9e4099b7f6",
+        "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "strategy_inputs": {},
+        "resolution": {
+          "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+          "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+          "support_tier": "deterministic_bundle",
+          "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'. Run creation did not require review-only acceptance.",
+          "decision_version": "resolver/v1",
+          "resolved_inputs": {},
+          "missing_inputs": [],
+          "missing_defaults": [],
+          "blocked_reasons": [],
+          "rejected_profiles": [],
+          "finding_coverage": {},
+          "preservation_summary": {}
+        }
+      }
+    ],
+    "schema_version": 2
+  },
+  "body_raw": "{\"job_type\": \"remediation_run\", \"run_id\": \"3ac8641b-a98e-4634-98ae-ca6f807631ba\", \"tenant_id\": \"9f7616d8-af04-43ca-99cd-713625357b70\", \"action_id\": \"d8da3698-230f-44e3-9c11-cc9e4099b7f6\", \"mode\": \"pr_only\", \"created_at\": \"2026-03-14T21:00:52.721174+00:00\", \"strategy_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"group_action_ids\": [\"d8da3698-230f-44e3-9c11-cc9e4099b7f6\"], \"repo_target\": {\"repository\": \"security-autopilot/remediation-bundles\", \"base_branch\": \"main\", \"provider\": \"generic_git\", \"head_branch\": \"rpw4-ebs-group-route\"}, \"action_resolutions\": [{\"action_id\": \"d8da3698-230f-44e3-9c11-cc9e4099b7f6\", \"strategy_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"profile_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"strategy_inputs\": {}, \"resolution\": {\"strategy_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"profile_id\": \"ebs_enable_default_encryption_aws_managed_kms_pr_bundle\", \"support_tier\": \"deterministic_bundle\", \"decision_rationale\": \"Wave 1 single-profile compatibility defaulted profile_id to 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'. Run creation did not require review-only acceptance.\", \"decision_version\": \"resolver/v1\", \"resolved_inputs\": {}, \"missing_inputs\": [], \"missing_defaults\": [], \"blocked_reasons\": [], \"rejected_profiles\": [], \"finding_coverage\": {}, \"preservation_summary\": {}}}], \"schema_version\": 2}"
+}

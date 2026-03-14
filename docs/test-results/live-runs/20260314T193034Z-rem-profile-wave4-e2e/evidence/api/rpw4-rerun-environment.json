@@ -1,0 +1,14 @@
+{
+  "recorded_at_utc": "2026-03-14T20:56:41Z",
+  "environment_label": "local on master with restarted backend",
+  "branch": "master",
+  "head_commit": "7d3cd53a1cba2c8a806a906bb5ac365a64e96c40",
+  "required_fix_commit": "7d3cd53a",
+  "backend_url": "http://127.0.0.1:18003",
+  "frontend_url": "http://localhost:3000",
+  "backend_pid": 74685,
+  "backend_command": "./venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 18003",
+  "queue_setup_artifact": "evidence/queue/rpw4-rerun-queue-setup.json",
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-rerun-20260314t205542z-ingest",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw4-rerun-20260314t205542z-quarantine"
+}

@@ -1,5 +1,47 @@
 # Task Log
 
+## Remediation-profile Wave 4 RPW4-06 blocker rerun and queue-v2 regression closure on master (2026-03-14)
+
+**Task:** Use the current `master` checkout only, rerun `RPW4-06` plus adjacent grouped queue-`v2` regressions `RPW4-04` and `RPW4-05` against a restarted backend that includes commit `7d3cd53a`, refresh the existing Wave 4 run package, and update docs/history with the authoritative gate decision.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/evidence/api/** - added rerun-specific environment proof, raw API request/response payloads, rerun status summaries, post-worker detail captures, and the fixed-backend log.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/evidence/queue/** - added isolated rerun queue setup, replay set, and fresh rerun queue captures for `RPW4-04`, `RPW4-05`, and the created `RPW4-06` differentiated run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/evidence/worker/** - added rerun worker log proving the replayed queue messages were consumed on the fixed backend.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/tests/rpw4-04.md** - added rerun addendum with fixed-backend queue/worker proof and latest authoritative PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/tests/rpw4-05.md** - added rerun addendum with fixed-backend queue/lifecycle proof and latest authoritative PASS status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/tests/rpw4-06.md** - added rerun addendum, recorded the differentiated non-500 outcomes, and flipped the latest authoritative status to PASS.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/notes/final-summary.md** - updated counts/core-status rows/wave gate decision and added the rerun addendum showing Wave 4 is ready for Wave 5.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - refreshed the recent targeted-runs summary line so it no longer advertises the pre-fix RPW4-06 blocker state.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this focused rerun and closeout.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, `docs/README.md`, and the original Wave 4 summary/test files before rerunning anything.
+- Verified the local checkout itself is the required fix point:
+  - `master`
+  - `HEAD=7d3cd53a`
+- Refused to use the stale local backend on `127.0.0.1:18002`; instead created isolated rerun SQS queues, launched a fresh backend on `http://127.0.0.1:18003`, and recorded the environment proof in `evidence/api/rpw4-rerun-environment.json`.
+- Found a local runtime gotcha before rerunning: the worker defaults to `backend/workers/.env`, which points at a different DB than `backend/.env`. For this rerun both backend and worker were explicitly pinned to the same API DB plus the new isolated rerun queues so API writes and worker reads stayed on one dataset.
+- Minted a local admin bearer for tenant `9f7616d8-af04-43ca-99cd-713625357b70` from the existing admin user `7c43e0b3-6e98-43af-826f-f4eeaa5af674`, preserving the same tenant/action context as the original Wave 4 run without mutating passwords.
+- Executed only the requested scope:
+  - `RPW4-04` rerun create returned `201`, queue capture still showed `schema_version=2` + `group_action_ids` + grouped `action_resolutions`, and the replayed worker path still failed closed with `grouped_support_tier_not_executable`.
+  - `RPW4-06` rerun reused the `RPW4-04` rerun create as the active baseline; identical replay stayed `409`, override-different replay created distinct run `9c16746d-099c-4191-9661-26a4fc1b99ea`, and repo-target-different replay returned explicit `409 grouped_active_run_conflict` with conflicting action ids / existing run ids instead of `500`.
+  - `RPW4-05` rerun create returned `201`, queue capture still showed `schema_version=2` + grouped `action_resolutions` + `repo_target`, and `ActionGroupRun` lifecycle stayed intact from `queued` to `finished` while the remediation run completed `success`.
+- Added rerun-specific evidence files only; the original March 14 failure artifacts remain untouched for traceability.
+- Updated the existing Wave 4 summary/test markdown so the latest authoritative result is now:
+  - `RPW4-06` = `PASS`
+  - `RPW4-04` rerun = `PASS`
+  - `RPW4-05` rerun = `PASS`
+  - Wave 4 gate = `Ready for Wave 5`
+
+**Technical debt / gotchas:**
+- The grouped representative-action anchor model still limits concurrent differentiated grouped runs to the number of free action anchors in the execution group. In this two-action snapshot-sharing group, once the `RPW4-04` rerun baseline and the `RPW4-06` override-different rerun existed, the `repo_target` rerun correctly degraded to explicit `409 grouped_active_run_conflict` instead of `500`; removing that ceiling would still require a broader persistence/index redesign.
+- Local API and worker env files do not agree on the DB by default. Future fixed-backend reruns should keep explicitly pinning both processes to the same DB and isolated queues, or the evidence can silently split across runtimes.
+
+**Open questions / TODOs:**
+- `RPW4-03` remains a separate local-dataset coverage gap because the seeded runtime still exposes only one remediation profile per strategy family. It is not blocking the requested Wave 5 gate, but it still needs distinct data seeding if a future rerun must close that item directly.
+
 ## RPW4-06 grouped duplicate anchor-collision fix on master (2026-03-14)
 
 **Task:** Fix the Wave 4 grouped duplicate/signature blocker from `RPW4-06` on current `master`, add focused regressions first, preserve the queue-v2/grouped artifact contract, and validate that differentiated grouped requests no longer surface the observed `500`.

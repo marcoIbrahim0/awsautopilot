@@ -1,0 +1,14 @@
+{
+  "recorded_at_utc": "2026-03-14T21:02:03Z",
+  "run_statuses": {
+    "rpw4-04": "failed",
+    "rpw4-05": "success",
+    "rpw4-06-override": "failed"
+  },
+  "run_ids": {
+    "rpw4-04": "1aef9c68-30ba-44bc-9e53-dd9fbff764e6",
+    "rpw4-05": "3ac8641b-a98e-4634-98ae-ca6f807631ba",
+    "rpw4-06-override": "9c16746d-099c-4191-9661-26a4fc1b99ea"
+  },
+  "group_runs_status_code": 200
+}

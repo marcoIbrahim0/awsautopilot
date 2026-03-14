@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 4 RPW4-06 blocker rerun and queue-v2 regression closure on master (2026-03-14)](task_log.md#remediation-profile-wave-4-rpw4-06-blocker-rerun-and-queue-v2-regression-closure-on-master-2026-03-14)
+  - Verified the rerun environment on local `master` actually used `HEAD=7d3cd53a` with a restarted backend on `127.0.0.1:18003` and isolated rerun queues, explicitly avoiding the stale pre-fix `18002` backend.
+  - Re-ran only `RPW4-04`, `RPW4-05`, and `RPW4-06`, added rerun-specific raw API/queue/worker evidence under the existing Wave 4 run package, and updated the summary/tests to the latest authoritative outcomes.
+  - Closed `RPW4-06` without any internal `500`, preserved `RPW4-04`/`RPW4-05` queue-`v2` regressions as PASS, and moved the Wave 4 gate to ready-for-Wave-5.
 - [RPW4-06 grouped duplicate anchor-collision fix on master (2026-03-14)](task_log.md#rpw4-06-grouped-duplicate-anchor-collision-fix-on-master-2026-03-14)
   - Fixed the real Wave 4 grouped duplicate blocker by stopping differentiated grouped requests from crashing on `uq_remediation_runs_action_active` after signature comparison.
   - Added failing-first grouped API regressions for override-map and `repo_target` differentiation, helper-level grouped signature determinism coverage, and validated the patched route on a fresh local backend with live request replays.

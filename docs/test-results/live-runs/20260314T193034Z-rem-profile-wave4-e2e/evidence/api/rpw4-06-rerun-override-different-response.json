@@ -1,0 +1,11 @@
+{
+  "id": "9c16746d-099c-4191-9661-26a4fc1b99ea",
+  "action_id": "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+  "mode": "pr_only",
+  "status": "pending",
+  "created_at": "2026-03-14T21:00:07.512373+00:00",
+  "updated_at": "2026-03-14T21:00:07.512373+00:00",
+  "manual_high_risk": false,
+  "pre_execution_notice": null,
+  "runbook_url": null
+}
