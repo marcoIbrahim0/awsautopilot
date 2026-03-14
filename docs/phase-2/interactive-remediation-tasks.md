@@ -151,15 +151,15 @@
 - [x] Schema: `applied_at`, `applied_by`, `changes[]` (field, before, after), `run_id`
 - [x] Frontend: on action detail page, detect `change_summary` artifact and render card
 - [x] Card format: ✅ Fixed on [date] by [user] — [change list] · [View run →]
-- **Files:** `pr_bundle_executor_worker.py`, `ActionDetailDrawer.tsx`
-- **Validation:** `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_execution.py`; `cd frontend && npm run test:ui -- src/components/ActionDetailDrawer.test.tsx`; `cd frontend && npx tsc --noEmit`
+- **Files:** `pr_bundle_executor_worker.py`, `ActionDetailModal.tsx`
+- **Validation:** `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_execution.py`; `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx`; `cd frontend && npx tsc --noEmit`
 
 ### Task 18 — Exception as a first-class choice
 - [x] Frontend: add "I need an exception" option at bottom of strategy list in modal
 - [x] Show duration picker (7/14/30/90 days) and reason field inline when selected
 - [x] Backend: accept exception duration and reason as `strategy_inputs` on exception strategy
 - [x] Connect to existing `onChooseException` path in `RemediationModal.tsx`
-- **Files:** `backend/services/remediation_strategy.py`, `backend/routers/remediation_runs.py`, `frontend/src/components/RemediationModal.tsx`, `frontend/src/components/ActionDetailDrawer.tsx`, `frontend/src/components/CreateExceptionModal.tsx`, `tests/test_remediation_runs_api.py`, `frontend/src/components/RemediationModal.test.tsx`
+- **Files:** `backend/services/remediation_strategy.py`, `backend/routers/remediation_runs.py`, `frontend/src/components/RemediationModal.tsx`, `frontend/src/components/ActionDetailModal.tsx`, `frontend/src/components/CreateExceptionModal.tsx`, `tests/test_remediation_runs_api.py`, `frontend/src/components/RemediationModal.test.tsx`
 - **Validation:** `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py`; `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx`; `cd frontend && npx tsc --noEmit`
 
 ---

@@ -6,7 +6,7 @@ Implemented source files:
 - `backend/services/action_graph_context.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
 - `tests/test_phase3_p1_2_graph_backed_action_context.py`
 
 ## Status
@@ -105,16 +105,16 @@ flowchart TD
     F --> I["Return graph_context"]
     G --> I
     H --> I
-    I --> J["ActionDetailDrawer graph-backed context card"]
+    I --> J["ActionDetailModal graph-backed context card"]
 ```
 
 ## UI behavior
 
-`frontend/src/components/ActionDetailDrawer.tsx` now renders a dedicated `Graph-backed context` card:
+`frontend/src/components/ActionDetailModal.tsx` now renders a dedicated `Graph-backed context` card:
 
-- when `status = available`, the drawer shows connected assets, identity path chips, and bounded blast-radius neighbors
-- when `status = unavailable`, the drawer shows the explicit fallback reason instead of hiding the section
-- when any section is truncated, the drawer shows a capped-traversal note sourced from `truncated_sections[]`
+- when `status = available`, the modal shows connected assets, identity path chips, and bounded blast-radius neighbors
+- when `status = unavailable`, the modal shows the explicit fallback reason instead of hiding the section
+- when any section is truncated, the modal shows a capped-traversal note sourced from `truncated_sections[]`
 
 ## Limitations
 

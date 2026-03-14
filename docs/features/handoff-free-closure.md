@@ -12,7 +12,7 @@ Implemented in Phase 3 P0.8 and extended in Phase 3 P1.3.
 - `backend/routers/actions.py`
 - `backend/routers/remediation_runs.py`
 - `backend/workers/jobs/remediation_run.py`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
 - `frontend/src/components/RemediationRunProgress.tsx`
 
 ## API contract
@@ -73,7 +73,7 @@ The raw `artifacts` payload remains unchanged for backward compatibility.
 
 The frontend now renders the normalized contract directly:
 
-- `ActionDetailDrawer` shows an `Implementation artifacts` section sourced from `action.implementation_artifacts`.
+- `ActionDetailModal` shows an `Implementation artifacts` section sourced from `action.implementation_artifacts`.
 - `RemediationRunProgress` shows:
   - a dedicated-page `Run snapshot` rail with jump links
   - a top-level `What you need to do` section before closure/evidence details
@@ -110,7 +110,7 @@ flowchart TD
     E --> F
     C --> G["build_action_implementation_artifacts(...)"]
     G --> H["GET /api/actions/{id}"]
-    H --> I["ActionDetailDrawer"]
+    H --> I["ActionDetailModal"]
     F --> J["RemediationRunProgress"]
 ```
 

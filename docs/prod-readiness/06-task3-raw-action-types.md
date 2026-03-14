@@ -26,13 +26,13 @@ RAW ACTION TYPE EXTRACTION
 | pr_bundle | PR bundle mode | iac-pr-required | backend/routers/actions.py | 847 |
 | pr_only | unknown | unknown | backend/routers/action_groups.py | 399 |
 | pr_only | pr_only (unmapped control) | manual | frontend/src/app/actions/ActionCard.tsx | 100 |
-| s3_block_public_access | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 29 |
-| enable_security_hub | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 30 |
-| enable_guardduty | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 31 |
-| ebs_default_encryption | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 32 |
-| pr_only | This action requires a PR. Use 'Create PR Bundle' from the Actions page. | iac-pr-required | frontend/src/components/ActionDetailDrawer.tsx | 37 |
-| pr_only | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 85 |
-| direct_fix | unknown | unknown | frontend/src/components/ActionDetailDrawer.tsx | 85 |
+| s3_block_public_access | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 70 |
+| enable_security_hub | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 71 |
+| enable_guardduty | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 72 |
+| ebs_default_encryption | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 73 |
+| pr_only | This action is pr_only (unmapped control). Terraform/CloudFormation generation isn't supported yet. Remediate manually in AWS, then click Recompute actions. | iac-pr-required | frontend/src/components/RemediationModal.tsx | 59 |
+| pr_only | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 465 |
+| direct_fix | unknown | unknown | frontend/src/components/ActionDetailModal.tsx | 719 |
 | pr_only | Unmapped controls remain separate to avoid unsafe over-merging. | unknown | tests/test_action_engine_merge.py | 66 |
 
 FILES READ (WITH LINE COUNTS)
@@ -57,7 +57,8 @@ FILES READ (WITH LINE COUNTS)
 - frontend/src/app/accounts/AccountIngestActions.tsx — 343 lines — no relevant definitions.
 - frontend/src/app/accounts/AccountRowActions.tsx — 41 lines — no relevant definitions.
 - frontend/src/app/actions/ActionCard.tsx — 179 lines — relevant definitions found.
-- frontend/src/components/ActionDetailDrawer.tsx — 789 lines — relevant definitions found.
+- frontend/src/components/ActionDetailModal.tsx — 1641 lines — relevant definitions found.
+- frontend/src/components/RemediationModal.tsx — 1722 lines — relevant definitions found.
 - frontend/src/components/control-plane/ReconcileActionsPanel.tsx — 207 lines — no relevant definitions.
 - frontend/src/components/ui/MajorActionButton.tsx — 85 lines — no relevant definitions.
 - tests/test_action_engine_merge.py — 205 lines — relevant definitions found.

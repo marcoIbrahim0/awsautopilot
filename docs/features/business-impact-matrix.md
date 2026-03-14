@@ -10,7 +10,7 @@ Implemented source files:
 - `backend/services/toxic_combinations.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
 - `frontend/src/app/pr-bundles/create/page.tsx`
 - `frontend/src/app/pr-bundles/create/summary/page.tsx`
 
@@ -127,11 +127,11 @@ The action still receives a deterministic matrix cell and rank because technical
 
 The matrix payload is currently surfaced in:
 
-- action detail drawer
+- action detail modal
 - PR bundle action selection list
 - PR bundle summary view
 
-The action detail drawer shows:
+The action detail modal shows:
 
 - matrix cell
 - technical risk tier and score

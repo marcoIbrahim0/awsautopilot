@@ -116,7 +116,7 @@ CANDIDATE FILE MAP
 | `frontend/src/app/findings/FindingGroupCard.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | controls |
 | `frontend/src/app/findings/GroupedFindingsView.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | controls |
 | `frontend/src/app/findings/GroupingControlBar.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | controls |
-| `frontend/src/components/ActionDetailDrawer.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | actions |
+| `frontend/src/components/ActionDetailModal.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | actions |
 | `frontend/src/components/RemediationModal.test.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | fix-logic |
 | `frontend/src/components/RemediationModal.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | fix-logic |
 | `frontend/src/components/RemediationRunProgress.tsx` | filename contains keyword: control/rule/action/finding/check/policy/remediation/fix/mapping/registry/catalog/inventory/config | fix-logic |

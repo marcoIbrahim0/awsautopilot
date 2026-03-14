@@ -8,9 +8,9 @@ Implemented source files:
 - `backend/services/action_attack_path_view.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
 - `tests/test_phase3_p3_5_1_attack_path_view.py`
-- `frontend/src/components/ActionDetailDrawer.test.tsx`
+- `frontend/src/components/ActionDetailModal.test.tsx`
 
 ## API contract
 
@@ -119,7 +119,7 @@ flowchart TD
     F --> H
     G --> H
     H --> I["attack_path_view"]
-    I --> J["ActionDetailDrawer Attack Path"]
+    I --> J["ActionDetailModal Attack Path"]
     F --> K["Why this is prioritized"]
     D --> K
     E --> K
@@ -127,7 +127,7 @@ flowchart TD
 
 ## UI behavior
 
-`frontend/src/components/ActionDetailDrawer.tsx` now renders:
+`frontend/src/components/ActionDetailModal.tsx` now renders:
 
 - an `Attack Path` section with a bounded horizontal path
 - explicit badges for:

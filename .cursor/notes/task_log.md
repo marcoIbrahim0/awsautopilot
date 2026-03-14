@@ -1,5 +1,56 @@
 # Task Log
 
+## Restore the no-drawer action-detail modal on the remediation-profile fix branch (2026-03-14)
+
+**Task:** Restore the March 14 no-drawer action-detail redesign on local branch `codex/rem-profile-w2-action-detail-hydration-fix`, keep the pop-card/modal UX instead of the old drawer, and fix any branch-local regression needed to make the restored modal render correctly.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailModal.tsx** - fixed the restored modal's initial portal rendering so the first server/client render stays aligned and the no-drawer action-detail pop-card hydrates cleanly.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/frontend/src/components/ActionDetailModal.test.tsx** - added a hydration regression test that server-renders and hydrates the action-detail modal without a React mismatch.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/features/attack-path-view.md** - updated the active feature doc to reference `ActionDetailModal` instead of the deleted drawer component.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/features/business-impact-matrix.md** - updated the active feature doc to refer to the action-detail modal surface.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/features/graph-backed-action-context.md** - updated the active feature doc to reference `ActionDetailModal`.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/features/handoff-free-closure.md** - updated the active feature doc to reference `ActionDetailModal`.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/features/root-key-remediation-lifecycle-ui.md** - updated the root-key lifecycle doc entrypoint path from the removed drawer component to `ActionDetailModal`.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/live-e2e-testing/root-key-safe-remediation-spec.md** - updated the action-detail entrypoint reference from `ActionDetailDrawer` to `ActionDetailModal`.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/prod-readiness/06-task1-file-map.md** - refreshed the frontend action-detail file-map entry to the modal component path.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/prod-readiness/06-task3-raw-action-types.md** - refreshed the action-detail/remediation file references after the drawer removal.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/phase-2/interactive-remediation-plan.md** - updated the active plan doc to reference `ActionDetailModal`.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/docs/phase-2/interactive-remediation-tasks.md** - updated the active task list doc to reference `ActionDetailModal` and its current test file.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_log.md** - logged this no-drawer restoration task.
+- **/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Verified the requested branch is the separate worktree at `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix` and re-read the binding `.cursor` rules/notes plus `docs/README.md` there before making changes.
+- Restored the intended March 14 no-drawer redesign in the frontend submodule by replaying commit `035798e` (`Align accounts and action detail with remediation surfaces`) onto this branch and resolving the delete/modify conflicts in favor of the redesign, which removes `ActionDetailDrawer.tsx` and restores `ActionDetailModal.tsx`.
+- Found that the restored modal reintroduced the same server-null/client-portal hydration divergence pattern that had previously existed in the drawer-only branch line.
+- Fixed that branch-local hydration regression in `ActionDetailModal.tsx` by keeping the modal content renderable on the first pass and only switching to `createPortal(...)` once `document.body` is available on the client.
+- Added a focused hydration regression test in `ActionDetailModal.test.tsx` that server-renders and hydrates the modal, then asserts React does not log a hydration mismatch.
+- Revalidated the restored no-drawer UX locally:
+  - `/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` now opens the intended action-detail modal/pop-card with full content instead of the old drawer shell.
+  - Hover explainers are active again; for example hovering `Risk 49` shows the tooltip explaining the overall danger rating and urgency.
+  - `Generate PR bundle` opens the embedded remediation workflow inside the modal, and the browser-authenticated `remediation-options` / `remediation-preview` requests still return `200`.
+  - `/findings` -> `View details` now opens the shared action-detail modal and renders real content without a hydration mismatch.
+- Updated the active docs that still referenced `ActionDetailDrawer` so they now point at `ActionDetailModal`, while intentionally leaving historical evidence/task-history docs unchanged.
+
+**Validation:**
+- `npm run test:ui -- --run src/components/ActionDetailModal.test.tsx src/app/findings/page.test.tsx src/components/ui/AnimatedTooltip.test.tsx` - pass
+- `npm run typecheck` - pass
+- Playwright local smoke on `http://localhost:3000/actions/2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` - pass
+  - modal content renders
+  - hover explainer tooltip renders
+  - browser console shows no hydration error
+  - action detail, remediation-options, and remediation-preview requests return `200`
+- Playwright local smoke on `http://localhost:3000/findings` - pass
+  - `View details` opens the shared action-detail modal with populated content and no hydration error
+
+**Technical debt / gotchas:**
+- The local `/findings` route still requires the existing tenant-ID bootstrap in this dev runtime before findings data loads; that behavior pre-existed this task and did not block verification once the tenant ID was supplied.
+- The action-detail modal still polls active remediation-run progress aggressively while a queued run is present; this was observed during validation but was not changed because it predates this restoration task.
+
+**Open questions / TODOs:**
+- None.
+
 ## Remediation-profile Wave 2 UI rerun after action-detail hydration fix (2026-03-14)
 
 **Task:** Re-run only the blocked remediation-profile Wave 2 action-detail UI checks on the local `codex/rem-profile-w2-action-detail-hydration-fix` runtime, capture fresh evidence, and update the existing Wave 2 run summary/history without widening scope.

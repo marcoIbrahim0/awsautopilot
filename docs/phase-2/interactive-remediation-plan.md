@@ -331,7 +331,7 @@ After successful apply, persist a structured summary on the finding/action detai
 **Frontend:** Card on action detail page:
 > ✅ **Fixed on 2026-03-04** by `user@company.com` — SSH: 0.0.0.0/0 → 10.0.5.1/32 · [View run →]
 
-**Files:** `pr_bundle_executor_worker.py` (write artifact), `ActionDetailDrawer.tsx` (render card).
+**Files:** `pr_bundle_executor_worker.py` (write artifact), `ActionDetailModal.tsx` (render card).
 
 ---
 

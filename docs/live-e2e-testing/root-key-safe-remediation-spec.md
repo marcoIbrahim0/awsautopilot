@@ -431,7 +431,7 @@ Implemented frontend surfaces:
   - Source: `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/root-key/RootKeyRemediationLifecycle.tsx`
   - Includes polling with backoff, resilient empty/error states, and role-based action controls.
 - Entry from action detail warning banner:
-  - Source: `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx`
+  - Source: `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx`
 
 Implemented UX requirements:
 - Run timeline with state, timestamp, and evidence links.

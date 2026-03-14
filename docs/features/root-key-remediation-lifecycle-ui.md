@@ -11,7 +11,7 @@ This document describes the frontend lifecycle UX for root-key remediation orche
 Implemented frontend surfaces:
 
 - Action Detail entrypoint:
-  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailDrawer.tsx`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx`
   - Adds an `Open root-key lifecycle` action in the root-account-required warning panel.
 - Lifecycle route:
   - `/root-key-remediation-runs/{id}`
