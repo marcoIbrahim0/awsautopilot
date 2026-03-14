@@ -12,6 +12,7 @@ from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from backend.auth import get_current_user
 from backend.database import get_db
@@ -143,7 +144,10 @@ def _mock_group_action(
 
 def _mock_group_query_result(items: list[MagicMock]) -> MagicMock:
     result = MagicMock()
-    result.scalars.return_value.unique.return_value.all.return_value = items
+    scalars = MagicMock()
+    scalars.all.return_value = items
+    scalars.unique.return_value.all.return_value = items
+    result.scalars.return_value = scalars
     return result
 
 
@@ -158,17 +162,20 @@ def _mock_group_session(
     *,
     account: MagicMock | None = None,
     pending_runs: list[MagicMock] | None = None,
+    active_runs: list[MagicMock] | None = None,
 ) -> MagicMock:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
             _mock_group_query_result(actions),
             _mock_group_account_result(account),
-            _mock_group_query_result(pending_runs or []),
+            _mock_group_query_result(active_runs if active_runs is not None else (pending_runs or [])),
         ]
     )
-    session.add = MagicMock()
+    added: list[MagicMock] = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
     session.commit = AsyncMock()
+    session._added = added
 
     async def _refresh(run_obj: MagicMock) -> None:
         run_obj.created_at = datetime.now(timezone.utc)
@@ -1051,6 +1058,11 @@ def test_create_group_pr_bundle_duplicate_pending_guard_still_works(client: Test
     action1 = _mock_group_action(priority=100)
     action2 = _mock_group_action(priority=90)
     pending_run = MagicMock()
+    pending_run.id = uuid.uuid4()
+    pending_run.action_id = action1.id
+    pending_run.mode = RemediationRunMode.pr_only
+    pending_run.status = RemediationRunStatus.pending
+    pending_run.created_at = datetime.now(timezone.utc)
     pending_run.artifacts = {
         "group_bundle": {
             "group_key": "s3_bucket_block_public_access|123456789012|eu-north-1|open"
@@ -1109,6 +1121,11 @@ def test_create_group_pr_bundle_different_override_map_not_duplicate(client: Tes
     action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
     action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
     pending_run = MagicMock()
+    pending_run.id = uuid.uuid4()
+    pending_run.action_id = action1.id
+    pending_run.mode = RemediationRunMode.pr_only
+    pending_run.status = RemediationRunStatus.pending
+    pending_run.created_at = datetime.now(timezone.utc)
     pending_run.artifacts = {
         "selected_strategy": "config_enable_centralized_delivery",
         "group_bundle": {
@@ -1130,7 +1147,18 @@ def test_create_group_pr_bundle_different_override_map_not_duplicate(client: Tes
             ],
         },
     }
-    session = _mock_group_session([action1, action2], pending_runs=[pending_run])
+    session = _mock_group_session([action1, action2], pending_runs=[pending_run], active_runs=[pending_run])
+
+    async def _commit_side_effect() -> None:
+        run = session._added[-1]
+        if run.action_id == action1.id:
+            raise IntegrityError(
+                "insert into remediation_runs ...",
+                {},
+                Exception('duplicate key value violates unique constraint "uq_remediation_runs_action_active"'),
+            )
+
+    session.commit = AsyncMock(side_effect=_commit_side_effect)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -1179,6 +1207,109 @@ def test_create_group_pr_bundle_different_override_map_not_duplicate(client: Tes
     assert r.status_code == 201
     assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
+    assert r.json()["action_id"] == str(action2.id)
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["action_id"] == str(action2.id)
+
+
+def test_create_group_pr_bundle_different_repo_target_not_duplicate(client: TestClient) -> None:
+    """A different repo_target should avoid the occupied representative action instead of 500ing."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    pending_run = MagicMock()
+    pending_run.id = uuid.uuid4()
+    pending_run.action_id = action1.id
+    pending_run.mode = RemediationRunMode.pr_only
+    pending_run.status = RemediationRunStatus.pending
+    pending_run.created_at = datetime.now(timezone.utc)
+    pending_run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "repo_target": {"repository": "acme/live", "base_branch": "main"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(action1.id), str(action2.id)],
+            "action_resolutions": [
+                {
+                    "action_id": str(action1.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                },
+                {
+                    "action_id": str(action2.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                },
+            ],
+        },
+    }
+    session = _mock_group_session([action1, action2], pending_runs=[pending_run], active_runs=[pending_run])
+
+    async def _commit_side_effect() -> None:
+        run = session._added[-1]
+        if run.action_id == action1.id:
+            raise IntegrityError(
+                "insert into remediation_runs ...",
+                {},
+                Exception('duplicate key value violates unique constraint "uq_remediation_runs_action_active"'),
+            )
+
+    session.commit = AsyncMock(side_effect=_commit_side_effect)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-group-different-repo-target"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                                "repo_target": {
+                                    "provider": "generic_git",
+                                    "repository": "acme/live",
+                                    "base_branch": "main",
+                                    "head_branch": "wave-4-rerun",
+                                },
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert session.commit.await_count == 1
+    assert mock_sqs.send_message.call_count == 1
+    assert r.json()["action_id"] == str(action2.id)
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["action_id"] == str(action2.id)
 
 
 def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: TestClient) -> None:
@@ -1202,6 +1333,11 @@ def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: T
         },
     ]
     pending_run = MagicMock()
+    pending_run.id = uuid.uuid4()
+    pending_run.action_id = action1.id
+    pending_run.mode = RemediationRunMode.pr_only
+    pending_run.status = RemediationRunStatus.pending
+    pending_run.created_at = datetime.now(timezone.utc)
     pending_run.artifacts = {
         "selected_strategy": "config_enable_centralized_delivery",
         "strategy_inputs": {"delivery_bucket": "central-config-bucket"},

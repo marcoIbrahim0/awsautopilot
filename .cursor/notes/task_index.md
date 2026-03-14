@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [RPW4-06 grouped duplicate anchor-collision fix on master (2026-03-14)](task_log.md#rpw4-06-grouped-duplicate-anchor-collision-fix-on-master-2026-03-14)
+  - Fixed the real Wave 4 grouped duplicate blocker by stopping differentiated grouped requests from crashing on `uq_remediation_runs_action_active` after signature comparison.
+  - Added failing-first grouped API regressions for override-map and `repo_target` differentiation, helper-level grouped signature determinism coverage, and validated the patched route on a fresh local backend with live request replays.
 - [Remediation-profile Wave 4 focused E2E validation on master (2026-03-14)](task_log.md#remediation-profile-wave-4-focused-e2e-validation-on-master-2026-03-14)
   - Created `docs/test-results/live-runs/20260314T193034Z-rem-profile-wave4-e2e/` with per-test markdown, direct queue/worker evidence, Playwright UI artifacts, and the scoped final summary for `RPW4-01` through `RPW4-12`.
   - Directly proved the core Wave 4 queue-contract items on local `master`, including schema `v2` single/grouped create+resend, action-groups route parity, legacy schema `v1` compatibility, future-schema quarantine, direct-fix stability, auth boundaries, and the action-detail remediation UI/preview.

@@ -1,5 +1,42 @@
 # Task Log
 
+## RPW4-06 grouped duplicate anchor-collision fix on master (2026-03-14)
+
+**Task:** Fix the Wave 4 grouped duplicate/signature blocker from `RPW4-06` on current `master`, add focused regressions first, preserve the queue-v2/grouped artifact contract, and validate that differentiated grouped requests no longer surface the observed `500`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - changed grouped create handling to scan active runs before persistence, keep identical grouped signatures on `409`, choose a free representative action anchor for differentiated grouped requests, and return a precise grouped-active-run `409` when every action in the group is already occupied.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - tightened grouped session mocks to model active grouped rows, added the failing-first regressions for differentiated override-map and `repo_target` requests hitting `uq_remediation_runs_action_active`, and preserved the identical grouped duplicate `409` assertions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_queue_contract.py** - added deterministic grouped signature normalization coverage and helper-level proof that identical canonical grouped `action_resolutions` still compare as duplicates even when artifact order differs.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this RPW4-06 fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the required `.cursor` rules/notes, remediation-profile docs, and the exact `RPW4-06` evidence files before touching code.
+- Anchored the failure to the actual exception path recorded in the Wave 4 evidence: differentiated grouped requests made it past signature comparison, then crashed on the partial unique index `uq_remediation_runs_action_active` because the route always persisted the grouped run on the default highest-priority representative action.
+- Added failing regressions first by simulating the observed `IntegrityError` when the grouped route tried to commit a differentiated request on an already-occupied representative action.
+- Narrowed the runtime fix to the grouped create route:
+  - active grouped `pr_only` duplicates still compare by canonical grouped signature and return `409 Duplicate pending run`
+  - differentiated grouped requests now pick the first action in the group that is not already anchoring an active remediation run
+  - if every action in the group is already occupied, the route now returns a precise `409 grouped_active_run_conflict` instead of a generic `500`
+- Left worker code, `direct_fix`, queue-v2 payload shape, grouped artifact persistence, and the single-row grouped `RemediationRun` model unchanged.
+- Ran the requested focused tests:
+  - `pytest tests/test_remediation_runs_api.py -q -k 'create_group_pr_bundle_duplicate_pending_guard_still_works or create_group_pr_bundle_different_override_map_not_duplicate or create_group_pr_bundle_different_repo_target_not_duplicate or create_group_pr_bundle_identical_override_map_still_duplicate'` -> `4 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_queue_contract.py -q` -> `7 passed`
+- Manually replayed `RPW4-06` on a fresh backend started from the edited checkout at `http://127.0.0.1:18003` using the same tenant/admin identity as the Wave 4 run:
+  - seeded a fresh baseline identical grouped request because the old pending baseline was no longer present
+  - identical replay returned `409`
+  - differentiated override-map replay returned `201`
+  - differentiated `repo_target` replay returned `201`
+  - cleaned up the temporary replay rows and shut down the temporary `18003` backend after validation
+
+**Technical debt / gotchas:**
+- The grouped representative-action anchor model can only create another differentiated active grouped run while at least one action in that execution group is not already anchoring an active run. Once every action in the group is occupied, the route now fails cleanly with `409 grouped_active_run_conflict`; removing that ceiling would require a broader persistence/index redesign outside `RPW4-06`.
+- The older local backend process on `127.0.0.1:18002` was still serving pre-fix code, so manual replay validation had to use a fresh backend process from the edited checkout on `127.0.0.1:18003`.
+
+**Open questions / TODOs:**
+- None for the narrow `RPW4-06` fix itself.
+
 ## Remediation-profile Wave 4 focused E2E validation on master (2026-03-14)
 
 **Task:** Execute the focused remediation-profile Wave 4 end-to-end validation on the current `master` checkout only, capture the evidence package under a dedicated live-run folder, and update the docs/task history with the scoped Wave 4 verdict.

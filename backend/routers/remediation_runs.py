@@ -201,6 +201,53 @@ def _raise_duplicate_run_conflict(existing_run: RemediationRun, *, reason: str, 
     )
 
 
+def _grouped_representative_candidate_ids(
+    *,
+    preferred_action_id: str,
+    action_ids: tuple[str, ...],
+) -> tuple[str, ...]:
+    return (preferred_action_id, *tuple(action_id for action_id in action_ids if action_id != preferred_action_id))
+
+
+def _select_grouped_representative_action_id(
+    *,
+    preferred_action_id: str,
+    action_ids: tuple[str, ...],
+    active_runs: list[RemediationRun],
+) -> str | None:
+    action_id_set = set(action_ids)
+    occupied = {str(run.action_id) for run in active_runs if str(run.action_id) in action_id_set}
+    for action_id in _grouped_representative_candidate_ids(
+        preferred_action_id=preferred_action_id,
+        action_ids=action_ids,
+    ):
+        if action_id not in occupied:
+            return action_id
+    return None
+
+
+def _raise_grouped_active_run_conflict(
+    *,
+    active_runs: list[RemediationRun],
+    action_ids: tuple[str, ...],
+) -> NoReturn:
+    action_id_set = set(action_ids)
+    conflicting_runs = [run for run in active_runs if str(run.action_id) in action_id_set]
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "error": "Active grouped run conflict",
+            "detail": (
+                "Every action in this execution group already anchors an active remediation run. "
+                "Wait for an existing run to complete before creating another differentiated grouped request."
+            ),
+            "reason": "grouped_active_run_conflict",
+            "conflicting_action_ids": sorted({str(run.action_id) for run in conflicting_runs}),
+            "existing_run_ids": [str(run.id) for run in conflicting_runs],
+        },
+    )
+
+
 def _raise_pr_bundle_rate_limit(
     *,
     reason: Literal["pr_bundle_rate_limit_total", "pr_bundle_rate_limit_identical"],
@@ -1820,15 +1867,16 @@ async def create_group_pr_bundle_run(
             strategy_id=normalized_request.strategy_id,
         )
 
-    pending_result = await db.execute(
+    active_run_result = await db.execute(
         select(RemediationRun).where(
             RemediationRun.tenant_id == tenant_uuid,
-            RemediationRun.mode == RemediationRunMode.pr_only,
-            RemediationRun.status == RemediationRunStatus.pending,
+            RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES),
         )
     )
-    pending_runs = pending_result.scalars().unique().all()
-    for pending in pending_runs:
+    active_runs = active_run_result.scalars().unique().all()
+    for pending in active_runs:
+        if _as_mode_value(pending.mode) != RemediationRunMode.pr_only.value:
+            continue
         if not isinstance(pending.artifacts, dict):
             continue
         existing_signature = normalize_grouped_run_artifact_signature(pending.artifacts)
@@ -1856,8 +1904,23 @@ async def create_group_pr_bundle_run(
                 },
             )
 
+    representative_action_id = _select_grouped_representative_action_id(
+        preferred_action_id=plan.representative_action_id,
+        action_ids=plan.action_ids,
+        active_runs=active_runs,
+    )
+    if representative_action_id is None:
+        emit_validation_failure(
+            logger,
+            reason="grouped_active_run_conflict",
+            action_type=action_type,
+            strategy_id=plan.request.strategy_id,
+            mode="pr_only",
+        )
+        _raise_grouped_active_run_conflict(active_runs=active_runs, action_ids=plan.action_ids)
+
     representative_by_id = {str(action.id): action for action in actions}
-    representative = representative_by_id.get(plan.representative_action_id, actions[0])
+    representative = representative_by_id.get(representative_action_id, actions[0])
     artifacts: dict[str, Any] = dict(plan.artifacts)
     if plan.request.pr_bundle_variant:
         artifacts["legacy_variant_mapped_from"] = plan.request.pr_bundle_variant
