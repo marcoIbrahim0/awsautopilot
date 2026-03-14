@@ -45,6 +45,12 @@ from backend.services.direct_fix_approval import (
     build_direct_fix_approval_metadata,
 )
 from backend.services.remediation_handoff import RunArtifactMetadata, build_run_artifact_metadata
+from backend.services.remediation_run_resolution import (
+    RemediationRunResolutionError,
+    apply_resolution_artifacts,
+    build_single_run_resolution,
+    resolve_create_profile_id,
+)
 from backend.services.remediation_strategy import (
     map_exception_strategy_inputs,
     map_legacy_variant_to_strategy,
@@ -269,6 +275,10 @@ class CreateRemediationRunRequest(BaseModel):
     strategy_id: str | None = Field(
         None,
         description="Selected remediation strategy ID (required when action type uses strategy catalog).",
+    )
+    profile_id: str | None = Field(
+        None,
+        description="Optional remediation profile ID nested beneath the selected strategy family.",
     )
     strategy_inputs: dict[str, Any] | None = Field(
         None,
@@ -932,6 +942,7 @@ async def create_remediation_run(
     account = acc_result.scalar_one_or_none()
 
     selected_strategy_id = (body.strategy_id or "").strip() or None
+    requested_profile_id = (body.profile_id or "").strip() or None
     normalized_variant = (body.pr_bundle_variant or "").strip() or None
     legacy_variant_mapped_from: str | None = None
 
@@ -974,9 +985,24 @@ async def create_remediation_run(
             )
         selected_strategy_id = mapped_strategy
         legacy_variant_mapped_from = normalized_variant
+    if body.mode == "pr_only" and requested_profile_id and not selected_strategy_id:
+        emit_validation_failure(
+            logger,
+            reason="profile_requires_strategy_id",
+            action_type=action.action_type,
+            mode=body.mode,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Missing strategy_id",
+                "detail": "profile_id requires a selected strategy_id for validation.",
+            },
+        )
 
     selected_strategy: dict[str, Any] | None = None
     selected_strategy_inputs: dict[str, Any] | None = None
+    selected_profile_id: str | None = None
     risk_snapshot: dict[str, Any] | None = None
     repo_target_payload = body.repo_target.model_dump(exclude_none=True) if body.repo_target else None
 
@@ -1024,6 +1050,25 @@ async def create_remediation_run(
                 mode=body.mode,
                 strategy_inputs=selected_strategy_inputs,
             )
+        if body.mode == "pr_only":
+            try:
+                selected_profile_id = resolve_create_profile_id(
+                    action.action_type,
+                    selected_strategy_id,
+                    requested_profile_id,
+                )
+            except RemediationRunResolutionError as exc:
+                emit_validation_failure(
+                    logger,
+                    reason="invalid_profile_selection",
+                    action_type=action.action_type,
+                    strategy_id=selected_strategy_id,
+                    mode=body.mode,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"error": "Invalid profile_id", "detail": str(exc)},
+                ) from exc
 
         risk_snapshot = evaluate_strategy_impact(
             action,
@@ -1332,20 +1377,37 @@ async def create_remediation_run(
             )
 
     artifacts: dict[str, Any] = {}
-    if selected_strategy_id:
-        artifacts["selected_strategy"] = selected_strategy_id
-    if selected_strategy_inputs:
-        artifacts["strategy_inputs"] = selected_strategy_inputs
     if risk_snapshot:
         artifacts["risk_snapshot"] = risk_snapshot
     if body.risk_acknowledged:
         artifacts["risk_acknowledged"] = True
-    if normalized_variant:
-        artifacts["pr_bundle_variant"] = normalized_variant
     if legacy_variant_mapped_from:
         artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
     if repo_target_payload:
         artifacts["repo_target"] = repo_target_payload
+    if body.mode == "pr_only" and selected_strategy and selected_profile_id:
+        artifacts = apply_resolution_artifacts(
+            artifacts,
+            resolution=build_single_run_resolution(
+                action=action,
+                strategy=selected_strategy,
+                profile_id=selected_profile_id,
+                strategy_inputs=selected_strategy_inputs,
+                risk_snapshot=risk_snapshot,
+                risk_acknowledged=body.risk_acknowledged,
+                requested_profile_id=requested_profile_id,
+            ),
+            strategy_id=selected_strategy_id,
+            strategy_inputs=selected_strategy_inputs,
+            pr_bundle_variant=normalized_variant,
+        )
+    else:
+        if selected_strategy_id:
+            artifacts["selected_strategy"] = selected_strategy_id
+        if selected_strategy_inputs:
+            artifacts["strategy_inputs"] = selected_strategy_inputs
+        if normalized_variant:
+            artifacts["pr_bundle_variant"] = normalized_variant
     if body.mode == "direct_fix":
         artifacts = _with_direct_fix_approval(
             artifacts,
