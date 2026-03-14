@@ -68,6 +68,11 @@ from backend.services.remediation_handoff import (
     ActionImplementationArtifactLink,
     build_action_implementation_artifacts,
 )
+from backend.services.remediation_profile_read_path import (
+    InvalidProfileSelection,
+    build_preview_resolution,
+    build_strategy_profile_metadata,
+)
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
 from backend.services.remediation_strategy import (
@@ -606,6 +611,10 @@ class RemediationPreviewResponse(BaseModel):
         default_factory=list,
         description="Line-by-line before/after delta entries.",
     )
+    resolution: "RemediationPreviewResolutionResponse | None" = Field(
+        default=None,
+        description="Optional Wave 2 profile-resolution metadata for the selected strategy family.",
+    )
 
 
 class DependencyCheckResponse(BaseModel):
@@ -639,6 +648,62 @@ class RemediationOptionResponse(BaseModel):
         default_factory=dict,
         description="Optional strategy-specific runtime context for UI defaults and helper options.",
     )
+    profiles: list["RemediationProfileResponse"] = Field(
+        default_factory=list,
+        description="Additive Wave 2 compatibility profiles nested beneath the strategy row.",
+    )
+    recommended_profile_id: str | None = Field(
+        default=None,
+        description="Recommended profile ID for this strategy in the current action context.",
+    )
+    missing_defaults: list[str] = Field(
+        default_factory=list,
+        description="Tenant remediation defaults that are still missing for this strategy/profile row.",
+    )
+    blocked_reasons: list[str] = Field(
+        default_factory=list,
+        description="Blocking reasons currently known for this strategy/profile row.",
+    )
+    decision_rationale: str = Field(
+        default="",
+        description="Short rationale for the current strategy/profile recommendation.",
+    )
+
+
+class RemediationProfileResponse(BaseModel):
+    """One additive compatibility-profile row exposed beneath a strategy."""
+
+    profile_id: str
+    support_tier: Literal[
+        "deterministic_bundle",
+        "review_required_bundle",
+        "manual_guidance_only",
+    ]
+    recommended: bool
+    requires_inputs: bool
+    supports_exception_flow: bool
+    exception_only: bool
+
+
+class RemediationPreviewResolutionResponse(BaseModel):
+    """Canonical normalized resolution metadata exposed on remediation preview."""
+
+    strategy_id: str
+    profile_id: str
+    support_tier: Literal[
+        "deterministic_bundle",
+        "review_required_bundle",
+        "manual_guidance_only",
+    ]
+    resolved_inputs: dict[str, Any] = Field(default_factory=dict)
+    missing_inputs: list[str] = Field(default_factory=list)
+    missing_defaults: list[str] = Field(default_factory=list)
+    blocked_reasons: list[str] = Field(default_factory=list)
+    rejected_profiles: list[dict[str, Any]] = Field(default_factory=list)
+    finding_coverage: dict[str, Any] = Field(default_factory=dict)
+    preservation_summary: dict[str, Any] = Field(default_factory=dict)
+    decision_rationale: str = ""
+    decision_version: str
 
 
 class TriggerReevalRequest(BaseModel):
@@ -1767,7 +1832,7 @@ async def get_remediation_options(
 ) -> RemediationOptionsResponse:
     """List strategy options and risk checks for one action."""
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
-    await get_tenant(tenant_uuid, db)
+    tenant = await get_tenant(tenant_uuid, db)
 
     try:
         action_uuid = uuid.UUID(action_id)
@@ -1795,6 +1860,7 @@ async def get_remediation_options(
         )
     )
     account = account_result.scalar_one_or_none()
+    tenant_settings = getattr(tenant, "remediation_settings", None)
 
     strategies = list_strategies_for_action_type(action.action_type)
     root_required = is_root_credentials_required_action(action.action_type)
@@ -1879,6 +1945,13 @@ async def get_remediation_options(
                     strategy["strategy_id"],
                 ),
                 context=runtime_context,
+                **build_strategy_profile_metadata(
+                    action_type=action.action_type,
+                    strategy=strategy,
+                    tenant_settings=tenant_settings,
+                    runtime_context=runtime_context,
+                    dependency_checks=risk_snapshot["checks"],
+                ),
             )
         )
 
@@ -2069,6 +2142,10 @@ async def get_remediation_preview(
         str | None,
         Query(description="Optional remediation strategy ID for direct-fix preview."),
     ] = None,
+    profile_id: Annotated[
+        str | None,
+        Query(description="Optional remediation profile ID within the selected strategy family."),
+    ] = None,
     strategy_inputs_json: Annotated[
         str | None,
         Query(alias="strategy_inputs", description="Optional JSON object string for strategy inputs."),
@@ -2082,7 +2159,7 @@ async def get_remediation_preview(
     Requires action to be fixable and account to have WriteRole.
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
-    await get_tenant(tenant_uuid, db)
+    tenant = await get_tenant(tenant_uuid, db)
 
     try:
         action_uuid = uuid.UUID(action_id)
@@ -2118,12 +2195,26 @@ async def get_remediation_preview(
                 strategy_inputs_error = str(exc)
 
     selected_strategy = get_strategy(action.action_type, strategy_id) if strategy_id else None
+    tenant_settings = getattr(tenant, "remediation_settings", None)
+    if profile_id is not None and selected_strategy is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Invalid profile_id",
+                "detail": "profile_id requires a valid strategy_id for this action.",
+            },
+        )
     needs_state_simulation = (
         selected_strategy is not None and strategy_supports_state_simulation(selected_strategy["strategy_id"])
     )
+    needs_runtime_risk = selected_strategy is not None and (
+        selected_strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES
+        or selected_strategy["strategy_id"] in _RUNTIME_CONTEXT_OPTION_STRATEGIES
+    )
+    needs_runtime_signals = needs_state_simulation or needs_runtime_risk
 
     account: AwsAccount | None = None
-    if needs_state_simulation:
+    if needs_runtime_signals:
         acc_result = await db.execute(
             select(AwsAccount).where(
                 AwsAccount.tenant_id == tenant_uuid,
@@ -2133,13 +2224,25 @@ async def get_remediation_preview(
         account = acc_result.scalar_one_or_none()
 
     runtime_signals: dict[str, Any] = {}
-    if needs_state_simulation and selected_strategy is not None:
+    if needs_runtime_signals and selected_strategy is not None:
         runtime_signals = collect_runtime_risk_signals(
             action=action,
             strategy=selected_strategy,
             strategy_inputs=parsed_strategy_inputs or {},
             account=account,
         )
+    runtime_context = runtime_signals.get("context")
+    if not isinstance(runtime_context, dict):
+        runtime_context = {}
+    dependency_checks: list[dict[str, Any]] = []
+    if selected_strategy is not None:
+        dependency_checks = evaluate_strategy_impact(
+            action,
+            selected_strategy,
+            parsed_strategy_inputs or {},
+            account=account,
+            runtime_signals=runtime_signals,
+        )["checks"]
 
     state_simulation = build_remediation_state_simulation(
         strategy_id=strategy_id,
@@ -2147,6 +2250,21 @@ async def get_remediation_preview(
         runtime_signals=runtime_signals,
     )
     impact_summary = get_impact_summary(strategy_id, parsed_strategy_inputs) or None
+    try:
+        resolution = build_preview_resolution(
+            action_type=action.action_type,
+            strategy=selected_strategy,
+            profile_id=profile_id,
+            strategy_inputs=parsed_strategy_inputs,
+            tenant_settings=tenant_settings,
+            runtime_context=runtime_context,
+            dependency_checks=dependency_checks,
+        )
+    except InvalidProfileSelection as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Invalid profile_id", "detail": str(exc)},
+        ) from exc
 
     def _preview_response(
         *,
@@ -2156,6 +2274,7 @@ async def get_remediation_preview(
         before_state: dict[str, Any] | None = None,
         after_state: dict[str, Any] | None = None,
         diff_lines: list[dict[str, str]] | None = None,
+        resolution_payload: RemediationPreviewResolutionResponse | None = None,
     ) -> RemediationPreviewResponse:
         return RemediationPreviewResponse(
             compliant=compliant,
@@ -2165,6 +2284,7 @@ async def get_remediation_preview(
             before_state=before_state if isinstance(before_state, dict) else state_simulation["before_state"],
             after_state=after_state if isinstance(after_state, dict) else state_simulation["after_state"],
             diff_lines=diff_lines if isinstance(diff_lines, list) else state_simulation["diff_lines"],
+            resolution=resolution_payload or resolution,
         )
 
     if strategy_inputs_error:
