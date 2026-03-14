@@ -9,6 +9,7 @@ Tests cover:
 """
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
@@ -130,6 +131,11 @@ def _group_action_resolution_payload(
     strategy_inputs: dict | None = None,
     support_tier: str = "deterministic_bundle",
     profile_id: str | None = None,
+    finding_coverage: dict | None = None,
+    decision_rationale: str = "",
+    missing_inputs: list[str] | None = None,
+    missing_defaults: list[str] | None = None,
+    blocked_reasons: list[str] | None = None,
 ) -> dict:
     inputs = dict(strategy_inputs or {})
     resolved_profile_id = profile_id or strategy_id
@@ -143,16 +149,33 @@ def _group_action_resolution_payload(
             "profile_id": resolved_profile_id,
             "support_tier": support_tier,
             "resolved_inputs": dict(inputs),
-            "missing_inputs": [],
-            "missing_defaults": [],
-            "blocked_reasons": [],
+            "missing_inputs": list(missing_inputs or []),
+            "missing_defaults": list(missing_defaults or []),
+            "blocked_reasons": list(blocked_reasons or []),
             "rejected_profiles": [],
-            "finding_coverage": {},
+            "finding_coverage": dict(finding_coverage or {}),
             "preservation_summary": {},
-            "decision_rationale": "",
+            "decision_rationale": decision_rationale,
             "decision_version": "resolver/v1",
         },
     }
+
+
+def _bundle_files_by_path(run: MagicMock) -> dict[str, str]:
+    assert isinstance(run.artifacts, dict)
+    pr_bundle = run.artifacts.get("pr_bundle")
+    assert isinstance(pr_bundle, dict)
+    files = pr_bundle.get("files")
+    assert isinstance(files, list)
+    result: dict[str, str] = {}
+    for file_item in files:
+        if not isinstance(file_item, dict):
+            continue
+        path = file_item.get("path")
+        if not isinstance(path, str):
+            continue
+        result[path] = str(file_item.get("content") or "")
+    return result
 
 
 @pytest.fixture(autouse=True)
@@ -979,7 +1002,7 @@ def test_group_pr_bundle_uses_queue_action_resolutions_when_present() -> None:
     assert [call.kwargs.get("variant") for call in mock_generate.call_args_list] == [None, None]
 
 
-@pytest.mark.parametrize("case_name", ["missing_action_id", "outside_group", "duplicate"])
+@pytest.mark.parametrize("case_name", ["missing_action_id", "outside_group", "duplicate", "missing_resolution"])
 def test_group_pr_bundle_malformed_action_resolutions_fail_closed(case_name: str) -> None:
     job = _make_job(mode="pr_only")
     run = _mock_run_with_action("s3_bucket_block_public_access")
@@ -1012,6 +1035,10 @@ def test_group_pr_bundle_malformed_action_resolutions_fail_closed(case_name: str
             ),
             valid_entries[1],
         ]
+    elif case_name == "missing_resolution":
+        malformed = dict(valid_entries[0])
+        malformed.pop("resolution")
+        job["action_resolutions"] = [malformed, valid_entries[1]]
     else:
         job["action_resolutions"] = [valid_entries[0], dict(valid_entries[0])]
     run.artifacts = {
@@ -1038,11 +1065,12 @@ def test_group_pr_bundle_malformed_action_resolutions_fail_closed(case_name: str
     assert pr_bundle_error.get("code") == "invalid_grouped_action_resolutions"
 
 
-def test_group_pr_bundle_non_deterministic_action_resolution_support_tier_fails_closed() -> None:
+def test_group_pr_bundle_mixed_tier_layout_for_executable_and_review_required_actions() -> None:
     job = _make_job(mode="pr_only")
     run = _mock_run_with_action("s3_bucket_block_public_access")
     run.action.resource_id = "arn:aws:s3:::bucket-one"
     run.action.target_id = "arn:aws:s3:::bucket-one"
+    run.action.title = "Bucket one hardening"
     second_action = _mock_group_action(
         target_id="arn:aws:s3:::bucket-two",
         title="Bucket two hardening",
@@ -1052,14 +1080,110 @@ def test_group_pr_bundle_non_deterministic_action_resolution_support_tier_fails_
         _group_action_resolution_payload(
             action_id=run.action.id,
             strategy_id="s3_bucket_block_public_access_standard",
-            support_tier="review_required_bundle",
+            support_tier="deterministic_bundle",
+            finding_coverage={"finding_ids": ["finding-1"]},
+            decision_rationale="Safe deterministic bundle",
         ),
         _group_action_resolution_payload(
             action_id=second_action.id,
             strategy_id="s3_migrate_cloudfront_oac_private",
+            support_tier="review_required_bundle",
+            decision_rationale="Needs operator review",
         ),
     ]
     run.artifacts = {"selected_strategy": "s3_bucket_block_public_access_standard"}
+    mock_session = _mock_group_session(run, [run.action, second_action])
+    bundle = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider"},
+            {"path": "main.tf", "content": "resource \"aws_s3_bucket_public_access_block\" \"this\" {}"},
+        ],
+        "steps": ["step one"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+            execute_remediation_run_job(job)
+            mock_generate.assert_called_once()
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "Group PR bundle generated (2 actions)"
+    files_by_path = _bundle_files_by_path(run)
+    assert "bundle_manifest.json" in files_by_path
+    assert "decision_log.md" in files_by_path
+    assert "finding_coverage.json" in files_by_path
+    assert "README_GROUP.txt" in files_by_path
+    assert "run_all.sh" in files_by_path
+    assert any(path.startswith("executable/actions/") and path.endswith(".tf") for path in files_by_path)
+    assert not any(path.startswith("review_required/actions/") and path.endswith(".tf") for path in files_by_path)
+    manifest = json.loads(files_by_path["bundle_manifest.json"])
+    assert manifest["layout_version"] == "grouped_bundle_mixed_tier/v1"
+    assert manifest["execution_root"] == "executable/actions"
+    assert manifest["grouped_actions"] == [str(run.action.id), str(second_action.id)]
+    executable_entry = next(item for item in manifest["actions"] if item["action_id"] == str(run.action.id))
+    review_entry = next(item for item in manifest["actions"] if item["action_id"] == str(second_action.id))
+    assert executable_entry["tier_root"] == "executable/actions"
+    assert executable_entry["outcome"] == "executable_bundle_generated"
+    assert executable_entry["has_runnable_terraform"] is True
+    assert review_entry["tier_root"] == "review_required/actions"
+    assert review_entry["outcome"] == "review_required_metadata_only"
+    assert review_entry["has_runnable_terraform"] is False
+    run_all = files_by_path["run_all.sh"]
+    assert 'EXECUTION_ROOT="executable/actions"' in run_all
+    assert "review_required/actions" not in run_all
+    assert "manual_guidance/actions" not in run_all
+    decision_log = files_by_path["decision_log.md"]
+    assert str(run.action.id) in decision_log
+    assert str(second_action.id) in decision_log
+    assert "Safe deterministic bundle" in decision_log
+    assert "Needs operator review" in decision_log
+    finding_coverage = json.loads(files_by_path["finding_coverage.json"])
+    assert [item["action_id"] for item in finding_coverage["actions"]] == [
+        str(run.action.id),
+        str(second_action.id),
+    ]
+    assert finding_coverage["actions"][0]["finding_coverage"] == {"finding_ids": ["finding-1"]}
+    assert finding_coverage["actions"][1]["finding_coverage"] == {}
+    assert "Only executable Terraform lives under executable/actions/." in files_by_path["README_GROUP.txt"]
+    assert "Review-required actions:" in files_by_path["README_GROUP.txt"]
+    assert "Manual-guidance actions:" in files_by_path["README_GROUP.txt"]
+    group_bundle = run.artifacts.get("group_bundle")
+    assert isinstance(group_bundle, dict)
+    assert group_bundle.get("layout_version") == "grouped_bundle_mixed_tier/v1"
+    assert group_bundle.get("execution_root") == "executable/actions"
+
+
+def test_group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    run.action.title = "Bucket one review"
+    second_action = _mock_group_action(
+        target_id="arn:aws:s3:::bucket-two",
+        title="Bucket two manual guidance",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+            support_tier="review_required_bundle",
+            decision_rationale="Needs approval before execution",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            support_tier="manual_guidance_only",
+            decision_rationale="Manual cloud changes required",
+        ),
+    ]
     mock_session = _mock_group_session(run, [run.action, second_action])
 
     with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
@@ -1072,12 +1196,62 @@ def test_group_pr_bundle_non_deterministic_action_resolution_support_tier_fails_
             execute_remediation_run_job(job)
             mock_generate.assert_not_called()
 
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "Group PR bundle generated (2 actions)"
+    files_by_path = _bundle_files_by_path(run)
+    assert not any(path.endswith(".tf") for path in files_by_path)
+    assert any(path.startswith("review_required/actions/") and path.endswith("decision.json") for path in files_by_path)
+    assert any(path.startswith("manual_guidance/actions/") and path.endswith("decision.json") for path in files_by_path)
+    assert "No executable Terraform action folders found under ${EXECUTION_ROOT}/." in files_by_path["run_all.sh"]
+    manifest = json.loads(files_by_path["bundle_manifest.json"])
+    assert manifest["runnable_action_count"] == 0
+    assert manifest["tier_counts"] == {
+        "executable": 0,
+        "review_required": 1,
+        "manual_guidance": 1,
+    }
+    finding_coverage = json.loads(files_by_path["finding_coverage.json"])
+    assert len(finding_coverage["actions"]) == 2
+    assert all(isinstance(item["finding_coverage"], dict) for item in finding_coverage["actions"])
+    assert "Needs approval before execution" in files_by_path["decision_log.md"]
+    assert "Manual cloud changes required" in files_by_path["decision_log.md"]
+
+
+def test_group_pr_bundle_invalid_executable_folder_layout_fails_closed() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    run.action.resource_id = "arn:aws:s3:::bucket-one"
+    run.action.target_id = "arn:aws:s3:::bucket-one"
+    job["group_action_ids"] = [str(run.action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_bucket_block_public_access_standard",
+            support_tier="deterministic_bundle",
+        )
+    ]
+    mock_session = _mock_group_session(run, [run.action])
+    bad_bundle = {
+        "format": "terraform",
+        "files": [{"path": "README.md", "content": "no terraform here"}],
+        "steps": ["step one"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bad_bundle):
+            execute_remediation_run_job(job)
+
     assert run.status == RemediationRunStatus.failed
-    assert run.outcome == "PR bundle generation failed: grouped_support_tier_not_executable"
+    assert run.outcome == "PR bundle generation failed: invalid_grouped_bundle_layout"
     assert isinstance(run.artifacts, dict)
     pr_bundle_error = run.artifacts.get("pr_bundle_error")
     assert isinstance(pr_bundle_error, dict)
-    assert pr_bundle_error.get("code") == "grouped_support_tier_not_executable"
+    assert pr_bundle_error.get("code") == "invalid_grouped_bundle_layout"
 
 
 def test_group_pr_bundle_schema_v1_falls_back_to_top_level_strategy_fields() -> None:

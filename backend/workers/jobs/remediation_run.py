@@ -215,6 +215,7 @@ class _GroupedActionDecision:
     profile_id: str | None
     strategy_inputs: dict[str, Any]
     support_tier: str
+    resolution: dict[str, Any] | None
 
 
 def _grouped_resolution_field(raw_value: object, field_name: str) -> object:
@@ -252,22 +253,6 @@ def _raise_invalid_grouped_action_resolutions(detail: str, *, action_type: str |
     raise _grouped_resolution_error(
         "invalid_grouped_action_resolutions",
         detail,
-        action_type=action_type,
-    )
-
-
-def _raise_grouped_support_tier_error(
-    action_id: str,
-    support_tier: str,
-    *,
-    action_type: str | None,
-) -> None:
-    raise _grouped_resolution_error(
-        "grouped_support_tier_not_executable",
-        (
-            "Grouped executable bundle generation requires deterministic per-action decisions. "
-            f"action_id '{action_id}' resolved support_tier '{support_tier}'."
-        ),
         action_type=action_type,
     )
 
@@ -323,6 +308,7 @@ def _legacy_grouped_action_decisions(
     copied_inputs = copy.deepcopy(strategy_inputs or {})
     support_tier = "review_required_bundle" if risk_acknowledged else "deterministic_bundle"
     profile_id: str | None = None
+    resolution: dict[str, Any] | None = None
     if strategy_id:
         resolution = build_compat_resolution_decision(
             strategy_id=strategy_id,
@@ -338,6 +324,7 @@ def _legacy_grouped_action_decisions(
             profile_id=profile_id,
             strategy_inputs=copy.deepcopy(copied_inputs),
             support_tier=support_tier,
+            resolution=copy.deepcopy(resolution),
         )
         for action_id in action_ids
     ]
@@ -412,15 +399,13 @@ def _canonical_grouped_action_decision(
             action_type=action_type,
         )
     strategy_inputs = _grouped_resolution_inputs(raw_entry, action_id=action_key, action_type=action_type)
-    support_tier = resolution["support_tier"]
-    if support_tier != "deterministic_bundle":
-        _raise_grouped_support_tier_error(action_key, support_tier, action_type=action_type)
     return _GroupedActionDecision(
         action_id=action_id,
         strategy_id=strategy_id,
         profile_id=profile_id,
         strategy_inputs=strategy_inputs,
-        support_tier=support_tier,
+        support_tier=resolution["support_tier"],
+        resolution=resolution,
     )
 
 
@@ -515,14 +500,570 @@ def _apply_pr_automation(
     return enriched_bundle, artifacts
 
 
-def _safe_group_folder_name(action: Action, index: int) -> str:
+def _safe_group_folder_name(action: Action, index: int, *, root: str = "actions") -> str:
     """Build a stable, filesystem-safe folder path for one action in a group bundle."""
     base = (action.resource_id or action.target_id or action.action_type or "action").lower()
     normalized = "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "-" for ch in base)
     normalized = "-".join(part for part in normalized.split("-") if part)
     if not normalized:
         normalized = "action"
-    return f"actions/{index + 1:02d}-{normalized[:48]}-{str(action.id)[:8]}"
+    return f"{root}/{index + 1:02d}-{normalized[:48]}-{str(action.id)[:8]}"
+
+
+GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION = "grouped_bundle_mixed_tier/v1"
+GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT = "executable/actions"
+_GROUP_BUNDLE_TIER_ROOTS = {
+    "deterministic_bundle": GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT,
+    "review_required_bundle": "review_required/actions",
+    "manual_guidance_only": "manual_guidance/actions",
+}
+_GROUP_BUNDLE_TIER_LABELS = {
+    "deterministic_bundle": "executable",
+    "review_required_bundle": "review_required",
+    "manual_guidance_only": "manual_guidance",
+}
+
+
+def _grouped_bundle_layout_error(
+    detail: str,
+    *,
+    action_type: str | None,
+) -> PRBundleGenerationError:
+    return PRBundleGenerationError(
+        {
+            "code": "invalid_grouped_bundle_layout",
+            "detail": detail,
+            "action_type": action_type or "",
+            "format": "terraform",
+            "strategy_id": "",
+            "variant": "",
+        }
+    )
+
+
+def _raise_invalid_grouped_bundle_layout(detail: str, *, action_type: str | None) -> None:
+    raise _grouped_bundle_layout_error(detail, action_type=action_type)
+
+
+def _mixed_tier_runner_script() -> tuple[str, str, str]:
+    script = f"""#!/usr/bin/env bash
+set -euo pipefail
+
+EXECUTION_ROOT="{GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT}"
+
+if ! command -v terraform >/dev/null 2>&1; then
+  echo "terraform is required but not installed."
+  exit 1
+fi
+
+CACHE_ROOT="${{HOME}}/.aws-security-autopilot/terraform"
+mkdir -p "${{CACHE_ROOT}}/plugin-cache"
+export TF_PLUGIN_CACHE_DIR="${{CACHE_ROOT}}/plugin-cache"
+export TF_REGISTRY_CLIENT_TIMEOUT="${{TF_REGISTRY_CLIENT_TIMEOUT:-30}}"
+export TF_REGISTRY_DISCOVERY_RETRY="${{TF_REGISTRY_DISCOVERY_RETRY:-3}}"
+
+TFRC_PATH="${{CACHE_ROOT}}/terraformrc"
+if [ ! -f "${{TFRC_PATH}}" ]; then
+  cat > "${{TFRC_PATH}}" <<EOF
+plugin_cache_dir = "${{TF_PLUGIN_CACHE_DIR}}"
+EOF
+fi
+export TF_CLI_CONFIG_FILE="${{TFRC_PATH}}"
+
+bootstrap_provider_cache() {{
+  local marker bootstrap_dir
+  marker="${{CACHE_ROOT}}/.aws-provider-6.31.0.ready"
+
+  if [ -f "${{marker}}" ] && find "${{TF_PLUGIN_CACHE_DIR}}" -type f -path '*registry.terraform.io/hashicorp/aws/6.31.0/*' -print -quit 2>/dev/null | grep -q .; then
+    return 0
+  fi
+
+  bootstrap_dir=$(mktemp -d)
+  cat > "${{bootstrap_dir}}/versions.tf" <<'EOF'
+terraform {{
+  required_providers {{
+    aws = {{
+      source  = "hashicorp/aws"
+      version = "= 6.31.0"
+    }}
+  }}
+}}
+EOF
+
+  (
+    cd "${{bootstrap_dir}}"
+    terraform init -backend=false -input=false >/dev/null
+  )
+  rm -rf "${{bootstrap_dir}}"
+  touch "${{marker}}"
+}}
+
+collect_action_dirs() {{
+  local dir
+  while IFS= read -r dir; do
+    if find "$dir" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then
+      ACTION_DIRS+=("$dir")
+    fi
+  done < <(find "${{EXECUTION_ROOT}}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+}}
+
+is_known_duplicate_only() {{
+  local log_file="$1"
+  local duplicate_pattern
+  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'
+
+  if ! grep -Eiq "$duplicate_pattern" "$log_file"; then
+    return 1
+  fi
+  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' "$log_file"; then
+    return 1
+  fi
+  return 0
+}}
+
+apply_with_duplicate_tolerance() {{
+  local dir="$1"
+  local log_file rc resource existing_id duplicate_line
+
+  log_file=$(mktemp)
+  set +e
+  (
+    cd "$dir"
+    terraform apply -auto-approve
+  ) >"$log_file" 2>&1
+  rc=$?
+  set -e
+  cat "$log_file"
+
+  if [ "$rc" -eq 0 ]; then
+    rm -f "$log_file"
+    return 0
+  fi
+
+  if is_known_duplicate_only "$log_file"; then
+    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' "$log_file" | head -n 1)
+    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' "$log_file" | head -n 1)
+    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' "$log_file" | head -n 1)
+    echo "WARNING: duplicate/already-existing resource detected; continuing without failure."
+    echo "  action: $dir"
+    if [ -n "$resource" ]; then
+      echo "  resource: $resource"
+    fi
+    if [ -n "$existing_id" ]; then
+      echo "  existing identifier: $existing_id"
+    fi
+    if [ -n "$duplicate_line" ]; then
+      echo "  detail: $duplicate_line"
+    fi
+    rm -f "$log_file"
+    return 0
+  fi
+
+  rm -f "$log_file"
+  return "$rc"
+}}
+
+run_terraform_init_with_retry() {{
+  local dir="$1"
+  local attempts=5
+  local attempt=1
+  local sleep_seconds=3
+  local rc=0
+
+  while [ "$attempt" -le "$attempts" ]; do
+    set +e
+    (
+      cd "$dir"
+      terraform init -input=false
+    )
+    rc=$?
+    set -e
+    if [ "$rc" -eq 0 ]; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$attempts" ]; then
+      echo "WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${{sleep_seconds}}s..."
+      sleep "$sleep_seconds"
+      sleep_seconds=$((sleep_seconds * 2))
+      if [ "$sleep_seconds" -gt 30 ]; then
+        sleep_seconds=30
+      fi
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  return "$rc"
+}}
+
+has_unresolved_placeholders() {{
+  local dir="$1"
+  local placeholders
+  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' "$dir" 2>/dev/null || true)
+  if [ -n "$placeholders" ]; then
+    echo "ERROR: unresolved placeholder token(s) found in Terraform files for $dir:"
+    echo "$placeholders"
+    return 0
+  fi
+  return 1
+}}
+
+bootstrap_provider_cache
+
+ACTION_DIRS=()
+collect_action_dirs
+TOTAL="${{#ACTION_DIRS[@]}}"
+if [ "${{TOTAL:-0}}" -eq 0 ]; then
+  echo "No executable Terraform action folders found under ${{EXECUTION_ROOT}}/."
+  exit 0
+fi
+
+SUCCESS_COUNT=0
+FAILED_COUNT=0
+FAILED_ACTIONS=()
+
+for dir in "${{ACTION_DIRS[@]}}"; do
+  echo ""
+  echo "=== Running terraform in $dir ==="
+
+  if has_unresolved_placeholders "$dir"; then
+    echo "ERROR: unresolved placeholders detected for $dir. Skipping this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (precheck)")
+    continue
+  fi
+
+  if ! run_terraform_init_with_retry "$dir"; then
+    echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (init)")
+    continue
+  fi
+
+  set +e
+  (
+    cd "$dir"
+    terraform plan -input=false
+  )
+  plan_rc=$?
+  set -e
+  if [ "$plan_rc" -ne 0 ]; then
+    echo "ERROR: terraform plan failed for $dir. Skipping apply for this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (plan)")
+    continue
+  fi
+
+  if ! apply_with_duplicate_tolerance "$dir"; then
+    echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (apply)")
+    continue
+  fi
+
+  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+done
+
+echo "Bundle run completed."
+echo "  Successful action folders: ${{SUCCESS_COUNT}}/${{TOTAL}}"
+echo "  Failed action folders: ${{FAILED_COUNT}}/${{TOTAL}}"
+if [ "$FAILED_COUNT" -gt 0 ]; then
+  echo "Failed folders summary:"
+  for failed in "${{FAILED_ACTIONS[@]}}"; do
+    echo "  - $failed"
+  done
+  exit 1
+fi
+echo "All action folders completed successfully."
+"""
+    return script, "embedded_mixed_tier", GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION
+
+
+def _grouped_decision_payload(
+    decision: _GroupedActionDecision,
+    *,
+    action_id: str,
+    action_type: str | None,
+) -> dict[str, Any]:
+    if isinstance(decision.resolution, dict):
+        return copy.deepcopy(decision.resolution)
+    _raise_invalid_grouped_action_resolutions(
+        f"Grouped action_resolutions entry for action_id '{action_id}' is missing normalized resolution data.",
+        action_type=action_type,
+    )
+
+
+def _grouped_tier_root(support_tier: str, *, action_type: str | None) -> str:
+    tier_root = _GROUP_BUNDLE_TIER_ROOTS.get(support_tier)
+    if isinstance(tier_root, str):
+        return tier_root
+    _raise_invalid_grouped_action_resolutions(
+        f"Unsupported grouped support_tier '{support_tier}'.",
+        action_type=action_type,
+    )
+
+
+def _grouped_tier_label(support_tier: str) -> str:
+    return _GROUP_BUNDLE_TIER_LABELS.get(support_tier, "unknown")
+
+
+def _grouped_action_outcome(support_tier: str, *, has_runnable_terraform: bool) -> str:
+    if support_tier == "deterministic_bundle":
+        return "executable_bundle_generated" if has_runnable_terraform else "executable_generation_failed"
+    if support_tier == "review_required_bundle":
+        return "review_required_metadata_only"
+    return "manual_guidance_metadata_only"
+
+
+def _grouped_decision_summary(
+    resolution: Mapping[str, Any],
+    *,
+    support_tier: str,
+    outcome: str,
+) -> str:
+    rationale = str(resolution.get("decision_rationale") or "").strip()
+    if rationale:
+        return rationale
+    if outcome == "executable_generation_failed":
+        return "Executable remediation failed to render; metadata was preserved without runnable Terraform."
+    if support_tier == "deterministic_bundle":
+        return "Executable Terraform was generated for this action."
+    if support_tier == "review_required_bundle":
+        return "Review is required before any implementation; this folder is metadata only."
+    return "Manual guidance only; this folder does not contain runnable Terraform."
+
+
+def _prefixed_group_bundle_files(
+    bundle: Mapping[str, Any],
+    *,
+    folder: str,
+) -> tuple[list[dict[str, str]], bool]:
+    files: list[dict[str, str]] = []
+    has_terraform = False
+    for file_item in bundle.get("files", []):
+        if not isinstance(file_item, dict):
+            continue
+        path = str(file_item.get("path") or "file")
+        content = file_item.get("content")
+        if content is None:
+            content = ""
+        elif not isinstance(content, str):
+            content = str(content)
+        if path.endswith(".tf"):
+            has_terraform = True
+        files.append({"path": f"{folder}/{path}", "content": content})
+    return files, has_terraform
+
+
+def _grouped_action_record(
+    action: Action,
+    decision: _GroupedActionDecision,
+    *,
+    index: int,
+    folder: str,
+    tier_root: str,
+    outcome: str,
+    has_runnable_terraform: bool,
+    generation_error: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    action_id = str(action.id)
+    resolution = _grouped_decision_payload(decision, action_id=action_id, action_type=action.action_type)
+    record = {
+        "index": index + 1,
+        "action_id": action_id,
+        "action_type": str(action.action_type or ""),
+        "title": str(action.title or ""),
+        "control_id": str(action.control_id or ""),
+        "target_id": str(action.target_id or ""),
+        "strategy_id": str(resolution.get("strategy_id") or ""),
+        "profile_id": str(resolution.get("profile_id") or ""),
+        "support_tier": decision.support_tier,
+        "tier": _grouped_tier_label(decision.support_tier),
+        "tier_root": tier_root,
+        "folder": folder,
+        "outcome": outcome,
+        "has_runnable_terraform": has_runnable_terraform,
+        "decision_version": str(resolution.get("decision_version") or ""),
+        "decision_rationale": str(resolution.get("decision_rationale") or ""),
+        "decision_summary": _grouped_decision_summary(
+            resolution,
+            support_tier=decision.support_tier,
+            outcome=outcome,
+        ),
+        "strategy_inputs": copy.deepcopy(decision.strategy_inputs),
+        "missing_inputs": copy.deepcopy(list(resolution.get("missing_inputs") or [])),
+        "missing_defaults": copy.deepcopy(list(resolution.get("missing_defaults") or [])),
+        "blocked_reasons": copy.deepcopy(list(resolution.get("blocked_reasons") or [])),
+        "rejected_profiles": copy.deepcopy(list(resolution.get("rejected_profiles") or [])),
+        "finding_coverage": copy.deepcopy(dict(resolution.get("finding_coverage") or {})),
+        "preservation_summary": copy.deepcopy(dict(resolution.get("preservation_summary") or {})),
+    }
+    if generation_error is not None:
+        record["generation_error"] = copy.deepcopy(dict(generation_error))
+    return record
+
+
+def _grouped_action_readme(record: Mapping[str, Any]) -> str:
+    lines = [
+        "AWS Security Autopilot — Group action artifact",
+        "",
+        f"Action: {record.get('title') or 'Untitled action'}",
+        f"Action ID: {record.get('action_id') or ''}",
+        f"Tier: {record.get('tier') or ''}",
+        f"Tier root: {record.get('tier_root') or ''}",
+        f"Outcome: {record.get('outcome') or ''}",
+        f"Strategy: {record.get('strategy_id') or ''}",
+        f"Profile: {record.get('profile_id') or ''}",
+        "",
+        f"Decision summary: {record.get('decision_summary') or ''}",
+    ]
+    if record.get("has_runnable_terraform"):
+        lines.append("Runnable Terraform is present in this folder.")
+    else:
+        lines.append("This folder is metadata only and does not contain runnable Terraform.")
+    return "\n".join(lines) + "\n"
+
+
+def _grouped_action_decision_file(record: Mapping[str, Any]) -> str:
+    return json.dumps(record, indent=2, sort_keys=True) + "\n"
+
+
+def _append_grouped_action_metadata_files(files: list[dict[str, str]], record: Mapping[str, Any]) -> None:
+    folder = str(record.get("folder") or "")
+    files.append({"path": f"{folder}/README_ACTION.txt", "content": _grouped_action_readme(record)})
+    files.append({"path": f"{folder}/decision.json", "content": _grouped_action_decision_file(record)})
+    generation_error = record.get("generation_error")
+    if isinstance(generation_error, Mapping):
+        files.append(
+            {
+                "path": f"{folder}/generation_error.json",
+                "content": json.dumps(dict(generation_error), indent=2, sort_keys=True) + "\n",
+            }
+        )
+
+
+def _grouped_tier_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    return {
+        "executable": sum(1 for record in records if record.get("tier") == "executable"),
+        "review_required": sum(1 for record in records if record.get("tier") == "review_required"),
+        "manual_guidance": sum(1 for record in records if record.get("tier") == "manual_guidance"),
+    }
+
+
+def _grouped_bundle_manifest(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    runner_template_source: str,
+    runner_template_version: str,
+) -> dict[str, Any]:
+    return {
+        "layout_version": GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION,
+        "execution_root": GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT,
+        "action_count": len(records),
+        "grouped_actions": [record["action_id"] for record in records],
+        "actions": [copy.deepcopy(dict(record)) for record in records],
+        "tier_counts": _grouped_tier_counts(records),
+        "runnable_action_count": sum(
+            1 for record in records if bool(record.get("has_runnable_terraform"))
+        ),
+        "runner_template_source": runner_template_source,
+        "runner_template_version": runner_template_version,
+    }
+
+
+def _grouped_decision_log(records: Sequence[Mapping[str, Any]]) -> str:
+    lines = ["# Decision Log", ""]
+    for record in records:
+        lines.extend(
+            [
+                f"## {record.get('index')}. {record.get('title') or 'Untitled action'}",
+                f"- Action ID: {record.get('action_id') or ''}",
+                f"- Tier: {record.get('tier_root') or ''}",
+                f"- Outcome: {record.get('outcome') or ''}",
+                f"- Strategy/Profile: {record.get('strategy_id') or ''} / {record.get('profile_id') or ''}",
+                f"- Summary: {record.get('decision_summary') or ''}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _grouped_finding_coverage(records: Sequence[Mapping[str, Any]]) -> str:
+    payload = {
+        "layout_version": GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION,
+        "actions": [
+            {
+                "action_id": record["action_id"],
+                "support_tier": record["support_tier"],
+                "finding_coverage": copy.deepcopy(dict(record.get("finding_coverage") or {})),
+            }
+            for record in records
+        ],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def _grouped_tier_section(records: Sequence[Mapping[str, Any]], *, tier: str) -> list[str]:
+    lines: list[str] = []
+    for record in records:
+        if record.get("tier") != tier:
+            continue
+        lines.append(
+            f"- {record.get('index')}. {record.get('title') or 'Untitled action'} "
+            f"({record.get('outcome') or ''}) -> {record.get('folder') or ''}"
+        )
+    if lines:
+        return lines
+    return ["- none"]
+
+
+def _grouped_bundle_readme(records: Sequence[Mapping[str, Any]]) -> str:
+    lines = [
+        "AWS Security Autopilot — Mixed-tier Group PR bundle",
+        "",
+        f"Layout version: {GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION}",
+        f"Execution root: {GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT}",
+        "",
+        "Only executable Terraform lives under executable/actions/.",
+        "review_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.",
+        "run_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.",
+        "",
+        "Run from bundle root:",
+        "  chmod +x ./run_all.sh",
+        "  ./run_all.sh",
+        "",
+        "Executable actions:",
+        *_grouped_tier_section(records, tier="executable"),
+        "",
+        "Review-required actions:",
+        *_grouped_tier_section(records, tier="review_required"),
+        "",
+        "Manual-guidance actions:",
+        *_grouped_tier_section(records, tier="manual_guidance"),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _validate_grouped_bundle_records(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    action_type: str | None,
+) -> None:
+    if not records:
+        _raise_invalid_grouped_bundle_layout(
+            "Grouped bundle generation produced zero represented actions.",
+            action_type=action_type,
+        )
+    folders = [str(record.get("folder") or "") for record in records]
+    if any(not folder for folder in folders):
+        _raise_invalid_grouped_bundle_layout(
+            "Grouped bundle generation produced an empty action folder path.",
+            action_type=action_type,
+        )
+    if len(set(folders)) != len(folders):
+        _raise_invalid_grouped_bundle_layout(
+            "Grouped bundle generation produced duplicate action folder paths.",
+            action_type=action_type,
+        )
 
 
 def _build_reporting_wrapper_script(
@@ -1094,6 +1635,172 @@ echo "All action folders completed successfully."
     }
 
 
+def _generate_mixed_tier_group_pr_bundle(
+    actions: list[Action],
+    *,
+    action_decisions: Sequence[_GroupedActionDecision],
+    callback_url: str | None = None,
+    report_token: str | None = None,
+) -> dict[str, Any]:
+    files: list[dict[str, str]] = []
+    records: list[dict[str, Any]] = []
+    runnable_action_ids: list[uuid.UUID] = []
+    skipped_actions: list[dict[str, Any]] = []
+    first_generation_error: PRBundleGenerationError | None = None
+    action_type = actions[0].action_type if actions else None
+
+    if len(actions) != len(action_decisions):
+        _raise_invalid_grouped_bundle_layout(
+            "Grouped action decision count does not match grouped action count.",
+            action_type=action_type,
+        )
+
+    runner_script, template_source, template_version = _mixed_tier_runner_script()
+
+    for index, (action, decision) in enumerate(zip(actions, action_decisions)):
+        if decision.action_id != action.id:
+            _raise_invalid_grouped_bundle_layout(
+                "Grouped action decision order does not match grouped action order.",
+                action_type=action.action_type,
+            )
+        tier_root = _grouped_tier_root(decision.support_tier, action_type=action.action_type)
+        folder = _safe_group_folder_name(action, index, root=tier_root)
+        has_runnable_terraform = False
+        generation_error: dict[str, Any] | None = None
+        if decision.support_tier == "deterministic_bundle":
+            try:
+                per_action_bundle = generate_pr_bundle(
+                    action,
+                    format="terraform",
+                    strategy_id=decision.strategy_id,
+                    strategy_inputs=decision.strategy_inputs,
+                )
+            except PRBundleGenerationError as error:
+                if first_generation_error is None:
+                    first_generation_error = error
+                generation_error = error.as_dict()
+                skipped_actions.append(
+                    {
+                        "action_id": str(action.id),
+                        "code": str(generation_error.get("code") or "pr_bundle_generation_error"),
+                        "detail": str(
+                            generation_error.get("detail") or "PR bundle generation failed for this action."
+                        ),
+                        "target_id": str(action.target_id or ""),
+                        "support_tier": decision.support_tier,
+                    }
+                )
+            else:
+                action_files, has_runnable_terraform = _prefixed_group_bundle_files(
+                    per_action_bundle,
+                    folder=folder,
+                )
+                if not has_runnable_terraform:
+                    _raise_invalid_grouped_bundle_layout(
+                        f"Executable action '{action.id}' produced no Terraform files.",
+                        action_type=action.action_type,
+                    )
+                files.extend(action_files)
+                runnable_action_ids.append(action.id)
+        outcome = _grouped_action_outcome(
+            decision.support_tier,
+            has_runnable_terraform=has_runnable_terraform,
+        )
+        record = _grouped_action_record(
+            action,
+            decision,
+            index=index,
+            folder=folder,
+            tier_root=tier_root,
+            outcome=outcome,
+            has_runnable_terraform=has_runnable_terraform,
+            generation_error=generation_error,
+        )
+        records.append(record)
+        _append_grouped_action_metadata_files(files, record)
+
+    _validate_grouped_bundle_records(records, action_type=action_type)
+    if not runnable_action_ids and first_generation_error is not None:
+        if all(record.get("tier") == "executable" for record in records):
+            raise first_generation_error
+
+    manifest = _grouped_bundle_manifest(
+        records,
+        runner_template_source=template_source,
+        runner_template_version=template_version,
+    )
+    files.insert(
+        0,
+        {
+            "path": "finding_coverage.json",
+            "content": _grouped_finding_coverage(records),
+        },
+    )
+    files.insert(
+        0,
+        {
+            "path": "decision_log.md",
+            "content": _grouped_decision_log(records) + "\n",
+        },
+    )
+    files.insert(
+        0,
+        {
+            "path": "bundle_manifest.json",
+            "content": json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        },
+    )
+    files.insert(
+        0,
+        {
+            "path": "README_GROUP.txt",
+            "content": _grouped_bundle_readme(records),
+        },
+    )
+    if callback_url and report_token:
+        files.insert(0, {"path": "run_actions.sh", "content": runner_script})
+        files.insert(
+            0,
+            {
+                "path": "run_all.sh",
+                "content": _build_reporting_wrapper_script(
+                    callback_url=callback_url,
+                    report_token=report_token,
+                    action_ids=runnable_action_ids,
+                ),
+            },
+        )
+    else:
+        files.insert(0, {"path": "run_all.sh", "content": runner_script})
+
+    tier_counts = manifest["tier_counts"]
+    return {
+        "format": "terraform",
+        "files": files,
+        "steps": [
+            "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+            "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+            "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only.",
+        ],
+        "metadata": {
+            "layout_version": GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION,
+            "execution_root": GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT,
+            "runner_template_source": template_source,
+            "runner_template_version": template_version,
+            "requested_action_count": len(actions),
+            "generated_action_count": len(records),
+            "represented_action_count": len(records),
+            "runnable_action_count": len(runnable_action_ids),
+            "skipped_action_count": len(skipped_actions),
+            "skipped_actions": skipped_actions,
+            "tier_counts": tier_counts,
+            "executable_action_count": int(tier_counts["executable"]),
+            "review_required_action_count": int(tier_counts["review_required"]),
+            "manual_guidance_action_count": int(tier_counts["manual_guidance"]),
+        },
+    }
+
+
 def _execute_direct_fix(session: Session, run: RemediationRun, log_lines: list[str]) -> None:
     """
     Execute direct fix: load action and account, assume WriteRole, call run_direct_fix.
@@ -1507,13 +2214,21 @@ def execute_remediation_run_job(job: dict) -> None:
                                 risk_acknowledged=risk_acknowledged,
                                 action_type=action.action_type,
                             )
-                            pr_bundle = _generate_group_pr_bundle(
-                                ordered_actions,
-                                action_decisions=action_decisions,
-                                variant=effective_variant if decision_source == "legacy" else None,
-                                callback_url=group_reporting_callback_url,
-                                report_token=group_reporting_token,
-                            )
+                            if decision_source == "legacy":
+                                pr_bundle = _generate_group_pr_bundle(
+                                    ordered_actions,
+                                    action_decisions=action_decisions,
+                                    variant=effective_variant,
+                                    callback_url=group_reporting_callback_url,
+                                    report_token=group_reporting_token,
+                                )
+                            else:
+                                pr_bundle = _generate_mixed_tier_group_pr_bundle(
+                                    ordered_actions,
+                                    action_decisions=action_decisions,
+                                    callback_url=group_reporting_callback_url,
+                                    report_token=group_reporting_token,
+                                )
                             grouped_strategy_id = _shared_group_strategy_id(action_decisions)
                             logged_variant = effective_variant if decision_source == "legacy" else None
                             pr_bundle, automation_artifacts = _apply_pr_automation(
@@ -1569,6 +2284,21 @@ def execute_remediation_run_job(job: dict) -> None:
                                         group_bundle["skipped_action_count"] = skipped_count
                                     if isinstance(skipped_actions, list):
                                         group_bundle["skipped_actions"] = skipped_actions
+                                    for key in (
+                                        "layout_version",
+                                        "execution_root",
+                                        "represented_action_count",
+                                        "runnable_action_count",
+                                        "executable_action_count",
+                                        "review_required_action_count",
+                                        "manual_guidance_action_count",
+                                    ):
+                                        value = metadata.get(key)
+                                        if isinstance(value, (str, int)):
+                                            group_bundle[key] = value
+                                    tier_counts = metadata.get("tier_counts")
+                                    if isinstance(tier_counts, dict):
+                                        group_bundle["tier_counts"] = copy.deepcopy(tier_counts)
                                     for key in (
                                         "diff_fingerprint_sha256",
                                         "repo_target_configured",
