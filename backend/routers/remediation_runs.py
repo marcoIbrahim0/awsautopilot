@@ -83,6 +83,8 @@ from backend.services.root_credentials_workflow import (
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
 from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
     build_pr_bundle_execution_job_payload,
     build_remediation_run_job_payload,
     parse_queue_region,
@@ -1495,6 +1497,7 @@ async def create_remediation_run(
                 ),
             )
 
+    canonical_resolution: dict[str, Any] | None = None
     artifacts: dict[str, Any] = {}
     if risk_snapshot:
         artifacts["risk_snapshot"] = risk_snapshot
@@ -1505,17 +1508,18 @@ async def create_remediation_run(
     if repo_target_payload:
         artifacts["repo_target"] = repo_target_payload
     if body.mode == "pr_only" and selected_strategy and selected_profile_id:
+        canonical_resolution = build_single_run_resolution(
+            action=action,
+            strategy=selected_strategy,
+            profile_id=selected_profile_id,
+            strategy_inputs=selected_strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            risk_acknowledged=body.risk_acknowledged,
+            requested_profile_id=requested_profile_id,
+        )
         artifacts = apply_resolution_artifacts(
             artifacts,
-            resolution=build_single_run_resolution(
-                action=action,
-                strategy=selected_strategy,
-                profile_id=selected_profile_id,
-                strategy_inputs=selected_strategy_inputs,
-                risk_snapshot=risk_snapshot,
-                risk_acknowledged=body.risk_acknowledged,
-                requested_profile_id=requested_profile_id,
-            ),
+            resolution=canonical_resolution,
             strategy_id=selected_strategy_id,
             strategy_inputs=selected_strategy_inputs,
             pr_bundle_variant=normalized_variant,
@@ -1596,6 +1600,12 @@ async def create_remediation_run(
         strategy_inputs=selected_strategy_inputs,
         risk_acknowledged=body.risk_acknowledged,
         repo_target=repo_target_payload,
+        resolution=canonical_resolution,
+        schema_version=(
+            REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+            if canonical_resolution is not None
+            else REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
+        ),
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
@@ -1873,7 +1883,7 @@ async def create_group_pr_bundle_run(
     await db.refresh(run)
 
     now = datetime.now(timezone.utc).isoformat()
-    queue_fields = plan.queue_v1_payload_fields()
+    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2)
     payload = build_remediation_run_job_payload(
         run.id,
         tenant_uuid,
@@ -1886,6 +1896,8 @@ async def create_group_pr_bundle_run(
         risk_acknowledged=bool(queue_fields.get("risk_acknowledged")),
         group_action_ids=queue_fields.get("group_action_ids"),
         repo_target=queue_fields.get("repo_target"),
+        action_resolutions=queue_fields.get("action_resolutions"),
+        schema_version=REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)
@@ -3045,6 +3057,7 @@ async def resend_remediation_run(
         artifacts=run.artifacts if isinstance(run.artifacts, dict) else None,
         mode=run.mode.value,
     )
+    schema_version = int(queue_inputs.get("schema_version") or REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1)
     payload = build_remediation_run_job_payload(
         run.id,
         run.tenant_id,
@@ -3057,6 +3070,13 @@ async def resend_remediation_run(
         risk_acknowledged=bool(queue_inputs.get("risk_acknowledged")),
         group_action_ids=queue_inputs.get("group_action_ids"),
         repo_target=queue_inputs.get("repo_target"),
+        resolution=queue_inputs.get("resolution") if schema_version == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2 else None,
+        action_resolutions=(
+            queue_inputs.get("action_resolutions")
+            if schema_version == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+            else None
+        ),
+        schema_version=schema_version,
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     queue_region = parse_queue_region(queue_url)

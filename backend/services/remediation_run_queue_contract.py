@@ -5,6 +5,10 @@ import copy
 from typing import Any, Mapping, Sequence
 
 from backend.services.remediation_profile_resolver import build_compat_resolution_decision
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+)
 
 
 def normalize_single_run_request_signature(
@@ -98,14 +102,23 @@ def reconstruct_resend_queue_inputs(
 ) -> dict[str, Any]:
     artifacts_dict = _artifacts_dict(artifacts)
     group_action_ids = _group_action_ids(artifacts_dict) or None
+    canonical_resolution = _canonical_resolution(artifacts_dict.get("resolution"))
+    canonical_action_resolutions = None
     resolution = None
     action_resolutions = None
+    schema_version = REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
     if _normalized_text(mode) == "pr_only":
         if group_action_ids:
-            action_resolutions = _canonical_or_legacy_group_action_resolutions(artifacts_dict)
+            canonical_action_resolutions = _canonical_group_action_resolutions(artifacts_dict)
+            action_resolutions = canonical_action_resolutions or _legacy_group_action_resolutions(artifacts_dict)
+            if canonical_action_resolutions:
+                schema_version = REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
         else:
-            resolution = _canonical_or_legacy_single_resolution(artifacts_dict)
+            resolution = canonical_resolution or _canonical_or_legacy_single_resolution(artifacts_dict)
+            if canonical_resolution is not None:
+                schema_version = REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     return {
+        "schema_version": schema_version,
         "pr_bundle_variant": _normalized_text(artifacts_dict.get("pr_bundle_variant")),
         "strategy_id": _preferred_strategy_id(artifacts_dict, resolution),
         "strategy_inputs": _normalized_mapping(artifacts_dict.get("strategy_inputs")),
@@ -172,14 +185,19 @@ def _canonical_or_legacy_single_resolution(artifacts: Mapping[str, Any]) -> dict
 def _canonical_or_legacy_group_action_resolutions(
     artifacts: Mapping[str, Any],
 ) -> list[dict[str, Any]] | None:
+    canonical = _canonical_group_action_resolutions(artifacts)
+    if canonical:
+        return canonical
+    return _legacy_group_action_resolutions(artifacts)
+
+
+def _canonical_group_action_resolutions(artifacts: Mapping[str, Any]) -> list[dict[str, Any]] | None:
     group_bundle = _artifacts_dict(artifacts.get("group_bundle"))
     canonical = _normalized_action_resolution_payloads(
         group_bundle.get("action_resolutions"),
         risk_acknowledged=bool(artifacts.get("risk_acknowledged")),
     )
-    if canonical:
-        return canonical
-    return _legacy_group_action_resolutions(artifacts)
+    return canonical or None
 
 
 def _legacy_group_action_resolutions(artifacts: Mapping[str, Any]) -> list[dict[str, Any]] | None:

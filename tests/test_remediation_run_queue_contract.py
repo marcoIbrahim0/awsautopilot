@@ -8,6 +8,10 @@ from backend.services.remediation_run_queue_contract import (
     normalize_grouped_run_request_signature,
     reconstruct_resend_queue_inputs,
 )
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+)
 
 
 def test_reconstruct_resend_queue_inputs_prefers_canonical_single_resolution() -> None:
@@ -37,6 +41,7 @@ def test_reconstruct_resend_queue_inputs_prefers_canonical_single_resolution() -
         mode="pr_only",
     )
 
+    assert queue_inputs["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert queue_inputs["strategy_id"] == "cloudtrail_enable_guided"
     assert queue_inputs["strategy_inputs"] == {"trail_name": "legacy-trail"}
     assert queue_inputs["pr_bundle_variant"] == "terraform"
@@ -82,6 +87,7 @@ def test_reconstruct_resend_queue_inputs_prefers_canonical_grouped_action_resolu
         mode="pr_only",
     )
 
+    assert queue_inputs["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert queue_inputs["group_action_ids"] == [action_id]
     assert queue_inputs["action_resolutions"] == action_resolutions
     assert queue_inputs["resolution"] is None
@@ -97,6 +103,7 @@ def test_reconstruct_resend_queue_inputs_derives_legacy_single_resolution() -> N
         mode="pr_only",
     )
 
+    assert queue_inputs["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
     resolution = queue_inputs["resolution"]
     assert resolution is not None
     assert resolution["strategy_id"] == "cloudtrail_enable_guided"
@@ -120,6 +127,7 @@ def test_reconstruct_resend_queue_inputs_derives_legacy_grouped_action_resolutio
         mode="pr_only",
     )
 
+    assert queue_inputs["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
     action_resolutions = queue_inputs["action_resolutions"]
     assert queue_inputs["group_action_ids"] == [action_one, action_two]
     assert [entry["action_id"] for entry in action_resolutions] == [action_one, action_two]

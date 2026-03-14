@@ -14,6 +14,7 @@ from backend.database import get_db
 from backend.main import app
 from backend.services.direct_fix_approval import DIRECT_FIX_APPROVAL_ARTIFACT_KEY
 from backend.services.remediation_profile_resolver import RESOLVER_DECISION_VERSION_V1
+from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
 
 
 def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
@@ -158,8 +159,10 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
     assert run.artifacts["selected_strategy"] == "s3_migrate_cloudfront_oac_private"
     assert run.artifacts["strategy_inputs"] == {}
     assert run.artifacts["pr_bundle_variant"] == "cloudfront_oac_private_s3"
-    assert _queued_payload(mock_sqs)["schema_version"] == 1
-    assert "profile_id" not in _queued_payload(mock_sqs)
+    payload = _queued_payload(mock_sqs)
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["resolution"] == resolution
+    assert "profile_id" not in payload
 
 
 def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_required_tier(client: TestClient) -> None:
@@ -197,8 +200,10 @@ def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_requir
     }
     assert run.artifacts["selected_strategy"] == "config_enable_centralized_delivery"
     assert run.artifacts["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
-    assert _queued_payload(mock_sqs)["schema_version"] == 1
-    assert "profile_id" not in _queued_payload(mock_sqs)
+    payload = _queued_payload(mock_sqs)
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["resolution"] == resolution
+    assert "profile_id" not in payload
 
 
 def test_pr_only_create_invalid_profile_id_returns_400(client: TestClient) -> None:

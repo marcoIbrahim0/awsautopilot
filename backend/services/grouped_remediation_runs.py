@@ -24,6 +24,10 @@ from backend.services.remediation_strategy import (
     validate_strategy,
     validate_strategy_inputs,
 )
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+)
 
 
 class GroupedRemediationRunValidationError(ValueError):
@@ -105,7 +109,7 @@ class GroupedRunPersistencePlan:
     action_resolutions: tuple[GroupedActionResolutionEntry, ...]
     artifacts: dict[str, Any]
 
-    def queue_v1_payload_fields(self) -> dict[str, Any]:
+    def queue_payload_fields_for_schema(self, schema_version: int) -> dict[str, Any]:
         payload: dict[str, Any] = {"group_action_ids": list(self.action_ids)}
         _set_optional(payload, "pr_bundle_variant", self.request.pr_bundle_variant)
         _set_optional(payload, "strategy_id", self.request.strategy_id)
@@ -113,6 +117,10 @@ class GroupedRunPersistencePlan:
         _set_optional_mapping(payload, "repo_target", self.request.repo_target)
         if self.request.risk_acknowledged:
             payload["risk_acknowledged"] = True
+        if schema_version == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2:
+            payload["action_resolutions"] = [entry.to_artifact_payload() for entry in self.action_resolutions]
+        elif schema_version != REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1:
+            raise ValueError(f"Unsupported remediation_run schema_version={schema_version}")
         return payload
 
 

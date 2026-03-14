@@ -16,6 +16,10 @@ from backend.services.grouped_remediation_runs import (
     normalize_grouped_request_from_action_group,
     normalize_grouped_request_from_remediation_runs,
 )
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+)
 
 
 @dataclass(slots=True)
@@ -312,10 +316,11 @@ def test_repo_target_normalization_is_preserved_in_artifacts_and_queue_fields() 
     }
     assert plan.request.repo_target == expected_repo_target
     assert plan.artifacts["repo_target"] == expected_repo_target
-    assert plan.queue_v1_payload_fields()["repo_target"] == expected_repo_target
+    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1)
+    assert queue_fields["repo_target"] == expected_repo_target
 
 
-def test_queue_v1_payload_fields_do_not_leak_queue_v2_or_worker_assumptions() -> None:
+def test_queue_payload_fields_for_schema_v1_do_not_leak_queue_v2_or_worker_assumptions() -> None:
     action_one = _make_action(priority=80, minutes_ago=1)
     request = NormalizedGroupedRunRequest(
         strategy_id="s3_migrate_cloudfront_oac_private",
@@ -334,7 +339,7 @@ def test_queue_v1_payload_fields_do_not_leak_queue_v2_or_worker_assumptions() ->
         group_bundle_seed={"group_key": "group-1"},
     )
 
-    queue_fields = plan.queue_v1_payload_fields()
+    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1)
     assert queue_fields == {
         "group_action_ids": [str(action_one.id)],
         "strategy_id": "s3_migrate_cloudfront_oac_private",
@@ -349,6 +354,31 @@ def test_queue_v1_payload_fields_do_not_leak_queue_v2_or_worker_assumptions() ->
     assert "profile_id" not in queue_fields
     assert "action_overrides" not in queue_fields
     assert "action_resolutions" not in queue_fields
+
+
+def test_queue_payload_fields_for_schema_v2_include_canonical_action_resolutions() -> None:
+    action_one = _make_action(priority=80, minutes_ago=1, action_type="aws_config_enabled")
+    action_two = _make_action(priority=70, minutes_ago=2, action_type="aws_config_enabled")
+    request = NormalizedGroupedRunRequest(
+        strategy_id="config_enable_centralized_delivery",
+        strategy_inputs={"delivery_bucket": "central-config-bucket"},
+        repo_target={"repository": "org/repo", "base_branch": "main"},
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="aws_config_enabled"),
+        actions=[action_one, action_two],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2)
+    assert queue_fields["group_action_ids"] == [str(action_one.id), str(action_two.id)]
+    assert queue_fields["repo_target"] == {"repository": "org/repo", "base_branch": "main"}
+    assert [entry["action_id"] for entry in queue_fields["action_resolutions"]] == [
+        str(action_one.id),
+        str(action_two.id),
+    ]
 
 
 def _make_action(

@@ -26,6 +26,10 @@ from backend.services.remediation_strategy import (
     list_strategies_for_action_type,
     validate_strategy_inputs,
 )
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+)
 
 
 def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
@@ -776,16 +780,16 @@ def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
     assert mock_sqs.send_message.call_count == 1
     metric_names = [call.args[1] for call in mock_metric.call_args_list if len(call.args) >= 2]
     assert "strategy_selected_count" in metric_names
+    run = session.add.call_args.args[0]
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert payload["action_id"] == str(action1.id)
     assert payload["strategy_id"] == "s3_migrate_cloudfront_oac_private"
     assert payload["group_action_ids"] == [str(action1.id), str(action2.id)]
     assert payload["risk_acknowledged"] is True
     assert "action_overrides" not in payload
-    assert "action_resolutions" not in payload
+    assert payload["action_resolutions"] == run.artifacts["group_bundle"]["action_resolutions"]
 
-    run = session.add.call_args.args[0]
     assert run.action_id == action1.id
     assert run.artifacts["selected_strategy"] == "s3_migrate_cloudfront_oac_private"
     resolutions = run.artifacts["group_bundle"]["action_resolutions"]
@@ -848,13 +852,15 @@ def test_create_group_pr_bundle_accepts_action_overrides(client: TestClient) -> 
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
+    run = session.add.call_args.args[0]
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert payload["strategy_id"] == "config_enable_centralized_delivery"
     assert payload["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
     assert payload["group_action_ids"] == [str(action1.id), str(action2.id)]
+    assert payload["action_resolutions"] == run.artifacts["group_bundle"]["action_resolutions"]
     assert "action_overrides" not in payload
 
-    run = session.add.call_args.args[0]
     assert run.artifacts["selected_strategy"] == "config_enable_centralized_delivery"
     resolutions = {
         entry["action_id"]: entry
@@ -1308,13 +1314,177 @@ def test_resend_run_legacy_grouped_artifacts_requeue_schema_v1(client: TestClien
 
     assert r.status_code == 200
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
     assert payload["strategy_id"] == "config_enable_centralized_delivery"
     assert payload["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
     assert payload["group_action_ids"] == run.artifacts["group_bundle"]["action_ids"]
     assert payload["repo_target"] == {"repository": "acme/live", "base_branch": "main"}
     assert "resolution" not in payload
     assert "action_resolutions" not in payload
+
+
+def test_resend_run_canonical_single_resolution_requeues_schema_v2(client: TestClient) -> None:
+    from backend.auth import get_optional_user
+
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    resolution = {
+        "strategy_id": "cloudtrail_enable_guided",
+        "profile_id": "cloudtrail_enable_guided",
+        "support_tier": "review_required_bundle",
+        "resolved_inputs": {"trail_name": "security-trail"},
+        "missing_inputs": [],
+        "missing_defaults": [],
+        "blocked_reasons": [],
+        "rejected_profiles": [],
+        "finding_coverage": {},
+        "preservation_summary": {},
+        "decision_rationale": "",
+        "decision_version": "resolver/v1",
+    }
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.action_id = uuid.uuid4()
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.pending
+    run.artifacts = {
+        "selected_strategy": "cloudtrail_enable_guided",
+        "strategy_inputs": {"trail_name": "legacy-trail"},
+        "pr_bundle_variant": "terraform",
+        "resolution": resolution,
+    }
+
+    session = _mock_async_session(tenant, run)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-resend-canonical-single"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.is_local = True
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(f"/api/remediation-runs/{run.id}/resend")
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["strategy_id"] == "cloudtrail_enable_guided"
+    assert payload["strategy_inputs"] == {"trail_name": "legacy-trail"}
+    assert payload["resolution"] == resolution
+    assert "action_resolutions" not in payload
+
+
+def test_resend_run_canonical_grouped_resolutions_requeue_schema_v2(client: TestClient) -> None:
+    from backend.auth import get_optional_user
+
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action_one = str(uuid.uuid4())
+    action_two = str(uuid.uuid4())
+    action_resolutions = [
+        {
+            "action_id": action_one,
+            "strategy_id": "config_enable_account_local_delivery",
+            "profile_id": "config_enable_account_local_delivery",
+            "strategy_inputs": {},
+            "resolution": {
+                "strategy_id": "config_enable_account_local_delivery",
+                "profile_id": "config_enable_account_local_delivery",
+                "support_tier": "deterministic_bundle",
+                "resolved_inputs": {},
+                "missing_inputs": [],
+                "missing_defaults": [],
+                "blocked_reasons": [],
+                "rejected_profiles": [],
+                "finding_coverage": {},
+                "preservation_summary": {},
+                "decision_rationale": "",
+                "decision_version": "resolver/v1",
+            },
+        },
+        {
+            "action_id": action_two,
+            "strategy_id": "config_enable_centralized_delivery",
+            "profile_id": "config_enable_centralized_delivery",
+            "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+            "resolution": {
+                "strategy_id": "config_enable_centralized_delivery",
+                "profile_id": "config_enable_centralized_delivery",
+                "support_tier": "review_required_bundle",
+                "resolved_inputs": {"delivery_bucket": "central-config-bucket"},
+                "missing_inputs": [],
+                "missing_defaults": [],
+                "blocked_reasons": [],
+                "rejected_profiles": [],
+                "finding_coverage": {},
+                "preservation_summary": {},
+                "decision_rationale": "",
+                "decision_version": "resolver/v1",
+            },
+        },
+    ]
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = tenant.id
+    run.action_id = uuid.uuid4()
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.pending
+    run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "repo_target": {"repository": "acme/live", "base_branch": "main"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [action_one, action_two],
+            "action_resolutions": action_resolutions,
+        },
+    }
+
+    session = _mock_async_session(tenant, run)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-resend-canonical-group"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.is_local = True
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(f"/api/remediation-runs/{run.id}/resend")
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
+    assert payload["group_action_ids"] == [action_one, action_two]
+    assert payload["repo_target"] == {"repository": "acme/live", "base_branch": "main"}
+    assert payload["action_resolutions"] == action_resolutions
+    assert "resolution" not in payload
 
 
 def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: TestClient) -> None:

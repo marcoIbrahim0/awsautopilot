@@ -16,6 +16,7 @@ from backend.main import app
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
 
 
 @pytest.fixture(autouse=True)
@@ -220,14 +221,14 @@ def test_create_action_group_bundle_run_preserves_reporting_and_repo_target(clie
     assert {entry["profile_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
 
     queue_payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
-    assert queue_payload["schema_version"] == 1
+    assert queue_payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert queue_payload["run_id"] == str(remediation_run.id)
     assert queue_payload["action_id"] == str(action1.id)
     assert queue_payload["strategy_id"] == "s3_migrate_cloudfront_oac_private"
     assert queue_payload["group_action_ids"] == [str(action1.id), str(action2.id)]
     assert queue_payload["repo_target"] == artifacts["repo_target"]
     assert "action_overrides" not in queue_payload
-    assert "action_resolutions" not in queue_payload
+    assert queue_payload["action_resolutions"] == resolutions
 
 
 def test_create_action_group_bundle_run_accepts_action_overrides(client: TestClient) -> None:

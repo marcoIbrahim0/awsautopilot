@@ -33,7 +33,11 @@ from backend.services.grouped_remediation_runs import (
     normalize_grouped_request_from_action_group,
 )
 from backend.services.remediation_strategy import strategy_required_for_action_type
-from backend.utils.sqs import build_remediation_run_job_payload, parse_queue_region
+from backend.utils.sqs import (
+    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
+    build_remediation_run_job_payload,
+    parse_queue_region,
+)
 
 router = APIRouter(prefix="/action-groups", tags=["action-groups"])
 logger = logging.getLogger("backend.routers.action_groups")
@@ -399,7 +403,7 @@ async def _enqueue_group_bundle_run_or_503(
     remediation_run: RemediationRun,
     tenant_id: uuid.UUID,
 ) -> None:
-    queue_fields = plan.queue_v1_payload_fields()
+    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2)
     payload = build_remediation_run_job_payload(
         run_id=remediation_run.id,
         tenant_id=tenant_id,
@@ -412,6 +416,8 @@ async def _enqueue_group_bundle_run_or_503(
         risk_acknowledged=bool(queue_fields.get("risk_acknowledged")),
         group_action_ids=queue_fields.get("group_action_ids"),
         repo_target=queue_fields.get("repo_target"),
+        action_resolutions=queue_fields.get("action_resolutions"),
+        schema_version=REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
     )
     queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
     sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
