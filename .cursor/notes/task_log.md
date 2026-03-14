@@ -1,5 +1,978 @@
 # Task Log
 
+## Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)
+
+**Task:** Consolidate Wave 0 remediation-profile-resolution baseline findings into one mergeable contract-lock doc, cross-link the remediation-profile docs, and update task-history discoverability.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-api-contract-baseline.md** - added the current generic remediation API surface baseline reconstructed from the live code paths.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-legacy-compat-baseline.md** - added the current legacy artifact mirror, duplicate-detection, and resend baseline reconstructed from the live code paths.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-worker-rootkey-baseline.md** - added the current worker schema-version fail-closed and root-key execution-authority baseline reconstructed from the live code paths.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-contract-lock.md** - added the consolidated Wave 0 current-state contract lock that later remediation-profile-resolution waves must preserve.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - added Wave 0 baseline links so the new contract-lock and source baselines are discoverable from the parent doc.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - added one minimal Step 1 navigation link to the Wave 0 contract-lock doc.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this integration task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, main docs index, remediation-profile-resolution spec, and remediation-profile-resolution implementation plan before editing.
+- Reviewed the live remediation routes, worker paths, queue helpers, and root-key router to capture the actual current behavior for:
+  - remediation options and preview
+  - single-run and grouped-run creation
+  - legacy artifact mirrors and their readers
+  - duplicate detection and resend behavior
+  - worker schema-version quarantine behavior
+  - root-key execution-authority boundaries
+- Added three source baseline docs so the Wave 0 integration has concrete inputs and cross-links even though the local `codex/rem-profile-w0-api-surface`, `codex/rem-profile-w0-legacy-compat`, and `codex/rem-profile-w0-worker-rootkey` refs did not contain committed baseline markdown files at integration time.
+- Added a consolidated `wave-0-contract-lock.md` that explicitly locks:
+  - the current API contract surface
+  - legacy mirror fields and consumers
+  - duplicate-detection and resend behavior
+  - worker schema-version fail-closed behavior
+  - the root-key execution-authority boundary
+  - rollback and validation expectations later waves must preserve
+- Kept the result documentation-only and did not change runtime code.
+
+**Validation:**
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-0-contract-lock.md** links all three source baseline docs.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** links the new Wave 0 contract-lock doc.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** now has a minimal Step 1 navigation link to the Wave 0 contract lock.
+- Confirmed **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** and **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** are updated.
+- Confirmed this task stays documentation-only.
+
+**Technical debt / gotchas:**
+- The local `codex/rem-profile-w0-*` refs all pointed at the same base commit and did not contain the expected baseline markdown artifacts, so the three source baselines were reconstructed from the live code paths during integration.
+- Current grouped remediation creation still has a real route-surface gap:
+  - `POST /api/remediation-runs/group-pr-bundle` already accepts `repo_target` and enforces richer duplicate/risk checks
+  - `POST /api/action-groups/{group_id}/bundle-run` does not yet match that surface
+- That grouped-route divergence is locked as current state here; it is not resolved by this Wave 0 documentation pass.
+
+**Open questions / TODOs:**
+- If the original agent-authored baseline markdown files later surface outside the local refs, compare them against these reconstructed baselines and update the docs only if they reveal a real current-state mismatch.
+
+## Remediation profile resolution plan expanded into numbered substeps (2026-03-14)
+
+**Task:** Expand the remediation profile resolution implementation plan from `10 top-level steps` into `10 top-level steps with numbered substeps` so each slice can be implemented one at a time.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - rewrote the plan into `Step N -> N.x substeps -> Step Definition of Done` format, added explicit substeps for all 10 steps, and preserved the same planned interface coverage and migration guardrails.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reworked the implementation plan so each step now breaks down into explicit numbered substeps instead of broad `Objective / Key work / Dependencies / Done when` sections.
+- Kept all 10 existing top-level steps in place and expanded all of them, with mixed depth:
+  - simpler contract-lock and docs-boundary steps stay shorter;
+  - multi-system steps such as resolver design, grouped-route unification, queue/worker migration, bundle layout, settings, and control-family migration now have deeper substep breakdowns.
+- Added a dedicated `Planned Interface Coverage` section so the document still clearly tracks the planned additive interfaces and payload fields:
+  - `POST /api/remediation-runs`
+  - `POST /api/remediation-runs/group-pr-bundle`
+  - `POST /api/action-groups/{group_id}/bundle-run`
+  - `GET/PATCH /api/users/me/remediation-settings`
+  - `profile_id`
+  - `profiles[]`
+  - grouped `action_overrides[]`
+  - `repo_target`
+  - `artifacts.resolution`
+  - `artifacts.group_bundle.action_resolutions`
+  - queue payload schema versioning
+- Preserved the original hard constraints, including:
+  - `direct_fix` remains out of scope;
+  - `strategy_id` remains the public compatibility contract;
+  - grouped runs remain single-row `RemediationRun` records in phase 1;
+  - both grouped bundle creation routes must share one resolver-backed path;
+  - `/api/root-key-remediation-runs` remains the only IAM.4 execution authority.
+
+**Validation:**
+- Confirmed all 10 top-level steps still exist after the rewrite.
+- Confirmed each step now ends with `Step N Definition of Done`.
+- Confirmed the complex steps received deeper substep expansion than the simpler steps.
+- Confirmed this change is documentation-only and did not modify runtime code.
+
+**Technical debt / gotchas:**
+- The rewritten plan is much more execution-oriented, but it is still a planning document rather than a live progress tracker; if implementation starts, a separate checklist or progress view may still be useful.
+- The plan now mixes current repo terminology from earlier edits (`step`) with older related docs that still say `phase` or `slice`. The remediation-profile-resolution folder should keep using `step/substep` consistently going forward.
+
+**Open questions / TODOs:**
+- None for this documentation pass.
+
+## Remediation profile resolution implementation plan organized into steps (2026-03-14)
+
+**Task:** Rework the remediation profile resolution implementation plan so it reads as explicit organized delivery steps instead of higher-level phase sections.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - rewrote the implementation plan into ordered `Step 1` through `Step 10` sections with consistent `Objective`, `Key work`, `Dependencies`, and `Done when` structure while preserving the same technical scope.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reframed the implementation plan around an explicit step index so the migration reads as a sequence of concrete delivery slices instead of broad phases.
+- Normalized each step to the same structure:
+  - objective
+  - key work
+  - dependencies
+  - done-when criteria
+- Kept the original technical constraints intact, including:
+  - `direct_fix` remains out of scope;
+  - `strategy_id` remains the public compatibility contract;
+  - grouped runs remain single-row `RemediationRun` records in phase 1;
+  - both grouped bundle creation routes must share one resolver-backed safety path;
+  - IAM.4 execution authority remains only under `/api/root-key-remediation-runs`.
+
+**Validation:**
+- Reviewed the rewritten implementation plan to confirm all ten original migration slices are still present as ordered steps.
+- Confirmed the rewritten plan still includes the same dependency chain and acceptance criteria style for each delivery slice.
+- Confirmed this task changed documentation only and did not modify runtime code.
+
+**Technical debt / gotchas:**
+- This edit improves structure and readability but does not reduce implementation complexity; later code work still needs to re-verify the live grouped-run, worker, and root-key contracts before treating the plan as the shipped contract.
+- The implementation plan now uses `Step` wording while some related docs and historical notes still use `phase` terminology. If this planning set grows, terminology should stay consistent inside the remediation-profile-resolution folder.
+
+**Open questions / TODOs:**
+- None for this documentation pass.
+
+## Remediation profile resolution doc set (2026-03-14)
+
+**Task:** Create a dedicated docs folder for the remediation profile resolution planning artifact, rewrite the imported plan into a normalized spec, add a serial implementation plan companion, and wire both docs into repo discoverability.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - added the planned remediation profile resolution spec with compatibility rules, resolver model, grouped-run model, artifact persistence, queue/worker migration rules, root-key boundaries, tenant remediation settings, rollout sequence, assumptions, and a Mermaid flow diagram.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - added the serial implementation plan with ten phases covering baseline guardrails, resolver schema/catalog work, options/preview, single-run creation, grouped route unification, queue/worker migration, mixed-tier bundle layout, remediation settings, control-family migration, and final docs rollout.
+- **/Users/marcomaher/AWS Security Autopilot/docs/README.md** - added discoverability links for the new remediation profile resolution docs and listed the new top-level folder under active docs areas.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Imported the planning content from the external remediation profile resolution draft into a dedicated in-repo docs folder rather than leaving it as an ad hoc external file.
+- Normalized the source plan into a spec-style README that keeps the hard decisions explicit:
+  - `direct_fix` remains out of scope;
+  - both grouped bundle creation routes are covered;
+  - `strategy_id` remains the public compatibility contract;
+  - grouped runs stay on the single-`RemediationRun`-row model in phase 1;
+  - `/api/root-key-remediation-runs` remains the only IAM.4 execution authority;
+  - tenant remediation settings stay tenant-scoped and admin-write.
+- Added a separate execution-oriented implementation plan so future implementation work can proceed in serial phases without using the spec doc as a task checklist.
+- Cross-linked the new doc set from the main docs index and linked it back to the existing remediation safety, repo-aware PR automation, and root-key planning docs.
+
+**Validation:**
+- Confirmed the new doc set is referenced from **/Users/marcomaher/AWS Security Autopilot/docs/README.md**.
+- Confirmed the new task-log entry is discoverable from **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md**.
+- Confirmed the new docs are documentation-only and do not claim the planned remediation profile resolution runtime is already implemented.
+
+**Technical debt / gotchas:**
+- The new docs intentionally capture planned behavior, not shipped runtime behavior. If implementation diverges, the spec and implementation plan must be updated before any operator-facing or product-claim docs are revised.
+- The source plan is broad and touches grouped runs, queue payloads, worker layout, and root-key boundaries. Any later implementation should re-verify the live code paths before treating these docs as the shipped contract.
+
+**Open questions / TODOs:**
+- None for the documentation task itself. Runtime implementation remains future work.
+
+## Accounts hub dashboard Neo UI alignment (2026-03-14)
+
+**Task:** Redesign the `/accounts` frontend and its subscreens so the page, quick actions, connect/reconnect flow, and account detail workflows match the current dashboard Neo UI instead of the older isolated neumorphic treatment.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/page.tsx** - rebuilt the accounts hub around the shared dashboard/remediation surface primitives with a stronger hero, KPI grid, tab rail, quick-action health table, and section-specific roles/integrations/lifecycle views.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/ConnectAccountModal.tsx** - moved the connect/reconnect flow onto the dashboard modal chrome and restructured it into clearer Step A / Step B panels with shared surface styling.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountDetailModal.tsx** - switched the account detail workflow onto the shared dashboard modal shell and regrouped refresh, validation, reconciliation, and management actions into dashboard-aligned panels.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountIngestActions.tsx** - restyled the modal refresh controls and success/error feedback to use the shared dashboard callout/inset treatment.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountServiceStatusCheck.tsx** - moved service verification guidance onto a dashboard callout with the account context chip and onboarding handoff CTA.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountReconciliationPanel.tsx** - regrouped reconciliation controls, run telemetry, and schedule settings into dashboard panels/insets without changing the underlying API behavior.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountRowActions.tsx** - added an explicit `Open details` quick action so row-level actions align with the new health table workflow.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/page.test.tsx** - added focused coverage for the redesigned account-hub shell and section switching.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/ConnectAccountModal.test.tsx** - added focused coverage proving the connect modal uses the dashboard chrome and still registers a new account from the pasted ARN.
+- **/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md** - documented that the account hub and its modal workflows now reuse the shared dashboard surface language.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Replaced the older `nm-*`-only accounts shell with the same dashboard surface primitives already used in action-detail and remediation workflows, so the page now reads as part of the same product surface instead of a separate subsystem.
+- Upgraded the health table to include explicit quick actions and a clearer dashboard hierarchy around connection health, coverage, status, and last validation.
+- Converted the connect/reconnect modal into dashboard-style Step A / Step B panels while keeping the existing CloudFormation launch, ARN paste, and region selection behavior intact.
+- Reworked the account detail workflow so refresh, onboarding-only verification guidance, reconciliation, WriteRole setup, and destructive account controls live inside consistent dashboard panels/callouts.
+
+**Validation:**
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run test:ui -- src/app/accounts/page.test.tsx src/app/accounts/ConnectAccountModal.test.tsx` - pass (`2 passed`)
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run typecheck` - pass
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run lint -- src/app/accounts/page.tsx src/app/accounts/ConnectAccountModal.tsx src/app/accounts/AccountDetailModal.tsx src/app/accounts/AccountReconciliationPanel.tsx src/app/accounts/AccountIngestActions.tsx src/app/accounts/AccountServiceStatusCheck.tsx src/app/accounts/AccountRowActions.tsx src/app/accounts/page.test.tsx src/app/accounts/ConnectAccountModal.test.tsx` - pass
+
+**Technical debt / gotchas:**
+- The focused regression coverage is on the redesigned accounts shell and connect modal; the account-detail and reconciliation subviews were validated by lint/typecheck but do not yet have dedicated UI tests.
+- This pass stayed scoped to the accounts flow only. Other older `nm-*` pages, such as some grouped-action and PR-bundle screens, still use the earlier surface treatment.
+
+**Open questions / TODOs:**
+- None.
+
+## Frontend and backend production redeploy (2026-03-14)
+
+**Task:** Redeploy the current frontend and backend production targets from the workspace using the repo's standard Cloudflare and AWS serverless deploy paths.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this redeploy task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Revalidated deploy credentials with `npx wrangler whoami` in `frontend/` and `aws sts get-caller-identity` in the repo root before starting any publish step.
+- Redeployed the frontend from **/Users/marcomaher/AWS Security Autopilot/frontend** with `npm run deploy`, which runs the wrapped OpenNext Cloudflare production path. Cloudflare published Worker version `fb1a7c5f-7533-4792-9759-e849c965a3b9` at `https://frontend.maromaher54.workers.dev`.
+- Redeployed the backend from **/Users/marcomaher/AWS Security Autopilot** with `./scripts/deploy_saas_serverless.sh --region eu-north-1`. CodeBuild produced image tag `20260313T221307Z`, and CloudFormation completed `security-autopilot-saas-serverless-runtime` successfully.
+- Verified the published frontend with `curl -I -L https://frontend.maromaher54.workers.dev` returning `HTTP/2 200`, and verified the backend with `curl https://sybw8x0716.execute-api.eu-north-1.amazonaws.com/health` returning `{"status":"ok","app":"AWS Security Autopilot"}`.
+- Rechecked the public custom domains after deploy: `curl -I -L https://ocypheris.com` returned `HTTP/2 200`, and `curl https://api.ocypheris.com/health` returned `{"status":"ok","app":"AWS Security Autopilot"}`.
+
+**Validation:**
+- `cd frontend && npx wrangler whoami` - pass
+- `aws sts get-caller-identity` - pass
+- `cd frontend && npm run deploy` - pass
+- `./scripts/deploy_saas_serverless.sh --region eu-north-1` - pass
+- `curl -I -L https://frontend.maromaher54.workers.dev` - pass (`HTTP/2 200`)
+- `curl https://sybw8x0716.execute-api.eu-north-1.amazonaws.com/health` - pass (`{"status":"ok","app":"AWS Security Autopilot"}`)
+- `curl -I -L https://ocypheris.com` - pass (`HTTP/2 200`)
+- `curl https://api.ocypheris.com/health` - pass (`{"status":"ok","app":"AWS Security Autopilot"}`)
+
+**Technical debt / gotchas:**
+- The nested **/Users/marcomaher/AWS Security Autopilot/frontend** repo was already dirty at deploy time, so this publish reflects the current local workspace state rather than a clean committed snapshot.
+- Wrangler emitted duplicate-key warnings inside generated `.open-next/server-functions/default/handler.mjs` during publish; the deploy still completed successfully, but the generated bundle warning is worth watching on the next frontend build upgrade.
+
+**Open questions / TODOs:**
+- None.
+
+## Remediation strategy card inline-background glitch fix (2026-03-13)
+
+**Task:** Fix the remediation strategy selector so the card background does not fragment into vertical blocks behind the text in either dark or light mode.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - made the shared remediation strategy `label` cards render as block-level full-width surfaces so their inset backgrounds no longer paint as fragmented inline boxes.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx** - added a focused regression proving the remediation strategy radio wrapper renders as a full-width block card.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Traced the visual artifact to the strategy card wrapper being a plain inline `label` with the remediation inset background classes applied directly to it.
+- Changed the shared strategy-card class to `block w-full`, which keeps the card surface continuous across the full option instead of fragmenting around each line and badge.
+- Kept the rest of the remediation selector styling unchanged so the fix applies equally to standalone remediation dialogs and the Action Detail inline PR-bundle flow.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx src/components/ActionDetailModal.test.tsx` - pass (`22 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The remediation strategy selector still relies on native radio inputs nested inside large clickable labels; if the card UI gets denser later, it may be worth extracting a dedicated strategy-card primitive instead of styling raw labels.
+
+**Open questions / TODOs:**
+- None.
+
+## Dark-mode remediation-surface fix for action detail subviews (2026-03-13)
+
+**Task:** Fix dark mode for `Action Detail`, `Generate PR Bundle`, and `Suppress Action` so the shared remediation surfaces stop rendering pale/light panels inside the dark dashboard theme.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx** - replaced the light-only remediation panel/header treatments with dark-specific gradient overrides and dark-safe inset/callout surfaces so the shared modal shell no longer carries white backgrounds into dark mode.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.test.ts** - added focused regression coverage for the shared dark-mode remediation panel, header, inset, and callout class contracts.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - documented that the same-popup Action Detail remediation surfaces now keep dark-theme contrast across the detail, PR-bundle, and suppress subviews.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Fixed the root cause in the shared remediation-surface primitives instead of patching each subview separately, so `Action Detail`, inline PR-bundle generation, and inline suppress all inherit the same dark-mode correction.
+- Replaced the light-only remediation panel and header background-image treatments with explicit dark-mode gradient overrides so the dark theme no longer renders light shells.
+- Added darker inset/callout treatments and subdued inner highlights for all remediation tones so the subview forms keep light text on dark surfaces instead of picking up pale glassy fills.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ui/remediation-surface.test.ts src/components/ActionDetailModal.test.tsx src/components/RemediationModal.test.tsx` - pass (`24 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- `remediation-surface.tsx` is shared beyond Action Detail, so future visual changes there will affect standalone remediation dialogs and any other surface that reuses the same primitives.
+
+**Open questions / TODOs:**
+- Decide whether the shared remediation surfaces should also get a small visual smoke test in browser automation, since class-level coverage guards the contract but not final rendered contrast.
+
+## Animated tooltip hidden-state regression fix after portal mount (2026-03-13)
+
+**Task:** Restore Action Detail hover explainers after the portal-based clipping fix left some tooltips mounted but permanently hidden.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.tsx** - made the shared tooltip recompute layout when the portaled node actually mounts, added a next-frame refresh, and normalized zero-size measurements so the tooltip no longer stays hidden at `left/top=-9999`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx** - fixed unrelated `title` prop typing collisions discovered while rerunning `npm run typecheck` by omitting the native `HTMLAttributes.title` field from the custom section/callout prop interfaces.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Fixed the shared tooltip lifecycle so portal-based explainers can become visible as soon as the tooltip DOM node exists, instead of relying only on the earlier `show` state transition.
+- Added a safe measurement fallback for the first render pass so hidden `0x0` tooltip boxes no longer remain permanently invisible in environments where the first layout pass is incomplete.
+- Cleared an unrelated frontend typecheck regression encountered during verification so the follow-up validation is green again.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ui/AnimatedTooltip.test.tsx src/components/ActionDetailModal.test.tsx src/components/ActionDetailPriorityStoryboard.test.tsx` - pass (`14 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Tooltip layout still uses a lightweight homegrown measurement path; if more overlay edge cases appear later, it may be worth consolidating onto a dedicated collision/positioning utility.
+
+**Open questions / TODOs:**
+- Verify the same portal-mount timing edge case does not affect any future shared popovers that reuse this tooltip pattern.
+
+## Animated tooltip portal fix for clipped action-detail explainers (2026-03-13)
+
+**Task:** Fix the remaining Action Detail explainer clipping by moving the shared tooltip out of modal overflow constraints instead of relying on local width/placement tweaks.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.tsx** - moved the tooltip body into a `document.body` portal, added viewport-clamped fixed-position layout, and kept auto-flip support on top of the new shared positioning path.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.test.tsx** - updated the primitive coverage to assert portal rendering plus the existing left-placement and top-to-bottom flip behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented that explainers now render through a top-level shared tooltip layer so modal overflow no longer clips them.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented that action-detail bounded-view explanations now use the top-level tooltip portal path.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Confirmed the remaining clipping was caused by Action Detail modal/container `overflow-hidden`, not by copy length alone.
+- Replaced the old absolutely positioned in-place tooltip body with a fixed-position portaled tooltip so explanations can escape modal clipping.
+- Kept the trigger API unchanged for callers, so existing Action Detail labels/badges now benefit from the shared fix automatically.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ui/AnimatedTooltip.test.tsx src/components/ActionDetailModal.test.tsx src/components/ActionDetailPriorityStoryboard.test.tsx` - pass (`14 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Tooltip positioning is now shared and viewport-clamped, but it still uses a simple single-pass layout strategy rather than a full floating-ui style collision system.
+
+**Open questions / TODOs:**
+- Decide whether any other shared overlay components in the app should move to the same portal pattern before they hit similar modal/container clipping issues.
+
+## Action detail explainer copy rewritten for non-technical operators (2026-03-13)
+
+**Task:** Rewrite the new Action Detail hover explanations so they explain the labels in plain language for non-technical operators instead of relying on score-model terminology.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailExplainers.ts** - rewrote the explainer copy to answer “what does this mean?” in plain language, including friendlier score-factor descriptions.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx** - updated the focused modal assertions to match the new non-technical explainer wording.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - updated the focused storyboard assertions to match the new non-technical explainer wording.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented that the current action-detail hover copy is intentionally plain-language and operator-facing.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - documented that the matrix hover copy now prioritizes non-technical meaning over model jargon.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented that the bounded-view hover copy is phrased in plain language first.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Rewrote the risk, matrix, bounded-view, business-critical, visible-lift, focus-dimension, and missing-context explainers so they read like short “what this means” tooltips for a non-technical reviewer.
+- Replaced the factor-row tooltip copy with friendlier descriptions of what each factor is trying to measure, instead of echoing raw scoring/explanation text.
+- Kept the shorter tooltip sizing and help-marker behavior from the prior follow-up unchanged.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx src/components/ActionDetailPriorityStoryboard.test.tsx src/components/ui/AnimatedTooltip.test.tsx` - pass (`14 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The factor descriptions are intentionally simplified; they improve comprehension, but they no longer expose the lower-level signal strings directly in the tooltip copy.
+
+**Open questions / TODOs:**
+- Decide whether advanced users should get a second “more detail” affordance later, or whether keeping these explainers strictly plain-language is the better default.
+
+## Action detail tooltip sizing and help-marker follow-up (2026-03-13)
+
+**Task:** Tighten the just-added Action Detail hover help so tooltip copy is shorter, the tooltip box does not collapse into narrow columns, top-edge tooltips do not clip, and hoverable labels/badges are visually distinguishable.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailExplainers.ts** - shortened the explainer copy so hover help reads like a quick gloss instead of a paragraph, and tightened factor-level explanations.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.tsx** - added additive auto-flip support, wider max-content sizing, and a bounded minimum width so tooltip copy stays readable near modal edges.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - moved the new header/attack-path explainers to bottom placement with auto-flip and added explicit help-marker affordances on hoverable labels/badges.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.tsx** - applied the same help-marker affordance and wider bottom-placement tooltip behavior across the storyboard explainers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx** - updated the focused modal assertions for the shorter explainer copy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - updated the focused storyboard assertions for the shorter explainer copy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.test.tsx** - added focused coverage proving auto-flip can switch a top-positioned tooltip to bottom placement.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - documented the explicit help markers on explainable action-detail labels.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented the help-marked labels and auto-flipped tooltip behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the shorter help markers and conservative tooltip sizing/placement behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Shortened the tooltip copy across the new Action Detail explainers, especially the matrix badge and visible-lift summary.
+- Changed the shared tooltip shell to size by content up to a bounded maximum width instead of collapsing to a narrow shrink-to-fit column.
+- Added a small explicit help marker on the hoverable labels/badges so explainable elements read differently from static text.
+- Added additive auto-flip support so top-positioned tooltips can render below the trigger when the preferred placement would clip near the top edge.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx src/components/ActionDetailPriorityStoryboard.test.tsx src/components/ui/AnimatedTooltip.test.tsx` - pass (`14 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Auto-flip currently flips only to the opposite side of the preferred placement; it is conservative by design and does not yet perform full collision-aware repositioning against every surrounding element.
+
+**Open questions / TODOs:**
+- Decide whether the new help-marker affordance should become the standard for other explainable dashboard surfaces, or stay scoped to Action Detail for now.
+
+## Action detail hover explanations for ambiguous labels (2026-03-13)
+
+**Task:** Add hover/focus/tap explanations to the ambiguous Action Detail labels and storyboard terms so operators can understand the scoring and bounded-view UI without leaving the modal.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - wrapped the ambiguous header and attack-path labels in shared tooltip triggers and reused existing action-detail payload fields for the explanation copy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.tsx** - added hover/focus/tap explainers to `Score waterfall`, `Visible lift`, factor labels, `Impact constellation`, `Focus dimension`, and `Context missing`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailPriorityStoryboardModel.ts** - threaded explainer strings into the storyboard model so the UI stays driven by one small helper layer instead of inline copy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailExplainers.ts** - added the shared flat tooltip-copy helpers derived from `business_impact`, `criticality`, and `score_factors`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.tsx** - added focusable non-button triggers, touch/pen press toggle behavior, configurable delay, and trigger wrapper classes without changing existing callers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx** - added focused modal assertions that the new Action Detail explainer copy is wired onto the intended labels.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - added focused storyboard assertions that the new explainers exist for the targeted labels and badges.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/AnimatedTooltip.test.tsx** - added focused primitive coverage for hover, keyboard focus, touch toggle, and left-placement behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - documented the new matrix/storyboard hover explanations in the action-detail UI section.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented the new `Bounded decision view` and `Business critical` explainer behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/action-score-explainability.md** - documented the new action-detail score explainability hovers for the risk badge and storyboard labels.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added one shared explainer-copy helper so Action Detail and the priority storyboard can derive concise operator-facing tooltip text from existing `business_impact`, `criticality`, and `score_factors` data instead of hard-coding copy inline.
+- Reused the shared tooltip primitive for the ambiguous header badges and storyboard labels, with `cursor-help`, keyboard focus support, and touch/pen toggle only on the labels that actually need explanation.
+- Kept the change frontend-only: no backend contract, scoring, or action-detail payload changes were introduced.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx src/components/ActionDetailPriorityStoryboard.test.tsx src/components/ui/AnimatedTooltip.test.tsx` - pass (`13 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The new touch-toggle path only activates for tooltip callers that opt into `tapToToggle`; older tooltip usages remain hover/focus-only unless they are upgraded explicitly.
+
+**Open questions / TODOs:**
+- Decide whether the same explainer pattern should expand to action-list badges and PR-bundle tables, or remain scoped to the full Action Detail experience.
+
+## Action detail same-popup suppress flow (2026-03-13)
+
+**Task:** Keep the `Suppress` exception flow inside the same `Action Detail` popup instead of opening a second nested modal above it, matching the PR-bundle same-popup behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - added an inline `suppress` subview, wired the `Suppress` button and remediation exception handoff into it, and kept the shared dialog shell responsible for close/back behavior.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/CreateExceptionModal.tsx** - split the exception workflow body into reusable inline content while keeping the existing standalone modal wrapper for non-action-detail callers.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx** - added focused regressions for same-dialog suppress navigation, inline exception submission, and remediation-to-suppress handoff.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - documented that action detail now keeps both PR-bundle and suppress workflows inside the same popup.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/communication-governance-layer.md** - documented the inline suppress workflow and remediation exception handoff under the governance layer.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Extracted the exception form/business logic into reusable content that can render either inline in `ActionDetailModal` or inside the existing `CreateExceptionModal` wrapper.
+- Changed `Suppress` to switch the action-detail popup from `detail` to `suppress` with a guarded header-level `Back to action detail` button instead of opening a nested exception modal.
+- Kept exception submission inside the same dialog, then returned to action detail and refreshed the action payload so the updated exception state is immediately visible.
+- Routed PR-bundle and direct-fix exception handoff into the same inline suppress view so prefilled reason and expiry defaults still carry through without overlay conflicts.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx src/components/RemediationModal.test.tsx` - pass (`20 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Action Detail now owns three subviews (`detail`, `pr_bundle`, and `suppress`) while the direct-fix execution flow itself still uses the standalone remediation modal wrapper.
+
+**Open questions / TODOs:**
+- Decide whether the direct-fix execution flow should eventually move into the same action-detail subview model for full modal-behavior consistency.
+
+## Action detail same-popup PR bundle flow (2026-03-13)
+
+**Task:** Fix the action-detail PR-bundle overlay conflict by keeping `Generate PR bundle` inside the same `Action Detail` popup with inline back navigation instead of opening a second modal above it.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - replaced the nested `pr_only` modal path with an internal `detail`/`pr_bundle` subview, added a guarded header back button, and kept the direct-fix modal path unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx** - split the remediation workflow body out from the modal shell so the same PR-bundle logic can render either inside `ActionDetailModal` or inside the existing standalone remediation modal.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx** - added focused regression coverage for same-dialog PR-bundle navigation, progress-to-detail return, and exception handoff.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/repo-aware-pr-automation.md** - documented the same-popup PR-bundle flow in action detail.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/handoff-free-closure.md** - updated the frontend UI wiring notes to reflect the inline PR-bundle flow.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reused the existing remediation workflow state and content without its own overlay so Action Detail can host the PR-bundle flow directly.
+- Changed `Generate PR bundle` to swap the action-detail body into the remediation workflow while keeping the original dialog, close button, focus trap, and backdrop.
+- Added a header-level `Back to action detail` control that returns from both the strategy form and the run-progress view.
+- Preserved the existing exception handoff by returning to action detail and then opening `CreateExceptionModal` with the same prefilled defaults.
+- Left `Run fix` on the old standalone remediation modal path to keep scope limited to the reported PR-bundle bug.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailModal.test.tsx src/components/RemediationModal.test.tsx` - pass (`18 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Action Detail now owns two dialog-subview states (`detail` and `pr_bundle`) while direct-fix still uses the standalone remediation modal, so future remediation UX unification should decide whether direct-fix should move onto the same subview model.
+
+**Open questions / TODOs:**
+- Decide whether the direct-fix flow should adopt the same in-popup navigation model for consistency, or stay modal-separated because of its different approval posture.
+
+## Action detail duplicate description removed above summary cards (2026-03-13)
+
+**Task:** Remove the redundant action description paragraph from the top of the action-detail modal when the same explanation is already shown again in `What is wrong`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - removed the standalone `action.description` block above the summary cards so the explanation appears only once in `What is wrong`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the duplicate description paragraph that sat under the action header buttons.
+- Kept the existing `What is wrong` and `What the fix does` cards unchanged, so the same information still appears in the structured summary area without repetition.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+
+**Technical debt / gotchas:**
+- The modal now relies on the summary cards as the primary explanation surface; if a future design needs a short header synopsis again, it should come from a dedicated condensed field instead of reusing the full action description verbatim.
+
+**Open questions / TODOs:**
+- None.
+
+## Attack path cards now use backend fact rows instead of frontend inference (2026-03-13)
+
+**Task:** Implement richer attack-path step metadata so each bounded path card renders one insight plus up to two operator-useful facts sourced directly from the API instead of from summary-derived frontend inference.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_attack_path_view.py** - added additive `facts` generation per node kind, threaded SLA into fact construction, and kept the existing bounded summary/status/path-order behavior intact.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended the additive action-detail contract with `ActionAttackPathFact` and `ActionAttackPathNode.facts`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - added the frontend `ActionAttackPathFact` type and `facts` on `ActionAttackPathNode`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - removed the old summary-derived attack-path card metadata path and switched the modal to render dedicated node cards directly from `node.facts`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailAttackPathNodeCard.tsx** - added the reusable bounded path-card component with consistent layout, wrapping fact rows, and the existing `next_step` badge suppression.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailAttackPathNodeCard.test.tsx** - added focused UI coverage for fact rendering, code-tone wrapping, and next-step badge suppression.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailAttackPath.test.ts** - updated helper fixtures so the additive `facts` contract is reflected in frontend tests.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py** - added focused backend assertions for entry-point, identity, target-asset, business-impact, and next-step fact rows in direct-builder and route-level payloads.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current API shape and fact-driven card behavior are explicit.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added additive per-node `facts[]` so attack-path cards can render structured operator context without inferring entry/target/scope rows from the summary.
+- Populated fact rows from existing bounded sources only:
+  - entry-point `Driver` and `Score impact`
+  - identity `Type` and `Source`
+  - target-asset `Asset` and `Scope`
+  - business-impact `Risk` and `Urgency`
+  - next-step `Mode` and `Blast radius`
+- Replaced the old inline modal card rendering with a dedicated `ActionDetailAttackPathNodeCard` component so all path cards share the same layout and wrap long values safely.
+- Kept the earlier attack-path UI cleanup intact: the `partial` tooltip remains left-aligned/wide, the summary stays the main story surface, and the next-step card still hides the redundant footer badge.
+
+**Validation:**
+- `pytest tests/test_phase3_p3_5_1_attack_path_view.py tests/test_wave5_action_detail_contract.py -q` - pass (`11 passed`)
+- `cd frontend && npm run test:ui -- src/components/ActionDetailAttackPathNodeCard.test.tsx src/components/actionDetailAttackPath.test.ts` - pass (`6 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- Fallback attack-path nodes can still render fewer than two fact rows when the bounded source payload does not expose enough trustworthy metadata; the API intentionally avoids filler values.
+
+**Open questions / TODOs:**
+- Decide whether future path-node cards need richer type-specific visuals such as icons or priority accents, or whether the current fact-row hierarchy is sufficient.
+
+## Priority storyboard contrast and modal-width cleanup (2026-03-13)
+
+**Task:** Tighten the follow-up `Priority storyboard` UI so it matches the dashboard more closely, increases contrast between the sections and score drivers, and gives the action-detail modal enough width to avoid crowding.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.tsx** - rebuilt the storyboard presentation around a calmer dashboard-style surface, gave the score waterfall stronger per-factor contrast, replaced the cramped impact grid with a primary business-dimension card plus supporting-evidence rail, and removed duplicated copy that was flattening the hierarchy.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailPriorityStoryboardModel.ts** - aligned the storyboard helper contract with the new primary-detail plus bounded-evidence layout and removed stale positioning fields from the earlier orbit-style experiment.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - widened the action-detail modal from `max-w-4xl` to `max-w-[88rem]` so the storyboard can sit in two columns without crowding.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - kept the focused storyboard coverage green against the updated dashboard-style layout.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the current `Why this is prioritized` description to match the stronger contrast and primary-card layout.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - updated the business-impact feature doc so the current action-detail storyboard description reflects the stronger contrast and widened modal presentation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Shifted the storyboard outer shell back toward the same neutral dashboard surface language used elsewhere in the modal.
+- Increased contrast in the score waterfall by giving the main explainable factors distinct tones instead of one barely-different blue treatment.
+- Replaced the cramped right-side `constellation` composition with a stronger primary-dimension card and a bounded evidence rail for the remaining matched business signals.
+- Widened the action-detail modal so the storyboard no longer compresses its two-column layout.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailPriorityStoryboard.test.tsx` - pass (`3 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The widened modal improves this surface substantially, but if additional dense sections continue to land in the action detail flow later, the modal may eventually need explicit per-section breakpoints instead of relying on one global width increase.
+
+**Open questions / TODOs:**
+- Decide whether the wider action-detail modal should become an intentional design standard for future dense decision surfaces such as owner views or remediation planning.
+
+## Priority storyboard layout regression fix for action detail (2026-03-13)
+
+**Task:** Fix the first-pass `Priority storyboard` layout regression where score labels overflowed their bars and business-impact evidence cards rendered outside the constellation panel.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.tsx** - replaced the fragile absolute-positioned factor labels and evidence cards with bounded responsive layout primitives, toned down the extra chrome, and kept the same high-level storyboard sections.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - updated the focused UI coverage to match the stable header/value factor rows and the bounded evidence-grid layout.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the storyboard description so it matches the current bounded layout behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - updated the business-impact feature doc so the current action-detail storyboard description reflects the fixed layout.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Moved score factor text out of the decorative bars and into stable row headers so narrow or offset waterfall segments no longer clip the labels.
+- Kept the waterfall feel by preserving the cumulative fill offsets, but limited the bars to visual decoration only.
+- Replaced the free-positioned constellation cards with a bounded evidence grid around the primary dimension card so no evidence card can render off-canvas.
+- Reduced the headline badge treatment to a calmer `Focus dimension` line so the surface reads more like the rest of the action-detail modal.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailPriorityStoryboard.test.tsx` - pass (`3 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The waterfall still uses cumulative offsets derived from score contribution percentages; if the product later needs precise numerical score-step auditing, that should become an explicit chart contract instead of pushing more meaning into CSS widths.
+
+**Open questions / TODOs:**
+- Decide whether the scoreboard should eventually show a compact numeric axis or keep the current lighter-weight visual-only rail.
+
+## Priority storyboard redesign for `Why this is prioritized` in action detail (2026-03-13)
+
+**Task:** Replace the old text-heavy `Why this is prioritized` two-column card with a more visual operator-first storyboard that makes score drivers, business impact, and the next verification step easier to scan.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - replaced the old inline prioritization card with the new dedicated storyboard component while keeping the surrounding action-detail flow unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.tsx** - added the new visual `Why this is prioritized` surface with a summary headline, score waterfall, impact constellation, and full-width recommended-check rail.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailPriorityStoryboardModel.ts** - added the small helper that derives the top score factors, waterfall lane positions, and constellation nodes from the existing action-detail payload.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailPriorityStoryboard.test.tsx** - added focused UI coverage for single-dimension, three-dimension, and unknown-criticality fallback states.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the attack-path feature doc so the `Why this is prioritized` section describes the current storyboard presentation.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - updated the business-impact feature doc so the action-detail surface matches the current modal and storyboard behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Replaced the old `Risk Score Components` plus `Business Context` split card with a single `Priority storyboard` surface.
+- Turned the top explainable score factors into a cumulative horizontal waterfall so the biggest drivers are visible immediately and non-positive factors remain visible but muted.
+- Reframed the business context as an `Impact constellation` with one central primary business dimension and up to three linked evidence nodes derived from the existing matched-dimension copy.
+- Promoted the operator next step into a dedicated command rail and collapsed the old enrichment paragraph into a compact `Context missing` badge when criticality is still unknown.
+- Kept the implementation additive at the frontend layer only; no API or backend contract changes were introduced.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/ActionDetailPriorityStoryboard.test.tsx` - pass (`3 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The constellation layout intentionally uses fixed bounded positions for up to three evidence nodes; if the surface later needs denser or more dynamic relationship detail, that should be a separate design pass instead of expanding this bounded view ad hoc.
+- The command rail uses the existing business-impact next-step guidance rather than a new recommendation-rationale contract, so future copy improvements should stay coordinated with `buildBusinessImpactPanel(...)`.
+
+**Open questions / TODOs:**
+- Decide whether the same storyboard treatment should be reused in future owner-queue or action-list detail surfaces, or stay exclusive to the full action-detail modal.
+
+## Attack path next-step card footer badge removed (2026-03-13)
+
+**Task:** Remove the redundant `Safest next step` footer badge from the final attack-path card while keeping the recommendation itself visible.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - filtered the `recommended` badge off the `next_step` card so the last card no longer repeats `Safest next step` at the bottom.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current next-step card behavior is accurate.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the bottom `Safest next step` badge from the final attack-path card only.
+- Left the actual recommendation label/body unchanged, so the operator still sees the remediation action itself.
+
+**Validation:**
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The `recommended` badge is still available for any future non-`next_step` attack-path nodes; this change only hides it on the dedicated final recommendation card.
+
+**Open questions / TODOs:**
+- Decide whether the final recommendation card should eventually get its own explicit visual treatment instead of reusing the generic path-node badge model.
+
+## Attack path tooltip clipping fix and card-context migration (2026-03-13)
+
+**Task:** Fix the clipped `partial` tooltip and finish removing redundant attack-path summary support rows by moving the remaining useful context into the bounded path cards.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - moved the `partial` tooltip to a left-side wider placement, removed the duplicated `Take care` line for partial paths from the summary area, removed the extra entry/target/scope row under the summary, and moved the remaining scope context into the target path card while keeping the cards consistently sized.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current UI behavior describes the left-side tooltip placement and the move of support context into the path cards.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Fixed the `partial` badge hover so the warning text is fully visible near the right edge of the panel.
+- Removed the redundant partial-path `Take care` line from below the summary since the hover already carries that warning.
+- Removed the extra `Entry / Target / Scope` support row from below the summary.
+- Moved the remaining scope context into the target path card and widened the cards so path-step text fits more comfortably inside each card.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/actionDetailAttackPath.test.ts` - pass (`2 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The target card now carries the scope metadata, but the path-node payload is still generic; if more node-specific metadata is needed later, the backend contract may be cleaner than continued frontend inference.
+
+**Open questions / TODOs:**
+- Decide whether attack-path node cards should eventually expose structured per-node metadata directly from the API instead of being derived from the summary context on the frontend.
+
+## Attack path summary copy tightened and node cards normalized (2026-03-13)
+
+**Task:** Tighten the attack-path copy/layout based on the latest UI review so the main story carries the emphasis, repeated resource IDs are removed, and the bounded path cards read more cleanly.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - changed the `partial` tooltip copy to `Take care: ...`, moved the narrative below a clearer header divider, emphasized important phrases directly inside the main summary sentence, removed repeated target/next-step text from the support lines when the summary already includes them, and normalized the bounded path cards to a consistent size and clearer text hierarchy.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current attack-path UI behavior describes the de-duplicated summary copy, `Take care:` tooltip wording, and normalized bounded path cards.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Changed the `partial` badge tooltip for truncated paths to `Take care: Extra graph context was capped to keep this view bounded.`
+- Kept the recommended next step highlighted inside the main attack-path summary instead of repeating it again in a separate `Next:` line when the summary already contains it.
+- Stopped repeating the resource ID below the main story when the summary already includes the target resource.
+- Added a clearer divider under the attack-path header so the narrative sits below the header band instead of blending into it.
+- Made the bounded path cards read more consistently with:
+  - same card sizing
+  - stronger title hierarchy
+  - clearer detail text
+  - cleaner edge labels
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/actionDetailAttackPath.test.ts` - pass (`2 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The main story sentence is still backend-provided prose, so frontend emphasis can highlight key phrases but cannot yet rewrite awkward wording from the source summary itself.
+
+**Open questions / TODOs:**
+- Decide whether the attack-path summary should eventually be generated as structured rich text from the backend instead of a single prebuilt sentence.
+
+## Attack path UI cleanup removes key-context cards in favor of inline emphasis (2026-03-13)
+
+**Task:** Clean up the attack-path presentation so it feels consistent with the rest of the dashboard UI and does not rely on a separate `Key context` card strip for highlighted text.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - removed the extra attack-path context cards, switched the panel back to a calmer dashboard-style surface, highlighted the important target/scope/caution/next-step details inline in the narrative copy, and surfaced node detail text directly in the bounded path cards.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailAttackPath.ts** - replaced the old card-oriented helper contract with a smaller inline-summary context helper for the attack-path panel.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailAttackPath.test.ts** - updated the focused helper coverage to validate the inline-summary context for truncated and self-resolved paths.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current UI behavior describes inline emphasis instead of the removed card strip.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Removed the earlier `Key context` strip from the attack-path panel.
+- Kept the same underlying attack-path data, but rendered the key details inline:
+  - target resource
+  - account scope
+  - operator caution
+  - recommended next step
+- Shifted the attack-path panel from an alert-heavy pink block to the same neutral dashboard surface treatment used elsewhere in the modal.
+- Added node `detail` text under each path node so operators do not need to infer the node meaning from the label alone.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/actionDetailAttackPath.test.ts` - pass (`2 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The attack-path summary still uses backend-provided prose for the main story sentence, so inline emphasis improves scannability but does not yet rewrite the upstream summary copy itself.
+
+**Open questions / TODOs:**
+- Decide whether `partial` paths that are only truncated should eventually be promoted to `available` while keeping the bounded warning copy.
+
+## Attack path key-context strip for resource and operator-critical details (2026-03-13)
+
+**Task:** Surface the most important attack-path details in a clearer dedicated view so operators can immediately see the target resource, account scope, take-care note, and recommended next step without parsing the full story paragraph.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailAttackPath.ts** - added a focused helper that derives `Key context` cards for the attack-path panel from the existing action detail, graph context, and attack-path payload.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailAttackPath.test.ts** - added focused frontend coverage for the new attack-path key-context cards, including truncated-path and self-resolved-path cases.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - rendered the new `Key context` strip inside the `Attack Path` section and highlighted resource identifiers in monospace so important target/scope information stands out immediately.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current UI behavior includes the new attack-path key-context strip.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Added a dedicated `Key context` strip above the bounded attack-path nodes instead of relying on the summary paragraph alone.
+- Pulled the most operator-relevant information into separate cards:
+  - target resource
+  - account scope
+  - take-care note
+  - recommended next step
+- Highlighted identifiers such as the resource ID and account ID in monospace so they read as concrete operational targets instead of generic prose.
+- Reused the existing backend contracts only; this is a frontend presentation improvement on top of the current additive attack-path payload.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/actionDetailAttackPath.test.ts` - pass (`2 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The `Key context` strip is only present inside the action-detail attack-path view; other surfaces still rely on their existing denser text-first presentation.
+
+**Open questions / TODOs:**
+- Decide whether the same attack-path helper should also be reused on any future dedicated action-detail page outside the modal.
+
+## Partial attack-path badge uses real tooltip instead of native title (2026-03-13)
+
+**Task:** Replace the earlier native `title` hover behavior on the `partial` attack-path badge with the shared tooltip component because the native hover was not surfacing reliably in the running UI.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - replaced the native badge `title` usage with `AnimatedTooltip` so the `partial` badge now shows an explicit UI tooltip with the bounded/incomplete reason.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc to describe the current `partial` badge tooltip behavior accurately.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Kept the existing short `partial` explanation text.
+- Switched from the badge `title` prop to the shared animated tooltip wrapper already used elsewhere in the frontend.
+- Left non-`partial` statuses unchanged.
+
+**Validation:**
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The shared tooltip currently has a short hover/focus delay, so the explanation is no longer browser-native but still not instant-on.
+
+**Open questions / TODOs:**
+- Decide whether the attack-path badge should also expose the same explanation on touch/mobile in a more explicit way.
+
+## Partial attack-path badge hover explanation in action detail (2026-03-13)
+
+**Task:** Add a brief hover explanation on the `partial` attack-path status badge so operators can quickly see why the path is partial without reading the full summary block first.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - added a small attack-path status-title helper and wired the `partial` badge to show a short native hover explanation based on `availability_reason`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the feature doc so the current UI behavior mentions the `partial` hover explanation and points at the current modal component path.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Reused the existing `Badge` `title` prop instead of introducing a new tooltip component or new layout.
+- Added brief `partial` explanations for the current bounded attack-path reasons:
+  - truncated bounded context
+  - unresolved entry point
+  - unresolved target asset
+- Kept non-`partial` statuses unchanged.
+
+**Validation:**
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- This is currently a native browser hover title, not a custom accessible tooltip component, so mobile/touch discoverability remains limited.
+
+**Open questions / TODOs:**
+- Decide whether the attack-path status badge should eventually switch from native `title` text to the shared tooltip component for richer desktop and touch behavior.
+
+## Attack path available-graph override for persisted context_incomplete markers (2026-03-13)
+
+**Task:** Fix remaining local attack-path fail-closed cases where `score_components.context_incomplete = true` was still forcing `context_incomplete` even though `graph_context.status = available`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_attack_path_view.py** - changed attack-path status selection so a bounded available graph overrides the persisted `context_incomplete` marker; fail-closed now only applies when bounded graph context is unavailable.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py** - added a focused regression proving provider-backed available graph context now renders an attack path even when the stored context-incomplete marker is still set.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the state-semantics doc so the current rule is explicit: available bounded graph context can render regardless of the older marker, while self-resolved paths keep lower confidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Investigated the actual local dataset instead of assuming the remaining issue was still the no-`resource_id` case.
+- Confirmed the remaining fail-closed actions were account-scoped actions with:
+  - `graph_context.status = available`
+  - `graph_context.self_resolved = false`
+  - `attack_path_view.status = context_incomplete`
+- Narrowed the root cause to attack-path status logic still honoring the persisted toxic-combinations `context_incomplete` marker even when bounded graph context had already resolved successfully.
+- Updated the status rule so bounded available graph context wins; fail-closed only remains when graph context is unavailable.
+
+**Validation:**
+- Local DB-backed inspection showed `17` actions with `graph_context.status = available` and `attack_path_view.status = context_incomplete` before the fix, all account-scoped.
+- `pytest tests/test_phase3_p3_5_1_attack_path_view.py -q` - pass (`7 passed`)
+
+**Technical debt / gotchas:**
+- The persisted `context_incomplete` marker still originates in toxic-combinations scoring, so it should no longer be treated as a universal blocker for attack-path rendering.
+
+**Open questions / TODOs:**
+- Decide whether attack-path should eventually surface a more specific explanation when graph context is available but toxic-combinations stayed fail-closed, instead of collapsing both concerns into one generic marker.
+
+## Lower self-resolved attack-path confidence fallback to 0.20 (2026-03-13)
+
+**Task:** Reduce the self-resolved attack-path confidence fallback from `0.70` to `0.20` for now without changing the self-resolved availability/status behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_attack_path_view.py** - lowered the fixed self-resolved confidence constant from `0.70` to `0.20`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py** - updated the focused self-resolved regression to assert `0.20`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - updated the current feature documentation to reflect the lower self-resolved confidence fallback.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Kept the self-resolved graph fallback behavior unchanged.
+- Changed only the fixed self-resolved attack-path confidence value so provider-metadata-missing paths now report a much more conservative confidence.
+- Updated the focused regression and feature doc so the current contract and documentation stay aligned.
+
+**Validation:**
+- `pytest tests/test_phase3_p3_5_1_attack_path_view.py -q` - pass (`6 passed`)
+
+**Technical debt / gotchas:**
+- Self-resolved attack paths still render as `available` or `partial` when the bounded graph exists; only the confidence value changed in this follow-up.
+
+**Open questions / TODOs:**
+- Decide whether the UI should eventually expose a more explicit label for self-resolved paths, since `0.20` now signals a much more conservative confidence level.
+
+## Attack path self-resolved graph fallback for incomplete provider metadata (2026-03-13)
+
+**Task:** Implement the planned self-resolved graph fallback so the attack-path view can still render a bounded path when provider relationship metadata is missing or low-confidence, while preserving explicit fail-closed behavior when the action cannot self-resolve.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_graph_context.py** - removed the graph-anchor hard stop on incomplete provider metadata, added `_GraphAnchor.self_resolved`, rebuilt fallback anchors from persisted action fields via `build_resource_key(...)`, and emitted additive `graph_context.self_resolved`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_attack_path_view.py** - allowed `context_incomplete` actions to render `available` or `partial` attack paths when the bounded graph was self-resolved, added explicit self-resolved summary text, and fixed self-resolved confidence at `0.70`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - extended the additive `ActionGraphContext` response model and default fallback payload with `self_resolved`.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - synced the shared frontend action-detail contract with additive `graph_context.self_resolved`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_2_graph_backed_action_context.py** - updated graph-context regressions to prove missing provider metadata now self-resolves from persisted action fields when possible and still falls back explicitly when the action itself cannot anchor the graph.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py** - updated attack-path regressions with a self-resolved path case that keeps `context_incomplete=true` but renders a bounded attack story with explicit Autopilot fallback messaging.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_wave5_action_detail_contract.py** - extended the stable action-detail fallback contract to assert `graph_context.self_resolved = false`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/graph-backed-action-context.md** - documented the new action-field self-resolution fallback, additive `self_resolved` contract field, and updated render flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/attack-path-view.md** - documented the new self-resolved attack-path semantics, confidence handling, and the limited exception to fail-closed `context_incomplete`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the existing P0.4/P1.2/P3.5.1 task history, `docs/README.md`, and the user-supplied implementation plan before editing.
+- Kept the change additive and bounded:
+  - `graph_context` now carries `self_resolved`
+  - `attack_path_view` does not add a new status; it reuses `available` / `partial` when the bounded graph already exists
+  - existing `unavailable` and fail-closed `context_incomplete` behavior still applies when the action cannot self-resolve
+- Reused the existing `build_resource_key(...)` canonicalization path instead of inventing a second anchor format.
+- Updated the attack-path summary so operators can tell when Autopilot reconstructed the path because provider relationship metadata was unavailable.
+- Fixed the self-resolved confidence contract at `0.70` to keep it distinct from both explicit provider confidence and low-confidence unavailable cases.
+- Updated the focused graph-context and attack-path tests together, since the old assumption that missing relationship metadata always meant `graph_context.status = unavailable` is no longer true.
+
+**Validation:**
+- `pytest tests/test_phase3_p1_2_graph_backed_action_context.py tests/test_phase3_p3_5_1_attack_path_view.py tests/test_wave5_action_detail_contract.py -q` - pass (`15 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- `graph_context.self_resolved` is additive and currently only surfaced directly in the backend/API contract; the current modal relies on the attack-path summary and status behavior rather than a dedicated frontend badge for self-resolved paths.
+- Self-resolved paths still depend on persisted action metadata being complete enough to build a canonical resource key; actions with missing account/resource anchor fields remain explicitly unavailable.
+- The fallback improves detail rendering, but it does not replace the need for authoritative provider-produced relationship metadata over time.
+
+**Open questions / TODOs:**
+- Decide whether the action-detail UI should add an explicit `Self resolved` badge now that the contract distinguishes provider-backed vs action-field-backed paths.
+
+## Business criticality action-detail rewrite for operator value (2026-03-12)
+
+**Task:** Make the action-detail `Business Criticality Context` section useful to an operator by replacing the generic matrix sentence and raw dimension chips with a clearer explanation of likely business effect, concrete matching evidence, explicit unknowns, and the next thing a reviewer should verify.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailBusinessImpact.ts** - added a focused helper that translates existing P1.7 criticality dimensions and signals into operator-facing overview text, evidence cards, unknown-context text, and a verification prompt without changing the underlying scoring model.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.tsx** - replaced the old business-criticality sentence plus chips with a richer block that shows likely business effect, matched evidence, still-unverified context, and an explicit operator check; also tightened the pre-existing `motion` transition tuple typing so frontend typecheck stays green.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/actionDetailBusinessImpact.test.ts** - added focused frontend coverage for identity-boundary and unknown-criticality messaging.
+- **/Users/marcomaher/AWS Security Autopilot/docs/features/business-impact-matrix.md** - updated the P1.7 doc so the action-detail UI surface describes the new evidence-first presentation and points at the current frontend source files.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor/` rules, project status, task index, the original P1.7 implementation log, `docs/README.md`, and the business-impact feature doc before editing.
+- Kept the existing P1.7 scoring and API contract intact; this is a presentation-layer improvement only.
+- Added a small translation layer that turns internal dimension names like `identity_boundary` into operator language such as `Shared access boundary`, then derives:
+  - a likely business-effect overview,
+  - signal-level evidence text,
+  - still-unverified business context,
+  - and a concrete verification prompt.
+- Reworked the action-detail business-impact panel so it now answers:
+  - what this might affect,
+  - why the model thinks that,
+  - what is still unknown,
+  - and what the reviewer should confirm next.
+- Fixed the existing `motion` transition tuple typing in the modal while in the same file so the targeted UI work does not leave `npm run typecheck` red.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/actionDetailBusinessImpact.test.ts` - pass (`2 passed`)
+- `cd frontend && npm run typecheck` - pass
+
+**Technical debt / gotchas:**
+- The richer operator-facing business-impact language currently exists only in the action-detail modal; list cards and PR-bundle tables still intentionally use the older condensed matrix labels.
+- The underlying criticality model is still heuristic and bounded; better wording improves operator trust, but it does not replace the need for tenant-owned asset criticality over time.
+
+**Open questions / TODOs:**
+- Decide whether the same helper should be reused in other P1.7 surfaces such as PR-bundle summary and action-group detail if those become primary decision surfaces.
+- Decide whether future versions should add explicit `confidence` or `needs confirmation` metadata to each criticality dimension instead of inferring that from matched vs unmatched signals alone.
+
 ## Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)
 
 **Task:** Stop the live Cloudflare frontend from calling `http://localhost:8000`, harden the OpenNext production build path against local env contamination, and republish the corrected frontend.
@@ -21461,3 +22434,32 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Investigate why the standard OpenNext/Cloudflare deploy command can stall after asset upload in this environment even when the resulting worker version can still be uploaded/promoted manually.
+
+## Remediation profile resolution plan review + scope closure (2026-03-14)
+
+**Task:** Review the backend-centered remediation profile resolution plan against the live codebase, confirm `direct_fix` is intentionally out of scope, and tighten the plan so the remaining migration work does not break current grouped-run, root-key, queue, or compatibility contracts.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified the current remediation contracts across the strategy catalog, remediation preview/create flows, grouped PR bundle creation, worker execution, SaaS bundle executor, root-key state machine, and tenant-backed `/me/*-settings` endpoints.
+- Confirmed `direct_fix` is a real shipped path, but it is intentionally excluded from this plan update and should remain on the current safety/approval/runtime contract in this migration phase.
+- Tightened the plan in review notes so it now explicitly covers:
+  - both grouped bundle entry points, with no resolver bypass allowed;
+  - queue/artifact schema migration for per-action grouped decisions and resend compatibility;
+  - legacy public strategy compatibility, including current flat `strategy_id` consumers;
+  - root-key contract boundaries so `strategy_id` remains authoritative unless the root-key contract is revved;
+  - generator fail-closed logic that still needs to move into resolver evidence before generators can become pure renderers;
+  - tenant remediation-settings implementation details (`Tenant.remediation_settings` JSONB, validation, admin-only PATCH semantics).
+
+**Technical debt / gotchas:**
+- The current system has two grouped bundle creation paths: `/api/remediation-runs/group-pr-bundle` and `/api/action-groups/{group_id}/bundle-run`. Only the former currently enforces the strategy/risk safety path.
+- Current grouped bundle worker/executor contracts assume one strategy per grouped run and an `actions/` root folder. Mixed-tier output requires a deliberate queue/artifact/executor migration, not just API changes.
+- Legacy behavior still depends on top-level artifact keys like `selected_strategy`, `strategy_inputs`, and `pr_bundle_variant` for duplicate detection, resend, and execution paths.
+- Root-key remediation is contract-versioned and state-machine-backed; adding profile metadata there is only safe if it stays additive to the existing `strategy_id` contract in this phase.
+
+**Open questions / TODOs:**
+- Decide whether `/api/action-groups/{group_id}/bundle-run` should be migrated into the shared resolver service or retired in favor of `/api/remediation-runs/group-pr-bundle`.
+- Decide whether phase 1 will keep writing legacy artifact keys alongside `artifacts.resolution` so resend/rate-limit logic can remain backward compatible during rollout.

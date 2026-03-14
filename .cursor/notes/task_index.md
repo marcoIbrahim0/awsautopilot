@@ -4,6 +4,101 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation profile resolution Wave 0 contract-lock integration (2026-03-14)](task_log.md#remediation-profile-resolution-wave-0-contract-lock-integration-2026-03-14)
+  - Added the consolidated `wave-0-contract-lock.md` plus the three source baseline docs that lock the current API, legacy-compat, worker, and root-key baseline behavior.
+  - Updated the remediation-profile-resolution README, added a minimal implementation-plan cross-link, and logged the Wave 0 integration for later discoverability.
+- [Remediation profile resolution plan expanded into numbered substeps (2026-03-14)](task_log.md#remediation-profile-resolution-plan-expanded-into-numbered-substeps-2026-03-14)
+  - Expanded the remediation profile resolution implementation plan into `Step N -> N.x substeps -> Step Definition of Done` so the work can be executed one slice at a time.
+  - Kept the same migration constraints and interface coverage while making the plan more execution-oriented.
+- [Remediation profile resolution implementation plan organized into steps (2026-03-14)](task_log.md#remediation-profile-resolution-implementation-plan-organized-into-steps-2026-03-14)
+  - Reworked the remediation profile resolution implementation plan from phase-based sections into explicit ordered steps with consistent objective, key-work, dependency, and done-when structure.
+  - Kept the same migration constraints, especially `direct_fix` out-of-scope boundaries, grouped single-row persistence, and root-key execution-authority rules.
+- [Remediation profile resolution doc set (2026-03-14)](task_log.md#remediation-profile-resolution-doc-set-2026-03-14)
+  - Added a dedicated `/docs/remediation-profile-resolution/` folder with a planned spec and serial implementation plan derived from the imported remediation profile resolution source plan.
+  - Updated `docs/README.md` so the new planning docs are discoverable from the main docs index.
+- [Accounts hub dashboard Neo UI alignment (2026-03-14)](task_log.md#accounts-hub-dashboard-neo-ui-alignment-2026-03-14)
+  - Rebuilt the `/accounts` shell, quick-action health table, and account subscreens around the shared dashboard/remediation surface primitives instead of the older isolated neumorphic cards.
+  - Moved the connect/reconnect and account-detail workflows onto the dashboard modal chrome and added focused frontend regressions for the new shell and connect flow.
+- [Frontend and backend production redeploy (2026-03-14)](task_log.md#frontend-and-backend-production-redeploy-2026-03-14)
+  - Redeployed the frontend with the wrapped OpenNext Cloudflare production path and published Worker version `fb1a7c5f-7533-4792-9759-e849c965a3b9`.
+  - Redeployed the backend serverless runtime with image tag `20260313T221307Z` and rechecked health on both the API Gateway endpoint and the public `api.ocypheris.com` domain.
+- [Remediation strategy card inline-background glitch fix (2026-03-13)](task_log.md#remediation-strategy-card-inline-background-glitch-fix-2026-03-13)
+  - Fixed the remediation strategy selector cards so their background no longer fragments into inline blue/orange blocks behind the text in dark or light mode.
+  - Added a focused frontend regression asserting the strategy option wrapper renders as a full-width block card.
+- [Dark-mode remediation-surface fix for action detail subviews (2026-03-13)](task_log.md#dark-mode-remediation-surface-fix-for-action-detail-subviews-2026-03-13)
+  - Fixed the shared remediation panel/header primitives so Action Detail, inline PR-bundle generation, and inline suppress no longer carry pale surfaces into the dark dashboard theme.
+  - Added focused frontend regression coverage for the shared dark-mode remediation surface classes and documented the updated same-popup dark-theme behavior.
+- [Animated tooltip hidden-state regression fix after portal mount (2026-03-13)](task_log.md#animated-tooltip-hidden-state-regression-fix-after-portal-mount-2026-03-13)
+  - Restored Action Detail explainers that were mounting into the portal but staying hidden because the shared tooltip only measured on the earlier `show` transition.
+  - Added mount-aware measurement refresh in the tooltip primitive and cleared the unrelated frontend `title` prop typecheck regression found during verification.
+- [Animated tooltip portal fix for clipped action-detail explainers (2026-03-13)](task_log.md#animated-tooltip-portal-fix-for-clipped-action-detail-explainers-2026-03-13)
+  - Moved the shared tooltip body into a top-level portal with viewport-clamped fixed positioning so Action Detail explainers are no longer cut off by modal overflow.
+  - Kept the same caller API and extended the primitive regression coverage for portal rendering plus placement flipping.
+- [Action detail explainer copy rewritten for non-technical operators (2026-03-13)](task_log.md#action-detail-explainer-copy-rewritten-for-non-technical-operators-2026-03-13)
+  - Rewrote the new Action Detail hover copy in plain language so it explains what a label means before it references scoring/model terms.
+  - Simplified the factor-row explanations into friendlier “what this measures” descriptions while keeping the same tooltip behavior and test coverage.
+- [Action detail tooltip sizing and help-marker follow-up (2026-03-13)](task_log.md#action-detail-tooltip-sizing-and-help-marker-follow-up-2026-03-13)
+  - Shortened the new Action Detail explainer copy, widened tooltip sizing, and added conservative auto-flip so top-edge tooltips stop clipping.
+  - Added explicit help markers so hoverable labels and badges are visually distinct from static metadata, with updated frontend regressions for the new behavior.
+- [Action detail hover explanations for ambiguous labels (2026-03-13)](task_log.md#action-detail-hover-explanations-for-ambiguous-labels-2026-03-13)
+  - Added frontend-only hover/focus/tap explainers for `Risk {score}`, `risk x criticality`, `Business critical`, `Bounded decision view`, and the priority-storyboard labels.
+  - Extended the shared tooltip primitive for focusable label triggers and touch toggle, then added focused UI regressions for the modal, storyboard, and tooltip behavior.
+- [Action detail same-popup suppress flow (2026-03-13)](task_log.md#action-detail-same-popup-suppress-flow-2026-03-13)
+  - Replaced the nested `Suppress` exception modal with an inline `suppress` subview inside `Action Detail`, including same-dialog back navigation.
+  - Routed PR-bundle and direct-fix exception handoff into that same suppress view and added focused frontend regressions for submit/refresh behavior.
+- [Action detail same-popup PR bundle flow (2026-03-13)](task_log.md#action-detail-same-popup-pr-bundle-flow-2026-03-13)
+  - Removed the nested PR-bundle overlay from `Action Detail` and switched the same dialog between detail and PR-bundle subviews.
+  - Added focused frontend regressions for back navigation, progress return, and exception handoff inside the shared popup.
+- [Action detail duplicate description removed above summary cards (2026-03-13)](task_log.md#action-detail-duplicate-description-removed-above-summary-cards-2026-03-13)
+  - Removed the redundant full action description paragraph from the header area so the explanation appears only once in `What is wrong`.
+  - Kept the existing action summary cards intact and limited the change to duplication cleanup.
+- [Attack path cards now use backend fact rows instead of frontend inference (2026-03-13)](task_log.md#attack-path-cards-now-use-backend-fact-rows-instead-of-frontend-inference-2026-03-13)
+  - Added additive `path_nodes[].facts[]` so bounded attack-path cards render structured `label/value/tone` metadata directly from the API instead of inferring context from the summary.
+  - Replaced the inline modal card metadata path with a dedicated reusable node-card component and added focused backend/frontend regressions for the new fact rows.
+- [Priority storyboard contrast and modal-width cleanup (2026-03-13)](task_log.md#priority-storyboard-contrast-and-modal-width-cleanup-2026-03-13)
+  - Reworked the right-hand business-impact panel into a sturdier primary-card plus evidence-rail layout and strengthened per-factor color contrast in the score waterfall.
+  - Increased the action-detail modal width so the storyboard matches the rest of the dashboard hierarchy without compressing the two-column content.
+- [Priority storyboard layout regression fix for action detail (2026-03-13)](task_log.md#priority-storyboard-layout-regression-fix-for-action-detail-2026-03-13)
+  - Reworked the storyboard so the score bars no longer carry overflowing text labels and the business-impact cards no longer render off-canvas.
+  - Kept the same data contract and operator flow while switching the storyboard to bounded responsive layout primitives.
+- [Priority storyboard redesign for `Why this is prioritized` in action detail (2026-03-13)](task_log.md#priority-storyboard-redesign-for-why-this-is-prioritized-in-action-detail-2026-03-13)
+  - Replaced the old two-column `Why this is prioritized` card with a single operator-first storyboard: score waterfall, impact constellation, and recommended-check command rail.
+  - Added focused frontend coverage for single-dimension, three-dimension, and unknown-criticality fallback states while keeping the implementation on the existing action-detail data contracts.
+- [Attack path next-step card footer badge removed (2026-03-13)](task_log.md#attack-path-next-step-card-footer-badge-removed-2026-03-13)
+  - Removed the redundant `Safest next step` footer badge from the final attack-path card.
+  - Kept the actual recommendation text unchanged in the summary and the next-step card body.
+- [Attack path tooltip clipping fix and card-context migration (2026-03-13)](task_log.md#attack-path-tooltip-clipping-fix-and-card-context-migration-2026-03-13)
+  - Moved the `partial` tooltip to a left-side wider placement so the bounded warning is fully visible near the panel edge.
+  - Removed the redundant entry/target/scope support row under the summary and moved the remaining scope context into the path cards themselves.
+- [Attack path summary copy tightened and node cards normalized (2026-03-13)](task_log.md#attack-path-summary-copy-tightened-and-node-cards-normalized-2026-03-13)
+  - Tightened the attack-path summary so the resource ID and next step are not repeated below the main story when already present there.
+  - Switched the `partial` tooltip to `Take care:` wording and normalized the bounded path cards to a consistent size and clearer text hierarchy.
+- [Attack path UI cleanup removes key-context cards in favor of inline emphasis (2026-03-13)](task_log.md#attack-path-ui-cleanup-removes-key-context-cards-in-favor-of-inline-emphasis-2026-03-13)
+  - Replaced the earlier attack-path `Key context` strip with cleaner inline emphasis inside the summary copy so the panel matches the rest of the dashboard UI.
+  - Kept the same attack-path data, partial tooltip, and bounded path behavior while toning down the container styling and surfacing node detail text directly in the path cards.
+- [Attack path key-context strip for resource and operator-critical details (2026-03-13)](task_log.md#attack-path-key-context-strip-for-resource-and-operator-critical-details-2026-03-13)
+  - Added a dedicated `Key context` strip to the attack-path panel so the target resource, account scope, caution note, and recommended next step stand out immediately.
+  - Highlighted resource/account identifiers in monospace and added focused frontend coverage for truncated and self-resolved card cases.
+- [Partial attack-path badge uses real tooltip instead of native title (2026-03-13)](task_log.md#partial-attack-path-badge-uses-real-tooltip-instead-of-native-title-2026-03-13)
+  - Replaced the earlier native `title` hover on the `partial` attack-path badge with the shared tooltip component so the explanation actually renders in the UI.
+  - Kept the brief bounded/incomplete reason text unchanged and limited the scope to the attack-path status badge.
+- [Partial attack-path badge hover explanation in action detail (2026-03-13)](task_log.md#partial-attack-path-badge-hover-explanation-in-action-detail-2026-03-13)
+  - Added a brief hover explanation to the `partial` attack-path status badge so operators can see the bounded/incomplete reason directly from the badge.
+  - Reused the existing native badge `title` path instead of adding a new tooltip component.
+- [Attack path available-graph override for persisted context_incomplete markers (2026-03-13)](task_log.md#attack-path-available-graph-override-for-persisted-context_incomplete-markers-2026-03-13)
+  - Fixed the remaining local fail-closed cases where account-scoped actions still showed `context_incomplete` even though bounded graph context was already `available`.
+  - Updated the attack-path status rule so available bounded graph context renders the path regardless of the older persisted toxic-combinations marker.
+- [Lower self-resolved attack-path confidence fallback to 0.20 (2026-03-13)](task_log.md#lower-self-resolved-attack-path-confidence-fallback-to-020-2026-03-13)
+  - Reduced the fixed self-resolved `attack_path_view.confidence` fallback from `0.70` to `0.20` without changing self-resolved availability/status behavior.
+  - Updated the focused self-resolved attack-path regression and the active feature doc so the current contract is explicit.
+- [Attack path self-resolved graph fallback for incomplete provider metadata (2026-03-13)](task_log.md#attack-path-self-resolved-graph-fallback-for-incomplete-provider-metadata-2026-03-13)
+  - Added additive `graph_context.self_resolved` so bounded graph context can reuse persisted action fields when provider relationship metadata is missing or low-confidence.
+  - Updated `attack_path_view` so `context_incomplete=true` can still render `available` or `partial` bounded paths when that graph context was self-resolved, with explicit Autopilot fallback messaging and fixed `0.70` confidence.
+  - Refreshed the focused graph-context, attack-path, and stable action-detail contract regressions and documented the new fallback semantics in the existing feature docs.
+- [Business criticality action-detail rewrite for operator value (2026-03-12)](task_log.md#business-criticality-action-detail-rewrite-for-operator-value-2026-03-12)
+  - Replaced the generic action-detail `Business Criticality Context` sentence and raw dimension chips with operator-oriented narrative, evidence cards, unverified context, and an explicit verification prompt.
+  - Added a small helper module that translates P1.7 criticality dimensions/signals into human-readable business effect language without changing the underlying scoring model.
+  - Added focused frontend coverage and kept `npm run typecheck` green after tightening the existing `motion` transition tuple typing in the same modal file.
 - [Production frontend localhost API regression fix and Cloudflare republish (2026-03-12)](task_log.md#production-frontend-localhost-api-regression-fix-and-cloudflare-republish-2026-03-12)
   - Confirmed live production was serving chunk `/_next/static/chunks/2985-fb203b08305ec2ff.js` with `http://localhost:8000` hardcoded in the auth/API base helper.
   - Added a fail-closed frontend API-base resolver plus a checked OpenNext production wrapper that strips inherited `NEXT_PUBLIC_*`, hides `.env.local`, and validates `.open-next/cloudflare/next-env.mjs`.
@@ -1552,3 +1647,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Onboarding step 5 Verify Intake refresh fallback and frontend rollout (2026-03-11)](task_log.md#onboarding-step-5-verify-intake-refresh-fallback-and-frontend-rollout-2026-03-11)
   - Step 5 now reuses the authenticated account-scoped synthetic-event route when a refresh removes the revealed control-plane token from browser state.
   - Added a regression test for the refreshed/no-token onboarding state and redeployed the frontend bundle live.
+- [Remediation profile resolution plan review + scope closure (2026-03-14)](task_log.md#remediation-profile-resolution-plan-review--scope-closure-2026-03-14)
+  - Confirmed `direct_fix` remains out of scope for this plan revision and tightened the migration plan around grouped runs, queue/artifact compatibility, root-key boundaries, and legacy flat-strategy consumers.
+  - Captured the remaining implementation guardrails needed before profile-based resolution can ship without breaking current API, worker, or SaaS execution behavior.

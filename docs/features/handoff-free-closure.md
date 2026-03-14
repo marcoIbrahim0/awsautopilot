@@ -74,6 +74,9 @@ The raw `artifacts` payload remains unchanged for backward compatibility.
 The frontend now renders the normalized contract directly:
 
 - `ActionDetailDrawer` shows an `Implementation artifacts` section sourced from `action.implementation_artifacts`.
+- `ActionDetailModal` keeps both the PR-bundle workflow and the `Suppress` exception workflow inside the same popup as `Action Detail`, with inline `Back to action detail` navigation instead of opening nested modals.
+- PR-bundle and direct-fix exception handoff now route into that same inline suppress view with the existing prefilled reason/expiry defaults, so exception review stays in the shared action-detail shell.
+- The shared remediation surface primitives now swap to dark-specific panel and header treatments, so `Action Detail`, inline PR-bundle generation, and inline suppress views keep light text on dark backgrounds when the dashboard theme is dark.
 - `RemediationRunProgress` shows:
   - a dedicated-page `Run snapshot` rail with jump links
   - a top-level `What you need to do` section before closure/evidence details

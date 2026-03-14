@@ -42,6 +42,7 @@ class _GraphAnchor:
     resource_id: str | None
     resource_type: str | None
     resource_key: str
+    self_resolved: bool = False
 
 
 async def build_action_graph_context(
@@ -75,6 +76,7 @@ async def build_action_graph_context(
         "status": "available",
         "availability_reason": None,
         "source": _GRAPH_CONTEXT_SOURCE,
+        "self_resolved": anchor.self_resolved,
         "connected_assets": connected_assets,
         "identity_path": identity_path,
         "blast_radius_neighborhood": blast_radius,
@@ -149,8 +151,7 @@ async def load_graph_inventory_assets(
 
 def _graph_anchor(action: Action) -> _GraphAnchor | None:
     relationship = _relationship_context_payload(action)
-    if not _relationship_context_complete(relationship):
-        return None
+    provider_complete = _relationship_context_complete(relationship)
     account_id = _normalized_text((relationship or {}).get("account_id")) or _normalized_text(getattr(action, "account_id", None))
     region = _normalized_text((relationship or {}).get("region")) or _normalized_text(getattr(action, "region", None))
     resource_id = _normalized_text((relationship or {}).get("resource_id")) or _normalized_text(getattr(action, "resource_id", None))
@@ -161,14 +162,18 @@ def _graph_anchor(action: Action) -> _GraphAnchor | None:
         resource_id=resource_id,
         resource_type=resource_type,
     )
-    if account_id is None or resource_key is None:
+    if account_id is None:
         return None
+    if resource_key is None:
+        # Last-resort: anchor to the account (optionally scoped by region).
+        resource_key = f"account:{account_id}:region:{region}" if region else f"account:{account_id}"
     return _GraphAnchor(
         account_id=account_id,
         region=region,
         resource_id=resource_id,
         resource_type=resource_type,
         resource_key=resource_key,
+        self_resolved=not provider_complete,
     )
 
 
@@ -765,6 +770,7 @@ def _unavailable_graph_context(reason: str) -> dict[str, Any]:
         "status": "unavailable",
         "availability_reason": reason,
         "source": _GRAPH_CONTEXT_SOURCE,
+        "self_resolved": False,
         "connected_assets": [],
         "identity_path": [],
         "blast_radius_neighborhood": [],

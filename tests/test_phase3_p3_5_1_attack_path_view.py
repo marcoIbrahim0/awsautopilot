@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from backend.auth import get_optional_user
 from backend.database import get_db
 from backend.main import app
+from backend.routers.actions import ActionScoreFactor, ActionScoreFactorProvenance
 from backend.services.action_attack_path_view import build_action_attack_path_view
 
 
@@ -27,8 +28,13 @@ def _relationship_context(*, confidence: float = 0.92) -> dict[str, object]:
     }
 
 
-def _action(*, context_incomplete: bool = False) -> SimpleNamespace:
+def _action(
+    *,
+    context_incomplete: bool = False,
+    relationship_context: dict[str, object] | None = None,
+) -> SimpleNamespace:
     observed_at = datetime(2026, 3, 12, 12, 0, tzinfo=timezone.utc)
+    resolved_relationship = relationship_context if relationship_context is not None else _relationship_context()
     finding = SimpleNamespace(
         id=uuid.uuid4(),
         finding_id="finding-1",
@@ -38,11 +44,10 @@ def _action(*, context_incomplete: bool = False) -> SimpleNamespace:
         account_id="123456789012",
         region="us-east-1",
         updated_at=observed_at,
-        raw_json={"relationship_context": _relationship_context()},
+        raw_json={"relationship_context": resolved_relationship} if resolved_relationship else {},
     )
     components = {
         "context_incomplete": context_incomplete,
-        "relationship_context": _relationship_context(),
         "severity": {"points": 35, "signals": ["severity:HIGH"]},
         "internet_exposure": {"normalized": 1.0, "points": 20, "signals": ["keyword:publicly accessible"]},
         "privilege_level": {"normalized": 0.6, "points": 9, "signals": ["keyword:iam"]},
@@ -84,6 +89,8 @@ def _action(*, context_incomplete: bool = False) -> SimpleNamespace:
         },
         "score": 86,
     }
+    if resolved_relationship is not None:
+        components["relationship_context"] = resolved_relationship
     return SimpleNamespace(
         id=uuid.uuid4(),
         tenant_id=uuid.uuid4(),
@@ -109,11 +116,17 @@ def _action(*, context_incomplete: bool = False) -> SimpleNamespace:
     )
 
 
-def _graph_context(*, truncated: bool = False, status: str = "available") -> dict[str, object]:
+def _graph_context(
+    *,
+    truncated: bool = False,
+    status: str = "available",
+    self_resolved: bool = False,
+) -> dict[str, object]:
     return {
         "status": status,
         "availability_reason": None if status == "available" else "relationship_context_unavailable",
         "source": "finding_relationship_context+inventory_assets",
+        "self_resolved": self_resolved,
         "connected_assets": [
             {
                 "label": "arn:aws:s3:::prod-sensitive-bucket",
@@ -196,6 +209,37 @@ def _score_factors() -> list[dict[str, object]]:
     ]
 
 
+def _detail_score_factors() -> list[ActionScoreFactor]:
+    return [
+        ActionScoreFactor(
+            factor_name="exploit_signals",
+            weight=10,
+            contribution=10,
+            evidence_source="trusted_threat_intel",
+            signals=[],
+            explanation="Exploit signals contributed 10 points using trusted threat intel.",
+            provenance=[
+                ActionScoreFactorProvenance(
+                    source="cisa_kev",
+                    observed_at="2026-03-12T11:00:00+00:00",
+                    decay_applied=0.99,
+                    final_contribution=10,
+                    base_contribution=10,
+                )
+            ],
+        ),
+        ActionScoreFactor(
+            factor_name="internet_exposure",
+            weight=20,
+            contribution=20,
+            evidence_source="score_components",
+            signals=[],
+            explanation="Internet exposure contributed 20 points using: keyword:publicly accessible.",
+            provenance=[],
+        ),
+    ]
+
+
 def _execution_guidance() -> list[dict[str, object]]:
     return [
         {
@@ -233,10 +277,41 @@ def test_attack_path_view_available_state_returns_bounded_story() -> None:
     assert payload["path_nodes"]
     assert payload["path_edges"]
     assert payload["entry_points"][0]["label"] == "Actively exploited path"
+    assert payload["entry_points"][0]["facts"] == [
+        {"label": "Driver", "value": "Actively exploited", "tone": "accent"},
+        {"label": "Score impact", "value": "+10", "tone": "code"},
+    ]
     assert payload["target_assets"][0]["label"] == "arn:aws:s3:::prod-sensitive-bucket"
+    assert payload["target_assets"][0]["facts"] == [
+        {"label": "Asset", "value": "AwsS3Bucket", "tone": "accent"},
+        {"label": "Scope", "value": "123456789012 · us-east-1", "tone": "code"},
+    ]
     assert payload["recommendation_summary"] == "Safest next step: Generate PR bundle via PR only."
     assert payload["confidence"] == 0.92
     assert payload["truncated"] is False
+    assert payload["path_nodes"][1]["kind"] == "identity"
+    assert payload["path_nodes"][1]["facts"] == [
+        {"label": "Type", "value": "Principal", "tone": "default"},
+        {
+            "label": "Source",
+            "value": "finding.raw_json.principal",
+            "tone": "code",
+        },
+    ]
+    assert payload["path_nodes"][3]["kind"] == "business_impact"
+    assert payload["path_nodes"][3]["facts"] == [
+        {
+            "label": "Risk",
+            "value": "Critical risk x Critical criticality",
+            "tone": "accent",
+        },
+        {"label": "Urgency", "value": "On track", "tone": "default"},
+    ]
+    assert payload["path_nodes"][4]["kind"] == "next_step"
+    assert payload["path_nodes"][4]["facts"] == [
+        {"label": "Mode", "value": "PR only", "tone": "accent"},
+        {"label": "Blast radius", "value": "Resource", "tone": "default"},
+    ]
 
 
 def test_attack_path_view_partial_state_marks_truncated_context() -> None:
@@ -254,6 +329,18 @@ def test_attack_path_view_partial_state_marks_truncated_context() -> None:
     assert payload["truncated"] is True
     assert payload["availability_reason"] == "bounded_context_truncated"
     assert "truncated or unresolved" in payload["summary"]
+    assert payload["path_nodes"][0]["facts"] == [
+        {"label": "Driver", "value": "Actively exploited", "tone": "accent"},
+        {"label": "Score impact", "value": "+10", "tone": "code"},
+    ]
+    assert payload["path_nodes"][3]["facts"] == [
+        {
+            "label": "Risk",
+            "value": "Critical risk x Critical criticality",
+            "tone": "accent",
+        },
+        {"label": "Urgency", "value": "Expiring", "tone": "default"},
+    ]
 
 
 def test_attack_path_view_unavailable_state_is_explicit() -> None:
@@ -288,6 +375,48 @@ def test_attack_path_view_context_incomplete_state_is_fail_closed() -> None:
     assert payload["path_nodes"] == []
     assert payload["path_edges"] == []
     assert "fail-closed" in payload["summary"]
+
+
+def test_attack_path_view_self_resolved_renders_path() -> None:
+    payload = build_action_attack_path_view(
+        _action(context_incomplete=True, relationship_context=None),
+        graph_context=_graph_context(self_resolved=True),
+        business_impact=_business_impact(),
+        recommendation=_recommendation(),
+        score_factors=_score_factors(),
+        execution_guidance=_execution_guidance(),
+    )
+
+    assert payload["status"] == "available"
+    assert payload["path_nodes"]
+    assert payload["path_edges"]
+    assert "Autopilot resolved this path independently" in payload["summary"]
+    assert payload["confidence"] == 0.20
+    assert payload["path_nodes"][0]["facts"] == [
+        {"label": "Driver", "value": "Actively exploited", "tone": "accent"},
+        {"label": "Score impact", "value": "+10", "tone": "code"},
+    ]
+    assert payload["path_nodes"][4]["facts"] == [
+        {"label": "Mode", "value": "PR only", "tone": "accent"},
+        {"label": "Blast radius", "value": "Resource", "tone": "default"},
+    ]
+
+
+def test_attack_path_view_available_graph_overrides_context_incomplete_marker() -> None:
+    payload = build_action_attack_path_view(
+        _action(context_incomplete=True),
+        graph_context=_graph_context(),
+        business_impact=_business_impact(),
+        recommendation=_recommendation(),
+        score_factors=_score_factors(),
+        execution_guidance=_execution_guidance(),
+    )
+
+    assert payload["status"] == "available"
+    assert payload["path_nodes"]
+    assert payload["path_edges"]
+    assert "fail-closed" not in payload["summary"]
+    assert payload["confidence"] == 0.92
 
 
 def test_get_action_returns_attack_path_view_payload(client: TestClient) -> None:
@@ -333,10 +462,14 @@ def test_get_action_returns_attack_path_view_payload(client: TestClient) -> None
                     new=AsyncMock(return_value=_graph_context()),
                 ):
                     with patch(
-                        "backend.routers.actions.build_action_execution_guidance",
-                        return_value=_execution_guidance(),
+                        "backend.routers.actions._score_factors_payload",
+                        return_value=_detail_score_factors(),
                     ):
-                        response = client.get(f"/api/actions/{action.id}")
+                        with patch(
+                            "backend.routers.actions.build_action_execution_guidance",
+                            return_value=_execution_guidance(),
+                        ):
+                            response = client.get(f"/api/actions/{action.id}")
     finally:
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_optional_user, None)
@@ -347,3 +480,11 @@ def test_get_action_returns_attack_path_view_payload(client: TestClient) -> None
     assert body["attack_path_view"]["path_nodes"]
     assert body["attack_path_view"]["entry_points"]
     assert body["attack_path_view"]["target_assets"]
+    assert body["attack_path_view"]["path_nodes"][0]["facts"] == [
+        {"label": "Driver", "value": "Actively exploited", "tone": "accent"},
+        {"label": "Score impact", "value": "+10", "tone": "code"},
+    ]
+    assert body["attack_path_view"]["target_assets"][0]["facts"] == [
+        {"label": "Asset", "value": "AwsS3Bucket", "tone": "accent"},
+        {"label": "Scope", "value": "123456789012 · us-east-1", "tone": "code"},
+    ]

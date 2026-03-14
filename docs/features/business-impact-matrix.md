@@ -10,7 +10,12 @@ Implemented source files:
 - `backend/services/toxic_combinations.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
+- `frontend/src/components/ActionDetailPriorityStoryboard.tsx`
+- `frontend/src/components/actionDetailExplainers.ts`
+- `frontend/src/components/actionDetailBusinessImpact.ts`
+- `frontend/src/components/ui/AnimatedTooltip.tsx`
+- `frontend/src/components/actionDetailBusinessImpact.test.ts`
 - `frontend/src/app/pr-bundles/create/page.tsx`
 - `frontend/src/app/pr-bundles/create/summary/page.tsx`
 
@@ -127,16 +132,22 @@ The action still receives a deterministic matrix cell and rank because technical
 
 The matrix payload is currently surfaced in:
 
-- action detail drawer
+- action detail modal
 - PR bundle action selection list
 - PR bundle summary view
 
-The action detail drawer shows:
+The action detail modal shows:
 
-- matrix cell
-- technical risk tier and score
-- criticality tier and score
-- matched criticality signals
+- a matrix/criticality badge in the main action header with hover/focus help that explains how technical risk and business criticality combine for matrix placement
+- hoverable labels and badges now use explicit help markers so explainable UI elements are visually distinct from static metadata
+- the current hover copy is written in non-technical language first, so operators can understand the badge meaning without knowing the underlying model terms
+- technical risk score in the main action header
+- a `Why this is prioritized` priority storyboard that combines:
+  - a short business-effect headline translated from the strongest matched dimensions
+  - a score waterfall for the top explainable score drivers with factor labels rendered outside the bars, stronger per-factor contrast, and hover/focus explanations on `Score waterfall`, `Visible lift`, and each factor label
+  - a dashboard-style impact panel centered on the primary matched business dimension with a bounded rail for supporting evidence cards plus hover/focus explanations on `Impact constellation` and `Focus dimension`
+  - a recommended-check command rail that keeps the operator's next verification step visible
+  - a compact `Context missing` badge when criticality is still unknown, with hover/focus help that explains why criticality stayed unknown and what tenant metadata would enrich it
 
 The PR bundle selection and summary tables show condensed matrix labels so operators can see business context before selecting or batching work.
 

@@ -44,6 +44,11 @@ Reminder dispatch:
 - Processes due reminder/revalidation/expired exceptions per tenant.
 - Uses idempotent notification keys and schedule advancement.
 
+### Frontend workflow notes
+
+- `ActionDetailModal` now keeps `Suppress` inside the same popup as `Action Detail` by switching between `detail` and `suppress` subviews instead of opening a second exception modal above it.
+- The same inline suppress view also receives exception handoff from PR-bundle and direct-fix remediation flows, preserving the existing prefilled reason/expiry guidance while avoiding stacked overlays.
+
 ### Dashboard
 
 Endpoint:
@@ -133,6 +138,7 @@ flowchart TD
 
 ## Related docs
 
+- [Handoff-free closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/handoff-free-closure.md)
 - [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
 - [Ownership-based risk queues](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/ownership-risk-queues.md)
 - [Weekly digest + Slack settings context](/Users/marcomaher/AWS%20Security%20Autopilot/docs/CHANGELOG.md)

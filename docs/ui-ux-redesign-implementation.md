@@ -302,7 +302,8 @@ Login
 1. Account area presents four sections with clear intents.
 2. Connection health and status are visible at both summary and row levels.
 3. Account-read checks are not executed from account/settings pages; users are routed to onboarding checks.
-4. Edge cases:
+4. The accounts page, connect/reconnect modal, and account-detail workflow reuse the shared dashboard surface language so the account area no longer reads like a separate UI system.
+5. Edge cases:
    - disabled account status
    - no connected accounts
    - mixed-status multi-account tenants

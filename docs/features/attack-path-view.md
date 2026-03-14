@@ -8,9 +8,15 @@ Implemented source files:
 - `backend/services/action_attack_path_view.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
-- `frontend/src/components/ActionDetailDrawer.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
+- `frontend/src/components/ActionDetailAttackPathNodeCard.tsx`
+- `frontend/src/components/actionDetailExplainers.ts`
+- `frontend/src/components/actionDetailAttackPath.ts`
+- `frontend/src/components/ui/AnimatedTooltip.tsx`
 - `tests/test_phase3_p3_5_1_attack_path_view.py`
-- `frontend/src/components/ActionDetailDrawer.test.tsx`
+- `tests/test_wave5_action_detail_contract.py`
+- `frontend/src/components/ActionDetailAttackPathNodeCard.test.tsx`
+- `frontend/src/components/actionDetailAttackPath.test.ts`
 
 ## API contract
 
@@ -43,6 +49,15 @@ Current `path_nodes[].kind` values:
 - `business_impact`
 - `next_step`
 
+Current `path_nodes[].facts[]` shape:
+
+- `label`
+- `value`
+- `tone`
+  - `default`
+  - `accent`
+  - `code`
+
 Current `availability_reason` values:
 
 - `relationship_context_unavailable`
@@ -74,6 +89,7 @@ No new risk score, business-criticality model, or unbounded graph query path is 
 - bounded graph context exists
 - a concrete entry point and target asset can be shown
 - no truncation was required
+- this now includes self-resolved bounded paths when the backing `graph_context` is marked `self_resolved=true`
 
 ### `partial`
 
@@ -89,6 +105,20 @@ No new risk score, business-criticality model, or unbounded graph query path is 
 
 - the action already carries explicit fail-closed context markers from the existing prioritization pipeline
 - the API avoids implying a concrete attack path and returns empty `path_nodes[]` / `path_edges[]`
+- exception: when bounded graph context is already `available`, the attack path can still render as `available` or `partial`
+- this applies both to provider-backed bounded graph context and to `self_resolved=true` fallback graph context
+- for self-resolved paths, the confidence stays lowered because the anchor was reconstructed from the action's persisted fields
+
+## Self-resolved fallback
+
+When provider relationship metadata is missing or low-confidence, the view can now reuse the additive bounded graph context if that graph was self-resolved from persisted action metadata.
+
+That behavior stays conservative:
+
+- it does not invent a new graph source of truth
+- it still relies on the existing bounded `graph_context` neighborhood
+- it lowers attack-path confidence to `0.20`
+- the summary explicitly states that Autopilot resolved the path independently because provider metadata was unavailable
 
 ## Bounded model
 
@@ -119,7 +149,7 @@ flowchart TD
     F --> H
     G --> H
     H --> I["attack_path_view"]
-    I --> J["ActionDetailDrawer Attack Path"]
+    I --> J["ActionDetailModal Attack Path"]
     F --> K["Why this is prioritized"]
     D --> K
     E --> K
@@ -127,27 +157,39 @@ flowchart TD
 
 ## UI behavior
 
-`frontend/src/components/ActionDetailDrawer.tsx` now renders:
+`frontend/src/components/ActionDetailModal.tsx` now renders:
 
-- an `Attack Path` section with a bounded horizontal path
+- a dashboard-aligned `Attack Path` section with a bounded horizontal path
+- hover/focus help on the `Bounded decision view` label so operators know the panel is intentionally concise and not a free-form graph explorer
+- help-marked hoverable labels/badges and auto-flipped tooltip placement so bounded-view explanations stay readable near the modal edge
+- plain-language hover copy that explains what the bounded view means before it references graph/scoring terminology
+- the shared tooltip renders in a top-level portal so these explanations are not cut off by the action-detail modal container
+- inline-emphasized target resource, account scope, operator caution, and recommended next step directly in the summary copy instead of separate context cards
+- de-duplicated summary support text so the target resource and next step are not repeated again below the main story when the summary already includes them
 - explicit badges for:
   - `Actively exploited`
-  - `Business critical`
+  - `Business critical` with hover/focus help that clarifies the badge is driven by business-impact evidence rather than technical score alone
   - `Context incomplete`
-- a `Why this is prioritized` panel that surfaces:
-  - score-factor explanations
-  - business-impact reasons
-  - threat-intel reasons
-  - recommendation rationale
+- a tooltip explanation on the `partial` status badge using concise `Take care:` wording and left-side placement so the bounded/incomplete reason is fully visible near the right edge of the panel
+- same-size bounded path cards with clearer typography and node detail text under each node when available
+- cards render backend-provided `path_nodes[].facts[]` directly in a compact `1 insight + up to 2 facts` format instead of inferring entry/target/scope rows from the summary on the frontend
+- target/scope support context moved into the relevant path cards instead of sitting in a separate metadata row above the path
+- the `next_step` card no longer repeats a redundant `Safest next step` footer badge because that recommendation is already expressed in the card title/body and summary copy
+- a `Why this is prioritized` priority storyboard that surfaces:
+  - a short risk-summary headline
+  - a score waterfall with stronger per-factor contrast and factor labels/values outside the decorative bars for stable scanning
+  - a dashboard-aligned impact panel with one primary business-dimension card and a bounded supporting-evidence rail so text never collapses into narrow columns
+  - a full-width recommended-check command rail with a compact `Context missing` badge when tenant context is still unverified
 
 Existing business-impact, score-explainability, threat-intel provenance, graph-context, and implementation-artifact sections remain in place.
 
 ## Limitations
 
 - The path is intentionally single-story and bounded; it is not a tenant-wide graph explorer.
-- `context_incomplete` remains fail-closed and returns no visual path nodes.
-- The current confidence value is derived from the existing relationship-context confidence and bounded-state handling, not from a new scoring system.
+- `context_incomplete` remains fail-closed when bounded graph context is not available.
+- The current confidence value is derived from the existing relationship-context confidence and bounded-state handling, with a fixed `0.20` fallback for self-resolved paths rather than a new scoring system.
 - The view prefers the recommended execution-guidance entry when present; otherwise it falls back to the existing recommendation mode/rationale.
+- Some nodes can legitimately render fewer than two fact rows when bounded source data is missing; the API does not invent filler metadata to satisfy the UI shape.
 
 ## Related docs
 

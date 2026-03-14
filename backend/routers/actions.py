@@ -467,11 +467,20 @@ class ActionGraphContext(BaseModel):
     status: Literal["available", "unavailable"]
     availability_reason: str | None = None
     source: str
+    self_resolved: bool = False
     connected_assets: list[ActionGraphAsset] = Field(default_factory=list)
     identity_path: list[ActionGraphIdentityNode] = Field(default_factory=list)
     blast_radius_neighborhood: list[ActionBlastRadiusNeighbor] = Field(default_factory=list)
     truncated_sections: list[str] = Field(default_factory=list)
     limits: ActionGraphLimits
+
+
+class ActionAttackPathFact(BaseModel):
+    """One compact fact row rendered inside an attack-path node card."""
+
+    label: str
+    value: str
+    tone: Literal["default", "accent", "code"] = "default"
 
 
 class ActionAttackPathNode(BaseModel):
@@ -482,6 +491,7 @@ class ActionAttackPathNode(BaseModel):
     label: str
     detail: str | None = None
     badges: list[str] = Field(default_factory=list)
+    facts: list[ActionAttackPathFact] = Field(default_factory=list)
 
 
 class ActionAttackPathEdge(BaseModel):
@@ -1259,6 +1269,7 @@ def _default_graph_context_payload() -> dict[str, Any]:
         "status": "unavailable",
         "availability_reason": "relationship_context_unavailable",
         "source": "finding_relationship_context+inventory_assets",
+        "self_resolved": False,
         "connected_assets": [],
         "identity_path": [],
         "blast_radius_neighborhood": [],

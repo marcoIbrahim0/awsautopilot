@@ -7,6 +7,10 @@ Implemented source files:
 - `backend/services/threat_intelligence.py`
 - `backend/routers/actions.py`
 - `frontend/src/lib/api.ts`
+- `frontend/src/components/ActionDetailModal.tsx`
+- `frontend/src/components/ActionDetailPriorityStoryboard.tsx`
+- `frontend/src/components/actionDetailExplainers.ts`
+- `frontend/src/components/ui/AnimatedTooltip.tsx`
 
 ## What is returned
 
@@ -43,6 +47,18 @@ Each `score_factors` entry includes:
 - `provenance`
 
 The factor contributions always sum to the returned `score`. If an older action only has partial scoring metadata, the API falls back to a single legacy factor so the contract stays non-empty and internally consistent.
+
+## Action detail UI
+
+The action-detail surface now exposes this explainability through hover/focus help as well as visible labels:
+
+- the `Risk {score}` badge explains that the score is the `0-100` technical risk score derived from the explainable factors below
+- the `Score waterfall` label explains that the rail is a relative explanatory view, not an audited numeric axis
+- the `Visible lift` chip explains that it is the sum of the positive factors currently shown in the bounded waterfall
+- each factor label uses the underlying `score_factors[].explanation` text as its tooltip copy
+- explainable labels now render with explicit help markers, and tooltip sizing/placement flips conservatively to avoid clipped copy near modal edges
+- the current hover copy is intentionally plain-language and operator-facing, so it explains what a label means before it explains scoring internals
+- the shared tooltip now renders in a top-level portal and clamps to the viewport, so action-detail explainers are not clipped by modal overflow
 
 ## Current factor weights
 

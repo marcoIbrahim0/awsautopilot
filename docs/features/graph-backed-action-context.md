@@ -34,7 +34,16 @@ The current graph-backed action detail payload is intentionally conservative and
 - `inventory_assets` rows for the same tenant/account and the anchor resource or same-account support assets
 - related `actions` and `findings` inside the same tenant/account neighborhood
 
-An action is considered graph-ready only when its relationship context is explicit and complete with confidence `>= 0.75`.
+When provider relationship metadata is explicit, complete, and confidence `>= 0.75`, the graph anchor uses that provider context directly.
+
+When that provider metadata is missing or low-confidence, the graph can now self-resolve the anchor from persisted action fields:
+
+- `action.account_id`
+- `action.region`
+- `action.resource_id`
+- `action.resource_type`
+
+using the existing `build_resource_key(...)` canonicalization path.
 
 ## API contract
 
@@ -47,6 +56,9 @@ An action is considered graph-ready only when its relationship context is explic
   - currently `relationship_context_unavailable` when the anchor action does not have complete/high-confidence relationship context
 - `source`
   - `finding_relationship_context+inventory_assets`
+- `self_resolved`
+  - `false` when the provider relationship context supplied the anchor
+  - `true` when the anchor was rebuilt from the action's own persisted fields
 - `connected_assets[]`
 - `identity_path[]`
 - `blast_radius_neighborhood[]`
@@ -97,15 +109,19 @@ When a section hits its cap, the response records that in `truncated_sections[]`
 flowchart TD
     A["GET /api/actions/{id}"] --> B["Load anchor action + linked findings"]
     B --> C["Validate complete relationship_context"]
-    C -->|No| D["graph_context.status = unavailable"]
-    C -->|Yes| E["Query bounded finding/action/inventory neighborhood"]
-    E --> F["Build connected_assets[]"]
-    E --> G["Build identity_path[]"]
-    E --> H["Build blast_radius_neighborhood[]"]
-    F --> I["Return graph_context"]
-    G --> I
-    H --> I
-    I --> J["ActionDetailDrawer graph-backed context card"]
+    C -->|Yes| D["Use provider anchor"]
+    C -->|No| E["Try action-field self resolution"]
+    E -->|No| F["graph_context.status = unavailable"]
+    E -->|Yes| G["Mark self_resolved = true"]
+    D --> H["Query bounded finding/action/inventory neighborhood"]
+    G --> H
+    H --> I["Build connected_assets[]"]
+    H --> J["Build identity_path[]"]
+    H --> K["Build blast_radius_neighborhood[]"]
+    I --> L["Return graph_context"]
+    J --> L
+    K --> L
+    L --> M["ActionDetailDrawer graph-backed context card"]
 ```
 
 ## UI behavior
@@ -119,6 +135,7 @@ flowchart TD
 ## Limitations
 
 - This slice does not yet traverse the persisted `security_graph_nodes` / `security_graph_edges` tables directly; it builds the detail payload from the persisted relationship metadata and inventory rows already used by the rest of the product.
+- `self_resolved=true` is a bounded fallback for missing provider metadata, not a replacement for authoritative provider-produced relationship context.
 - `identity_path` is only populated when linked finding payloads contain concrete identity hints such as principals or IAM resources.
 - The current neighborhood remains intentionally narrow; it is explainability-focused, not a tenant-wide free-form graph explorer.
 

@@ -63,6 +63,7 @@ def test_action_detail_contract_includes_explanation_fields() -> None:
     assert response.implementation_artifacts == []
     assert response.graph_context.status == "unavailable"
     assert response.graph_context.availability_reason == "relationship_context_unavailable"
+    assert response.graph_context.self_resolved is False
     assert response.attack_path_view.status == "unavailable"
     assert response.attack_path_view.path_nodes == []
     assert response.attack_path_view.path_edges == []

@@ -6,6 +6,7 @@ from typing import Any
 _ENTRY_POINT_LIMIT = 2
 _TARGET_ASSET_LIMIT = 3
 _MIN_RELATIONSHIP_CONFIDENCE = 0.75
+_SELF_RESOLVED_CONFIDENCE = 0.20
 _RELATIONSHIP_CONTEXT_KEYS = (
     "relationship_context",
     "RelationshipContext",
@@ -33,7 +34,16 @@ def build_action_attack_path_view(
     entry_points = _entry_points(action, graph, score_factors)
     target_assets = _target_assets(action, graph, business_impact)
     status = _status(action, graph, entry_points, target_assets)
-    path_nodes = _visible_path_nodes(status, graph, business_impact, recommendation, execution_guidance, entry_points, target_assets)
+    path_nodes = _visible_path_nodes(
+        status,
+        graph,
+        business_impact,
+        recommendation,
+        execution_guidance,
+        entry_points,
+        target_assets,
+        sla,
+    )
     return {
         "status": status,
         "summary": _summary(status, business_impact, recommendation, execution_guidance, entry_points, target_assets, sla, graph),
@@ -56,6 +66,7 @@ def _graph_payload(graph_context: dict[str, Any] | None) -> dict[str, Any]:
     return {
         "status": "unavailable",
         "availability_reason": "graph_context_unavailable",
+        "self_resolved": False,
         "connected_assets": [],
         "identity_path": [],
         "blast_radius_neighborhood": [],
@@ -69,9 +80,10 @@ def _status(
     entry_points: list[dict[str, Any]],
     target_assets: list[dict[str, Any]],
 ) -> str:
-    if _context_incomplete(action):
+    graph_available = _string(graph.get("status")) == "available"
+    if _context_incomplete(action) and not graph_available and not _self_resolved(graph):
         return "context_incomplete"
-    if _string(graph.get("status")) != "available":
+    if not graph_available:
         return "unavailable"
     if _is_truncated(graph) or not entry_points or not target_assets:
         return "partial"
@@ -100,16 +112,42 @@ def _factor_entry_points(score_factors: list[dict[str, Any]]) -> list[dict[str, 
     if _positive_factor(exploit):
         items.append(_exploit_entry_point(exploit))
     if _positive_factor(exposure):
-        items.append(_item("entry-exposure", "entry_point", "Public exposure", _string(exposure.get("explanation")), []))
+        items.append(
+            _factor_entry_point(
+                "entry-exposure",
+                "Public exposure",
+                _string(exposure.get("explanation")),
+                [],
+                "Public exposure",
+                exposure,
+            )
+        )
     if not items and _positive_factor(privilege):
-        items.append(_item("entry-privilege", "entry_point", "Privileged identity path", _string(privilege.get("explanation")), []))
+        items.append(
+            _factor_entry_point(
+                "entry-privilege",
+                "Privileged identity path",
+                _string(privilege.get("explanation")),
+                [],
+                "Privileged path",
+                privilege,
+            )
+        )
     return items
 
 
 def _exploit_entry_point(factor: dict[str, Any]) -> dict[str, Any]:
     badges = ["actively_exploited"] if _has_threat_provenance(factor) else []
     label = "Actively exploited path" if badges else "Exploitable path"
-    return _item("entry-exploit", "entry_point", label, _string(factor.get("explanation")), badges)
+    driver = "Actively exploited" if badges else "Exploitable path"
+    return _factor_entry_point(
+        "entry-exploit",
+        label,
+        _string(factor.get("explanation")),
+        badges,
+        driver,
+        factor,
+    )
 
 
 def _target_assets(
@@ -117,21 +155,27 @@ def _target_assets(
     graph: dict[str, Any],
     business_impact: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    items = [_target_asset_item(asset, business_impact) for asset in _connected_assets(graph)]
+    items = [_target_asset_item(asset, business_impact, action) for asset in _connected_assets(graph)]
     if items:
         return items[:_TARGET_ASSET_LIMIT]
     fallback = _action_target_asset(action, business_impact)
     return [fallback] if fallback is not None else []
 
 
-def _target_asset_item(asset: dict[str, Any], business_impact: dict[str, Any]) -> dict[str, Any]:
-    detail = _join_parts(_string(asset.get("resource_type")), _string(asset.get("relationship")))
+def _target_asset_item(
+    asset: dict[str, Any],
+    business_impact: dict[str, Any],
+    action: Any,
+) -> dict[str, Any]:
+    resource_type = _string(asset.get("resource_type"))
+    detail = _join_parts(resource_type, _string(asset.get("relationship")))
     return _item(
         f"target-{_string(asset.get('resource_key')) or _string(asset.get('label'))}",
         "target_asset",
         _string(asset.get("label")) or "Target asset",
         detail,
         _business_badges(business_impact),
+        _target_asset_facts(action, resource_type),
     )
 
 
@@ -139,8 +183,15 @@ def _action_target_asset(action: Any, business_impact: dict[str, Any]) -> dict[s
     label = _string(getattr(action, "resource_id", None)) or _string(getattr(action, "target_id", None))
     if not label:
         return None
-    detail = _string(getattr(action, "resource_type", None))
-    return _item("target-action", "target_asset", label, detail, _business_badges(business_impact))
+    resource_type = _string(getattr(action, "resource_type", None))
+    return _item(
+        "target-action",
+        "target_asset",
+        label,
+        resource_type,
+        _business_badges(business_impact),
+        _target_asset_facts(action, resource_type),
+    )
 
 
 def _path_nodes(
@@ -150,9 +201,10 @@ def _path_nodes(
     execution_guidance: list[dict[str, Any]],
     entry_points: list[dict[str, Any]],
     target_assets: list[dict[str, Any]],
+    sla: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     nodes = _primary_nodes(entry_points, graph, target_assets)
-    nodes.append(_impact_node(business_impact))
+    nodes.append(_impact_node(business_impact, sla))
     nodes.append(_next_step_node(recommendation, execution_guidance))
     return [node for node in nodes if node is not None]
 
@@ -165,10 +217,19 @@ def _visible_path_nodes(
     execution_guidance: list[dict[str, Any]],
     entry_points: list[dict[str, Any]],
     target_assets: list[dict[str, Any]],
+    sla: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     if status in {"unavailable", "context_incomplete"}:
         return []
-    return _path_nodes(graph, business_impact, recommendation, execution_guidance, entry_points, target_assets)
+    return _path_nodes(
+        graph,
+        business_impact,
+        recommendation,
+        execution_guidance,
+        entry_points,
+        target_assets,
+        sla,
+    )
 
 
 def _primary_nodes(
@@ -194,13 +255,28 @@ def _identity_step_node(
     entry_label = _string(entry_points[0].get("label")) if entry_points else None
     if identity_node["label"] == entry_label:
         return None
-    return _item("identity-primary", "identity", identity_node["label"], identity_node["source"], [])
+    return _item(
+        "identity-primary",
+        "identity",
+        identity_node["label"],
+        identity_node["source"],
+        [],
+        _identity_facts(identity_node),
+    )
 
 
-def _impact_node(business_impact: dict[str, Any]) -> dict[str, Any]:
-    cell = _string(((business_impact.get("matrix_position") or {}).get("cell")))
-    detail = _join_parts(_string(business_impact.get("summary")), cell)
-    return _item("impact-business", "business_impact", "Business impact", detail, _business_badges(business_impact))
+def _impact_node(
+    business_impact: dict[str, Any],
+    sla: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return _item(
+        "impact-business",
+        "business_impact",
+        "Business impact",
+        _string(business_impact.get("summary")),
+        _business_badges(business_impact),
+        _business_impact_facts(business_impact, sla),
+    )
 
 
 def _next_step_node(
@@ -209,15 +285,27 @@ def _next_step_node(
 ) -> dict[str, Any]:
     guidance = _recommended_guidance(execution_guidance)
     if guidance is None:
-        label = _mode_label(_string(recommendation.get("mode")) or "recommended_action")
+        mode = _string(recommendation.get("mode")) or "recommended_action"
+        label = _mode_label(mode)
         detail = _string(recommendation.get("rationale"))
-        return _item("next-step-mode", "next_step", label, detail, ["recommended"])
+        return _item(
+            "next-step-mode",
+            "next_step",
+            label,
+            detail,
+            ["recommended"],
+            _next_step_facts(mode=mode, blast_radius=None),
+        )
     return _item(
         "next-step-guidance",
         "next_step",
         _string(guidance.get("label")) or "Recommended next step",
         _string(guidance.get("blast_radius_summary")) or _string(recommendation.get("rationale")),
         ["recommended"],
+        _next_step_facts(
+            mode=_string(guidance.get("mode")),
+            blast_radius=_string(guidance.get("blast_radius")),
+        ),
     )
 
 
@@ -252,6 +340,18 @@ def _summary(
     target = _string(target_assets[0].get("label")) if target_assets else "the affected target"
     urgency = _urgency_fragment(business_impact, sla)
     next_step = _recommendation_summary(recommendation, execution_guidance)
+    if _self_resolved(graph):
+        if status == "partial":
+            return (
+                f"{entry} can reach {target} in the current bounded view, but some path context is truncated or unresolved. "
+                "Autopilot resolved this path independently because provider relationship metadata was unavailable. "
+                f"{urgency} {next_step}"
+            )
+        return (
+            f"{entry} can reach {target}. "
+            "Autopilot resolved this path independently because provider relationship metadata was unavailable. "
+            f"{urgency} {next_step}{_truncation_suffix(graph)}"
+        )
     if status == "partial":
         return f"{entry} can reach {target} in the current bounded view, but some path context is truncated or unresolved. {urgency} {next_step}"
     return f"{entry} can reach {target}. {urgency} {next_step}{_truncation_suffix(graph)}"
@@ -341,6 +441,8 @@ def _availability_reason(
 
 
 def _confidence(action: Any, status: str, graph: dict[str, Any]) -> float:
+    if _self_resolved(graph):
+        return _SELF_RESOLVED_CONFIDENCE
     base = _relationship_confidence(action)
     if status == "available":
         return round(max(base, _MIN_RELATIONSHIP_CONFIDENCE), 2)
@@ -405,7 +507,11 @@ def _primary_identity_node(graph: dict[str, Any]) -> dict[str, str] | None:
         return None
     for node in nodes:
         if isinstance(node, dict) and _string(node.get("label")):
-            return {"label": _string(node.get("label")) or "Identity path", "source": _string(node.get("source")) or ""}
+            return {
+                "label": _string(node.get("label")) or "Identity path",
+                "node_type": _string(node.get("node_type")) or "",
+                "source": _string(node.get("source")) or "",
+            }
     return None
 
 
@@ -429,7 +535,16 @@ def _action_entry_fallback(action: Any) -> list[dict[str, Any]]:
     if not _string(getattr(action, "title", None)):
         return []
     detail = _string(getattr(action, "description", None))
-    return [_item("entry-action", "entry_point", "Observed finding path", detail, [])]
+    return [
+        _item(
+            "entry-action",
+            "entry_point",
+            "Observed finding path",
+            detail,
+            [],
+            [_fact("Driver", "Observed finding", "default")],
+        )
+    ]
 
 
 def _edge_label(source_kind: str | None, target_kind: str | None) -> str:
@@ -459,6 +574,10 @@ def _is_truncated(graph: dict[str, Any]) -> bool:
     return isinstance(sections, list) and bool(sections)
 
 
+def _self_resolved(graph: dict[str, Any]) -> bool:
+    return bool(graph.get("self_resolved"))
+
+
 def _business_badges(business_impact: dict[str, Any]) -> list[str]:
     criticality = _string(((business_impact.get("criticality") or {}).get("tier")))
     return ["business_critical"] if criticality in {"critical", "high"} else []
@@ -484,6 +603,7 @@ def _item(
     label: str,
     detail: str | None,
     badges: list[str],
+    facts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "node_id": node_id,
@@ -491,7 +611,114 @@ def _item(
         "label": label,
         "detail": detail,
         "badges": badges,
+        "facts": facts or [],
     }
+
+
+def _factor_entry_point(
+    node_id: str,
+    label: str,
+    detail: str | None,
+    badges: list[str],
+    driver: str,
+    factor: dict[str, Any],
+) -> dict[str, Any]:
+    return _item(
+        node_id,
+        "entry_point",
+        label,
+        detail,
+        badges,
+        _entry_point_facts(driver, factor),
+    )
+
+
+def _entry_point_facts(driver: str, factor: dict[str, Any]) -> list[dict[str, Any]]:
+    facts = [_fact("Driver", driver, "accent")]
+    contribution = int(factor.get("contribution") or 0)
+    if contribution > 0:
+        facts.append(_fact("Score impact", f"+{contribution}", "code"))
+    return facts
+
+
+def _identity_facts(identity_node: dict[str, str]) -> list[dict[str, Any]]:
+    facts: list[dict[str, Any]] = []
+    node_type = _string(identity_node.get("node_type"))
+    if node_type:
+        facts.append(_fact("Type", _title_case(node_type), "default"))
+    source = _string(identity_node.get("source"))
+    if source:
+        facts.append(_fact("Source", source, "code"))
+    return facts
+
+
+def _target_asset_facts(action: Any, resource_type: str | None) -> list[dict[str, Any]]:
+    facts: list[dict[str, Any]] = []
+    if resource_type:
+        facts.append(_fact("Asset", resource_type, "accent"))
+    scope = _action_scope(action)
+    if scope:
+        facts.append(_fact("Scope", scope, "code"))
+    return facts
+
+
+def _business_impact_facts(
+    business_impact: dict[str, Any],
+    sla: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    facts: list[dict[str, Any]] = []
+    risk = _business_risk_value(business_impact)
+    if risk:
+        facts.append(_fact("Risk", risk, "accent"))
+    urgency = _sla_state_label(sla)
+    if urgency:
+        facts.append(_fact("Urgency", urgency, "default"))
+    return facts
+
+
+def _business_risk_value(business_impact: dict[str, Any]) -> str | None:
+    risk = _string(business_impact.get("technical_risk_tier"))
+    criticality = _string(((business_impact.get("criticality") or {}).get("tier")))
+    if risk and criticality:
+        return f"{_title_case(risk)} risk x {_title_case(criticality)} criticality"
+    cell = _string(((business_impact.get("matrix_position") or {}).get("cell")))
+    if cell:
+        return _title_case(cell.replace(":", " x "))
+    return None
+
+
+def _next_step_facts(
+    *,
+    mode: str | None,
+    blast_radius: str | None,
+) -> list[dict[str, Any]]:
+    facts: list[dict[str, Any]] = []
+    if mode:
+        facts.append(_fact("Mode", _mode_label(mode), "accent"))
+    if blast_radius:
+        facts.append(_fact("Blast radius", _title_case(blast_radius), "default"))
+    return facts
+
+
+def _action_scope(action: Any) -> str | None:
+    account_id = _string(getattr(action, "account_id", None))
+    if not account_id:
+        return None
+    region = _string(getattr(action, "region", None)) or "global"
+    return f"{account_id} · {region}"
+
+
+def _sla_state_label(sla: dict[str, Any] | None) -> str | None:
+    state = _string((sla or {}).get("state"))
+    if not state:
+        return None
+    if state == "on_track":
+        return "On track"
+    return _title_case(state)
+
+
+def _fact(label: str, value: str, tone: str) -> dict[str, str]:
+    return {"label": label, "value": value, "tone": tone}
 
 
 def _mapping(value: Any) -> dict[str, Any] | None:

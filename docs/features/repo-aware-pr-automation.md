@@ -98,6 +98,14 @@ appear in `artifact_metadata.evidence_pointers[]`
 
 This keeps action-detail and run-detail UX additive while preserving the raw worker `artifacts` payload for existing consumers.
 
+## Frontend flow
+
+Action detail now keeps PR-bundle generation inside the same popup instead of stacking a second modal above `Action Detail`.
+
+- `Generate PR bundle` switches the existing action-detail dialog into the PR-bundle workflow.
+- The dialog header adds a `Back to action detail` control so operators can return without dismissing the popup.
+- After a PR bundle run is created, the same dialog keeps the `Run progress` view in place until the operator goes back, closes, or opens the dedicated run page.
+
 ## Data flow
 
 ```mermaid

@@ -212,6 +212,29 @@ def test_build_action_graph_context_returns_explicit_fallback_when_graph_is_unav
     anchor_action = _action(anchor_finding, action_type="s3_bucket_block_public_access")
 
     db_session = MagicMock()
+    db_session.execute = AsyncMock(side_effect=[_rows_result([]), _rows_result([]), _rows_result([])])
+
+    payload = asyncio.run(
+        build_action_graph_context(db_session, tenant_id=anchor_action.tenant_id, action=anchor_action)
+    )
+
+    assert payload["status"] == "available"
+    assert payload["availability_reason"] is None
+    assert payload["self_resolved"] is True
+    assert any(item["relationship"] == "anchor" for item in payload["connected_assets"])
+
+
+def test_build_action_graph_context_returns_explicit_fallback_when_action_cannot_self_resolve() -> None:
+    anchor_finding = _finding(
+        control_id="S3.2",
+        resource_id="arn:aws:s3:::prod-sensitive-bucket",
+        resource_type="AwsS3Bucket",
+        raw_json={},
+    )
+    anchor_action = _action(anchor_finding, action_type="s3_bucket_block_public_access")
+    anchor_action.account_id = None
+
+    db_session = MagicMock()
     db_session.execute = AsyncMock()
 
     payload = asyncio.run(
@@ -336,6 +359,7 @@ def test_get_action_contract_includes_graph_context_payload_shape(client: TestCl
     graph = body["graph_context"]
     assert graph["status"] == "available"
     assert graph["availability_reason"] is None
+    assert graph["self_resolved"] is False
     assert graph["limits"]["max_connected_assets"] == 6
     assert isinstance(graph["connected_assets"], list)
     assert isinstance(graph["identity_path"], list)
