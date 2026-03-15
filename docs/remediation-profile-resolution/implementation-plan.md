@@ -2,7 +2,7 @@
 
 > Scope date: 2026-03-14
 >
-> ⚠️ Status: Planned — not yet implemented
+> ⚠️ Status: Partially implemented on `master` — later steps and live product-claim updates remain planned
 >
 > Source spec: [Remediation Profile Resolution](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md)
 
@@ -618,6 +618,13 @@ Specify that executable S3.5 and S3.11 output requires resolver-side preservatio
 - lifecycle-document capture and additive-merge safety for S3.11
 
 Without that evidence, the path downgrades explicitly.
+
+Current landed scope on `master`:
+
+- 9.2 is implemented for EC2.53.
+- 9.3 is implemented for IAM.4 guidance metadata while `/api/root-key-remediation-runs` remains the only execution authority.
+- 9.4 is implemented for S3.2 with explicit manual-only fallback profiles.
+- 9.5 is implemented for S3.5 and S3.11 with resolver-side preservation summaries, explicit downgrade reasons, and single-run worker gating that keeps non-deterministic branches metadata-only.
 
 ### 9.6 Define S3.9 and S3.15 branching and downgrade conditions
 

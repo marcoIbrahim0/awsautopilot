@@ -1,5 +1,57 @@
 # Task Log
 
+## Remediation-profile Wave 6 S3.2, S3.5, and S3.11 family migration on master (2026-03-15)
+
+**Task:** Implement remediation-profile Wave 6 Prompt 3 on current `master` only by migrating S3.2, S3.5, and S3.11 onto resolver-backed family/profile selection with explicit downgrade behavior, preservation-evidence gating, and worker-side non-executable bundle enforcement.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/s3_family_resolution_adapter.py** - added resolver-side S3 family adapters for S3.2, S3.5, and S3.11, including downgrade triggers, blocked reasons, rejected profiles, and `preservation_summary` payloads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - added S3.2 manual fallback profiles and tagged S3.5/S3.11 compatibility rows with family resolver kinds while keeping public strategy IDs unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py** - routed S3.2, S3.5, and S3.11 through family-aware resolver selection and persisted additive preservation metadata in the canonical selection result.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_read_path.py** - surfaced family-aware `preservation_summary` and downgrade metadata in remediation options and preview.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py** - persisted family-aware preservation summaries in single-run canonical `artifacts.resolution`.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - added S3.11 lifecycle-document capture signals alongside the existing S3.2/S3.5 policy/access-path evidence.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - added canonical-resolution gating so downgraded S3.2/S3.5/S3.11 branches emit metadata-only guidance bundles instead of runnable IaC.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py** - let grouped creation treat non-deterministic S3 family resolutions as explicit review/manual outcomes instead of hard validation failures.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - threaded runtime signals into profile-aware S3 options/preview metadata and exposed additive preservation summaries.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - threaded runtime signals into create-time S3 resolution and allowed downgraded non-executable S3 runs to persist canonical review/manual decisions.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - forwarded canonical single-run and grouped resolutions into bundle generation so S3 family executability follows the stored resolver decision.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - updated catalog coverage for S3 family rows and resolver kinds.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added focused S3.2/S3.5/S3.11 options and preview coverage for fallback profiles, preservation summaries, and explicit downgrade reasons.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - added focused single-run create coverage for S3.2 manual fallback and S3.5/S3.11 preservation-evidence downgrades.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** - added focused S3.11 lifecycle-capture coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - added focused generation coverage proving downgraded S3.2/S3.5/S3.11 branches stay metadata-only and preserved legacy CloudFront OAC runnable behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - added focused worker coverage for canonical non-executable resolution forwarding and outcome text.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented the landed Wave 6 S3 family behavior and worker-side non-executable gating.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - updated Step 9 status notes to record the landed S3 family scope on `master`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 Prompt 3 task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Kept the public S3 strategy IDs unchanged, including legacy CloudFront OAC strategy compatibility and the `cloudfront_oac_private_s3` variant mapping.
+- Migrated S3.2 `s3_bucket_block_public_access` onto resolver-backed family selection with two explicit manual-only fallback profiles:
+  - `s3_bucket_block_public_access_manual_preservation`
+  - `s3_migrate_cloudfront_oac_private_manual_preservation`
+- Added resolver-side S3.2 downgrade rules so executable output is blocked when website/public-preservation safety is under-proven or CloudFront/OAC policy preservation cannot be proven safe.
+- Migrated S3.5 `s3_bucket_require_ssl` onto resolver-backed preservation gating so executable output now requires merge-safe bucket-policy preservation evidence and unsafe overwrite requests stay non-executable.
+- Migrated S3.11 `s3_bucket_lifecycle_configuration` onto resolver-backed preservation gating so executable output now requires lifecycle-document capture plus additive-merge safety.
+- Threaded the same family decision through remediation options, remediation preview, single-run create, grouped create, and single-run worker bundle generation.
+- Kept customer-run PR bundles as the supported model and left `direct_fix` untouched.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py -q` -> `8 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py -q -k 's3_2 or s3_5 or s3_11'` -> `4 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py -q -k 's3_2 or s3_5 or s3_11'` -> `4 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py -q -k 's3_2_non_executable_resolution or s3_cloudfront_oac_private or s3_ssl or s3_11'` -> `17 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py -q -k 's35 or s3_11'` -> `6 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q -k non_executable_resolution` -> `1 passed`
+- broader touched-surface regression: `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q` -> `205 passed`
+
+**Open questions / TODOs:**
+- Prompt 4 must preserve canonical `artifacts.resolution` as the single-run worker authority for S3.2/S3.5/S3.11 executability; legacy mirrored `selected_strategy` and `strategy_inputs` are compatibility fields, not the safety authority.
+- Prompt 4 must preserve customer-run PR bundles as the supported execution model and must not reintroduce SaaS-managed PR-bundle execution.
+- Prompt 4 must preserve legacy CloudFront OAC variant compatibility for S3.2 and must not widen IAM.4 or root-key route scope.
+
 ## Remediation-profile Wave 6 IAM.4 metadata and authority preservation on master (2026-03-15)
 
 **Task:** Implement remediation-profile Wave 6 Prompt 2 on current `master` only by moving IAM.4 read surfaces onto additive profile metadata while preserving `/api/root-key-remediation-runs` as the only execution authority.

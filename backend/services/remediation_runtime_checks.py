@@ -266,6 +266,36 @@ def _policy_statement_count(policy_json: str | None) -> int:
     return 0
 
 
+def _normalize_lifecycle_configuration_document(document: Any) -> str | None:
+    """Return canonical lifecycle-configuration JSON or None when invalid."""
+    if isinstance(document, str):
+        try:
+            document = json.loads(document)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(document, dict):
+        return None
+    rules = document.get("Rules")
+    if rules is None:
+        document = {"Rules": []}
+    elif not isinstance(rules, list):
+        return None
+    else:
+        document = {"Rules": rules}
+    return json.dumps(document, separators=(",", ":"), sort_keys=True)
+
+
+def _lifecycle_rule_count(document: Any) -> int:
+    normalized = _normalize_lifecycle_configuration_document(document)
+    if not normalized:
+        return 0
+    parsed = json.loads(normalized)
+    rules = parsed.get("Rules")
+    if isinstance(rules, list):
+        return len(rules)
+    return 0
+
+
 def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[bool | None, str | None]:
     """
     Non-mutating direct-fix permission probe.
@@ -823,6 +853,45 @@ def collect_runtime_risk_signals(
         else:
             if account is not None:
                 _mark_access_path_unavailable("Missing bucket identifier for access-path validation.")
+
+    if strategy_id == "s3_enable_abort_incomplete_uploads":
+        bucket = _bucket_name_from_target_id(action.target_id)
+        if bucket:
+            signals["evidence"]["target_bucket"] = bucket
+            session = _get_read_session()
+            if session is None:
+                signals["s3_lifecycle_analysis_possible"] = False
+                signals["s3_lifecycle_analysis_error"] = (
+                    read_probe_error or "Unable to inspect current lifecycle configuration."
+                )
+            else:
+                s3 = session.client("s3")
+                try:
+                    lifecycle_document = s3.get_bucket_lifecycle_configuration(Bucket=bucket)
+                    normalized_lifecycle = _normalize_lifecycle_configuration_document(lifecycle_document)
+                    signals["s3_lifecycle_analysis_possible"] = True
+                    evidence_payload = signals.setdefault("evidence", {})
+                    if isinstance(evidence_payload, dict):
+                        evidence_payload["existing_lifecycle_rule_count"] = _lifecycle_rule_count(
+                            normalized_lifecycle
+                        )
+                        if normalized_lifecycle is not None:
+                            evidence_payload["existing_lifecycle_configuration_json"] = normalized_lifecycle
+                except ClientError as exc:
+                    code = _error_code(exc)
+                    if code == "NoSuchLifecycleConfiguration":
+                        signals["s3_lifecycle_analysis_possible"] = True
+                        evidence_payload = signals.setdefault("evidence", {})
+                        if isinstance(evidence_payload, dict):
+                            evidence_payload["existing_lifecycle_rule_count"] = 0
+                    else:
+                        signals["s3_lifecycle_analysis_possible"] = False
+                        signals["s3_lifecycle_analysis_error"] = code or "GetLifecycleConfigurationFailed"
+                        evidence_payload = signals.setdefault("evidence", {})
+                        if isinstance(evidence_payload, dict):
+                            evidence_payload["existing_lifecycle_capture_error"] = (
+                                code or "GetLifecycleConfigurationFailed"
+                            )
 
     if strategy_id in ("snapshot_block_all_sharing", "snapshot_block_new_sharing_only"):
         session = _get_read_session()

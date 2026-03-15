@@ -343,6 +343,227 @@ def test_remediation_preview_rejects_invalid_profile_id(client: TestClient) -> N
     assert detail["error"] == "Invalid profile_id"
 
 
+def test_s3_2_options_expose_manual_fallback_metadata_when_preservation_is_required(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "access_path_evidence_available": True,
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategies = {item["strategy_id"]: item for item in response.json()["strategies"]}
+    strategy = strategies["s3_bucket_block_public_access_standard"]
+    assert strategy["recommended_profile_id"] == "s3_bucket_block_public_access_manual_preservation"
+    assert strategy["blocked_reasons"] == [
+        "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access.",
+        "Bucket policy is currently public; direct public-access preservation must be reviewed manually.",
+    ]
+    assert strategy["preservation_summary"] == {
+        "single_profile_compatible": False,
+        "strategy_only_supported": True,
+        "family": "s3_bucket_block_public_access",
+        "selected_branch": "s3_bucket_block_public_access_manual_preservation",
+        "bucket_policy_public": True,
+        "website_configured": True,
+        "existing_bucket_policy_statement_count": None,
+        "existing_bucket_policy_json_captured": False,
+        "access_path_evidence_available": True,
+        "executable_preservation_allowed": False,
+        "manual_preservation_required": True,
+        "family_strategy": "s3_bucket_block_public_access_standard",
+    }
+    profile_map = {profile["profile_id"]: profile for profile in strategy["profiles"]}
+    assert profile_map["s3_bucket_block_public_access_standard"]["support_tier"] == "manual_guidance_only"
+    assert profile_map["s3_bucket_block_public_access_manual_preservation"]["recommended"] is True
+    assert profile_map["s3_bucket_block_public_access_manual_preservation"]["support_tier"] == "manual_guidance_only"
+
+
+def test_s3_2_preview_keeps_legacy_oac_strategy_compatible_but_downgrades_without_preservation_evidence(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "access_path_evidence_available": True,
+            "evidence": {"existing_bucket_policy_statement_count": 2},
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_migrate_cloudfront_oac_private",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["strategy_id"] == "s3_migrate_cloudfront_oac_private"
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private_manual_preservation"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Existing bucket policy statements were detected, but their JSON was not captured for safe preservation."
+    ]
+    assert resolution["rejected_profiles"] == [
+        {
+            "profile_id": "s3_migrate_cloudfront_oac_private",
+            "reason": "branch_unavailable",
+            "detail": "Existing bucket policy statements were detected, but their JSON was not captured for safe preservation.",
+        }
+    ]
+    assert resolution["preservation_summary"]["existing_bucket_policy_json_captured"] is False
+    assert resolution["preservation_summary"]["manual_preservation_required"] is True
+
+
+def test_s3_5_preview_requires_policy_preservation_evidence_for_executable_output(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_require_ssl")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_policy_analysis_possible": True,
+            "evidence": {"existing_bucket_policy_statement_count": 2},
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enforce_ssl_strict_deny",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Existing bucket policy statements were detected, but their JSON was not captured for safe merge."
+    ]
+    assert resolution["preservation_summary"]["merge_safe_policy_available"] is False
+    assert resolution["preservation_summary"]["executable_policy_merge_allowed"] is False
+
+
+def test_s3_11_preview_requires_lifecycle_document_capture_for_existing_rules(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_lifecycle_configuration")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_lifecycle_analysis_possible": True,
+            "evidence": {"existing_lifecycle_rule_count": 2},
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_abort_incomplete_uploads",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_abort_incomplete_uploads"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Existing lifecycle rules were detected, but the lifecycle document was not captured for additive review."
+    ]
+    assert resolution["preservation_summary"]["existing_lifecycle_configuration_captured"] is False
+    assert resolution["preservation_summary"]["additive_merge_safe"] is False
+
+
 def test_iam_4_options_expose_guidance_only_profile_metadata(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)

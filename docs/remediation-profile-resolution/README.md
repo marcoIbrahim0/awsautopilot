@@ -2,19 +2,20 @@
 
 > Scope date: 2026-03-14
 >
-> ⚠️ Status: Planned — not yet implemented
+> ⚠️ Status: Partially implemented on `master` — remaining waves and live product-claim validation are still planned
 >
 > This document defines the planned backend-centered remediation profile resolution model for generic remediation flows that produce PR bundles, review bundles, or manual guidance artifacts.
 
 ## Summary
 
+- Customer-run PR bundles are the supported execution model. Public SaaS-managed PR-bundle plan/apply routes are archived.
 - Introduce a backend `RemediationProfileResolver` as the sole safety authority for generic remediation flows.
 - Introduce a `RootKeyResolutionAdapter` so generic IAM.4 bundle and guidance generation uses the same decision model without bypassing the existing root-key state machine or changing execution authority.
 - Keep the current public `strategy_id` catalog as the compatibility contract. Profiles are additive execution variants nested beneath strategies.
 - Persist resolved decisions in `remediation_runs.artifacts`, using `artifacts.resolution` for single-action runs and `artifacts.group_bundle.action_resolutions` for grouped runs.
 - Keep grouped runs on the current single-`RemediationRun`-row model in phase 1.
 - Store tenant-scoped remediation defaults on `Tenant.remediation_settings` JSONB and expose them through `GET/PATCH /api/users/me/remediation-settings`.
-- Keep `direct_fix` explicitly out of scope for this migration. Existing direct-fix preview, approval, validation, queueing, and execution remain unchanged in this phase.
+- Keep `direct_fix` explicitly out of scope for this migration. Existing direct-fix preview, approval, validation, queueing, and execution remain unchanged in this phase, and `WriteRole` remains relevant only there.
 
 Related docs:
 
@@ -53,7 +54,7 @@ Related docs:
 
 ## Wave 6 Family Branching
 
-> ❓ Needs verification: This Wave 6 note reflects focused local contract coverage only. A later prompt still needs to decide whether single-run worker generation should consume canonical resolver support tiers directly instead of relying on legacy mirrored `strategy_inputs`.
+> ❓ Needs verification: This Wave 6 note reflects focused local contract coverage on `master`. Later prompts still need the remaining family migrations plus live validation before any product-claim update.
 
 - Shared family branching now exists beneath the public compatibility strategy `sg_restrict_public_ports_guided`.
 - The first migrated family is EC2.53 `sg_restrict_public_ports`, with internal profiles:
@@ -73,10 +74,45 @@ Related docs:
 - Current Wave 6 support tiers for EC2.53 are:
   - executable-capable profiles: `close_public`, `close_and_revoke`, `restrict_to_ip`, `restrict_to_cidr`
   - downgrade-only profiles: `ssm_only`, `bastion_sg_reference`
+- S3.2 `s3_bucket_block_public_access` is now resolver-backed while keeping the public strategy IDs unchanged:
+  - `s3_bucket_block_public_access_standard`
+    - executable profile: `s3_bucket_block_public_access_standard`
+    - manual-only fallback profile: `s3_bucket_block_public_access_manual_preservation`
+  - `s3_migrate_cloudfront_oac_private`
+    - executable profile: `s3_migrate_cloudfront_oac_private`
+    - manual-only fallback profile: `s3_migrate_cloudfront_oac_private_manual_preservation`
+  - explicit S3.2 downgrade triggers:
+    - bucket website hosting is enabled
+    - bucket policy is public
+    - CloudFront/OAC policy-preservation evidence is missing or incomplete
+    - access-path evidence is unavailable
+- S3.5 `s3_bucket_require_ssl` is now resolver-backed for:
+  - `s3_enforce_ssl_strict_deny`
+  - `s3_enforce_ssl_with_principal_exemptions`
+  - executable output now requires merge-safe bucket-policy preservation evidence:
+    - existing bucket policy absent, or
+    - existing bucket policy JSON captured so the deny statement can be merged safely
+  - explicit S3.5 downgrade triggers:
+    - `preserve_existing_policy=false`
+    - bucket-policy analysis unavailable
+    - existing statements detected but policy JSON not captured
+- S3.11 `s3_bucket_lifecycle_configuration` is now resolver-backed for `s3_enable_abort_incomplete_uploads`.
+  - executable output now requires lifecycle-document capture plus additive-merge safety.
+  - executable cases remain limited to:
+    - no existing lifecycle configuration
+    - an already-equivalent abort-incomplete-multipart rule
+  - explicit S3.11 downgrade triggers:
+    - existing lifecycle rules detected but the lifecycle document was not captured
+    - existing lifecycle document captured but additive merge is still ambiguous
+    - lifecycle analysis unavailable
 - Current implemented surfaces:
   - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
+  - remediation options and preview now also expose S3.2, S3.5, and S3.11 `preservation_summary`, `blocked_reasons`, and profile-aware downgrade metadata
   - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
+  - single-run create now persists the same canonical resolution for S3.2, S3.5, and S3.11, including explicit non-executable downgrade decisions
+  - single-run worker generation now consumes canonical resolver support tiers for S3.2, S3.5, and S3.11 so downgraded branches emit metadata-only guidance bundles instead of runnable Terraform or CloudFormation
   - grouped create routes inherit the same family resolver per action through the shared grouped-run service
+  - grouped bundle generation continues using per-action canonical resolutions, and customer-run PR bundles remain the supported execution model
   - IAM.4 options and preview expose additive profile metadata as guidance only, with `manual_guidance_only` support tiers and an explicit `/api/root-key-remediation-runs` execution-authority pointer
   - generic IAM.4 single-run create, grouped create, and resend paths fail closed instead of becoming an alternate execution authority
 
@@ -89,7 +125,7 @@ In scope:
 - Both grouped PR bundle creation routes:
   - `POST /api/remediation-runs/group-pr-bundle`
   - `POST /api/action-groups/{group_id}/bundle-run`
-- Grouped bundle generation, grouped bundle execution compatibility, and grouped reporting compatibility.
+- Grouped bundle generation, customer-run grouped bundle execution compatibility, and grouped reporting compatibility.
 - IAM.4 generic bundle and guidance resolution through a root-key adapter.
 - Tenant remediation defaults, additive metrics, additive audit evidence, and artifact persistence.
 - Queue payload migration, resend compatibility, duplicate detection updates, and backward compatibility for current clients.
@@ -103,6 +139,7 @@ Not in scope:
 - Replacing current public strategy IDs.
 - Changing the current root-key contract versioning model.
 - Introducing a second IAM.4 execution authority outside `/api/root-key-remediation-runs`.
+- Reintroducing public SaaS-managed PR-bundle plan/apply in this phase.
 
 ## Compatibility Contract
 

@@ -91,6 +91,7 @@ def _post_create(
     payload: dict[str, object],
     *,
     runtime_signals: dict[str, object] | None = None,
+    risk_snapshot: dict[str, object] | None = None,
     probe_result: tuple[bool | None, str | None] | None = None,
     direct_fix_types: set[str] | None = None,
 ) -> tuple[object, MagicMock]:
@@ -112,6 +113,10 @@ def _post_create(
             if runtime_signals is not None:
                 stack.enter_context(
                     patch("backend.routers.remediation_runs.collect_runtime_risk_signals", return_value=runtime_signals)
+                )
+            if risk_snapshot is not None:
+                stack.enter_context(
+                    patch("backend.routers.remediation_runs.evaluate_strategy_impact", return_value=risk_snapshot)
                 )
             if probe_result is not None:
                 stack.enter_context(
@@ -156,7 +161,12 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
             "strategy_id": "s3_migrate_cloudfront_oac_private",
             "pr_bundle_variant": "cloudfront_oac_private_s3",
         },
-        runtime_signals={"s3_bucket_policy_public": False, "s3_bucket_website_configured": False},
+        runtime_signals={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": True,
+            "evidence": {"existing_bucket_policy_statement_count": 0},
+        },
     )
 
     run = _added_run(session)
@@ -172,6 +182,149 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
     assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert payload["resolution"] == resolution
     assert "profile_id" not in payload
+
+
+def test_s3_2_create_downgrades_standard_strategy_to_manual_preservation_profile(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_bucket_block_public_access_standard",
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "access_path_evidence_available": True,
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_website_enabled",
+                    "status": "fail",
+                    "message": "Bucket is currently serving traffic from S3 website hosting.",
+                }
+            ],
+            "recommendation": "manual_review",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_bucket_block_public_access_manual_preservation"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access.",
+        "Bucket policy is currently public; direct public-access preservation must be reviewed manually.",
+    ]
+    assert resolution["preservation_summary"]["manual_preservation_required"] is True
+    assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == resolution["profile_id"]
+
+
+def test_s3_5_create_requires_policy_preservation_evidence_before_executable_output(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+        },
+        runtime_signals={
+            "s3_policy_analysis_possible": True,
+            "evidence": {"existing_bucket_policy_statement_count": 2},
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "existing_bucket_policy",
+                    "status": "fail",
+                    "message": "Bucket policy merge safety has not been proven.",
+                }
+            ],
+            "recommendation": "manual_review",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Existing bucket policy statements were detected, but their JSON was not captured for safe merge.",
+    ]
+    assert resolution["preservation_summary"]["merge_safe_policy_available"] is False
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
+def test_s3_11_create_requires_lifecycle_preservation_evidence_before_executable_output(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+        },
+        runtime_signals={
+            "s3_lifecycle_analysis_possible": True,
+            "evidence": {"existing_lifecycle_rule_count": 2},
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "existing_lifecycle_rules",
+                    "status": "fail",
+                    "message": "Lifecycle document must be reviewed before additive merge.",
+                }
+            ],
+            "recommendation": "manual_review",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enable_abort_incomplete_uploads"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Existing lifecycle rules were detected, but the lifecycle document was not captured for additive review.",
+    ]
+    assert resolution["preservation_summary"]["additive_merge_safe"] is False
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
 
 
 def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_required_tier(client: TestClient) -> None:

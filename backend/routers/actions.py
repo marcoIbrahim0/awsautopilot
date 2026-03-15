@@ -107,6 +107,9 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_enforce_ssl_strict_deny",
+        "s3_enforce_ssl_with_principal_exemptions",
+        "s3_enable_abort_incomplete_uploads",
         "iam_root_key_delete",
     }
 )
@@ -663,6 +666,10 @@ class RemediationOptionResponse(BaseModel):
     blocked_reasons: list[str] = Field(
         default_factory=list,
         description="Blocking reasons currently known for this strategy/profile row.",
+    )
+    preservation_summary: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Resolver-side preservation evidence summary for the current strategy/profile row.",
     )
     decision_rationale: str = Field(
         default="",
@@ -1949,7 +1956,7 @@ async def get_remediation_options(
                     action_type=action.action_type,
                     strategy=strategy,
                     tenant_settings=tenant_settings,
-                    runtime_context=runtime_context,
+                    runtime_signals=runtime_signals,
                     dependency_checks=risk_snapshot["checks"],
                     action=action,
                 ),
@@ -2258,7 +2265,7 @@ async def get_remediation_preview(
             profile_id=profile_id,
             strategy_inputs=parsed_strategy_inputs,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_context,
+            runtime_signals=runtime_signals,
             dependency_checks=dependency_checks,
             action=action,
         )

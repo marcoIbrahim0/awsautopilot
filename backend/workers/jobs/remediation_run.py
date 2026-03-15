@@ -823,6 +823,25 @@ def _grouped_decision_payload(
     )
 
 
+def _selected_resolution_payload(job: dict[str, Any], run: RemediationRun) -> dict[str, Any] | None:
+    raw_resolution = job.get("resolution")
+    if isinstance(raw_resolution, Mapping):
+        try:
+            return normalize_resolution_decision(raw_resolution)
+        except ValueError:
+            return None
+    artifacts = run.artifacts if isinstance(run.artifacts, Mapping) else None
+    if not isinstance(artifacts, Mapping):
+        return None
+    stored_resolution = artifacts.get("resolution")
+    if not isinstance(stored_resolution, Mapping):
+        return None
+    try:
+        return normalize_resolution_decision(stored_resolution)
+    except ValueError:
+        return None
+
+
 def _grouped_tier_root(support_tier: str, *, action_type: str | None) -> str:
     tier_root = _GROUP_BUNDLE_TIER_ROOTS.get(support_tier)
     if isinstance(tier_root, str):
@@ -1575,6 +1594,7 @@ echo "All action folders completed successfully."
                 strategy_id=decision.strategy_id,
                 strategy_inputs=decision.strategy_inputs,
                 variant=variant,
+                resolution=decision.resolution,
             )
         except PRBundleGenerationError as error:
             if first_generation_error is None:
@@ -1726,6 +1746,7 @@ def _generate_mixed_tier_group_pr_bundle(
                     format="terraform",
                     strategy_id=decision.strategy_id,
                     strategy_inputs=decision.strategy_inputs,
+                    resolution=decision.resolution,
                 )
             except PRBundleGenerationError as error:
                 if first_generation_error is None:
@@ -2222,6 +2243,7 @@ def execute_remediation_run_job(job: dict) -> None:
                         stored_risk = run.artifacts.get("risk_snapshot")
                         if isinstance(stored_risk, dict):
                             selected_risk_snapshot = stored_risk
+                    selected_resolution = _selected_resolution_payload(job, run)
                     repo_target = _selected_repo_target(job, run)
                     if _ensure_manual_high_risk_marker(run, selected_strategy_id):
                         log_lines.append(
@@ -2426,6 +2448,7 @@ def execute_remediation_run_job(job: dict) -> None:
                             strategy_inputs=selected_strategy_inputs,
                             risk_snapshot=selected_risk_snapshot,
                             variant=effective_variant,
+                            resolution=selected_resolution,
                         )
                         pr_bundle, automation_artifacts = _apply_pr_automation(
                             session=session,
@@ -2449,9 +2472,23 @@ def execute_remediation_run_job(job: dict) -> None:
                         artifacts.update(automation_artifacts)
                         artifacts["pr_bundle"] = pr_bundle
                         run.artifacts = artifacts
-                        run.outcome = "PR bundle generated"
+                        bundle_metadata = pr_bundle.get("metadata")
+                        non_executable_bundle = (
+                            isinstance(bundle_metadata, dict)
+                            and bundle_metadata.get("non_executable_bundle") is True
+                        )
+                        run.outcome = (
+                            "Non-executable remediation guidance bundle generated"
+                            if non_executable_bundle
+                            else "PR bundle generated"
+                        )
                         run.status = RemediationRunStatus.success
-                        if effective_variant:
+                        if non_executable_bundle:
+                            log_lines.append(
+                                "Non-executable remediation guidance bundle generated for "
+                                f"action_type={action.action_type}."
+                            )
+                        elif effective_variant:
                             log_lines.append(
                                 "PR bundle generated for "
                                 f"action_type={action.action_type} variant={effective_variant}."

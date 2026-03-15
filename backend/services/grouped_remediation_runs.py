@@ -529,7 +529,7 @@ def _build_action_resolution(
             requested_profile_id=selection.requested_profile_id,
             explicit_inputs=selection.strategy_inputs,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_signals.get("context"),
+            runtime_signals=runtime_signals,
             action=action,
         )
     except RemediationRunResolutionError as exc:
@@ -547,6 +547,7 @@ def _build_action_resolution(
     _validate_risk_snapshot(
         action,
         selection=selection,
+        support_tier=profile_selection.support_tier,
         risk_snapshot=risk_snapshot,
         risk_acknowledged=risk_acknowledged,
     )
@@ -587,11 +588,12 @@ def _validate_risk_snapshot(
     action: Any,
     *,
     selection: _ResolvedSelection,
+    support_tier: str,
     risk_snapshot: Mapping[str, Any],
     risk_acknowledged: bool,
 ) -> None:
     checks = list(risk_snapshot.get("checks") or [])
-    if has_failing_checks(checks):
+    if has_failing_checks(checks) and support_tier == "deterministic_bundle":
         raise GroupedRemediationRunValidationError(
             "dependency_check_failed",
             (

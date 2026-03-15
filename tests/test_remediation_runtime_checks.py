@@ -11,9 +11,18 @@ from backend.services.remediation_runtime_checks import collect_runtime_risk_sig
 
 
 class _FakeS3Client:
-    def __init__(self, *, policy_json: str | None = None, error_code: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        policy_json: str | None = None,
+        error_code: str | None = None,
+        lifecycle_document: dict[str, Any] | None = None,
+        lifecycle_error_code: str | None = None,
+    ) -> None:
         self._policy_json = policy_json
         self._error_code = error_code
+        self._lifecycle_document = lifecycle_document
+        self._lifecycle_error_code = lifecycle_error_code
 
     def get_bucket_policy(self, *, Bucket: str) -> dict[str, Any]:
         if self._error_code:
@@ -22,6 +31,15 @@ class _FakeS3Client:
                 "GetBucketPolicy",
             )
         return {"Policy": self._policy_json}
+
+    def get_bucket_lifecycle_configuration(self, *, Bucket: str) -> dict[str, Any]:
+        if self._lifecycle_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._lifecycle_error_code, "Message": "simulated failure"}},
+                "GetBucketLifecycleConfiguration",
+            )
+        assert self._lifecycle_document is not None
+        return self._lifecycle_document
 
 
 class _FakeSession:
@@ -128,6 +146,10 @@ def _cloudtrail_strategy() -> dict[str, Any]:
     return {"strategy_id": "cloudtrail_enable_guided"}
 
 
+def _s3_11_strategy() -> dict[str, Any]:
+    return {"strategy_id": "s3_enable_abort_incomplete_uploads"}
+
+
 def test_collect_runtime_risk_signals_s35_captures_existing_bucket_policy(monkeypatch) -> None:
     existing_policy = {
         "Version": "2012-10-17",
@@ -194,6 +216,77 @@ def test_collect_runtime_risk_signals_s35_access_denied_marks_policy_path_unavai
     assert signals["access_path_evidence_available"] is False
     assert signals["evidence"]["existing_bucket_policy_capture_error"] == "AccessDenied"
     assert "Unable to inspect current bucket policy (AccessDenied)." in signals["access_path_evidence_reason"]
+
+
+def test_collect_runtime_risk_signals_s3_11_captures_existing_lifecycle_document(monkeypatch) -> None:
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "AbortMultipartUploads",
+                "Status": "Enabled",
+                "Filter": {"Prefix": ""},
+                "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7},
+            }
+        ]
+    }
+    session = _FakeSession(_FakeS3Client(lifecycle_document=lifecycle_document))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="s3_bucket_lifecycle_configuration"),
+        strategy=_s3_11_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    evidence = signals["evidence"]
+    assert signals["s3_lifecycle_analysis_possible"] is True
+    assert evidence["existing_lifecycle_rule_count"] == 1
+    parsed_lifecycle = json.loads(evidence["existing_lifecycle_configuration_json"])
+    assert parsed_lifecycle["Rules"][0]["AbortIncompleteMultipartUpload"]["DaysAfterInitiation"] == 7
+
+
+def test_collect_runtime_risk_signals_s3_11_sets_zero_rule_count_when_no_lifecycle_configuration(
+    monkeypatch,
+) -> None:
+    session = _FakeSession(_FakeS3Client(lifecycle_error_code="NoSuchLifecycleConfiguration"))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="s3_bucket_lifecycle_configuration"),
+        strategy=_s3_11_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_lifecycle_analysis_possible"] is True
+    assert signals["evidence"]["existing_lifecycle_rule_count"] == 0
+    assert "existing_lifecycle_configuration_json" not in signals["evidence"]
+
+
+def test_collect_runtime_risk_signals_s3_11_access_denied_marks_lifecycle_path_unavailable(monkeypatch) -> None:
+    session = _FakeSession(_FakeS3Client(lifecycle_error_code="AccessDenied"))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="s3_bucket_lifecycle_configuration"),
+        strategy=_s3_11_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_lifecycle_analysis_possible"] is False
+    assert signals["s3_lifecycle_analysis_error"] == "AccessDenied"
+    assert signals["evidence"]["existing_lifecycle_capture_error"] == "AccessDenied"
 
 
 def test_collect_runtime_risk_signals_s3_kms_exposes_kms_key_options_context(monkeypatch) -> None:

@@ -13,6 +13,18 @@ from backend.services.root_key_resolution_adapter import (
     root_key_default_support_tier,
     root_key_family_resolver_kind,
 )
+from backend.services.s3_family_resolution_adapter import (
+    S3_11_FAMILY_RESOLVER_KIND,
+    S3_11_STRATEGY_ID,
+    S3_2_FAMILY_RESOLVER_KIND,
+    S3_2_OAC_MANUAL_PROFILE_ID,
+    S3_2_OAC_STRATEGY_ID,
+    S3_2_STANDARD_MANUAL_PROFILE_ID,
+    S3_2_STANDARD_STRATEGY_ID,
+    S3_5_EXEMPTION_STRATEGY_ID,
+    S3_5_FAMILY_RESOLVER_KIND,
+    S3_5_STRICT_STRATEGY_ID,
+)
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
 SupportTier = Literal[
@@ -169,15 +181,110 @@ def _ec2_53_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
     )
 
 
+def _s3_2_standard_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_STANDARD_STRATEGY_ID,
+            profile_id=S3_2_STANDARD_STRATEGY_ID,
+            label="Block public access on bucket",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_STANDARD_STRATEGY_ID,
+            profile_id=S3_2_STANDARD_MANUAL_PROFILE_ID,
+            label="Manual website/public preservation review",
+            default_support_tier="manual_guidance_only",
+            recommended=False,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+    )
+
+
+def _s3_2_oac_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_OAC_STRATEGY_ID,
+            profile_id=S3_2_OAC_STRATEGY_ID,
+            label="Migrate to CloudFront + OAC + private S3",
+            default_support_tier="deterministic_bundle",
+            recommended=True,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_OAC_STRATEGY_ID,
+            profile_id=S3_2_OAC_MANUAL_PROFILE_ID,
+            label="Manual CloudFront/OAC preservation review",
+            default_support_tier="manual_guidance_only",
+            recommended=False,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+    )
+
+
+def _family_clone(
+    action_type: str,
+    strategy: RemediationStrategy,
+    *,
+    family_kind: str,
+) -> tuple[RemediationProfileDefinition, ...]:
+    profile = _seed_profile_definition(action_type, strategy)
+    return (
+        RemediationProfileDefinition(
+            action_type=profile.action_type,
+            strategy_id=profile.strategy_id,
+            profile_id=profile.profile_id,
+            label=profile.label,
+            default_support_tier=profile.default_support_tier,
+            recommended=profile.recommended,
+            requires_inputs=profile.requires_inputs,
+            supports_exception_flow=profile.supports_exception_flow,
+            exception_only=profile.exception_only,
+            family_resolver_kind=family_kind,
+            default_inputs=profile.default_inputs,
+            legacy_input_hints=profile.legacy_input_hints,
+        ),
+    )
+
+
 def _profile_rows_for_strategy(
     action_type: str,
     strategy: RemediationStrategy,
 ) -> tuple[RemediationProfileDefinition, ...]:
+    strategy_id = strategy["strategy_id"]
     if (
         action_type == "sg_restrict_public_ports"
-        and strategy["strategy_id"] == "sg_restrict_public_ports_guided"
+        and strategy_id == "sg_restrict_public_ports_guided"
     ):
         return _ec2_53_family_profiles()
+    if action_type == "s3_bucket_block_public_access" and strategy_id == S3_2_STANDARD_STRATEGY_ID:
+        return _s3_2_standard_family_profiles()
+    if action_type == "s3_bucket_block_public_access" and strategy_id == S3_2_OAC_STRATEGY_ID:
+        return _s3_2_oac_family_profiles()
+    if action_type == "s3_bucket_require_ssl" and strategy_id in {
+        S3_5_STRICT_STRATEGY_ID,
+        S3_5_EXEMPTION_STRATEGY_ID,
+    }:
+        return _family_clone(action_type, strategy, family_kind=S3_5_FAMILY_RESOLVER_KIND)
+    if action_type == "s3_bucket_lifecycle_configuration" and strategy_id == S3_11_STRATEGY_ID:
+        return _family_clone(action_type, strategy, family_kind=S3_11_FAMILY_RESOLVER_KIND)
     return (_seed_profile_definition(action_type, strategy),)
 
 

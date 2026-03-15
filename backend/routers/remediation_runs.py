@@ -1397,7 +1397,7 @@ async def create_remediation_run(
                     requested_profile_id=requested_profile_id,
                     explicit_inputs=selected_strategy_inputs,
                     tenant_settings=getattr(tenant, "remediation_settings", None),
-                    runtime_context=runtime_signals.get("context"),
+                    runtime_signals=runtime_signals,
                     action=action,
                 )
             except RemediationRunResolutionError as exc:
@@ -1422,7 +1422,12 @@ async def create_remediation_run(
             account=account,
             runtime_signals=runtime_signals,
         )
-        if has_failing_checks(risk_snapshot["checks"]):
+        non_executable_resolution = (
+            body.mode == "pr_only"
+            and profile_selection is not None
+            and profile_selection.support_tier != "deterministic_bundle"
+        )
+        if has_failing_checks(risk_snapshot["checks"]) and not non_executable_resolution:
             emit_strategy_metric(
                 logger,
                 "dependency_check_fail_count",

@@ -588,6 +588,49 @@ def test_pr_only_variant_generates_cloudfront_oac_bundle() -> None:
     assert "pr_bundle" in run.artifacts
 
 
+def test_pr_only_non_executable_resolution_is_forwarded_and_sets_guidance_outcome() -> None:
+    job = _make_job(mode="pr_only")
+    job["resolution"] = {
+        "strategy_id": "s3_enforce_ssl_strict_deny",
+        "profile_id": "s3_enforce_ssl_strict_deny",
+        "support_tier": "review_required_bundle",
+        "blocked_reasons": ["Bucket policy merge safety has not been proven."],
+        "preservation_summary": {"merge_safe_policy_available": False},
+        "decision_rationale": "Needs review.",
+    }
+    run = _mock_run_with_action("s3_bucket_require_ssl")
+    run.artifacts = {"selected_strategy": "s3_enforce_ssl_strict_deny"}
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    bundle = {
+        "format": "terraform",
+        "files": [{"path": "decision.json", "content": "{}"}],
+        "steps": ["step"],
+        "metadata": {"non_executable_bundle": True},
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle) as mock_generate:
+            execute_remediation_run_job(job)
+            _, kwargs = mock_generate.call_args
+            assert kwargs.get("resolution", {}).get("support_tier") == "review_required_bundle"
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "Non-executable remediation guidance bundle generated"
+    assert "Non-executable remediation guidance bundle generated" in (run.logs or "")
+
+
 def test_pr_only_generation_structured_error_persists_error_artifact() -> None:
     """PR bundle generation errors are stored as structured artifacts and mark run failed."""
     job = _make_job(mode="pr_only")

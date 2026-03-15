@@ -15,6 +15,14 @@ from backend.services.remediation_profile_catalog import (
 )
 from backend.services.remediation_profile_resolver import ResolverRejectedProfile, SupportTier
 from backend.services.remediation_settings import normalize_remediation_settings
+from backend.services.s3_family_resolution_adapter import (
+    S3_11_FAMILY_RESOLVER_KIND,
+    S3_2_FAMILY_RESOLVER_KIND,
+    S3_5_FAMILY_RESOLVER_KIND,
+    resolve_s3_11_selection,
+    resolve_s3_2_selection,
+    resolve_s3_5_selection,
+)
 from backend.services.remediation_strategy import RemediationStrategy, StrategyInputField
 
 _SAFE_DEFAULT_TOKEN_PATTERN = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
@@ -53,6 +61,7 @@ class ProfileSelectionResolution:
     missing_defaults: list[str]
     blocked_reasons: list[str]
     rejected_profiles: list[ResolverRejectedProfile]
+    preservation_summary: dict[str, Any]
     decision_rationale: str
 
 
@@ -63,7 +72,7 @@ def resolve_profile_selection(
     requested_profile_id: str | None,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None = None,
 ) -> ProfileSelectionResolution:
     profiles = list_profiles_for_strategy(action_type, strategy["strategy_id"])
@@ -77,7 +86,37 @@ def resolve_profile_selection(
             requested_profile_id=requested_profile_id,
             explicit_inputs=explicit_inputs,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_context,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    if family_kind == S3_2_FAMILY_RESOLVER_KIND:
+        return _resolve_s3_2_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    if family_kind == S3_5_FAMILY_RESOLVER_KIND:
+        return _resolve_s3_5_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    if family_kind == S3_11_FAMILY_RESOLVER_KIND:
+        return _resolve_s3_11_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
             action=action,
         )
     return _resolve_compatibility_selection(
@@ -86,7 +125,7 @@ def resolve_profile_selection(
         requested_profile_id=requested_profile_id,
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
 
@@ -98,7 +137,7 @@ def _resolve_compatibility_selection(
     requested_profile_id: str | None,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> ProfileSelectionResolution:
     selected_profile = _profile_or_error(action_type, strategy["strategy_id"], requested_profile_id)
@@ -107,7 +146,7 @@ def _resolve_compatibility_selection(
         profile=selected_profile,
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     missing_defaults = _compat_missing_defaults(
@@ -129,6 +168,7 @@ def _resolve_compatibility_selection(
         missing_defaults=missing_defaults,
         blocked_reasons=[],
         rejected_profiles=[],
+        preservation_summary={},
         decision_rationale=rationale,
     )
 
@@ -140,7 +180,7 @@ def _resolve_ec2_53_selection(
     requested_profile_id: str | None,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> ProfileSelectionResolution:
     selection = _ec2_53_selection_target(
@@ -156,7 +196,7 @@ def _resolve_ec2_53_selection(
         selection=selection,
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     return _ec2_53_with_safe_fallback(
@@ -166,7 +206,7 @@ def _resolve_ec2_53_selection(
         resolution=resolution,
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
 
@@ -201,7 +241,7 @@ def _ec2_53_profile_resolution(
     selection: tuple[str, str],
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> ProfileSelectionResolution:
     source, profile_id = selection
@@ -211,7 +251,7 @@ def _ec2_53_profile_resolution(
         profile=profile,
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     missing_inputs = _ec2_53_missing_inputs(profile_id, resolved_inputs)
@@ -227,6 +267,7 @@ def _ec2_53_profile_resolution(
         missing_defaults=missing_defaults,
         blocked_reasons=blocked_reasons,
         rejected_profiles=[],
+        preservation_summary={},
         decision_rationale=_ec2_53_rationale(
             strategy_id=strategy["strategy_id"],
             profile_id=profile_id,
@@ -244,7 +285,7 @@ def _ec2_53_with_safe_fallback(
     resolution: ProfileSelectionResolution,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> ProfileSelectionResolution:
     source, _ = selection
@@ -258,7 +299,7 @@ def _ec2_53_with_safe_fallback(
         selection=("safe_default", "close_public"),
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     detail = resolution.blocked_reasons[0] if resolution.blocked_reasons else "Preferred branch requires more data."
@@ -272,10 +313,124 @@ def _ec2_53_with_safe_fallback(
         missing_defaults=fallback.missing_defaults,
         blocked_reasons=fallback.blocked_reasons,
         rejected_profiles=rejected,
+        preservation_summary=fallback.preservation_summary,
         decision_rationale=(
             f"Tenant preference selected '{resolution.profile.profile_id}' but it could not be resolved safely. "
             f"Fell back to compatibility profile '{fallback.profile.profile_id}'. {detail}"
         ),
+    )
+
+
+def _resolve_s3_2_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    outcome = resolve_s3_2_selection(
+        strategy_id=strategy["strategy_id"],
+        requested_profile_id=requested_profile_id,
+        runtime_signals=runtime_signals,
+    )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome=outcome,
+    )
+
+
+def _resolve_s3_5_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    outcome = resolve_s3_5_selection(
+        strategy_id=strategy["strategy_id"],
+        requested_profile_id=requested_profile_id,
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome=outcome,
+    )
+
+
+def _resolve_s3_11_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    outcome = resolve_s3_11_selection(
+        strategy_id=strategy["strategy_id"],
+        requested_profile_id=requested_profile_id,
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome=outcome,
+    )
+
+
+def _family_selection_resolution(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+    outcome: Mapping[str, Any],
+) -> ProfileSelectionResolution:
+    profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = _resolved_inputs(
+        strategy=strategy,
+        profile=profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    return ProfileSelectionResolution(
+        profile=profile,
+        support_tier=outcome["support_tier"],
+        resolved_inputs=resolved_inputs,
+        persisted_strategy_inputs=copy.deepcopy(dict(explicit_inputs or {})),
+        missing_inputs=_required_missing_inputs(strategy, resolved_inputs),
+        missing_defaults=_compat_missing_defaults(strategy=strategy, resolved_inputs=resolved_inputs),
+        blocked_reasons=list(outcome.get("blocked_reasons") or []),
+        rejected_profiles=list(outcome.get("rejected_profiles") or []),
+        preservation_summary=copy.deepcopy(dict(outcome.get("preservation_summary") or {})),
+        decision_rationale=str(outcome.get("decision_rationale") or ""),
     )
 
 
@@ -297,11 +452,11 @@ def _resolved_inputs(
     profile: RemediationProfileDefinition,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> dict[str, Any]:
     values = _schema_defaults(strategy, action=action)
-    values.update(_runtime_default_inputs(strategy["strategy_id"], profile.profile_id, runtime_context))
+    values.update(_runtime_default_inputs(strategy["strategy_id"], profile.profile_id, runtime_signals))
     values.update(_tenant_default_inputs(strategy["strategy_id"], profile.profile_id, tenant_settings))
     values.update(dict(explicit_inputs or {}))
     values.update(dict(profile.default_inputs))
@@ -328,8 +483,9 @@ def _render_field_default(field: StrategyInputField, *, action: Action | None) -
 def _runtime_default_inputs(
     strategy_id: str,
     profile_id: str,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    runtime_context = _runtime_context(runtime_signals)
     default_inputs = _mapping_value(runtime_context, "default_inputs")
     values = dict(default_inputs) if isinstance(default_inputs, Mapping) else {}
     if strategy_id != _EC2_53_STRATEGY_ID or profile_id != "restrict_to_ip":
@@ -338,6 +494,13 @@ def _runtime_default_inputs(
     if detected_cidr:
         values.setdefault("allowed_cidr", detected_cidr)
     return values
+
+
+def _runtime_context(runtime_signals: Mapping[str, Any] | None) -> dict[str, Any]:
+    context = _mapping_value(runtime_signals, "context")
+    if not isinstance(context, Mapping):
+        return {}
+    return dict(context)
 
 
 def _tenant_default_inputs(

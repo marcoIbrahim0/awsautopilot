@@ -63,7 +63,7 @@ def resolve_create_profile_selection(
     requested_profile_id: str | None,
     explicit_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Any | None = None,
 ) -> ProfileSelectionResolution:
     try:
@@ -73,7 +73,7 @@ def resolve_create_profile_selection(
             requested_profile_id=requested_profile_id,
             explicit_inputs=explicit_inputs,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_context,
+            runtime_signals=runtime_signals,
             action=action,
         )
     except ValueError as exc:
@@ -103,7 +103,11 @@ def build_single_run_resolution(
         blocked_reasons=profile_selection.blocked_reasons,
         rejected_profiles=profile_selection.rejected_profiles,
         finding_coverage={},
-        preservation_summary={},
+        preservation_summary={
+            "single_profile_compatible": profile_selection.profile.profile_id == strategy["strategy_id"],
+            "strategy_only_supported": True,
+            **dict(profile_selection.preservation_summary),
+        },
         decision_rationale=_decision_rationale(
             strategy_id=strategy["strategy_id"],
             profile_id=profile_selection.profile.profile_id,

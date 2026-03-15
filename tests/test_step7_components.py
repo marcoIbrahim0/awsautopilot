@@ -1858,8 +1858,40 @@ def test_pr_bundle_s3_15_custom_mode_requires_kms_key_arn() -> None:
     assert payload["action_type"] == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS
 
 
-def test_pr_bundle_s3_ssl_preserve_existing_policy_false_skips_fail_closed_and_tfvars() -> None:
-    """Task 6: S3.5 preserve_existing_policy=false bypasses preservation preload/fail-closed path."""
+def test_pr_bundle_s3_2_non_executable_resolution_returns_guidance_bundle() -> None:
+    """Wave 6: downgraded S3.2 branches render metadata-only guidance instead of runnable IaC."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_bucket_block_public_access_standard",
+        resolution={
+            "strategy_id": "s3_bucket_block_public_access_standard",
+            "profile_id": "s3_bucket_block_public_access_manual_preservation",
+            "support_tier": "manual_guidance_only",
+            "blocked_reasons": [
+                "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access."
+            ],
+            "preservation_summary": {"manual_preservation_required": True},
+            "decision_rationale": "Manual preservation is required.",
+        },
+    )
+    assert r["metadata"]["non_executable_bundle"] is True
+    paths = [f["path"] for f in r["files"]]
+    assert paths == ["decision.json", "README.txt"]
+    assert all(not path.endswith((".tf", ".yaml")) for path in paths)
+    assert "manual_guidance_only" in next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    decision = json.loads(next(f for f in r["files"] if f["path"] == "decision.json")["content"])
+    assert decision["profile_id"] == "s3_bucket_block_public_access_manual_preservation"
+
+
+def test_pr_bundle_s3_ssl_preserve_existing_policy_false_returns_guidance_bundle_when_resolver_downgrades() -> None:
+    """Wave 6: unsafe S3.5 overwrite requests stay non-executable once the resolver downgrades them."""
     action = _make_action(
         action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
         target_id="my-bucket",
@@ -1871,14 +1903,26 @@ def test_pr_bundle_s3_ssl_preserve_existing_policy_false_skips_fail_closed_and_t
         "terraform",
         strategy_inputs={"preserve_existing_policy": False},
         risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 2}},
+        resolution={
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "profile_id": "s3_enforce_ssl_strict_deny",
+            "support_tier": "manual_guidance_only",
+            "blocked_reasons": [
+                "Unsafe bucket policy overwrite is not executable in Wave 6; preserve_existing_policy must remain true."
+            ],
+            "preservation_summary": {"unsafe_overwrite_requested": True},
+            "decision_rationale": "Unsafe overwrite stays manual-only.",
+        },
     )
     paths = [f["path"] for f in r["files"]]
-    assert "s3_bucket_require_ssl.tf" in paths
+    assert paths == ["decision.json", "README.txt"]
+    assert "s3_bucket_require_ssl.tf" not in paths
     assert "terraform.auto.tfvars.json" not in paths
+    assert r["metadata"]["non_executable_bundle"] is True
 
 
-def test_pr_bundle_s3_ssl_cloudformation_preserve_existing_policy_false_sets_flag() -> None:
-    """Task 6: S3.5 CloudFormation wires preserve_existing_policy=false into custom resource inputs."""
+def test_pr_bundle_s3_ssl_review_required_resolution_returns_guidance_bundle() -> None:
+    """Wave 6: under-proven S3.5 merge safety returns review metadata only."""
     action = _make_action(
         action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
         target_id="my-bucket",
@@ -1888,11 +1932,51 @@ def test_pr_bundle_s3_ssl_cloudformation_preserve_existing_policy_false_sets_fla
     r = generate_pr_bundle(
         action,
         "cloudformation",
-        strategy_inputs={"preserve_existing_policy": False},
         risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 2}},
+        resolution={
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "profile_id": "s3_enforce_ssl_strict_deny",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Existing bucket policy statements were detected, but their JSON was not captured for safe merge."
+            ],
+            "preservation_summary": {"merge_safe_policy_available": False},
+            "decision_rationale": "Policy capture is incomplete.",
+        },
     )
-    content = r["files"][0]["content"]
-    assert "PreserveExistingPolicy: false" in content
+    assert r["metadata"]["non_executable_bundle"] is True
+    paths = [f["path"] for f in r["files"]]
+    assert paths == ["decision.json", "README.txt"]
+    decision = json.loads(next(f for f in r["files"] if f["path"] == "decision.json")["content"])
+    assert decision["support_tier"] == "review_required_bundle"
+
+
+def test_pr_bundle_s3_11_review_required_resolution_returns_guidance_bundle() -> None:
+    """Wave 6: S3.11 additive-merge uncertainty renders metadata-only guidance."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        resolution={
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Existing lifecycle rules were detected, but the lifecycle document was not captured for additive review."
+            ],
+            "preservation_summary": {"additive_merge_safe": False},
+            "decision_rationale": "Lifecycle capture is incomplete.",
+        },
+    )
+    assert r["metadata"]["non_executable_bundle"] is True
+    paths = [f["path"] for f in r["files"]]
+    assert paths == ["decision.json", "README.txt"]
+    assert "s3_bucket_lifecycle_configuration.tf" not in paths
 
 
 def test_pr_bundle_s3_ssl_fails_closed_when_policy_count_present_without_policy_json() -> None:

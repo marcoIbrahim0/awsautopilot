@@ -42,6 +42,7 @@ class RemediationStrategyProfileMetadata(TypedDict):
     recommended_profile_id: str | None
     missing_defaults: list[str]
     blocked_reasons: list[str]
+    preservation_summary: dict[str, Any]
     decision_rationale: str
 
 def build_strategy_profile_metadata(
@@ -49,7 +50,7 @@ def build_strategy_profile_metadata(
     action_type: str | None,
     strategy: RemediationStrategy,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     dependency_checks: list[Mapping[str, Any]] | None,
     action: Action | None = None,
 ) -> RemediationStrategyProfileMetadata:
@@ -61,18 +62,22 @@ def build_strategy_profile_metadata(
         profile_id=None,
         strategy_inputs=None,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     profiles = _profile_payloads(
         action_type,
         strategy,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         recommended_profile_id=selection.profile.profile_id,
         action=action,
     )
     blocked_reasons = _merge_reasons(selection.blocked_reasons, _blocked_reasons(dependency_checks))
+    preservation_summary = _preservation_summary(
+        strategy=strategy,
+        selection=selection,
+    )
     decision_rationale = _selection_rationale(selection, blocked_reasons=blocked_reasons)
     if is_root_key_action_type(action_type):
         guidance = build_root_key_guidance_metadata(
@@ -80,12 +85,14 @@ def build_strategy_profile_metadata(
             blocked_reasons=blocked_reasons,
         )
         blocked_reasons = guidance["blocked_reasons"]
+        preservation_summary.update(guidance["preservation_summary"])
         decision_rationale = guidance["decision_rationale"]
     return {
         "profiles": profiles,
         "recommended_profile_id": selection.profile.profile_id,
         "missing_defaults": list(selection.missing_defaults),
         "blocked_reasons": blocked_reasons,
+        "preservation_summary": preservation_summary,
         "decision_rationale": decision_rationale,
     }
 
@@ -97,7 +104,7 @@ def build_preview_resolution(
     profile_id: str | None,
     strategy_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     dependency_checks: list[Mapping[str, Any]] | None,
     action: Action | None = None,
 ) -> ResolverDecision | None:
@@ -110,15 +117,12 @@ def build_preview_resolution(
         profile_id=profile_id,
         strategy_inputs=strategy_inputs,
         tenant_settings=tenant_settings,
-        runtime_context=runtime_context,
+        runtime_signals=runtime_signals,
         action=action,
     )
     blocked_reasons = _merge_reasons(selection.blocked_reasons, _blocked_reasons(dependency_checks))
     support_tier = selection.support_tier
-    preservation_summary: dict[str, Any] = {
-        "single_profile_compatible": True,
-        "strategy_only_supported": True,
-    }
+    preservation_summary = _preservation_summary(strategy=strategy, selection=selection)
     decision_rationale = _selection_rationale(selection, blocked_reasons=blocked_reasons)
     if is_root_key_action_type(action_type):
         guidance = build_root_key_guidance_metadata(
@@ -147,7 +151,7 @@ def _profile_payloads(
     action_type: str | None,
     strategy: RemediationStrategy,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     recommended_profile_id: str | None,
     action: Action | None,
 ) -> list[RemediationProfileOptionPayload]:
@@ -160,7 +164,7 @@ def _profile_payloads(
             profile_id=profile.profile_id,
             strategy_inputs=None,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_context,
+            runtime_signals=runtime_signals,
             action=action,
         )
         support_tier = selection.support_tier
@@ -188,7 +192,7 @@ def _resolve_selection_or_error(
     profile_id: str | None,
     strategy_inputs: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
-    runtime_context: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> ProfileSelectionResolution:
     try:
@@ -198,11 +202,23 @@ def _resolve_selection_or_error(
             requested_profile_id=profile_id,
             explicit_inputs=strategy_inputs,
             tenant_settings=tenant_settings,
-            runtime_context=runtime_context,
+            runtime_signals=runtime_signals,
             action=action,
         )
     except ValueError as exc:
         raise InvalidProfileSelection(str(exc)) from exc
+
+
+def _preservation_summary(
+    *,
+    strategy: RemediationStrategy,
+    selection: ProfileSelectionResolution,
+) -> dict[str, Any]:
+    return {
+        "single_profile_compatible": selection.profile.profile_id == strategy["strategy_id"],
+        "strategy_only_supported": True,
+        **dict(selection.preservation_summary),
+    }
 
 
 def _blocked_reasons(dependency_checks: list[Mapping[str, Any]] | None) -> list[str]:

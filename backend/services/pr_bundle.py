@@ -15,12 +15,15 @@ import uuid
 import json
 from ipaddress import ip_network
 from datetime import datetime, timezone
-from typing import Any, Literal, NoReturn, Protocol, TypedDict
+from typing import Any, Literal, Mapping, NoReturn, Protocol, TypedDict
+
+from typing_extensions import NotRequired
 
 from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_MESSAGE,
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
 )
+from backend.services.remediation_profile_resolver import normalize_support_tier
 
 # ---------------------------------------------------------------------------
 # Contract: return shape and action interface
@@ -51,6 +54,7 @@ class PRBundleResult(TypedDict):
     format: str
     files: list[PRBundleFile]
     steps: list[str]
+    metadata: NotRequired[dict[str, Any]]
 
 
 class PRBundleErrorPayload(TypedDict):
@@ -436,6 +440,98 @@ def _raise_pr_bundle_error(
     raise PRBundleGenerationError(payload)
 
 
+def _is_non_executable_resolution(
+    action_type: str,
+    resolution: Mapping[str, Any] | None,
+) -> bool:
+    if action_type not in {
+        ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+    }:
+        return False
+    if not isinstance(resolution, Mapping):
+        return False
+    try:
+        return normalize_support_tier(resolution.get("support_tier")) != "deterministic_bundle"
+    except ValueError:
+        return False
+
+
+def _generate_non_executable_resolution_bundle(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_id: str | None,
+    resolution: Mapping[str, Any] | None,
+) -> PRBundleResult:
+    return {
+        "format": format,
+        "files": [
+            PRBundleFile(
+                path="decision.json",
+                content=json.dumps(dict(resolution or {}), indent=2, sort_keys=True) + "\n",
+            ),
+            PRBundleFile(
+                path="README.txt",
+                content=_non_executable_bundle_readme(
+                    action=action,
+                    strategy_id=strategy_id,
+                    resolution=resolution,
+                ),
+            ),
+        ],
+        "steps": _non_executable_bundle_steps(action=action, resolution=resolution),
+        "metadata": {"non_executable_bundle": True},
+    }
+
+
+def _non_executable_bundle_readme(
+    *,
+    action: ActionLike,
+    strategy_id: str | None,
+    resolution: Mapping[str, Any] | None,
+) -> str:
+    support_tier = str((resolution or {}).get("support_tier") or "manual_guidance_only")
+    blocked_reasons = list((resolution or {}).get("blocked_reasons") or [])
+    reason_lines = "\n".join(f"- {reason}" for reason in blocked_reasons) or "- No explicit blocked reasons recorded."
+    rationale = str((resolution or {}).get("decision_rationale") or "").strip() or "No rationale recorded."
+    return f"""AWS Security Autopilot — Non-executable remediation guidance
+
+Action
+------
+- action_type: {action.action_type}
+- strategy_id: {strategy_id or ""}
+- support_tier: {support_tier}
+
+Why this bundle is non-executable
+---------------------------------
+{reason_lines}
+
+Decision rationale
+------------------
+{rationale}
+
+Contents
+--------
+- decision.json contains the canonical resolver decision, blocked reasons, and preservation summary.
+- No Terraform or CloudFormation files were emitted because this branch is downgrade-only in Wave 6.
+"""
+
+
+def _non_executable_bundle_steps(
+    *,
+    action: ActionLike,
+    resolution: Mapping[str, Any] | None,
+) -> list[str]:
+    support_tier = str((resolution or {}).get("support_tier") or "manual_guidance_only")
+    return [
+        f"Review decision.json for the canonical {support_tier} resolver decision for {action.action_type}.",
+        "Preserve the existing configuration manually or update the target bucket configuration until an executable branch becomes safe.",
+        "Recompute actions after the reviewed change is applied.",
+    ]
+
+
 def generate_pr_bundle(
     action: ActionLike | None,
     format: str = "terraform",
@@ -443,6 +539,7 @@ def generate_pr_bundle(
     strategy_inputs: dict[str, Any] | None = None,
     risk_snapshot: dict[str, Any] | None = None,
     variant: str | None = None,
+    resolution: Mapping[str, Any] | None = None,
 ) -> PRBundleResult:
     """
     Generate a PR bundle for the given action by dispatching on action_type.
@@ -461,6 +558,7 @@ def generate_pr_bundle(
         strategy_inputs: Optional strategy input values.
         risk_snapshot: Optional evaluated risk snapshot to append in README.
         variant: Legacy variant string. When provided, mapped to strategy behavior.
+        resolution: Optional canonical resolver decision for non-executable gating.
 
     Returns:
         Dict with keys: format, files (list of { path, content }), steps (list of strings).
@@ -505,6 +603,13 @@ def generate_pr_bundle(
     normalized_variant = (variant or "").strip().lower()
     if normalized_variant == PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3 and not effective_strategy_id:
         effective_strategy_id = "s3_migrate_cloudfront_oac_private"
+    if _is_non_executable_resolution(action_type, resolution):
+        return _generate_non_executable_resolution_bundle(
+            action,
+            normalized_format,
+            strategy_id=effective_strategy_id,
+            resolution=resolution,
+        )
 
     if action_type == ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS:
         result = _generate_for_s3(action, normalized_format)
@@ -842,7 +947,12 @@ def _maybe_append_terraform_readme(
     """Append README.txt to Terraform bundles so users see credential/risk instructions."""
     if result.get("format") != TERRAFORM_FORMAT or not result.get("files"):
         return result
+    metadata = result.get("metadata")
+    if isinstance(metadata, dict) and metadata.get("non_executable_bundle") is True:
+        return result
     files = list(result["files"])
+    if any(f.get("path") == "README.txt" for f in files):
+        return result
     readme = _terraform_readme_content()
     plan_timestamp_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     readme += "\nTerraform proof metadata (C2/C5)\n-------------------------------\n"

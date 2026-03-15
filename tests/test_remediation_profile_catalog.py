@@ -12,11 +12,19 @@ from backend.services.remediation_profile_catalog import (
     recommended_profile_id_for_strategy,
 )
 from backend.services.root_key_resolution_adapter import ROOT_KEY_FAMILY_RESOLVER_KIND
+from backend.services.s3_family_resolution_adapter import (
+    S3_11_FAMILY_RESOLVER_KIND,
+    S3_2_FAMILY_RESOLVER_KIND,
+    S3_5_FAMILY_RESOLVER_KIND,
+)
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
 EC2_53_ACTION_TYPE = "sg_restrict_public_ports"
 EC2_53_STRATEGY_ID = "sg_restrict_public_ports_guided"
 IAM_4_ACTION_TYPE = "iam_root_access_key_absent"
+S3_2_ACTION_TYPE = "s3_bucket_block_public_access"
+S3_2_STANDARD_STRATEGY_ID = "s3_bucket_block_public_access_standard"
+S3_2_OAC_STRATEGY_ID = "s3_migrate_cloudfront_oac_private"
 EC2_53_PROFILE_IDS = [
     "close_public",
     "close_and_revoke",
@@ -24,6 +32,14 @@ EC2_53_PROFILE_IDS = [
     "restrict_to_cidr",
     "ssm_only",
     "bastion_sg_reference",
+]
+S3_2_STANDARD_PROFILE_IDS = [
+    "s3_bucket_block_public_access_standard",
+    "s3_bucket_block_public_access_manual_preservation",
+]
+S3_2_OAC_PROFILE_IDS = [
+    "s3_migrate_cloudfront_oac_private",
+    "s3_migrate_cloudfront_oac_private_manual_preservation",
 ]
 
 
@@ -38,6 +54,10 @@ def _iter_strategy_rows() -> list[tuple[str, RemediationStrategy]]:
 def _expected_profile_ids(action_type: str, strategy: RemediationStrategy) -> list[str]:
     if action_type == EC2_53_ACTION_TYPE and strategy["strategy_id"] == EC2_53_STRATEGY_ID:
         return list(EC2_53_PROFILE_IDS)
+    if action_type == S3_2_ACTION_TYPE and strategy["strategy_id"] == S3_2_STANDARD_STRATEGY_ID:
+        return list(S3_2_STANDARD_PROFILE_IDS)
+    if action_type == S3_2_ACTION_TYPE and strategy["strategy_id"] == S3_2_OAC_STRATEGY_ID:
+        return list(S3_2_OAC_PROFILE_IDS)
     return [strategy["strategy_id"]]
 
 
@@ -47,6 +67,28 @@ def _expected_support_tier(action_type: str, strategy: RemediationStrategy) -> s
     if strategy["exception_only"]:
         return "manual_guidance_only"
     return "deterministic_bundle"
+
+
+def _profile_expected_support_tier(
+    action_type: str,
+    strategy: RemediationStrategy,
+    profile_id: str,
+) -> str:
+    if profile_id in {
+        "s3_bucket_block_public_access_manual_preservation",
+        "s3_migrate_cloudfront_oac_private_manual_preservation",
+    }:
+        return "manual_guidance_only"
+    return _expected_support_tier(action_type, strategy)
+
+
+def _profile_expected_recommended(strategy: RemediationStrategy, profile_id: str) -> bool:
+    if profile_id in {
+        "s3_bucket_block_public_access_manual_preservation",
+        "s3_migrate_cloudfront_oac_private_manual_preservation",
+    }:
+        return False
+    return strategy["recommended"]
 
 
 def test_every_strategy_row_has_a_seeded_profile() -> None:
@@ -66,8 +108,12 @@ def test_every_strategy_row_has_a_seeded_profile() -> None:
                 assert profile.exception_only is strategy["exception_only"]
                 if action_type == EC2_53_ACTION_TYPE and strategy["strategy_id"] == EC2_53_STRATEGY_ID:
                     continue
-                assert profile.default_support_tier == _expected_support_tier(action_type, strategy)
-                assert profile.recommended is strategy["recommended"]
+                    assert profile.default_support_tier == _profile_expected_support_tier(
+                        action_type,
+                        strategy,
+                        profile.profile_id,
+                    )
+                assert profile.recommended is _profile_expected_recommended(strategy, profile.profile_id)
                 assert profile.requires_inputs is strategy["requires_inputs"]
 
 
@@ -123,6 +169,28 @@ def test_iam_4_profiles_are_guidance_only_catalog_rows() -> None:
     assert profile.profile_id == "iam_root_key_disable"
     assert profile.default_support_tier == "manual_guidance_only"
     assert profile.family_resolver_kind == ROOT_KEY_FAMILY_RESOLVER_KIND
+
+
+def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
+    s3_2_standard = list_profiles_for_strategy(S3_2_ACTION_TYPE, S3_2_STANDARD_STRATEGY_ID)
+    s3_2_oac = list_profiles_for_strategy(S3_2_ACTION_TYPE, S3_2_OAC_STRATEGY_ID)
+    s3_5_strict = list_profiles_for_strategy("s3_bucket_require_ssl", "s3_enforce_ssl_strict_deny")
+    s3_11 = list_profiles_for_strategy("s3_bucket_lifecycle_configuration", "s3_enable_abort_incomplete_uploads")
+
+    assert [profile.profile_id for profile in s3_2_standard] == S3_2_STANDARD_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_2_standard] == [
+        S3_2_FAMILY_RESOLVER_KIND,
+        S3_2_FAMILY_RESOLVER_KIND,
+    ]
+    assert [profile.profile_id for profile in s3_2_oac] == S3_2_OAC_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_2_oac] == [
+        S3_2_FAMILY_RESOLVER_KIND,
+        S3_2_FAMILY_RESOLVER_KIND,
+    ]
+    assert len(s3_5_strict) == 1
+    assert s3_5_strict[0].family_resolver_kind == S3_5_FAMILY_RESOLVER_KIND
+    assert len(s3_11) == 1
+    assert s3_11[0].family_resolver_kind == S3_11_FAMILY_RESOLVER_KIND
 
 
 def test_invalid_profile_catalog_combinations_fail_safely() -> None:
