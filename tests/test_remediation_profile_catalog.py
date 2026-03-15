@@ -11,10 +11,12 @@ from backend.services.remediation_profile_catalog import (
     list_profiles_for_strategy,
     recommended_profile_id_for_strategy,
 )
+from backend.services.root_key_resolution_adapter import ROOT_KEY_FAMILY_RESOLVER_KIND
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
 EC2_53_ACTION_TYPE = "sg_restrict_public_ports"
 EC2_53_STRATEGY_ID = "sg_restrict_public_ports_guided"
+IAM_4_ACTION_TYPE = "iam_root_access_key_absent"
 EC2_53_PROFILE_IDS = [
     "close_public",
     "close_and_revoke",
@@ -39,7 +41,9 @@ def _expected_profile_ids(action_type: str, strategy: RemediationStrategy) -> li
     return [strategy["strategy_id"]]
 
 
-def _expected_support_tier(strategy: RemediationStrategy) -> str:
+def _expected_support_tier(action_type: str, strategy: RemediationStrategy) -> str:
+    if action_type == IAM_4_ACTION_TYPE:
+        return "manual_guidance_only"
     if strategy["exception_only"]:
         return "manual_guidance_only"
     return "deterministic_bundle"
@@ -62,7 +66,7 @@ def test_every_strategy_row_has_a_seeded_profile() -> None:
                 assert profile.exception_only is strategy["exception_only"]
                 if action_type == EC2_53_ACTION_TYPE and strategy["strategy_id"] == EC2_53_STRATEGY_ID:
                     continue
-                assert profile.default_support_tier == _expected_support_tier(strategy)
+                assert profile.default_support_tier == _expected_support_tier(action_type, strategy)
                 assert profile.recommended is strategy["recommended"]
                 assert profile.requires_inputs is strategy["requires_inputs"]
 
@@ -109,6 +113,16 @@ def test_ec2_53_family_profiles_expose_expected_support_tiers() -> None:
     assert profiles["bastion_sg_reference"].default_support_tier == "review_required_bundle"
     assert profiles["close_public"].recommended is True
     assert profiles["close_public"].family_resolver_kind == "ec2_53_access_path"
+
+
+def test_iam_4_profiles_are_guidance_only_catalog_rows() -> None:
+    profiles = list_profiles_for_strategy(IAM_4_ACTION_TYPE, "iam_root_key_disable")
+
+    assert len(profiles) == 1
+    profile = profiles[0]
+    assert profile.profile_id == "iam_root_key_disable"
+    assert profile.default_support_tier == "manual_guidance_only"
+    assert profile.family_resolver_kind == ROOT_KEY_FAMILY_RESOLVER_KIND
 
 
 def test_invalid_profile_catalog_combinations_fail_safely() -> None:

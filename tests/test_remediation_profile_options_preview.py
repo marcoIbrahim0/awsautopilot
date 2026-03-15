@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from backend.database import get_db
 from backend.main import app
 from backend.services.remediation_profile_resolver import RESOLVER_DECISION_VERSION_V1
+from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 
 
 def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
@@ -340,6 +341,111 @@ def test_remediation_preview_rejects_invalid_profile_id(client: TestClient) -> N
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["error"] == "Invalid profile_id"
+
+
+def test_iam_4_options_expose_guidance_only_profile_metadata(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        response = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategies = {item["strategy_id"]: item for item in response.json()["strategies"]}
+    assert set(strategies) >= {
+        "iam_root_key_disable",
+        "iam_root_key_delete",
+        "iam_root_key_keep_exception",
+    }
+    for strategy_id in (
+        "iam_root_key_disable",
+        "iam_root_key_delete",
+        "iam_root_key_keep_exception",
+    ):
+        strategy = strategies[strategy_id]
+        assert strategy["recommended_profile_id"] == strategy_id
+        assert strategy["profiles"] == [
+            {
+                "profile_id": strategy_id,
+                "support_tier": "manual_guidance_only",
+                "recommended": True,
+                "requires_inputs": strategy["requires_inputs"],
+                "supports_exception_flow": strategy["supports_exception_flow"],
+                "exception_only": strategy["exception_only"],
+            }
+        ]
+        assert strategy["blocked_reasons"] == [
+            "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs."
+        ]
+        assert ROOT_KEY_EXECUTION_AUTHORITY_PATH in strategy["decision_rationale"]
+
+
+def test_iam_4_preview_returns_guidance_only_resolution_metadata(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={"iam_root_account_mfa_enrolled": True},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "iam_root_key_delete",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["strategy_id"] == "iam_root_key_delete"
+    assert resolution["profile_id"] == "iam_root_key_delete"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs."
+    ]
+    assert resolution["preservation_summary"] == {
+        "single_profile_compatible": True,
+        "strategy_only_supported": True,
+        "guidance_only": True,
+        "generic_execution_allowed": False,
+        "execution_authority": ROOT_KEY_EXECUTION_AUTHORITY_PATH,
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+    }
+    assert ROOT_KEY_EXECUTION_AUTHORITY_PATH in resolution["decision_rationale"]
+    assert resolution["decision_version"] == RESOLVER_DECISION_VERSION_V1
 
 
 def test_direct_fix_preview_without_strategy_keeps_existing_behavior(client: TestClient) -> None:

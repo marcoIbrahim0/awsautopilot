@@ -9,6 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping
 
+from backend.services.root_key_resolution_adapter import (
+    root_key_default_support_tier,
+    root_key_family_resolver_kind,
+)
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
 SupportTier = Literal[
@@ -47,9 +51,12 @@ def _normalize_key(value: str | None) -> str | None:
     return normalized or None
 
 
-def _default_support_tier(strategy: RemediationStrategy) -> SupportTier:
+def _default_support_tier(action_type: str, strategy: RemediationStrategy) -> SupportTier:
     # Wave 1 seeds compatibility rows only, so explicit exception paths are the
     # only strategies that default away from executable bundle semantics.
+    root_key_tier = root_key_default_support_tier(action_type)
+    if root_key_tier is not None:
+        return root_key_tier
     if strategy["exception_only"]:
         return "manual_guidance_only"
     return "deterministic_bundle"
@@ -65,11 +72,12 @@ def _seed_profile_definition(
         strategy_id=strategy_id,
         profile_id=strategy_id,
         label=strategy["label"],
-        default_support_tier=_default_support_tier(strategy),
+        default_support_tier=_default_support_tier(action_type, strategy),
         recommended=strategy["recommended"],
         requires_inputs=strategy["requires_inputs"],
         supports_exception_flow=strategy["supports_exception_flow"],
         exception_only=strategy["exception_only"],
+        family_resolver_kind=root_key_family_resolver_kind(action_type),
     )
 
 

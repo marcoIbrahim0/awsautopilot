@@ -77,6 +77,8 @@ Related docs:
   - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
   - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
   - grouped create routes inherit the same family resolver per action through the shared grouped-run service
+  - IAM.4 options and preview expose additive profile metadata as guidance only, with `manual_guidance_only` support tiers and an explicit `/api/root-key-remediation-runs` execution-authority pointer
+  - generic IAM.4 single-run create, grouped create, and resend paths fail closed instead of becoming an alternate execution authority
 
 ## Scope and Non-Goals
 

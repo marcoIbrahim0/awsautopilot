@@ -80,6 +80,11 @@ from backend.services.root_credentials_workflow import (
     is_root_credentials_required_action,
     root_credentials_required_error_detail,
 )
+from backend.services.root_key_resolution_adapter import (
+    build_root_key_execution_authority_error,
+    is_root_key_action_type,
+    is_root_key_strategy_id,
+)
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
 from backend.utils.sqs import (
@@ -276,6 +281,13 @@ def _root_notice(action_type: str | None) -> tuple[bool, str | None, str | None]
     return True, ROOT_CREDENTIALS_REQUIRED_MESSAGE, ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH
 
 
+def _raise_root_key_execution_authority(strategy_id: str | None) -> NoReturn:
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=build_root_key_execution_authority_error(strategy_id=strategy_id),
+    )
+
+
 def _with_manual_high_risk_marker(
     artifacts: dict[str, Any] | None,
     *,
@@ -316,6 +328,24 @@ def _run_requires_root_credentials(run: RemediationRun) -> bool:
     if marker.get("requires_root_credentials") is True:
         return True
     return is_root_credentials_required_action(str(marker.get("action_type") or ""))
+
+
+def _run_targets_root_key_authority(run: RemediationRun) -> bool:
+    if _run_requires_root_credentials(run):
+        return True
+    artifacts = _extract_artifacts(run)
+    if is_root_key_strategy_id(_optional_string(artifacts.get("selected_strategy"))):
+        return True
+    resolution = artifacts.get("resolution")
+    if isinstance(resolution, dict) and is_root_key_strategy_id(_optional_string(resolution.get("strategy_id"))):
+        return True
+    group_bundle = artifacts.get("group_bundle")
+    if not isinstance(group_bundle, dict):
+        return False
+    for entry in group_bundle.get("action_resolutions") or []:
+        if isinstance(entry, dict) and is_root_key_strategy_id(_optional_string(entry.get("strategy_id"))):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -1344,6 +1374,15 @@ async def create_remediation_run(
                 mode=body.mode,
                 strategy_inputs=selected_strategy_inputs,
             )
+        if body.mode == "pr_only" and is_root_key_action_type(action.action_type):
+            emit_validation_failure(
+                logger,
+                reason="root_key_execution_authority",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            _raise_root_key_execution_authority(selected_strategy_id)
         runtime_signals = collect_runtime_risk_signals(
             action=action,
             strategy=selected_strategy,
@@ -1922,6 +1961,15 @@ async def create_group_pr_bundle_run(
             action_type=action_type,
             strategy_id=(body.strategy_id or "").strip() or None,
         )
+    if is_root_key_action_type(action_type):
+        emit_validation_failure(
+            logger,
+            reason="root_key_execution_authority",
+            action_type=action_type,
+            strategy_id=normalized_request.strategy_id,
+            mode="pr_only",
+        )
+        _raise_root_key_execution_authority(normalized_request.strategy_id)
 
     strategy_required = strategy_required_for_action_type(action_type)
     has_top_level_group_strategy = bool(normalized_request.strategy_id or normalized_request.pr_bundle_variant)
@@ -3227,6 +3275,13 @@ async def resend_remediation_run(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Remediation run not found", "detail": f"No run found with ID {run_id}"},
+        )
+    if _run_targets_root_key_authority(run):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=build_root_key_execution_authority_error(
+                strategy_id=_optional_string(_extract_artifacts(run).get("selected_strategy")),
+            ),
         )
 
     if run.status != RemediationRunStatus.pending:

@@ -385,6 +385,37 @@ def test_create_root_key_run_happy_path_returns_201(client: TestClient) -> None:
     assert body["idempotency_replayed"] is False
 
 
+def test_create_root_key_run_rejects_keep_exception_strategy(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id)
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=_scalar_result(action))
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_settings()):
+        response = client.post(
+            "/api/root-key-remediation-runs",
+            json={
+                "action_id": str(action.id),
+                "strategy_id": "iam_root_key_keep_exception",
+            },
+            headers={"Idempotency-Key": "rk-create-invalid-strategy"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_strategy_id"
+
+
 def test_create_root_key_run_idempotent_replay_returns_200(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     user = _mock_user(tenant_id)

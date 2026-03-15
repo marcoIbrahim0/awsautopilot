@@ -13,6 +13,10 @@ from backend.services.remediation_profile_resolver import (
     ResolverDecision,
     build_compat_resolution_decision,
 )
+from backend.services.root_key_resolution_adapter import (
+    build_root_key_guidance_metadata,
+    is_root_key_action_type,
+)
 from backend.services.remediation_strategy import RemediationStrategy
 
 
@@ -69,12 +73,20 @@ def build_strategy_profile_metadata(
         action=action,
     )
     blocked_reasons = _merge_reasons(selection.blocked_reasons, _blocked_reasons(dependency_checks))
+    decision_rationale = _selection_rationale(selection, blocked_reasons=blocked_reasons)
+    if is_root_key_action_type(action_type):
+        guidance = build_root_key_guidance_metadata(
+            strategy_id=selection.profile.profile_id,
+            blocked_reasons=blocked_reasons,
+        )
+        blocked_reasons = guidance["blocked_reasons"]
+        decision_rationale = guidance["decision_rationale"]
     return {
         "profiles": profiles,
         "recommended_profile_id": selection.profile.profile_id,
         "missing_defaults": list(selection.missing_defaults),
         "blocked_reasons": blocked_reasons,
-        "decision_rationale": _selection_rationale(selection, blocked_reasons=blocked_reasons),
+        "decision_rationale": decision_rationale,
     }
 
 
@@ -102,20 +114,32 @@ def build_preview_resolution(
         action=action,
     )
     blocked_reasons = _merge_reasons(selection.blocked_reasons, _blocked_reasons(dependency_checks))
+    support_tier = selection.support_tier
+    preservation_summary: dict[str, Any] = {
+        "single_profile_compatible": True,
+        "strategy_only_supported": True,
+    }
+    decision_rationale = _selection_rationale(selection, blocked_reasons=blocked_reasons)
+    if is_root_key_action_type(action_type):
+        guidance = build_root_key_guidance_metadata(
+            strategy_id=selection.profile.profile_id,
+            blocked_reasons=blocked_reasons,
+        )
+        support_tier = guidance["support_tier"]
+        blocked_reasons = guidance["blocked_reasons"]
+        preservation_summary.update(guidance["preservation_summary"])
+        decision_rationale = guidance["decision_rationale"]
     return build_compat_resolution_decision(
         strategy_id=strategy["strategy_id"],
         profile_id=selection.profile.profile_id,
-        support_tier=selection.support_tier,
+        support_tier=support_tier,
         resolved_inputs=selection.resolved_inputs,
         missing_inputs=selection.missing_inputs,
         missing_defaults=selection.missing_defaults,
         blocked_reasons=blocked_reasons,
         rejected_profiles=selection.rejected_profiles,
-        preservation_summary={
-            "single_profile_compatible": True,
-            "strategy_only_supported": True,
-        },
-        decision_rationale=_selection_rationale(selection, blocked_reasons=blocked_reasons),
+        preservation_summary=preservation_summary,
+        decision_rationale=decision_rationale,
     )
 
 
@@ -139,10 +163,15 @@ def _profile_payloads(
             runtime_context=runtime_context,
             action=action,
         )
+        support_tier = selection.support_tier
+        if is_root_key_action_type(action_type):
+            support_tier = build_root_key_guidance_metadata(
+                strategy_id=profile.profile_id,
+            )["support_tier"]
         payloads.append(
             {
                 "profile_id": profile.profile_id,
-                "support_tier": selection.support_tier,
+                "support_tier": support_tier,
                 "recommended": profile.profile_id == recommended_profile_id,
                 "requires_inputs": profile.requires_inputs,
                 "supports_exception_flow": profile.supports_exception_flow,

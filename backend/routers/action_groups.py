@@ -32,6 +32,10 @@ from backend.services.grouped_remediation_runs import (
     build_grouped_run_persistence_plan,
     normalize_grouped_request_from_action_group,
 )
+from backend.services.root_key_resolution_adapter import (
+    build_root_key_execution_authority_error,
+    is_root_key_action_type,
+)
 from backend.services.remediation_strategy import strategy_required_for_action_type
 from backend.utils.sqs import (
     REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
@@ -225,6 +229,13 @@ def _grouped_risk_error_detail(
     if isinstance(risk_snapshot, dict):
         detail["risk_snapshot"] = risk_snapshot
     return detail
+
+
+def _raise_root_key_execution_authority(strategy_id: str | None) -> NoReturn:
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=build_root_key_execution_authority_error(strategy_id=strategy_id),
+    )
 
 
 def _normalize_group_request_or_400(body: CreateActionGroupBundleRunRequest, *, action_type: str):
@@ -617,6 +628,8 @@ async def create_action_group_bundle_run(
     group = await _load_action_group_or_404(db, group_id=group_uuid, tenant_id=current_user.tenant_id)
     action_rows = await _load_group_actions_or_404(db, tenant_id=current_user.tenant_id, group_id=group.id)
     normalized_request = _normalize_group_request_or_400(request_body, action_type=group.action_type)
+    if is_root_key_action_type(group.action_type):
+        _raise_root_key_execution_authority(normalized_request.strategy_id)
     account = await _load_group_account(db, tenant_id=current_user.tenant_id, account_id=group.account_id)
     group_run, token, callback_url = _create_group_run_with_token(
         tenant_id=current_user.tenant_id,

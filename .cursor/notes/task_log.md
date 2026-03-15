@@ -1,5 +1,45 @@
 # Task Log
 
+## Remediation-profile Wave 6 IAM.4 metadata and authority preservation on master (2026-03-15)
+
+**Task:** Implement remediation-profile Wave 6 Prompt 2 on current `master` only by moving IAM.4 read surfaces onto additive profile metadata while preserving `/api/root-key-remediation-runs` as the only execution authority.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_resolution_adapter.py** - added the narrow IAM.4 metadata/authority helper used by generic profile-aware surfaces and generic-route rejection paths.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - normalized IAM.4 catalog rows onto guidance-only support tiers plus a dedicated family resolver kind.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_read_path.py** - made IAM.4 options/preview surfaces expose additive guidance-only metadata, blocked reasons, and explicit root-key execution-authority pointers.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - hard-blocked generic IAM.4 single-run create, grouped create, and resend from acting as execution routes while preserving generic guidance/read semantics.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py** - blocked the action-groups bundle route from becoming an alternate IAM.4 execution path.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_resolution_adapter.py** - added direct coverage for IAM.4 guidance metadata and dedicated-route rejection details.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - updated catalog expectations for guidance-only IAM.4 profile rows.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added focused IAM.4 options/preview metadata assertions.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - added focused generic-route tests proving IAM.4 create/grouped/resend flows fail closed and aligned tenant lookup stubbing with current route wiring.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py** - added focused action-group route coverage and aligned tenant lookup stubbing with current route wiring.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** - added a compatibility guard proving the dedicated root-key API still rejects `iam_root_key_keep_exception`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented the landed IAM.4 guidance-only metadata boundary and generic-route fail-closed behavior.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 Prompt 2 task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Preserved the public IAM.4 strategy rows `iam_root_key_disable`, `iam_root_key_delete`, and `iam_root_key_keep_exception`.
+- Added a narrow root-key resolution adapter so IAM.4 generic options/preview surfaces can emit stable guidance-only metadata without creating a second execution subsystem.
+- Normalized IAM.4 compatibility profile rows to `manual_guidance_only` and tagged them with the dedicated root-key family resolver kind.
+- Updated generic read surfaces so IAM.4 profile-aware options/preview results always carry explicit blocked reasons, guidance-only preservation metadata, and the `/api/root-key-remediation-runs` authority pointer.
+- Kept the dedicated root-key API authoritative by rejecting IAM.4 generic single-run create, grouped create, action-group bundle create, and resend attempts with a dedicated `root_key_execution_authority` error.
+- Left `direct_fix`, root-key lifecycle semantics, idempotency, and contract versioning unchanged.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_root_key_resolution_adapter.py -q` -> `3 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py -q` -> `7 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py -q` -> `9 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py -q -k 'root_key_strategy_requires_dedicated_route or group_pr_bundle_root_key_strategy_requires_dedicated_route or resend_root_key_run_requires_dedicated_route'` -> `3 passed, 106 deselected`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py -q -k root_key_requires_dedicated_route` -> `1 passed, 7 deselected`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py -q` -> `19 passed`
+
+**Open questions / TODOs:**
+- Prompt 3 must preserve the rule that generic remediation-run surfaces may expose IAM.4 metadata and guidance, but must not become executable root-key authorities.
+- Prompt 3 should avoid changing root-key contract/version semantics unless the dedicated `/api/root-key-remediation-runs` subsystem explicitly requires it.
+
 ## Remediation-profile Wave 6 shared family branching and EC2.53 resolver migration on master (2026-03-15)
 
 **Task:** Implement remediation-profile Wave 6 Prompt 1 on current `master` only by introducing shared multi-profile family branching support and migrating EC2.53 `sg_restrict_public_ports` onto resolver-backed profile selection while preserving the public compatibility strategy `sg_restrict_public_ports_guided`.

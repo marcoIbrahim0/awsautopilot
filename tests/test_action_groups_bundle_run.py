@@ -16,6 +16,7 @@ from backend.main import app
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
 
 
@@ -29,6 +30,17 @@ def stub_grouped_risk(monkeypatch: pytest.MonkeyPatch) -> None:
         "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
         lambda *_, **__: {"checks": [], "warnings": [], "recommendation": "ok"},
     )
+
+
+@pytest.fixture(autouse=True)
+def stub_action_group_tenant_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _stub_get_tenant(tenant_id: uuid.UUID, db) -> MagicMock:
+        tenant = MagicMock()
+        tenant.id = tenant_id
+        tenant.remediation_settings = {}
+        return tenant
+
+    monkeypatch.setattr("backend.routers.action_groups.get_tenant", _stub_get_tenant)
 
 
 def _mock_scalar_result(value: object) -> MagicMock:
@@ -359,6 +371,36 @@ def test_create_action_group_bundle_run_invalid_overrides_rejected(
     detail = response.json()["detail"]
     assert detail["error"] == expected_error
     assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_create_action_group_bundle_run_root_key_requires_dedicated_route(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="iam_root_access_key_absent")
+    action = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    session, added = _mock_group_session(group=group, actions=[action])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client") as mock_boto_client:
+            try:
+                response = client.post(
+                    f"/api/action-groups/{group.id}/bundle-run",
+                    json={"strategy_id": "iam_root_key_disable"},
+                )
+            finally:
+                _clear_action_group_dependencies()
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["reason"] == "root_key_execution_authority"
+    assert detail["execution_authority"] == ROOT_KEY_EXECUTION_AUTHORITY_PATH
+    assert added == []
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0
 

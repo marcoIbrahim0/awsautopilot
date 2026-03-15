@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 IAM.4 metadata and authority preservation on master (2026-03-15)](task_log.md#remediation-profile-wave-6-iam4-metadata-and-authority-preservation-on-master-2026-03-15)
+  - Normalized IAM.4 profile-aware options and preview surfaces onto additive guidance-only metadata, keeping the public root-key strategy rows intact.
+  - Preserved `/api/root-key-remediation-runs` as the only IAM.4 execution authority by fail-closing generic create, grouped create, action-group bundle, and resend routes.
 - [Remediation-profile Wave 6 shared family branching and EC2.53 resolver migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-shared-family-branching-and-ec253-resolver-migration-on-master-2026-03-15)
   - Introduced shared multi-profile family branching beneath public compatibility strategies, then migrated EC2.53 `sg_restrict_public_ports_guided` onto resolver-backed profile selection with explicit downgrade behavior for unsupported or under-specified branches.
   - Updated remediation options/preview, single-run create, and both grouped creation paths to use the shared selector, added focused EC2.53 coverage, and left direct-fix plus archived SaaS execution boundaries unchanged.

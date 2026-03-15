@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from backend.auth import get_current_user
+from backend.auth import get_current_user, get_optional_user
 from backend.database import get_db
 from backend.main import app
 from backend.models.enums import (
@@ -23,6 +23,7 @@ from backend.models.enums import (
     RemediationRunMode,
     RemediationRunStatus,
 )
+from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 from backend.services.remediation_strategy import (
     list_strategies_for_action_type,
     validate_strategy_inputs,
@@ -183,6 +184,17 @@ def _mock_group_session(
 
     session.refresh = AsyncMock(side_effect=_refresh)
     return session
+
+
+@pytest.fixture(autouse=True)
+def stub_remediation_run_tenant_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _stub_get_tenant(tenant_id: uuid.UUID, db) -> MagicMock:
+        tenant = MagicMock()
+        tenant.id = tenant_id
+        tenant.remediation_settings = {}
+        return tenant
+
+    monkeypatch.setattr("backend.routers.remediation_runs.get_tenant", _stub_get_tenant)
 
 
 # ---------------------------------------------------------------------------
@@ -2096,8 +2108,8 @@ def test_validate_strategy_input_iam_root_action_mode_mismatch_rejected() -> Non
         validate_strategy_inputs(strategies["iam_root_key_delete"], {"action_mode": "disable_key"})
 
 
-def test_create_run_root_delete_strategy_mfa_disabled_blocks_400(client: TestClient) -> None:
-    """IAM root key delete strategy fails closed when root MFA is not enrolled."""
+def test_create_run_root_key_strategy_requires_dedicated_route(client: TestClient) -> None:
+    """IAM.4 generic single-run creation must defer to the dedicated root-key API."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="iam_root_access_key_absent")
@@ -2114,48 +2126,32 @@ def test_create_run_root_delete_strategy_mfa_disabled_blocks_400(client: TestCli
     app.dependency_overrides[get_current_user] = mock_get_current_user
     with patch("backend.routers.remediation_runs.settings") as mock_settings:
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        with patch(
-            "backend.routers.remediation_runs.collect_runtime_risk_signals",
-            return_value={"iam_root_account_mfa_enrolled": False},
-        ):
-            try:
-                r = client.post(
-                    "/api/remediation-runs",
-                    json={
-                        "action_id": str(action.id),
-                        "mode": "pr_only",
-                        "strategy_id": "iam_root_key_delete",
-                        "risk_acknowledged": True,
-                    },
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_current_user, None)
+        try:
+            r = client.post(
+                "/api/remediation-runs",
+                json={
+                    "action_id": str(action.id),
+                    "mode": "pr_only",
+                    "strategy_id": "iam_root_key_delete",
+                    "risk_acknowledged": True,
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 400
     detail = r.json().get("detail", {})
     assert isinstance(detail, dict)
-    assert detail.get("error") == "Dependency check failed"
-    checks = detail.get("risk_snapshot", {}).get("checks", [])
-    mfa_gate = next((check for check in checks if check.get("code") == "iam_root_mfa_enrollment_gate"), None)
-    assert isinstance(mfa_gate, dict)
-    assert mfa_gate.get("status") == "fail"
+    assert detail.get("reason") == "root_key_execution_authority"
+    assert detail.get("execution_authority") == ROOT_KEY_EXECUTION_AUTHORITY_PATH
 
 
-def test_create_run_root_delete_strategy_mfa_enabled_allows_201(client: TestClient) -> None:
-    """IAM root key delete strategy proceeds when MFA probe reports AccountMFAEnabled=1."""
+def test_group_pr_bundle_root_key_strategy_requires_dedicated_route(client: TestClient) -> None:
+    """IAM.4 generic grouped creation must not produce a usable alternate path."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
-    action = _mock_action(action_type="iam_root_access_key_absent")
-    action.tenant_id = tenant.id
-    account = _mock_account(role_write_arn=None)
-    session = _mock_async_session(action, account, None)
-
-    async def _refresh(run_obj: MagicMock) -> None:
-        run_obj.created_at = datetime.now(timezone.utc)
-        run_obj.updated_at = datetime.now(timezone.utc)
-
-    session.refresh = AsyncMock(side_effect=_refresh)
+    session = _mock_async_session(tenant)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -2166,34 +2162,66 @@ def test_create_run_root_delete_strategy_mfa_enabled_allows_201(client: TestClie
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
-    mock_sqs = MagicMock()
-    mock_sqs.send_message.return_value = {"MessageId": "msg-root-delete"}
-
     with patch("backend.routers.remediation_runs.settings") as mock_settings:
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
-            with patch(
-                "backend.routers.remediation_runs.collect_runtime_risk_signals",
-                return_value={"iam_root_account_mfa_enrolled": True},
-            ):
-                try:
-                    r = client.post(
-                        "/api/remediation-runs",
-                        json={
-                            "action_id": str(action.id),
-                            "mode": "pr_only",
-                            "strategy_id": "iam_root_key_delete",
-                            "risk_acknowledged": True,
-                        },
-                    )
-                finally:
-                    app.dependency_overrides.pop(get_db, None)
-                    app.dependency_overrides.pop(get_current_user, None)
+        try:
+            r = client.post(
+                "/api/remediation-runs/group-pr-bundle",
+                json={
+                    "action_type": "iam_root_access_key_absent",
+                    "account_id": "123456789012",
+                    "status": "open",
+                    "region": "us-east-1",
+                    "strategy_id": "iam_root_key_disable",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
 
-    assert r.status_code == 201
-    assert mock_sqs.send_message.call_count == 1
-    body = mock_sqs.send_message.call_args.kwargs.get("MessageBody", "")
-    assert '"strategy_id": "iam_root_key_delete"' in body
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    assert detail.get("reason") == "root_key_execution_authority"
+    assert detail.get("execution_authority") == ROOT_KEY_EXECUTION_AUTHORITY_PATH
+
+
+def test_resend_root_key_run_requires_dedicated_route(client: TestClient) -> None:
+    """Pending legacy IAM.4 generic runs cannot be re-enqueued through the generic resend route."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="iam_root_access_key_absent")
+    action.tenant_id = tenant.id
+    run = _mock_existing_run(
+        action,
+        status=RemediationRunStatus.pending,
+        artifacts={
+            "manual_high_risk": {
+                "requires_root_credentials": True,
+                "action_type": "iam_root_access_key_absent",
+            }
+        },
+    )
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(run)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        try:
+            r = client.post(f"/api/remediation-runs/{run.id}/resend")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 400
+    detail = r.json().get("detail", {})
+    assert detail.get("reason") == "root_key_execution_authority"
+    assert detail.get("execution_authority") == ROOT_KEY_EXECUTION_AUTHORITY_PATH
 
 
 def test_create_run_warn_requires_risk_ack_400(client: TestClient) -> None:
