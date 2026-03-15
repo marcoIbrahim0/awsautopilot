@@ -1,0 +1,1 @@
+2026-03-15 direct AssumeRole check for arn:aws:iam::696505809372:role/SecurityAutopilotReadRole\nResult: AccessDenied\nMessage: User arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform sts:AssumeRole on the target role.\n

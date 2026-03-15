@@ -1,0 +1,134 @@
+{
+  "id": "3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7",
+  "action_id": "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+  "mode": "pr_only",
+  "status": "success",
+  "outcome": "Group PR bundle generated (2 actions)",
+  "started_at": "2026-03-15T02:03:22.279482+00:00",
+  "completed_at": "2026-03-15T02:03:22.297434+00:00",
+  "group_bundle": {
+    "group_id": "75cd4f50-97c9-4aa0-911b-eb3b17ffd804",
+    "group_run_id": "cebf8d7a-e416-4d2e-9f72-6e284580e5b0",
+    "layout_version": "grouped_bundle_mixed_tier/v1",
+    "execution_root": "executable/actions",
+    "tier_counts": {
+      "executable": 1,
+      "manual_guidance": 0,
+      "review_required": 1
+    },
+    "resolved_action_ids": [
+      "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+      "47c023ae-945c-42bf-9b44-018d276046fa"
+    ]
+  },
+  "artifact_metadata": {
+    "implementation_artifacts": [
+      {
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "description": "Terraform remediation bundle with 16 files.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-generated-files",
+        "executable": true,
+        "metadata": {
+          "format": "terraform",
+          "file_count": 16,
+          "step_count": 3,
+          "has_readme": true,
+          "generated_action_count": 2,
+          "skipped_action_count": 0
+        }
+      }
+    ],
+    "evidence_pointers": [
+      {
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "description": "Terraform remediation bundle with 16 files.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-generated-files",
+        "metadata": {
+          "format": "terraform",
+          "file_count": 16,
+          "step_count": 3,
+          "has_readme": true,
+          "generated_action_count": 2,
+          "skipped_action_count": 0
+        }
+      },
+      {
+        "key": "diff_summary",
+        "kind": "diff_summary",
+        "label": "Generated diff summary",
+        "description": "13 mapped file(s) captured with reproducible hashes.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-generated-files",
+        "metadata": {
+          "file_count": 13,
+          "fingerprint_sha256": "9a10101286e9a080178be440a9c8fd29e2f85ec4b8a072e2207c606dec4ca385"
+        }
+      },
+      {
+        "key": "rollback_notes",
+        "kind": "rollback_notes",
+        "label": "Rollback notes",
+        "description": "2 rollback note(s) prepared for this run.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-generated-files",
+        "metadata": {
+          "entry_count": 2
+        }
+      },
+      {
+        "key": "control_mapping_context",
+        "kind": "control_mapping_context",
+        "label": "Control mapping context",
+        "description": "1 control ID(s) and 0 framework mapping row(s) attached.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-generated-files",
+        "metadata": {
+          "control_count": 1,
+          "mapping_count": 0
+        }
+      },
+      {
+        "key": "activity_log",
+        "kind": "activity_log",
+        "label": "Run activity log",
+        "description": "3 execution log lines recorded for this run.",
+        "href": "/remediation-runs/3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7#run-activity",
+        "metadata": {
+          "line_count": 3
+        }
+      }
+    ],
+    "closure_checklist": [
+      {
+        "id": "artifact_recorded",
+        "title": "Implementation artifact recorded",
+        "status": "complete",
+        "detail": "Implementation artifact linked for engineering handoff.",
+        "evidence_keys": [
+          "pr_bundle"
+        ]
+      },
+      {
+        "id": "evidence_attached",
+        "title": "Evidence pointers attached",
+        "status": "complete",
+        "detail": "Evidence pointers are attached to this run.",
+        "evidence_keys": [
+          "pr_bundle",
+          "diff_summary",
+          "rollback_notes",
+          "control_mapping_context",
+          "activity_log"
+        ]
+      },
+      {
+        "id": "action_closure_verified",
+        "title": "Action closure verified",
+        "status": "pending",
+        "detail": "Refresh or recompute the parent action to confirm closure.",
+        "evidence_keys": []
+      }
+    ]
+  }
+}

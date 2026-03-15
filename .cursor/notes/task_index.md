@@ -4,9 +4,17 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 5 narrowed live S3.9 mixed-tier executable grouped proof on master (2026-03-15)](task_log.md#wave-5-narrowed-live-s39-mixed-tier-executable-grouped-proof-on-master-2026-03-15)
+  - Closed the remaining Wave 5 mixed-tier executable grouped gap with a narrow S3.9 family specialization, proving the real March 15, 2026 S3.9 grouped case now splits into one executable bucket-scoped action and one review-required account-scoped action.
+  - Added focused S3.9 risk/grouped-resolution tests and a narrowed live rerun package under `docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/`.
 - [Wave 5 grouped callback replay protection fix on master (2026-03-15)](task_log.md#wave-5-grouped-callback-replay-protection-fix-on-master-2026-03-15)
   - Fixed `POST /api/internal/group-runs/report` so a valid finished callback can finalize a grouped customer-run bundle only once, with later terminal callback replays rejected as `409 reason=group_run_report_replay`.
   - Added focused regressions for started-then-finished success, identical and changed-payload finished replays, invalid-token `401`, wrong-JTI `409`, and mixed executable/non-executable first-finish acceptance.
+- [Archive public SaaS PR-bundle execution and keep customer-run bundles as the supported path on master (2026-03-15)](task_log.md#archive-public-saas-pr-bundle-execution-and-keep-customer-run-bundles-as-the-supported-path-on-master-2026-03-15)
+  - Archived the four public SaaS-managed PR-bundle execution routes behind an explicit `410 Gone` response and removed the stale frontend bulk plan/apply affordances, while preserving PR bundle generation/download, mixed-tier grouped manifests, customer-run `run_all.sh` / `run_actions.sh`, grouped reporting callbacks, and unchanged `direct_fix`.
+  - Updated the remediation-profile, WriteRole, local-environment, changelog, and archived inventory docs so the current product direction is clear: customer-run PR bundles are supported, public SaaS-managed PR-bundle execution is archived, and `WriteRole` remains relevant only for `direct_fix`.
+  - Re-ran the focused remediation-runs API, grouped-reporting, remediation-worker, and affected frontend tests; all passed.
+
 - [Remediation-profile Wave 5 live AWS validation on master (2026-03-15)](task_log.md#remediation-profile-wave-5-live-aws-validation-on-master-2026-03-15)
   - Ran the Wave 5 live-AWS validation from local `master` against an isolated local runtime plus the real AWS account `696505809372`, captured a dedicated run package under `docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/`, and recorded pass/fail/blocked outcomes for `RPW5-LIVE-01` through `RPW5-LIVE-08`.
   - Proved the Wave 5 mixed-tier layout semantics, zero-executable `no_executable_bundle` contract, and additive `non_executable_results[]` callback persistence, but found no real mixed-tier executable grouped family, no connected WriteRole for the isolated test account, and a callback replay-token acceptance bug.

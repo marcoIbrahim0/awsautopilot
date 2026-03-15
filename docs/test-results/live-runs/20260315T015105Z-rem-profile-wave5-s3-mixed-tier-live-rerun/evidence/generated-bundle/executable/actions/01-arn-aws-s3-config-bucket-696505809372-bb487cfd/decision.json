@@ -1,0 +1,28 @@
+{
+  "action_id": "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [],
+  "control_id": "S3.9",
+  "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 's3_enable_access_logging_guided'. Run creation did not require review-only acceptance.",
+  "decision_summary": "Wave 1 single-profile compatibility defaulted profile_id to 's3_enable_access_logging_guided'. Run creation did not require review-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {},
+  "profile_id": "s3_enable_access_logging_guided",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-access-logs-696505809372"
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.9",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

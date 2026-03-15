@@ -1,0 +1,7 @@
+{
+  "group_run_id": "cebf8d7a-e416-4d2e-9f72-6e284580e5b0",
+  "remediation_run_id": "3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7",
+  "reporting_token": "<REDACTED_REPORTING_TOKEN>",
+  "reporting_callback_url": "http://127.0.0.1:18006/api/internal/group-runs/report",
+  "status": "queued"
+}

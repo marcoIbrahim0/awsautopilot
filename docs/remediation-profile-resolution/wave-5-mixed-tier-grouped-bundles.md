@@ -11,11 +11,13 @@ Related docs:
 - [Remediation profile resolution spec](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md)
 - [Implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md)
 - [Wave 4 queue contract and worker migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-4-queue-contract-and-worker-migration.md)
+- [Wave 5 narrowed live S3.9 rerun summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/notes/final-summary.md)
 
 ## Summary
 
 Wave 5 completes the mixed-tier grouped-bundle slice that Wave 4 explicitly deferred:
 
+- Customer-run PR bundles remain the supported execution model. Public SaaS-managed PR-bundle plan/apply routes are archived.
 - Resolver-backed grouped PR bundles no longer require every action to stay `deterministic_bundle`.
 - Grouped bundle generation now maps each resolved action into one of three tier roots:
   - `deterministic_bundle` -> `executable/actions`
@@ -23,7 +25,7 @@ Wave 5 completes the mixed-tier grouped-bundle slice that Wave 4 explicitly defe
   - `manual_guidance_only` -> `manual_guidance/actions`
 - Mixed-tier bundles now carry a first-class `bundle_manifest.json` with layout metadata, per-action records, tier counts, and runnable-action counts.
 - `run_all.sh` now treats `executable/actions` as the only execution root. Review/manual folders are metadata only.
-- The SaaS executor and grouped callback flow now support additive `non_executable_results[]` so review/manual actions are reported without being treated as execution failures.
+- The generated customer-run bundle flow, grouped callback flow, and legacy internal executor code path support additive `non_executable_results[]` so review/manual actions are reported without being treated as execution failures.
 - Legacy grouped bundles remain runnable through the existing `actions/` layout and heuristic detection path.
 
 ## Scope Boundary
@@ -38,6 +40,8 @@ Wave 5 changes the landed mixed-tier grouped-bundle behavior in:
 Wave 5 does not change:
 
 - `direct_fix` behavior
+- customer-run `run_all.sh` / `run_actions.sh` bundle execution
+- grouped callback/reporting support at `/api/internal/group-runs/report`
 - the queue-`v2` contract introduced in Wave 4
 - the dedicated root-key execution authority
 - the separate control-family migration work needed to move more remediation families onto the resolver
@@ -169,9 +173,9 @@ When grouped callback reporting is not configured:
 - `run_all.sh` is the Terraform runner directly.
 - `run_actions.sh` is not generated.
 
-## Executor Detection Order
+## Execution-Root Detection Order
 
-Both the SaaS executor and the remediation-run execution API now detect grouped execution targets in this order:
+The generated customer-run bundle flow and the legacy internal executor code path share the same grouped execution-root detection order:
 
 1. `bundle_manifest.json`
    - If the manifest contains a non-empty `layout_version` and `execution_root`, execution is treated as `target_kind="mixed_tier_grouped"` with `detected_by="bundle_manifest"`.
@@ -191,7 +195,7 @@ Mixed-tier execution metadata is propagated into execution results and workspace
 - `executed_folders`
 - `non_executable_action_count`
 
-The remediation-run execution route also uses the same mixed-tier detection summary before starting SaaS plan/apply work. If a mixed-tier bundle has zero executable folders, the route fails closed with `400` `reason=no_executable_bundle` instead of starting an empty execution.
+Before the public SaaS plan/apply routes were archived, the remediation-run execution path used the same mixed-tier detection summary and failed closed on zero-executable bundles. Customer-run bundles remain supported today through `run_all.sh` / `run_actions.sh` plus optional grouped callback reporting.
 
 ## Reporting Contract
 
@@ -231,7 +235,7 @@ Persistence semantics remain schema-compatible:
 - non-executable results are stored as `execution_status=unknown`
 - non-executable detail is preserved in `ActionGroupRunResult.raw_result` with `result_type="non_executable"`
 
-For rollout compatibility, SaaS executor result payloads still include the older `non_executable_actions` alias, but new consumers should prefer `non_executable_results`.
+For rollout compatibility, legacy internal executor result payloads still include the older `non_executable_actions` alias, but new consumers should prefer `non_executable_results`.
 
 ## Mixed-Tier Success and Failure Semantics
 
@@ -242,12 +246,12 @@ Landed rules:
 - A grouped callback `finished` event becomes `failed` only when an executable `action_results[]` item reports `failed`.
 - A grouped callback `finished` event becomes `cancelled` only when an executable `action_results[]` item reports `cancelled`.
 - Otherwise the grouped callback finishes as `finished`, even when review/manual actions are present.
-- SaaS executor result sync now follows the same rule set and no longer falls back to `missing_folder_result` for review/manual actions that intentionally have no runnable folder.
+- Legacy internal executor result sync now follows the same rule set and no longer falls back to `missing_folder_result` for review/manual actions that intentionally have no runnable folder.
 - Non-executable grouped actions remain auditable through `raw_result`, but they do not make the overall `ActionGroupRun` fail by default.
 
 There is one intentional fail-closed boundary:
 
-- If a mixed-tier bundle reaches SaaS execution with zero executable folders, the route rejects execution up front and the worker also raises `mixed-tier bundle has no executable folders` if reached anyway.
+- If legacy internal SaaS execution code is reached with zero executable folders, the worker still raises `mixed-tier bundle has no executable folders` fail-closed instead of treating metadata-only folders as runnable work.
 
 ## Legacy Compatibility
 
@@ -292,6 +296,29 @@ flowchart TD
     V --> W
 ```
 
+## Narrowed Live Proof
+
+March 15, 2026 now has a narrowed live-AWS proof for the exact mixed-tier executable grouped case that blocked the first Wave 5 run:
+
+- Grouped family: `s3_bucket_access_logging` / `S3.9`
+- Run package: [20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/notes/final-summary.md)
+- Group ID: `75cd4f50-97c9-4aa0-911b-eb3b17ffd804`
+- Account / region: `696505809372` / `eu-north-1`
+- Bucket-scoped action: `bb487cfd-2d28-41a6-8ec3-5f685e4eaa26` targeting `arn:aws:s3:::config-bucket-696505809372`
+- Account-scoped action: `47c023ae-945c-42bf-9b44-018d276046fa` targeting `AWS::::Account:696505809372`
+
+Observed grouped bundle contract:
+
+- `bundle_manifest.json`, `decision_log.md`, `finding_coverage.json`, `README_GROUP.txt`, and `run_all.sh` were generated in one successful grouped run.
+- `bundle_manifest.json` reported `layout_version = grouped_bundle_mixed_tier/v1` and `execution_root = executable/actions`.
+- The bucket-scoped action resolved `support_tier = deterministic_bundle` and generated runnable Terraform under `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/`.
+- The account-scoped action resolved `support_tier = review_required_bundle` and generated metadata-only output under `review_required/actions/02-aws-account-696505809372-47c023ae/`.
+
+Environment note:
+
+- The narrowed rerun did not widen into target-account IAM repair after `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole` stopped accepting the SaaS account.
+- Instead, the isolated runtime restored the exact March 15, 2026 live-ingested S3.9 group records from the earlier Wave 5 evidence package and then exercised the current `master` API/worker grouped-bundle path end to end.
+
 ## Still Deferred After Wave 5
 
 > ⚠️ Status: Planned — not yet implemented
@@ -301,21 +328,25 @@ flowchart TD
 - Control-family migration remains separate. Wave 5 does not claim that every remediation family now has resolver-backed mixed-tier grouped coverage.
 - Root-key execution authority remains separate. IAM.4 execution authority still stays on the dedicated root-key remediation routes and does not move into the generic remediation-run executor.
 
-> ❓ Needs verification: A live AWS E2E still needs to prove mixed-tier grouped bundle creation, SaaS execution gating, and grouped callback/reporting behavior on a real environment before any shipped-product docs or product claims are updated.
+> ❓ Needs verification: A fresh end-to-end live ingest against account `696505809372` still requires the target `SecurityAutopilotReadRole` trust to allow the SaaS account again. The mixed-tier grouped-bundle product contract itself is now proven by the narrowed S3.9 live rerun above.
 
 ## Landed Coverage
 
 The landed mixed-tier grouped-bundle contract is covered in:
 
 - [tests/test_internal_group_run_report.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_internal_group_run_report.py)
+- [tests/test_remediation_risk.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_remediation_risk.py)
+- [tests/test_grouped_remediation_run_service.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_grouped_remediation_run_service.py)
 - [tests/test_remediation_run_worker.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_remediation_run_worker.py)
 - [tests/test_action_groups_bundle_run.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_action_groups_bundle_run.py)
 
 Those tests now cover the Wave 5 contract points:
 
+- family-specific S3.9 risk specialization that keeps bucket-scoped access-logging actions executable and downgrades account-scoped variants to review-required
+- grouped resolution splitting for mixed bucket-scope plus account-scope S3.9 action sets
 - mixed-tier grouped bundle generation with per-tier folders and manifest metadata
 - reporting-wrapper emission of `action_results[]` plus additive `non_executable_results[]`
 - strict callback rejection for invalid non-executable action IDs
 - non-failing mixed-tier group status when executable folders succeed and review/manual actions are metadata only
-- SaaS executor result sync that does not misclassify non-executable actions as execution failures
+- legacy internal executor result sync that does not misclassify non-executable actions as execution failures
 - ActionGroupRun linkage and reporting-token preservation on the action-groups route

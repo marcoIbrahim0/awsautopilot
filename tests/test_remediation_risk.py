@@ -211,6 +211,52 @@ def test_cloudtrail_guided_strategy_warns_when_existing_trail_is_present() -> No
     assert "existing-org-trail" in existing_check["message"]
 
 
+def test_s3_access_logging_bucket_scope_is_specialized_and_executable() -> None:
+    action = SimpleNamespace(
+        action_type="s3_bucket_access_logging",
+        target_id="123456789012|eu-north-1|arn:aws:s3:::config-bucket-123456789012|S3.9",
+        resource_id="arn:aws:s3:::config-bucket-123456789012",
+    )
+    strategy = _fake_strategy(
+        "s3_enable_access_logging_guided",
+        action_type="s3_bucket_access_logging",
+        risk_level="low",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
+    )
+
+    status_map = _code_status(snapshot)
+    assert "risk_evaluation_not_specialized" not in status_map
+    assert status_map["s3_access_logging_bucket_scope_confirmed"] == "pass"
+    assert snapshot["recommendation"] == "safe_to_proceed"
+
+
+def test_s3_access_logging_account_scope_downgrades_to_review() -> None:
+    action = SimpleNamespace(
+        action_type="s3_bucket_access_logging",
+        target_id="123456789012|eu-north-1|AWS::::Account:123456789012|S3.9",
+        resource_id="AWS::::Account:123456789012",
+    )
+    strategy = _fake_strategy(
+        "s3_enable_access_logging_guided",
+        action_type="s3_bucket_access_logging",
+        risk_level="low",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
+    )
+
+    status_map = _code_status(snapshot)
+    assert "risk_evaluation_not_specialized" not in status_map
+    assert status_map["s3_access_logging_scope_requires_review"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
 def test_iam_root_delete_strategy_blocks_when_root_mfa_not_enrolled() -> None:
     action = SimpleNamespace(action_type="iam_root_access_key_absent")
     strategy = _fake_strategy(

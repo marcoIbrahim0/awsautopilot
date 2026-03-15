@@ -6,6 +6,7 @@ acknowledgement before potentially disruptive changes.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Literal, TypedDict
 
 from typing_extensions import NotRequired
@@ -59,11 +60,44 @@ _STRICT_ACCESS_PATH_STRATEGIES = frozenset(
     }
 )
 _MEDIUM_HIGH_RISK_LEVELS = {"medium", "high"}
+_S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
 
 
 def _specialization_fallback_status(strategy: RemediationStrategy) -> CheckStatus:
     """Promote unspecialized checks to fail for medium/high-risk controls."""
     return "fail" if strategy.get("risk_level") in _MEDIUM_HIGH_RISK_LEVELS else "unknown"
+
+
+def _s3_bucket_name_candidate(raw: Any) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().strip("'\"")
+    if not value:
+        return None
+    match = _S3_BUCKET_ARN_PATTERN.search(value)
+    if match:
+        return match.group("bucket")
+    if "|" in value:
+        for part in value.split("|"):
+            candidate = _s3_bucket_name_candidate(part)
+            if candidate:
+                return candidate
+        return None
+    if value.startswith("AWS::::Account:") or value.lower().startswith("account:"):
+        return None
+    if value.lower().startswith("aws-account-"):
+        return None
+    if re.fullmatch(r"\d{12}", value):
+        return None
+    return None
+
+
+def _s3_access_logging_source_bucket(action: Action) -> str | None:
+    for field_name in ("target_id", "resource_id"):
+        candidate = _s3_bucket_name_candidate(getattr(action, field_name, None))
+        if candidate:
+            return candidate
+    return None
 
 
 def evaluate_strategy_impact(
@@ -301,6 +335,43 @@ def evaluate_strategy_impact(
                     str(
                         runtime_signals.get("ebs_customer_kms_key_error")
                         or "Selected customer-managed KMS key is invalid for this account/region."
+                    ),
+                )
+            )
+    elif strategy_id == "s3_enable_access_logging_guided":
+        source_bucket = _s3_access_logging_source_bucket(action)
+        if source_bucket:
+            checks.append(
+                _build_check(
+                    "s3_access_logging_bucket_scope_confirmed",
+                    "pass",
+                    (
+                        "Bucket-scoped target was identified for S3 access logging. "
+                        "This action can stay executable once a dedicated destination bucket is selected."
+                    ),
+                )
+            )
+            log_bucket_name = str(strategy_inputs.get("log_bucket_name") or "").strip()
+            if log_bucket_name and log_bucket_name == source_bucket:
+                checks.append(
+                    _build_check(
+                        "s3_access_logging_destination_invalid",
+                        "fail",
+                        (
+                            "Log destination must be a dedicated bucket. "
+                            "Do not use the source bucket as the log destination."
+                        ),
+                    )
+                )
+        else:
+            checks.append(
+                _build_check(
+                    "s3_access_logging_scope_requires_review",
+                    "warn",
+                    (
+                        "This S3.9 action is not bucket-scoped, so the exact source bucket cannot be "
+                        "derived automatically. Review and map the affected bucket(s) before generating "
+                        "runnable IaC."
                     ),
                 )
             )

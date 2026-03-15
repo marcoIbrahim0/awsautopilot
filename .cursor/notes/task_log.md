@@ -1,5 +1,56 @@
 # Task Log
 
+## Wave 5 narrowed live S3.9 mixed-tier executable grouped proof on master (2026-03-15)
+
+**Task:** Close the remaining Wave 5 live-AWS coverage gap on current `master` by proving at least one real AWS-backed grouped family now generates a true mixed-tier executable customer-run bundle with both executable and metadata-only actions.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py** - added a narrow `s3_enable_access_logging_guided` specialization so bucket-scoped S3.9 actions resolve as executable when a dedicated log bucket is supplied, while account-scoped S3.9 actions downgrade explicitly to review-required instead of falling through `risk_evaluation_not_specialized`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py** - added focused regressions proving bucket-scoped S3.9 stays executable and account-scoped S3.9 downgrades to review-required.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py** - added grouped-plan coverage proving a mixed bucket-scope plus account-scope S3.9 action set splits into `deterministic_bundle` plus `review_required_bundle`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - updated the Wave 5 doc with the exact March 15, 2026 narrowed live S3.9 proof and the remaining environment-only fresh-ingest caveat.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/tests/rpw5-live-s3-mixed-tier.md** - added the focused live proof record for the narrowed S3.9 grouped rerun.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/notes/final-summary.md** - added the summary for the narrowed live rerun, including the exact group/action IDs and bundle contract evidence.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 5 closure pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, Wave 5 docs, and the March 15, 2026 live-run summary before changing code.
+- Confirmed the missing mixed-tier executable grouped case was not data-only:
+  - the real live dataset already contained grouped family `s3_bucket_access_logging`
+  - group `75cd4f50-97c9-4aa0-911b-eb3b17ffd804` already had one bucket-scoped member and one account-scoped member
+  - the real blocker was the missing S3.9 risk specialization in `backend/services/remediation_risk.py`
+- Added the narrow family-specific fix only:
+  - bucket-scoped S3.9 actions now emit `s3_access_logging_bucket_scope_confirmed = pass`
+  - account-scoped S3.9 actions now emit `s3_access_logging_scope_requires_review = warn`
+  - no schema change or broader family migration was introduced
+- Ran the focused product tests:
+  - `pytest '/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py' '/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py' -q` -> `26 passed`
+- Discovered a fresh environment-only blocker during the live rerun:
+  - `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole` no longer allowed the SaaS account to assume it, so fresh isolated ingest could not be replayed without target-account IAM repair
+- Kept the scope narrow and still produced real grouped-run proof by restoring the exact March 15, 2026 live-ingested S3.9 group records from the earlier Wave 5 evidence package into the isolated runtime, then exercising the current API/worker bundle path on `master`
+- Proved the exact mixed-tier executable grouped scenario through the real API and worker:
+  - `GET /api/actions/bb487cfd-2d28-41a6-8ec3-5f685e4eaa26/remediation-options` now returns bucket-scope executable checks
+  - `GET /api/actions/47c023ae-945c-42bf-9b44-018d276046fa/remediation-options` now returns account-scope review-required checks
+  - `POST /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/bundle-run` created grouped run `cebf8d7a-e416-4d2e-9f72-6e284580e5b0`
+  - remediation run `3feb85a9-2845-4ee3-b4f2-2530ff0eb0c7` finished `success` with `Group PR bundle generated (2 actions)`
+- Extracted and preserved the generated bundle proof under `docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/evidence/generated-bundle/`
+- Verified the exact required contract:
+  - `bundle_manifest.json`
+  - `decision_log.md`
+  - `finding_coverage.json`
+  - `README_GROUP.txt`
+  - `run_all.sh`
+  - one runnable folder under `executable/actions/...`
+  - one metadata-only folder under `review_required/actions/...`
+
+**Technical debt / gotchas:**
+- Fresh ingest on this AWS account is currently blocked by target-account IAM trust, not by grouped-bundle product logic. This task intentionally did not widen into cross-account IAM repair.
+- The narrowed live proof reuses exact live-ingested S3.9 records from the earlier March 15, 2026 Wave 5 run package. That preserves AWS-backed provenance but is narrower than a completely fresh ingest pass.
+
+**Open questions / TODOs:**
+- If another fresh ingest-based live rerun is required, repair `SecurityAutopilotReadRole` trust for account `696505809372` first.
+
 ## Wave 5 grouped callback replay protection fix on master (2026-03-15)
 
 **Task:** Fix the remaining real Wave 5 grouped callback replay bug on the current `master` checkout only so `POST /api/internal/group-runs/report` rejects replayed valid finished callbacks without changing customer-run reporting semantics.
@@ -34,6 +85,60 @@
 
 **Open questions / TODOs:**
 - Wave 5 still needs a live rerun against a dataset/account combination that can exercise a real mixed-tier executable grouped family plus a usable WriteRole. This fix closes the replay blocker only.
+
+## Archive public SaaS PR-bundle execution and keep customer-run bundles as the supported path on master (2026-03-15)
+
+**Task:** Archive the public SaaS-managed PR-bundle plan/apply surface on the current `master` checkout only while preserving customer-run PR bundle generation/download, mixed-tier grouped bundle manifests/layout, grouped callback reporting, and unchanged `direct_fix` behavior.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - replaced the four public SaaS PR-bundle execution endpoints with a shared explicit `410 Gone` archived response so they no longer enqueue work or create/advance SaaS execution records.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts** - removed the now-unused public SaaS PR-bundle execution helpers and response/request types from the frontend API client.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx** - removed dead SaaS execution state and bulk plan/apply handler wiring from the PR-bundle summary page while leaving customer-run bundle generation/download intact.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx** - changed execution copy so archived SaaS-managed apply states now direct users to download and run bundles with customer-owned credentials or pipelines.
+- **/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.test.tsx** - added assertions proving the summary page no longer exposes SaaS-run buttons or refresh controls.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py** - replaced the old SaaS execution route expectations with archived-route regressions that assert `410` plus no enqueue/capacity calls.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - updated the remediation-profile overview to state that customer-run PR bundles are the supported model, SaaS-managed execution is archived, mixed-tier grouped bundles/reporting remain active, and `WriteRole` is still only for `direct_fix`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - updated Wave 5 docs so mixed-tier grouped bundle generation/reporting is documented as customer-run, with the public SaaS execution surface explicitly archived.
+- **/Users/marcomaher/AWS Security Autopilot/docs/connect-write-role.md** - clarified that WriteRole is not required for PR-only customer-run bundles and remains relevant only for `direct_fix`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md** - marked `SAAS_BUNDLE_EXECUTOR_ENABLED` as an archived legacy flag rather than a supported product path.
+- **/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/deployer-runbook-phase1-phase3.md** - updated the example environment to keep the legacy SaaS executor disabled and note that customer-run PR bundles are the supported flow.
+- **/Users/marcomaher/AWS Security Autopilot/docs/CHANGELOG.md** - added the current product-status note that public SaaS-managed PR-bundle execution is archived.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/complete-feature-inventory.md** - added a historical-status note so the archived February inventory is not read as the current product direction.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task2-frontend-features.md** - added a historical-status note for the archived frontend inventory snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task3-backend-features.md** - added a historical-status note for the archived backend inventory snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task4-worker-features.md** - added a historical-status note for the archived worker inventory snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task7-implementation-status.md** - added a historical-status note for the archived implementation-status snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/docs/archive/2026-02-doc-cleanup/features/feat-task8-feature-dependencies.md** - added a historical-status note for the archived dependency snapshot.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this archive change and validation.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes plus the required remediation-profile, WriteRole, and local-environment docs before editing code.
+- Archived exactly these public SaaS-managed PR-bundle endpoints:
+  - `POST /api/remediation-runs/{run_id}/execute-pr-bundle`
+  - `POST /api/remediation-runs/{run_id}/approve-apply`
+  - `POST /api/remediation-runs/bulk-execute-pr-bundle`
+  - `POST /api/remediation-runs/bulk-approve-apply`
+- Standardized the archived response to `HTTP 410 Gone` with:
+  - `error = SaaS bundle execution archived`
+  - `reason = saas_bundle_execution_archived`
+  - explicit guidance to download the PR bundle, review the generated artifacts, and run it outside the SaaS with customer-owned credentials or pipelines while preserving optional grouped reporting callbacks.
+- Kept customer-run PR bundle generation, bundle download, grouped mixed-tier manifest/layout generation, `run_all.sh` / `run_actions.sh`, `/api/internal/group-runs/report`, and `direct_fix` behavior unchanged.
+- Removed the stale frontend API helpers and dead summary-page SaaS execution state so there is no remaining current UI affordance that suggests the SaaS will run PR-bundle plan/apply.
+- Updated current docs to match the new product direction and added explicit historical-status notes to the old archived inventory snapshots that still described the February 2026 SaaS execution surface as active.
+- Ran the focused validation requested for this scope:
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_runs_api.py` -> `108 passed`
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_internal_group_run_report.py` -> `4 passed`
+  - `PYTHONPATH=. ./venv/bin/pytest -q tests/test_remediation_run_worker.py` -> `37 passed`
+  - `npm run test:ui -- src/app/pr-bundles/create/summary/page.test.tsx src/components/RemediationRunProgress.test.tsx src/components/pr-bundles/OnlineExecutionControls.test.tsx` -> `3 files passed`, `6 tests passed`
+- Did one final repository sweep for `execute-pr-bundle`, `approve-apply`, `Run all plans`, `Approve all apply`, and related copy. No remaining current public route or UI path offers SaaS-managed PR-bundle execution; only archived historical/test-evidence records still mention the old surface.
+
+**Technical debt / gotchas:**
+- The legacy internal SaaS executor code path still exists under worker/config/SQS internals (`backend/workers/jobs/remediation_run_execution.py`, `backend/config.py`, `backend/utils/sqs.py`, `backend/workers/main.py`) even though the public product surface is archived. That cleanup stayed out of scope because the route-level archive fully disables public enqueue/advance behavior and the grouped callback/customer-run path remains supported.
+- Historical test evidence under `docs/test-results/` still references the old route behavior as part of time-stamped validation records. Those files were left intact to preserve evidence integrity.
+
+**Open questions / TODOs:**
+- If the product wants a full removal instead of an archived public surface, follow up with a separate cleanup pass to delete the now-unreachable SaaS executor internals and any remaining legacy config wiring.
 
 ## Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)
 

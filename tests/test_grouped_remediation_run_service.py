@@ -16,6 +16,7 @@ from backend.services.grouped_remediation_runs import (
     normalize_grouped_request_from_action_group,
     normalize_grouped_request_from_remediation_runs,
 )
+from backend.services.remediation_risk import evaluate_strategy_impact as real_evaluate_strategy_impact
 from backend.utils.sqs import (
     REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
     REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
@@ -269,6 +270,62 @@ def test_grouped_artifacts_include_per_action_resolutions() -> None:
     }
     assert first_resolution["resolution"]["strategy_id"] == first_resolution["strategy_id"]
     assert first_resolution["resolution"]["profile_id"] == first_resolution["profile_id"]
+
+
+def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bucket_action = DummyAction(
+        id=uuid.uuid4(),
+        action_type="s3_bucket_access_logging",
+        account_id="123456789012",
+        region="eu-north-1",
+        status="open",
+        priority=100,
+        updated_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+        created_at=datetime.now(timezone.utc) - timedelta(minutes=2),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::config-bucket-123456789012|S3.9",
+        resource_id="arn:aws:s3:::config-bucket-123456789012",
+    )
+    account_action = DummyAction(
+        id=uuid.uuid4(),
+        action_type="s3_bucket_access_logging",
+        account_id="123456789012",
+        region="eu-north-1",
+        status="open",
+        priority=90,
+        updated_at=datetime.now(timezone.utc) - timedelta(minutes=2),
+        created_at=datetime.now(timezone.utc) - timedelta(minutes=3),
+        target_id="123456789012|eu-north-1|AWS::::Account:123456789012|S3.9",
+        resource_id="AWS::::Account:123456789012",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enable_access_logging_guided",
+        strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {},
+    )
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+        real_evaluate_strategy_impact,
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_access_logging"),
+        actions=[account_action, bucket_action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    resolutions = {entry.action_id: entry.resolution for entry in plan.action_resolutions}
+    assert resolutions[str(bucket_action.id)]["support_tier"] == "deterministic_bundle"
+    assert resolutions[str(account_action.id)]["support_tier"] == "review_required_bundle"
+    assert plan.artifacts["group_bundle"]["action_resolutions"][0]["strategy_id"] == "s3_enable_access_logging_guided"
+    assert plan.artifacts["group_bundle"]["action_resolutions"][1]["strategy_id"] == "s3_enable_access_logging_guided"
 
 
 def test_representative_action_selection_is_deterministic() -> None:
