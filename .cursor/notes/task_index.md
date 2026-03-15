@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-5-mixed-tier-grouped-bundle-documentation-and-task-history-integration-on-master-2026-03-15)
+  - Added the missing Wave 5 summary doc for the landed mixed-tier grouped layout, manifest semantics, executable-root runner behavior, executor detection order, additive `non_executable_results[]` reporting, and overall success/failure rules.
+  - Linked the new doc from the remediation-profile README and recorded the remaining separate boundaries for control-family migration, root-key authority, and live AWS validation before shipped-doc claims.
 - [Remediation-profile Wave 5 grouped reporting and mixed-tier result semantics on master (2026-03-15)](task_log.md#remediation-profile-wave-5-grouped-reporting-and-mixed-tier-result-semantics-on-master-2026-03-15)
   - Added additive grouped callback `non_executable_results[]`, strict finished-payload validation against the reporting token action set, and non-failing persistence for review/manual outcomes.
   - Updated mixed-tier bundle wrapper generation and SaaS executor result-sync so metadata-only grouped actions stay out of executable failure classification while preserving the existing ActionGroupRun/report-token lifecycle.

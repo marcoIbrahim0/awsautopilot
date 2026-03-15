@@ -1,5 +1,40 @@
 # Task Log
 
+## Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)
+
+**Task:** Document the already-landed Wave 5 mixed-tier grouped-bundle behavior on the current `master` checkout only, add the missing Wave 5 summary doc, and update remediation-profile navigation plus task-history entries without changing runtime code.
+
+**Files created/modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - added the Wave 5 summary doc covering the mixed-tier grouped layout, manifest semantics, executable-root runner behavior, executor detection order, additive `non_executable_results[]` reporting, success/failure semantics, legacy compatibility, and remaining boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - linked the new Wave 5 summary doc from the remediation-profile doc entrypoint.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 5 documentation pass.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, remediation-profile docs, and the landed Wave 5 implementation files before writing docs:
+  - `backend/workers/jobs/remediation_run.py`
+  - `backend/workers/jobs/remediation_run_execution.py`
+  - `backend/routers/internal.py`
+  - `backend/routers/remediation_runs.py`
+- Recorded only implemented behavior in the new Wave 5 doc:
+  - mixed-tier grouped bundle layout rooted at `executable/actions`, `review_required/actions`, and `manual_guidance/actions`
+  - `bundle_manifest.json` keys and per-action record semantics
+  - `run_all.sh` behavior, including the reporting-wrapper split into `run_all.sh` and `run_actions.sh` when callback reporting is configured
+  - executor detection order for mixed-tier manifest-backed bundles, mixed-tier heuristic bundles, legacy grouped bundles, and single-run bundles
+  - additive grouped callback `non_executable_results[]` support and its strict token-backed validation rules
+  - overall grouped success/failure semantics that ignore metadata-only review/manual actions unless executable results actually fail or cancel
+  - explicit legacy grouped compatibility boundaries and the still-separate control-family/root-key/live-validation work
+- Added one Mermaid flow that traces grouped action resolution through mixed-tier generation, executor detection, and the split reporting path.
+- Confirmed the remediation-profile README now links the new Wave 5 doc and that task history is discoverable through both `task_log.md` and `task_index.md`.
+- Kept this pass documentation-only; no application code changed and no additional pytest scopes were rerun.
+
+**Technical debt / gotchas:**
+- The remediation-profile root spec remains marked planned because later migration slices are still separate even though the Wave 5 mixed-tier grouped runtime is landed on `master`.
+- The next confidence gate for this Wave 5 slice is a live AWS end-to-end run. Another local-only platform rerun would not replace the need to validate mixed-tier generation, execution gating, and grouped reporting against a real environment.
+
+**Open questions / TODOs:**
+- Run a live AWS E2E for the mixed-tier grouped path before promoting this Wave 5 slice into shipped-product claims or broader external-facing docs.
+
 ## Remediation-profile Wave 5 grouped reporting and mixed-tier result semantics on master (2026-03-15)
 
 **Task:** Implement Wave 5 Prompt 3 grouped reporting support for mixed-tier remediation bundles on the current `master` checkout only, preserving the queue-v2 contract, direct-fix behavior, and existing ActionGroupRun/report-token lifecycle.

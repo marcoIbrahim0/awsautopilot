@@ -47,6 +47,10 @@ Related docs:
 
 - [Wave 4 queue contract and worker migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-4-queue-contract-and-worker-migration.md)
 
+## Wave 5 Mixed-Tier Grouped Bundles
+
+- [Wave 5 mixed-tier grouped bundles](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md)
+
 ## Scope and Non-Goals
 
 In scope:
