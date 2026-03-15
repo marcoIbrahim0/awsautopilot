@@ -327,6 +327,120 @@ def test_s3_11_create_requires_lifecycle_preservation_evidence_before_executable
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
 
 
+def test_s3_9_create_stays_executable_only_when_destination_safety_is_proven(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_access_logging")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_access_logging_guided",
+            "strategy_inputs": {"log_bucket_name": "dedicated-access-log-bucket"},
+        },
+        runtime_signals={
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": True,
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_access_logging_bucket_scope_confirmed",
+                    "status": "pass",
+                    "message": "Bucket scope is confirmed.",
+                },
+                {
+                    "code": "s3_access_logging_destination_safety_proven",
+                    "status": "pass",
+                    "message": "Destination safety is proven.",
+                },
+            ],
+            "recommendation": "safe_to_proceed",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enable_access_logging_guided"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["destination_safety_proven"] is True
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_15_create_downgrades_customer_managed_branch_when_dependency_proof_is_missing(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_encryption_kms")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::kms-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_sse_kms_guided",
+            "strategy_inputs": {
+                "kms_key_mode": "custom",
+                "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+            },
+        },
+        runtime_signals={
+            "s3_customer_kms_key_valid": True,
+            "s3_customer_kms_dependency_proven": False,
+            "s3_customer_kms_dependency_error": "Customer-managed KMS key policy/grant evidence is under-specified.",
+            "evidence": {"customer_kms_grant_count": 0},
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_customer_kms_dependency_unproven",
+                    "status": "fail",
+                    "message": "Customer-managed KMS key policy/grant evidence is under-specified.",
+                }
+            ],
+            "recommendation": "blocked",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enable_sse_kms_customer_managed"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Customer-managed KMS key policy/grant evidence is under-specified."
+    ]
+    assert run.artifacts["strategy_inputs"] == {
+        "kms_key_mode": "custom",
+        "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == "s3_enable_sse_kms_customer_managed"
+
+
 def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_required_tier(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()

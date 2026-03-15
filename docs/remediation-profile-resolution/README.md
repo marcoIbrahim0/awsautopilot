@@ -105,12 +105,32 @@ Related docs:
     - existing lifecycle rules detected but the lifecycle document was not captured
     - existing lifecycle document captured but additive merge is still ambiguous
     - lifecycle analysis unavailable
+- S3.9 `s3_bucket_access_logging` is now resolver-backed for `s3_enable_access_logging_guided`.
+  - executable compatibility branch: `s3_enable_access_logging_guided`
+  - review branch: `s3_enable_access_logging_review_destination_safety`
+  - executable output now requires:
+    - source bucket scope proven from the action target
+    - resolved destination bucket different from the source bucket
+    - runtime proof that the destination bucket is reachable and safe to use
+  - explicit S3.9 downgrade triggers:
+    - source bucket scope is ambiguous or account-scoped
+    - destination bucket is unresolved or matches the source bucket
+    - destination safety cannot be proven from runtime evidence
+- S3.15 `s3_bucket_encryption_kms` is now resolver-backed for `s3_enable_sse_kms_guided`.
+  - AWS-managed compatibility branch: `s3_enable_sse_kms_guided`
+  - customer-managed branch: `s3_enable_sse_kms_customer_managed`
+  - executable AWS-managed output remains available where bucket scope is proven.
+  - explicit S3.15 downgrade triggers:
+    - target bucket scope cannot be proven
+    - customer-managed branch is selected but `kms_key_arn` is missing
+    - customer-managed key is invalid, disabled, or account/region mismatched
+    - customer-managed key policy or grant evidence is unavailable or incomplete
 - Current implemented surfaces:
   - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
-  - remediation options and preview now also expose S3.2, S3.5, and S3.11 `preservation_summary`, `blocked_reasons`, and profile-aware downgrade metadata
+  - remediation options and preview now also expose S3.2, S3.5, S3.9, S3.11, and S3.15 `preservation_summary`, `blocked_reasons`, and profile-aware downgrade metadata
   - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
-  - single-run create now persists the same canonical resolution for S3.2, S3.5, and S3.11, including explicit non-executable downgrade decisions
-  - single-run worker generation now consumes canonical resolver support tiers for S3.2, S3.5, and S3.11 so downgraded branches emit metadata-only guidance bundles instead of runnable Terraform or CloudFormation
+  - single-run create now persists the same canonical resolution for S3.2, S3.5, S3.9, S3.11, and S3.15, including explicit non-executable downgrade decisions
+  - single-run worker generation now consumes canonical resolver support tiers for S3.2, S3.5, S3.9, S3.11, and S3.15 so downgraded branches emit metadata-only guidance bundles instead of runnable Terraform or CloudFormation
   - grouped create routes inherit the same family resolver per action through the shared grouped-run service
   - grouped bundle generation continues using per-action canonical resolutions, and customer-run PR bundles remain the supported execution model
   - IAM.4 options and preview expose additive profile metadata as guidance only, with `manual_guidance_only` support tiers and an explicit `/api/root-key-remediation-runs` execution-authority pointer
@@ -353,8 +373,14 @@ Phase-1 migration rules captured in the source plan:
 - S3.2 keeps current strategy families and adds `website_manual` as manual-only.
 - S3.5 executable output requires resolver-side policy-document classification proving merge and preservation are safe.
 - S3.11 executable output requires resolver-side lifecycle classification proving additive merge is safe.
-- S3.9 remains under `s3_bucket_access_logging` with internal branching for default destination, explicit external destination, and manual-only fallback.
-- S3.15 remains under `s3_bucket_encryption_kms` with internal branching for AWS-managed and customer-managed KMS paths.
+- S3.9 stays under `s3_bucket_access_logging` and preserves public strategy `s3_enable_access_logging_guided`.
+  - Executable compatibility branch remains `s3_enable_access_logging_guided`.
+  - Explicit downgrade branch is `s3_enable_access_logging_review_destination_safety`.
+  - Bucket scope and destination safety must be proven before the branch remains executable.
+- S3.15 stays under `s3_bucket_encryption_kms` and preserves public strategy `s3_enable_sse_kms_guided`.
+  - Executable compatibility branch remains the AWS-managed-key path.
+  - Explicit customer-managed branch is `s3_enable_sse_kms_customer_managed`.
+  - Missing or under-proven customer-managed KMS evidence downgrades explicitly instead of silently falling back to executable output.
 - CloudTrail.1 keeps `cloudtrail_enable_guided` as the public compatibility strategy while unresolved branches downgrade explicitly.
 - Config.1 preserves current strategy families in phase 1 and adds `org_config_manual` as manual-only.
 

@@ -13,6 +13,7 @@ from typing import Any, Literal, TypedDict
 from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
 from backend.services.direct_fix_bridge import get_supported_direct_fix_action_types
+from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
 from backend.services.remediation_strategy import (
@@ -109,11 +110,19 @@ def _build_strategy_guidance(
     strategy: RemediationStrategy,
     account: AwsAccount | None,
 ) -> ActionExecutionGuidance:
-    runtime_signals = collect_runtime_risk_signals(action, strategy, {}, account)
+    probe_inputs = resolve_runtime_probe_inputs(
+        action_type=action.action_type,
+        strategy=strategy,
+        requested_profile_id=None,
+        explicit_inputs=None,
+        tenant_settings=None,
+        action=action,
+    )
+    runtime_signals = collect_runtime_risk_signals(action, strategy, probe_inputs, account)
     risk_snapshot = evaluate_strategy_impact(
         action,
         strategy,
-        {},
+        probe_inputs,
         account=account,
         runtime_signals=runtime_signals,
     )

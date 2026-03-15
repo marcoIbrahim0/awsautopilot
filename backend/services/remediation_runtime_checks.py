@@ -252,6 +252,16 @@ def _normalize_bucket_policy_document(policy_json: str | None) -> str | None:
     return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
 
 
+def _s3_kms_key_mode(strategy_inputs: dict[str, Any] | None) -> str:
+    """Normalize S3.15 key mode from strategy inputs."""
+    inputs = strategy_inputs or {}
+    raw_mode = str(inputs.get("kms_key_mode", "")).strip().lower()
+    kms_key_arn = str(inputs.get("kms_key_arn", "")).strip()
+    if raw_mode == "custom" or kms_key_arn:
+        return "custom"
+    return "aws_managed"
+
+
 def _policy_statement_count(policy_json: str | None) -> int:
     """Count policy statements from normalized/raw policy JSON."""
     normalized = _normalize_bucket_policy_document(policy_json)
@@ -472,7 +482,56 @@ def collect_runtime_risk_signals(
                     if isinstance(evidence_payload, dict):
                         evidence_payload["security_group_probe_error"] = f"{type(exc).__name__}"
 
-    if strategy_id == "s3_bucket_encryption_kms":
+    if strategy_id == "s3_enable_access_logging_guided":
+        source_bucket = _bucket_name_from_target_id(action.target_id)
+        log_bucket = str(strategy_inputs.get("log_bucket_name", "")).strip()
+        evidence_payload = signals.setdefault("evidence", {})
+        if isinstance(evidence_payload, dict):
+            if source_bucket:
+                evidence_payload["target_bucket"] = source_bucket
+            if log_bucket:
+                evidence_payload["log_bucket_name"] = log_bucket
+        if not log_bucket:
+            signals["s3_access_logging_destination_safe"] = False
+            signals["s3_access_logging_destination_safety_reason"] = (
+                "Destination log bucket could not be resolved for S3 access logging."
+            )
+        elif source_bucket and log_bucket == source_bucket:
+            signals["s3_access_logging_destination_bucket_reachable"] = True
+            signals["s3_access_logging_destination_safe"] = False
+            signals["s3_access_logging_destination_safety_reason"] = (
+                "Log destination must be a dedicated bucket and cannot match the source bucket."
+            )
+        else:
+            session = _get_read_session()
+            if session is None:
+                signals["s3_access_logging_destination_bucket_reachable"] = False
+                signals["s3_access_logging_destination_safe"] = False
+                signals["s3_access_logging_destination_safety_reason"] = (
+                    read_probe_error
+                    or "Destination safety could not be proven for the selected S3 access-log bucket."
+                )
+            else:
+                s3 = session.client("s3")
+                try:
+                    s3.head_bucket(Bucket=log_bucket)
+                    signals["s3_access_logging_destination_bucket_reachable"] = True
+                    signals["s3_access_logging_destination_safe"] = True
+                except ClientError as exc:
+                    code = _error_code(exc) or "HeadBucketFailed"
+                    signals["s3_access_logging_destination_bucket_reachable"] = False
+                    signals["s3_access_logging_destination_safe"] = False
+                    signals["s3_access_logging_destination_safety_reason"] = (
+                        f"Destination log bucket '{log_bucket}' could not be verified from this account context ({code})."
+                    )
+                except Exception as exc:  # pragma: no cover - defensive
+                    signals["s3_access_logging_destination_bucket_reachable"] = False
+                    signals["s3_access_logging_destination_safe"] = False
+                    signals["s3_access_logging_destination_safety_reason"] = (
+                        f"Destination log bucket '{log_bucket}' could not be verified from this account context ({type(exc).__name__})."
+                    )
+
+    if strategy_id == "s3_enable_sse_kms_guided":
         session = _get_read_session()
         context_payload = _context_payload(signals)
         if session is None:
@@ -517,6 +576,111 @@ def collect_runtime_risk_signals(
                     context_payload["kms_key_options"] = options
             except ClientError as exc:
                 context_payload["kms_key_options_error"] = _error_code(exc) or "ListAliasesFailed"
+
+        if _s3_kms_key_mode(strategy_inputs) == "custom":
+            kms_key_arn = str(strategy_inputs.get("kms_key_arn", "")).strip()
+            evidence_payload = signals.setdefault("evidence", {})
+            if isinstance(evidence_payload, dict) and kms_key_arn:
+                evidence_payload["kms_key_arn"] = kms_key_arn
+            if not kms_key_arn:
+                signals["s3_customer_kms_dependency_proven"] = False
+                signals["s3_customer_kms_dependency_error"] = (
+                    "Customer-managed KMS branch requires an approved kms_key_arn."
+                )
+            elif not _KMS_ARN_PATTERN.match(kms_key_arn):
+                signals["s3_customer_kms_key_valid"] = False
+                signals["s3_customer_kms_key_error"] = "kms_key_arn is not a valid KMS ARN."
+                signals["s3_customer_kms_dependency_proven"] = False
+                signals["s3_customer_kms_dependency_error"] = (
+                    "Customer-managed KMS dependency proof could not start because kms_key_arn is invalid."
+                )
+            else:
+                arn_parts = kms_key_arn.split(":", 5)
+                kms_region = arn_parts[3] if len(arn_parts) > 4 else ""
+                kms_account_id = arn_parts[4] if len(arn_parts) > 5 else ""
+                dependency_errors: list[str] = []
+                if action.region and kms_region and kms_region != action.region:
+                    signals["s3_customer_kms_key_valid"] = False
+                    signals["s3_customer_kms_key_error"] = (
+                        f"KMS key region {kms_region} does not match action region {action.region}."
+                    )
+                    signals["s3_customer_kms_dependency_proven"] = False
+                    signals["s3_customer_kms_dependency_error"] = str(signals["s3_customer_kms_key_error"])
+                elif account is not None and kms_account_id and kms_account_id != account.account_id:
+                    signals["s3_customer_kms_key_valid"] = False
+                    signals["s3_customer_kms_key_error"] = (
+                        f"KMS key account {kms_account_id} does not match action account {account.account_id}."
+                    )
+                    signals["s3_customer_kms_dependency_proven"] = False
+                    signals["s3_customer_kms_dependency_error"] = str(signals["s3_customer_kms_key_error"])
+                elif session is None:
+                    signals["s3_customer_kms_dependency_proven"] = False
+                    signals["s3_customer_kms_dependency_error"] = (
+                        read_probe_error or "ReadRole runtime probe unavailable for customer-managed KMS validation."
+                    )
+                else:
+                    kms = session.client("kms", region_name=action.region or kms_region or None)
+                    try:
+                        key_metadata = kms.describe_key(KeyId=kms_key_arn).get("KeyMetadata", {})
+                        if key_metadata.get("KeyState") != "Enabled":
+                            signals["s3_customer_kms_key_valid"] = False
+                            signals["s3_customer_kms_key_error"] = "KMS key is not enabled."
+                        else:
+                            signals["s3_customer_kms_key_valid"] = True
+                    except ClientError as exc:
+                        signals["s3_customer_kms_key_valid"] = False
+                        signals["s3_customer_kms_key_error"] = _error_code(exc) or "DescribeKeyFailed"
+
+                    if signals.get("s3_customer_kms_key_valid") is True:
+                        policy_captured = False
+                        grants_captured = False
+                        try:
+                            policy = kms.get_key_policy(KeyId=kms_key_arn, PolicyName="default").get("Policy")
+                            if isinstance(policy, str) and policy.strip():
+                                policy_captured = True
+                                if isinstance(evidence_payload, dict):
+                                    evidence_payload["customer_kms_policy_json"] = policy.strip()
+                            else:
+                                dependency_errors.append("GetKeyPolicyEmpty")
+                        except ClientError as exc:
+                            dependency_errors.append(_error_code(exc) or "GetKeyPolicyFailed")
+
+                        try:
+                            grants: list[dict[str, Any]] = []
+                            marker: str | None = None
+                            while True:
+                                kwargs: dict[str, Any] = {"KeyId": kms_key_arn, "Limit": 100}
+                                if marker:
+                                    kwargs["Marker"] = marker
+                                resp = kms.list_grants(**kwargs)
+                                raw_grants = resp.get("Grants", [])
+                                if isinstance(raw_grants, list):
+                                    grants.extend(grant for grant in raw_grants if isinstance(grant, dict))
+                                if not resp.get("Truncated"):
+                                    break
+                                marker = str(resp.get("NextMarker", "")).strip() or None
+                                if marker is None:
+                                    break
+                            grants_captured = True
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload["customer_kms_grant_count"] = len(grants)
+                        except ClientError as exc:
+                            dependency_errors.append(_error_code(exc) or "ListGrantsFailed")
+
+                        if dependency_errors or not policy_captured or not grants_captured:
+                            signals["s3_customer_kms_dependency_proven"] = False
+                            signals["s3_customer_kms_dependency_error"] = (
+                                "Customer-managed KMS key policy/grant evidence is under-specified "
+                                f"({' / '.join(dependency_errors)})."
+                            )
+                        else:
+                            signals["s3_customer_kms_dependency_proven"] = True
+                    else:
+                        signals["s3_customer_kms_dependency_proven"] = False
+                        signals["s3_customer_kms_dependency_error"] = str(
+                            signals.get("s3_customer_kms_key_error")
+                            or "Customer-managed KMS dependency proof is unavailable because key validation failed."
+                        )
 
     if strategy_id == "cloudtrail_enable_guided":
         context_payload = _context_payload(signals)

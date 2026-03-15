@@ -16,11 +16,13 @@ class _FakeS3Client:
         *,
         policy_json: str | None = None,
         error_code: str | None = None,
+        head_bucket_error_code: str | None = None,
         lifecycle_document: dict[str, Any] | None = None,
         lifecycle_error_code: str | None = None,
     ) -> None:
         self._policy_json = policy_json
         self._error_code = error_code
+        self._head_bucket_error_code = head_bucket_error_code
         self._lifecycle_document = lifecycle_document
         self._lifecycle_error_code = lifecycle_error_code
 
@@ -41,6 +43,14 @@ class _FakeS3Client:
         assert self._lifecycle_document is not None
         return self._lifecycle_document
 
+    def head_bucket(self, *, Bucket: str) -> dict[str, Any]:
+        if self._head_bucket_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._head_bucket_error_code, "Message": "simulated failure"}},
+                "HeadBucket",
+            )
+        return {}
+
 
 class _FakeSession:
     def __init__(self, clients: dict[str, Any] | _FakeS3Client) -> None:
@@ -56,11 +66,51 @@ class _FakeSession:
 
 
 class _FakeKmsClient:
-    def __init__(self, aliases: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        aliases: list[dict[str, Any]],
+        *,
+        describe_key_error_code: str | None = None,
+        key_state: str = "Enabled",
+        key_policy: str | None = None,
+        key_policy_error_code: str | None = None,
+        grants: list[dict[str, Any]] | None = None,
+        grants_error_code: str | None = None,
+    ) -> None:
         self._aliases = aliases
+        self._describe_key_error_code = describe_key_error_code
+        self._key_state = key_state
+        self._key_policy = key_policy
+        self._key_policy_error_code = key_policy_error_code
+        self._grants = grants or []
+        self._grants_error_code = grants_error_code
 
     def list_aliases(self, **kwargs) -> dict[str, Any]:
         return {"Aliases": self._aliases, "Truncated": False}
+
+    def describe_key(self, *, KeyId: str) -> dict[str, Any]:
+        if self._describe_key_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._describe_key_error_code, "Message": "simulated failure"}},
+                "DescribeKey",
+            )
+        return {"KeyMetadata": {"KeyState": self._key_state}}
+
+    def get_key_policy(self, *, KeyId: str, PolicyName: str) -> dict[str, Any]:
+        if self._key_policy_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._key_policy_error_code, "Message": "simulated failure"}},
+                "GetKeyPolicy",
+            )
+        return {"Policy": self._key_policy or ""}
+
+    def list_grants(self, **kwargs) -> dict[str, Any]:
+        if self._grants_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._grants_error_code, "Message": "simulated failure"}},
+                "ListGrants",
+            )
+        return {"Grants": self._grants, "Truncated": False}
 
 
 class _FakeConfigClient:
@@ -134,8 +184,12 @@ def _strict_ssl_strategy() -> dict[str, Any]:
     return {"strategy_id": "s3_enforce_ssl_strict_deny"}
 
 
+def _s3_9_strategy() -> dict[str, Any]:
+    return {"strategy_id": "s3_enable_access_logging_guided"}
+
+
 def _s3_kms_strategy() -> dict[str, Any]:
-    return {"strategy_id": "s3_bucket_encryption_kms"}
+    return {"strategy_id": "s3_enable_sse_kms_guided"}
 
 
 def _config_strategy() -> dict[str, Any]:
@@ -289,6 +343,51 @@ def test_collect_runtime_risk_signals_s3_11_access_denied_marks_lifecycle_path_u
     assert signals["evidence"]["existing_lifecycle_capture_error"] == "AccessDenied"
 
 
+def test_collect_runtime_risk_signals_s3_9_proves_destination_safety(monkeypatch) -> None:
+    session = _FakeSession(_FakeS3Client())
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9",
+            action_type="s3_bucket_access_logging",
+        ),
+        strategy=_s3_9_strategy(),
+        strategy_inputs={"log_bucket_name": "dedicated-access-log-bucket"},
+        account=_make_account(),
+    )
+
+    assert signals["s3_access_logging_destination_bucket_reachable"] is True
+    assert signals["s3_access_logging_destination_safe"] is True
+    assert signals["evidence"]["target_bucket"] == "source-bucket"
+    assert signals["evidence"]["log_bucket_name"] == "dedicated-access-log-bucket"
+
+
+def test_collect_runtime_risk_signals_s3_9_marks_destination_unsafe_when_probe_fails(monkeypatch) -> None:
+    session = _FakeSession(_FakeS3Client(head_bucket_error_code="AccessDenied"))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9",
+            action_type="s3_bucket_access_logging",
+        ),
+        strategy=_s3_9_strategy(),
+        strategy_inputs={"log_bucket_name": "dedicated-access-log-bucket"},
+        account=_make_account(),
+    )
+
+    assert signals["s3_access_logging_destination_bucket_reachable"] is False
+    assert signals["s3_access_logging_destination_safe"] is False
+    assert "AccessDenied" in signals["s3_access_logging_destination_safety_reason"]
+
+
 def test_collect_runtime_risk_signals_s3_kms_exposes_kms_key_options_context(monkeypatch) -> None:
     session = _FakeSession(
         {
@@ -324,6 +423,37 @@ def test_collect_runtime_risk_signals_s3_kms_exposes_kms_key_options_context(mon
     assert isinstance(context.get("kms_key_options"), list)
     assert context["kms_key_options"][0]["value"] == "arn:aws:kms:us-east-1:123456789012:alias/aws/s3"
     assert context["kms_key_options"][1]["value"] == "arn:aws:kms:us-east-1:123456789012:alias/security-autopilot"
+
+
+def test_collect_runtime_risk_signals_s3_kms_custom_key_captures_dependency_proof(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "kms": _FakeKmsClient(
+                aliases=[],
+                key_policy='{"Version":"2012-10-17","Statement":[]}',
+                grants=[{"GrantId": "grant-1"}],
+            )
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="s3_bucket_encryption_kms"),
+        strategy=_s3_kms_strategy(),
+        strategy_inputs={
+            "kms_key_mode": "custom",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+        },
+        account=_make_account(),
+    )
+
+    assert signals["s3_customer_kms_key_valid"] is True
+    assert signals["s3_customer_kms_dependency_proven"] is True
+    assert signals["evidence"]["customer_kms_grant_count"] == 1
+    assert signals["evidence"]["customer_kms_policy_json"].startswith('{"Version"')
 
 
 def test_collect_runtime_risk_signals_config_sets_contextual_default_inputs(monkeypatch) -> None:

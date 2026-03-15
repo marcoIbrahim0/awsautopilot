@@ -57,6 +57,7 @@ from backend.services.remediation_run_resolution import (
     build_single_run_resolution,
     resolve_create_profile_selection,
 )
+from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
 from backend.services.remediation_run_queue_contract import (
     grouped_run_signatures_match,
     normalize_grouped_run_artifact_signature,
@@ -1383,10 +1384,31 @@ async def create_remediation_run(
                 mode=body.mode,
             )
             _raise_root_key_execution_authority(selected_strategy_id)
+        try:
+            probe_inputs = resolve_runtime_probe_inputs(
+                action_type=action.action_type,
+                strategy=selected_strategy,
+                requested_profile_id=requested_profile_id,
+                explicit_inputs=selected_strategy_inputs,
+                tenant_settings=getattr(tenant, "remediation_settings", None),
+                action=action,
+            )
+        except ValueError as exc:
+            emit_validation_failure(
+                logger,
+                reason="invalid_profile_selection",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid profile_id", "detail": str(exc)},
+            ) from exc
         runtime_signals = collect_runtime_risk_signals(
             action=action,
             strategy=selected_strategy,
-            strategy_inputs=selected_strategy_inputs,
+            strategy_inputs=probe_inputs,
             account=account,
         )
         if body.mode == "pr_only":

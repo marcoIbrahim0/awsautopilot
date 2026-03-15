@@ -14,8 +14,11 @@ from backend.services.remediation_profile_catalog import (
 from backend.services.root_key_resolution_adapter import ROOT_KEY_FAMILY_RESOLVER_KIND
 from backend.services.s3_family_resolution_adapter import (
     S3_11_FAMILY_RESOLVER_KIND,
+    S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+    S3_15_FAMILY_RESOLVER_KIND,
     S3_2_FAMILY_RESOLVER_KIND,
     S3_5_FAMILY_RESOLVER_KIND,
+    S3_9_FAMILY_RESOLVER_KIND,
 )
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
@@ -41,6 +44,14 @@ S3_2_OAC_PROFILE_IDS = [
     "s3_migrate_cloudfront_oac_private",
     "s3_migrate_cloudfront_oac_private_manual_preservation",
 ]
+S3_9_PROFILE_IDS = [
+    "s3_enable_access_logging_guided",
+    "s3_enable_access_logging_review_destination_safety",
+]
+S3_15_PROFILE_IDS = [
+    "s3_enable_sse_kms_guided",
+    S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+]
 
 
 def _iter_strategy_rows() -> list[tuple[str, RemediationStrategy]]:
@@ -58,6 +69,10 @@ def _expected_profile_ids(action_type: str, strategy: RemediationStrategy) -> li
         return list(S3_2_STANDARD_PROFILE_IDS)
     if action_type == S3_2_ACTION_TYPE and strategy["strategy_id"] == S3_2_OAC_STRATEGY_ID:
         return list(S3_2_OAC_PROFILE_IDS)
+    if action_type == "s3_bucket_access_logging" and strategy["strategy_id"] == "s3_enable_access_logging_guided":
+        return list(S3_9_PROFILE_IDS)
+    if action_type == "s3_bucket_encryption_kms" and strategy["strategy_id"] == "s3_enable_sse_kms_guided":
+        return list(S3_15_PROFILE_IDS)
     return [strategy["strategy_id"]]
 
 
@@ -79,6 +94,11 @@ def _profile_expected_support_tier(
         "s3_migrate_cloudfront_oac_private_manual_preservation",
     }:
         return "manual_guidance_only"
+    if profile_id in {
+        "s3_enable_access_logging_review_destination_safety",
+        S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+    }:
+        return "review_required_bundle"
     return _expected_support_tier(action_type, strategy)
 
 
@@ -86,6 +106,8 @@ def _profile_expected_recommended(strategy: RemediationStrategy, profile_id: str
     if profile_id in {
         "s3_bucket_block_public_access_manual_preservation",
         "s3_migrate_cloudfront_oac_private_manual_preservation",
+        "s3_enable_access_logging_review_destination_safety",
+        S3_15_CUSTOMER_MANAGED_PROFILE_ID,
     }:
         return False
     return strategy["recommended"]
@@ -174,8 +196,10 @@ def test_iam_4_profiles_are_guidance_only_catalog_rows() -> None:
 def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
     s3_2_standard = list_profiles_for_strategy(S3_2_ACTION_TYPE, S3_2_STANDARD_STRATEGY_ID)
     s3_2_oac = list_profiles_for_strategy(S3_2_ACTION_TYPE, S3_2_OAC_STRATEGY_ID)
+    s3_9 = list_profiles_for_strategy("s3_bucket_access_logging", "s3_enable_access_logging_guided")
     s3_5_strict = list_profiles_for_strategy("s3_bucket_require_ssl", "s3_enforce_ssl_strict_deny")
     s3_11 = list_profiles_for_strategy("s3_bucket_lifecycle_configuration", "s3_enable_abort_incomplete_uploads")
+    s3_15 = list_profiles_for_strategy("s3_bucket_encryption_kms", "s3_enable_sse_kms_guided")
 
     assert [profile.profile_id for profile in s3_2_standard] == S3_2_STANDARD_PROFILE_IDS
     assert [profile.family_resolver_kind for profile in s3_2_standard] == [
@@ -187,10 +211,20 @@ def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
         S3_2_FAMILY_RESOLVER_KIND,
         S3_2_FAMILY_RESOLVER_KIND,
     ]
+    assert [profile.profile_id for profile in s3_9] == S3_9_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_9] == [
+        S3_9_FAMILY_RESOLVER_KIND,
+        S3_9_FAMILY_RESOLVER_KIND,
+    ]
     assert len(s3_5_strict) == 1
     assert s3_5_strict[0].family_resolver_kind == S3_5_FAMILY_RESOLVER_KIND
     assert len(s3_11) == 1
     assert s3_11[0].family_resolver_kind == S3_11_FAMILY_RESOLVER_KIND
+    assert [profile.profile_id for profile in s3_15] == S3_15_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_15] == [
+        S3_15_FAMILY_RESOLVER_KIND,
+        S3_15_FAMILY_RESOLVER_KIND,
+    ]
 
 
 def test_invalid_profile_catalog_combinations_fail_safely() -> None:

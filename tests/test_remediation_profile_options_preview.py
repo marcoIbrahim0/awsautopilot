@@ -33,6 +33,8 @@ def _mock_action(action_type: str) -> MagicMock:
     action.action_type = action_type
     action.account_id = "123456789012"
     action.region = "us-east-1"
+    action.target_id = "target-1"
+    action.resource_id = "resource-1"
     return action
 
 
@@ -61,6 +63,8 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
     user = _mock_user(tenant.id)
     action = _mock_action("s3_bucket_access_logging")
     action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield _mock_async_session(tenant, action, None)
@@ -72,11 +76,21 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
 
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    try:
-        response = client.get(f"/api/actions/{action.id}/remediation-options")
-    finally:
-        app.dependency_overrides.pop(get_db, None)
-        app.dependency_overrides.pop(get_optional_user, None)
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": True,
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
 
     assert response.status_code == 200
     body = response.json()
@@ -91,6 +105,14 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
             "profile_id": "s3_enable_access_logging_guided",
             "support_tier": "deterministic_bundle",
             "recommended": True,
+            "requires_inputs": True,
+            "supports_exception_flow": False,
+            "exception_only": False,
+        },
+        {
+            "profile_id": "s3_enable_access_logging_review_destination_safety",
+            "support_tier": "review_required_bundle",
+            "recommended": False,
             "requires_inputs": True,
             "supports_exception_flow": False,
             "exception_only": False,
@@ -462,6 +484,213 @@ def test_s3_2_preview_keeps_legacy_oac_strategy_compatible_but_downgrades_withou
     ]
     assert resolution["preservation_summary"]["existing_bucket_policy_json_captured"] is False
     assert resolution["preservation_summary"]["manual_preservation_required"] is True
+
+
+def test_s3_9_options_recommend_review_branch_when_destination_safety_is_not_proven(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_access_logging")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_access_logging_destination_safe": False,
+            "s3_access_logging_destination_bucket_reachable": False,
+            "s3_access_logging_destination_safety_reason": (
+                "Destination log bucket 'security-autopilot-access-logs-123456789012' could not be verified "
+                "from this account context (AccessDenied)."
+            ),
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategy = next(
+        item for item in response.json()["strategies"] if item["strategy_id"] == "s3_enable_access_logging_guided"
+    )
+    assert strategy["recommended_profile_id"] == "s3_enable_access_logging_review_destination_safety"
+    assert strategy["blocked_reasons"] == [
+        "Destination log bucket 'security-autopilot-access-logs-123456789012' could not be verified from this account context (AccessDenied)."
+    ]
+    profile_map = {profile["profile_id"]: profile for profile in strategy["profiles"]}
+    assert profile_map["s3_enable_access_logging_guided"]["support_tier"] == "review_required_bundle"
+    assert profile_map["s3_enable_access_logging_review_destination_safety"]["recommended"] is True
+    assert strategy["preservation_summary"]["destination_safety_proven"] is False
+
+
+def test_s3_15_preview_switches_to_customer_managed_profile_and_downgrades_without_dependency_proof(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::kms-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_customer_kms_key_valid": True,
+            "s3_customer_kms_dependency_proven": False,
+            "s3_customer_kms_dependency_error": "Customer-managed KMS key policy/grant evidence is under-specified.",
+            "context": {"kms_key_options": []},
+            "evidence": {"customer_kms_grant_count": 0},
+        },
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_sse_kms_guided",
+                    "strategy_inputs": json.dumps(
+                        {
+                            "kms_key_mode": "custom",
+                            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+                        }
+                    ),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_sse_kms_customer_managed"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["resolved_inputs"]["kms_key_mode"] == "custom"
+    assert resolution["blocked_reasons"] == [
+        "Customer-managed KMS key policy/grant evidence is under-specified."
+    ]
+    assert resolution["preservation_summary"]["kms_key_mode"] == "custom"
+    assert resolution["preservation_summary"]["customer_managed_dependency_proven"] is False
+
+
+def test_s3_15_preview_keeps_aws_managed_branch_executable_by_default(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::kms-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={"context": {"kms_key_options": []}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_sse_kms_guided",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_sse_kms_guided"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["resolved_inputs"]["kms_key_mode"] == "aws_managed"
+
+
+def test_s3_15_preview_customer_profile_surfaces_missing_defaults_when_key_arn_is_unset(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::kms-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_customer_kms_dependency_proven": False,
+            "s3_customer_kms_dependency_error": "Customer-managed KMS branch requires an approved kms_key_arn.",
+            "context": {"kms_key_options": []},
+        },
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_sse_kms_guided",
+                    "profile_id": "s3_enable_sse_kms_customer_managed",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_sse_kms_customer_managed"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["missing_inputs"] == ["kms_key_arn"]
+    assert resolution["missing_defaults"] == ["s3_encryption.kms_key_arn"]
+    assert resolution["blocked_reasons"] == ["Customer-managed KMS branch requires an approved kms_key_arn."]
 
 
 def test_s3_5_preview_requires_policy_preservation_evidence_for_executable_output(client: TestClient) -> None:

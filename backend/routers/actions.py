@@ -73,6 +73,7 @@ from backend.services.remediation_profile_read_path import (
     build_preview_resolution,
     build_strategy_profile_metadata,
 )
+from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
 from backend.services.remediation_strategy import (
@@ -107,6 +108,7 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_enable_access_logging_guided",
         "s3_enforce_ssl_strict_deny",
         "s3_enforce_ssl_with_principal_exemptions",
         "s3_enable_abort_incomplete_uploads",
@@ -116,7 +118,7 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
 
 _RUNTIME_CONTEXT_OPTION_STRATEGIES = frozenset(
     {
-        "s3_bucket_encryption_kms",
+        "s3_enable_sse_kms_guided",
         "config_enable_account_local_delivery",
         "config_enable_centralized_delivery",
         "cloudtrail_enable_guided",
@@ -1900,10 +1902,18 @@ async def get_remediation_options(
             strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES
             or strategy["strategy_id"] in _RUNTIME_CONTEXT_OPTION_STRATEGIES
         ):
+            probe_inputs = resolve_runtime_probe_inputs(
+                action_type=action.action_type,
+                strategy=strategy,
+                requested_profile_id=None,
+                explicit_inputs=None,
+                tenant_settings=tenant_settings,
+                action=action,
+            )
             runtime_signals = collect_runtime_risk_signals(
                 action=action,
                 strategy=strategy,
-                strategy_inputs={},
+                strategy_inputs=probe_inputs,
                 account=account,
             )
         runtime_context = runtime_signals.get("context")
@@ -2233,10 +2243,24 @@ async def get_remediation_preview(
 
     runtime_signals: dict[str, Any] = {}
     if needs_runtime_signals and selected_strategy is not None:
+        try:
+            probe_inputs = resolve_runtime_probe_inputs(
+                action_type=action.action_type,
+                strategy=selected_strategy,
+                requested_profile_id=profile_id,
+                explicit_inputs=parsed_strategy_inputs,
+                tenant_settings=tenant_settings,
+                action=action,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid profile_id", "detail": str(exc)},
+            ) from exc
         runtime_signals = collect_runtime_risk_signals(
             action=action,
             strategy=selected_strategy,
-            strategy_inputs=parsed_strategy_inputs or {},
+            strategy_inputs=probe_inputs,
             account=account,
         )
     runtime_context = runtime_signals.get("context")

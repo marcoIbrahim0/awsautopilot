@@ -446,6 +446,8 @@ def _is_non_executable_resolution(
 ) -> bool:
     if action_type not in {
         ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
         ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
         ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
     }:

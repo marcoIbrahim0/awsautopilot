@@ -12,6 +12,7 @@ from backend.services.remediation_run_resolution import (
     resolve_create_profile_selection,
     resolve_create_profile_id,
 )
+from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
 from backend.services.remediation_risk import (
     evaluate_strategy_impact,
     has_failing_checks,
@@ -516,10 +517,24 @@ def _build_action_resolution(
     tenant_settings: Mapping[str, Any] | None,
     risk_acknowledged: bool,
 ) -> GroupedActionResolutionEntry:
+    try:
+        probe_inputs = resolve_runtime_probe_inputs(
+            action_type=_action_field(action, "action_type"),
+            strategy=selection.strategy,
+            requested_profile_id=selection.requested_profile_id,
+            explicit_inputs=selection.strategy_inputs,
+            tenant_settings=tenant_settings,
+            action=action,
+        )
+    except ValueError as exc:
+        raise GroupedRemediationRunValidationError(
+            "invalid_override_profile",
+            str(exc),
+        ) from exc
     runtime_signals = collect_runtime_risk_signals(
         action=action,
         strategy=selection.strategy,
-        strategy_inputs=selection.strategy_inputs,
+        strategy_inputs=probe_inputs,
         account=account,
     )
     try:

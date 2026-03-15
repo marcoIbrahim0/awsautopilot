@@ -625,13 +625,21 @@ Current landed scope on `master`:
 - 9.3 is implemented for IAM.4 guidance metadata while `/api/root-key-remediation-runs` remains the only execution authority.
 - 9.4 is implemented for S3.2 with explicit manual-only fallback profiles.
 - 9.5 is implemented for S3.5 and S3.11 with resolver-side preservation summaries, explicit downgrade reasons, and single-run worker gating that keeps non-deterministic branches metadata-only.
+- 9.6 is implemented for S3.9 and S3.15 with explicit family branches, runtime-proof downgrade rules, and worker-side metadata-only bundle gating for non-deterministic paths.
 
 ### 9.6 Define S3.9 and S3.15 branching and downgrade conditions
 
-Specify branching and downgrade rules for:
+Implemented scope on `master`:
 
 - S3.9 access-logging destination safety
+  - executable compatibility branch: `s3_enable_access_logging_guided`
+  - explicit downgrade branch: `s3_enable_access_logging_review_destination_safety`
+  - executable output now requires source bucket scope plus destination safety proof from runtime signals
+  - ambiguous source/destination relationships and unproven destination safety downgrade explicitly
 - S3.15 AWS-managed versus customer-managed KMS paths
+  - executable compatibility branch remains `s3_enable_sse_kms_guided` for AWS-managed `aws/s3`
+  - explicit customer-managed branch is `s3_enable_sse_kms_customer_managed`
+  - customer-managed paths downgrade when `kms_key_arn` is missing, the key is invalid, or key-policy/grant proof is incomplete
 
 External dependencies that cannot be proven safe in phase 1 must downgrade explicitly.
 

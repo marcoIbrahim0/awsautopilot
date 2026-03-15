@@ -1858,6 +1858,69 @@ def test_pr_bundle_s3_15_custom_mode_requires_kms_key_arn() -> None:
     assert payload["action_type"] == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS
 
 
+def test_pr_bundle_s3_9_review_required_resolution_returns_guidance_bundle() -> None:
+    """Wave 6: downgraded S3.9 branches stay metadata-only once destination safety is unproven."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="log-source-bucket",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"log_bucket_name": "dedicated-access-log-bucket"},
+        resolution={
+            "strategy_id": "s3_enable_access_logging_guided",
+            "profile_id": "s3_enable_access_logging_review_destination_safety",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Destination safety could not be proven for the selected S3 access-log bucket."
+            ],
+            "preservation_summary": {"destination_safety_proven": False},
+            "decision_rationale": "Destination safety is under-proven.",
+        },
+    )
+
+    assert r["metadata"]["non_executable_bundle"] is True
+    assert [f["path"] for f in r["files"]] == ["decision.json", "README.txt"]
+    decision = json.loads(next(f for f in r["files"] if f["path"] == "decision.json")["content"])
+    assert decision["profile_id"] == "s3_enable_access_logging_review_destination_safety"
+
+
+def test_pr_bundle_s3_15_review_required_resolution_returns_guidance_bundle() -> None:
+    """Wave 6: downgraded S3.15 customer-managed branches stay metadata-only."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "kms_key_mode": "custom",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+        },
+        resolution={
+            "strategy_id": "s3_enable_sse_kms_guided",
+            "profile_id": "s3_enable_sse_kms_customer_managed",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Customer-managed KMS key policy/grant evidence is under-specified."
+            ],
+            "preservation_summary": {"customer_managed_dependency_proven": False},
+            "decision_rationale": "Customer-managed KMS safety is under-proven.",
+        },
+    )
+
+    assert r["metadata"]["non_executable_bundle"] is True
+    assert [f["path"] for f in r["files"]] == ["decision.json", "README.txt"]
+    decision = json.loads(next(f for f in r["files"] if f["path"] == "decision.json")["content"])
+    assert decision["profile_id"] == "s3_enable_sse_kms_customer_managed"
+
+
 def test_pr_bundle_s3_2_non_executable_resolution_returns_guidance_bundle() -> None:
     """Wave 6: downgraded S3.2 branches render metadata-only guidance instead of runnable IaC."""
     action = _make_action(

@@ -226,11 +226,13 @@ def test_s3_access_logging_bucket_scope_is_specialized_and_executable() -> None:
         action,
         strategy,
         strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
+        runtime_signals={"s3_access_logging_destination_safe": True},
     )
 
     status_map = _code_status(snapshot)
     assert "risk_evaluation_not_specialized" not in status_map
     assert status_map["s3_access_logging_bucket_scope_confirmed"] == "pass"
+    assert status_map["s3_access_logging_destination_safety_proven"] == "pass"
     assert snapshot["recommendation"] == "safe_to_proceed"
 
 
@@ -255,6 +257,82 @@ def test_s3_access_logging_account_scope_downgrades_to_review() -> None:
     assert "risk_evaluation_not_specialized" not in status_map
     assert status_map["s3_access_logging_scope_requires_review"] == "warn"
     assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
+def test_s3_access_logging_bucket_scope_blocks_when_destination_safety_is_missing() -> None:
+    action = SimpleNamespace(
+        action_type="s3_bucket_access_logging",
+        target_id="123456789012|eu-north-1|arn:aws:s3:::config-bucket-123456789012|S3.9",
+        resource_id="arn:aws:s3:::config-bucket-123456789012",
+    )
+    strategy = _fake_strategy(
+        "s3_enable_access_logging_guided",
+        action_type="s3_bucket_access_logging",
+        risk_level="low",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
+        runtime_signals={
+            "s3_access_logging_destination_safe": False,
+            "s3_access_logging_destination_safety_reason": "Destination safety could not be proven.",
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_access_logging_destination_safety_unproven"] == "fail"
+    assert snapshot["recommendation"] == "blocked"
+
+
+def test_s3_15_aws_managed_branch_is_specialized_and_executable() -> None:
+    action = SimpleNamespace(
+        action_type="s3_bucket_encryption_kms",
+        target_id="123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15",
+        resource_id="arn:aws:s3:::kms-bucket",
+    )
+    strategy = _fake_strategy(
+        "s3_enable_sse_kms_guided",
+        action_type="s3_bucket_encryption_kms",
+        risk_level="low",
+    )
+    snapshot = evaluate_strategy_impact(action, strategy, strategy_inputs={"kms_key_mode": "aws_managed"})
+
+    status_map = _code_status(snapshot)
+    assert "risk_evaluation_not_specialized" not in status_map
+    assert status_map["s3_sse_kms_bucket_scope_confirmed"] == "pass"
+    assert status_map["s3_sse_kms_aws_managed_branch_ready"] == "pass"
+    assert snapshot["recommendation"] == "safe_to_proceed"
+
+
+def test_s3_15_customer_managed_branch_blocks_without_dependency_proof() -> None:
+    action = SimpleNamespace(
+        action_type="s3_bucket_encryption_kms",
+        target_id="123456789012|us-east-1|arn:aws:s3:::kms-bucket|S3.15",
+        resource_id="arn:aws:s3:::kms-bucket",
+    )
+    strategy = _fake_strategy(
+        "s3_enable_sse_kms_guided",
+        action_type="s3_bucket_encryption_kms",
+        risk_level="low",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        strategy_inputs={
+            "kms_key_mode": "custom",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/custom-key-id",
+        },
+        runtime_signals={
+            "s3_customer_kms_key_valid": True,
+            "s3_customer_kms_dependency_proven": False,
+            "s3_customer_kms_dependency_error": "Customer-managed KMS key policy/grant evidence is under-specified.",
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_customer_kms_dependency_unproven"] == "fail"
+    assert snapshot["recommendation"] == "blocked"
 
 
 def test_iam_root_delete_strategy_blocks_when_root_mfa_not_enrolled() -> None:

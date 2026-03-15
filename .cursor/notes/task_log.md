@@ -1,5 +1,60 @@
 # Task Log
 
+## Remediation-profile Wave 6 S3.9 and S3.15 family migration on master (2026-03-15)
+
+**Task:** Implement remediation-profile Wave 6 Prompt 4 on current `master` only by migrating S3.9 and S3.15 onto resolver-backed family/profile selection with explicit branching, explicit downgrade behavior, and worker-side non-executable bundle enforcement while preserving the proven Wave 5 mixed-tier grouped S3.9 path.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/s3_family_resolution_adapter.py** - added resolver-side S3.9 and S3.15 family branching, downgrade triggers, blocked reasons, and `preservation_summary` payloads.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - added S3.9 review and S3.15 customer-managed profile rows while keeping public strategy IDs unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py** - routed S3.9 and S3.15 through family-aware selection, added branch-aware runtime probe input resolution, and persisted the effective branch-driving inputs for create/grouped flows.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - added S3.9 destination-safety probes, fixed the stale S3.15 strategy-ID check, and added customer-managed KMS key/policy/grant proof collection.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py** - replaced the narrow S3.9 bucket-only specialization with destination-safety gating and added explicit S3.15 AWS-managed versus customer-managed risk checks.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - extended non-executable bundle gating so downgraded S3.9 and S3.15 resolutions emit metadata-only guidance bundles.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py** - collected branch-aware probe inputs before grouped runtime checks so mixed-tier grouped S3.9 decisions stay aligned with canonical resolution.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/action_execution_guidance.py** - switched guidance risk/runtime collection to the same branch-aware probe inputs.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - fixed S3.15 runtime option wiring, added S3.9 option/runtime collection, and fed branch-aware probe inputs into options and preview.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - fed branch-aware probe inputs into create-time runtime checks before canonical S3.9/S3.15 resolution.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - updated catalog expectations for the new S3.9 and S3.15 family rows.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added focused S3.9 and S3.15 options/preview coverage for executable selection, explicit downgrades, customer-managed branch selection, and missing defaults.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - added focused single-run create coverage for executable S3.9 and downgraded S3.15 customer-managed resolution.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py** - updated the proven mixed bucket-scope plus account-scope S3.9 grouped case so only the bucket-scoped action stays executable once destination safety is proven.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** - added focused S3.9 destination-safety and S3.15 customer-managed KMS probe coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py** - added focused S3.9 and S3.15 risk specialization coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - added focused Step 7 bundle coverage proving downgraded S3.9 and S3.15 resolutions stay metadata-only.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented the landed S3.9 and S3.15 branches, downgrade triggers, and implemented surfaces.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - updated Step 9 status notes to record the landed S3.9 and S3.15 scope on `master`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 Prompt 4 task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Migrated S3.9 `s3_bucket_access_logging` onto resolver-backed family selection with:
+  - executable compatibility branch `s3_enable_access_logging_guided`
+  - explicit review branch `s3_enable_access_logging_review_destination_safety`
+  - executable output gated on both source bucket scope and runtime-proven destination safety
+- Preserved the already-proven Wave 5 mixed-tier grouped S3.9 behavior by keeping bucket-scoped actions executable only when destination safety is proven, while account-scoped or ambiguous actions downgrade to review-required in the same grouped run.
+- Migrated S3.15 `s3_bucket_encryption_kms` onto resolver-backed family selection with:
+  - executable AWS-managed compatibility branch `s3_enable_sse_kms_guided`
+  - explicit customer-managed branch `s3_enable_sse_kms_customer_managed`
+  - downgrade behavior when `kms_key_arn` is missing, the selected key is invalid, or customer-managed key policy/grant proof is incomplete
+- Added branch-aware runtime probe input resolution so remediation options, remediation preview, single-run create, and grouped create all collect safety evidence against the same resolved branch inputs.
+- Extended worker/bundle gating so downgraded S3.9 and S3.15 decisions remain metadata-only customer-run bundles and do not surface runnable IaC by default.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py -q` -> `8 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py -q` -> `17 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py -q` -> `13 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py -q -k s3_access_logging` -> `1 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py -q -k 's3_bucket_access_logging or s3_15 or s3_bucket_encryption_kms'` -> `12 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_risk.py -q` -> `17 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py -q` -> `13 passed`
+
+**Open questions / TODOs:**
+- Prompt 5 must preserve canonical `artifacts.resolution` as the worker’s safety authority for S3 executability; mirrored `selected_strategy` and `strategy_inputs` remain compatibility artifacts only.
+- Prompt 5 must preserve customer-run PR bundles as the supported execution model and must not reintroduce SaaS-managed PR-bundle execution.
+- Prompt 5 must preserve legacy CloudFront OAC compatibility plus unchanged IAM.4/root-key execution-authority boundaries.
+- Live AWS validation for the newly migrated S3.9 and S3.15 branches remains separate from this focused local contract change.
+
 ## Remediation-profile Wave 6 S3.2, S3.5, and S3.11 family migration on master (2026-03-15)
 
 **Task:** Implement remediation-profile Wave 6 Prompt 3 on current `master` only by migrating S3.2, S3.5, and S3.11 onto resolver-backed family/profile selection with explicit downgrade behavior, preservation-evidence gating, and worker-side non-executable bundle enforcement.

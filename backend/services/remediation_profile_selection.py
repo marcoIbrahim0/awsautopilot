@@ -17,11 +17,17 @@ from backend.services.remediation_profile_resolver import ResolverRejectedProfil
 from backend.services.remediation_settings import normalize_remediation_settings
 from backend.services.s3_family_resolution_adapter import (
     S3_11_FAMILY_RESOLVER_KIND,
+    S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+    S3_15_FAMILY_RESOLVER_KIND,
     S3_2_FAMILY_RESOLVER_KIND,
     S3_5_FAMILY_RESOLVER_KIND,
+    S3_9_FAMILY_RESOLVER_KIND,
     resolve_s3_11_selection,
+    resolve_s3_15_selection,
     resolve_s3_2_selection,
     resolve_s3_5_selection,
+    resolve_s3_9_selection,
+    resolve_s3_kms_key_mode,
 )
 from backend.services.remediation_strategy import RemediationStrategy, StrategyInputField
 
@@ -99,6 +105,16 @@ def resolve_profile_selection(
             runtime_signals=runtime_signals,
             action=action,
         )
+    if family_kind == S3_9_FAMILY_RESOLVER_KIND:
+        return _resolve_s3_9_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
     if family_kind == S3_5_FAMILY_RESOLVER_KIND:
         return _resolve_s3_5_family_selection(
             action_type=action_type,
@@ -119,6 +135,16 @@ def resolve_profile_selection(
             runtime_signals=runtime_signals,
             action=action,
         )
+    if family_kind == S3_15_FAMILY_RESOLVER_KIND:
+        return _resolve_s3_15_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
     return _resolve_compatibility_selection(
         action_type=action_type,
         strategy=strategy,
@@ -126,6 +152,27 @@ def resolve_profile_selection(
         explicit_inputs=explicit_inputs,
         tenant_settings=tenant_settings,
         runtime_signals=runtime_signals,
+        action=action,
+    )
+
+
+def resolve_runtime_probe_inputs(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    action: Action | None = None,
+) -> dict[str, Any]:
+    """Resolve non-runtime defaults so callers can collect branch-aware runtime probes."""
+    profile = _profile_or_error(action_type, strategy["strategy_id"], requested_profile_id)
+    return _resolved_inputs(
+        strategy=strategy,
+        profile=profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=None,
         action=action,
     )
 
@@ -347,6 +394,60 @@ def _resolve_s3_2_family_selection(
     )
 
 
+def _resolve_s3_9_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    requested_profile = _clean_text(requested_profile_id)
+    probe_inputs = resolve_runtime_probe_inputs(
+        action_type=action_type,
+        strategy=strategy,
+        requested_profile_id=requested_profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        action=action,
+    )
+    outcome = resolve_s3_9_selection(
+        strategy_id=strategy["strategy_id"],
+        requested_profile_id=requested_profile_id,
+        resolved_inputs=probe_inputs,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    selected_profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = probe_inputs
+    initial_profile_id = requested_profile or default_profile_id_for_strategy(action_type, strategy["strategy_id"])
+    if selected_profile.profile_id != initial_profile_id:
+        resolved_inputs = _resolved_inputs(
+            strategy=strategy,
+            profile=selected_profile,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome=outcome,
+        resolved_inputs=resolved_inputs,
+        persisted_strategy_inputs=_s3_9_persisted_inputs(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+        ),
+    )
+
+
 def _resolve_s3_5_family_selection(
     *,
     action_type: str | None,
@@ -401,6 +502,77 @@ def _resolve_s3_11_family_selection(
     )
 
 
+def _resolve_s3_15_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    probe_inputs = resolve_runtime_probe_inputs(
+        action_type=action_type,
+        strategy=strategy,
+        requested_profile_id=requested_profile_id,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        action=action,
+    )
+    outcome = resolve_s3_15_selection(
+        strategy_id=strategy["strategy_id"],
+        requested_profile_id=requested_profile_id,
+        resolved_inputs=probe_inputs,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    selected_profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = _resolved_inputs(
+        strategy=strategy,
+        profile=selected_profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    missing_inputs = _dedupe_strings(
+        [
+            *_required_missing_inputs(strategy, resolved_inputs),
+            *_s3_15_missing_inputs(
+                profile_id=selected_profile.profile_id,
+                resolved_inputs=resolved_inputs,
+            ),
+        ]
+    )
+    missing_defaults = _dedupe_strings(
+        [
+            *_compat_missing_defaults(strategy=strategy, resolved_inputs=resolved_inputs),
+            *_s3_15_missing_defaults(
+                profile_id=selected_profile.profile_id,
+                resolved_inputs=resolved_inputs,
+                explicit_inputs=explicit_inputs,
+            ),
+        ]
+    )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome=outcome,
+        resolved_inputs=resolved_inputs,
+        missing_inputs=missing_inputs,
+        missing_defaults=missing_defaults,
+        persisted_strategy_inputs=_s3_15_persisted_inputs(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+        ),
+    )
+
+
 def _family_selection_resolution(
     *,
     action_type: str | None,
@@ -410,23 +582,38 @@ def _family_selection_resolution(
     runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
     outcome: Mapping[str, Any],
+    resolved_inputs: Mapping[str, Any] | None = None,
+    missing_inputs: list[str] | None = None,
+    missing_defaults: list[str] | None = None,
+    persisted_strategy_inputs: Mapping[str, Any] | None = None,
 ) -> ProfileSelectionResolution:
     profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
-    resolved_inputs = _resolved_inputs(
-        strategy=strategy,
-        profile=profile,
-        explicit_inputs=explicit_inputs,
-        tenant_settings=tenant_settings,
-        runtime_signals=runtime_signals,
-        action=action,
-    )
+    resolved_values = dict(resolved_inputs or {})
+    if not resolved_values:
+        resolved_values = _resolved_inputs(
+            strategy=strategy,
+            profile=profile,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
     return ProfileSelectionResolution(
         profile=profile,
         support_tier=outcome["support_tier"],
-        resolved_inputs=resolved_inputs,
-        persisted_strategy_inputs=copy.deepcopy(dict(explicit_inputs or {})),
-        missing_inputs=_required_missing_inputs(strategy, resolved_inputs),
-        missing_defaults=_compat_missing_defaults(strategy=strategy, resolved_inputs=resolved_inputs),
+        resolved_inputs=resolved_values,
+        persisted_strategy_inputs=copy.deepcopy(
+            dict(persisted_strategy_inputs if persisted_strategy_inputs is not None else (explicit_inputs or {}))
+        ),
+        missing_inputs=list(
+            missing_inputs if missing_inputs is not None else _required_missing_inputs(strategy, resolved_values)
+        ),
+        missing_defaults=list(
+            missing_defaults if missing_defaults is not None else _compat_missing_defaults(
+                strategy=strategy,
+                resolved_inputs=resolved_values,
+            )
+        ),
         blocked_reasons=list(outcome.get("blocked_reasons") or []),
         rejected_profiles=list(outcome.get("rejected_profiles") or []),
         preservation_summary=copy.deepcopy(dict(outcome.get("preservation_summary") or {})),
@@ -630,6 +817,58 @@ def _ec2_53_persisted_inputs(
     return values
 
 
+def _s3_9_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    if _present(resolved_inputs.get("log_bucket_name")):
+        values["log_bucket_name"] = resolved_inputs["log_bucket_name"]
+    return values
+
+
+def _s3_15_missing_inputs(
+    *,
+    profile_id: str,
+    resolved_inputs: Mapping[str, Any],
+) -> list[str]:
+    key_mode = resolve_s3_kms_key_mode(resolved_inputs)
+    if profile_id != S3_15_CUSTOMER_MANAGED_PROFILE_ID and key_mode != "custom":
+        return []
+    if _present(resolved_inputs.get("kms_key_arn")):
+        return []
+    return ["kms_key_arn"]
+
+
+def _s3_15_missing_defaults(
+    *,
+    profile_id: str,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> list[str]:
+    key_mode = resolve_s3_kms_key_mode(resolved_inputs)
+    if profile_id != S3_15_CUSTOMER_MANAGED_PROFILE_ID and key_mode != "custom":
+        return []
+    if _present(_mapping_value(explicit_inputs, "kms_key_arn")) or _present(resolved_inputs.get("kms_key_arn")):
+        return []
+    return ["s3_encryption.kms_key_arn"]
+
+
+def _s3_15_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    key_mode = resolve_s3_kms_key_mode(resolved_inputs)
+    if key_mode == "custom" or _present(values.get("kms_key_mode")):
+        values["kms_key_mode"] = key_mode
+    if key_mode == "custom" and _present(resolved_inputs.get("kms_key_arn")):
+        values["kms_key_arn"] = resolved_inputs["kms_key_arn"]
+    return values
+
+
 def _compatibility_rationale(
     *,
     strategy_id: str,
@@ -755,4 +994,12 @@ def _present(value: Any) -> bool:
 _MISSING = object()
 
 
-__all__ = ["ProfileSelectionResolution", "resolve_profile_selection"]
+def _dedupe_strings(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    for value in values:
+        if value and value not in deduped:
+            deduped.append(value)
+    return deduped
+
+
+__all__ = ["ProfileSelectionResolution", "resolve_profile_selection", "resolve_runtime_probe_inputs"]

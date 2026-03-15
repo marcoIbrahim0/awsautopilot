@@ -307,7 +307,12 @@ def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
 
     monkeypatch.setattr(
         "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
-        lambda **_: {},
+        lambda **kwargs: {
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": True,
+        }
+        if "arn:aws:s3:::" in str(getattr(kwargs["action"], "target_id", ""))
+        else {},
     )
     monkeypatch.setattr(
         "backend.services.grouped_remediation_runs.evaluate_strategy_impact",

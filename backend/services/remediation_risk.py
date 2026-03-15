@@ -13,6 +13,7 @@ from typing_extensions import NotRequired
 
 from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
+from backend.services.s3_family_resolution_adapter import resolve_s3_kms_key_mode
 from backend.services.remediation_strategy import RemediationStrategy
 
 CheckStatus = Literal["pass", "warn", "unknown", "fail"]
@@ -347,7 +348,7 @@ def evaluate_strategy_impact(
                     "pass",
                     (
                         "Bucket-scoped target was identified for S3 access logging. "
-                        "This action can stay executable once a dedicated destination bucket is selected."
+                        "This action can stay executable once destination safety is proven."
                     ),
                 )
             )
@@ -363,6 +364,26 @@ def evaluate_strategy_impact(
                         ),
                     )
                 )
+            destination_safe = runtime_signals.get("s3_access_logging_destination_safe")
+            if destination_safe is True:
+                checks.append(
+                    _build_check(
+                        "s3_access_logging_destination_safety_proven",
+                        "pass",
+                        "Destination safety is proven for the selected S3 access-log bucket.",
+                    )
+                )
+            else:
+                checks.append(
+                    _build_check(
+                        "s3_access_logging_destination_safety_unproven",
+                        "fail",
+                        str(
+                            runtime_signals.get("s3_access_logging_destination_safety_reason")
+                            or "Destination safety could not be proven for the selected S3 access-log bucket."
+                        ),
+                    )
+                )
         else:
             checks.append(
                 _build_check(
@@ -375,6 +396,73 @@ def evaluate_strategy_impact(
                     ),
                 )
             )
+    elif strategy_id == "s3_enable_sse_kms_guided":
+        target_bucket = _s3_access_logging_source_bucket(action)
+        if target_bucket:
+            checks.append(
+                _build_check(
+                    "s3_sse_kms_bucket_scope_confirmed",
+                    "pass",
+                    "Bucket-scoped target was identified for S3 SSE-KMS enforcement.",
+                )
+            )
+        else:
+            checks.append(
+                _build_check(
+                    "s3_sse_kms_scope_requires_review",
+                    "warn",
+                    "This S3.15 action is not bucket-scoped, so the exact target bucket must be reviewed manually.",
+                )
+            )
+        key_mode = resolve_s3_kms_key_mode(strategy_inputs)
+        if key_mode != "custom":
+            checks.append(
+                _build_check(
+                    "s3_sse_kms_aws_managed_branch_ready",
+                    "pass",
+                    "AWS-managed SSE-KMS remains executable on this branch.",
+                )
+            )
+        else:
+            kms_key_arn = str(strategy_inputs.get("kms_key_arn") or "").strip()
+            if not kms_key_arn:
+                checks.append(
+                    _build_check(
+                        "s3_customer_kms_key_missing",
+                        "fail",
+                        "Customer-managed KMS branch requires an approved kms_key_arn.",
+                    )
+                )
+            elif runtime_signals.get("s3_customer_kms_key_valid") is False:
+                checks.append(
+                    _build_check(
+                        "s3_customer_kms_key_invalid",
+                        "fail",
+                        str(
+                            runtime_signals.get("s3_customer_kms_key_error")
+                            or "Selected customer-managed KMS key is invalid for this bucket/account scope."
+                        ),
+                    )
+                )
+            elif runtime_signals.get("s3_customer_kms_dependency_proven") is True:
+                checks.append(
+                    _build_check(
+                        "s3_customer_kms_dependency_proven",
+                        "pass",
+                        "Customer-managed KMS dependency proof is present for this branch.",
+                    )
+                )
+            else:
+                checks.append(
+                    _build_check(
+                        "s3_customer_kms_dependency_unproven",
+                        "fail",
+                        str(
+                            runtime_signals.get("s3_customer_kms_dependency_error")
+                            or "Customer-managed KMS key policy/grant evidence is under-specified."
+                        ),
+                    )
+                )
     elif strategy_id == "s3_enforce_ssl_strict_deny":
         checks.append(
             _build_check(

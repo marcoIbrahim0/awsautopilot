@@ -2,22 +2,32 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Mapping, TypedDict
 
 from backend.services.remediation_profile_resolver import ResolverRejectedProfile, SupportTier
 
 S3_2_FAMILY_RESOLVER_KIND = "s3_2_public_access_family"
+S3_9_FAMILY_RESOLVER_KIND = "s3_9_access_logging_family"
 S3_5_FAMILY_RESOLVER_KIND = "s3_5_policy_preservation_family"
 S3_11_FAMILY_RESOLVER_KIND = "s3_11_lifecycle_preservation_family"
+S3_15_FAMILY_RESOLVER_KIND = "s3_15_kms_family"
 
 S3_2_STANDARD_STRATEGY_ID = "s3_bucket_block_public_access_standard"
 S3_2_STANDARD_MANUAL_PROFILE_ID = "s3_bucket_block_public_access_manual_preservation"
 S3_2_OAC_STRATEGY_ID = "s3_migrate_cloudfront_oac_private"
 S3_2_OAC_MANUAL_PROFILE_ID = "s3_migrate_cloudfront_oac_private_manual_preservation"
 
+S3_9_STRATEGY_ID = "s3_enable_access_logging_guided"
+S3_9_REVIEW_PROFILE_ID = "s3_enable_access_logging_review_destination_safety"
+
 S3_5_STRICT_STRATEGY_ID = "s3_enforce_ssl_strict_deny"
 S3_5_EXEMPTION_STRATEGY_ID = "s3_enforce_ssl_with_principal_exemptions"
 S3_11_STRATEGY_ID = "s3_enable_abort_incomplete_uploads"
+S3_15_STRATEGY_ID = "s3_enable_sse_kms_guided"
+S3_15_CUSTOMER_MANAGED_PROFILE_ID = "s3_enable_sse_kms_customer_managed"
+
+_S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
 
 
 class FamilySelectionOutcome(TypedDict):
@@ -29,6 +39,19 @@ class FamilySelectionOutcome(TypedDict):
     rejected_profiles: list[ResolverRejectedProfile]
     preservation_summary: dict[str, Any]
     decision_rationale: str
+
+
+def resolve_s3_access_logging_source_bucket(action: Any | None) -> str | None:
+    return _bucket_name_from_action_fields(action, "target_id", "resource_id")
+
+
+def resolve_s3_kms_key_mode(values: Mapping[str, Any] | None) -> str:
+    raw_mode = _clean_text(_mapping_value(values, "kms_key_mode"))
+    if raw_mode == "custom":
+        return "custom"
+    if _clean_text(_mapping_value(values, "kms_key_arn")) is not None:
+        return "custom"
+    return "aws_managed"
 
 
 def resolve_s3_2_selection(
@@ -68,6 +91,43 @@ def resolve_s3_2_selection(
             explicit_profile=explicit_profile,
             blocked_reasons=blocked_reasons,
         ),
+    }
+
+
+def resolve_s3_9_selection(
+    *,
+    strategy_id: str,
+    requested_profile_id: str | None,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+) -> FamilySelectionOutcome:
+    explicit_profile = _clean_text(requested_profile_id)
+    blocked_reasons = _s3_9_blocked_reasons(
+        resolved_inputs=resolved_inputs,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    profile_id = explicit_profile or _automatic_s3_9_profile_id(blocked_reasons)
+    return {
+        "profile_id": profile_id,
+        "support_tier": _s3_9_support_tier(profile_id=profile_id, blocked_reasons=blocked_reasons),
+        "blocked_reasons": blocked_reasons,
+        "rejected_profiles": _automatic_rejected_profile(
+            explicit_profile=explicit_profile,
+            fallback_profile_id=S3_9_REVIEW_PROFILE_ID,
+            strategy_id=strategy_id,
+            blocked_reasons=blocked_reasons,
+        ),
+        "preservation_summary": _s3_9_preservation_summary(
+            strategy_id=strategy_id,
+            profile_id=profile_id,
+            resolved_inputs=resolved_inputs,
+            runtime_signals=runtime_signals,
+            action=action,
+            blocked_reasons=blocked_reasons,
+        ),
+        "decision_rationale": _s3_9_rationale(profile_id=profile_id, blocked_reasons=blocked_reasons),
     }
 
 
@@ -141,6 +201,46 @@ def resolve_s3_11_selection(
     }
 
 
+def resolve_s3_15_selection(
+    *,
+    strategy_id: str,
+    requested_profile_id: str | None,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+) -> FamilySelectionOutcome:
+    explicit_profile = _clean_text(requested_profile_id)
+    key_mode = resolve_s3_kms_key_mode(resolved_inputs)
+    blocked_reasons = _s3_15_blocked_reasons(
+        key_mode=key_mode,
+        resolved_inputs=resolved_inputs,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    profile_id = explicit_profile or _automatic_s3_15_profile_id(strategy_id=strategy_id, key_mode=key_mode)
+    return {
+        "profile_id": profile_id,
+        "support_tier": _s3_15_support_tier(
+            profile_id=profile_id,
+            key_mode=key_mode,
+            resolved_inputs=resolved_inputs,
+            blocked_reasons=blocked_reasons,
+        ),
+        "blocked_reasons": blocked_reasons,
+        "rejected_profiles": [],
+        "preservation_summary": _s3_15_preservation_summary(
+            strategy_id=strategy_id,
+            profile_id=profile_id,
+            key_mode=key_mode,
+            resolved_inputs=resolved_inputs,
+            runtime_signals=runtime_signals,
+            action=action,
+            blocked_reasons=blocked_reasons,
+        ),
+        "decision_rationale": _s3_15_rationale(profile_id=profile_id, key_mode=key_mode, blocked_reasons=blocked_reasons),
+    }
+
+
 def _automatic_rejected_profile(
     *,
     explicit_profile: str | None,
@@ -162,6 +262,12 @@ def _automatic_s3_2_profile_id(strategy_id: str, blocked_reasons: list[str]) -> 
     return _s3_2_fallback_profile_id(strategy_id)
 
 
+def _automatic_s3_9_profile_id(blocked_reasons: list[str]) -> str:
+    if not blocked_reasons:
+        return S3_9_STRATEGY_ID
+    return S3_9_REVIEW_PROFILE_ID
+
+
 def _s3_2_fallback_profile_id(strategy_id: str) -> str:
     if strategy_id == S3_2_STANDARD_STRATEGY_ID:
         return S3_2_STANDARD_MANUAL_PROFILE_ID
@@ -181,6 +287,14 @@ def _s3_2_support_tier(
         return "manual_guidance_only"
     if strategy_id != profile_id or blocked_reasons:
         return "manual_guidance_only"
+    return "deterministic_bundle"
+
+
+def _s3_9_support_tier(*, profile_id: str, blocked_reasons: list[str]) -> SupportTier:
+    if profile_id == S3_9_REVIEW_PROFILE_ID:
+        return "review_required_bundle"
+    if blocked_reasons:
+        return "review_required_bundle"
     return "deterministic_bundle"
 
 
@@ -241,6 +355,24 @@ def _s3_2_oac_blocked_reasons(
     return _append_access_path_reason(reasons, runtime_signals)
 
 
+def _s3_9_blocked_reasons(
+    *,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+) -> list[str]:
+    source_bucket = resolve_s3_access_logging_source_bucket(action)
+    if source_bucket is None:
+        return [
+            "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+        ]
+    return _s3_9_destination_blocked_reasons(
+        source_bucket=source_bucket,
+        resolved_inputs=resolved_inputs,
+        runtime_signals=runtime_signals,
+    )
+
+
 def _append_access_path_reason(
     reasons: list[str],
     runtime_signals: Mapping[str, Any] | None,
@@ -253,6 +385,23 @@ def _append_access_path_reason(
             ).strip()
         )
     return _dedupe_strings(reasons)
+
+
+def _s3_9_destination_blocked_reasons(
+    *,
+    source_bucket: str,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    destination_bucket = _clean_text(_mapping_value(resolved_inputs, "log_bucket_name"))
+    if destination_bucket is None:
+        return ["Destination log bucket could not be resolved for S3 access logging."]
+    if destination_bucket == source_bucket:
+        return ["Log destination must be a dedicated bucket and cannot match the source bucket."]
+    if _mapping_value(runtime_signals, "s3_access_logging_destination_safe") is True:
+        return []
+    detail = _clean_text(_mapping_value(runtime_signals, "s3_access_logging_destination_safety_reason"))
+    return [detail or "Destination safety could not be proven for the selected S3 access-log bucket."]
 
 
 def _s3_2_preservation_summary(
@@ -284,6 +433,32 @@ def _s3_2_preservation_summary(
     }
 
 
+def _s3_9_preservation_summary(
+    *,
+    strategy_id: str,
+    profile_id: str,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+    blocked_reasons: list[str],
+) -> dict[str, Any]:
+    source_bucket = resolve_s3_access_logging_source_bucket(action)
+    return {
+        "family": "s3_bucket_access_logging",
+        "family_strategy": strategy_id,
+        "selected_branch": profile_id,
+        "source_bucket_name": source_bucket,
+        "source_bucket_scope_proven": source_bucket is not None,
+        "destination_bucket_name": _clean_text(_mapping_value(resolved_inputs, "log_bucket_name")),
+        "destination_bucket_reachable": _optional_bool(
+            _mapping_value(runtime_signals, "s3_access_logging_destination_bucket_reachable")
+        ),
+        "destination_safety_proven": _mapping_value(runtime_signals, "s3_access_logging_destination_safe") is True,
+        "ambiguous_source_destination_relationship": bool(blocked_reasons),
+        "executable_destination_allowed": not blocked_reasons,
+    }
+
+
 def _s3_2_rationale(
     *,
     strategy_id: str,
@@ -305,6 +480,14 @@ def _s3_2_rationale(
         f"Family resolver downgraded strategy '{strategy_id}' to manual S3.2 preservation profile '{profile_id}'. "
         f"{detail}"
     )
+
+
+def _s3_9_rationale(*, profile_id: str, blocked_reasons: list[str]) -> str:
+    if not blocked_reasons:
+        return "Family resolver kept S3.9 executable because bucket scope and destination safety are proven."
+    if profile_id == S3_9_REVIEW_PROFILE_ID:
+        return f"Family resolver downgraded S3.9 to destination-safety review. {' '.join(blocked_reasons)}"
+    return f"Family resolver preserved the explicit S3.9 profile but downgraded executability. {' '.join(blocked_reasons)}"
 
 
 def _s3_5_blocked_reasons(
@@ -494,6 +677,85 @@ def _s3_11_rationale(
     )
 
 
+def _automatic_s3_15_profile_id(*, strategy_id: str, key_mode: str) -> str:
+    if key_mode == "custom":
+        return S3_15_CUSTOMER_MANAGED_PROFILE_ID
+    return strategy_id
+
+
+def _s3_15_blocked_reasons(
+    *,
+    key_mode: str,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+) -> list[str]:
+    reasons: list[str] = []
+    if _bucket_name_from_action_fields(action, "target_id", "resource_id") is None:
+        reasons.append("Target bucket scope could not be proven for S3 SSE-KMS enforcement.")
+    if key_mode != "custom":
+        return reasons
+    if _clean_text(_mapping_value(resolved_inputs, "kms_key_arn")) is None:
+        reasons.append("Customer-managed KMS branch requires an approved kms_key_arn.")
+        return reasons
+    if _mapping_value(runtime_signals, "s3_customer_kms_key_valid") is False:
+        detail = _clean_text(_mapping_value(runtime_signals, "s3_customer_kms_key_error"))
+        reasons.append(detail or "Customer-managed KMS key is invalid for this bucket/account scope.")
+    if _mapping_value(runtime_signals, "s3_customer_kms_dependency_proven") is not True:
+        detail = _clean_text(_mapping_value(runtime_signals, "s3_customer_kms_dependency_error"))
+        reasons.append(detail or "Customer-managed KMS key policy/grant evidence is under-specified.")
+    return _dedupe_strings(reasons)
+
+
+def _s3_15_support_tier(
+    *,
+    profile_id: str,
+    key_mode: str,
+    resolved_inputs: Mapping[str, Any] | None,
+    blocked_reasons: list[str],
+) -> SupportTier:
+    if not blocked_reasons:
+        return "deterministic_bundle"
+    if profile_id != S3_15_CUSTOMER_MANAGED_PROFILE_ID and key_mode != "custom":
+        return "review_required_bundle"
+    if _clean_text(_mapping_value(resolved_inputs, "kms_key_arn")) is None:
+        return "manual_guidance_only"
+    return "review_required_bundle"
+
+
+def _s3_15_preservation_summary(
+    *,
+    strategy_id: str,
+    profile_id: str,
+    key_mode: str,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Any | None,
+    blocked_reasons: list[str],
+) -> dict[str, Any]:
+    evidence = _evidence(runtime_signals)
+    return {
+        "family": "s3_bucket_encryption_kms",
+        "family_strategy": strategy_id,
+        "selected_branch": profile_id,
+        "kms_key_mode": key_mode,
+        "kms_key_arn_present": _clean_text(_mapping_value(resolved_inputs, "kms_key_arn")) is not None,
+        "target_bucket_name": _bucket_name_from_action_fields(action, "target_id", "resource_id"),
+        "target_bucket_scope_proven": _bucket_name_from_action_fields(action, "target_id", "resource_id") is not None,
+        "customer_managed_key_valid": _optional_bool(_mapping_value(runtime_signals, "s3_customer_kms_key_valid")),
+        "customer_managed_dependency_proven": _mapping_value(runtime_signals, "s3_customer_kms_dependency_proven") is True,
+        "customer_managed_policy_json_captured": _clean_text(evidence.get("customer_kms_policy_json")) is not None,
+        "customer_managed_grants_captured": _coerce_int(evidence.get("customer_kms_grant_count")) is not None,
+        "executable_kms_change_allowed": not blocked_reasons,
+    }
+
+
+def _s3_15_rationale(*, profile_id: str, key_mode: str, blocked_reasons: list[str]) -> str:
+    if not blocked_reasons:
+        return f"Family resolver kept S3.15 branch '{profile_id}' executable with key_mode={key_mode}."
+    return f"Family resolver downgraded S3.15 branch '{profile_id}' because KMS safety is under-proven. {' '.join(blocked_reasons)}"
+
+
 def _s3_11_equivalent_safe_state(lifecycle_json: str | None, *, abort_days: int) -> bool:
     parsed = _parse_json_object(lifecycle_json)
     if parsed is None:
@@ -546,6 +808,36 @@ def _evidence(runtime_signals: Mapping[str, Any] | None) -> dict[str, Any]:
     return dict(evidence)
 
 
+def _bucket_name_from_action_fields(action: Any | None, *field_names: str) -> str | None:
+    for field_name in field_names:
+        candidate = _bucket_name_candidate(getattr(action, field_name, None))
+        if candidate:
+            return candidate
+    return None
+
+
+def _bucket_name_candidate(raw: Any) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().strip("'\"")
+    if not value:
+        return None
+    match = _S3_BUCKET_ARN_PATTERN.search(value)
+    if match:
+        return match.group("bucket")
+    if "|" in value:
+        for part in value.split("|"):
+            candidate = _bucket_name_candidate(part)
+            if candidate:
+                return candidate
+        return None
+    if value.startswith("AWS::::Account:") or value.lower().startswith("account:"):
+        return None
+    if value.lower().startswith("aws-account-") or re.fullmatch(r"\d{12}", value):
+        return None
+    return value
+
+
 def _mapping_value(mapping: Mapping[str, Any] | None, key: str) -> Any:
     if not isinstance(mapping, Mapping):
         return None
@@ -591,4 +883,3 @@ def _dedupe_strings(values: list[str]) -> list[str]:
         if cleaned is not None and cleaned not in deduped:
             deduped.append(cleaned)
     return deduped
-

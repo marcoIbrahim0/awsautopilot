@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 S3.9 and S3.15 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-s39-and-s315-family-migration-on-master-2026-03-15)
+  - Migrated S3.9 and S3.15 onto resolver-backed family selection while keeping public strategy IDs unchanged, adding an explicit S3.9 destination-safety review branch and an explicit S3.15 customer-managed KMS branch.
+  - Threaded the same branch-aware decision through options, preview, create, grouped create, runtime probes, risk checks, and worker bundle gating so unsafe or under-proven S3.9/S3.15 paths stay metadata-only by default.
 - [Remediation-profile Wave 6 S3.2, S3.5, and S3.11 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-s32-s35-and-s311-family-migration-on-master-2026-03-15)
   - Migrated S3.2, S3.5, and S3.11 onto resolver-backed family selection while keeping public strategy IDs unchanged, adding explicit S3.2 manual fallback profiles, and making S3.5/S3.11 executable output depend on preservation evidence.
   - Threaded the same downgrade decision through options, preview, create, grouped create, and the single-run worker so under-proven S3 branches now emit metadata-only guidance bundles instead of runnable IaC.

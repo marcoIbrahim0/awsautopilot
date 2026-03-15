@@ -16,6 +16,9 @@ from backend.services.root_key_resolution_adapter import (
 from backend.services.s3_family_resolution_adapter import (
     S3_11_FAMILY_RESOLVER_KIND,
     S3_11_STRATEGY_ID,
+    S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+    S3_15_FAMILY_RESOLVER_KIND,
+    S3_15_STRATEGY_ID,
     S3_2_FAMILY_RESOLVER_KIND,
     S3_2_OAC_MANUAL_PROFILE_ID,
     S3_2_OAC_STRATEGY_ID,
@@ -24,6 +27,9 @@ from backend.services.s3_family_resolution_adapter import (
     S3_5_EXEMPTION_STRATEGY_ID,
     S3_5_FAMILY_RESOLVER_KIND,
     S3_5_STRICT_STRATEGY_ID,
+    S3_9_FAMILY_RESOLVER_KIND,
+    S3_9_REVIEW_PROFILE_ID,
+    S3_9_STRATEGY_ID,
 )
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
 
@@ -239,6 +245,66 @@ def _s3_2_oac_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
     )
 
 
+def _s3_9_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_access_logging",
+            strategy_id=S3_9_STRATEGY_ID,
+            profile_id=S3_9_STRATEGY_ID,
+            label="Enable S3 access logging with a proven safe destination",
+            default_support_tier="deterministic_bundle",
+            recommended=True,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_9_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_access_logging",
+            strategy_id=S3_9_STRATEGY_ID,
+            profile_id=S3_9_REVIEW_PROFILE_ID,
+            label="Review destination safety and bucket scope manually",
+            default_support_tier="review_required_bundle",
+            recommended=False,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_9_FAMILY_RESOLVER_KIND,
+        ),
+    )
+
+
+def _s3_15_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_encryption_kms",
+            strategy_id=S3_15_STRATEGY_ID,
+            profile_id=S3_15_STRATEGY_ID,
+            label="Enable SSE-KMS with the AWS managed S3 key",
+            default_support_tier="deterministic_bundle",
+            recommended=True,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_15_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_encryption_kms",
+            strategy_id=S3_15_STRATEGY_ID,
+            profile_id=S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+            label="Use a customer-managed KMS key after dependency review",
+            default_support_tier="review_required_bundle",
+            recommended=False,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_15_FAMILY_RESOLVER_KIND,
+            default_inputs={"kms_key_mode": "custom"},
+            legacy_input_hints={"kms_key_mode": "custom"},
+        ),
+    )
+
+
 def _family_clone(
     action_type: str,
     strategy: RemediationStrategy,
@@ -278,6 +344,8 @@ def _profile_rows_for_strategy(
         return _s3_2_standard_family_profiles()
     if action_type == "s3_bucket_block_public_access" and strategy_id == S3_2_OAC_STRATEGY_ID:
         return _s3_2_oac_family_profiles()
+    if action_type == "s3_bucket_access_logging" and strategy_id == S3_9_STRATEGY_ID:
+        return _s3_9_family_profiles()
     if action_type == "s3_bucket_require_ssl" and strategy_id in {
         S3_5_STRICT_STRATEGY_ID,
         S3_5_EXEMPTION_STRATEGY_ID,
@@ -285,6 +353,8 @@ def _profile_rows_for_strategy(
         return _family_clone(action_type, strategy, family_kind=S3_5_FAMILY_RESOLVER_KIND)
     if action_type == "s3_bucket_lifecycle_configuration" and strategy_id == S3_11_STRATEGY_ID:
         return _family_clone(action_type, strategy, family_kind=S3_11_FAMILY_RESOLVER_KIND)
+    if action_type == "s3_bucket_encryption_kms" and strategy_id == S3_15_STRATEGY_ID:
+        return _s3_15_family_profiles()
     return (_seed_profile_definition(action_type, strategy),)
 
 
