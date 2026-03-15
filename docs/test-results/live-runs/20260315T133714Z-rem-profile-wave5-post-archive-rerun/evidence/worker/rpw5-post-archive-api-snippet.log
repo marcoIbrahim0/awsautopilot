@@ -1,0 +1,21 @@
+INFO:     127.0.0.1:55260 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55270 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55273 - "POST /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55276 - "GET /api/remediation-runs/75379cc5-6322-4735-b86f-e6b3719fe4d4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55278 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55279 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55280 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55281 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55282 - "GET /api/remediation-runs/75379cc5-6322-4735-b86f-e6b3719fe4d4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55288 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55289 - "POST /api/internal/group-runs/report HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55290 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55291 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55292 - "GET /api/remediation-runs/75379cc5-6322-4735-b86f-e6b3719fe4d4 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55293 - "GET /api/action-groups HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55294 - "POST /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/bundle-run HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55295 - "POST /api/internal/group-runs/report HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55296 - "POST /api/remediation-runs/75379cc5-6322-4735-b86f-e6b3719fe4d4/execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55297 - "POST /api/remediation-runs/75379cc5-6322-4735-b86f-e6b3719fe4d4/approve-apply HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55298 - "POST /api/remediation-runs/bulk-execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55299 - "POST /api/remediation-runs/bulk-approve-apply HTTP/1.1" 410 Gone

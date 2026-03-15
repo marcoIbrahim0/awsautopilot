@@ -1,0 +1,30 @@
+{
+  "group_run_id": "f31c9c99-f24f-4536-8774-abff4a765eab",
+  "remediation_run_id": "75379cc5-6322-4735-b86f-e6b3719fe4d4",
+  "invalid_token": {
+    "detail": "Invalid reporting token: Not enough segments"
+  },
+  "replay": {
+    "detail": {
+      "error": "Group run report replay",
+      "detail": "This callback was already consumed because the group run is already finalized.",
+      "reason": "group_run_report_replay",
+      "group_run_id": "f31c9c99-f24f-4536-8774-abff4a765eab",
+      "current_status": "finished",
+      "already_consumed": true
+    }
+  },
+  "wrong_tenant_group_detail": {
+    "detail": "Action group not found"
+  },
+  "wrong_tenant_group_runs": {
+    "items": [],
+    "total": 0
+  },
+  "wrong_tenant_run_detail": {
+    "detail": {
+      "error": "Remediation run not found",
+      "detail": "No run found with ID 75379cc5-6322-4735-b86f-e6b3719fe4d4"
+    }
+  }
+}

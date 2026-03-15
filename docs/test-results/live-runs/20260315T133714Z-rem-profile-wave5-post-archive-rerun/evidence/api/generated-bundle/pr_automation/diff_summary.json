@@ -1,0 +1,128 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 13,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 4918,
+      "change_type": "create_or_update",
+      "content_sha256": "101d00a014ce7fd101a95b0e080a25427ebf5095175b2411ab413e37de461fa9",
+      "line_count": 72,
+      "repo_path": "run_all.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 5888,
+      "change_type": "create_or_update",
+      "content_sha256": "f96bb6af9f2bd7843df201826144c87243a0242daa93e64972d210cc60f1beac",
+      "line_count": 228,
+      "repo_path": "run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 880,
+      "change_type": "create_or_update",
+      "content_sha256": "be93b91602995d3acedcd45946a86adbd43ccaf7da82c6b8ed91f1cfb2b20b2c",
+      "line_count": 21,
+      "repo_path": "README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 3363,
+      "change_type": "create_or_update",
+      "content_sha256": "6d187f051ef5611e5e4bd2747e20e8b6e106f9e54ee29f1f152bdcdd5782a2fc",
+      "line_count": 75,
+      "repo_path": "bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 933,
+      "change_type": "create_or_update",
+      "content_sha256": "0af428c654af7e9dc0d61c79cbd5acc02c22ac041fc766f8af0ef4c1c2d91c12",
+      "line_count": 16,
+      "repo_path": "decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 370,
+      "change_type": "create_or_update",
+      "content_sha256": "d27590f834edcadf2858a912232410c939845e3d6bef7ef2fdc033fad4c7b722",
+      "line_count": 15,
+      "repo_path": "finding_coverage.json"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/providers.tf",
+      "byte_count": 476,
+      "change_type": "create_or_update",
+      "content_sha256": "f7dc1ebcd327b31adcad599447eaf386679db3c141c8feef9f13906d2df29ab9",
+      "line_count": 18,
+      "repo_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/s3_bucket_access_logging.tf",
+      "byte_count": 918,
+      "change_type": "create_or_update",
+      "content_sha256": "0ed8ce7896ae1b50591062875c309fb067f9969220f1015ee4cf097a506a0db7",
+      "line_count": 28,
+      "repo_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "159b707064a143973fe921ba6768f790ce14ded0272f8c16d38fb8087ee8f049",
+      "line_count": 23,
+      "repo_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README_ACTION.txt",
+      "byte_count": 555,
+      "change_type": "create_or_update",
+      "content_sha256": "84a287fa8be98689d78351fbb86337d28a649e9af6b0fcf19dcd8e41b7b7d578",
+      "line_count": 12,
+      "repo_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/decision.json",
+      "byte_count": 1290,
+      "change_type": "create_or_update",
+      "content_sha256": "3894a62357b8d3ee19d265759e274f813c8c61fcb6b4fa81ac75e962f8df8b66",
+      "line_count": 28,
+      "repo_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/decision.json"
+    },
+    {
+      "bundle_path": "review_required/actions/02-aws-account-696505809372-47c023ae/README_ACTION.txt",
+      "byte_count": 627,
+      "change_type": "create_or_update",
+      "content_sha256": "878b30c93278bcf3a03e94ea04d9b9053dbe1acec2df152151396de76159895f",
+      "line_count": 12,
+      "repo_path": "review_required/actions/02-aws-account-696505809372-47c023ae/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "review_required/actions/02-aws-account-696505809372-47c023ae/decision.json",
+      "byte_count": 1357,
+      "change_type": "create_or_update",
+      "content_sha256": "e58cbe7e2e49ac49561c1a2e4863f4036614eb16918450e7bfa758b562cc11d1",
+      "line_count": 28,
+      "repo_path": "review_required/actions/02-aws-account-696505809372-47c023ae/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "5bd8e77526119a60c1e0a89a56ffe436096aab66e1923dcb8f029ba8f019444f",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`run_all.sh` <- `run_all.sh` (72 lines, sha256:101d00a014ce)",
+    "`run_actions.sh` <- `run_actions.sh` (228 lines, sha256:f96bb6af9f2b)",
+    "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:be93b9160299)",
+    "`bundle_manifest.json` <- `bundle_manifest.json` (75 lines, sha256:6d187f051ef5)",
+    "`decision_log.md` <- `decision_log.md` (16 lines, sha256:0af428c654af)",
+    "`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:d27590f834ed)",
+    "`executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/providers.tf` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/providers.tf` (18 lines, sha256:f7dc1ebcd327)",
+    "`executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/s3_bucket_access_logging.tf` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/s3_bucket_access_logging.tf` (28 lines, sha256:0ed8ce7896ae)",
+    "`executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README.txt` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README.txt` (23 lines, sha256:159b707064a1)",
+    "`executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/README_ACTION.txt` (12 lines, sha256:84a287fa8be9)",
+    "`executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/decision.json` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd/decision.json` (28 lines, sha256:3894a62357b8)",
+    "`review_required/actions/02-aws-account-696505809372-47c023ae/README_ACTION.txt` <- `review_required/actions/02-aws-account-696505809372-47c023ae/README_ACTION.txt` (12 lines, sha256:878b30c93278)",
+    "`review_required/actions/02-aws-account-696505809372-47c023ae/decision.json` <- `review_required/actions/02-aws-account-696505809372-47c023ae/decision.json` (28 lines, sha256:e58cbe7e2e49)"
+  ],
+  "version": 1
+}

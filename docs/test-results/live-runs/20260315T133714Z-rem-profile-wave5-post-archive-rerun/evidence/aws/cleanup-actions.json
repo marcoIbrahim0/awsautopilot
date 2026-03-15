@@ -1,0 +1,14 @@
+{
+  "cleaned_at": "2026-03-15T13:45:21Z",
+  "deleted_queues": [
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-rerun-20260315t133714z-ingest",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-rerun-20260315t133714z-contract-quarantine",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-rerun-20260315t133714z-events-fastlane",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-rerun-20260315t133714z-inventory-reconcile",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-rerun-20260315t133714z-export-report"
+  ],
+  "stopped_backend": true,
+  "stopped_worker": true,
+  "stopped_postgres": true,
+  "removed_postgres_dir": "/tmp/rpw5-post-archive-rerun-pg-20260315T133714Z"
+}

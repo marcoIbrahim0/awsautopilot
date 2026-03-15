@@ -1,0 +1,15 @@
+{
+  "group_run_id": "f31c9c99-f24f-4536-8774-abff4a765eab",
+  "remediation_run_id": "75379cc5-6322-4735-b86f-e6b3719fe4d4",
+  "callback_url": "http://127.0.0.1:18010/api/internal/group-runs/report",
+  "started_response": {
+    "status": "accepted",
+    "event": "started",
+    "group_run_id": "f31c9c99-f24f-4536-8774-abff4a765eab"
+  },
+  "finished_response": {
+    "status": "accepted",
+    "event": "finished",
+    "group_run_id": "f31c9c99-f24f-4536-8774-abff4a765eab"
+  }
+}

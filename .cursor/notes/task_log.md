@@ -1,5 +1,56 @@
 # Task Log
 
+## Wave 5 post-archive narrowed rerun closure on master (2026-03-15)
+
+**Task:** Re-run the narrowed post-archive Wave 5 gate on current `master` after the `download_bundle` callback lifecycle fix, capture fresh isolated evidence for `RPW5-POST-ARCHIVE-01` through `RPW5-POST-ARCHIVE-05`, and determine whether Wave 5 is now complete under the archived-SaaS product model.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/tests/rpw5-post-archive-01.md** through **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/tests/rpw5-post-archive-05.md** - added the five fresh narrowed rerun test records with current evidence links and final per-test outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/notes/final-summary.md** - added the rerun summary with exact environment, exact rerun commit, all five PASS outcomes, and the final archived-SaaS gate verdict.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/notes/aws-cleanup-summary.md** - added the cleanup record for the isolated rerun environment.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/evidence/** - preserved fresh API, AWS, worker, bundle, and cleanup artifacts for the rerun.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new Wave 5 rerun package from the recent targeted runs list.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - updated the Wave 5 behavior doc so it points at both the historical pre-fix failure package and the new rerun closure package.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this rerun closure.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, the live-E2E docs, the Wave 5 grouped-bundle doc, and the prior narrowed post-archive package before touching the runtime.
+- Confirmed the precondition fix was committed on local `master` at `HEAD=7eee3cbb57ee99fa9866d811aa5f1bdf5f428a73`, then created a new follow-up rerun package under `docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/` instead of mutating the archived pre-fix package.
+- Stood up a fresh isolated local runtime:
+  - backend `http://127.0.0.1:18010`
+  - isolated Postgres on `127.0.0.1:55435`
+  - isolated SQS queues in account `029037611564`
+  - target account under proof remained `696505809372` in `eu-north-1`
+- Reused the same narrow AWS-backed proof strategy as the prior gate:
+  - `sts:AssumeRole` into `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole` still returned `AccessDenied`
+  - the rerun therefore restored the exact March 15, 2026 live-ingested S3.9 group/action records into the isolated tenant instead of widening into target-account IAM repair
+- Executed the full narrowed rerun scope with fresh evidence:
+  - `RPW5-POST-ARCHIVE-01` regression: grouped mixed-tier executable bundle generation still passed
+  - `RPW5-POST-ARCHIVE-02` regression: customer-run bundle manifest/layout semantics still passed
+  - `RPW5-POST-ARCHIVE-03`: before callback finalization the grouped `download_bundle` run stayed `started` with `finished_at=null`; the first valid `started` and mixed `finished` callbacks both returned `200`; executable plus non-executable results persisted; the group run finalized exactly once
+  - `RPW5-POST-ARCHIVE-04` regression: invalid token `401`, wrong-tenant access denied or empty-only, replayed valid finished callback `409` after true finalization
+  - `RPW5-POST-ARCHIVE-05` regression: archived SaaS PR-bundle execution routes still returned the explicit `410` archived response
+- Recorded the final narrowed rerun outcomes:
+  - `RPW5-POST-ARCHIVE-01` = `PASS`
+  - `RPW5-POST-ARCHIVE-02` = `PASS`
+  - `RPW5-POST-ARCHIVE-03` = `PASS`
+  - `RPW5-POST-ARCHIVE-04` = `PASS`
+  - `RPW5-POST-ARCHIVE-05` = `PASS`
+- Cleaned up the isolated runtime completely:
+  - deleted the five isolated SQS queues
+  - stopped backend and worker sessions
+  - stopped and removed `/tmp/rpw5-post-archive-rerun-pg-20260315T133714Z`
+  - retained no AWS or local runtime resources
+
+**Technical debt / gotchas:**
+- The archived-SaaS Wave 5 gate is now closed, but the isolated live proof still depends on restored March 15, 2026 AWS-backed S3.9 records because the target ReadRole trust remains broken for a fresh isolated ingest.
+- The historical pre-fix package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/` remains unchanged as failure evidence.
+
+**Open questions / TODOs:**
+- No remaining product blocker is open for the archived-SaaS Wave 5 gate.
+- If another fresh ingest-based live rerun is required later, repair target-account `SecurityAutopilotReadRole` trust first.
+
 ## Wave 5 download bundle callback lifecycle fix on master (2026-03-15)
 
 **Task:** Fix the remaining Wave 5 post-archive blocker on current `master` so callback-managed grouped `download_bundle` runs do not finalize at bundle-generation time and the later valid customer `finished` callback can persist executable plus non-executable results exactly once.

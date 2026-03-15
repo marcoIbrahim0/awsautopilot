@@ -29,7 +29,7 @@ Wave 5 completes the mixed-tier grouped-bundle slice that Wave 4 explicitly defe
 - Callback-managed `download_bundle` group runs now stay non-terminal after successful bundle generation so the later valid customer `finished` callback can persist results exactly once.
 - Legacy grouped bundles remain runnable through the existing `actions/` layout and heuristic detection path.
 
-> ⚠️ Historical note (2026-03-15): the archived post-archive live AWS run package still records the pre-fix `RPW5-POST-ARCHIVE-03` failure state. The current `master` behavior is that callback-managed `download_bundle` runs remain `started` with `finished_at=null` until the first valid bundle `finished` callback arrives. See the historical evidence in [post-archive live AWS summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md).
+> ⚠️ Historical note (2026-03-15): the archived post-archive live AWS run package still records the pre-fix `RPW5-POST-ARCHIVE-03` failure state. The follow-up narrowed rerun on current `master` now proves the closure path: callback-managed `download_bundle` runs stay `started` with `finished_at=null` until the first valid mixed `finished` callback arrives, that first callback persists both executable plus non-executable results, and replay rejection still applies only after true finalization. Historical failure evidence: [post-archive live AWS summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md). Closure evidence: [post-archive rerun summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/notes/final-summary.md).
 
 ## Scope Boundary
 
@@ -323,6 +323,35 @@ Environment note:
 
 - The narrowed rerun did not widen into target-account IAM repair after `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole` stopped accepting the SaaS account.
 - Instead, the isolated runtime restored the exact March 15, 2026 live-ingested S3.9 group records from the earlier Wave 5 evidence package and then exercised the current `master` API/worker grouped-bundle path end to end.
+
+## Post-Archive Gate Closure
+
+March 15, 2026 now also has the narrowed archived-SaaS gate closure rerun for the same S3.9 grouped family:
+
+- Run package: [20260315T133714Z-rem-profile-wave5-post-archive-rerun](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/notes/final-summary.md)
+- Backend URL used: `http://127.0.0.1:18010`
+- Queue/runtime account: `029037611564`
+- Target account / region: `696505809372` / `eu-north-1`
+- Exact rerun commit: `7eee3cbb57ee99fa9866d811aa5f1bdf5f428a73`
+
+Observed post-archive callback lifecycle proof:
+
+- Before callback finalization, the grouped `download_bundle` `ActionGroupRun` stayed `started` with `finished_at = null`.
+- The first valid `started` callback returned `200`.
+- The first valid mixed `finished` callback returned `200` and persisted:
+  - executable `action_results[]` for `bb487cfd-2d28-41a6-8ec3-5f685e4eaa26`
+  - review-required `non_executable_results[]` for `47c023ae-945c-42bf-9b44-018d276046fa`
+- After that first successful finalization, replaying the same valid `finished` payload returned `409 reason=group_run_report_replay`.
+- Archived public SaaS PR-bundle execution routes still returned `410`.
+
+Gate result:
+
+- `RPW5-POST-ARCHIVE-01` = `PASS`
+- `RPW5-POST-ARCHIVE-02` = `PASS`
+- `RPW5-POST-ARCHIVE-03` = `PASS`
+- `RPW5-POST-ARCHIVE-04` = `PASS`
+- `RPW5-POST-ARCHIVE-05` = `PASS`
+- Wave 5 is therefore complete under the archived-SaaS product model.
 
 ## Still Deferred After Wave 5
 

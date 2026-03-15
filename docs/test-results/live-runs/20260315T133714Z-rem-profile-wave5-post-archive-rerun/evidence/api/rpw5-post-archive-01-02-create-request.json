@@ -1,0 +1,7 @@
+{
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-access-logs-696505809372"
+  },
+  "risk_acknowledged": true
+}

@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 5 post-archive narrowed rerun closure on master (2026-03-15)](task_log.md#wave-5-post-archive-narrowed-rerun-closure-on-master-2026-03-15)
+  - Re-ran `RPW5-POST-ARCHIVE-01` through `RPW5-POST-ARCHIVE-05` on `HEAD=7eee3cbb57ee99fa9866d811aa5f1bdf5f428a73` using a fresh isolated local runtime plus isolated AWS queue account plumbing, captured the follow-up run package under `docs/test-results/live-runs/20260315T133714Z-rem-profile-wave5-post-archive-rerun/`, and cleaned the runtime up afterward.
+  - Proved `RPW5-POST-ARCHIVE-03` now passes end to end: callback-managed `download_bundle` runs stay non-terminal until the first valid mixed `finished` callback, executable plus non-executable results persist, replay rejection still applies after true finalization, all regressions remain green, and Wave 5 is now complete under the archived-SaaS model.
 - [Wave 5 download bundle callback lifecycle fix on master (2026-03-15)](task_log.md#wave-5-download-bundle-callback-lifecycle-fix-on-master-2026-03-15)
   - Fixed the remaining Wave 5 blocker on current `master` by keeping callback-managed `download_bundle` group runs non-terminal after successful bundle generation so the later valid customer `finished` callback can persist executable plus non-executable results exactly once.
   - Added focused worker and callback regressions for callback-managed `started`/`finished` sequencing, preserved legacy non-callback immediate-finish behavior, and updated the Wave 5 mixed-tier bundle doc to match the landed lifecycle semantics.

@@ -1,0 +1,27 @@
+{
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "execution_root": "executable/actions",
+  "required_files_present": {
+    "bundle_manifest.json": true,
+    "decision_log.md": true,
+    "finding_coverage.json": true,
+    "README_GROUP.txt": true,
+    "run_all.sh": true,
+    "run_actions.sh": true
+  },
+  "run_actions_execution_root_matches": true,
+  "run_all_reports_callback": true,
+  "total_actions": 2,
+  "runnable_action_ids": [
+    "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26"
+  ],
+  "non_executable_action_ids": [
+    "47c023ae-945c-42bf-9b44-018d276046fa"
+  ],
+  "executable_action_dirs": [
+    "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd"
+  ],
+  "review_required_action_dirs": [
+    "review_required/actions/02-aws-account-696505809372-47c023ae"
+  ]
+}
