@@ -222,6 +222,7 @@ The internal callback route now validates the combined finished payload strictly
 - action IDs across `action_results[]` and `non_executable_results[]` must be unique
 - every action ID must be allowed by the reporting token
 - every token-authorized action must be accounted for across the two arrays
+- once a finished callback finalizes the run, later terminal callback replays are rejected with `409 reason=group_run_report_replay`
 - broken tokens, mismatched action IDs, and malformed finished payloads still fail closed
 
 Persistence semantics remain schema-compatible:

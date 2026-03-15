@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 5 grouped callback replay protection fix on master (2026-03-15)](task_log.md#wave-5-grouped-callback-replay-protection-fix-on-master-2026-03-15)
+  - Fixed `POST /api/internal/group-runs/report` so a valid finished callback can finalize a grouped customer-run bundle only once, with later terminal callback replays rejected as `409 reason=group_run_report_replay`.
+  - Added focused regressions for started-then-finished success, identical and changed-payload finished replays, invalid-token `401`, wrong-JTI `409`, and mixed executable/non-executable first-finish acceptance.
 - [Remediation-profile Wave 5 live AWS validation on master (2026-03-15)](task_log.md#remediation-profile-wave-5-live-aws-validation-on-master-2026-03-15)
   - Ran the Wave 5 live-AWS validation from local `master` against an isolated local runtime plus the real AWS account `696505809372`, captured a dedicated run package under `docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/`, and recorded pass/fail/blocked outcomes for `RPW5-LIVE-01` through `RPW5-LIVE-08`.
   - Proved the Wave 5 mixed-tier layout semantics, zero-executable `no_executable_bundle` contract, and additive `non_executable_results[]` callback persistence, but found no real mixed-tier executable grouped family, no connected WriteRole for the isolated test account, and a callback replay-token acceptance bug.

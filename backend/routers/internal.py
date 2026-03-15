@@ -393,6 +393,28 @@ def _non_executable_raw_result(item: GroupRunNonExecutableResult) -> dict:
     return payload
 
 
+_TERMINAL_GROUP_RUN_STATUSES = {
+    ActionGroupRunStatus.finished,
+    ActionGroupRunStatus.failed,
+    ActionGroupRunStatus.cancelled,
+}
+
+
+def _is_group_run_terminal(run: ActionGroupRun) -> bool:
+    return run.finished_at is not None or run.status in _TERMINAL_GROUP_RUN_STATUSES
+
+
+def _group_run_report_replay_detail(run: ActionGroupRun) -> dict[str, object]:
+    return {
+        "error": "Group run report replay",
+        "detail": "This callback was already consumed because the group run is already finalized.",
+        "reason": "group_run_report_replay",
+        "group_run_id": str(run.id),
+        "current_status": _status_value(run.status),
+        "already_consumed": True,
+    }
+
+
 async def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
     return await assume_role_precheck_service(account, tenant_external_id)
 
@@ -701,7 +723,7 @@ async def report_group_run_event(
                 ActionGroupRun.id == group_run_id,
                 ActionGroupRun.tenant_id == tenant_id,
                 ActionGroupRun.group_id == group_id,
-            )
+            ).with_for_update()
         )
     ).scalar_one_or_none()
     if run is None:
@@ -743,6 +765,11 @@ async def report_group_run_event(
         return {"status": "accepted", "event": "started", "group_run_id": str(run.id)}
 
     # finished event
+    if _is_group_run_terminal(run):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_group_run_report_replay_detail(run),
+        )
     finished_at = _parse_iso_utc(body.finished_at) or datetime.now(timezone.utc)
     if run.started_at is None:
         run.started_at = started_at

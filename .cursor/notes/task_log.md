@@ -1,5 +1,40 @@
 # Task Log
 
+## Wave 5 grouped callback replay protection fix on master (2026-03-15)
+
+**Task:** Fix the remaining real Wave 5 grouped callback replay bug on the current `master` checkout only so `POST /api/internal/group-runs/report` rejects replayed valid finished callbacks without changing customer-run reporting semantics.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py** - locked the `ActionGroupRun` row during callback handling and added a terminal-state replay guard that rejects already-consumed finished callbacks with `409 reason=group_run_report_replay` while preserving the existing invalid-token and wrong-JTI behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py** - expanded the focused callback suite to cover started-then-finished success, identical finished replay rejection, changed-payload finished replay rejection, invalid token `401`, wrong-JTI `409`, and the mixed executable plus non-executable first-finish success path.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - documented the finished-callback replay rejection contract for customer-run grouped reporting.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 5 replay-protection fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, Wave 5 docs, live-run failure evidence, and the internal grouped callback handler/tests before editing.
+- Confirmed the root cause in `backend/routers/internal.py`: the finished-callback path verified the token/JTI/action set but never treated a terminal `ActionGroupRun` as consumed, so the same valid `finished` payload could update the same run/results again and return `200`.
+- Added a transaction-safe terminal guard by selecting the `ActionGroupRun` with `FOR UPDATE` semantics and rejecting a second terminal callback once the run is already finalized.
+- Standardized the replay response to `409` with:
+  - `error = Group run report replay`
+  - `reason = group_run_report_replay`
+  - explicit `detail`, `group_run_id`, `current_status`, and `already_consumed=true`
+- Kept the existing boundaries unchanged:
+  - invalid reporting token still returns `401`
+  - wrong token JTI still returns `409`
+  - first valid `started` callback still works
+  - first valid `finished` callback still works
+  - mixed `action_results[]` plus `non_executable_results[]` finished payloads still persist on first submission
+- Ran the requested focused validation:
+  - `pytest '/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py' -q` -> `9 passed`
+
+**Technical debt / gotchas:**
+- Replay protection currently keys off existing terminal run state (`status` / `finished_at`) rather than a dedicated callback-consumption column. That keeps the fix narrow and migration-free, but future reporting changes should preserve the invariant that bundle callbacks finalize the run exactly once.
+- The row lock closes the callback race on the `ActionGroupRun`, but it does not attempt broader deduplication outside the single issued reporting token/run pair.
+
+**Open questions / TODOs:**
+- Wave 5 still needs a live rerun against a dataset/account combination that can exercise a real mixed-tier executable grouped family plus a usable WriteRole. This fix closes the replay blocker only.
+
 ## Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)
 
 **Task:** Document the already-landed Wave 5 mixed-tier grouped-bundle behavior on the current `master` checkout only, add the missing Wave 5 summary doc, and update remediation-profile navigation plus task-history entries without changing runtime code.
