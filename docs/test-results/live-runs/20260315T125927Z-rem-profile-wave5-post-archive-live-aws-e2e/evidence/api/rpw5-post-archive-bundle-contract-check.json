@@ -1,0 +1,47 @@
+{
+  "required_files_present": {
+    "bundle_manifest.json": true,
+    "decision_log.md": true,
+    "finding_coverage.json": true,
+    "README_GROUP.txt": true,
+    "run_all.sh": true,
+    "run_actions.sh": true
+  },
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "execution_root": "executable/actions",
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 0,
+    "review_required": 1
+  },
+  "runnable_action_count": 1,
+  "actions": [
+    {
+      "action_id": "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+      "tier": "executable",
+      "tier_root": "executable/actions",
+      "support_tier": "deterministic_bundle",
+      "has_runnable_terraform": true,
+      "folder": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd"
+    },
+    {
+      "action_id": "47c023ae-945c-42bf-9b44-018d276046fa",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "support_tier": "review_required_bundle",
+      "has_runnable_terraform": false,
+      "folder": "review_required/actions/02-aws-account-696505809372-47c023ae"
+    }
+  ],
+  "run_all_is_reporting_wrapper": true,
+  "run_actions_targets_only_executable_actions": true,
+  "run_actions_ignores_review_and_manual_as_execution_roots": false,
+  "review_manual_metadata_only_documented": true,
+  "executable_action_dirs": [
+    "executable/actions/01-arn-aws-s3-config-bucket-696505809372-bb487cfd"
+  ],
+  "review_required_action_dirs": [
+    "review_required/actions/02-aws-account-696505809372-47c023ae"
+  ],
+  "manual_guidance_action_dirs": []
+}

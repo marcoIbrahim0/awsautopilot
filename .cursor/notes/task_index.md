@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 5 post-archive live AWS gate on master (2026-03-15)](task_log.md#wave-5-post-archive-live-aws-gate-on-master-2026-03-15)
+  - Executed the narrowed archived-SaaS Wave 5 live gate on local `master`, created the full run package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/`, and cleaned up the isolated runtime/AWS queues afterward.
+  - Proved mixed-tier executable grouped bundle generation, customer-run bundle semantics, archived SaaS `410` behavior, and deny-closed auth/replay boundaries, but recorded a blocking live failure in `RPW5-POST-ARCHIVE-03` because `download_bundle` worker sync finalized the group run before the mixed `finished` callback could persist results.
 - [Wave 5 narrowed live S3.9 mixed-tier executable grouped proof on master (2026-03-15)](task_log.md#wave-5-narrowed-live-s39-mixed-tier-executable-grouped-proof-on-master-2026-03-15)
   - Closed the remaining Wave 5 mixed-tier executable grouped gap with a narrow S3.9 family specialization, proving the real March 15, 2026 S3.9 grouped case now splits into one executable bucket-scoped action and one review-required account-scoped action.
   - Added focused S3.9 risk/grouped-resolution tests and a narrowed live rerun package under `docs/test-results/live-runs/20260315T015105Z-rem-profile-wave5-s3-mixed-tier-live-rerun/`.

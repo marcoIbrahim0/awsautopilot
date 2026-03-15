@@ -1,0 +1,52 @@
+2026-03-15 15:03:04 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-15 15:03:04 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-15 15:03:04 | INFO     | worker | Starting worker pool=all queue=events url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-events-fastlane region=eu-north-1
+2026-03-15 15:03:04 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-15 15:03:04 | INFO     | worker | Starting worker pool=all queue=inventory url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-inventory-reconcile region=eu-north-1
+2026-03-15 15:03:04 | INFO     | worker | Starting worker pool=all queue=export url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-export-report region=eu-north-1
+2026-03-15 15:03:04 | INFO     | worker | Starting worker pool=all queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-ingest region=eu-north-1
+2026-03-15 15:03:04 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-15 15:04:06 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:04:06 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:04:06 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:04:06 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:04:25 | INFO     | worker | [8cb7c550-1f80-4daa-b254-2963203dd3cc] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=3f392e92-069a-47f7-884e-985d5e5ed035 account=None region=None
+2026-03-15 15:04:25 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=7a7f38cb-10f4-4166-9fa8-03d0e169fcd1 action_id=bb487cfd-2d28-41a6-8ec3-5f685e4eaa26 status=success
+2026-03-15 15:04:26 | INFO     | worker | [8cb7c550-1f80-4daa-b254-2963203dd3cc] Job completed and message deleted.
+2026-03-15 15:05:07 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=2 empty_poll_rate=0.67 messages_received=1 messages_processed=1 in_flight=0 avg_processing_ms=883.77 receive_errors=0
+2026-03-15 15:05:09 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:05:09 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:05:09 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:06:09 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:06:10 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:06:10 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:06:10 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:07:09 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:07:10 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:07:10 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:07:13 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:08:10 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:08:11 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:08:12 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:08:13 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:09:11 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:09:12 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:09:12 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:09:14 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:10:11 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:10:12 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:10:12 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:10:14 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:11:12 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:11:13 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:11:13 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:11:15 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:12:13 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:12:13 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:12:13 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:12:16 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:13:13 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:13:14 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:13:14 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:13:16 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 15:13:33 | ERROR    | worker | SQS receive_message failed queue=legacy after retries: AWS.SimpleQueueService.NonExistentQueue - An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the ReceiveMessage operation: The specified queue does not exist.

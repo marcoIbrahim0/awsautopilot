@@ -1,5 +1,56 @@
 # Task Log
 
+## Wave 5 post-archive live AWS gate on master (2026-03-15)
+
+**Task:** Execute the narrowed post-archive Wave 5 live-AWS gate on current `master`, using an isolated local runtime plus the isolated AWS test account only, capture a fresh run package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/`, and record the final archived-SaaS verdict.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/tests/rpw5-post-archive-01.md** through **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/tests/rpw5-post-archive-05.md** - added the five narrowed post-archive Wave 5 test records with raw evidence links and final per-test outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md** - added the archived-SaaS-model summary with exact pass/fail counts, proven contracts, and gate decision.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/aws-cleanup-summary.md** - added the AWS/runtime cleanup record for this isolated run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/evidence/** - preserved raw API, AWS, worker, and bundle artifacts for the narrowed gate.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - linked the new post-archive Wave 5 run from the recent targeted runs list.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - added the live-gate caveat that current `master` still fails the mixed `finished` callback ordering proof for customer-run bundles.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this live gate execution.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, the live-E2E docs, the remediation-profile docs, and the March 15, 2026 prior Wave 5 run summaries before touching the runtime.
+- Verified the environment boundaries up front:
+  - `HEAD=4f676b932139` on local `master`
+  - isolated runtime queues created in SaaS account `029037611564`
+  - isolated target AWS account under test remained `696505809372` in `eu-north-1`
+  - fresh `AssumeRole` into `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole` now failed with `AccessDenied`
+- Kept the product proof narrow and AWS-backed by restoring the exact March 15, 2026 live-ingested S3.9 grouped records into the isolated tenant, then exercising the current API/worker bundle path on `master`.
+- Proved the post-archive archived-SaaS model now covers:
+  - real mixed-tier executable grouped bundle generation
+  - customer-run bundle shape and executable-root semantics
+  - archived public SaaS execution routes returning explicit `410`
+  - deny-closed invalid-token, wrong-tenant, and replay handling on the tested callback/auth surfaces
+- Found the remaining gate blocker on current `master`:
+  - `download_bundle` worker lifecycle sync still marks the `ActionGroupRun` `finished` as soon as bundle generation completes
+  - the later real mixed `finished` callback from the customer-run bundle is therefore rejected as `409 reason=group_run_report_replay`
+  - no `action_group_run_results` rows are persisted for the executable plus review-required mixed case
+- Recorded the final narrowed outcomes:
+  - `RPW5-POST-ARCHIVE-01` = `PASS`
+  - `RPW5-POST-ARCHIVE-02` = `PASS`
+  - `RPW5-POST-ARCHIVE-03` = `FAIL`
+  - `RPW5-POST-ARCHIVE-04` = `PASS`
+  - `RPW5-POST-ARCHIVE-05` = `PASS`
+- Cleaned up the isolated runtime completely:
+  - deleted the five isolated SQS queues
+  - stopped backend and worker sessions
+  - stopped and removed `/tmp/rpw5-post-archive-pg-20260315T125927Z`
+  - retained no AWS or local runtime resources
+
+**Technical debt / gotchas:**
+- The narrowed live proof still relies on restored March 15, 2026 AWS-backed S3.9 records because the target ReadRole trust is currently broken for fresh ingest.
+- The remaining product blocker is not an environment-only artifact: the worker-side `download_bundle` lifecycle sync and customer-run callback lifecycle still disagree on when the group run should become terminal.
+
+**Open questions / TODOs:**
+- Change the `download_bundle` lifecycle so bundle generation does not consume the customer-run mixed `finished` callback path, then rerun `RPW5-POST-ARCHIVE-03` and `RPW5-POST-ARCHIVE-04` live.
+- Repair target-account `SecurityAutopilotReadRole` trust if another fresh-ingest live rerun is required.
+
 ## Wave 5 narrowed live S3.9 mixed-tier executable grouped proof on master (2026-03-15)
 
 **Task:** Close the remaining Wave 5 live-AWS coverage gap on current `master` by proving at least one real AWS-backed grouped family now generates a true mixed-tier executable customer-run bundle with both executable and metadata-only actions.

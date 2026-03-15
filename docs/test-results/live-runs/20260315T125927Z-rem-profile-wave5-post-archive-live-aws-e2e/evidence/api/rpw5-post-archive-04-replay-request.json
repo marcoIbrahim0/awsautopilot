@@ -1,0 +1,22 @@
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiIzZjM5MmU5Mi0wNjlhLTQ3ZjctODg0ZS05ODVkNWU1ZWQwMzUiLCJncm91cF9ydW5faWQiOiI2ZGUwZjAzYy01OGMyLTRjNWYtODczOS1kZmRkOWVlNTFlZmYiLCJncm91cF9pZCI6Ijc1Y2Q0ZjUwLTk3YzktNGFhMC05MTFiLWViM2IxN2ZmZDgwNCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiYjQ4N2NmZC0yZDI4LTQxYTYtOGVjMy01ZjY4NWU0ZWFhMjYiLCI0N2MwMjNhZS05NDVjLTQyYmYtOWI0NC0wMThkMjc2MDQ2ZmEiXSwianRpIjoiZTAxYWVhY2EtNWVjYS00NjAxLTgyNDMtYmE0M2I3Mzg0YjlmIiwiaWF0IjoxNzczNTc5ODY1LCJleHAiOjE3NzM2NjYyNjV9.u43iXzmDcCCosp5vnif8OAj3ErEvvjGpWf6no5teR7M",
+  "event": "finished",
+  "reporting_source": "bundle_callback",
+  "finished_at": "2026-03-15T13:06:01Z",
+  "action_results": [
+    {
+      "action_id": "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+      "execution_status": "success"
+    }
+  ],
+  "non_executable_results": [
+    {
+      "action_id": "47c023ae-945c-42bf-9b44-018d276046fa",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enable_access_logging_guided",
+      "strategy_id": "s3_enable_access_logging_guided",
+      "reason": "review_required_metadata_only",
+      "blocked_reasons": []
+    }
+  ]
+}

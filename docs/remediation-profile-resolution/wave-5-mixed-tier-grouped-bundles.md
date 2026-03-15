@@ -28,6 +28,8 @@ Wave 5 completes the mixed-tier grouped-bundle slice that Wave 4 explicitly defe
 - The generated customer-run bundle flow, grouped callback flow, and legacy internal executor code path support additive `non_executable_results[]` so review/manual actions are reported without being treated as execution failures.
 - Legacy grouped bundles remain runnable through the existing `actions/` layout and heuristic detection path.
 
+> ⚠️ Live gate note (2026-03-15): the post-archive live AWS rerun on current `master` proved mixed-tier generation, customer-run bundle shape, auth boundaries, and archived SaaS route behavior, but `RPW5-POST-ARCHIVE-03` still failed because worker-side `download_bundle` lifecycle sync finalized the `ActionGroupRun` at bundle-generation time before a later mixed `finished` callback could persist results. See [post-archive live AWS summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md).
+
 ## Scope Boundary
 
 Wave 5 changes the landed mixed-tier grouped-bundle behavior in:

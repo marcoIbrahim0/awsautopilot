@@ -1,0 +1,124 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_initial_models, initial models
+INFO  [alembic.runtime.migration] Running upgrade 0001_initial_models -> 0002_findings, findings table
+INFO  [alembic.runtime.migration] Running upgrade 0002_findings -> 0003_auth_user_fields_invites, Add auth fields to users table and create user_invites table.
+INFO  [alembic.runtime.migration] Running upgrade 0003_auth_user_fields_invites -> 0004_actions, actions table (Step 5.1)
+INFO  [alembic.runtime.migration] Running upgrade 0004_actions -> 0005_action_findings, action_findings association table (Step 5.2)
+INFO  [alembic.runtime.migration] Running upgrade 0005_action_findings -> 0006_exceptions, exceptions table (Step 6.1)
+INFO  [alembic.runtime.migration] Running upgrade 0006_exceptions -> 0007_remediation_runs, remediation_runs table (Step 7.1)
+INFO  [alembic.runtime.migration] Running upgrade 0007_remediation_runs -> 0008_audit_log, audit_log table (Step 7.5)
+INFO  [alembic.runtime.migration] Running upgrade 0008_audit_log -> 0009_evidence_exports, evidence_exports table (Step 10.1)
+INFO  [alembic.runtime.migration] Running upgrade 0009_evidence_exports -> 0010_findings_source, findings.source column (Step 2B.1)
+INFO  [alembic.runtime.migration] Running upgrade 0010_findings_source -> 0011_last_digest_sent_at, tenants.last_digest_sent_at (Step 11.1)
+INFO  [alembic.runtime.migration] Running upgrade 0011_last_digest_sent_at -> 0012_digest_preferences, tenants digest preferences (Step 11.3)
+INFO  [alembic.runtime.migration] Running upgrade 0012_digest_preferences -> 0013_slack_settings, tenants Slack settings (Step 11.4)
+INFO  [alembic.runtime.migration] Running upgrade 0013_slack_settings -> 0014_pack_type, evidence_exports.pack_type (Step 12.2)
+INFO  [alembic.runtime.migration] Running upgrade 0014_pack_type -> 0015_control_mappings, control_mappings table (Step 12.3)
+INFO  [alembic.runtime.migration] Running upgrade 0015_control_mappings -> 0016_baseline_reports, baseline_reports table (Step 13.2)
+INFO  [alembic.runtime.migration] Running upgrade 0016_baseline_reports -> 0017_aws_account_disabled, Add disabled status to aws_account_status enum
+INFO  [alembic.runtime.migration] Running upgrade 0017_aws_account_disabled -> 0018_support_notes_files, support notes and files tables for SaaS admin dashboard
+INFO  [alembic.runtime.migration] Running upgrade 0018_support_notes_files -> 0019_findings_unique_tenant, findings unique constraint scoped by tenant
+INFO  [alembic.runtime.migration] Running upgrade 0019_findings_unique_tenant -> 0020_run_executions, remediation run executions table for SaaS bundle executor
+INFO  [alembic.runtime.migration] Running upgrade 0020_run_executions -> 0021_control_plane_shadow, control-plane events and shadow finding state tables
+INFO  [alembic.runtime.migration] Running upgrade 0021_control_plane_shadow -> 0022_inventory_assets, inventory assets table for phase-2 reconciliation
+INFO  [alembic.runtime.migration] Running upgrade 0022_inventory_assets -> 0023_cp_reconcile_jobs, control-plane reconcile job history table
+INFO  [alembic.runtime.migration] Running upgrade 0023_cp_reconcile_jobs -> 0024_tenant_cp_token, tenant control-plane token
+INFO  [alembic.runtime.migration] Running upgrade 0024_tenant_cp_token -> 0025_cp_event_status, control-plane event ingest status
+INFO  [alembic.runtime.migration] Running upgrade 0025_cp_event_status -> 0026_canonical_keys, canonical control/resource keys for overlay and promotion
+INFO  [alembic.runtime.migration] Running upgrade 0026_canonical_keys -> 0027_findings_scope_shadow, findings in_scope flag and shadow overlay fields
+INFO  [alembic.runtime.migration] Running upgrade 0027_findings_scope_shadow -> 0028_findings_missing_keys_index, partial index for in-scope findings missing canonical/resource keys
+INFO  [alembic.runtime.migration] Running upgrade 0028_findings_missing_keys_index -> 0029_tenant_reconcile_controls, tenant-facing reconciliation run tracking and schedules
+INFO  [alembic.runtime.migration] Running upgrade 0029_tenant_reconcile_controls -> 0030_action_groups_persistent, persistent immutable action groups and run tracking
+INFO  [alembic.runtime.migration] Running upgrade 0030_action_groups_persistent -> 0031_control_plane_token_hash, control-plane token hash lifecycle metadata
+INFO  [alembic.runtime.migration] Running upgrade 0031_control_plane_token_hash -> 0032_findings_resolved_at, add resolved_at to findings
+INFO  [alembic.runtime.migration] Running upgrade 0032_findings_resolved_at -> 0033_user_auth_reset_fields, add user token version and password reset fields
+INFO  [alembic.runtime.migration] Running upgrade 0033_user_auth_reset_fields -> 0034_remrun_active_unique_guard, add unique active-run guard for remediation_runs
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UnsafeNewEnumValueUsage: unsafe use of new value "awaiting_approval" of enum type remediation_run_status
+LINE 1: ..., action_id) WHERE status IN ('pending','running','awaiting_...
+                                                             ^
+HINT:  New enum values must be committed before they can be used.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/./venv/bin/alembic", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/config.py", line 1047, in main
+    CommandLine(prog=prog).main(argv=argv)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/config.py", line 1037, in main
+    self.run_cmd(cfg, options)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/config.py", line 971, in run_cmd
+    fn(
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/command.py", line 483, in upgrade
+    script.run_env()
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/script/base.py", line 545, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/util/pyfiles.py", line 116, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/util/pyfiles.py", line 136, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/Users/marcomaher/AWS Security Autopilot/alembic/env.py", line 105, in <module>
+    run_migrations_online()
+  File "/Users/marcomaher/AWS Security Autopilot/alembic/env.py", line 99, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/runtime/environment.py", line 969, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/runtime/migration.py", line 626, in run_migrations
+    step.migration_fn(**kw)
+  File "/Users/marcomaher/AWS Security Autopilot/alembic/versions/0034_remediation_runs_active_unique_guard.py", line 23, in upgrade
+    op.create_index(
+  File "<string>", line 8, in create_index
+  File "<string>", line 3, in create_index
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/operations/ops.py", line 1012, in create_index
+    return operations.invoke(op)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/operations/base.py", line 452, in invoke
+    return fn(self, operation)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/operations/toimpl.py", line 117, in create_index
+    operations.impl.create_index(idx, **kw)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/ddl/postgresql.py", line 99, in create_index
+    self._exec(CreateIndex(index, **kw))
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/alembic/ddl/impl.py", line 256, in _exec
+    return conn.execute(construct, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/sql/ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1530, in _execute_ddl
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (psycopg2.errors.UnsafeNewEnumValueUsage) unsafe use of new value "awaiting_approval" of enum type remediation_run_status
+LINE 1: ..., action_id) WHERE status IN ('pending','running','awaiting_...
+                                                             ^
+HINT:  New enum values must be committed before they can be used.
+
+[SQL: CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

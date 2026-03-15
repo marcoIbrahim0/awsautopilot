@@ -1,0 +1,30 @@
+INFO:     Started server process [87061]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18008 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55050 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55059 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "GET /api/actions/bb487cfd-2d28-41a6-8ec3-5f685e4eaa26/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55061 - "GET /api/actions/47c023ae-945c-42bf-9b44-018d276046fa/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55062 - "POST /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55066 - "GET /api/remediation-runs/7a7f38cb-10f4-4166-9fa8-03d0e169fcd1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55067 - "GET /api/action-groups/6de0f03c-58c2-4c5f-8739-dfdd9ee51eff HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55068 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55069 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55070 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55072 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "GET /api/remediation-runs/7a7f38cb-10f4-4166-9fa8-03d0e169fcd1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55075 - "POST /api/internal/group-runs/report HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55084 - "POST /api/auth/signup HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:55085 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55089 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55090 - "GET /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55091 - "GET /api/remediation-runs/7a7f38cb-10f4-4166-9fa8-03d0e169fcd1 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55092 - "GET /api/action-groups HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55093 - "POST /api/action-groups/75cd4f50-97c9-4aa0-911b-eb3b17ffd804/bundle-run HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55094 - "POST /api/remediation-runs/7a7f38cb-10f4-4166-9fa8-03d0e169fcd1/execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55095 - "POST /api/remediation-runs/7a7f38cb-10f4-4166-9fa8-03d0e169fcd1/approve-apply HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55096 - "POST /api/remediation-runs/bulk-execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55097 - "POST /api/remediation-runs/bulk-approve-apply HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:55102 - "POST /api/internal/group-runs/report HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55103 - "POST /api/internal/group-runs/report HTTP/1.1" 409 Conflict

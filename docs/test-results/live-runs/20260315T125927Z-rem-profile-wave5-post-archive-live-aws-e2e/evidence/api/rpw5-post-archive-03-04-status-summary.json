@@ -1,0 +1,9 @@
+{
+  "started_event_status": "accepted",
+  "finished_event_status": "409",
+  "invalid_token_status": "401",
+  "wrong_tenant_group_detail_status": "404",
+  "wrong_tenant_group_runs_status": "200",
+  "wrong_tenant_run_detail_status": "404",
+  "wrong_tenant_bundle_create_status": "404"
+}

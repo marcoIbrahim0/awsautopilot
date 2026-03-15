@@ -1,0 +1,12 @@
+{
+  "cleanup_completed_at_utc": "2026-03-15T13:13:39Z",
+  "deleted_queues": [
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-ingest",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-contract-quarantine",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-events-fastlane",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-inventory-reconcile",
+    "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-post-archive-20260315t125927z-export-report"
+  ],
+  "postgres_dir_removed": true,
+  "worker_backend_stop_requested_via_exec_sessions": true
+}

@@ -1,0 +1,11 @@
+{
+  "tenant_id": "3f392e92-069a-47f7-884e-985d5e5ed035",
+  "group_id": "75cd4f50-97c9-4aa0-911b-eb3b17ffd804",
+  "group_key": "3f392e92-069a-47f7-884e-985d5e5ed035|s3_bucket_access_logging|696505809372|eu-north-1",
+  "restored_action_ids": [
+    "bb487cfd-2d28-41a6-8ec3-5f685e4eaa26",
+    "47c023ae-945c-42bf-9b44-018d276046fa"
+  ],
+  "source_group_id": "75cd4f50-97c9-4aa0-911b-eb3b17ffd804",
+  "source_run_dir": "20260315T001855Z-rem-profile-wave5-live-aws-e2e"
+}

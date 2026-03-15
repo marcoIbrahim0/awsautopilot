@@ -1,0 +1,16 @@
+2026-03-15 14:59:47.053 EET [86417] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 14:59:47.055 EET [86417] LOG:  listening on IPv6 address "::1", port 55434
+2026-03-15 14:59:47.055 EET [86417] LOG:  listening on IPv4 address "127.0.0.1", port 55434
+2026-03-15 14:59:47.055 EET [86417] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55434"
+2026-03-15 14:59:47.057 EET [86418] LOG:  database system was shut down at 2026-03-15 14:59:47 EET
+2026-03-15 14:59:47.060 EET [86417] LOG:  database system is ready to accept connections
+2026-03-15 15:00:06.603 EET [86477] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-15 15:00:06.603 EET [86477] HINT:  New enum values must be committed before they can be used.
+2026-03-15 15:00:06.603 EET [86477] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-15 15:00:16.622 EET [86531] ERROR:  relation "alembic_version" does not exist at character 25
+2026-03-15 15:00:16.622 EET [86531] STATEMENT:  select version_num from alembic_version;
+2026-03-15 15:13:39.311 EET [86417] LOG:  received fast shutdown request
+2026-03-15 15:13:39.311 EET [86417] LOG:  aborting any active transactions
+2026-03-15 15:13:39.313 EET [86417] LOG:  background worker "logical replication launcher" (PID 86424) exited with exit code 1
+2026-03-15 15:13:39.313 EET [86419] LOG:  shutting down
+2026-03-15 15:13:39.320 EET [86417] LOG:  database system is shut down
