@@ -156,11 +156,18 @@ def build_grouped_run_persistence_plan(
 ) -> GroupedRunPersistencePlan:
     """Build grouped artifacts and normalized queue-compatible mirrors."""
     sorted_actions = _validate_grouped_action_set(actions, scope=scope)
+    default_strategy_id = _mapped_strategy_id(
+        scope.action_type,
+        request.strategy_id,
+        request.pr_bundle_variant,
+    )
     override_map = _resolve_override_map(
         request.action_overrides,
         sorted_actions,
         action_type=scope.action_type,
         tenant_settings=tenant_settings,
+        default_strategy_id=default_strategy_id,
+        default_strategy_inputs=request.strategy_inputs,
     )
     default_selection = _resolve_default_selection(
         request,
@@ -168,6 +175,7 @@ def build_grouped_run_persistence_plan(
         override_map,
         action_type=scope.action_type,
         tenant_settings=tenant_settings,
+        default_strategy_id=default_strategy_id,
     )
     normalized_request = _normalized_request(request, default_selection)
     action_resolutions = _build_action_resolutions(
@@ -334,6 +342,8 @@ def _resolve_override_map(
     *,
     action_type: str,
     tenant_settings: Mapping[str, Any] | None,
+    default_strategy_id: str | None,
+    default_strategy_inputs: Mapping[str, Any] | None,
 ) -> dict[str, _ResolvedSelection]:
     action_ids = {_action_id(action) for action in actions}
     override_map: dict[str, _ResolvedSelection] = {}
@@ -351,9 +361,16 @@ def _resolve_override_map(
             )
         override_map[action_id] = _resolve_selection(
             action_type=action_type,
-            strategy_id=override.strategy_id,
+            strategy_id=_effective_override_strategy_id(
+                override=override,
+                default_strategy_id=default_strategy_id,
+            ),
             profile_id=override.profile_id,
-            strategy_inputs=override.strategy_inputs,
+            strategy_inputs=_effective_override_strategy_inputs(
+                override=override,
+                default_strategy_id=default_strategy_id,
+                default_strategy_inputs=default_strategy_inputs,
+            ),
             tenant_settings=tenant_settings,
         )
     return override_map
@@ -366,14 +383,14 @@ def _resolve_default_selection(
     *,
     action_type: str,
     tenant_settings: Mapping[str, Any] | None,
+    default_strategy_id: str | None,
 ) -> _ResolvedSelection | None:
-    strategy_id = _mapped_strategy_id(action_type, request.strategy_id, request.pr_bundle_variant)
-    if strategy_id is None:
+    if default_strategy_id is None:
         _ensure_every_action_overridden(actions, override_map, action_type=action_type)
         return None
     return _resolve_selection(
         action_type=action_type,
-        strategy_id=strategy_id,
+        strategy_id=default_strategy_id,
         profile_id=None,
         strategy_inputs=request.strategy_inputs,
         tenant_settings=tenant_settings,
@@ -434,11 +451,18 @@ def _resolve_selection(
             "action_overrides[].strategy_id is required.",
         )
     strategy = _validated_strategy(action_type, strategy_id, strategy_inputs=strategy_inputs)
-    normalized_inputs = validate_strategy_inputs(
-        strategy,
-        dict(strategy_inputs or {}),
-        allow_missing_required_keys=_tenant_default_required_input_keys(strategy_id, tenant_settings),
-    )
+    try:
+        normalized_inputs = validate_strategy_inputs(
+            strategy,
+            dict(strategy_inputs or {}),
+            allow_missing_required_keys=_tenant_default_required_input_keys(strategy_id, tenant_settings),
+        )
+    except ValueError as exc:
+        raise GroupedRemediationRunValidationError(
+            "invalid_strategy_inputs",
+            str(exc),
+            details={"strategy_id": strategy_id},
+        ) from exc
     resolved_profile_id = _validated_profile_id(action_type, strategy_id, profile_id)
     return _ResolvedSelection(
         strategy=strategy,
@@ -446,6 +470,27 @@ def _resolve_selection(
         strategy_inputs=normalized_inputs,
         requested_profile_id=resolved_profile_id,
     )
+
+
+def _effective_override_strategy_id(
+    *,
+    override: GroupedActionOverride,
+    default_strategy_id: str | None,
+) -> str | None:
+    return override.strategy_id or default_strategy_id
+
+
+def _effective_override_strategy_inputs(
+    *,
+    override: GroupedActionOverride,
+    default_strategy_id: str | None,
+    default_strategy_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if override.strategy_id not in (None, default_strategy_id):
+        return copy.deepcopy(dict(override.strategy_inputs))
+    merged = copy.deepcopy(dict(default_strategy_inputs or {}))
+    merged.update(copy.deepcopy(dict(override.strategy_inputs)))
+    return merged
 
 
 def _tenant_default_required_input_keys(

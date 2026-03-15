@@ -232,7 +232,9 @@ def test_create_action_group_bundle_run_preserves_reporting_and_repo_target(clie
     resolutions = group_bundle["action_resolutions"]
     assert [entry["action_id"] for entry in resolutions] == [str(action1.id), str(action2.id)]
     assert {entry["strategy_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
-    assert {entry["profile_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
+    assert {entry["profile_id"] for entry in resolutions} == {
+        "s3_migrate_cloudfront_oac_private_manual_preservation"
+    }
 
     queue_payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
     assert queue_payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
@@ -292,12 +294,112 @@ def test_create_action_group_bundle_run_accepts_action_overrides(client: TestCli
     }
     assert resolutions[str(action1.id)]["strategy_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["profile_id"] == "config_enable_account_local_delivery"
-    assert resolutions[str(action1.id)]["strategy_inputs"] == {}
+    assert resolutions[str(action1.id)]["strategy_inputs"] == {
+        "delivery_bucket_mode": "create_new"
+    }
     assert resolutions[str(action2.id)]["strategy_id"] == "config_enable_centralized_delivery"
     assert resolutions[str(action2.id)]["profile_id"] == "config_enable_centralized_delivery"
     assert resolutions[str(action2.id)]["strategy_inputs"] == {
-        "delivery_bucket": "central-config-bucket"
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "delivery_bucket": "central-config-bucket",
+        "encrypt_with_kms": False,
     }
+
+
+def test_create_action_group_bundle_run_inherits_top_level_inputs_into_same_strategy_profile_overrides(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="s3_bucket_access_logging")
+    action1 = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    action2 = _make_action(action_type=group.action_type, priority=90, minutes_ago=2)
+    session, added = _mock_group_session(group=group, actions=[action1, action2])
+    _install_action_group_dependencies(session, user)
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-s3-9-override"}
+    token_expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.routers.action_groups.issue_group_run_reporting_token",
+                return_value=("signed-token", "token-jti", token_expiry),
+            ):
+                try:
+                    response = client.post(
+                        f"/api/action-groups/{group.id}/bundle-run",
+                        json={
+                            "strategy_id": "s3_enable_access_logging_guided",
+                            "strategy_inputs": {"log_bucket_name": "dedicated-access-log-bucket"},
+                            "action_overrides": [
+                                {
+                                    "action_id": str(action1.id),
+                                    "profile_id": "s3_enable_access_logging_review_destination_safety",
+                                },
+                                {
+                                    "action_id": str(action2.id),
+                                    "profile_id": "s3_enable_access_logging_review_destination_safety",
+                                },
+                            ],
+                        },
+                    )
+                finally:
+                    _clear_action_group_dependencies()
+
+    assert response.status_code == 201
+    remediation_run = added[1]
+    resolutions = remediation_run.artifacts["group_bundle"]["action_resolutions"]
+    for entry in resolutions:
+        assert entry["strategy_id"] == "s3_enable_access_logging_guided"
+        assert entry["profile_id"] == "s3_enable_access_logging_review_destination_safety"
+        assert entry["strategy_inputs"] == {"log_bucket_name": "dedicated-access-log-bucket"}
+
+
+def test_create_action_group_bundle_run_missing_required_inherited_inputs_returns_400(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="s3_bucket_access_logging")
+    action = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    session, _ = _mock_group_session(group=group, actions=[action])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client") as mock_boto_client:
+            try:
+                response = client.post(
+                    f"/api/action-groups/{group.id}/bundle-run",
+                    json={
+                        "strategy_id": "s3_enable_access_logging_guided",
+                        "action_overrides": [
+                            {
+                                "action_id": str(action.id),
+                                "profile_id": "s3_enable_access_logging_review_destination_safety",
+                            }
+                        ],
+                    },
+                )
+            finally:
+                _clear_action_group_dependencies()
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["error"] == "Invalid grouped remediation request"
+    assert detail["reason"] == "invalid_strategy_inputs"
+    assert "strategy_inputs.log_bucket_name is required" in detail["detail"]
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
 
 
 @pytest.mark.parametrize(

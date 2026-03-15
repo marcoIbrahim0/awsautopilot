@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 W6-LIVE-07 grouped override inheritance and fail-closed validation fix on master (2026-03-15)](task_log.md#remediation-profile-wave-6-w6-live-07-grouped-override-inheritance-and-fail-closed-validation-fix-on-master-2026-03-15)
+  - Fixed the shared grouped-run service so same-strategy overrides inherit top-level grouped `strategy_inputs`, eliminating the live S3.9 grouped-create `500` when callers selected only the review profile per action.
+  - Added focused grouped service, action-groups route, and remediation-runs grouped-route regressions; grouped requests with missing required inherited inputs now fail closed with deterministic `400` validation responses instead of internal errors.
 - [Remediation-profile Wave 6 live AWS validation gate on master (2026-03-15)](task_log.md#remediation-profile-wave-6-live-aws-validation-gate-on-master-2026-03-15)
   - Executed the full Wave 6 live-AWS validation gate on isolated local `master`, captured the complete evidence package under `docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/`, and cleaned the isolated runtime plus temporary SaaS-account queues afterward.
   - Final gate decision was `stop for fixes`: no migrated family met both required proofs, IAM.4 authoritative root-key execution was disabled, EC2.53/S3.11/S3.15 had no fresh live scenarios, Config.1 lacked manual apply/rollback credentials, and S3.9 grouped create returned a blocking `500`.

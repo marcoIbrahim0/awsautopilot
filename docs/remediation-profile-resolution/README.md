@@ -217,6 +217,7 @@ Grouped override rules:
 - In phase 1, grouped runs remain single-action-type groups, so override strategies must remain valid for the group action type.
 - Override `profile_id` must belong to the supplied override `strategy_id` family.
 - Top-level grouped `strategy_id` and `strategy_inputs` remain the default for actions without overrides.
+- Same-strategy overrides inherit omitted top-level grouped `strategy_inputs`; strategy-changing overrides validate only their override-local inputs.
 - A blocked or downgraded override affects only that action unless shared run invariants fail or zero actions can produce any artifact.
 
 Artifact persistence rules:

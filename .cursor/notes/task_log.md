@@ -1,5 +1,40 @@
 # Task Log
 
+## Remediation-profile Wave 6 W6-LIVE-07 grouped override inheritance and fail-closed validation fix on master (2026-03-15)
+
+**Task:** Fix the remediation-profile Wave 6 live-AWS blocker `W6-LIVE-07` on current `master` only by removing the grouped `500` from `POST /api/action-groups/{group_id}/bundle-run` when per-action overrides relied on top-level grouped `strategy_inputs`, while keeping grouped action resolution canonical and customer-run bundle behavior unchanged.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py** - made same-strategy grouped overrides inherit top-level grouped `strategy_inputs`, kept strategy-changing overrides override-local, and wrapped grouped strategy-input validation failures into `GroupedRemediationRunValidationError` instead of leaking raw `ValueError`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py** - added focused regressions for same-strategy profile overrides inheriting top-level S3.9 `log_bucket_name` and for fail-closed grouped validation when that required inherited input is still missing.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py** - added focused action-groups S3.9 grouped-route regressions for inherited top-level inputs and deterministic `400` validation, and updated stale grouped expectations to current Wave 6 resolver outputs.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_routes.py** - added a focused remediation-runs grouped-route regression file proving `/api/remediation-runs/group-pr-bundle` follows the same shared inheritance and fail-closed behavior.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented the landed grouped override inheritance rule: same-strategy overrides inherit omitted top-level inputs, while strategy-changing overrides validate only override-local inputs.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-3-grouped-run-orchestration.md** - updated the grouped orchestration doc to record the landed same-strategy inheritance and fail-closed override validation semantics.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this W6-LIVE-07 fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Traced the live `500` to `backend/services/grouped_remediation_runs.py`, where `_resolve_override_map()` validated each override in isolation before the top-level grouped selection/default inputs were available.
+- Preserved the narrow backward-compatible contract by inheriting top-level grouped `strategy_inputs` only when an override stays within the same effective strategy family; strategy-changing overrides keep override-local inputs so existing grouped Config behavior does not regress.
+- Converted grouped strategy-input validation failures into grouped validation errors with deterministic `400` responses instead of leaking raw `ValueError` into internal `500` responses.
+- Kept canonical grouped persistence under `artifacts.group_bundle.action_resolutions` unchanged and did not touch the customer-run bundle model or reintroduce archived SaaS PR-bundle execution.
+- Added focused S3.9 regressions that exercise the exact top-level `log_bucket_name` plus per-action profile-override shape that failed in the live Wave 6 run package.
+- Validated the broader grouped remediation-runs API surface via a focused passing subset without dragging the already-dirty broad test file into this fix.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py -q` -> `14 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py -q` -> `10 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_routes.py -q` -> `2 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py -q -k 'create_group_pr_bundle_duplicate_action_overrides_rejected_400 or create_group_pr_bundle_override_action_outside_group_rejected_400 or create_group_pr_bundle_invalid_action_override_rejected_400 or create_group_pr_bundle_different_override_map_not_duplicate or create_group_pr_bundle_different_repo_target_not_duplicate or create_group_pr_bundle_requires_region_filter'` -> `7 passed`
+
+**Technical debt / gotchas:**
+- The main worktree still contains unrelated uncommitted changes and cache noise outside this task; this fix stayed scoped to the shared grouped-run service, grouped-route regressions, docs, and task history.
+- A fresh manual backend replay of the exact Wave 6 request shape was not rerun in this pass; the new grouped route regressions cover the same request contract locally.
+
+**Open questions / TODOs:**
+- Re-run the isolated local/AWS Wave 6 `W6-LIVE-07` scenario against the saved live package when the next targeted live rerun is scheduled, so the existing evidence folder captures the post-fix route behavior directly.
+
 ## Remediation-profile Wave 6 live AWS validation gate on master (2026-03-15)
 
 **Task:** Execute the remediation-profile Wave 6 live-AWS validation gate on current `master` only, under the post-Wave-5 archived-SaaS product model, using an isolated local runtime plus isolated/approved AWS accounts and disposable runtime resources.

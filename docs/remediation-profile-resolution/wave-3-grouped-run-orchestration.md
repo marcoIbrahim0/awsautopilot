@@ -73,6 +73,8 @@ Compatibility behavior preserved in Wave 3:
 
 - legacy top-level grouped requests still work
 - top-level strategy/default inputs still apply to actions without overrides
+- same-strategy overrides inherit omitted top-level grouped `strategy_inputs` and may layer per-action keys on top
+- strategy-changing overrides remain override-local for `strategy_inputs` and fail closed if their effective shape is invalid
 - queue payloads remain schema-version `1`
 - per-action decisions are persisted in artifacts only, not sent to workers yet
 
@@ -93,6 +95,8 @@ Validation rules now enforced:
 - override `action_id` must belong to the grouped action set
 - override strategy must be valid for the grouped action type
 - override `profile_id` must belong to the selected override strategy family
+- if an override keeps the top-level grouped strategy, omitted `strategy_inputs` inherit from the top-level grouped request
+- if an override changes strategy, only override-local `strategy_inputs` are validated for that action
 - if no top-level grouped strategy exists, every grouped action must be covered by an explicit override
 
 ## Grouped Per-Action Resolution Persistence

@@ -224,7 +224,12 @@ def test_actions_without_overrides_inherit_top_level_strategy_and_profile() -> N
     assert overridden.profile_id == "config_enable_account_local_delivery"
     assert inherited.strategy_id == "config_enable_centralized_delivery"
     assert inherited.profile_id == "config_enable_centralized_delivery"
-    assert inherited.strategy_inputs == {"delivery_bucket": "central-config-bucket"}
+    assert inherited.strategy_inputs == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "delivery_bucket": "central-config-bucket",
+        "encrypt_with_kms": False,
+    }
     assert plan.request.strategy_id == "config_enable_centralized_delivery"
     assert plan.request.strategy_inputs == {"delivery_bucket": "central-config-bucket"}
 
@@ -441,6 +446,61 @@ def test_queue_payload_fields_for_schema_v2_include_canonical_action_resolutions
         str(action_one.id),
         str(action_two.id),
     ]
+
+
+def test_same_strategy_profile_overrides_inherit_top_level_strategy_inputs() -> None:
+    action_one = _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_access_logging")
+    action_two = _make_action(priority=90, minutes_ago=2, action_type="s3_bucket_access_logging")
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enable_access_logging_guided",
+        strategy_inputs={"log_bucket_name": "dedicated-access-log-bucket"},
+        action_overrides=(
+            GroupedActionOverride(
+                action_id=str(action_one.id),
+                profile_id="s3_enable_access_logging_review_destination_safety",
+            ),
+            GroupedActionOverride(
+                action_id=str(action_two.id),
+                profile_id="s3_enable_access_logging_review_destination_safety",
+            ),
+        ),
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_access_logging"),
+        actions=[action_two, action_one],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    for entry in plan.action_resolutions:
+        assert entry.strategy_id == "s3_enable_access_logging_guided"
+        assert entry.profile_id == "s3_enable_access_logging_review_destination_safety"
+        assert entry.strategy_inputs == {"log_bucket_name": "dedicated-access-log-bucket"}
+
+
+def test_same_strategy_profile_overrides_fail_closed_when_required_inputs_are_missing() -> None:
+    action = _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_access_logging")
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enable_access_logging_guided",
+        action_overrides=(
+            GroupedActionOverride(
+                action_id=str(action.id),
+                profile_id="s3_enable_access_logging_review_destination_safety",
+            ),
+        ),
+    )
+
+    with pytest.raises(GroupedRemediationRunValidationError) as exc:
+        build_grouped_run_persistence_plan(
+            request=request,
+            scope=_scope(action_type="s3_bucket_access_logging"),
+            actions=[action],
+            group_bundle_seed={"group_key": "group-1"},
+        )
+
+    assert exc.value.code == "invalid_strategy_inputs"
+    assert "strategy_inputs.log_bucket_name is required" in str(exc.value)
 
 
 def _make_action(
