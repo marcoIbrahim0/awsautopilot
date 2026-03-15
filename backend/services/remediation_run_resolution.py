@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import copy
-import re
 from typing import Any, Mapping
 
-from backend.models.action import Action
+from backend.services.remediation_profile_selection import (
+    ProfileSelectionResolution,
+    resolve_profile_selection,
+)
 from backend.services.remediation_profile_catalog import (
     default_profile_id_for_strategy,
     get_profile_definition,
@@ -16,19 +18,24 @@ from backend.services.remediation_profile_resolver import (
     build_compat_resolution_decision,
 )
 from backend.services.remediation_risk import requires_risk_ack
-from backend.services.remediation_strategy import RemediationStrategy, StrategyInputField
+from backend.services.remediation_strategy import RemediationStrategy
 
 LEGACY_RESOLUTION_MIRROR_FIELDS = (
     "selected_strategy",
     "strategy_inputs",
     "pr_bundle_variant",
 )
-_MISSING = object()
-_SAFE_DEFAULT_TOKEN_PATTERN = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
 
 class RemediationRunResolutionError(ValueError):
     """Raised when single-run profile resolution cannot be normalized."""
+
+
+_SUPPORT_TIER_ORDER: dict[SupportTier, int] = {
+    "deterministic_bundle": 0,
+    "review_required_bundle": 1,
+    "manual_guidance_only": 2,
+}
 
 
 def resolve_create_profile_id(
@@ -49,33 +56,61 @@ def resolve_create_profile_id(
     return resolved_profile_id
 
 
+def resolve_create_profile_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_context: Mapping[str, Any] | None,
+    action: Any | None = None,
+) -> ProfileSelectionResolution:
+    try:
+        return resolve_profile_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_context=runtime_context,
+            action=action,
+        )
+    except ValueError as exc:
+        raise RemediationRunResolutionError(str(exc)) from exc
+
+
 def build_single_run_resolution(
     *,
-    action: Action,
     strategy: RemediationStrategy,
-    profile_id: str,
-    strategy_inputs: dict[str, Any] | None,
+    profile_selection: ProfileSelectionResolution,
     risk_snapshot: Mapping[str, Any] | None,
     risk_acknowledged: bool,
     requested_profile_id: str | None,
 ) -> ResolverDecision:
-    support_tier = _support_tier(risk_snapshot, risk_acknowledged=risk_acknowledged)
+    support_tier = _support_tier(
+        profile_selection.support_tier,
+        risk_snapshot,
+        risk_acknowledged=risk_acknowledged,
+    )
     return build_compat_resolution_decision(
         strategy_id=strategy["strategy_id"],
-        profile_id=profile_id,
+        profile_id=profile_selection.profile.profile_id,
         support_tier=support_tier,
-        resolved_inputs=_resolved_inputs(strategy, strategy_inputs, action=action),
-        missing_inputs=[],
-        missing_defaults=[],
-        blocked_reasons=[],
-        rejected_profiles=[],
+        resolved_inputs=profile_selection.resolved_inputs,
+        missing_inputs=profile_selection.missing_inputs,
+        missing_defaults=profile_selection.missing_defaults,
+        blocked_reasons=profile_selection.blocked_reasons,
+        rejected_profiles=profile_selection.rejected_profiles,
         finding_coverage={},
         preservation_summary={},
         decision_rationale=_decision_rationale(
             strategy_id=strategy["strategy_id"],
-            profile_id=profile_id,
+            profile_id=profile_selection.profile.profile_id,
             support_tier=support_tier,
             requested_profile_id=requested_profile_id,
+            selection_rationale=profile_selection.decision_rationale,
+            selection_support_tier=profile_selection.support_tier,
         ),
     )
 
@@ -101,79 +136,24 @@ def apply_resolution_artifacts(
 
 
 def _support_tier(
+    selected_support_tier: SupportTier,
     risk_snapshot: Mapping[str, Any] | None,
     *,
     risk_acknowledged: bool,
 ) -> SupportTier:
+    support_tier = selected_support_tier
     if not risk_acknowledged:
-        return "deterministic_bundle"
+        return support_tier
     checks = risk_snapshot.get("checks") if isinstance(risk_snapshot, Mapping) else None
     if isinstance(checks, list) and requires_risk_ack(checks):
-        return "review_required_bundle"
-    return "deterministic_bundle"
+        support_tier = _max_support_tier(support_tier, "review_required_bundle")
+    return support_tier
 
 
-def _resolved_inputs(
-    strategy: RemediationStrategy,
-    strategy_inputs: dict[str, Any] | None,
-    *,
-    action: Action,
-) -> dict[str, Any]:
-    resolved = copy.deepcopy(strategy_inputs or {})
-    for field in strategy["input_schema"].get("fields", []):
-        _apply_field_default(resolved, field, action=action)
-    return resolved
-
-
-def _apply_field_default(
-    resolved: dict[str, Any],
-    field: StrategyInputField,
-    *,
-    action: Action,
-) -> None:
-    key = field["key"]
-    if key in resolved:
-        return
-    default_value = _default_value(field, action=action)
-    if default_value is _MISSING:
-        return
-    resolved[key] = default_value
-
-
-def _default_value(field: StrategyInputField, *, action: Action) -> Any:
-    if "default_value" in field:
-        return copy.deepcopy(field["default_value"])
-    if "safe_default_value" not in field:
-        return _MISSING
-    safe_default = field["safe_default_value"]
-    return _render_safe_default(safe_default, action=action)
-
-
-def _render_safe_default(value: Any, *, action: Action) -> Any:
-    if not isinstance(value, str):
-        return copy.deepcopy(value)
-    if "{{" not in value:
-        return value
-    try:
-        return _SAFE_DEFAULT_TOKEN_PATTERN.sub(
-            lambda match: _safe_default_token(action, match.group(1)),
-            value,
-        )
-    except KeyError:
-        return _MISSING
-
-
-def _safe_default_token(action: Action, token: str) -> str:
-    context = {
-        "account_id": getattr(action, "account_id", None),
-        "region": getattr(action, "region", None),
-        "target_id": getattr(action, "target_id", None),
-        "resource_id": getattr(action, "resource_id", None),
-    }
-    value = context.get(token)
-    if value in (None, ""):
-        raise KeyError(token)
-    return str(value)
+def _max_support_tier(left: SupportTier, right: SupportTier) -> SupportTier:
+    if _SUPPORT_TIER_ORDER[left] >= _SUPPORT_TIER_ORDER[right]:
+        return left
+    return right
 
 
 def _decision_rationale(
@@ -182,18 +162,21 @@ def _decision_rationale(
     profile_id: str,
     support_tier: SupportTier,
     requested_profile_id: str | None,
+    selection_rationale: str,
+    selection_support_tier: SupportTier,
 ) -> str:
-    profile_note = (
-        f"Caller selected remediation profile '{profile_id}' within strategy '{strategy_id}'."
-        if _clean_text(requested_profile_id)
-        else f"Wave 1 single-profile compatibility defaulted profile_id to '{profile_id}'."
-    )
-    review_note = (
-        "Run creation was accepted after risk_acknowledged=true satisfied review-required checks."
-        if support_tier == "review_required_bundle"
-        else "Run creation did not require review-only acceptance."
-    )
-    return f"{profile_note} {review_note}"
+    parts: list[str] = []
+    if selection_rationale:
+        parts.append(selection_rationale)
+    elif _clean_text(requested_profile_id):
+        parts.append(f"Caller selected remediation profile '{profile_id}' within strategy '{strategy_id}'.")
+    else:
+        parts.append(f"Compatibility resolver selected profile '{profile_id}' within strategy '{strategy_id}'.")
+    if support_tier != selection_support_tier and support_tier == "review_required_bundle":
+        parts.append("Run creation was accepted after risk_acknowledged=true satisfied review-required checks.")
+    else:
+        parts.append("Run creation did not require additional risk-only acceptance.")
+    return " ".join(parts)
 
 
 def _clean_text(value: str | None) -> str | None:
@@ -208,5 +191,6 @@ __all__ = [
     "RemediationRunResolutionError",
     "apply_resolution_artifacts",
     "build_single_run_resolution",
+    "resolve_create_profile_selection",
     "resolve_create_profile_id",
 ]

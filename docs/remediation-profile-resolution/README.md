@@ -51,6 +51,33 @@ Related docs:
 
 - [Wave 5 mixed-tier grouped bundles](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md)
 
+## Wave 6 Family Branching
+
+> ❓ Needs verification: This Wave 6 note reflects focused local contract coverage only. A later prompt still needs to decide whether single-run worker generation should consume canonical resolver support tiers directly instead of relying on legacy mirrored `strategy_inputs`.
+
+- Shared family branching now exists beneath the public compatibility strategy `sg_restrict_public_ports_guided`.
+- The first migrated family is EC2.53 `sg_restrict_public_ports`, with internal profiles:
+  - `close_public`
+  - `close_and_revoke`
+  - `restrict_to_ip`
+  - `restrict_to_cidr`
+  - `ssm_only`
+  - `bastion_sg_reference`
+- Resolver precedence for this family is:
+  - explicit `profile_id`
+  - legacy `strategy_inputs.access_mode`
+  - tenant remediation settings such as `sg_access_path_preference`, `approved_admin_cidrs`, and `approved_bastion_security_group_ids`
+  - runtime defaults already present in resolver context
+  - compatibility-safe fallback `close_public`
+- Strategy-only requests remain valid. When a tenant preference cannot be resolved safely, the resolver records an explicit downgrade or rejected preferred branch instead of silently guessing an executable path.
+- Current Wave 6 support tiers for EC2.53 are:
+  - executable-capable profiles: `close_public`, `close_and_revoke`, `restrict_to_ip`, `restrict_to_cidr`
+  - downgrade-only profiles: `ssm_only`, `bastion_sg_reference`
+- Current implemented surfaces:
+  - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
+  - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
+  - grouped create routes inherit the same family resolver per action through the shared grouped-run service
+
 ## Scope and Non-Goals
 
 In scope:

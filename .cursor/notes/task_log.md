@@ -1,5 +1,51 @@
 # Task Log
 
+## Remediation-profile Wave 6 shared family branching and EC2.53 resolver migration on master (2026-03-15)
+
+**Task:** Implement remediation-profile Wave 6 Prompt 1 on current `master` only by introducing shared multi-profile family branching support and migrating EC2.53 `sg_restrict_public_ports` onto resolver-backed profile selection while preserving the public compatibility strategy `sg_restrict_public_ports_guided`.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - added catalog-level family profile rows for EC2.53 beneath the unchanged public strategy and expanded profile definitions with family metadata/default inputs.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py** - added the shared family-branch selection helper used by read/create/grouped flows, including EC2.53 tenant/runtime/default precedence, safe fallback, and explicit downgrade/rejection reasons.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py** - allowed required strategy inputs with implicit defaults so strategy-only compatibility requests can still validate cleanly.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_read_path.py** - switched options/preview resolution to the shared selector so EC2.53 now exposes real `profiles[]`, `recommended_profile_id`, and profile-aware preview resolution.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py** - added create-time shared profile-selection normalization and canonical resolution building from family-aware selections.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py** - moved grouped per-action resolution onto the shared selector so grouped routes inherit EC2.53 family behavior automatically.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - passed live action context into remediation options/preview profile metadata resolution.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py** - resolved single-run and grouped create requests through the shared family selector while preserving existing direct-fix behavior and archived SaaS route boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py** - threaded tenant remediation settings into grouped bundle creation so the action-groups route matches grouped remediation-runs behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - updated catalog coverage for multi-profile EC2.53 family rows and support tiers.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added EC2.53 options/preview coverage for real profile metadata, tenant-driven recommendations, downgrade-only profiles, and invalid profile rejection.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - added EC2.53 create-time coverage for strategy-only safe resolution, tenant CIDR preference, downgrade-only profiles, and invalid profile rejection.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - added a narrow Wave 6 family-branching note and recorded the Prompt 2 boundary around single-run worker execution semantics.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 Prompt 1 task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, remediation-profile docs, implementation plan, and Wave 5 grouped-bundle doc before editing.
+- Extended the internal profile catalog so one public strategy can own multiple internal profiles without changing the public `strategy_id` contract.
+- Introduced a shared `resolve_profile_selection(...)` flow that:
+  - preserves non-family compatibility strategies
+  - resolves EC2.53 from explicit `profile_id`, legacy `access_mode`, tenant remediation settings, runtime defaults, and a safe compatibility fallback
+  - downgrades unsupported or under-specified branches explicitly instead of silently guessing executable behavior
+- Migrated read surfaces so `GET /api/actions/{id}/remediation-options` and `GET /api/actions/{id}/remediation-preview` now expose real EC2.53 family metadata and profile-aware resolver decisions.
+- Migrated single-run create so `POST /api/remediation-runs` persists canonical `artifacts.resolution` plus compatibility mirror `strategy_inputs` for the selected EC2.53 profile.
+- Migrated grouped resolution so both grouped entry points now resolve EC2.53 per action through the shared grouped-run service without router-specific hard-coding.
+- Kept `direct_fix` untouched.
+- Ran focused validation:
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py -q` -> `6 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py -q` -> `7 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py -q` -> `8 passed`
+  - extra safety check: `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py -q` -> `12 passed`
+
+**Technical debt / gotchas:**
+- Single-run worker generation still consumes legacy mirrored `strategy_inputs` and does not yet consume canonical resolver support tiers directly. This prompt keeps the existing customer-run bundle generation model intact, but Prompt 2 must preserve the resolver artifacts if it changes single-run execution semantics.
+- EC2.53 runtime defaulting only uses runtime evidence when that evidence is already present in resolver context. The options route still does not fetch extra SG runtime context beyond the currently wired surfaces.
+
+**Open questions / TODOs:**
+- Prompt 2 must preserve `artifacts.resolution` as the canonical single-run decision source if it changes worker-side executable vs non-executable handling for single-action EC2.53 runs.
+- Live validation for the Wave 6 EC2.53 family migration remains separate from this focused local contract change.
+
 ## Wave 5 post-archive narrowed rerun closure on master (2026-03-15)
 
 **Task:** Re-run the narrowed post-archive Wave 5 gate on current `master` after the `download_bundle` callback lifecycle fix, capture fresh isolated evidence for `RPW5-POST-ARCHIVE-01` through `RPW5-POST-ARCHIVE-05`, and determine whether Wave 5 is now complete under the archived-SaaS product model.

@@ -25,6 +25,13 @@ def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
     return user
 
 
+def _mock_tenant(remediation_settings: dict | None = None) -> MagicMock:
+    tenant = MagicMock()
+    tenant.id = uuid.uuid4()
+    tenant.remediation_settings = remediation_settings
+    return tenant
+
+
 def _mock_action(tenant_id: uuid.UUID, *, action_type: str) -> MagicMock:
     action = MagicMock()
     action.id = uuid.uuid4()
@@ -132,9 +139,11 @@ def _queued_payload(mock_sqs: MagicMock) -> dict[str, object]:
 
 def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resolution(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
     user = _mock_user(tenant_id)
     action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
-    session = _mock_async_session(action, None, None)
+    session = _mock_async_session(tenant, action, None, None)
     _install_refresh(session)
 
     response, mock_sqs = _post_create(
@@ -167,9 +176,11 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
 
 def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_required_tier(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
     user = _mock_user(tenant_id)
     action = _mock_action(tenant_id, action_type="aws_config_enabled")
-    session = _mock_async_session(action, None, None)
+    session = _mock_async_session(tenant, action, None, None)
     _install_refresh(session)
 
     response, mock_sqs = _post_create(
@@ -206,11 +217,13 @@ def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_requir
     assert "profile_id" not in payload
 
 
-def test_pr_only_create_invalid_profile_id_returns_400(client: TestClient) -> None:
+def test_pr_only_create_rejects_invalid_ec2_53_profile_id(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
     user = _mock_user(tenant_id)
-    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
-    session = _mock_async_session(action, None)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None)
 
     response, mock_sqs = _post_create(
         client,
@@ -219,9 +232,10 @@ def test_pr_only_create_invalid_profile_id_returns_400(client: TestClient) -> No
         {
             "action_id": str(action.id),
             "mode": "pr_only",
-            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "strategy_id": "sg_restrict_public_ports_guided",
             "profile_id": "not-a-real-profile",
         },
+        runtime_signals={},
     )
 
     detail = response.json()["detail"]
@@ -234,9 +248,11 @@ def test_pr_only_create_invalid_profile_id_returns_400(client: TestClient) -> No
 
 def test_strategy_only_pr_only_client_still_succeeds_with_defaulted_inputs(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
     user = _mock_user(tenant_id)
     action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
-    session = _mock_async_session(action, None, None)
+    session = _mock_async_session(tenant, action, None, None)
     _install_refresh(session)
 
     response, _ = _post_create(
@@ -263,12 +279,127 @@ def test_strategy_only_pr_only_client_still_succeeds_with_defaulted_inputs(clien
     }
 
 
+def test_ec2_53_strategy_only_create_persists_safe_resolved_profile(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "evidence": {
+                "security_group_id": "sg-0123456789abcdef0",
+                "public_admin_ipv4_ports": [22],
+                "public_admin_ipv6_ports": [],
+            }
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "close_public"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert run.artifacts["strategy_inputs"] == {"access_mode": "close_public"}
+    payload = _queued_payload(mock_sqs)
+    assert payload["resolution"]["profile_id"] == "close_public"
+
+
+def test_ec2_53_create_uses_tenant_cidr_preference_when_safe(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "sg_access_path_preference": "restrict_to_approved_admin_cidr",
+            "approved_admin_cidrs": ["203.0.113.10/32"],
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "restrict_to_cidr"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["resolved_inputs"]["allowed_cidr"] == "203.0.113.10/32"
+    assert run.artifacts["strategy_inputs"] == {
+        "access_mode": "restrict_to_cidr",
+        "allowed_cidr": "203.0.113.10/32",
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == "restrict_to_cidr"
+
+
+def test_ec2_53_create_downgrades_unsupported_profiles_explicitly(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "profile_id": "ssm_only",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "ssm_only"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."
+    ]
+    assert run.artifacts["strategy_inputs"] == {}
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "manual_guidance_only"
+
+
 def test_direct_fix_create_remains_without_resolution_artifact(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
     user = _mock_user(tenant_id)
     action = _mock_action(tenant_id, action_type="s3_block_public_access")
     account = _mock_account("arn:aws:iam::123456789012:role/WriteRole")
-    session = _mock_async_session(action, account, None)
+    session = _mock_async_session(tenant, action, account, None)
     _install_refresh(session)
 
     response, mock_sqs = _post_create(

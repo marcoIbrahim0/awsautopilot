@@ -9,6 +9,7 @@ from typing import Any, Mapping, Sequence
 from backend.services.remediation_run_resolution import (
     RemediationRunResolutionError,
     build_single_run_resolution,
+    resolve_create_profile_selection,
     resolve_create_profile_id,
 )
 from backend.services.remediation_risk import (
@@ -128,7 +129,6 @@ class GroupedRunPersistencePlan:
 class _ResolvedSelection:
     strategy: RemediationStrategy
     strategy_id: str
-    profile_id: str
     strategy_inputs: dict[str, Any]
     requested_profile_id: str | None = None
 
@@ -150,6 +150,7 @@ def build_grouped_run_persistence_plan(
     actions: Sequence[Any],
     group_bundle_seed: Mapping[str, Any] | None = None,
     account: Any | None = None,
+    tenant_settings: Mapping[str, Any] | None = None,
 ) -> GroupedRunPersistencePlan:
     """Build grouped artifacts and normalized queue-compatible mirrors."""
     sorted_actions = _validate_grouped_action_set(actions, scope=scope)
@@ -161,6 +162,7 @@ def build_grouped_run_persistence_plan(
         default_selection=default_selection,
         override_map=override_map,
         account=account,
+        tenant_settings=tenant_settings,
         risk_acknowledged=normalized_request.risk_acknowledged,
     )
     artifacts = _build_grouped_artifacts(
@@ -419,9 +421,8 @@ def _resolve_selection(
     return _ResolvedSelection(
         strategy=strategy,
         strategy_id=strategy_id,
-        profile_id=resolved_profile_id,
         strategy_inputs=normalized_inputs,
-        requested_profile_id=profile_id,
+        requested_profile_id=resolved_profile_id,
     )
 
 
@@ -447,7 +448,9 @@ def _validated_strategy(
     )
 
 
-def _validated_profile_id(action_type: str, strategy_id: str, profile_id: str | None) -> str:
+def _validated_profile_id(action_type: str, strategy_id: str, profile_id: str | None) -> str | None:
+    if profile_id is None:
+        return None
     try:
         return resolve_create_profile_id(action_type, strategy_id, profile_id)
     except RemediationRunResolutionError as exc:
@@ -476,6 +479,7 @@ def _build_action_resolutions(
     default_selection: _ResolvedSelection | None,
     override_map: Mapping[str, _ResolvedSelection],
     account: Any | None,
+    tenant_settings: Mapping[str, Any] | None,
     risk_acknowledged: bool,
 ) -> tuple[GroupedActionResolutionEntry, ...]:
     return tuple(
@@ -483,6 +487,7 @@ def _build_action_resolutions(
             action,
             selection=_selection_for_action(action, default_selection, override_map),
             account=account,
+            tenant_settings=tenant_settings,
             risk_acknowledged=risk_acknowledged,
         )
         for action in actions
@@ -508,9 +513,37 @@ def _build_action_resolution(
     *,
     selection: _ResolvedSelection,
     account: Any | None,
+    tenant_settings: Mapping[str, Any] | None,
     risk_acknowledged: bool,
 ) -> GroupedActionResolutionEntry:
-    risk_snapshot = _risk_snapshot(action, selection=selection, account=account)
+    runtime_signals = collect_runtime_risk_signals(
+        action=action,
+        strategy=selection.strategy,
+        strategy_inputs=selection.strategy_inputs,
+        account=account,
+    )
+    try:
+        profile_selection = resolve_create_profile_selection(
+            action_type=_action_field(action, "action_type"),
+            strategy=selection.strategy,
+            requested_profile_id=selection.requested_profile_id,
+            explicit_inputs=selection.strategy_inputs,
+            tenant_settings=tenant_settings,
+            runtime_context=runtime_signals.get("context"),
+            action=action,
+        )
+    except RemediationRunResolutionError as exc:
+        raise GroupedRemediationRunValidationError(
+            "invalid_override_profile",
+            str(exc),
+        ) from exc
+    risk_snapshot = _risk_snapshot(
+        action,
+        selection=selection,
+        strategy_inputs=profile_selection.persisted_strategy_inputs,
+        runtime_signals=runtime_signals,
+        account=account,
+    )
     _validate_risk_snapshot(
         action,
         selection=selection,
@@ -518,10 +551,8 @@ def _build_action_resolution(
         risk_acknowledged=risk_acknowledged,
     )
     resolution = build_single_run_resolution(
-        action=action,
         strategy=selection.strategy,
-        profile_id=selection.profile_id,
-        strategy_inputs=selection.strategy_inputs,
+        profile_selection=profile_selection,
         risk_snapshot=risk_snapshot,
         risk_acknowledged=risk_acknowledged,
         requested_profile_id=selection.requested_profile_id,
@@ -529,23 +560,24 @@ def _build_action_resolution(
     return GroupedActionResolutionEntry(
         action_id=_action_id(action),
         strategy_id=selection.strategy_id,
-        profile_id=selection.profile_id,
-        strategy_inputs=copy.deepcopy(selection.strategy_inputs),
+        profile_id=profile_selection.profile.profile_id,
+        strategy_inputs=copy.deepcopy(profile_selection.persisted_strategy_inputs),
         resolution=copy.deepcopy(dict(resolution)),
     )
 
 
-def _risk_snapshot(action: Any, *, selection: _ResolvedSelection, account: Any | None) -> dict[str, Any]:
-    runtime_signals = collect_runtime_risk_signals(
-        action=action,
-        strategy=selection.strategy,
-        strategy_inputs=selection.strategy_inputs,
-        account=account,
-    )
+def _risk_snapshot(
+    action: Any,
+    *,
+    selection: _ResolvedSelection,
+    strategy_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    account: Any | None,
+) -> dict[str, Any]:
     return evaluate_strategy_impact(
         action,
         selection.strategy,
-        strategy_inputs=selection.strategy_inputs,
+        strategy_inputs=strategy_inputs,
         account=account,
         runtime_signals=runtime_signals,
     )

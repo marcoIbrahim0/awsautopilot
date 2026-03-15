@@ -1808,7 +1808,7 @@ def validate_strategy_inputs(strategy: RemediationStrategy, raw_inputs: dict[str
         value = raw_inputs.get(key)
 
         if value is None:
-            if required:
+            if required and not _field_has_implicit_default(field):
                 raise ValueError(f"strategy_inputs.{key} is required.")
             continue
 
@@ -1903,6 +1903,13 @@ def validate_strategy_inputs(strategy: RemediationStrategy, raw_inputs: dict[str
             )
 
     return normalized
+
+
+def _field_has_implicit_default(field: StrategyInputField) -> bool:
+    if "default_value" in field:
+        return True
+    safe_default = field.get("safe_default_value")
+    return isinstance(safe_default, str) and "{{" not in safe_default and bool(safe_default.strip())
 
 
 def _validate_enum_and_options(key: str, value: str, field: StrategyInputField) -> None:

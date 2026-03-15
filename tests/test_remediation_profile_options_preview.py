@@ -96,7 +96,7 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
         }
     ]
     assert strategy["recommended_profile_id"] == "s3_enable_access_logging_guided"
-    assert strategy["missing_defaults"] == ["s3_access_logs.default_target_bucket_name"]
+    assert strategy["missing_defaults"] == []
     assert strategy["blocked_reasons"] == []
     assert "decision_rationale" in strategy
     for existing_field in (
@@ -112,7 +112,69 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
         assert existing_field in strategy
 
 
-def test_remediation_preview_defaults_profile_to_strategy_id(client: TestClient) -> None:
+def test_remediation_options_surface_real_ec2_53_profiles_and_tenant_recommendation(client: TestClient) -> None:
+    tenant = _mock_tenant(
+        {
+            "sg_access_path_preference": "restrict_to_approved_admin_cidr",
+            "approved_admin_cidrs": ["203.0.113.10/32"],
+        }
+    )
+    user = _mock_user(tenant.id)
+    action = _mock_action("sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "context": {"default_inputs": {"detected_public_ipv4_cidr": "198.51.100.15/32"}},
+            "evidence": {
+                "security_group_id": "sg-0123456789abcdef0",
+                "public_admin_ipv4_ports": [22],
+                "public_admin_ipv6_ports": [],
+            },
+        },
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategy = next(
+        item for item in response.json()["strategies"] if item["strategy_id"] == "sg_restrict_public_ports_guided"
+    )
+    assert [profile["profile_id"] for profile in strategy["profiles"]] == [
+        "close_public",
+        "close_and_revoke",
+        "restrict_to_ip",
+        "restrict_to_cidr",
+        "ssm_only",
+        "bastion_sg_reference",
+    ]
+    assert strategy["recommended_profile_id"] == "restrict_to_cidr"
+    profile_map = {profile["profile_id"]: profile for profile in strategy["profiles"]}
+    assert profile_map["restrict_to_cidr"]["recommended"] is True
+    assert profile_map["restrict_to_cidr"]["support_tier"] == "deterministic_bundle"
+    assert profile_map["restrict_to_ip"]["support_tier"] == "review_required_bundle"
+    assert profile_map["ssm_only"]["support_tier"] == "manual_guidance_only"
+    assert profile_map["bastion_sg_reference"]["support_tier"] == "manual_guidance_only"
+    assert strategy["blocked_reasons"] == []
+    assert "restrict_to_cidr" in strategy["decision_rationale"]
+
+
+def test_remediation_preview_resolves_real_ec2_53_profile_from_legacy_access_mode(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action("sg_restrict_public_ports")
@@ -165,7 +227,7 @@ def test_remediation_preview_defaults_profile_to_strategy_id(client: TestClient)
     ):
         assert existing_field in body
     assert body["resolution"]["strategy_id"] == "sg_restrict_public_ports_guided"
-    assert body["resolution"]["profile_id"] == "sg_restrict_public_ports_guided"
+    assert body["resolution"]["profile_id"] == "close_and_revoke"
     assert body["resolution"]["support_tier"] == "deterministic_bundle"
     assert body["resolution"]["decision_version"] == RESOLVER_DECISION_VERSION_V1
 
@@ -194,7 +256,7 @@ def test_remediation_preview_preserves_explicit_profile_id(client: TestClient) -
                 params={
                     "mode": "pr_only",
                     "strategy_id": "sg_restrict_public_ports_guided",
-                    "profile_id": "sg_restrict_public_ports_guided",
+                    "profile_id": "close_public",
                 },
             )
         finally:
@@ -202,7 +264,47 @@ def test_remediation_preview_preserves_explicit_profile_id(client: TestClient) -
             app.dependency_overrides.pop(get_optional_user, None)
 
     assert response.status_code == 200
-    assert response.json()["resolution"]["profile_id"] == "sg_restrict_public_ports_guided"
+    assert response.json()["resolution"]["profile_id"] == "close_public"
+
+
+def test_remediation_preview_downgrades_unsupported_ec2_53_profiles_explicitly(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.actions.collect_runtime_risk_signals", return_value={}):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "sg_restrict_public_ports_guided",
+                    "profile_id": "ssm_only",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "ssm_only"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."
+    ]
 
 
 def test_remediation_preview_rejects_invalid_profile_id(client: TestClient) -> None:

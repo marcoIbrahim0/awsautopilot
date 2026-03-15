@@ -55,7 +55,7 @@ from backend.services.remediation_run_resolution import (
     RemediationRunResolutionError,
     apply_resolution_artifacts,
     build_single_run_resolution,
-    resolve_create_profile_id,
+    resolve_create_profile_selection,
 )
 from backend.services.remediation_run_queue_contract import (
     grouped_run_signatures_match,
@@ -1167,6 +1167,7 @@ async def create_remediation_run(
     record (approved_by_user_id, created_at) is immutable.
     """
     tenant_uuid = current_user.tenant_id
+    tenant = await get_tenant(tenant_uuid, db)
 
     if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
         raise HTTPException(
@@ -1296,6 +1297,7 @@ async def create_remediation_run(
     selected_strategy_inputs: dict[str, Any] | None = None
     selected_profile_id: str | None = None
     risk_snapshot: dict[str, Any] | None = None
+    profile_selection = None
     repo_target_payload = body.repo_target.model_dump(exclude_none=True) if body.repo_target else None
 
     strategy_required = strategy_required_for_action_type(action.action_type)
@@ -1342,12 +1344,22 @@ async def create_remediation_run(
                 mode=body.mode,
                 strategy_inputs=selected_strategy_inputs,
             )
+        runtime_signals = collect_runtime_risk_signals(
+            action=action,
+            strategy=selected_strategy,
+            strategy_inputs=selected_strategy_inputs,
+            account=account,
+        )
         if body.mode == "pr_only":
             try:
-                selected_profile_id = resolve_create_profile_id(
-                    action.action_type,
-                    selected_strategy_id,
-                    requested_profile_id,
+                profile_selection = resolve_create_profile_selection(
+                    action_type=action.action_type,
+                    strategy=selected_strategy,
+                    requested_profile_id=requested_profile_id,
+                    explicit_inputs=selected_strategy_inputs,
+                    tenant_settings=getattr(tenant, "remediation_settings", None),
+                    runtime_context=runtime_signals.get("context"),
+                    action=action,
                 )
             except RemediationRunResolutionError as exc:
                 emit_validation_failure(
@@ -1361,18 +1373,15 @@ async def create_remediation_run(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail={"error": "Invalid profile_id", "detail": str(exc)},
                 ) from exc
+            selected_profile_id = profile_selection.profile.profile_id
+            selected_strategy_inputs = profile_selection.persisted_strategy_inputs
 
         risk_snapshot = evaluate_strategy_impact(
             action,
             selected_strategy,
             strategy_inputs=selected_strategy_inputs,
             account=account,
-            runtime_signals=collect_runtime_risk_signals(
-                action=action,
-                strategy=selected_strategy,
-                strategy_inputs=selected_strategy_inputs,
-                account=account,
-            ),
+            runtime_signals=runtime_signals,
         )
         if has_failing_checks(risk_snapshot["checks"]):
             emit_strategy_metric(
@@ -1680,12 +1689,10 @@ async def create_remediation_run(
         artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
     if repo_target_payload:
         artifacts["repo_target"] = repo_target_payload
-    if body.mode == "pr_only" and selected_strategy and selected_profile_id:
+    if body.mode == "pr_only" and selected_strategy and profile_selection is not None:
         canonical_resolution = build_single_run_resolution(
-            action=action,
             strategy=selected_strategy,
-            profile_id=selected_profile_id,
-            strategy_inputs=selected_strategy_inputs,
+            profile_selection=profile_selection,
             risk_snapshot=risk_snapshot,
             risk_acknowledged=body.risk_acknowledged,
             requested_profile_id=requested_profile_id,
@@ -1851,6 +1858,7 @@ async def create_group_pr_bundle_run(
 ) -> RemediationRunCreatedResponse:
     """Create one PR-only run that includes all actions in the selected execution group."""
     tenant_uuid = current_user.tenant_id
+    tenant = await get_tenant(tenant_uuid, db)
 
     if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
         raise HTTPException(
@@ -1985,6 +1993,7 @@ async def create_group_pr_bundle_run(
             actions=actions,
             group_bundle_seed={"group_key": group_key},
             account=account,
+            tenant_settings=getattr(tenant, "remediation_settings", None),
         )
     except GroupedRemediationRunValidationError as exc:
         _raise_grouped_validation_error(

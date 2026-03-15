@@ -1951,6 +1951,7 @@ async def get_remediation_options(
                     tenant_settings=tenant_settings,
                     runtime_context=runtime_context,
                     dependency_checks=risk_snapshot["checks"],
+                    action=action,
                 ),
             )
         )
@@ -2259,6 +2260,7 @@ async def get_remediation_preview(
             tenant_settings=tenant_settings,
             runtime_context=runtime_context,
             dependency_checks=dependency_checks,
+            action=action,
         )
     except InvalidProfileSelection as exc:
         raise HTTPException(

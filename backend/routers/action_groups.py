@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Annotated, Any, NoReturn, Optional
+from typing import Annotated, Any, Mapping, NoReturn, Optional
 
 import boto3
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
@@ -335,6 +335,7 @@ def _build_action_group_plan_or_400(
     token: str,
     callback_url: str,
     account: AwsAccount | None,
+    tenant_settings: Mapping[str, Any] | None,
 ):
     try:
         return build_grouped_run_persistence_plan(
@@ -349,6 +350,7 @@ def _build_action_group_plan_or_400(
             actions=actions,
             group_bundle_seed=_group_bundle_seed(group, group_run=group_run, token=token, callback_url=callback_url),
             account=account,
+            tenant_settings=tenant_settings,
         )
     except GroupedRemediationRunValidationError as exc:
         _raise_action_group_grouped_validation_error(exc)
@@ -608,9 +610,10 @@ async def create_action_group_bundle_run(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ingest queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
-        )
+    )
     group_uuid = _parse_group_uuid_or_400(group_id)
     request_body = body or CreateActionGroupBundleRunRequest()
+    tenant = await get_tenant(current_user.tenant_id, db)
     group = await _load_action_group_or_404(db, group_id=group_uuid, tenant_id=current_user.tenant_id)
     action_rows = await _load_group_actions_or_404(db, tenant_id=current_user.tenant_id, group_id=group.id)
     normalized_request = _normalize_group_request_or_400(request_body, action_type=group.action_type)
@@ -629,6 +632,7 @@ async def create_action_group_bundle_run(
         token=token,
         callback_url=callback_url,
         account=account,
+        tenant_settings=getattr(tenant, "remediation_settings", None),
     )
     remediation_run = await _persist_group_bundle_run(
         db,
