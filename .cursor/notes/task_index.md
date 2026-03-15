@@ -1698,3 +1698,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 6 split-path shipped-validation closure for S3.11 and S3.15 follow-up framing (2026-03-16)](task_log.md#wave-6-split-path-shipped-validation-closure-for-s311-and-s315-follow-up-framing-2026-03-16)
   - Formalized the Step 10 provider-drift exception so `S3.11` can be treated as a documented executable-only live-semantics closure without changing runtime behavior.
   - Split `S3.15` out of the default S3 campaign, added a dedicated remap follow-up doc, and updated live-testing/navigation docs so `S3.15` is the only remaining Wave 6 live-family blocker.
+- [Wave 6 strict-gate revert for S3.11 and S3.15 split-path framing (2026-03-16)](task_log.md#wave-6-strict-gate-revert-for-s311-and-s315-split-path-framing-2026-03-16)
+  - Removed the Step 10 provider-drift exception and restored the strict Wave 6 requirement that every family needs both truthful live executable and truthful live downgrade/manual proof before shipped-claim closure.
+  - Restored `S3.15` to the default S3 campaign, deleted the separate remap follow-up framing, and updated Wave 6 docs so `S3.11` remains not fully closed, `S3.15` remains blocked, and Wave 6 remains incomplete.

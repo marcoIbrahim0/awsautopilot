@@ -23323,3 +23323,47 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - `S3.15` still needs a separate product/AWS mapping decision before the final nine-family Wave 6 gate can pass.
 - If AWS later exposes a truthful SSE-KMS-aligned control/finding in the isolated account, the `S3.11` provider-drift exception and the `S3.15` follow-up packet should both be revisited in the next targeted rerun.
+
+## Wave 6 strict-gate revert for S3.11 and S3.15 split-path framing (2026-03-16)
+
+**Task:** Revert the Wave 6 split-path closure on current `master` only, restore the strict no-compromise nine-family completion standard, preserve the earlier runtime fixes from `30382e9a`, and leave the March 15/16 evidence packages untouched.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md` (deleted)
+- `/Users/marcomaher/AWS Security Autopilot/scripts/run_s3_controls_campaign.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_s3_campaign_summary.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Removed the Step 10 provider-drift exception from the implementation plan and restored the strict shipped-claim rule that each migrated family needs:
+  - one truthful live executable validation case
+  - one truthful live blocked or review/manual validation case
+- Reverted the Wave 6 documentation framing so it no longer treats `S3.11` as closed by exception and no longer treats `S3.15` as the only remaining blocker.
+- Restored the truthful March 15/16 status across the Wave 6 docs:
+  - `S3.2` and `S3.5` are closed from truthful live evidence
+  - `S3.11` is executable-ready but not fully closed
+  - `S3.15` remains blocked
+  - Wave 6 remains incomplete under the strict nine-family standard
+- Deleted the split-path-only `S3.15` follow-up framing document instead of preserving a separate exception track.
+- Restored the default S3 campaign to all four controls in `scripts/run_s3_controls_campaign.py`:
+  - `S3.9`
+  - `S3.5`
+  - `S3.11`
+  - `S3.15`
+- Replaced the split-path test expectation with focused assertions that the default campaign still includes `S3.15`.
+- Intentionally preserved the real runtime fixes and evidence from the earlier blocker-closure work:
+  - the `S3.13 -> S3.11` lifecycle alias
+  - the S3.5 create-time support-tier preservation fix
+  - the March 15/16 readiness and rerun evidence packages
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_s3_campaign_summary.py -q`
+- `rg -n "split-path|provider-drift|executable-only under current live semantics|only remaining Wave 6 live-family blocker|S3\\.15 live remap follow-up|opt-in pending a separate remap decision|shipped/live-validated" docs/remediation-profile-resolution/implementation-plan.md docs/remediation-profile-resolution/wave-6-control-family-migration.md docs/remediation-profile-resolution/README.md docs/live-e2e-testing/README.md scripts/run_s3_controls_campaign.py tests/test_s3_campaign_summary.py`
+
+**Open questions / TODOs:**
+- Wave 6 remains blocked under the strict standard until `S3.11` has a truthful downgrade/manual live case and `S3.15` has truthful live family materialization.

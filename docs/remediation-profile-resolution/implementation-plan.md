@@ -678,21 +678,12 @@ Dependencies: Steps 1 through 9 complete for the relevant control families.
 
 ### 10.1 Define the live-validation coverage required before claiming shipped behavior
 
-Specify that each migrated control family needs one of these live-validation proof shapes before product or operator docs describe the behavior as shipped:
+Specify that each migrated control family needs at least:
 
-- Standard proof shape:
-  - one deterministic executable validation case
-  - one truthful blocked or review/manual validation case
-- Provider-drift exception shape:
-  - one deterministic executable validation case
-  - explicit evidence that current live provider semantics do not materialize a truthful failing case for that family
+- one truthful deterministic executable validation case
+- one truthful blocked or review/manual validation case
 
-Lock the provider-drift exception behind these guardrails:
-
-- it is documentation and gate-policy only, not a runtime downgrade relaxation
-- it must cite a dated evidence package plus exact action, run, resource, and control identifiers
-- the family must be described as `executable-only under current live semantics`
-- it must be re-evaluated on the next targeted live rerun or if the live provider control inventory changes
+before product or operator docs describe the behavior as shipped.
 
 ### 10.2 Define which runtime docs can change only after validation
 
@@ -714,7 +705,7 @@ This boundary prevents accidental cleanup before all compatibility consumers are
 
 ### Step 10 Definition of Done
 
-- Shipped docs and product claims describe only validated runtime behavior, including any explicitly documented provider-drift exception.
+- Shipped docs and product claims describe only validated runtime behavior.
 - The legacy-mirror retirement boundary is clearly tracked as follow-on work rather than implied complete.
 
 ## Acceptance Summary

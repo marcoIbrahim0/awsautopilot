@@ -55,12 +55,10 @@ Related docs:
 ## Wave 6 Control-Family Migration
 
 - [Wave 6 control-family migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md)
-- [S3.15 live remap follow-up](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md)
 - Wave 6 is now fully documented as landed-on-`master` behavior across EC2.53, IAM.4, S3.2, S3.5, S3.9, S3.11, S3.15, CloudTrail.1, and Config.1.
 - The Wave 6 summary doc records the exact migration order, preserved public strategy IDs, added internal branches, downgrade rules, tenant-default inputs, runtime/preservation gates, and the artifact-to-mixed-tier bundle flow.
-- Live validation still governs shipped claims, but the current split-path truth is narrower: `S3.11` now counts as a documented provider-drift exception (`executable-only under current live semantics`), while `S3.15` remains the only unresolved live-family blocker.
-- Latest isolated rerun note: [`20260315T213821Z-rem-profile-wave6-readiness-rerun`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) closed the remaining `S3.2` and `S3.5` blockers, confirmed that live lifecycle findings now surface on `S3.13` and materialize as executable `S3.11`, and confirmed that `S3.15` still has no truthful live Security Hub mapping in the isolated account.
-- The `S3.11` exception relies on the March 15 rerun evidence package and does not relax runtime downgrade behavior. The separate [S3.15 live remap follow-up](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md) tracks the remaining product/AWS mapping decision.
+- Wave 6 live family validation remains incomplete under the strict standard. `S3.2` and `S3.5` are closed from the March 15 rerun evidence, but `S3.11` still lacks a truthful downgrade/manual live case and `S3.15` still lacks truthful live family materialization, so Wave 6 is not complete.
+- Latest isolated rerun note: [`20260315T213821Z-rem-profile-wave6-readiness-rerun`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) closed the remaining `S3.2` and `S3.5` blockers, confirmed that live lifecycle findings now surface on `S3.13` and materialize as executable `S3.11` without a truthful downgrade/manual case, and confirmed that `S3.15` still has no truthful live Security Hub mapping in the isolated account.
 - `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority for executability, while legacy mirror fields remain compatibility-only rollout artifacts.
 
 ## Scope and Non-Goals

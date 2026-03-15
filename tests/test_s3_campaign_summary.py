@@ -203,9 +203,9 @@ def test_parse_args_accepts_output_dir_and_reconcile_after_apply_flag() -> None:
 def test_parse_args_defaults_to_shipped_s3_controls() -> None:
     args = parse_args([])
 
-    assert TARGET_CONTROLS == ["S3.9", "S3.5", "S3.11"]
-    assert args.controls == "S3.9,S3.5,S3.11"
-    assert "S3.15" not in args.controls
+    assert TARGET_CONTROLS == ["S3.9", "S3.5", "S3.11", "S3.15"]
+    assert args.controls == "S3.9,S3.5,S3.11,S3.15"
+    assert "S3.15" in args.controls
 
 
 def test_parse_args_allows_explicit_s315_control() -> None:
