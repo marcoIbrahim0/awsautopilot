@@ -1,0 +1,14 @@
+                  id                  |  control_id  |          action_type          |   region   |               resource_id               | resource_type 
+--------------------------------------+--------------+-------------------------------+------------+-----------------------------------------+---------------
+ 4c4f4b3b-90d5-4682-a94a-1cfdc673bdc6 | CloudTrail.1 | cloudtrail_enabled            | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ 36047480-acb6-4372-9750-97692589fc46 | CloudTrail.1 | cloudtrail_enabled            | us-east-1  | AWS::::Account:696505809372             | AwsAccount
+ d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c | Config.1     | aws_config_enabled            | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ 8cff2109-2b8a-4183-b6df-2c1008bf173d | Config.1     | aws_config_enabled            | us-east-1  | AWS::::Account:696505809372             | AwsAccount
+ 207c4d45-bd8e-49ba-b4d5-9f2f860e1696 | IAM.4        | iam_root_access_key_absent    | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ f081ae21-1114-4a0e-8af3-e5a308615d34 | S3.2         | s3_bucket_block_public_access | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ e6ee1990-bf42-4134-a2ed-cfa0d2287577 | S3.5         | s3_bucket_require_ssl         | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ dc64daaa-a4d4-4352-be62-edfaee3e459a | S3.5         | s3_bucket_require_ssl         | eu-north-1 | arn:aws:s3:::config-bucket-696505809372 | AwsS3Bucket
+ d7f868c5-9a64-4aca-bff0-aabb06b3c104 | S3.9         | s3_bucket_access_logging      | eu-north-1 | AWS::::Account:696505809372             | AwsAccount
+ bee5888e-8c14-43f2-87f6-77b9fcd8c4aa | S3.9         | s3_bucket_access_logging      | eu-north-1 | arn:aws:s3:::config-bucket-696505809372 | AwsS3Bucket
+(10 rows)
+

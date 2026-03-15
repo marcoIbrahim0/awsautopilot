@@ -1,0 +1,115 @@
+{
+  "account_id": "696505809372",
+  "role_arn": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole",
+  "regions": {
+    "eu-north-1": {
+      "EC2.53": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "IAM.4": {
+        "count": 2,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.2": {
+        "count": 2,
+        "sample_resource_ids": [
+          "arn:aws:s3:::config-bucket-696505809372",
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.5": {
+        "count": 2,
+        "sample_resource_ids": [
+          "arn:aws:s3:::config-bucket-696505809372",
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.11": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "S3.9": {
+        "count": 2,
+        "sample_resource_ids": [
+          "arn:aws:s3:::config-bucket-696505809372",
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.15": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "CloudTrail.1": {
+        "count": 2,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "Config.1": {
+        "count": 1,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      }
+    },
+    "us-east-1": {
+      "EC2.53": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "IAM.4": {
+        "count": 3,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372",
+          "arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2BASELINE",
+          "arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2HEADROOM"
+        ]
+      },
+      "S3.2": {
+        "count": 1,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.5": {
+        "count": 1,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.11": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "S3.9": {
+        "count": 1,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "S3.15": {
+        "count": 0,
+        "sample_resource_ids": []
+      },
+      "CloudTrail.1": {
+        "count": 1,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372"
+        ]
+      },
+      "Config.1": {
+        "count": 5,
+        "sample_resource_ids": [
+          "AWS::::Account:696505809372",
+          "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-no-ti",
+          "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-lowconf",
+          "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev",
+          "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-aged-kev"
+        ]
+      }
+    }
+  }
+}

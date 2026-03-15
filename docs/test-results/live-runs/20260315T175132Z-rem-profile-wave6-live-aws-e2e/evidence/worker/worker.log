@@ -1,0 +1,219 @@
+2026-03-15 19:52:49 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-15 19:52:49 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-15 19:52:49 | INFO     | worker | Starting worker pool=all queue=events url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-events-fastlane region=eu-north-1
+2026-03-15 19:52:49 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-15 19:52:49 | INFO     | worker | Starting worker pool=all queue=inventory url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-inventory-reconcile region=eu-north-1
+2026-03-15 19:52:49 | INFO     | worker | Starting worker pool=all queue=export url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-export-report region=eu-north-1
+2026-03-15 19:52:49 | INFO     | worker | Starting worker pool=all queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-ingest region=eu-north-1
+2026-03-15 19:52:49 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10
+2026-03-15 19:53:50 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:53:50 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:53:50 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:53:50 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:54:50 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:54:50 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:54:50 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:54:50 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:55:51 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:55:51 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:55:51 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:55:51 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:56:51 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:56:51 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:56:51 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:56:51 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:57:25 | INFO     | worker | [275135e7-b2de-4ccc-8736-06fbeca7b2a2] Processing queue=legacy receive_count=1 job_type=ingest_findings schema_version=1 tenant=a2805c66-3117-430d-9ab5-699835441dda account=696505809372 region=eu-north-1
+2026-03-15 19:57:25 | INFO     | worker.jobs.ingest_findings | Assuming role for account_id=696505809372 region=eu-north-1
+2026-03-15 19:57:25 | INFO     | backend.services.aws | Assuming role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole with session name wave6-live-session
+2026-03-15 19:57:26 | INFO     | worker | [458db39d-e083-4f40-b8bf-e9320e23afb7] Processing queue=legacy receive_count=1 job_type=ingest_findings schema_version=1 tenant=a2805c66-3117-430d-9ab5-699835441dda account=696505809372 region=us-east-1
+2026-03-15 19:57:26 | INFO     | worker.jobs.ingest_findings | Assuming role for account_id=696505809372 region=us-east-1
+2026-03-15 19:57:26 | INFO     | backend.services.aws | Assuming role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole with session name wave6-live-session
+2026-03-15 19:57:26 | INFO     | backend.services.aws | Successfully assumed role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole
+2026-03-15 19:57:26 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=first
+2026-03-15 19:57:26 | INFO     | backend.services.aws | Successfully assumed role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole
+2026-03-15 19:57:26 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=first
+2026-03-15 19:57:28 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:28 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:29 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:30 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:30 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:31 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:32 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:32 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:34 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:34 | INFO     | backend.workers.services.security_hub | Fetched all findings account_id=696505809372 region=us-east-1 total=371 pages=4
+2026-03-15 19:57:34 | INFO     | backend.workers.services.security_hub | Fetched all findings account_id=696505809372 region=eu-north-1 total=639 pages=7
+2026-03-15 19:57:36 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=first
+2026-03-15 19:57:36 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=first
+2026-03-15 19:57:37 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:37 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:39 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:40 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:40 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:41 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=us-east-1 page=next
+2026-03-15 19:57:42 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:43 | INFO     | backend.workers.services.security_hub | Fetched all findings account_id=696505809372 region=us-east-1 total=371 pages=4
+2026-03-15 19:57:43 | INFO     | worker.jobs.ingest_findings | Upserting 371 findings into database tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=us-east-1
+2026-03-15 19:57:43 | INFO     | worker.jobs.ingest_findings | Upsert progress: 50/371 (new=50 updated=0 out_of_scope=47 errors=0)
+2026-03-15 19:57:43 | INFO     | worker.jobs.ingest_findings | Upsert progress: 100/371 (new=100 updated=0 out_of_scope=97 errors=0)
+2026-03-15 19:57:44 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Upsert progress: 150/371 (new=150 updated=0 out_of_scope=147 errors=0)
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Upsert progress: 200/371 (new=200 updated=0 out_of_scope=197 errors=0)
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Upsert progress: 250/371 (new=250 updated=0 out_of_scope=242 errors=0)
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Upsert progress: 300/371 (new=300 updated=0 out_of_scope=292 errors=0)
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Upsert progress: 350/371 (new=350 updated=0 out_of_scope=337 errors=0)
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | ingest_findings complete tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=us-east-1 processed=371 new=371 updated=0 errors=0
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | ingest_findings included out-of-scope controls tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=us-east-1 out_of_scope=349
+2026-03-15 19:57:44 | INFO     | worker.jobs.ingest_findings | Enqueued compute_actions for tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=us-east-1
+2026-03-15 19:57:44 | INFO     | worker | [0a115bb3-ec3e-48da-8931-a00222451f91] Processing queue=legacy receive_count=1 job_type=compute_actions schema_version=1 tenant=a2805c66-3117-430d-9ab5-699835441dda account=696505809372 region=us-east-1
+2026-03-15 19:57:45 | INFO     | backend.services.action_engine | compute_actions_for_tenant tenant_id=a2805c66-3117-430d-9ab5-699835441dda scope=(account=696505809372 region=us-east-1) groups=7 created=7 updated=0 resolved=0 reopened_with_open_findings=0 links=7 removed_links=0 toxic_combination_matches=1 graph_nodes_created=22 graph_edges_created=47 graph_nodes_deleted=0 graph_edges_deleted=0
+2026-03-15 19:57:45 | INFO     | worker.jobs.compute_actions | compute_actions complete tenant_id=a2805c66-3117-430d-9ab5-699835441dda scope=(account=696505809372 region=us-east-1) created=7 updated=0 resolved=0 links=7
+2026-03-15 19:57:45 | INFO     | worker | [458db39d-e083-4f40-b8bf-e9320e23afb7] Job completed and message deleted.
+2026-03-15 19:57:45 | INFO     | backend.workers.services.security_hub | Fetching Security Hub findings account_id=696505809372 region=eu-north-1 page=next
+2026-03-15 19:57:45 | INFO     | worker | [0a115bb3-ec3e-48da-8931-a00222451f91] Job completed and message deleted.
+2026-03-15 19:57:46 | INFO     | backend.workers.services.security_hub | Fetched all findings account_id=696505809372 region=eu-north-1 total=639 pages=7
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upserting 639 findings into database tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 50/639 (new=50 updated=0 out_of_scope=49 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 100/639 (new=100 updated=0 out_of_scope=99 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 150/639 (new=150 updated=0 out_of_scope=149 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 200/639 (new=200 updated=0 out_of_scope=199 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 250/639 (new=250 updated=0 out_of_scope=248 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 300/639 (new=300 updated=0 out_of_scope=291 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 350/639 (new=350 updated=0 out_of_scope=335 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 400/639 (new=400 updated=0 out_of_scope=385 errors=0)
+2026-03-15 19:57:46 | INFO     | worker.jobs.ingest_findings | Upsert progress: 450/639 (new=450 updated=0 out_of_scope=435 errors=0)
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | Upsert progress: 500/639 (new=500 updated=0 out_of_scope=485 errors=0)
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | Upsert progress: 550/639 (new=550 updated=0 out_of_scope=535 errors=0)
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | Upsert progress: 600/639 (new=600 updated=0 out_of_scope=583 errors=0)
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | ingest_findings complete tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1 processed=639 new=639 updated=0 errors=0
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | ingest_findings included out-of-scope controls tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1 out_of_scope=610
+2026-03-15 19:57:47 | INFO     | worker.jobs.ingest_findings | Enqueued compute_actions for tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1
+2026-03-15 19:57:48 | INFO     | worker | [ef8a35ee-6c2b-4f16-aee6-6c6065f530da] Processing queue=legacy receive_count=1 job_type=compute_actions schema_version=1 tenant=a2805c66-3117-430d-9ab5-699835441dda account=696505809372 region=eu-north-1
+2026-03-15 19:57:48 | INFO     | backend.services.aws | Assuming role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole with session name wave6-live-session
+2026-03-15 19:57:48 | INFO     | worker | [275135e7-b2de-4ccc-8736-06fbeca7b2a2] Job completed and message deleted.
+2026-03-15 19:57:48 | INFO     | backend.services.aws | Successfully assumed role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole
+2026-03-15 19:57:52 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:57:52 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:57:52 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:58:05 | WARNING  | backend.services.action_engine | Skipping account-scoped SG finding expansion tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/5940965d-8b9e-4e56-ac17-d8a5d1b0790d control_id=EC2.18 reason=config_rule_not_found config_rule=None
+2026-03-15 19:58:08 | INFO     | worker | Queue metrics queue=legacy polls=6 empty_polls=2 empty_poll_rate=0.33 messages_received=4 messages_processed=3 in_flight=1 avg_processing_ms=14050.95 receive_errors=0
+2026-03-15 19:58:16 | WARNING  | backend.services.action_engine | Skipping account-scoped SG finding expansion tenant_id=a2805c66-3117-430d-9ab5-699835441dda account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/f96f654f-2571-4c38-8db7-b36968bbb676 control_id=EC2.19 reason=config_rule_not_found config_rule=None
+2026-03-15 19:58:16 | INFO     | backend.services.action_engine | compute_actions_for_tenant tenant_id=a2805c66-3117-430d-9ab5-699835441dda scope=(account=696505809372 region=eu-north-1) groups=14 created=14 updated=0 resolved=0 reopened_with_open_findings=0 links=21 removed_links=0 toxic_combination_matches=2 graph_nodes_created=45 graph_edges_created=127 graph_nodes_deleted=0 graph_edges_deleted=0
+2026-03-15 19:58:17 | INFO     | worker.jobs.compute_actions | compute_actions complete tenant_id=a2805c66-3117-430d-9ab5-699835441dda scope=(account=696505809372 region=eu-north-1) created=14 updated=0 resolved=0 links=21
+2026-03-15 19:58:17 | INFO     | worker | [ef8a35ee-6c2b-4f16-aee6-6c6065f530da] Job completed and message deleted.
+2026-03-15 19:58:52 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:58:52 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:58:52 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:59:08 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=1 in_flight=0 avg_processing_ms=29089.69 receive_errors=0
+2026-03-15 19:59:52 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:59:52 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 19:59:52 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:00:09 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:00:53 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:00:53 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:00:53 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:01:10 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:01:53 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:01:53 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:01:53 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:02:10 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:02:54 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:02:54 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:02:54 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:03:12 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:03:54 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:03:54 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:03:54 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:04:12 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:04:54 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:04:55 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:04:55 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:05:13 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:05:55 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:05:55 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:05:55 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:06:05 | INFO     | worker | [ecb9f811-395a-4886-bac2-1d411c360181] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:06:05 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=cb6a9e54-3660-4bc5-9a63-452fa7934362 action_id=4c4f4b3b-90d5-4682-a94a-1cfdc673bdc6 status=success
+2026-03-15 20:06:05 | INFO     | worker | [c3389806-fe62-4b96-8cd1-d56516ea2919] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:06:05 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=dfd14fde-5744-4b05-81af-7248c6a5d466 action_id=dc64daaa-a4d4-4352-be62-edfaee3e459a status=success
+2026-03-15 20:06:05 | INFO     | worker | [ecb9f811-395a-4886-bac2-1d411c360181] Job completed and message deleted.
+2026-03-15 20:06:06 | INFO     | worker | [c3389806-fe62-4b96-8cd1-d56516ea2919] Job completed and message deleted.
+2026-03-15 20:06:06 | INFO     | worker | [a39e2846-f279-40d6-a49a-960c9c3fbcf2] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:06:06 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=49103000-1104-4a36-8757-8e243e883dc5 action_id=d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c status=success
+2026-03-15 20:06:06 | INFO     | worker | [a39e2846-f279-40d6-a49a-960c9c3fbcf2] Job completed and message deleted.
+2026-03-15 20:06:06 | INFO     | worker | [01926fb6-ac7c-45ca-bd57-0575b0cd132f] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:06:06 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=cd5a4eb4-4ecb-4aa5-9367-6876a8c7c834 action_id=f081ae21-1114-4a0e-8af3-e5a308615d34 status=success
+2026-03-15 20:06:06 | INFO     | worker | [01926fb6-ac7c-45ca-bd57-0575b0cd132f] Job completed and message deleted.
+2026-03-15 20:06:26 | INFO     | worker | Queue metrics queue=legacy polls=7 empty_polls=3 empty_poll_rate=0.43 messages_received=4 messages_processed=4 in_flight=0 avg_processing_ms=402.22 receive_errors=0
+2026-03-15 20:06:54 | INFO     | worker | [8e04e4fd-0385-4c4f-b297-ce5ddd4a868d] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:06:54 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=e1a04e3f-d39e-47d5-b6ab-1539af58a2f5 action_id=d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c status=success
+2026-03-15 20:06:54 | INFO     | worker | [8e04e4fd-0385-4c4f-b297-ce5ddd4a868d] Job completed and message deleted.
+2026-03-15 20:06:56 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:06:56 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:06:56 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:07:34 | INFO     | worker | Queue metrics queue=legacy polls=4 empty_polls=3 empty_poll_rate=0.75 messages_received=1 messages_processed=1 in_flight=0 avg_processing_ms=178.18 receive_errors=0
+2026-03-15 20:07:57 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:07:57 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:07:57 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:07:58 | INFO     | worker | [501b4b4d-3b8b-4ee0-a04c-21502bf5a86a] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=a2805c66-3117-430d-9ab5-699835441dda account=None region=None
+2026-03-15 20:07:58 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=837fccdc-a51e-4b1f-a8d0-ed7cc6eea3a3 action_id=bee5888e-8c14-43f2-87f6-77b9fcd8c4aa status=success
+2026-03-15 20:07:58 | INFO     | worker | [501b4b4d-3b8b-4ee0-a04c-21502bf5a86a] Job completed and message deleted.
+2026-03-15 20:08:38 | INFO     | worker | Queue metrics queue=legacy polls=4 empty_polls=3 empty_poll_rate=0.75 messages_received=1 messages_processed=1 in_flight=0 avg_processing_ms=199.41 receive_errors=0
+2026-03-15 20:08:57 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:08:57 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:08:57 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:09:39 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:09:58 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:09:58 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:09:58 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:10:39 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:10:59 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:10:59 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:10:59 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:11:40 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:11:59 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:11:59 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:11:59 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:12:40 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:13:00 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:13:00 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:13:00 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:13:41 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:14:00 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:14:00 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:14:00 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:14:41 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:15:01 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:15:01 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:15:01 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:15:42 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:16:01 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:16:01 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:16:01 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:16:42 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:17:02 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:17:02 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:17:02 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:17:43 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:18:03 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:18:03 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:18:03 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:18:44 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:19:04 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:19:04 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:19:04 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:19:44 | INFO     | worker | Queue metrics queue=legacy polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:19:58 | INFO     | worker | Received signal 2. Finishing current message, then shutting down...
+2026-03-15 20:20:05 | INFO     | worker | Queue metrics queue=inventory polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:20:05 | INFO     | worker | Queue poller exited queue=inventory
+2026-03-15 20:20:05 | INFO     | worker | Queue metrics queue=events polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:20:05 | INFO     | worker | Queue metrics queue=export polls=3 empty_polls=3 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:20:05 | INFO     | worker | Queue poller exited queue=events
+2026-03-15 20:20:05 | INFO     | worker | Queue metrics queue=legacy polls=1 empty_polls=1 empty_poll_rate=1.00 messages_received=0 messages_processed=0 in_flight=0 avg_processing_ms=0.00 receive_errors=0
+2026-03-15 20:20:05 | INFO     | worker | Queue poller exited queue=export
+2026-03-15 20:20:05 | INFO     | worker | Queue poller joined queue=events
+2026-03-15 20:20:05 | INFO     | worker | Queue poller exited queue=legacy
+2026-03-15 20:20:05 | INFO     | worker | Queue poller joined queue=inventory
+2026-03-15 20:20:05 | INFO     | worker | Queue poller joined queue=export
+2026-03-15 20:20:05 | INFO     | worker | Queue poller joined queue=legacy
+2026-03-15 20:20:05 | INFO     | worker | Worker shut down gracefully.

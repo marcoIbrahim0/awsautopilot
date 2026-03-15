@@ -1,0 +1,15 @@
+2026-03-15 19:52:24.374 EET [22462] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 19:52:24.377 EET [22462] LOG:  listening on IPv6 address "::1", port 55436
+2026-03-15 19:52:24.377 EET [22462] LOG:  listening on IPv4 address "127.0.0.1", port 55436
+2026-03-15 19:52:24.377 EET [22462] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55436"
+2026-03-15 19:52:24.379 EET [22464] LOG:  database system was shut down at 2026-03-15 19:52:24 EET
+2026-03-15 19:52:24.381 EET [22462] LOG:  database system is ready to accept connections
+2026-03-15 19:57:40.168 EET [25404] ERROR:  column "compliance_status" does not exist at character 28
+2026-03-15 19:57:40.168 EET [25404] STATEMENT:  select account_id, source, compliance_status, count(*) from findings group by 1,2,3 order by 1,2,3;
+2026-03-15 20:03:09.363 EET [31717] ERROR:  column "status" does not exist at character 45
+2026-03-15 20:03:09.363 EET [31717] STATEMENT:  select id, action_type, account_id, region, status, group_key from action_groups where tenant_id='a2805c66-3117-430d-9ab5-699835441dda' order by action_type, region;
+2026-03-15 20:20:17.330 EET [22462] LOG:  received fast shutdown request
+2026-03-15 20:20:17.330 EET [22462] LOG:  aborting any active transactions
+2026-03-15 20:20:17.334 EET [22462] LOG:  background worker "logical replication launcher" (PID 22473) exited with exit code 1
+2026-03-15 20:20:17.337 EET [22467] LOG:  shutting down
+2026-03-15 20:20:17.347 EET [22462] LOG:  database system is shut down

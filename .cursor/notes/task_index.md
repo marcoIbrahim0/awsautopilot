@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 live AWS validation gate on master (2026-03-15)](task_log.md#remediation-profile-wave-6-live-aws-validation-gate-on-master-2026-03-15)
+  - Executed the full Wave 6 live-AWS validation gate on isolated local `master`, captured the complete evidence package under `docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/`, and cleaned the isolated runtime plus temporary SaaS-account queues afterward.
+  - Final gate decision was `stop for fixes`: no migrated family met both required proofs, IAM.4 authoritative root-key execution was disabled, EC2.53/S3.11/S3.15 had no fresh live scenarios, Config.1 lacked manual apply/rollback credentials, and S3.9 grouped create returned a blocking `500`.
 - [Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-control-family-migration-documentation-and-task-history-integration-on-master-2026-03-15)
   - Added the dedicated Wave 6 summary doc for the landed control-family migration order, preserved compatibility strategy IDs, internal family branches, downgrade rules, tenant-default inputs, runtime/preservation gates, canonical artifact authority, and mixed-tier grouped bundle outcomes.
   - Updated remediation-profile navigation and task history while preserving the post-Wave-6 boundary that live family-level validation is still required before shipped-product claims are updated.

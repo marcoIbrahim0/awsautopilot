@@ -1,0 +1,11 @@
+{
+  "cloudtrail": {
+    "default_bucket_name": "config-bucket-696505809372"
+  },
+  "config": {
+    "default_bucket_name": "config-bucket-696505809372"
+  },
+  "s3_access_logs": {
+    "default_target_bucket_name": "config-bucket-696505809372"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "strategy_id": "s3_enable_access_logging_guided",
+  "action_overrides": [
+    {
+      "action_id": "d7f868c5-9a64-4aca-bff0-aabb06b3c104",
+      "profile_id": "s3_enable_access_logging_review_destination_safety"
+    },
+    {
+      "action_id": "bee5888e-8c14-43f2-87f6-77b9fcd8c4aa",
+      "profile_id": "s3_enable_access_logging_review_destination_safety"
+    }
+  ]
+}

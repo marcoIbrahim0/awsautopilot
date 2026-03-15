@@ -1,0 +1,1 @@
+{"detail":{"error":"SaaS bundle execution archived","reason":"saas_bundle_execution_archived","detail":"PR bundles remain supported. Download the bundle, review the generated artifacts, and run it with your own credentials or pipeline outside the SaaS. Optional grouped reporting callbacks remain supported for customer-run bundles."}}

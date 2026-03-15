@@ -1,0 +1,12 @@
+{
+  "postgres_dir": "/tmp/rpw6-pg-20260315T175132Z",
+  "postgres_port": 55436,
+  "database": "security_autopilot_rpw6",
+  "api_port": 18012,
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-ingest",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-contract-quarantine",
+  "events_fast_lane_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-events-fastlane",
+  "inventory_reconcile_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-inventory-reconcile",
+  "export_report_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-export-report",
+  "aws_region": "eu-north-1"
+}

@@ -1,0 +1,9 @@
+{
+    "QueueUrls": [
+        "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-contract-quarantine",
+        "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-events-fastlane",
+        "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-export-report",
+        "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-ingest",
+        "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-20260315t175132z-inventory-reconcile"
+    ]
+}

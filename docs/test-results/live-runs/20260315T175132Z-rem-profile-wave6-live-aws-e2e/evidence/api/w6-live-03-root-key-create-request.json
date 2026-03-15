@@ -1,0 +1,9 @@
+{
+  "action_id": "207c4d45-bd8e-49ba-b4d5-9f2f860e1696",
+  "strategy_id": "iam_root_key_disable",
+  "mode": "manual",
+  "actor_metadata": {
+    "wave": "wave-6",
+    "test_id": "W6-LIVE-03"
+  }
+}

@@ -1,0 +1,255 @@
+INFO:     Started server process [22542]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18012 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58122 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58124 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58123 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58128 - "POST /api/auth/signup HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:58129 - "POST /api/auth/signup HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:58130 - "POST /api/auth/signup HTTP/1.1" 202 Accepted
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22542]
+INFO:     Started server process [22772]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18012 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58137 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58138 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58154 - "POST /api/aws/accounts HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58155 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58159 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58320 - "GET /api/actions/4c4f4b3b-90d5-4682-a94a-1cfdc673bdc6/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /api/actions/36047480-acb6-4372-9750-97692589fc46/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58327 - "GET /api/actions/d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58337 - "GET /api/actions/8cff2109-2b8a-4183-b6df-2c1008bf173d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58359 - "GET /api/actions/207c4d45-bd8e-49ba-b4d5-9f2f860e1696/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58363 - "GET /api/actions/f081ae21-1114-4a0e-8af3-e5a308615d34/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58369 - "GET /api/actions/e6ee1990-bf42-4134-a2ed-cfa0d2287577/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /api/actions/dc64daaa-a4d4-4352-be62-edfaee3e459a/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58394 - "GET /api/actions/d7f868c5-9a64-4aca-bff0-aabb06b3c104/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58409 - "GET /api/actions/bee5888e-8c14-43f2-87f6-77b9fcd8c4aa/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58495 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58533 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58535 - "GET /api/actions/4c4f4b3b-90d5-4682-a94a-1cfdc673bdc6/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58539 - "GET /api/actions/36047480-acb6-4372-9750-97692589fc46/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58544 - "GET /api/actions/d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58585 - "GET /api/actions/8cff2109-2b8a-4183-b6df-2c1008bf173d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58595 - "GET /api/actions/d7f868c5-9a64-4aca-bff0-aabb06b3c104/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58598 - "GET /api/actions/bee5888e-8c14-43f2-87f6-77b9fcd8c4aa/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58782 - "GET /api/actions/207c4d45-bd8e-49ba-b4d5-9f2f860e1696/remediation-preview?mode=pr_only&strategy_id=iam_root_key_disable&profile_id=iam_root_key_disable HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58783 - "GET /api/actions/f081ae21-1114-4a0e-8af3-e5a308615d34/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard&profile_id=s3_bucket_block_public_access_manual_preservation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58785 - "GET /api/actions/dc64daaa-a4d4-4352-be62-edfaee3e459a/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny&profile_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58788 - "GET /api/actions/bee5888e-8c14-43f2-87f6-77b9fcd8c4aa/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided&profile_id=s3_enable_access_logging_review_destination_safety HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58789 - "GET /api/actions/4c4f4b3b-90d5-4682-a94a-1cfdc673bdc6/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided&profile_id=cloudtrail_enable_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58795 - "GET /api/actions/d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c/remediation-preview?mode=pr_only&strategy_id=config_enable_account_local_delivery&profile_id=config_enable_account_local_delivery HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58800 - "GET /api/actions/d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery&profile_id=config_enable_centralized_delivery HTTP/1.1" 200 OK
+remediation_validation_failure {"action_type": "cloudtrail_enabled", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "cloudtrail_enable_guided", "value": 1}
+INFO:     127.0.0.1:58846 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+remediation_validation_failure {"action_type": "s3_bucket_block_public_access", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "s3_bucket_block_public_access_standard", "value": 1}
+remediation_validation_failure {"action_type": "aws_config_enabled", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "config_enable_centralized_delivery", "value": 1}
+INFO:     127.0.0.1:58847 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58848 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+remediation_validation_failure {"action_type": "aws_config_enabled", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "config_enable_account_local_delivery", "value": 1}
+INFO:     127.0.0.1:58849 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58876 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58873 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58874 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58875 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58906 - "POST /api/root-key-remediation-runs HTTP/1.1" 404 Not Found
+remediation_validation_failure {"action_type": "iam_root_access_key_absent", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "root_key_execution_authority", "strategy_id": "iam_root_key_disable", "value": 1}
+INFO:     127.0.0.1:58908 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58905 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58907 - "POST /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/bundle-run HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58947 - "POST /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/bundle-run HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/main.py", line 86, in explicit_cors_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py", line 640, in create_action_group_bundle_run
+    plan = _build_action_group_plan_or_400(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py", line 352, in _build_action_group_plan_or_400
+    return build_grouped_run_persistence_plan(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 159, in build_grouped_run_persistence_plan
+    override_map = _resolve_override_map(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 352, in _resolve_override_map
+    override_map[action_id] = _resolve_selection(
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 437, in _resolve_selection
+    normalized_inputs = validate_strategy_inputs(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py", line 1818, in validate_strategy_inputs
+    raise ValueError(f"strategy_inputs.{key} is required.")
+ValueError: strategy_inputs.log_bucket_name is required.
+INFO:     127.0.0.1:58962 - "POST /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/bundle-run HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/main.py", line 86, in explicit_cors_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py", line 640, in create_action_group_bundle_run
+    plan = _build_action_group_plan_or_400(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py", line 352, in _build_action_group_plan_or_400
+    return build_grouped_run_persistence_plan(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 159, in build_grouped_run_persistence_plan
+    override_map = _resolve_override_map(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 352, in _resolve_override_map
+    override_map[action_id] = _resolve_selection(
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py", line 437, in _resolve_selection
+    normalized_inputs = validate_strategy_inputs(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py", line 1818, in validate_strategy_inputs
+    raise ValueError(f"strategy_inputs.{key} is required.")
+ValueError: strategy_inputs.log_bucket_name is required.
+INFO:     127.0.0.1:58973 - "POST /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58987 - "GET /api/remediation-runs/cb6a9e54-3660-4bc5-9a63-452fa7934362 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58990 - "GET /api/remediation-runs/cd5a4eb4-4ecb-4aa5-9367-6876a8c7c834 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58989 - "GET /api/remediation-runs/e1a04e3f-d39e-47d5-b6ab-1539af58a2f5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58988 - "GET /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58991 - "GET /api/remediation-runs/dfd14fde-5744-4b05-81af-7248c6a5d466 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59029 - "GET /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59026 - "GET /api/remediation-runs/cb6a9e54-3660-4bc5-9a63-452fa7934362/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59025 - "GET /api/remediation-runs/dfd14fde-5744-4b05-81af-7248c6a5d466/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59027 - "GET /api/remediation-runs/e1a04e3f-d39e-47d5-b6ab-1539af58a2f5/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59028 - "GET /api/remediation-runs/cd5a4eb4-4ecb-4aa5-9367-6876a8c7c834/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59034 - "GET /api/remediation-runs/837fccdc-a51e-4b1f-a8d0-ed7cc6eea3a3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59036 - "GET /api/remediation-runs/837fccdc-a51e-4b1f-a8d0-ed7cc6eea3a3/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59035 - "GET /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59063 - "POST /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5/execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:59065 - "POST /api/remediation-runs/bulk-approve-apply HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:59062 - "POST /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5/approve-apply HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:59064 - "POST /api/remediation-runs/bulk-execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:59061 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59069 - "GET /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59071 - "POST /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5/execute-pr-bundle HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59070 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59076 - "POST /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5/execute-pr-bundle HTTP/1.1" 410 Gone
+INFO:     127.0.0.1:59078 - "GET /api/remediation-runs/49103000-1104-4a36-8757-8e243e883dc5 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59075 - "GET /api/actions/d0daa0c3-4a22-4dfc-9db2-aef91ab9c27c/remediation-options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59077 - "GET /api/action-groups/a02f5fa8-4b27-4e2d-8c4b-70621ea557a3/runs HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22772]

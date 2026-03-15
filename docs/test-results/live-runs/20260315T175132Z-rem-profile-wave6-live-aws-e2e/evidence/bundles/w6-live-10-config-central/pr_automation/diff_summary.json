@@ -1,0 +1,38 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 3,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 476,
+      "change_type": "create_or_update",
+      "content_sha256": "f7dc1ebcd327b31adcad599447eaf386679db3c141c8feef9f13906d2df29ab9",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "aws_config_enabled.tf",
+      "byte_count": 9305,
+      "change_type": "create_or_update",
+      "content_sha256": "eb775bf78ba5c259092953b37d5b9ade92d4e97497494676fb046f1dec476f30",
+      "line_count": 206,
+      "repo_path": "aws_config_enabled.tf"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 1974,
+      "change_type": "create_or_update",
+      "content_sha256": "fe03bfc500aeceba4a958cdce6348ed033552b24ba297887ed6fb4e7b244e32b",
+      "line_count": 41,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "55dc66f0f4bdcb28a4566ca9ab79dd5c4b444dce792396b4f86c316534d5ca3f",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:f7dc1ebcd327)",
+    "`aws_config_enabled.tf` <- `aws_config_enabled.tf` (206 lines, sha256:eb775bf78ba5)",
+    "`README.txt` <- `README.txt` (41 lines, sha256:fe03bfc500ae)"
+  ],
+  "version": 1
+}

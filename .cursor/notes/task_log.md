@@ -1,5 +1,57 @@
 # Task Log
 
+## Remediation-profile Wave 6 live AWS validation gate on master (2026-03-15)
+
+**Task:** Execute the remediation-profile Wave 6 live-AWS validation gate on current `master` only, under the post-Wave-5 archived-SaaS product model, using an isolated local runtime plus isolated/approved AWS accounts and disposable runtime resources.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/notes/final-summary.md** - added the Wave 6 gate summary with environment proof, outcome counts, highest-severity findings, family-by-family status, exact downgrade cases, cleanup status, and gate decision.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/notes/aws-cleanup-summary.md** - recorded AWS accounts/regions, resources touched, cleanup commands, retained-resource status, and final cleanup evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/tests/w6-live-01.md** through **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/tests/w6-live-11.md** - captured the per-test live validation results for the full Wave 6 matrix.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/evidence/api/** - saved raw request/response payloads for signup, account registration, ingest, remediation settings, per-family options/preview/create flows, grouped-run proof, archived-route probes, and auth-boundary checks.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/evidence/aws/** - saved caller-identity proof, live family counts, queue cleanup evidence, and Postgres shutdown output.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/evidence/bundles/** - saved downloaded bundle zips and extracted bundle contents used for grouped and single-run artifact inspection.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - added the Wave 6 live-AWS run to the recent targeted runs index.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 live validation task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability for this live validation run.
+
+**What was done:**
+- Verified that `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md` exists on `master` before starting the gate.
+- Built an isolated local runtime on `master` (`HEAD=d7ac0cc648dea696fb384e98d77245e66fff94e5`) with disposable Postgres and temporary SaaS-account SQS queues, then signed up an isolated tenant and aligned its external ID for the approved test account.
+- Registered isolated AWS account `696505809372` with read-only import role `arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole`, triggered fresh ingest, and captured caller identity plus per-family finding/action inventory.
+- Executed the Wave 6 API matrix across options, preview, create, grouped create, bundle download, run detail, archived-route probes, and auth-boundary probes under the customer-run PR-bundle model only.
+- Downloaded and inspected generated bundles, including grouped `bundle_manifest.json`, `decision_log.md`, `finding_coverage.json`, `README_GROUP.txt`, and `run_all.sh` where the runtime actually emitted them.
+- Recorded the observed gate result: no migrated family met the full live executable plus downgrade proof bar; `S3.9` exposed a blocking grouped-create `500`; `IAM.4` stayed blocked by the disabled authoritative root-key route; `EC2.53`, `S3.11`, and `S3.15` had no fresh live cases; `Config.1` stayed blocked at manual apply/rollback because the isolated account was connected read-only.
+- Cleaned the isolated runtime after evidence capture by stopping the backend, worker, and disposable Postgres, deleting the five temporary SaaS-account queues, and probing those queue URLs until AWS returned `NonExistentQueue`.
+
+**AWS resources touched:**
+- SaaS queue/runtime account `029037611564` in `eu-north-1`
+  - temporary SQS queues `security-autopilot-rpw6-20260315t175132z-ingest`, `security-autopilot-rpw6-20260315t175132z-contract-quarantine`, `security-autopilot-rpw6-20260315t175132z-events-fastlane`, `security-autopilot-rpw6-20260315t175132z-inventory-reconcile`, and `security-autopilot-rpw6-20260315t175132z-export-report`
+- Isolated AWS test account `696505809372` in `eu-north-1` and `us-east-1`
+  - assumed read-only import role `arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole`
+  - read live findings/actions and inspected S3, CloudTrail, Config, IAM root-key, and account-level remediation metadata
+  - no target-account write-role was connected and no target-account AWS mutation was performed
+
+**Rollback / cleanup status:**
+- Target-account AWS rollback status: no rollback required because no executable bundle was manually applied and no target-account AWS state was changed.
+- Local backend status: stopped.
+- Local worker status: stopped.
+- Disposable Postgres status: stopped.
+- Temporary SaaS-account SQS queues: deleted and verified as non-existent.
+- Intentionally retained AWS resources: none.
+
+**Validation:**
+- Confirmed the run package contains all `W6-LIVE-01` through `W6-LIVE-11` test files plus `notes/final-summary.md` and `notes/aws-cleanup-summary.md`.
+- Confirmed `.cursor/notes/task_log.md`, `.cursor/notes/task_index.md`, and `docs/live-e2e-testing/README.md` were updated for discoverability.
+- Confirmed AWS evidence exists for the executable-attempt surfaces that reached bundle generation and for cleanup verification; no AWS apply/rollback evidence exists because no executable bundle was manually run against the isolated account.
+
+**Open questions / TODOs:**
+- Provide a safe isolated IAM.4 root-key scenario and enable `/api/root-key-remediation-runs` in the isolated runtime before re-running the family gate.
+- Produce fresh live EC2.53, S3.11, and S3.15 findings/actions in the isolated test account so both executable and downgrade branches can be exercised.
+- Supply operator-owned/test-account write credentials or connect an approved isolated `WriteRole` so executable customer-run bundles can be manually applied and rolled back on AWS.
+- Fix grouped S3.9 create so missing per-action `strategy_inputs.log_bucket_name` fails closed with `4xx` validation instead of `500`.
+- Decide whether the single-run PR-bundle documentation/test expectations should be updated to match the observed current-master artifact shape, since only grouped bundles emitted the grouped manifest files.
+
 ## Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)
 
 **Task:** Document the completed remediation-profile Wave 6 control-family migration work on current `master` only, based on the landed Prompt 1 through Prompt 5 code, and integrate that summary into the remediation-profile docs navigation plus task history.

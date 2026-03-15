@@ -1,0 +1,7 @@
+{
+  "action_id": "dc64daaa-a4d4-4352-be62-edfaee3e459a",
+  "mode": "pr_only",
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "profile_id": "s3_enforce_ssl_strict_deny",
+  "risk_acknowledged": true
+}
