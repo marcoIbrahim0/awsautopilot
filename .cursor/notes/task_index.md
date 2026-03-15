@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 5 download bundle callback lifecycle fix on master (2026-03-15)](task_log.md#wave-5-download-bundle-callback-lifecycle-fix-on-master-2026-03-15)
+  - Fixed the remaining Wave 5 blocker on current `master` by keeping callback-managed `download_bundle` group runs non-terminal after successful bundle generation so the later valid customer `finished` callback can persist executable plus non-executable results exactly once.
+  - Added focused worker and callback regressions for callback-managed `started`/`finished` sequencing, preserved legacy non-callback immediate-finish behavior, and updated the Wave 5 mixed-tier bundle doc to match the landed lifecycle semantics.
 - [Wave 5 post-archive live AWS gate on master (2026-03-15)](task_log.md#wave-5-post-archive-live-aws-gate-on-master-2026-03-15)
   - Executed the narrowed archived-SaaS Wave 5 live gate on local `master`, created the full run package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/`, and cleaned up the isolated runtime/AWS queues afterward.
   - Proved mixed-tier executable grouped bundle generation, customer-run bundle semantics, archived SaaS `410` behavior, and deny-closed auth/replay boundaries, but recorded a blocking live failure in `RPW5-POST-ARCHIVE-03` because `download_bundle` worker sync finalized the group run before the mixed `finished` callback could persist results.

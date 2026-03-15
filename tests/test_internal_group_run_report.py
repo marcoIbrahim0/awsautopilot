@@ -92,6 +92,64 @@ def test_group_runs_report_started_updates_run_and_states(client: TestClient) ->
     assert mock_record.await_count == 1
 
 
+def test_group_runs_report_started_accepts_already_started_run(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    group_run_id = uuid.uuid4()
+    action_id = uuid.uuid4()
+    token_jti = str(uuid.uuid4())
+    started_at = datetime(2026, 2, 11, 12, 0, tzinfo=timezone.utc)
+
+    run = MagicMock()
+    run.id = group_run_id
+    run.tenant_id = tenant_id
+    run.group_id = group_id
+    run.report_token_jti = token_jti
+    run.status = ActionGroupRunStatus.started
+    run.started_at = started_at
+    run.finished_at = None
+    run.reporting_source = "system"
+
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            _mock_scalar_result(run),
+            _mock_rows_result([(action_id,)]),
+        ]
+    )
+    session.commit = AsyncMock()
+    session.add = MagicMock()
+
+    _install_db_override(session)
+    with patch(
+        "backend.routers.internal.verify_group_run_reporting_token",
+        return_value={
+            "tenant_id": str(tenant_id),
+            "group_id": str(group_id),
+            "group_run_id": str(group_run_id),
+            "jti": token_jti,
+            "allowed_action_ids": [str(action_id)],
+            "exp": 9999999999,
+        },
+    ):
+        with patch("backend.routers.internal.record_execution_result_async", AsyncMock()) as mock_record:
+            response = client.post(
+                "/api/internal/group-runs/report",
+                json={
+                    "token": "signed-token",
+                    "event": "started",
+                    "started_at": "2026-02-11T12:01:00Z",
+                },
+            )
+    _clear_db_override()
+
+    assert response.status_code == 200
+    assert run.status == ActionGroupRunStatus.started
+    assert run.started_at == started_at
+    assert run.reporting_source == "bundle_callback"
+    assert mock_record.await_count == 1
+
+
 def test_group_runs_report_started_then_finished_succeeds(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     group_id = uuid.uuid4()

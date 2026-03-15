@@ -26,9 +26,10 @@ Wave 5 completes the mixed-tier grouped-bundle slice that Wave 4 explicitly defe
 - Mixed-tier bundles now carry a first-class `bundle_manifest.json` with layout metadata, per-action records, tier counts, and runnable-action counts.
 - `run_all.sh` now treats `executable/actions` as the only execution root. Review/manual folders are metadata only.
 - The generated customer-run bundle flow, grouped callback flow, and legacy internal executor code path support additive `non_executable_results[]` so review/manual actions are reported without being treated as execution failures.
+- Callback-managed `download_bundle` group runs now stay non-terminal after successful bundle generation so the later valid customer `finished` callback can persist results exactly once.
 - Legacy grouped bundles remain runnable through the existing `actions/` layout and heuristic detection path.
 
-> ⚠️ Live gate note (2026-03-15): the post-archive live AWS rerun on current `master` proved mixed-tier generation, customer-run bundle shape, auth boundaries, and archived SaaS route behavior, but `RPW5-POST-ARCHIVE-03` still failed because worker-side `download_bundle` lifecycle sync finalized the `ActionGroupRun` at bundle-generation time before a later mixed `finished` callback could persist results. See [post-archive live AWS summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md).
+> ⚠️ Historical note (2026-03-15): the archived post-archive live AWS run package still records the pre-fix `RPW5-POST-ARCHIVE-03` failure state. The current `master` behavior is that callback-managed `download_bundle` runs remain `started` with `finished_at=null` until the first valid bundle `finished` callback arrives. See the historical evidence in [post-archive live AWS summary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/notes/final-summary.md).
 
 ## Scope Boundary
 
@@ -222,6 +223,8 @@ Each `non_executable_results[]` item includes:
 - executable actions stay in `action_results[]`
 - metadata-only review/manual actions are emitted through `non_executable_results[]`
 - wrapper failures still report metadata-only actions as non-executable instead of converting them into failed execution results
+- when grouped callback reporting is configured, successful bundle generation sets `started_at` but leaves the `ActionGroupRun` non-terminal until the later valid `finished` callback arrives
+- when grouped callback reporting is not configured, the legacy immediate-finish worker lifecycle remains unchanged
 
 The internal callback route now validates the combined finished payload strictly:
 

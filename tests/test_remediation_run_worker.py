@@ -34,7 +34,10 @@ from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
 )
-from backend.workers.jobs.remediation_run import execute_remediation_run_job
+from backend.workers.jobs.remediation_run import (
+    _sync_download_bundle_group_runs as sync_download_bundle_group_runs,
+    execute_remediation_run_job,
+)
 from backend.workers.jobs.remediation_run_execution import (
     _sync_group_run_results,
     execute_pr_bundle_execution_job,
@@ -217,6 +220,14 @@ def _mock_query_one_or_none(value: object) -> MagicMock:
     return query
 
 
+def _mock_download_bundle_group_run_session(*rows: MagicMock) -> MagicMock:
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = list(rows)
+    session = MagicMock()
+    session.execute.return_value = result
+    return session
+
+
 @pytest.fixture(autouse=True)
 def _stub_download_bundle_group_run_sync():
     """
@@ -226,6 +237,95 @@ def _stub_download_bundle_group_run_sync():
     with patch("backend.workers.jobs.remediation_run._sync_download_bundle_group_runs", return_value=None):
         with patch("backend.workers.jobs.remediation_run.build_control_mapping_rows", return_value=[]):
             yield
+
+
+def test_sync_download_bundle_group_runs_callback_managed_success_stays_started() -> None:
+    started_at = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
+    completed_at = datetime(2026, 3, 15, 12, 5, tzinfo=timezone.utc)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = uuid.uuid4()
+    run.status = RemediationRunStatus.success
+    run.started_at = started_at
+    run.completed_at = completed_at
+    run.artifacts = {
+        "group_bundle": {
+            "reporting": {
+                "callback_url": "https://api.example.com/api/internal/group-runs/report",
+                "token": "signed-token",
+            }
+        }
+    }
+    group_run = MagicMock()
+    group_run.status = ActionGroupRunStatus.queued
+    group_run.started_at = None
+    group_run.finished_at = None
+    group_run.report_token_jti = None
+
+    session = _mock_download_bundle_group_run_session(group_run)
+
+    sync_download_bundle_group_runs(session, run)
+
+    assert group_run.status == ActionGroupRunStatus.started
+    assert group_run.started_at == started_at
+    assert group_run.finished_at is None
+
+
+def test_sync_download_bundle_group_runs_legacy_success_finishes_immediately() -> None:
+    started_at = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
+    completed_at = datetime(2026, 3, 15, 12, 5, tzinfo=timezone.utc)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = uuid.uuid4()
+    run.status = RemediationRunStatus.success
+    run.started_at = started_at
+    run.completed_at = completed_at
+    run.artifacts = {}
+    group_run = MagicMock()
+    group_run.status = ActionGroupRunStatus.queued
+    group_run.started_at = None
+    group_run.finished_at = None
+    group_run.report_token_jti = None
+
+    session = _mock_download_bundle_group_run_session(group_run)
+
+    sync_download_bundle_group_runs(session, run)
+
+    assert group_run.status == ActionGroupRunStatus.finished
+    assert group_run.started_at == started_at
+    assert group_run.finished_at == completed_at
+
+
+def test_sync_download_bundle_group_runs_failure_still_fails_immediately() -> None:
+    started_at = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
+    completed_at = datetime(2026, 3, 15, 12, 5, tzinfo=timezone.utc)
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.tenant_id = uuid.uuid4()
+    run.status = RemediationRunStatus.failed
+    run.started_at = started_at
+    run.completed_at = completed_at
+    run.artifacts = {
+        "group_bundle": {
+            "reporting": {
+                "callback_url": "https://api.example.com/api/internal/group-runs/report",
+                "token": "signed-token",
+            }
+        }
+    }
+    group_run = MagicMock()
+    group_run.status = ActionGroupRunStatus.started
+    group_run.started_at = started_at
+    group_run.finished_at = None
+    group_run.report_token_jti = "token-jti"
+
+    session = _mock_download_bundle_group_run_session(group_run)
+
+    sync_download_bundle_group_runs(session, run)
+
+    assert group_run.status == ActionGroupRunStatus.failed
+    assert group_run.started_at == started_at
+    assert group_run.finished_at == completed_at
 
 
 def test_direct_fix_success() -> None:

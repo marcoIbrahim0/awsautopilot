@@ -1,5 +1,40 @@
 # Task Log
 
+## Wave 5 download bundle callback lifecycle fix on master (2026-03-15)
+
+**Task:** Fix the remaining Wave 5 post-archive blocker on current `master` so callback-managed grouped `download_bundle` runs do not finalize at bundle-generation time and the later valid customer `finished` callback can persist executable plus non-executable results exactly once.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - added a narrow callback-managed `download_bundle` lifecycle guard so worker success leaves callback-managed group runs non-terminal while preserving immediate failure/cancel semantics and legacy non-callback immediate finish behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - added focused lifecycle regressions for callback-managed success staying `started`, legacy/system success still finishing immediately, and bundle-generation failure still failing immediately.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py** - added coverage proving a `started` callback is still accepted when the worker has already moved the callback-managed group run to `started`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - updated the Wave 5 behavior doc so it reflects the landed callback-managed lifecycle instead of the pre-fix blocker state.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this lifecycle fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules/notes, the Wave 5 mixed-tier grouped-bundle doc, the archived post-archive live failure summary, and the worker/callback/test code before editing.
+- Confirmed the exact root cause on current `master`:
+  - `backend/workers/jobs/remediation_run.py` called `_sync_download_bundle_group_runs()` when the remediation run switched to `running`, which correctly moved the linked `ActionGroupRun` from `queued` to `started`.
+  - The same helper was called again after successful bundle generation, and the helper unconditionally mapped remediation-run `success` to `ActionGroupRun.status=finished` plus `finished_at=run.completed_at`.
+  - `POST /api/internal/group-runs/report` rejects any `finished` callback for a run that is already terminal or already has `finished_at`, so the first real customer mixed `finished` callback was replay-rejected before results could persist.
+- Kept the fix narrow to the worker sync path only:
+  - callback-managed `download_bundle` rows are now detected by persisted reporting metadata and/or `report_token_jti`
+  - successful callback-managed bundle generation leaves the group run `started` with `finished_at=null`
+  - non-callback legacy/system `download_bundle` success still finishes immediately
+  - bundle-generation failure still finalizes the group run as `failed`
+- Verified the requested regression scopes:
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py -q` -> `7 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py -q` -> `10 passed`
+  - `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q` -> `40 passed`
+
+**Technical debt / gotchas:**
+- This fix intentionally does not add any timeout or stale-started cleanup policy for callback-managed `download_bundle` runs. If bundles are generated but never report `finished`, those rows can remain `started` until a separate cleanup policy is defined.
+- The historical post-archive live run package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/` still records the pre-fix failure state and should remain unchanged as evidence.
+
+**Open questions / TODOs:**
+- Re-run the narrowed live Wave 5 post-archive proof, especially `RPW5-POST-ARCHIVE-03`, to confirm the supported customer-run mixed callback path now passes end-to-end on current `master`.
+
 ## Wave 5 post-archive live AWS gate on master (2026-03-15)
 
 **Task:** Execute the narrowed post-archive Wave 5 live-AWS gate on current `master`, using an isolated local runtime plus the isolated AWS test account only, capture a fresh run package under `docs/test-results/live-runs/20260315T125927Z-rem-profile-wave5-post-archive-live-aws-e2e/`, and record the final archived-SaaS verdict.

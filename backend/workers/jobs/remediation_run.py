@@ -64,6 +64,40 @@ REMEDIATION_RUN_REQUIRED_FIELDS = {"job_type", "run_id", "tenant_id", "action_id
 _RUNNER_TEMPLATE_CACHE: dict[str, object] = {}
 
 
+def _download_bundle_group_run_uses_callback(row: ActionGroupRun, run: RemediationRun) -> bool:
+    if str(row.report_token_jti or "").strip():
+        return True
+    artifacts = run.artifacts if isinstance(run.artifacts, Mapping) else None
+    if not isinstance(artifacts, Mapping):
+        return False
+    group_bundle = artifacts.get("group_bundle")
+    if not isinstance(group_bundle, Mapping):
+        return False
+    reporting = group_bundle.get("reporting")
+    if not isinstance(reporting, Mapping):
+        return False
+    callback_url = reporting.get("callback_url")
+    token = reporting.get("token")
+    return any(isinstance(value, str) and value.strip() for value in (callback_url, token))
+
+
+def _mark_download_bundle_group_run_started(row: ActionGroupRun, *, started_at: datetime) -> None:
+    if row.status == ActionGroupRunStatus.queued:
+        row.status = ActionGroupRunStatus.started
+    if row.started_at is None:
+        row.started_at = started_at
+
+
+def _download_bundle_group_run_terminal_status(run: RemediationRun) -> ActionGroupRunStatus | None:
+    if run.status == RemediationRunStatus.success:
+        return ActionGroupRunStatus.finished
+    if run.status == RemediationRunStatus.failed:
+        return ActionGroupRunStatus.failed
+    if run.status == RemediationRunStatus.cancelled:
+        return ActionGroupRunStatus.cancelled
+    return None
+
+
 def _sync_download_bundle_group_runs(session: Session, run: RemediationRun) -> None:
     """
     Keep action_group_runs in sync for download_bundle workflows.
@@ -84,26 +118,23 @@ def _sync_download_bundle_group_runs(session: Session, run: RemediationRun) -> N
         return
 
     now = datetime.now(timezone.utc)
+    started_at = run.started_at or now
+    finished_at = run.completed_at or now
     for row in rows:
         if run.status == RemediationRunStatus.running:
-            if row.status == ActionGroupRunStatus.queued:
-                row.status = ActionGroupRunStatus.started
-            if row.started_at is None:
-                row.started_at = run.started_at or now
+            _mark_download_bundle_group_run_started(row, started_at=started_at)
             continue
 
-        if run.status == RemediationRunStatus.success:
-            row.status = ActionGroupRunStatus.finished
-        elif run.status == RemediationRunStatus.failed:
-            row.status = ActionGroupRunStatus.failed
-        elif run.status == RemediationRunStatus.cancelled:
-            row.status = ActionGroupRunStatus.cancelled
-        else:
+        terminal_status = _download_bundle_group_run_terminal_status(run)
+        if terminal_status is None:
             continue
-
-        if row.started_at is None:
-            row.started_at = run.started_at or now
-        row.finished_at = run.completed_at or now
+        if terminal_status == ActionGroupRunStatus.finished and _download_bundle_group_run_uses_callback(row, run):
+            _mark_download_bundle_group_run_started(row, started_at=started_at)
+            row.finished_at = None
+            continue
+        _mark_download_bundle_group_run_started(row, started_at=started_at)
+        row.status = terminal_status
+        row.finished_at = finished_at
 
 
 def _parse_s3_uri(uri: str) -> tuple[str, str] | None:
