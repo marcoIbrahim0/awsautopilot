@@ -1,0 +1,20 @@
+probe https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-ingest
+
+An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the GetQueueAttributes operation: The specified queue does not exist.
+---
+probe https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-contract-quarantine
+
+An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the GetQueueAttributes operation: The specified queue does not exist.
+---
+probe https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-events-fastlane
+
+An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the GetQueueAttributes operation: The specified queue does not exist.
+---
+probe https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-inventory-reconcile
+
+An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the GetQueueAttributes operation: The specified queue does not exist.
+---
+probe https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-export-report
+
+An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the GetQueueAttributes operation: The specified queue does not exist.
+---

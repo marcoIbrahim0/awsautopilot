@@ -1,0 +1,40 @@
+{
+  "resolution": {
+    "strategy_id": "s3_enable_abort_incomplete_uploads",
+    "profile_id": "s3_enable_abort_incomplete_uploads",
+    "support_tier": "deterministic_bundle",
+    "resolved_inputs": {
+      "abort_days": 7
+    },
+    "missing_inputs": [],
+    "missing_defaults": [],
+    "blocked_reasons": [],
+    "rejected_profiles": [],
+    "finding_coverage": {},
+    "preservation_summary": {
+      "family": "s3_bucket_lifecycle_configuration",
+      "abort_days": 7,
+      "family_strategy": "s3_enable_abort_incomplete_uploads",
+      "additive_merge_safe": true,
+      "strategy_only_supported": true,
+      "single_profile_compatible": true,
+      "existing_lifecycle_rule_count": 0,
+      "executable_lifecycle_merge_allowed": true,
+      "existing_lifecycle_configuration_captured": false,
+      "existing_lifecycle_configuration_equivalent": false
+    },
+    "decision_rationale": "Family resolver kept S3.11 strategy 's3_enable_abort_incomplete_uploads' executable with abort_days=7 because lifecycle preservation is already safe. Run creation did not require additional risk-only acceptance.",
+    "decision_version": "resolver/v1"
+  },
+  "action": {
+    "id": "a769c380-0bfb-45b7-b358-c41b176521e1",
+    "title": "S3 general purpose buckets should have Lifecycle configurations",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open"
+  },
+  "created_at": "2026-03-15T23:40:04.533400+00:00",
+  "updated_at": "2026-03-15T23:40:07.571762+00:00",
+  "status": "success",
+  "outcome": "PR bundle generated"
+}

@@ -1,0 +1,11 @@
+{
+    "StandardsSubscriptions": [
+        {
+            "StandardsSubscriptionArn": "arn:aws:securityhub:eu-north-1:696505809372:subscription/nist-800-53/v/5.0.0",
+            "StandardsArn": "arn:aws:securityhub:eu-north-1::standards/nist-800-53/v/5.0.0",
+            "StandardsInput": {},
+            "StandardsStatus": "PENDING",
+            "StandardsControlsUpdatable": "NOT_READY_FOR_UPDATES"
+        }
+    ]
+}

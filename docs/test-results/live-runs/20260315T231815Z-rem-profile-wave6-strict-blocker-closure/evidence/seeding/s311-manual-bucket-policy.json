@@ -1,0 +1,12 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyImportRoleBucketReads",
+      "Effect": "Deny",
+      "Principal": {"AWS": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"},
+      "Action": "s3:GetBucket*",
+      "Resource": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372"
+    }
+  ]
+}

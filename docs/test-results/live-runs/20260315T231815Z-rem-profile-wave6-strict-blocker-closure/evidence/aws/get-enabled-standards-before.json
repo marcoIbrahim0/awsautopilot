@@ -1,0 +1,11 @@
+{
+    "StandardsSubscriptions": [
+        {
+            "StandardsSubscriptionArn": "arn:aws:securityhub:eu-north-1:696505809372:subscription/aws-foundational-security-best-practices/v/1.0.0",
+            "StandardsArn": "arn:aws:securityhub:eu-north-1::standards/aws-foundational-security-best-practices/v/1.0.0",
+            "StandardsInput": {},
+            "StandardsStatus": "READY",
+            "StandardsControlsUpdatable": "READY_FOR_UPDATES"
+        }
+    ]
+}

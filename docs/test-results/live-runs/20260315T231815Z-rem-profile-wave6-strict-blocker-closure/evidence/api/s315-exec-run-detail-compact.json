@@ -1,0 +1,44 @@
+{
+  "resolution": {
+    "strategy_id": "s3_enable_sse_kms_guided",
+    "profile_id": "s3_enable_sse_kms_guided",
+    "support_tier": "deterministic_bundle",
+    "resolved_inputs": {
+      "kms_key_mode": "aws_managed"
+    },
+    "missing_inputs": [],
+    "missing_defaults": [],
+    "blocked_reasons": [],
+    "rejected_profiles": [],
+    "finding_coverage": {},
+    "preservation_summary": {
+      "family": "s3_bucket_encryption_kms",
+      "kms_key_mode": "aws_managed",
+      "family_strategy": "s3_enable_sse_kms_guided",
+      "selected_branch": "s3_enable_sse_kms_guided",
+      "target_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372",
+      "kms_key_arn_present": false,
+      "strategy_only_supported": true,
+      "single_profile_compatible": true,
+      "customer_managed_key_valid": null,
+      "target_bucket_scope_proven": true,
+      "executable_kms_change_allowed": true,
+      "customer_managed_grants_captured": false,
+      "customer_managed_dependency_proven": false,
+      "customer_managed_policy_json_captured": false
+    },
+    "decision_rationale": "Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.",
+    "decision_version": "resolver/v1"
+  },
+  "action": {
+    "id": "a6585d13-e010-415e-823c-334a4c40bdf8",
+    "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open"
+  },
+  "created_at": "2026-03-15T23:40:09.013652+00:00",
+  "updated_at": "2026-03-15T23:40:10.626693+00:00",
+  "status": "success",
+  "outcome": "PR bundle generated"
+}

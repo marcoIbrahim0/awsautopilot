@@ -1,0 +1,13 @@
+{
+  "run_id": "20260315T231815Z-rem-profile-wave6-strict-blocker-closure",
+  "postgres_dir": "/tmp/rpw6-strict-pg-20260315T231815Z",
+  "postgres_port": 55439,
+  "database": "security_autopilot_rpw6_strict",
+  "api_port": 18019,
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-ingest",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-contract-quarantine",
+  "events_fast_lane_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-events-fastlane",
+  "inventory_reconcile_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-inventory-reconcile",
+  "export_report_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-export-report",
+  "aws_region": "eu-north-1"
+}

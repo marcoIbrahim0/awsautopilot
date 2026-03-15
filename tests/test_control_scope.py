@@ -65,7 +65,7 @@ def test_control_to_action_type_matches_table() -> None:
     assert set(CONTROL_TO_ACTION_TYPE.keys()) == IN_SCOPE_CONTROL_IDS
     assert CONTROL_ALIAS_TO_ACTION_TYPE["S3.3"] == "s3_bucket_block_public_access"
     assert CONTROL_ALIAS_TO_ACTION_TYPE["S3.8"] == "s3_bucket_block_public_access"
-    assert CONTROL_ALIAS_TO_ACTION_TYPE["S3.17"] == "s3_bucket_block_public_access"
+    assert CONTROL_ALIAS_TO_ACTION_TYPE["S3.17"] == "s3_bucket_encryption_kms"
     assert CONTROL_ALIAS_TO_ACTION_TYPE["S3.13"] == "s3_bucket_lifecycle_configuration"
     assert CONTROL_ALIAS_TO_ACTION_TYPE["EC2.13"] == "sg_restrict_public_ports"
     assert CONTROL_ALIAS_TO_ACTION_TYPE["EC2.19"] == "sg_restrict_public_ports"
@@ -79,7 +79,7 @@ def test_action_type_from_control_all_mapped_controls() -> None:
         assert action_type_from_control("  " + c["control_id"] + "  ") == c["action_type"]
     assert action_type_from_control("S3.3") == "s3_bucket_block_public_access"
     assert action_type_from_control("S3.8") == "s3_bucket_block_public_access"
-    assert action_type_from_control("S3.17") == "s3_bucket_block_public_access"
+    assert action_type_from_control("S3.17") == "s3_bucket_encryption_kms"
     assert action_type_from_control("S3.13") == "s3_bucket_lifecycle_configuration"
     assert action_type_from_control("EC2.13") == "sg_restrict_public_ports"
     assert action_type_from_control("EC2.19") == "sg_restrict_public_ports"
@@ -130,7 +130,7 @@ def test_canonical_control_id_for_action_type_uses_primary_control() -> None:
     ) == "S3.2"
     assert canonical_control_id_for_action_type(
         "s3_bucket_block_public_access",
-        "S3.17",
+        "S3.3",
     ) == "S3.2"
     assert canonical_control_id_for_action_type(
         "sg_restrict_public_ports",
@@ -148,6 +148,10 @@ def test_canonical_control_id_for_action_type_uses_primary_control() -> None:
         "s3_bucket_lifecycle_configuration",
         "S3.13",
     ) == "S3.11"
+    assert canonical_control_id_for_action_type(
+        "s3_bucket_encryption_kms",
+        "S3.17",
+    ) == "S3.15"
     assert canonical_control_id_for_action_type("pr_only", "S3.8") == "S3.8"
 
 

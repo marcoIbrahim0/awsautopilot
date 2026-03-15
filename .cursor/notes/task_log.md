@@ -23367,3 +23367,81 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Wave 6 remains blocked under the strict standard until `S3.11` has a truthful downgrade/manual live case and `S3.15` has truthful live family materialization.
+
+## Wave 6 strict blocker closure for S3.11 and S3.15 live proof (2026-03-16)
+
+**Task:** Close the remaining strict Wave 6 blockers on current `master` only by producing truthful live downgrade/manual proof for `S3.11`, truthful live executable plus downgrade/manual family materialization for `S3.15`, and a fresh strict evidence package without reviving any split-path or provider-drift exception.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/alembic/env.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_worker_ingest.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project notes, Wave 6 docs, March 15 readiness packages, and the required backend/test files before editing.
+- Created a fresh strict blocker-closure package at `docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/` on top of `master` `HEAD=75fd66b22b003ee58880eaabbfc0626d8a538dd5`.
+- Added truthful live control aliasing in `backend/services/control_scope.py`:
+  - `S3.13 -> s3_bucket_lifecycle_configuration -> canonical family S3.11`
+  - `S3.17 -> s3_bucket_encryption_kms -> canonical family S3.15`
+- Added a narrow ingest-time drift filter in `backend/workers/jobs/ingest_findings.py` so current live Security Hub controls that no longer match the product family semantics do not materialize false family actions:
+  - live `S3.11` findings with `event notifications` titles are stored but marked `in_scope = false`
+  - live `S3.15` findings with `Object Lock` titles are stored but marked `in_scope = false`
+  - live `S3.13` and `S3.17` findings remain the truthful materialization path for the `S3.11` and `S3.15` families
+- Added focused regression coverage proving the new mapping and drift filter:
+  - control-scope alias assertions for `S3.13` and `S3.17`
+  - action-merge grouping assertions showing `S3.11/S3.13` and `S3.15/S3.17` collapse into the same canonical families
+  - worker-ingest assertions that drifted live `S3.11` / `S3.15` findings are excluded while live `S3.13` / `S3.17` findings stay in scope
+- Added `transaction_per_migration=True` to the Alembic environment so the fresh disposable Postgres bootstrap can replay current migrations cleanly on local `master`; without that fix, the isolated runtime could not be brought up truthfully for this task.
+- Built a fresh isolated local runtime:
+  - Postgres at `/tmp/rpw6-strict-pg-20260315T231815Z` on port `55439`
+  - API on `127.0.0.1:18019`
+  - worker against five temporary SaaS-account queues in `eu-north-1`
+  - fresh tenant `89fa1ba7-bb60-4a0d-ba2f-5b4f19da82fd`
+- Registered isolated AWS account `696505809372` with read-path role `arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole`, aligned the tenant external ID, enabled NIST 800-53 in `eu-north-1`, seeded four strict S3 buckets plus one customer-managed KMS key, and captured all bootstrap/API/AWS evidence in the new package.
+- Closed `S3.11` truthfully:
+  - executable bucket `security-autopilot-w6-strict-s311-exec-696505809372` received a resource-policy allow for the import role because the role identity policy grants only Security Hub actions
+  - manual bucket `security-autopilot-w6-strict-s311-manual-696505809372` received a resource-policy deny, producing a real `AccessDenied` downgrade instead of a fabricated failing case
+  - post-fix action/finding evidence now links lifecycle actions only to live `S3.13` findings
+  - executable proof: action `a769c380-0bfb-45b7-b358-c41b176521e1`, run `53eaa411-1407-4966-948a-b8880075ce08`
+  - downgrade/manual proof: action `4f550979-f521-471a-8246-1a24ca7c48d7`, run `7848b5a3-b91a-46b4-b8d7-349dc401c05d`
+- Closed `S3.15` truthfully:
+  - executable bucket `security-autopilot-w6-strict-s315-exec-696505809372` materialized through live `S3.17` SSE-KMS findings on the AWS-managed branch
+  - manual bucket `security-autopilot-w6-strict-s315-manual-696505809372` used customer-managed key `arn:aws:kms:eu-north-1:696505809372:key/ef0cca31-8328-41e6-ab28-64cbedc1a44c`
+  - the import role still lacks KMS reads and the custom-key branch remained under-proven, so preview/run detail truthfully downgraded on `AccessDeniedException` instead of being forced executable
+  - post-fix action/finding evidence now links SSE-KMS actions only to live `S3.17` findings
+  - executable proof: action `a6585d13-e010-415e-823c-334a4c40bdf8`, run `38ed8b33-1737-4601-a491-e9d428eafc5e`
+  - downgrade/manual proof: action `9405f465-5b90-4fee-b4f7-030660683e52`, run `8f441c77-9eca-49a1-af8f-853b17f429c6`
+- Wrote the strict notes package:
+  - `notes/final-summary.md`
+  - `notes/family-readiness-matrix.md`
+  - `notes/aws-cleanup-summary.md`
+- Updated non-Production docs to reflect the new strict truth:
+  - `docs/remediation-profile-resolution/README.md`
+  - `docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+  - `docs/live-e2e-testing/README.md`
+- Cleaned up disposable local resources after evidence capture:
+  - stopped the local API, worker, and Postgres runtime
+  - deleted the five temporary strict SQS queues and probed them as `NonExistentQueue`
+  - intentionally retained the isolated-account strict fixture buckets, custom KMS key, and enabled NIST standard because they back the fresh live proof
+
+**Validation:**
+- `./venv/bin/pytest tests/test_worker_ingest.py tests/test_control_scope.py tests/test_action_engine_merge.py -q`
+  - `60 passed in 3.19s`
+- Fresh strict proof matrix recorded in:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/evidence/api/strict-wave6-proof-matrix.json`
+- Fresh post-fix materialization truth recorded in:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/evidence/api/strict-findings-post-fix.txt`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/evidence/api/strict-action-links-post-fix-current.txt`
+
+**Open questions / TODOs:**
+- All nine families are now ready for the final strict live gate, but this task did not rerun the full nine-family E2E gate itself.
+- The retained isolated-account proof fixtures should be deleted after that final full-gate rerun is complete.

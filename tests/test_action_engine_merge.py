@@ -44,6 +44,21 @@ def test_grouping_key_merges_equivalent_s3_lifecycle_controls() -> None:
     assert _grouping_key(f_s311) == _grouping_key(f_s313)
 
 
+def test_grouping_key_merges_equivalent_s3_kms_controls() -> None:
+    """S3.15 and live AWS S3.17 should merge into one SSE-KMS action group."""
+    tenant_id = uuid.uuid4()
+    base = dict(
+        tenant_id=tenant_id,
+        account_id="029037611564",
+        region="eu-north-1",
+        resource_id="arn:aws:s3:::demomarcoss",
+    )
+    f_s315 = SimpleNamespace(**base, control_id="S3.15")
+    f_s317 = SimpleNamespace(**base, control_id="S3.17")
+
+    assert _grouping_key(f_s315) == _grouping_key(f_s317)
+
+
 def test_grouping_key_merges_equivalent_ec2_sg_controls() -> None:
     """EC2.53/EC2.13/EC2.19 (and back-compat EC2.18) should merge into one action group per security group."""
     tenant_id = uuid.uuid4()
@@ -135,6 +150,28 @@ def test_target_id_uses_canonical_control_for_equivalent_s3_lifecycle_controls()
         canonical_s313,
     )
     assert target_s311 == target_s313
+
+
+def test_target_id_uses_canonical_control_for_equivalent_s3_kms_controls() -> None:
+    """Live AWS S3.17 SSE-KMS findings should dedupe to canonical product family S3.15."""
+    action_type_s315 = _action_type_from_control("S3.15")
+    action_type_s317 = _action_type_from_control("S3.17")
+    canonical_s315 = canonical_control_id_for_action_type(action_type_s315, "S3.15")
+    canonical_s317 = canonical_control_id_for_action_type(action_type_s317, "S3.17")
+
+    target_s315 = _build_target_id(
+        "029037611564",
+        "eu-north-1",
+        "arn:aws:s3:::demomarcoss",
+        canonical_s315,
+    )
+    target_s317 = _build_target_id(
+        "029037611564",
+        "eu-north-1",
+        "arn:aws:s3:::demomarcoss",
+        canonical_s317,
+    )
+    assert target_s315 == target_s317
 
 
 def test_target_id_uses_canonical_control_for_equivalent_ec2_controls() -> None:

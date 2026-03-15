@@ -1,0 +1,106 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/186528e9-9ed9-45a6-85b7-df8d21779db0",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.13",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T23:30:43.431Z",
+            "LastObservedAt": "2026-03-15T23:30:43.431Z",
+            "CreatedAt": "2026-03-15T23:31:03.516Z",
+            "UpdatedAt": "2026-03-15T23:31:03.516Z",
+            "Severity": {
+                "Label": "LOW",
+                "Normalized": 1,
+                "Original": "LOW"
+            },
+            "Title": "S3 general purpose buckets should have Lifecycle configurations",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket has a Lifecycle configuration. The control fails if the bucket doesn't have a Lifecycle configuration. You can provide custom values for one or more if the preceding parameters, the control passes only if the policy includes the specified storage class, deletion time, and transition time.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.13/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-lifecycle-policy-check-50c2aee1",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "Found no bucket lifecycle configuration rules.",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/186528e9-9ed9-45a6-85b7-df8d21779db0"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-15T23:29:20.000Z",
+                            "Name": "security-autopilot-w6-strict-s311-exec-696505809372"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "RelatedRequirements": [
+                    "NIST.800-53.r5 CP-10",
+                    "NIST.800-53.r5 CP-6(2)",
+                    "NIST.800-53.r5 CP-9",
+                    "NIST.800-53.r5 SC-5(2)",
+                    "NIST.800-53.r5 SI-13(5)"
+                ],
+                "SecurityControlId": "S3.13",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    },
+                    {
+                        "StandardsId": "standards/nist-800-53/v/5.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "targetTransitionDays",
+                        "Value": []
+                    },
+                    {
+                        "Name": "targetExpirationDays",
+                        "Value": []
+                    },
+                    {
+                        "Name": "targetTransitionStorageClass",
+                        "Value": []
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "LOW",
+                    "Original": "LOW"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T23:31:15.264Z"
+        }
+    ]
+}

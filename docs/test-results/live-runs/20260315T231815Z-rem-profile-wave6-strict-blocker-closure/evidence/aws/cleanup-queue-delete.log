@@ -1,0 +1,10 @@
+delete https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-ingest
+status=0
+delete https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-contract-quarantine
+status=0
+delete https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-events-fastlane
+status=0
+delete https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-inventory-reconcile
+status=0
+delete https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-strict-20260315t231815z-export-report
+status=0

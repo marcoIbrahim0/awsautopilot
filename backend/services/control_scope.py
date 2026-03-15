@@ -182,9 +182,10 @@ CONTROL_TO_ACTION_TYPE: dict[str, str] = {c["control_id"]: c["action_type"] for 
 CONTROL_ALIAS_TO_ACTION_TYPE: dict[str, str] = {
     "S3.3": "s3_bucket_block_public_access",
     "S3.8": "s3_bucket_block_public_access",
-    "S3.17": "s3_bucket_block_public_access",
     # AWS now surfaces the lifecycle family on S3.13; keep the product family canonicalized to S3.11.
     "S3.13": "s3_bucket_lifecycle_configuration",
+    # AWS now surfaces the SSE-KMS family on S3.17 in the current standards catalog.
+    "S3.17": "s3_bucket_encryption_kms",
     # EC2 security group hardening: treat these controls as equivalent remediation for MVP.
     # Canonical control_id stored on the action is EC2.53.
     "EC2.13": "sg_restrict_public_ports",

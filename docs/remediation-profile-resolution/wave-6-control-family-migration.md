@@ -142,18 +142,24 @@ flowchart LR
 - The follow-up blocker-closure rerun under [`docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) refined the live-control truth in the same isolated account:
   - direct Security Hub `EC2.53` still remains `DISABLED`, but live `EC2.18`/`EC2.19` findings continue to canonicalize into executable/downgrade-ready `EC2.53` actions
   - current bucket-scoped public-access failures surface from enabled control `S3.8`, and the product canonicalizes them into the `S3.2` family
-  - current lifecycle findings surface from enabled control `S3.13`, and the product now canonicalizes them into canonical family `S3.11`
-  - no enabled live Security Hub control/finding currently maps to the product's `S3.15` SSE-KMS family semantics in the isolated account
-- Current live-AWS gate truth after the blocker-closure rerun:
+  - current lifecycle findings surface from enabled control `S3.13`, while current live `S3.11` findings represent `event notifications`
+  - current SSE-KMS findings surface from enabled control `S3.17`, while current live `S3.15` findings represent `Object Lock`
+- The strict blocker-closure package under [`docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/notes/final-summary.md) closed the final two families without weakening the gate:
+  - live `S3.11` event-notification findings are excluded from lifecycle-family materialization, while live `S3.13` lifecycle findings canonicalize to family `S3.11`
+  - live `S3.15` Object Lock findings are excluded from SSE-KMS-family materialization, while live `S3.17` SSE-KMS findings canonicalize to family `S3.15`
+  - `S3.11` now has a truthful executable case and a truthful downgrade/manual case backed by paired bucket-policy access to the import role
+  - `S3.15` now has a truthful executable case and a truthful downgrade/manual case backed by the AWS-managed branch plus a customer-managed-KMS AccessDenied downgrade
+- Current live-AWS readiness truth after the strict blocker-closure package:
   - `S3.2` is closed from truthful live executable and downgrade/manual evidence
   - `S3.5` is closed from truthful live executable and downgrade/manual evidence
-  - `S3.11` is executable-ready, but not fully closed, because lifecycle-present buckets currently pass `S3.13` and therefore do not produce a truthful failing downgrade/manual case
-  - `S3.15` remains blocked by live AWS/product drift
-- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do define the current strict final-gate boundary precisely: `7/9` families are fully ready, `S3.11` is not fully closed, `S3.15` remains blocked, and Wave 6 is not complete.
+  - `S3.11` is closed from truthful live executable and downgrade/manual evidence
+  - `S3.15` is closed from truthful live executable and downgrade/manual evidence
+- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do update the strict final-gate boundary precisely: `9/9` families are now ready for the final strict live gate.
 
 ## Post-Wave-6 Boundary
 
-- Wave 6 control-family migration is implemented on `master`, but Wave 6 is not complete under the strict live-validation standard. `S3.11` still lacks a truthful downgrade/manual live case, and `S3.15` still lacks truthful live family materialization.
+- Wave 6 control-family migration is implemented on `master`, and all nine families are now ready for the final strict live gate under the current live-validation standard.
+- The full nine-family E2E gate rerun itself still remains outstanding. This doc records readiness and landed behavior, not a claim that the final rerun already passed.
 - Legacy artifact mirrors are still present during rollout. `selected_strategy`, `strategy_inputs`, and `pr_bundle_variant` remain compatibility artifacts, not the safety authority.
 - Wave 5 mixed-tier grouped behavior remains the grouped execution/output boundary for downgraded review/manual actions.
 - Customer-run PR bundles remain the supported model, and direct-fix boundaries are unchanged.

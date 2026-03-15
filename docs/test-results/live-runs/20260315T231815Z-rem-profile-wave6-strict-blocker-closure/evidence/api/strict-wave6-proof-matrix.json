@@ -1,0 +1,46 @@
+{
+  "S3_11": {
+    "executable": {
+      "control_id": "S3.11",
+      "live_finding_control_id": "S3.13",
+      "region": "eu-north-1",
+      "action_id": "a769c380-0bfb-45b7-b358-c41b176521e1",
+      "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/186528e9-9ed9-45a6-85b7-df8d21779db0",
+      "run_id": "53eaa411-1407-4966-948a-b8880075ce08",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+      "support_tier": "deterministic_bundle"
+    },
+    "manual": {
+      "control_id": "S3.11",
+      "live_finding_control_id": "S3.13",
+      "region": "eu-north-1",
+      "action_id": "4f550979-f521-471a-8246-1a24ca7c48d7",
+      "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/a829dd71-b973-4924-b2e5-2a11d7a31bc1",
+      "run_id": "7848b5a3-b91a-46b4-b8d7-349dc401c05d",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+      "support_tier": "manual_guidance_only"
+    }
+  },
+  "S3_15": {
+    "executable": {
+      "control_id": "S3.15",
+      "live_finding_control_id": "S3.17",
+      "region": "eu-north-1",
+      "action_id": "a6585d13-e010-415e-823c-334a4c40bdf8",
+      "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/3e164775-f8b9-498f-9e33-9d3e3b29c0fd",
+      "run_id": "38ed8b33-1737-4601-a491-e9d428eafc5e",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+      "support_tier": "deterministic_bundle"
+    },
+    "manual": {
+      "control_id": "S3.15",
+      "live_finding_control_id": "S3.17",
+      "region": "eu-north-1",
+      "action_id": "9405f465-5b90-4fee-b4f7-030660683e52",
+      "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/ce87ea38-d12a-4c80-9e33-afb7a361c4b7",
+      "run_id": "8f441c77-9eca-49a1-af8f-853b17f429c6",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+      "support_tier": "review_required_bundle"
+    }
+  }
+}

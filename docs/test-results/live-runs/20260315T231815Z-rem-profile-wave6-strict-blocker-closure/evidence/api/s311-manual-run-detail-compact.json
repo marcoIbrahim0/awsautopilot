@@ -1,0 +1,43 @@
+{
+  "resolution": {
+    "strategy_id": "s3_enable_abort_incomplete_uploads",
+    "profile_id": "s3_enable_abort_incomplete_uploads",
+    "support_tier": "manual_guidance_only",
+    "resolved_inputs": {
+      "abort_days": 7
+    },
+    "missing_inputs": [],
+    "missing_defaults": [],
+    "blocked_reasons": [
+      "AccessDenied",
+      "Lifecycle preservation evidence is missing for additive merge review."
+    ],
+    "rejected_profiles": [],
+    "finding_coverage": {},
+    "preservation_summary": {
+      "family": "s3_bucket_lifecycle_configuration",
+      "abort_days": 7,
+      "family_strategy": "s3_enable_abort_incomplete_uploads",
+      "additive_merge_safe": false,
+      "strategy_only_supported": true,
+      "single_profile_compatible": true,
+      "existing_lifecycle_rule_count": null,
+      "executable_lifecycle_merge_allowed": false,
+      "existing_lifecycle_configuration_captured": false,
+      "existing_lifecycle_configuration_equivalent": false
+    },
+    "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. AccessDenied Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+    "decision_version": "resolver/v1"
+  },
+  "action": {
+    "id": "4f550979-f521-471a-8246-1a24ca7c48d7",
+    "title": "S3 general purpose buckets should have Lifecycle configurations",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open"
+  },
+  "created_at": "2026-03-15T23:40:07.554722+00:00",
+  "updated_at": "2026-03-15T23:40:09.009518+00:00",
+  "status": "success",
+  "outcome": "Non-executable remediation guidance bundle generated"
+}

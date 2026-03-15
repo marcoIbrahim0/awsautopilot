@@ -1,0 +1,20 @@
+{
+    "RoleName": "CodexP2SecurityHubImportRole",
+    "PolicyName": "CodexP2SecurityHubImportRole",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "SecurityHubP2E2E",
+                "Effect": "Allow",
+                "Action": [
+                    "securityhub:BatchImportFindings",
+                    "securityhub:BatchUpdateFindings",
+                    "securityhub:GetFindings",
+                    "securityhub:DescribeHub"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+}

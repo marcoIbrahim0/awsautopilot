@@ -1,0 +1,47 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_initial_models, initial models
+INFO  [alembic.runtime.migration] Running upgrade 0001_initial_models -> 0002_findings, findings table
+INFO  [alembic.runtime.migration] Running upgrade 0002_findings -> 0003_auth_user_fields_invites, Add auth fields to users table and create user_invites table.
+INFO  [alembic.runtime.migration] Running upgrade 0003_auth_user_fields_invites -> 0004_actions, actions table (Step 5.1)
+INFO  [alembic.runtime.migration] Running upgrade 0004_actions -> 0005_action_findings, action_findings association table (Step 5.2)
+INFO  [alembic.runtime.migration] Running upgrade 0005_action_findings -> 0006_exceptions, exceptions table (Step 6.1)
+INFO  [alembic.runtime.migration] Running upgrade 0006_exceptions -> 0007_remediation_runs, remediation_runs table (Step 7.1)
+INFO  [alembic.runtime.migration] Running upgrade 0007_remediation_runs -> 0008_audit_log, audit_log table (Step 7.5)
+INFO  [alembic.runtime.migration] Running upgrade 0008_audit_log -> 0009_evidence_exports, evidence_exports table (Step 10.1)
+INFO  [alembic.runtime.migration] Running upgrade 0009_evidence_exports -> 0010_findings_source, findings.source column (Step 2B.1)
+INFO  [alembic.runtime.migration] Running upgrade 0010_findings_source -> 0011_last_digest_sent_at, tenants.last_digest_sent_at (Step 11.1)
+INFO  [alembic.runtime.migration] Running upgrade 0011_last_digest_sent_at -> 0012_digest_preferences, tenants digest preferences (Step 11.3)
+INFO  [alembic.runtime.migration] Running upgrade 0012_digest_preferences -> 0013_slack_settings, tenants Slack settings (Step 11.4)
+INFO  [alembic.runtime.migration] Running upgrade 0013_slack_settings -> 0014_pack_type, evidence_exports.pack_type (Step 12.2)
+INFO  [alembic.runtime.migration] Running upgrade 0014_pack_type -> 0015_control_mappings, control_mappings table (Step 12.3)
+INFO  [alembic.runtime.migration] Running upgrade 0015_control_mappings -> 0016_baseline_reports, baseline_reports table (Step 13.2)
+INFO  [alembic.runtime.migration] Running upgrade 0016_baseline_reports -> 0017_aws_account_disabled, Add disabled status to aws_account_status enum
+INFO  [alembic.runtime.migration] Running upgrade 0017_aws_account_disabled -> 0018_support_notes_files, support notes and files tables for SaaS admin dashboard
+INFO  [alembic.runtime.migration] Running upgrade 0018_support_notes_files -> 0019_findings_unique_tenant, findings unique constraint scoped by tenant
+INFO  [alembic.runtime.migration] Running upgrade 0019_findings_unique_tenant -> 0020_run_executions, remediation run executions table for SaaS bundle executor
+INFO  [alembic.runtime.migration] Running upgrade 0020_run_executions -> 0021_control_plane_shadow, control-plane events and shadow finding state tables
+INFO  [alembic.runtime.migration] Running upgrade 0021_control_plane_shadow -> 0022_inventory_assets, inventory assets table for phase-2 reconciliation
+INFO  [alembic.runtime.migration] Running upgrade 0022_inventory_assets -> 0023_cp_reconcile_jobs, control-plane reconcile job history table
+INFO  [alembic.runtime.migration] Running upgrade 0023_cp_reconcile_jobs -> 0024_tenant_cp_token, tenant control-plane token
+INFO  [alembic.runtime.migration] Running upgrade 0024_tenant_cp_token -> 0025_cp_event_status, control-plane event ingest status
+INFO  [alembic.runtime.migration] Running upgrade 0025_cp_event_status -> 0026_canonical_keys, canonical control/resource keys for overlay and promotion
+INFO  [alembic.runtime.migration] Running upgrade 0026_canonical_keys -> 0027_findings_scope_shadow, findings in_scope flag and shadow overlay fields
+INFO  [alembic.runtime.migration] Running upgrade 0027_findings_scope_shadow -> 0028_findings_missing_keys_index, partial index for in-scope findings missing canonical/resource keys
+INFO  [alembic.runtime.migration] Running upgrade 0028_findings_missing_keys_index -> 0029_tenant_reconcile_controls, tenant-facing reconciliation run tracking and schedules
+INFO  [alembic.runtime.migration] Running upgrade 0029_tenant_reconcile_controls -> 0030_action_groups_persistent, persistent immutable action groups and run tracking
+INFO  [alembic.runtime.migration] Running upgrade 0030_action_groups_persistent -> 0031_control_plane_token_hash, control-plane token hash lifecycle metadata
+INFO  [alembic.runtime.migration] Running upgrade 0031_control_plane_token_hash -> 0032_findings_resolved_at, add resolved_at to findings
+INFO  [alembic.runtime.migration] Running upgrade 0032_findings_resolved_at -> 0033_user_auth_reset_fields, add user token version and password reset fields
+INFO  [alembic.runtime.migration] Running upgrade 0033_user_auth_reset_fields -> 0034_remrun_active_unique_guard, add unique active-run guard for remediation_runs
+INFO  [alembic.runtime.migration] Running upgrade 0034_remrun_active_unique_guard -> 0035_rootkey_remediation_orch, root-key remediation orchestration schema
+INFO  [alembic.runtime.migration] Running upgrade 0035_rootkey_remediation_orch -> 0036_secret_migration_conn, secret migration connectors schema
+INFO  [alembic.runtime.migration] Running upgrade 0036_secret_migration_conn -> 0037_comm_governance_layer, communication + governance layer schema
+INFO  [alembic.runtime.migration] Running upgrade 0037_comm_governance_layer -> 0038_user_verification_mfa, Add user contact verification and MFA fields.
+INFO  [alembic.runtime.migration] Running upgrade 0038_user_verification_mfa -> 0039_action_scoring_metadata, action scoring metadata
+INFO  [alembic.runtime.migration] Running upgrade 0038_user_verification_mfa -> 0039_action_owner_queues, Add action ownership fields for owner-based queues.
+INFO  [alembic.runtime.migration] Running upgrade 0039_action_owner_queues, 0039_action_scoring_metadata -> 0040_firebase_email_verification, Add Firebase-backed email verification fields and merge current heads.
+INFO  [alembic.runtime.migration] Running upgrade 0040_firebase_email_verification -> 0041_security_graph_foundation, Add tenant-scoped security graph foundation tables.
+INFO  [alembic.runtime.migration] Running upgrade 0041_security_graph_foundation -> 0042_bidirectional_integrations, Add tenant-scoped bi-directional integration persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0041_security_graph_foundation -> 0042_action_remediation_system_of_record, Add action remediation sync state and event tables.
+INFO  [alembic.runtime.migration] Running upgrade 0042_action_remediation_system_of_record, 0042_bidirectional_integrations -> 0043_tenant_remediation_settings, Add tenant remediation settings persistence and merge current heads.

@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnableRootPermissions",
+      "Effect": "Allow",
+      "Principal": {"AWS": "arn:aws:iam::696505809372oot"},
+      "Action": "kms:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowImportRoleDescribeOnly",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": ["kms:DescribeKey"],
+      "Resource": "*",
+      "Condition": {"ArnEquals": {"aws:PrincipalArn": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"}}
+    },
+    {
+      "Sid": "DenyImportRoleEvidenceReads",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": ["kms:GetKeyPolicy", "kms:ListGrants"],
+      "Resource": "*",
+      "Condition": {"ArnEquals": {"aws:PrincipalArn": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"}}
+    }
+  ]
+}

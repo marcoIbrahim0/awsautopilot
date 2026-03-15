@@ -1,0 +1,20 @@
+                                                   finding_id                                                    | control_id | canonical_control_id | in_scope |                            resource_id                             
+-----------------------------------------------------------------------------------------------------------------+------------+----------------------+----------+--------------------------------------------------------------------
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/4ef387bb-e523-417c-bec3-5b49eaf1e1fc | S3.11      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/186528e9-9ed9-45a6-85b7-df8d21779db0 | S3.13      | S3.11                | t        | arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/a4efae16-55dc-4202-8783-e3453b33b77a | S3.15      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/cfb4cebe-e1a7-4f70-8c67-76fd91a31eda | S3.17      | S3.15                | t        | arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/62c883be-08e5-45e8-804b-d27b7a7784fa | S3.11      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/a829dd71-b973-4924-b2e5-2a11d7a31bc1 | S3.13      | S3.11                | t        | arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/5dd000e6-9952-4cc4-a1ff-d189cb69499a | S3.15      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/46471aa0-2c6c-4016-952c-40c0287ea96a | S3.17      | S3.15                | t        | arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/8f71e722-89f3-4da3-a41d-588e098dfabc | S3.11      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/51a1937b-977a-4060-a55e-c77fb7fe2627 | S3.13      | S3.11                | t        | arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/17f2a2e7-204f-4fb5-9a81-1f0d14e4cc73 | S3.15      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/3e164775-f8b9-498f-9e33-9d3e3b29c0fd | S3.17      | S3.15                | t        | arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/324566ac-03f9-47bd-8d21-8970ba4b08ad | S3.11      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.13/finding/729fb39a-10e3-4a0e-8b3c-13bf6ee45820 | S3.13      | S3.11                | t        | arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/e2d38f54-3700-4367-a90b-d173597ed8d1 | S3.15      |                      | f        | arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372
+ arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/ce87ea38-d12a-4c80-9e33-afb7a361c4b7 | S3.17      | S3.15                | t        | arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372
+(16 rows)
+

@@ -20,7 +20,11 @@ from sqlalchemy.orm import Session
 
 from backend.models import AwsAccount, Finding
 from backend.models.action_finding import ActionFinding
-from backend.services.canonicalization import build_resource_key, canonicalize_control_id
+from backend.services.canonicalization import (
+    build_resource_key,
+    canonicalize_control_id,
+    normalize_control_id_token,
+)
 from backend.services.finding_relationship_context import enrich_finding_raw_json
 from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
 from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
@@ -47,6 +51,12 @@ _S3_BUCKET_SCOPED_ACTION_TYPES = {
 }
 _SECURITY_HUB_CONSISTENCY_MAX_FETCH_PASSES = 3
 _SECURITY_HUB_CONSISTENCY_RETRY_SECONDS = 2.0
+_SECURITY_HUB_SEMANTIC_EXCLUSIONS: dict[str, tuple[str, ...]] = {
+    # Current live Security Hub S3.11 is event notifications, not the product's lifecycle family.
+    "S3.11": ("event notifications",),
+    # Current live Security Hub S3.15 is Object Lock, not the product's SSE-KMS family.
+    "S3.15": ("object lock",),
+}
 
 
 def _is_security_hub_not_enabled_error(exc: ClientError) -> bool:
@@ -212,6 +222,28 @@ def _select_primary_resource(resources_raw: object, control_id: str | None) -> t
     return _resource_id_and_type(resources[0])
 
 
+def _materializable_control_id(raw: dict[str, Any]) -> tuple[str | None, str | None]:
+    """
+    Return the control token eligible for product materialization.
+
+    The product keeps canonical family IDs S3.11 and S3.15 for lifecycle and
+    SSE-KMS guidance, but current live Security Hub uses those same IDs for
+    unrelated controls (event notifications and Object Lock). We keep the raw
+    control_id for transparency while excluding those live semantics from the
+    lifecycle/SSE-KMS action families.
+    """
+    comp = raw.get("Compliance") or {}
+    control_id = normalize_control_id_token(str(comp.get("SecurityControlId") or ""))
+    if not control_id:
+        return None, None
+
+    title = str(raw.get("Title") or "").strip().lower()
+    exclusion_markers = _SECURITY_HUB_SEMANTIC_EXCLUSIONS.get(control_id)
+    if exclusion_markers and any(marker in title for marker in exclusion_markers):
+        return None, f"security_hub_semantic_drift:{control_id}"
+    return control_id, None
+
+
 def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: uuid.UUID) -> dict[str, Any]:
     sid = raw.get("Id") or ""
     sev = (raw.get("Severity") or {}).get("Label")
@@ -221,17 +253,18 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
     resources = raw.get("Resources") or []
     comp = raw.get("Compliance") or {}
     ctrl = comp.get("SecurityControlId")
-    rid, rtype = _select_primary_resource(resources, str(ctrl) if ctrl is not None else None)
+    materializable_control_id, exclusion_reason = _materializable_control_id(raw)
+    rid, rtype = _select_primary_resource(resources, materializable_control_id)
     standards = comp.get("AssociatedStandards") or []
     std_name = standards[0].get("StandardsId") if standards else None
     created = _parse_ts(raw.get("CreatedAt"))
     updated = _parse_ts(raw.get("UpdatedAt"))
     last_obs = _parse_ts(raw.get("LastObservedAt"))
 
-    canonical_control_id = canonicalize_control_id(str(ctrl) if ctrl is not None else None)
+    canonical_control_id = canonicalize_control_id(materializable_control_id)
     in_scope = (
-        action_type_from_control(str(ctrl) if ctrl is not None else None) != ACTION_TYPE_DEFAULT
-        if ctrl is not None
+        action_type_from_control(materializable_control_id) != ACTION_TYPE_DEFAULT
+        if materializable_control_id is not None
         else False
     )
     resource_key = build_resource_key(
@@ -248,6 +281,8 @@ def _extract_finding_fields(raw: dict, account_id: str, region: str, tenant_id: 
         resource_type=_trunc(rtype, 256),
         resource_key=_trunc(resource_key, 512),
     )
+    if exclusion_reason:
+        raw_json["materialization_excluded_reason"] = exclusion_reason
     status = _normalized_finding_status(raw)[:32]
     resolved_at = (last_obs or updated or datetime.now(timezone.utc)) if status == "RESOLVED" else None
 

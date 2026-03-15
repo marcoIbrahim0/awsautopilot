@@ -214,6 +214,65 @@ def test_extract_finding_fields_severity_normalized() -> None:
     assert fields["severity_normalized"] == 100
 
 
+@pytest.mark.parametrize(
+    ("control_id", "title", "expected_canonical", "expected_in_scope", "expected_exclusion"),
+    [
+        (
+            "S3.11",
+            "S3 general purpose buckets should have event notifications enabled",
+            None,
+            False,
+            "security_hub_semantic_drift:S3.11",
+        ),
+        (
+            "S3.15",
+            "S3 general purpose buckets should have Object Lock enabled",
+            None,
+            False,
+            "security_hub_semantic_drift:S3.15",
+        ),
+        (
+            "S3.13",
+            "S3 general purpose buckets should have Lifecycle configurations",
+            "S3.11",
+            True,
+            None,
+        ),
+        (
+            "S3.17",
+            "S3 general purpose buckets should be encrypted at rest with AWS KMS keys",
+            "S3.15",
+            True,
+            None,
+        ),
+    ],
+)
+def test_extract_finding_fields_respects_live_s3_semantic_split(
+    control_id: str,
+    title: str,
+    expected_canonical: str | None,
+    expected_in_scope: bool,
+    expected_exclusion: str | None,
+) -> None:
+    """Current live Security Hub S3.11/S3.15 semantics must not pollute lifecycle/SSE-KMS families."""
+    tenant_id = uuid.uuid4()
+    raw = {
+        "Id": f"arn:aws:securityhub:us-east-1:123456789012:finding/{control_id}",
+        "Title": title,
+        "Severity": {"Label": "MEDIUM"},
+        "Resources": [{"Id": "arn:aws:s3:::semantic-split-bucket", "Type": "AwsS3Bucket"}],
+        "Workflow": {"Status": "NEW"},
+        "Compliance": {"SecurityControlId": control_id},
+    }
+
+    fields = _extract_finding_fields(raw, "123456789012", "us-east-1", tenant_id)
+
+    assert fields["control_id"] == control_id
+    assert fields["canonical_control_id"] == expected_canonical
+    assert fields["in_scope"] is expected_in_scope
+    assert fields["raw_json"].get("materialization_excluded_reason") == expected_exclusion
+
+
 def test_normalized_finding_status_passed_maps_to_resolved() -> None:
     """Only Compliance PASSED is treated as resolved."""
     raw = {

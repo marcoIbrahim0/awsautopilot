@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Wave 6 strict blocker closure for S3.11 and S3.15 live proof (2026-03-16)](task_log.md#wave-6-strict-blocker-closure-for-s311-and-s315-live-proof-2026-03-16)
+  - Added truthful live remapping for current Security Hub drift so lifecycle findings now close through `S3.13 -> S3.11` and SSE-KMS findings now close through `S3.17 -> S3.15`, while current live `S3.11` event-notification findings and `S3.15` Object Lock findings are explicitly excluded from family materialization.
+  - Captured a fresh strict evidence package under `docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/`, proved truthful executable plus downgrade/manual cases for both `S3.11` and `S3.15`, updated the Wave 6 status docs, and left Wave 6 at `9/9` families ready for the final strict live gate.
 - [Remediation-profile Wave 6 environment readiness for the next live AWS validation on master (2026-03-15)](task_log.md#remediation-profile-wave-6-environment-readiness-for-the-next-live-aws-validation-on-master-2026-03-15)
   - Built the readiness package under `docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`, enabled the IAM.4 authoritative route in the isolated runtime only, repaired the target-account customer-run credential path, seeded dedicated AWS fixtures, and captured the per-family readiness matrix plus cleanup plan.
   - Reclassified the March 15 Wave 6 blockers from fresh live evidence: `EC2.53`, `S3.9`, `CloudTrail.1`, and `Config.1` now have executable-ready cases; `S3.2` and `S3.5` remain downgrade-only; IAM.4 runtime authority is resolved; and `S3.11` / `S3.15` remain blocked by current Security Hub control drift.

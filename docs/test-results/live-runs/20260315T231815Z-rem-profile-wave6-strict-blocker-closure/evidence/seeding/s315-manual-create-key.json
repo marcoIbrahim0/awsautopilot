@@ -1,0 +1,21 @@
+{
+    "KeyMetadata": {
+        "AWSAccountId": "696505809372",
+        "KeyId": "ef0cca31-8328-41e6-ab28-64cbedc1a44c",
+        "Arn": "arn:aws:kms:eu-north-1:696505809372:key/ef0cca31-8328-41e6-ab28-64cbedc1a44c",
+        "CreationDate": "2026-03-16T01:30:58.308000+02:00",
+        "Enabled": true,
+        "Description": "Wave 6 strict S3.15 manual key default-policy probe",
+        "KeyUsage": "ENCRYPT_DECRYPT",
+        "KeyState": "Enabled",
+        "Origin": "AWS_KMS",
+        "KeyManager": "CUSTOMER",
+        "CustomerMasterKeySpec": "SYMMETRIC_DEFAULT",
+        "KeySpec": "SYMMETRIC_DEFAULT",
+        "EncryptionAlgorithms": [
+            "SYMMETRIC_DEFAULT"
+        ],
+        "MultiRegion": false,
+        "CurrentKeyMaterialId": "1899f489e17f670230eb1fd32bb9c70e1f7d5bce7026729cc01073095476fd83"
+    }
+}
