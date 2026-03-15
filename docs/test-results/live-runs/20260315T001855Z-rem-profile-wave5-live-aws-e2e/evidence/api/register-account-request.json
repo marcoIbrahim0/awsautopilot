@@ -1,0 +1,6 @@
+{
+  "account_id": "696505809372",
+  "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+  "regions": ["eu-north-1", "us-east-1"],
+  "tenant_id": "69d0da9c-3244-47ca-b556-37993e25f6ea"
+}

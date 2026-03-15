@@ -1,0 +1,71 @@
+{
+  "action_count": 2,
+  "actions": [
+    {
+      "action_id": "cd54929e-54d9-4c8a-b648-04a42bab0025",
+      "action_type": "ebs_snapshot_block_public_access",
+      "blocked_reasons": [],
+      "control_id": "EC2.182",
+      "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+      "decision_summary": "Wave 1 single-profile compatibility defaulted profile_id to 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-cd54929e",
+      "has_runnable_terraform": false,
+      "index": 1,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {},
+      "profile_id": "snapshot_block_all_sharing",
+      "rejected_profiles": [],
+      "strategy_id": "snapshot_block_all_sharing",
+      "strategy_inputs": {},
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Amazon EBS Snapshots should not be publicly accessible"
+    },
+    {
+      "action_id": "e3cd4d2e-9fbd-41d1-93a3-550fb3a36e27",
+      "action_type": "ebs_snapshot_block_public_access",
+      "blocked_reasons": [],
+      "control_id": "EC2.182",
+      "decision_rationale": "Wave 1 single-profile compatibility defaulted profile_id to 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+      "decision_summary": "Wave 1 single-profile compatibility defaulted profile_id to 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/02-aws-account-696505809372-e3cd4d2e",
+      "has_runnable_terraform": false,
+      "index": 2,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {},
+      "profile_id": "snapshot_block_all_sharing",
+      "rejected_profiles": [],
+      "strategy_id": "snapshot_block_all_sharing",
+      "strategy_inputs": {},
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|EC2.182",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Amazon EBS Snapshots should not be publicly accessible"
+    }
+  ],
+  "execution_root": "executable/actions",
+  "grouped_actions": [
+    "cd54929e-54d9-4c8a-b648-04a42bab0025",
+    "e3cd4d2e-9fbd-41d1-93a3-550fb3a36e27"
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 0,
+  "runner_template_source": "embedded_mixed_tier",
+  "runner_template_version": "grouped_bundle_mixed_tier/v1",
+  "tier_counts": {
+    "executable": 0,
+    "manual_guidance": 0,
+    "review_required": 2
+  }
+}

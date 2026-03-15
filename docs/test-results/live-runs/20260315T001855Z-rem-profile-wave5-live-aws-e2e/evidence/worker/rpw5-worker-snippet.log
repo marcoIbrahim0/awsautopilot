@@ -1,0 +1,9 @@
+2026-03-15 02:27:05 | INFO     | backend.services.aws | Assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole with session name security-autopilot-session
+2026-03-15 02:27:05 | INFO     | backend.services.aws | Successfully assumed role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+2026-03-15 02:27:09 | INFO     | backend.services.action_engine | compute_actions_for_tenant tenant_id=69d0da9c-3244-47ca-b556-37993e25f6ea scope=(account=696505809372 region=eu-north-1) groups=14 created=14 updated=0 resolved=0 reopened_with_open_findings=0 links=21 removed_links=0 toxic_combination_matches=2 graph_nodes_created=45 graph_edges_created=127 graph_nodes_deleted=0 graph_edges_deleted=0
+2026-03-15 02:36:44 | INFO     | worker | [971fc8a8-21a6-4f15-88a8-cb8594236826] Processing queue=legacy receive_count=1 job_type=remediation_run schema_version=2 tenant=69d0da9c-3244-47ca-b556-37993e25f6ea account=None region=None
+2026-03-15 02:36:44 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=8745650b-c730-416f-8375-7fbbec760aff action_id=cd54929e-54d9-4c8a-b648-04a42bab0025 status=success
+2026-03-15 02:37:57 | INFO     | worker.jobs.remediation_run | RemediationRun completed run_id=e36343f8-dcf3-49a1-bb20-01a4a72f09c9 action_id=cd54929e-54d9-4c8a-b648-04a42bab0025 status=success
+2026-03-15 02:44:20 | ERROR    | worker | SQS receive_message failed queue=legacy after retries: AWS.SimpleQueueService.NonExistentQueue - An error occurred (AWS.SimpleQueueService.NonExistentQueue) when calling the ReceiveMessage operation: The specified queue does not exist.
+2026-03-15 02:44:29 | CRITICAL | worker | Too many consecutive SQS errors queue=legacy (5). Backing off...
+2026-03-15 02:44:30 | INFO     | worker | Received signal 2. Finishing current message, then shutting down...

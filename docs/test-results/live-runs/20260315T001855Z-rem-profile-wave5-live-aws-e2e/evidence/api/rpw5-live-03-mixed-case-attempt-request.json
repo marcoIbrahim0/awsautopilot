@@ -1,0 +1,5 @@
+{
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "strategy_inputs": {"preserve_existing_policy": true},
+  "risk_acknowledged": true
+}

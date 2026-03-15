@@ -1,0 +1,13 @@
+{
+  "strategy_id": "snapshot_block_all_sharing",
+  "action_overrides": [
+    {
+      "action_id": "e3cd4d2e-9fbd-41d1-93a3-550fb3a36e27",
+      "strategy_id": "snapshot_keep_sharing_exception",
+      "strategy_inputs": {
+        "exception_duration_days": "30",
+        "exception_reason": "Wave 5 mixed-tier validation in isolated runtime"
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "backend": "http://127.0.0.1:18004",
+  "postgres_port": "55432",
+  "ingest_queue": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-20260315t001855z-ingest",
+  "contract_quarantine_queue": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw5-20260315t001855z-contract-quarantine"
+}

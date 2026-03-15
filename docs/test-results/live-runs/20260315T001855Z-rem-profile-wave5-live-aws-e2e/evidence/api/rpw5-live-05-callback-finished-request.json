@@ -1,0 +1,26 @@
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI2OWQwZGE5Yy0zMjQ0LTQ3Y2EtYjU1Ni0zNzk5M2UyNWY2ZWEiLCJncm91cF9ydW5faWQiOiI5YTc4NmNiNi0wNTFhLTQ2MGYtYjE3MC1kZTA4MzVlZDEwNDEiLCJncm91cF9pZCI6IjQwMDQxYmZiLTJlZTktNGFmZC05NDM2LWNiOTNhOTc2YzZjYSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJjZDU0OTI5ZS01NGQ5LTRjOGEtYjY0OC0wNGE0MmJhYjAwMjUiLCJlM2NkNGQyZS05ZmJkLTQxZDEtOTNhMy01NTBmYjNhMzZlMjciXSwianRpIjoiOTc0NGE4OGYtZjQ2Mi00YjRiLTllMDEtYmYwNTkyNDVhZTFiIiwiaWF0IjoxNzczNTM1MDc0LCJleHAiOjE3NzM2MjE0NzR9.H0NPtEQ7nvlLYJLcBMwTJYMZvN58mt8dq_c35nRiKnQ",
+  "event": "finished",
+  "reporting_source": "bundle_callback",
+  "started_at": "2026-03-15T00:38:30Z",
+  "finished_at": "2026-03-15T00:38:45Z",
+  "action_results": [],
+  "non_executable_results": [
+    {
+      "action_id": "cd54929e-54d9-4c8a-b648-04a42bab0025",
+      "support_tier": "review_required_bundle",
+      "profile_id": "snapshot_block_all_sharing",
+      "strategy_id": "snapshot_block_all_sharing",
+      "reason": "review_required_metadata_only",
+      "blocked_reasons": []
+    },
+    {
+      "action_id": "e3cd4d2e-9fbd-41d1-93a3-550fb3a36e27",
+      "support_tier": "review_required_bundle",
+      "profile_id": "snapshot_block_all_sharing",
+      "strategy_id": "snapshot_block_all_sharing",
+      "reason": "review_required_metadata_only",
+      "blocked_reasons": []
+    }
+  ]
+}

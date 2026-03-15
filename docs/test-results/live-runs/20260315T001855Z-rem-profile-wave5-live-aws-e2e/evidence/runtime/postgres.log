@@ -1,0 +1,27 @@
+2026-03-15 02:19:25.415 EET [79269] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 02:19:25.417 EET [79269] LOG:  listening on IPv6 address "::1", port 55432
+2026-03-15 02:19:25.417 EET [79269] LOG:  listening on IPv4 address "127.0.0.1", port 55432
+2026-03-15 02:19:25.417 EET [79269] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55432"
+2026-03-15 02:19:25.419 EET [79270] LOG:  database system was shut down at 2026-03-15 02:19:14 EET
+2026-03-15 02:19:25.421 EET [79269] LOG:  database system is ready to accept connections
+2026-03-15 02:19:38.583 EET [79308] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-15 02:19:38.583 EET [79308] HINT:  New enum values must be committed before they can be used.
+2026-03-15 02:19:38.583 EET [79308] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-15 02:19:53.926 EET [79365] ERROR:  relation "alembic_version" does not exist at character 25
+2026-03-15 02:19:53.926 EET [79365] STATEMENT:  select version_num from alembic_version;
+2026-03-15 02:19:53.926 EET [79363] ERROR:  type "remediation_run_status" does not exist at character 32
+2026-03-15 02:19:53.926 EET [79363] STATEMENT:  select unnest(enum_range(null::remediation_run_status));
+2026-03-15 02:39:32.306 EET [82619] FATAL:  role "marcomaher" does not exist
+2026-03-15 02:39:45.067 EET [82649] FATAL:  role "codex" does not exist
+2026-03-15 02:39:45.068 EET [82648] FATAL:  role "security_autopilot" does not exist
+2026-03-15 02:44:14.757 EET [79269] LOG:  received fast shutdown request
+2026-03-15 02:44:14.760 EET [79269] LOG:  aborting any active transactions
+2026-03-15 02:44:14.761 EET [80672] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.761 EET [79748] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.761 EET [82365] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.761 EET [82152] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.761 EET [79750] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.761 EET [81094] FATAL:  terminating connection due to administrator command
+2026-03-15 02:44:14.762 EET [79269] LOG:  background worker "logical replication launcher" (PID 79276) exited with exit code 1
+2026-03-15 02:44:14.765 EET [79271] LOG:  shutting down
+2026-03-15 02:44:14.779 EET [79269] LOG:  database system is shut down

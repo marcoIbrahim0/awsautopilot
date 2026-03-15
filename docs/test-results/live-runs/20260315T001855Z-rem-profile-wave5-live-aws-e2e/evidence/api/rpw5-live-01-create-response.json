@@ -1,0 +1,1 @@
+{"detail":{"error":"Exception-only strategy","detail":"Selected strategy 'snapshot_keep_sharing_exception' is exception-only. Use Exception workflow instead of PR bundle.","exception_flow":{"duration_days":30,"reason":"Wave 5 mixed-tier validation in isolated runtime"}}}

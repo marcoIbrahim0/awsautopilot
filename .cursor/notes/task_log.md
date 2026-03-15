@@ -22247,6 +22247,78 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 ## Ocypheris API domain cutover via Cloudflare proxy and live signup restoration (2026-03-09)
 
+## Remediation-profile Wave 5 live AWS validation on master (2026-03-15)
+
+**Task:** Execute the remediation-profile Wave 5 live-AWS validation from the current `master` checkout only, using an isolated environment plus a real AWS test account, and record authoritative outcomes for `RPW5-LIVE-01` through `RPW5-LIVE-08`.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/notes/aws-cleanup-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-01.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-02.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-03.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-04.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-05.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-06.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-07.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/tests/rpw5-live-08.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/evidence/worker/rpw5-worker-snippet.log`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/evidence/worker/rpw5-api-snippet.log`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Built an isolated local runtime on `master` rather than using shared production:
+  - isolated backend/worker at `http://127.0.0.1:18004`
+  - disposable Postgres on port `55432`
+  - disposable SQS ingest and contract-quarantine queues in SaaS account `029037611564`
+- Reused the real AWS test account `696505809372` by aligning the isolated tenant external ID to the existing live ReadRole trust and ingesting real Security Hub data.
+  - Real ingest completed with `1010` updated findings (`371` in `eu-north-1`, `639` in `us-east-1`)
+- Identified the only live grouped families available after ingest:
+  - `ebs_snapshot_block_public_access`
+  - `s3_bucket_access_logging`
+  - `s3_bucket_require_ssl`
+- Proved the following Wave 5 contracts on live AWS-backed data:
+  - mixed-tier grouped layout semantics (`grouped_bundle_mixed_tier/v1`, `execution_root=executable/actions`)
+  - zero-executable grouped runs return explicit `400 reason=no_executable_bundle`, not `500`
+  - grouped callback reporting accepts and persists `non_executable_results[]`
+- Recorded the gating blockers:
+  - no real mixed-tier executable grouped family exists in the isolated live dataset
+  - the connected isolated account has `role_write_arn: null`
+  - the inferred standard `SecurityAutopilotWriteRole` is not assumable from the SaaS account
+  - callback replay protection is missing: the same valid finished callback payload was accepted twice
+- Captured setup-only issues encountered while building the isolated validation environment:
+  - fresh DB bootstrap hit the `0034_remediation_runs_active_unique_guard` migration ordering bug
+  - `/api/aws/accounts/{id}/validate` returned `500` because the AWS Config probe sends an invalid `Limit` parameter
+
+**AWS resources touched:**
+- Target validation account: `696505809372`
+- Regions: `eu-north-1` and `us-east-1`
+- Assumed role: `arn:aws:iam::696505809372:role/SecurityAutopilotReadRole`
+- Probed role (failed assume): `arn:aws:iam::696505809372:role/SecurityAutopilotWriteRole`
+- Real resource/control families observed via Security Hub findings and grouped actions:
+  - `EC2.182` EBS snapshot block public access
+  - `S3.9` S3 bucket access logging
+  - `S3.5` S3 bucket require SSL
+- Disposable SaaS-side queues created and later deleted:
+  - `security-autopilot-rpw5-20260315t001855z-ingest`
+  - `security-autopilot-rpw5-20260315t001855z-contract-quarantine`
+
+**Cleanup state:**
+- No target-account AWS mutation was performed, so no rollback was required in account `696505809372`.
+- Deleted the temporary isolated SQS queues.
+- Stopped and removed the disposable Postgres cluster.
+- Stopped the isolated backend and worker.
+- No intentionally retained AWS or local runtime resources remain from this run.
+
+**Open questions / TODOs:**
+- Provision or connect an isolated test account that has a real usable WriteRole and reversible disposable targets for Wave 5 plan/apply coverage.
+- Seed or identify a real migrated grouped family that produces `deterministic_bundle + review_required/manual_guidance` on live AWS-backed data.
+- Fix callback replay protection on `/api/internal/group-runs/report`.
+- Fix `/api/aws/accounts/{id}/validate` so the AWS Config probe does not send the invalid `Limit` parameter.
+- Fix the fresh-empty-DB Alembic bootstrap failure around revision `0034_remediation_runs_active_unique_guard`.
+
 **Task:** Move the live app to `Cloudflare frontend + AWS backend` using `https://api.ocypheris.com`, remove active `valensjewelry.com` usage from the live path, and verify real-browser signup on `https://ocypheris.com/signup`.
 
 **Files created/modified:**
