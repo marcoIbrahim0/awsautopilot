@@ -23276,3 +23276,50 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - `S3.11` still has no truthful downgrade-ready failing live case because lifecycle-present buckets currently pass `S3.13`; a broader product decision would be required if the full gate insists on both executable and downgrade proof for that family.
 - `S3.15` remains blocked by live AWS/product drift because the isolated account still has no current enabled Security Hub control/finding that matches the product’s SSE-KMS family semantics.
+
+## Wave 6 split-path shipped-validation closure for S3.11 and S3.15 follow-up framing (2026-03-16)
+
+**Task:** Implement the narrow split-path closure on current `master` only by formalizing the `S3.11` provider-drift validation exception, removing `S3.15` from the default shipped S3 campaign, and documenting `S3.15` as a separate live-remap follow-up instead of a remaining code bug.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/run_s3_controls_campaign.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_s3_campaign_summary.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Updated Step 10.1 in the remediation-profile implementation plan so shipped-validation can now use one of two proof shapes:
+  - the standard executable + truthful downgrade/manual case
+  - a provider-drift exception with executable proof plus explicit evidence that current live provider semantics do not materialize a truthful failing case
+- Locked that exception to documentation/gate-policy only:
+  - no runtime downgrade relaxation
+  - must cite a dated evidence package
+  - must cite exact action/run/resource/control identifiers
+  - must be described as `executable-only under current live semantics`
+  - must be re-evaluated on the next targeted live rerun or if live control inventory changes
+- Applied that framing to the Wave 6 docs:
+  - `wave-6-control-family-migration.md` now treats `S3.11` as closed for shipped-validation via live `S3.13 -> S3.11` canonicalization plus documented downgrade impossibility
+  - `README.md` now links the separate `S3.15` follow-up packet and states that `S3.15` is the only unresolved Wave 6 live-family blocker
+- Added a dedicated `S3.15` follow-up packet that records the actual March 15 rerun evidence, the exact live AWS/product mismatch, the prohibited shortcut mappings, the acceptable follow-on decision paths, and the acceptance evidence required before any future runtime change.
+- Split the internal shipped/default S3 campaign away from `S3.15` without changing the override surface:
+  - `scripts/run_s3_controls_campaign.py` now defaults to `S3.9,S3.5,S3.11`
+  - `--controls` still allows explicit `S3.15` runs
+  - script help/docstring now explains that `S3.15` is excluded from the default set pending the separate remap decision
+- Added focused test coverage for the script-default change and the explicit `--controls S3.15` override while preserving the existing campaign-summary behavior checks.
+- Updated live-testing docs and task-history navigation so the split-path outcome is discoverable from the main indexes.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_s3_campaign_summary.py -q`
+
+**Technical debt / gotchas:**
+- The underlying Wave 6 rerun evidence package is intentionally unchanged. The split-path closure only reinterprets the March 15 evidence at the higher-level docs/gate-policy layer.
+- The default S3 campaign is now a shipped-validation subset, not the exhaustive S3 control list. Any operator who still wants to probe `S3.15` must pass it explicitly through `--controls`.
+
+**Open questions / TODOs:**
+- `S3.15` still needs a separate product/AWS mapping decision before the final nine-family Wave 6 gate can pass.
+- If AWS later exposes a truthful SSE-KMS-aligned control/finding in the isolated account, the `S3.11` provider-drift exception and the `S3.15` follow-up packet should both be revisited in the next targeted rerun.

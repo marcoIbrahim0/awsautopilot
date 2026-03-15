@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """
-Campaign runner: validate PR bundles for all 4 S3 controls end-to-end.
+Campaign runner: validate PR bundles for the current shipped/live-validated S3 set.
+
+Default controls:
+  - S3.9
+  - S3.5
+  - S3.11
+
+S3.15 is excluded from the default set because it still requires a separate
+live remap decision. Use --controls S3.15 (or include it explicitly) to run it.
 
 Execution model (gated):
   Stage 0: Readiness gate (must pass before any control execution)
-  Stage 1+: Per-control runs (S3.9, S3.5, S3.11, S3.15)
+  Stage 1+: Per-control runs (default: S3.9, S3.5, S3.11)
 
 Usage:
   export SAAS_EMAIL=<email>
@@ -42,7 +50,9 @@ except ImportError:  # pragma: no cover
     from scripts.lib.no_ui_agent_client import SaaSApiClient
 
 
-TARGET_CONTROLS = ["S3.9", "S3.5", "S3.11", "S3.15"]
+# Default shipped-validation set. S3.15 stays opt-in until the live remap
+# follow-up lands and revalidates a truthful Security Hub mapping.
+TARGET_CONTROLS = ["S3.9", "S3.5", "S3.11"]
 
 DEFAULT_API_BASE = "https://api.ocypheris.com"
 DEFAULT_ACCOUNT_ID = "029037611564"
@@ -59,7 +69,7 @@ DEFAULT_CLIENT_RETRY_BACKOFF_SEC = 1.5
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="S3 control campaign runner")
+    parser = argparse.ArgumentParser(description="S3 control campaign runner for the current shipped-validation set")
     parser.add_argument("--dry-run", action="store_true", help="Skip terraform apply in no-UI agent")
     parser.add_argument("--stage0-only", action="store_true", help="Run readiness gate only and exit")
     parser.add_argument("--api-base", default=DEFAULT_API_BASE, help="SaaS API base URL")
@@ -105,7 +115,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--controls",
         default=",".join(TARGET_CONTROLS),
-        help="Comma-separated control IDs to execute in order (default: S3 campaign controls).",
+        help=(
+            "Comma-separated control IDs to execute in order "
+            "(default: current shipped/live-validated S3 set "
+            "`S3.9,S3.5,S3.11`; `S3.15` remains opt-in pending a separate remap decision)."
+        ),
     )
     parser.add_argument(
         "--client-timeout-sec",

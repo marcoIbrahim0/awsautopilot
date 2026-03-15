@@ -11,6 +11,7 @@ Related docs:
 - [Remediation profile resolution spec](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md)
 - [Implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md)
 - [Wave 5 mixed-tier grouped bundles](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md)
+- [S3.15 live remap follow-up](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md)
 
 ## Summary
 
@@ -151,9 +152,22 @@ flowchart LR
   - `S3.15` remains blocked by live AWS/product drift
 - Those live-control observations do not change the landed Wave 6 product behavior described above, but they do define the current final-gate boundary precisely: `7/9` families are fully ready, `S3.11` is executable-only under current live semantics, and `S3.15` still requires a broader product/AWS mapping decision.
 
+## Split-Path Closure After The March 15 Rerun
+
+- Step 10.1 now allows a documented provider-drift exception when a migrated family has:
+  - one deterministic executable case
+  - explicit evidence that current live provider semantics do not materialize a truthful failing review/manual case
+- Under that rule, `S3.11` is now treated as closed for shipped-validation documentation:
+  - executable action `3b03726e-a29f-473c-a7ae-ecac0f1ee1c5`
+  - executable run `c2aab0c4-ed7d-4320-a7d7-34e6c059f2b1`
+  - review resource `arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372`
+  - live control evidence: lifecycle findings materialize on `S3.13`, while the lifecycle-present review bucket remains `S3.13 PASSED` and produces no failing action
+- This `S3.11` exception is documentation and gate-policy only. It does not relax resolver downgrade rules, and it must be re-evaluated on the next targeted live rerun or if the isolated account's enabled S3 control inventory changes.
+- `S3.15` is not covered by that exception because there is no compatible live finding/action materialization at all. It remains the only open Wave 6 live-family blocker and now has a separate follow-up packet under [S3.15 live remap follow-up](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/s3-15-live-remap-follow-up.md).
+
 ## Post-Wave-6 Boundary
 
-- Wave 6 control-family migration is implemented on `master`, but live validation is still required per migrated family before any shipped-product claim is updated.
+- Wave 6 control-family migration is implemented on `master`, but live validation still governs shipped claims. After the split-path closure, `S3.15` remains the only unresolved Wave 6 live-family blocker.
 - Legacy artifact mirrors are still present during rollout. `selected_strategy`, `strategy_inputs`, and `pr_bundle_variant` remain compatibility artifacts, not the safety authority.
 - Wave 5 mixed-tier grouped behavior remains the grouped execution/output boundary for downgraded review/manual actions.
 - Customer-run PR bundles remain the supported model, and direct-fix boundaries are unchanged.

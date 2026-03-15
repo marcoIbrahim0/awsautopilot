@@ -1695,3 +1695,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 6 blocker-closure rerun for S3.2 / S3.5 / S3.11 / S3.15 (2026-03-16)](task_log.md#wave-6-blocker-closure-rerun-for-s32--s35--s311--s315-2026-03-16)
   - Reused the March 15 rerun runtime to capture the missing S3.2 bucket-scoped proof, close the S3.5 create-tier mismatch, confirm executable-only `S3.11` truth through live `S3.13`, and reconfirm that `S3.15` still lacks a live Security Hub mapping.
   - Added final rerun notes, refreshed Wave 6 live-readiness docs, and cleaned up the disposable local runtime plus rerun queues after evidence capture.
+- [Wave 6 split-path shipped-validation closure for S3.11 and S3.15 follow-up framing (2026-03-16)](task_log.md#wave-6-split-path-shipped-validation-closure-for-s311-and-s315-follow-up-framing-2026-03-16)
+  - Formalized the Step 10 provider-drift exception so `S3.11` can be treated as a documented executable-only live-semantics closure without changing runtime behavior.
+  - Split `S3.15` out of the default S3 campaign, added a dedicated remap follow-up doc, and updated live-testing/navigation docs so `S3.15` is the only remaining Wave 6 live-family blocker.
