@@ -19,12 +19,16 @@ class _FakeS3Client:
         head_bucket_error_code: str | None = None,
         lifecycle_document: dict[str, Any] | None = None,
         lifecycle_error_code: str | None = None,
+        policy_public: bool | None = None,
+        website_error_code: str | None = "NoSuchWebsiteConfiguration",
     ) -> None:
         self._policy_json = policy_json
         self._error_code = error_code
         self._head_bucket_error_code = head_bucket_error_code
         self._lifecycle_document = lifecycle_document
         self._lifecycle_error_code = lifecycle_error_code
+        self._policy_public = policy_public
+        self._website_error_code = website_error_code
 
     def get_bucket_policy(self, *, Bucket: str) -> dict[str, Any]:
         if self._error_code:
@@ -34,6 +38,19 @@ class _FakeS3Client:
             )
         return {"Policy": self._policy_json}
 
+    def get_bucket_policy_status(self, *, Bucket: str) -> dict[str, Any]:
+        if self._error_code:
+            raise ClientError(
+                {"Error": {"Code": self._error_code, "Message": "simulated failure"}},
+                "GetBucketPolicyStatus",
+            )
+        if self._policy_public is None:
+            raise ClientError(
+                {"Error": {"Code": "NoSuchBucketPolicy", "Message": "simulated failure"}},
+                "GetBucketPolicyStatus",
+            )
+        return {"PolicyStatus": {"IsPublic": self._policy_public}}
+
     def get_bucket_lifecycle_configuration(self, *, Bucket: str) -> dict[str, Any]:
         if self._lifecycle_error_code:
             raise ClientError(
@@ -42,6 +59,14 @@ class _FakeS3Client:
             )
         assert self._lifecycle_document is not None
         return self._lifecycle_document
+
+    def get_bucket_website(self, *, Bucket: str) -> dict[str, Any]:
+        if self._website_error_code:
+            raise ClientError(
+                {"Error": {"Code": self._website_error_code, "Message": "simulated failure"}},
+                "GetBucketWebsite",
+            )
+        return {}
 
     def head_bucket(self, *, Bucket: str) -> dict[str, Any]:
         if self._head_bucket_error_code:
@@ -204,6 +229,10 @@ def _s3_11_strategy() -> dict[str, Any]:
     return {"strategy_id": "s3_enable_abort_incomplete_uploads"}
 
 
+def _s3_2_strategy() -> dict[str, Any]:
+    return {"strategy_id": "s3_bucket_block_public_access_standard"}
+
+
 def test_collect_runtime_risk_signals_s35_captures_existing_bucket_policy(monkeypatch) -> None:
     existing_policy = {
         "Version": "2012-10-17",
@@ -270,6 +299,29 @@ def test_collect_runtime_risk_signals_s35_access_denied_marks_policy_path_unavai
     assert signals["access_path_evidence_available"] is False
     assert signals["evidence"]["existing_bucket_policy_capture_error"] == "AccessDenied"
     assert "Unable to inspect current bucket policy (AccessDenied)." in signals["access_path_evidence_reason"]
+
+
+def test_collect_runtime_risk_signals_s3_2_captures_private_bucket_and_disabled_website(monkeypatch) -> None:
+    session = _FakeSession(_FakeS3Client(policy_public=False, website_error_code="NoSuchWebsiteConfiguration"))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    action = _make_action()
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::safe-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::safe-bucket"
+    signals = collect_runtime_risk_signals(
+        action=action,
+        strategy=_s3_2_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_bucket_policy_public"] is False
+    assert signals["s3_bucket_website_configured"] is False
+    assert signals["access_path_evidence_available"] is True
+    assert signals["evidence"]["target_bucket"] == "safe-bucket"
 
 
 def test_collect_runtime_risk_signals_s3_11_captures_existing_lifecycle_document(monkeypatch) -> None:

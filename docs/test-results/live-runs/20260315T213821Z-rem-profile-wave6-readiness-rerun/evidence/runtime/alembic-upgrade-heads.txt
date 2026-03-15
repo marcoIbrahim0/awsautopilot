@@ -1,0 +1,27 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0020_run_executions -> 0021_control_plane_shadow, control-plane events and shadow finding state tables
+INFO  [alembic.runtime.migration] Running upgrade 0021_control_plane_shadow -> 0022_inventory_assets, inventory assets table for phase-2 reconciliation
+INFO  [alembic.runtime.migration] Running upgrade 0022_inventory_assets -> 0023_cp_reconcile_jobs, control-plane reconcile job history table
+INFO  [alembic.runtime.migration] Running upgrade 0023_cp_reconcile_jobs -> 0024_tenant_cp_token, tenant control-plane token
+INFO  [alembic.runtime.migration] Running upgrade 0024_tenant_cp_token -> 0025_cp_event_status, control-plane event ingest status
+INFO  [alembic.runtime.migration] Running upgrade 0025_cp_event_status -> 0026_canonical_keys, canonical control/resource keys for overlay and promotion
+INFO  [alembic.runtime.migration] Running upgrade 0026_canonical_keys -> 0027_findings_scope_shadow, findings in_scope flag and shadow overlay fields
+INFO  [alembic.runtime.migration] Running upgrade 0027_findings_scope_shadow -> 0028_findings_missing_keys_index, partial index for in-scope findings missing canonical/resource keys
+INFO  [alembic.runtime.migration] Running upgrade 0028_findings_missing_keys_index -> 0029_tenant_reconcile_controls, tenant-facing reconciliation run tracking and schedules
+INFO  [alembic.runtime.migration] Running upgrade 0029_tenant_reconcile_controls -> 0030_action_groups_persistent, persistent immutable action groups and run tracking
+INFO  [alembic.runtime.migration] Running upgrade 0030_action_groups_persistent -> 0031_control_plane_token_hash, control-plane token hash lifecycle metadata
+INFO  [alembic.runtime.migration] Running upgrade 0031_control_plane_token_hash -> 0032_findings_resolved_at, add resolved_at to findings
+INFO  [alembic.runtime.migration] Running upgrade 0032_findings_resolved_at -> 0033_user_auth_reset_fields, add user token version and password reset fields
+INFO  [alembic.runtime.migration] Running upgrade 0033_user_auth_reset_fields -> 0034_remrun_active_unique_guard, add unique active-run guard for remediation_runs
+INFO  [alembic.runtime.migration] Running upgrade 0034_remrun_active_unique_guard -> 0035_rootkey_remediation_orch, root-key remediation orchestration schema
+INFO  [alembic.runtime.migration] Running upgrade 0035_rootkey_remediation_orch -> 0036_secret_migration_conn, secret migration connectors schema
+INFO  [alembic.runtime.migration] Running upgrade 0036_secret_migration_conn -> 0037_comm_governance_layer, communication + governance layer schema
+INFO  [alembic.runtime.migration] Running upgrade 0037_comm_governance_layer -> 0038_user_verification_mfa, Add user contact verification and MFA fields.
+INFO  [alembic.runtime.migration] Running upgrade 0038_user_verification_mfa -> 0039_action_scoring_metadata, action scoring metadata
+INFO  [alembic.runtime.migration] Running upgrade 0038_user_verification_mfa -> 0039_action_owner_queues, Add action ownership fields for owner-based queues.
+INFO  [alembic.runtime.migration] Running upgrade 0039_action_owner_queues, 0039_action_scoring_metadata -> 0040_firebase_email_verification, Add Firebase-backed email verification fields and merge current heads.
+INFO  [alembic.runtime.migration] Running upgrade 0040_firebase_email_verification -> 0041_security_graph_foundation, Add tenant-scoped security graph foundation tables.
+INFO  [alembic.runtime.migration] Running upgrade 0041_security_graph_foundation -> 0042_bidirectional_integrations, Add tenant-scoped bi-directional integration persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0041_security_graph_foundation -> 0042_action_remediation_system_of_record, Add action remediation sync state and event tables.
+INFO  [alembic.runtime.migration] Running upgrade 0042_action_remediation_system_of_record, 0042_bidirectional_integrations -> 0043_tenant_remediation_settings, Add tenant remediation settings persistence and merge current heads.

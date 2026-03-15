@@ -1,0 +1,6 @@
+{
+  "action_id": "3b03726e-a29f-473c-a7ae-ecac0f1ee1c5",
+  "mode": "pr_only",
+  "strategy_id": "s3_enable_abort_incomplete_uploads",
+  "risk_acknowledged": true
+}

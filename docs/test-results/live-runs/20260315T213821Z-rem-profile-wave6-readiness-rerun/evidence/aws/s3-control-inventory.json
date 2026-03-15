@@ -1,0 +1,17 @@
+[
+    [
+        "S3.13",
+        "S3 general purpose buckets should have Lifecycle configurations",
+        "ENABLED"
+    ],
+    [
+        "S3.2",
+        "S3 general purpose buckets should block public read access",
+        "ENABLED"
+    ],
+    [
+        "S3.8",
+        "S3 general purpose buckets should block public access",
+        "ENABLED"
+    ]
+]

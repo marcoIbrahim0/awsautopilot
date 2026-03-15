@@ -23208,3 +23208,71 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - None for this blocker. The branch is ready for a Wave 2 UI rerun from the action-detail hydration perspective.
+
+## Wave 6 blocker-closure rerun for S3.2 / S3.5 / S3.11 / S3.15 (2026-03-16)
+
+**Task:** Close the remaining Wave 6 family blockers after the March 15 environment-readiness pass, using the existing rerun package and local master checkout only.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed the live rerun runtime and rerun Postgres were still reusable, then resumed the existing package `20260315T213821Z-rem-profile-wave6-readiness-rerun` instead of starting a fresh run.
+- Closed the S3.2 blocker truthfully.
+  - Re-queried post-seeding actions and confirmed that the second recompute had created the missing bucket-scoped canonical `S3.2` actions:
+    - executable action `1166ca21-3d37-4bfc-96d8-4362bacf6f47` on `arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372`
+    - downgrade action `540f1cd9-1087-46f8-ae79-dcf746acf206` on `arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372`
+  - Captured fresh API evidence showing the family boundary is correct:
+    - executable preview stayed `deterministic_bundle` only when the bucket was private and website hosting was disabled
+    - review preview downgraded to `manual_guidance_only` when website hosting was enabled
+    - run `726e95b9-c33c-4bf6-8f27-ccfe0e84b882` persisted the executable result end to end
+  - Confirmed the true live-AWS source semantics: bucket-scoped failures currently come from `S3.8`, not direct failing `S3.2`, and the product canonicalizes them to the `S3.2` family.
+- Closed the S3.5 create-tier mismatch.
+  - Preserved executable support tiers through create-time risk acknowledgement for the S3.5 strategy IDs in `remediation_run_resolution`.
+  - Existing live run `0c7045dd-3745-4bce-b452-e796ce4b67a8` now shows preview/create/run-detail consistency with persisted `deterministic_bundle`.
+  - Captured a fresh live downgrade probe on account-scoped action `230d6326-f361-4a57-b38a-7be3a16ca99b`, which correctly stayed `review_required_bundle` when bucket identity and merge-safe policy preservation evidence were missing.
+- Closed the S3.11 executable blocker without faking the downgrade path.
+  - Added `S3.13 -> s3_bucket_lifecycle_configuration` aliasing so live lifecycle findings canonicalize to the product’s `S3.11` family.
+  - Existing live run `c2aab0c4-ed7d-4320-a7d7-34e6c059f2b1` proves executable materialization now works.
+  - Captured direct AWS truth for the review bucket:
+    - lifecycle configuration exists
+    - Security Hub reports `S3.13 PASSED`
+    - no failing lifecycle action materializes for that bucket
+  - Recorded the family truthfully as executable-ready but not downgrade-ready under current live semantics.
+- Closed S3.15 truthfully as a remaining drift, not a code bug.
+  - Reconfirmed current enabled S3 control inventory in the isolated account:
+    - `S3.13`
+    - `S3.2`
+    - `S3.8`
+  - Reconfirmed `S3.15` findings remained empty and no `s3_bucket_encryption_kms` action existed post-seeding.
+  - Left the family blocked rather than inventing a mapping from inventory-only or shadow data.
+- Extended focused regression coverage and reran the smallest relevant pytest scope:
+  - `./venv/bin/pytest tests/test_control_scope.py tests/test_action_engine_merge.py tests/test_remediation_profile_options_preview.py tests/test_remediation_run_resolution_create.py tests/test_remediation_runtime_checks.py -q`
+  - Result: `87 passed in 0.46s`
+- Wrote the rerun notes package:
+  - `notes/final-summary.md`
+  - `notes/family-readiness-matrix.md`
+  - `notes/aws-cleanup-summary.md`
+- Updated non-Production docs to reflect the latest live-readiness truth:
+  - `wave-6-control-family-migration.md` now records the live `S3.8 -> S3.2` and `S3.13 -> S3.11` behavior instead of the stale older direct-control assumption
+  - `docs/remediation-profile-resolution/README.md` now links to the blocker-closure rerun summary
+- Cleaned up disposable rerun infrastructure after evidence capture:
+  - stopped the local API, worker, and Postgres runtime
+  - deleted the temporary rerun SQS queues and probed them as `NonExistentQueue`
+  - deleted the abandoned fresh S3.2 attempt buckets that had been created under the SaaS account credentials
+  - retained the reusable isolated-account buckets that now back the ready family proofs
+
+**Open questions / TODOs:**
+- `S3.11` still has no truthful downgrade-ready failing live case because lifecycle-present buckets currently pass `S3.13`; a broader product decision would be required if the full gate insists on both executable and downgrade proof for that family.
+- `S3.15` remains blocked by live AWS/product drift because the isolated account still has no current enabled Security Hub control/finding that matches the product’s SSE-KMS family semantics.

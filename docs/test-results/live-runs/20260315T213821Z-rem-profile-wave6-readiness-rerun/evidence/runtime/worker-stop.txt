@@ -1,0 +1,3 @@
+83249 Ss+  /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m backend.workers.main
+zsh:kill:1: kill 83249 failed: no such process
+final check: no running process for PID 83249 after cleanup

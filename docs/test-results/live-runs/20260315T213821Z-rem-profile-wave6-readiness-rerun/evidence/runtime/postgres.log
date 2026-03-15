@@ -1,0 +1,21 @@
+2026-03-15 23:41:13.782 EET [79328] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 23:41:13.786 EET [79328] LOG:  listening on IPv6 address "::1", port 55439
+2026-03-15 23:41:13.786 EET [79328] LOG:  listening on IPv4 address "127.0.0.1", port 55439
+2026-03-15 23:41:13.787 EET [79328] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55439"
+2026-03-15 23:41:13.794 EET [79329] LOG:  database system was shut down at 2026-03-15 23:41:13 EET
+2026-03-15 23:41:13.799 EET [79328] LOG:  database system is ready to accept connections
+2026-03-15 23:41:19.271 EET [79346] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-15 23:41:19.271 EET [79346] HINT:  New enum values must be committed before they can be used.
+2026-03-15 23:41:19.271 EET [79346] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-16 00:26:24.119 EET [48562] ERROR:  relation "action_finding_links" does not exist at character 103
+2026-03-16 00:26:24.119 EET [48562] STATEMENT:  select a.id, a.action_type, a.resource_id, string_agg(distinct f.control_id, ',') from actions a join action_finding_links afl on afl.action_id=a.id join findings f on f.id=afl.finding_id where a.action_type in ('s3_bucket_block_public_access','s3_bucket_lifecycle_configuration','s3_bucket_encryption_kms') group by a.id, a.action_type, a.resource_id order by a.action_type, a.resource_id;
+2026-03-16 00:34:44.848 EET [79328] LOG:  received fast shutdown request
+2026-03-16 00:34:44.849 EET [79328] LOG:  aborting any active transactions
+2026-03-16 00:34:44.850 EET [51364] FATAL:  terminating connection due to administrator command
+2026-03-16 00:34:44.850 EET [48697] FATAL:  terminating connection due to administrator command
+2026-03-16 00:34:44.850 EET [48698] FATAL:  terminating connection due to administrator command
+2026-03-16 00:34:44.850 EET [83476] FATAL:  terminating connection due to administrator command
+2026-03-16 00:34:44.852 EET [9891] FATAL:  terminating connection due to administrator command
+2026-03-16 00:34:44.853 EET [79328] LOG:  background worker "logical replication launcher" (PID 79335) exited with exit code 1
+2026-03-16 00:34:44.858 EET [79330] LOG:  shutting down
+2026-03-16 00:34:44.873 EET [79328] LOG:  database system is shut down

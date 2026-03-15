@@ -58,6 +58,7 @@ Related docs:
 - Wave 6 is now fully documented as landed-on-`master` behavior across EC2.53, IAM.4, S3.2, S3.5, S3.9, S3.11, S3.15, CloudTrail.1, and Config.1.
 - The Wave 6 summary doc records the exact migration order, preserved public strategy IDs, added internal branches, downgrade rules, tenant-default inputs, runtime/preservation gates, and the artifact-to-mixed-tier bundle flow.
 - Live validation is still required per migrated family before any shipped-product claim is updated.
+- Latest isolated rerun note: [`20260315T213821Z-rem-profile-wave6-readiness-rerun`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) closed the remaining `S3.2` and `S3.5` blockers, confirmed that live lifecycle findings now surface on `S3.13` and materialize as executable `S3.11`, and confirmed that `S3.15` still has no truthful live Security Hub mapping in the isolated account.
 - `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority for executability, while legacy mirror fields remain compatibility-only rollout artifacts.
 
 ## Scope and Non-Goals

@@ -1692,3 +1692,6 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 2 action-detail hydration mismatch fix (2026-03-14)](task_log.md#wave-2-action-detail-hydration-mismatch-fix-2026-03-14)
   - Fixed the local `/actions/[id]` hydration blocker by removing the server-null/client-portal first-render divergence in `ActionDetailDrawer`.
   - Added a hydration regression test, manually re-verified both `/actions/[id]` and findings-entry drawer usage, and stored fresh screenshot evidence in the Wave 2 run folder.
+- [Wave 6 blocker-closure rerun for S3.2 / S3.5 / S3.11 / S3.15 (2026-03-16)](task_log.md#wave-6-blocker-closure-rerun-for-s32--s35--s311--s315-2026-03-16)
+  - Reused the March 15 rerun runtime to capture the missing S3.2 bucket-scoped proof, close the S3.5 create-tier mismatch, confirm executable-only `S3.11` truth through live `S3.13`, and reconfirm that `S3.15` still lacks a live Security Hub mapping.
+  - Added final rerun notes, refreshed Wave 6 live-readiness docs, and cleaned up the disposable local runtime plus rerun queues after evidence capture.

@@ -163,6 +163,10 @@ def _preserve_selection_support_tier(strategy_id: str) -> bool:
         "cloudtrail_enable_guided",
         "config_enable_account_local_delivery",
         "config_enable_centralized_delivery",
+        # Family resolvers already determine whether these branches stay executable.
+        "s3_enforce_ssl_strict_deny",
+        "s3_enforce_ssl_with_principal_exemptions",
+        "s3_enable_abort_incomplete_uploads",
     }
 
 

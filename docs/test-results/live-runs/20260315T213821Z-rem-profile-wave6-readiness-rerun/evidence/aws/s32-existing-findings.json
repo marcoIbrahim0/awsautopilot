@@ -1,0 +1,338 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.8/finding/d912ab7c-9329-4188-9ea2-a22c90b33e98",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.8",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T21:57:03.787Z",
+            "LastObservedAt": "2026-03-15T21:57:03.787Z",
+            "CreatedAt": "2026-03-15T20:45:51.706Z",
+            "UpdatedAt": "2026-03-15T21:57:19.569Z",
+            "Severity": {
+                "Label": "HIGH",
+                "Normalized": 70,
+                "Original": "HIGH"
+            },
+            "Title": "S3 general purpose buckets should block public access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket blocks public access at the bucket level. The control fails if any of the following settings are set to false: ignorePublicAcls, blockPublicPolicy, blockPublicAcls, restrictPublicBuckets.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.8/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-level-public-access-prohibited-aeb25130",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "PublicAccessBlockConfigurations are incorrect for block_public_acls: false ignore_public_acls: false block_public_policy: false restrict_public_buckets false",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.8/finding/d912ab7c-9329-4188-9ea2-a22c90b33e98",
+                "PreviousComplianceStatus": "PASSED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-15T21:56:37.000Z",
+                            "Name": "security-autopilot-w6-envready-s311-review-696505809372"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "S3.8",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "HIGH",
+                    "Original": "HIGH"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T21:57:32.652Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/50441bfb-5b0f-4d85-910c-b765dc8aad40",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.2",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Effects/Data Exposure"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:38.512Z",
+            "LastObservedAt": "2026-03-15T21:57:03.818Z",
+            "CreatedAt": "2026-03-15T20:45:53.861Z",
+            "UpdatedAt": "2026-03-15T21:57:07.128Z",
+            "Severity": {
+                "Label": "INFORMATIONAL",
+                "Normalized": 0,
+                "Original": "INFORMATIONAL"
+            },
+            "Title": "S3 general purpose buckets should block public read access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket permits public read access. It evaluates the block public access settings, the bucket policy, and the bucket access control list (ACL). The control fails if the bucket permits public read access.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.2/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-public-read-prohibited-a490ed63",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/50441bfb-5b0f-4d85-910c-b765dc8aad40",
+                "PreviousComplianceStatus": "PASSED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-15T20:44:49.000Z",
+                            "Name": "security-autopilot-w6-envready-s311-review-696505809372"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "PASSED",
+                "SecurityControlId": "S3.2",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "RESOLVED"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "INFORMATIONAL",
+                    "Original": "INFORMATIONAL"
+                },
+                "Types": [
+                    "Effects/Data Exposure"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T21:57:24.279Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/57ba7460-8ed3-448b-9b77-52cc779a51a7",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.2",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Effects/Data Exposure"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:46.843Z",
+            "LastObservedAt": "2026-03-15T21:56:58.124Z",
+            "CreatedAt": "2026-03-15T20:45:53.864Z",
+            "UpdatedAt": "2026-03-15T21:57:07.127Z",
+            "Severity": {
+                "Label": "INFORMATIONAL",
+                "Normalized": 0,
+                "Original": "INFORMATIONAL"
+            },
+            "Title": "S3 general purpose buckets should block public read access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket permits public read access. It evaluates the block public access settings, the bucket policy, and the bucket access control list (ACL). The control fails if the bucket permits public read access.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.2/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-public-read-prohibited-a490ed63",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/57ba7460-8ed3-448b-9b77-52cc779a51a7",
+                "PreviousComplianceStatus": "PASSED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-15T20:45:05.000Z",
+                            "Name": "security-autopilot-w6-envready-s315-exec-696505809372"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "PASSED",
+                "SecurityControlId": "S3.2",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "RESOLVED"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "INFORMATIONAL",
+                    "Original": "INFORMATIONAL"
+                },
+                "Types": [
+                    "Effects/Data Exposure"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T21:57:28.482Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.8/finding/8355b904-0545-4a4f-9232-7ec9ed1e0691",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.8",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T21:56:58.081Z",
+            "LastObservedAt": "2026-03-15T21:56:58.081Z",
+            "CreatedAt": "2026-03-15T20:45:51.708Z",
+            "UpdatedAt": "2026-03-15T21:57:03.899Z",
+            "Severity": {
+                "Label": "HIGH",
+                "Normalized": 70,
+                "Original": "HIGH"
+            },
+            "Title": "S3 general purpose buckets should block public access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket blocks public access at the bucket level. The control fails if any of the following settings are set to false: ignorePublicAcls, blockPublicPolicy, blockPublicAcls, restrictPublicBuckets.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.8/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-level-public-access-prohibited-aeb25130",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "PublicAccessBlockConfigurations are incorrect for block_public_acls: false ignore_public_acls: false block_public_policy: false restrict_public_buckets false",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.8/finding/8355b904-0545-4a4f-9232-7ec9ed1e0691",
+                "PreviousComplianceStatus": "PASSED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-15T21:56:32.000Z",
+                            "Name": "security-autopilot-w6-envready-s315-exec-696505809372"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "S3.8",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "HIGH",
+                    "Original": "HIGH"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T21:57:30.792Z"
+        }
+    ]
+}

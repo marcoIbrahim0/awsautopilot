@@ -1,0 +1,52 @@
+INFO:     Started server process [83250]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18019 (Press CTRL+C to quit)
+INFO:     127.0.0.1:61449 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61446 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61456 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61457 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61463 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61469 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61472 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61473 - "GET /api/remediation-settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61474 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61475 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61566 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:61575 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T21%3a49%3a43Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61596 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T21%3a49%3a43Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61648 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T21%3a49%3a43Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61690 - "GET /api/actions?limit=2000 HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:61694 - "GET /api/actions?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61699 - "GET /api/actions?limit=2000 HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:61702 - "GET /api/actions?limit=2000 HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:61716 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61723 - "GET /api/actions/9c67856d-10d4-4359-aef2-059fb3be9edc/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61729 - "GET /api/actions/9c67856d-10d4-4359-aef2-059fb3be9edc/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61732 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61738 - "GET /api/remediation-runs/0c7045dd-3745-4bce-b452-e796ce4b67a8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61742 - "GET /api/remediation-runs/0c7045dd-3745-4bce-b452-e796ce4b67a8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61745 - "GET /api/actions/3b03726e-a29f-473c-a7ae-ecac0f1ee1c5/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61748 - "GET /api/actions/3b03726e-a29f-473c-a7ae-ecac0f1ee1c5/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61751 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61757 - "GET /api/remediation-runs/c2aab0c4-ed7d-4320-a7d7-34e6c059f2b1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61758 - "GET /api/remediation-runs/c2aab0c4-ed7d-4320-a7d7-34e6c059f2b1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61820 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:61844 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T21%3a58%3a24Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61855 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T21%3a58%3a24Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61871 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62112 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62113 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62119 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62120 - "GET /api/actions/1166ca21-3d37-4bfc-96d8-4362bacf6f47/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62118 - "GET /api/actions/540f1cd9-1087-46f8-ae79-dcf746acf206/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62132 - "GET /api/actions/1166ca21-3d37-4bfc-96d8-4362bacf6f47/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62131 - "GET /api/actions/540f1cd9-1087-46f8-ae79-dcf746acf206/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62149 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62159 - "GET /api/remediation-runs/726e95b9-c33c-4bf6-8f27-ccfe0e84b882 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62185 - "GET /api/actions/230d6326-f361-4a57-b38a-7be3a16ca99b/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62184 - "GET /api/actions/230d6326-f361-4a57-b38a-7be3a16ca99b/remediation-options HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [83250]

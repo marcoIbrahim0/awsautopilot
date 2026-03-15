@@ -486,6 +486,58 @@ def test_s3_2_preview_keeps_legacy_oac_strategy_compatible_but_downgrades_withou
     assert resolution["preservation_summary"]["manual_preservation_required"] is True
 
 
+def test_s3_2_preview_keeps_standard_strategy_executable_when_bucket_is_private_and_website_disabled(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::safe-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::safe-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": True,
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_bucket_block_public_access_standard",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_bucket_block_public_access_standard"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["executable_preservation_allowed"] is True
+
+
 def test_s3_9_options_recommend_review_branch_when_destination_safety_is_not_proven(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)

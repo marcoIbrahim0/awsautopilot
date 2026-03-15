@@ -29,6 +29,21 @@ def test_grouping_key_merges_equivalent_s3_public_controls() -> None:
     assert _grouping_key(f_s32) == _grouping_key(f_s38)
 
 
+def test_grouping_key_merges_equivalent_s3_lifecycle_controls() -> None:
+    """S3.11 and live AWS S3.13 should merge into one lifecycle action group."""
+    tenant_id = uuid.uuid4()
+    base = dict(
+        tenant_id=tenant_id,
+        account_id="029037611564",
+        region="eu-north-1",
+        resource_id="arn:aws:s3:::demomarcoss",
+    )
+    f_s311 = SimpleNamespace(**base, control_id="S3.11")
+    f_s313 = SimpleNamespace(**base, control_id="S3.13")
+
+    assert _grouping_key(f_s311) == _grouping_key(f_s313)
+
+
 def test_grouping_key_merges_equivalent_ec2_sg_controls() -> None:
     """EC2.53/EC2.13/EC2.19 (and back-compat EC2.18) should merge into one action group per security group."""
     tenant_id = uuid.uuid4()
@@ -98,6 +113,28 @@ def test_target_id_uses_canonical_control_for_equivalent_controls() -> None:
         canonical_s38,
     )
     assert target_s32 == target_s38
+
+
+def test_target_id_uses_canonical_control_for_equivalent_s3_lifecycle_controls() -> None:
+    """Live AWS S3.13 lifecycle findings should dedupe to canonical product family S3.11."""
+    action_type_s311 = _action_type_from_control("S3.11")
+    action_type_s313 = _action_type_from_control("S3.13")
+    canonical_s311 = canonical_control_id_for_action_type(action_type_s311, "S3.11")
+    canonical_s313 = canonical_control_id_for_action_type(action_type_s313, "S3.13")
+
+    target_s311 = _build_target_id(
+        "029037611564",
+        "eu-north-1",
+        "arn:aws:s3:::demomarcoss",
+        canonical_s311,
+    )
+    target_s313 = _build_target_id(
+        "029037611564",
+        "eu-north-1",
+        "arn:aws:s3:::demomarcoss",
+        canonical_s313,
+    )
+    assert target_s311 == target_s313
 
 
 def test_target_id_uses_canonical_control_for_equivalent_ec2_controls() -> None:

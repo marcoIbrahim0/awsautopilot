@@ -138,11 +138,18 @@ flowchart LR
 
 ## Live AWS readiness notes from March 15, 2026
 
-- The readiness package under [`docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/final-summary.md) found fresh live-AWS control drift in isolated account `696505809372`.
-- Direct Security Hub `EC2.53` in `eu-north-1` was `DISABLED`, but seeded public-admin security groups still produced live `EC2.18` and `EC2.19` findings that current product logic canonicalized into `EC2.53` actions.
-- Direct Security Hub `S3.11` in `eu-north-1` was `DISABLED` and titled `S3 general purpose buckets should have event notifications enabled`, which does not match the product's current `s3_bucket_lifecycle_configuration` family semantics.
-- Direct Security Hub `S3.15` in `eu-north-1` was `DISABLED` and titled `S3 general purpose buckets should have Object Lock enabled`, which does not match the product's current `s3_bucket_encryption_kms` family semantics.
-- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do mean the next live-AWS gate must treat `EC2.53` canonicalization and the `S3.11` / `S3.15` mapping gap as explicit validation notes rather than assuming direct control parity.
+- The first readiness package under [`docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/final-summary.md) established the March 15 baseline and isolated the remaining blockers to `S3.2`, `S3.5`, `S3.11`, and `S3.15`.
+- The follow-up blocker-closure rerun under [`docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) refined the live-control truth in the same isolated account:
+  - direct Security Hub `EC2.53` still remains `DISABLED`, but live `EC2.18`/`EC2.19` findings continue to canonicalize into executable/downgrade-ready `EC2.53` actions
+  - current bucket-scoped public-access failures surface from enabled control `S3.8`, and the product canonicalizes them into the `S3.2` family
+  - current lifecycle findings surface from enabled control `S3.13`, and the product now canonicalizes them into canonical family `S3.11`
+  - no enabled live Security Hub control/finding currently maps to the product's `S3.15` SSE-KMS family semantics in the isolated account
+- Current live-AWS gate truth after the blocker-closure rerun:
+  - `S3.2` is now executable-ready and downgrade-ready
+  - `S3.5` is now executable-ready and downgrade-ready
+  - `S3.11` is now executable-ready, but not downgrade-ready, because lifecycle-present buckets currently pass `S3.13` and therefore do not produce a failing review case
+  - `S3.15` remains blocked by live AWS/product drift
+- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do define the current final-gate boundary precisely: `7/9` families are fully ready, `S3.11` is executable-only under current live semantics, and `S3.15` still requires a broader product/AWS mapping decision.
 
 ## Post-Wave-6 Boundary
 

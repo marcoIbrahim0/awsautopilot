@@ -1,0 +1,4 @@
+*   Trying 127.0.0.1:18019...
+* connect to 127.0.0.1 port 18019 from 127.0.0.1 port 62289 failed: Connection refused
+* Failed to connect to 127.0.0.1 port 18019 after 0 ms: Couldn't connect to server
+* Closing connection
