@@ -1,8 +1,8 @@
 # Remediation Profile Resolution
 
-> Scope date: 2026-03-14
+> Scope date: 2026-03-15
 >
-> ⚠️ Status: Partially implemented on `master` — remaining waves and live product-claim validation are still planned
+> ⚠️ Status: Wave 0 through Wave 6 are implemented on `master` — live product-claim validation and legacy compatibility cleanup are still planned
 >
 > This document defines the planned backend-centered remediation profile resolution model for generic remediation flows that produce PR bundles, review bundles, or manual guidance artifacts.
 
@@ -52,112 +52,13 @@ Related docs:
 
 - [Wave 5 mixed-tier grouped bundles](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md)
 
-## Wave 6 Family Branching
+## Wave 6 Control-Family Migration
 
-> ❓ Needs verification: This Wave 6 note reflects focused local contract coverage on `master`. Later prompts still need the remaining family migrations plus live validation before any product-claim update.
-
-- Shared family branching now exists beneath the public compatibility strategy `sg_restrict_public_ports_guided`.
-- The first migrated family is EC2.53 `sg_restrict_public_ports`, with internal profiles:
-  - `close_public`
-  - `close_and_revoke`
-  - `restrict_to_ip`
-  - `restrict_to_cidr`
-  - `ssm_only`
-  - `bastion_sg_reference`
-- Resolver precedence for this family is:
-  - explicit `profile_id`
-  - legacy `strategy_inputs.access_mode`
-  - tenant remediation settings such as `sg_access_path_preference`, `approved_admin_cidrs`, and `approved_bastion_security_group_ids`
-  - runtime defaults already present in resolver context
-  - compatibility-safe fallback `close_public`
-- Strategy-only requests remain valid. When a tenant preference cannot be resolved safely, the resolver records an explicit downgrade or rejected preferred branch instead of silently guessing an executable path.
-- Current Wave 6 support tiers for EC2.53 are:
-  - executable-capable profiles: `close_public`, `close_and_revoke`, `restrict_to_ip`, `restrict_to_cidr`
-  - downgrade-only profiles: `ssm_only`, `bastion_sg_reference`
-- S3.2 `s3_bucket_block_public_access` is now resolver-backed while keeping the public strategy IDs unchanged:
-  - `s3_bucket_block_public_access_standard`
-    - executable profile: `s3_bucket_block_public_access_standard`
-    - manual-only fallback profile: `s3_bucket_block_public_access_manual_preservation`
-  - `s3_migrate_cloudfront_oac_private`
-    - executable profile: `s3_migrate_cloudfront_oac_private`
-    - manual-only fallback profile: `s3_migrate_cloudfront_oac_private_manual_preservation`
-  - explicit S3.2 downgrade triggers:
-    - bucket website hosting is enabled
-    - bucket policy is public
-    - CloudFront/OAC policy-preservation evidence is missing or incomplete
-    - access-path evidence is unavailable
-- S3.5 `s3_bucket_require_ssl` is now resolver-backed for:
-  - `s3_enforce_ssl_strict_deny`
-  - `s3_enforce_ssl_with_principal_exemptions`
-  - executable output now requires merge-safe bucket-policy preservation evidence:
-    - existing bucket policy absent, or
-    - existing bucket policy JSON captured so the deny statement can be merged safely
-  - explicit S3.5 downgrade triggers:
-    - `preserve_existing_policy=false`
-    - bucket-policy analysis unavailable
-    - existing statements detected but policy JSON not captured
-- S3.11 `s3_bucket_lifecycle_configuration` is now resolver-backed for `s3_enable_abort_incomplete_uploads`.
-  - executable output now requires lifecycle-document capture plus additive-merge safety.
-  - executable cases remain limited to:
-    - no existing lifecycle configuration
-    - an already-equivalent abort-incomplete-multipart rule
-  - explicit S3.11 downgrade triggers:
-    - existing lifecycle rules detected but the lifecycle document was not captured
-    - existing lifecycle document captured but additive merge is still ambiguous
-    - lifecycle analysis unavailable
-- S3.9 `s3_bucket_access_logging` is now resolver-backed for `s3_enable_access_logging_guided`.
-  - executable compatibility branch: `s3_enable_access_logging_guided`
-  - review branch: `s3_enable_access_logging_review_destination_safety`
-  - executable output now requires:
-    - source bucket scope proven from the action target
-    - resolved destination bucket different from the source bucket
-    - runtime proof that the destination bucket is reachable and safe to use
-  - explicit S3.9 downgrade triggers:
-    - source bucket scope is ambiguous or account-scoped
-    - destination bucket is unresolved or matches the source bucket
-    - destination safety cannot be proven from runtime evidence
-- S3.15 `s3_bucket_encryption_kms` is now resolver-backed for `s3_enable_sse_kms_guided`.
-  - AWS-managed compatibility branch: `s3_enable_sse_kms_guided`
-  - customer-managed branch: `s3_enable_sse_kms_customer_managed`
-  - executable AWS-managed output remains available where bucket scope is proven.
-  - explicit S3.15 downgrade triggers:
-    - target bucket scope cannot be proven
-    - customer-managed branch is selected but `kms_key_arn` is missing
-    - customer-managed key is invalid, disabled, or account/region mismatched
-    - customer-managed key policy or grant evidence is unavailable or incomplete
-- CloudTrail.1 `cloudtrail_enabled` is now resolver-backed for `cloudtrail_enable_guided`.
-  - executable compatibility branch remains `cloudtrail_enable_guided`
-  - tenant defaults can resolve `trail_bucket_name` and `kms_key_arn` from `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn`
-  - explicit CloudTrail.1 downgrade triggers:
-    - `trail_bucket_name` is unresolved
-    - runtime proof cannot verify the selected log bucket from this account context
-    - `create_bucket_policy=false`
-    - `multi_region=false`
-    - `kms_key_arn` is present before KMS proof exists
-- Config.1 `aws_config_enabled` is now resolver-backed while keeping public strategy rows unchanged:
-  - `config_enable_account_local_delivery`
-  - `config_enable_centralized_delivery`
-  - `config_keep_exception`
-  - tenant defaults can resolve delivery mode, bucket, and KMS from `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn`
-  - executable local-delivery output remains available when generator-safe local-bucket creation is selected
-  - explicit Config.1 downgrade triggers:
-    - centralized delivery bucket is unresolved
-    - centralized or existing-bucket dependencies cannot be proven from runtime evidence
-    - centralized bucket policy compatibility is not proven
-    - KMS delivery is requested but KMS proof is missing or invalid
-- Current implemented surfaces:
-  - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
-  - remediation options and preview now also expose S3.2, S3.5, S3.9, S3.11, and S3.15 `preservation_summary`, `blocked_reasons`, and profile-aware downgrade metadata
-  - remediation options and preview now also expose CloudTrail.1 and Config.1 tenant-default-backed profile metadata, blocked reasons, and explicit downgrade decisions
-  - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
-  - single-run create now persists the same canonical resolution for S3.2, S3.5, S3.9, S3.11, and S3.15, including explicit non-executable downgrade decisions
-  - single-run create now persists the same canonical resolution for CloudTrail.1 and Config.1, including tenant-default-backed resolved inputs and explicit downgrade decisions
-  - single-run worker generation now consumes canonical resolver support tiers for S3.2, S3.5, S3.9, S3.11, and S3.15 so downgraded branches emit metadata-only guidance bundles instead of runnable Terraform or CloudFormation
-  - CloudTrail.1 and Config.1 keep the customer-run PR-bundle model unchanged; this prompt only migrates the selection/default boundary and does not widen direct-fix or root-key authority
-  - grouped create routes inherit the same family resolver per action through the shared grouped-run service
-  - grouped bundle generation continues using per-action canonical resolutions, and customer-run PR bundles remain the supported execution model
-  - IAM.4 options and preview expose additive profile metadata as guidance only, with `manual_guidance_only` support tiers and an explicit `/api/root-key-remediation-runs` execution-authority pointer
-  - generic IAM.4 single-run create, grouped create, and resend paths fail closed instead of becoming an alternate execution authority
+- [Wave 6 control-family migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md)
+- Wave 6 is now fully documented as landed-on-`master` behavior across EC2.53, IAM.4, S3.2, S3.5, S3.9, S3.11, S3.15, CloudTrail.1, and Config.1.
+- The Wave 6 summary doc records the exact migration order, preserved public strategy IDs, added internal branches, downgrade rules, tenant-default inputs, runtime/preservation gates, and the artifact-to-mixed-tier bundle flow.
+- Live validation is still required per migrated family before any shipped-product claim is updated.
+- `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority for executability, while legacy mirror fields remain compatibility-only rollout artifacts.
 
 ## Scope and Non-Goals
 

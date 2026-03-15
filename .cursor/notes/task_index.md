@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-control-family-migration-documentation-and-task-history-integration-on-master-2026-03-15)
+  - Added the dedicated Wave 6 summary doc for the landed control-family migration order, preserved compatibility strategy IDs, internal family branches, downgrade rules, tenant-default inputs, runtime/preservation gates, canonical artifact authority, and mixed-tier grouped bundle outcomes.
+  - Updated remediation-profile navigation and task history while preserving the post-Wave-6 boundary that live family-level validation is still required before shipped-product claims are updated.
 - [Remediation-profile Wave 6 CloudTrail.1 and Config.1 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-cloudtrail1-and-config1-family-migration-on-master-2026-03-15)
   - Migrated CloudTrail.1 and Config.1 onto resolver-backed family selection while keeping public strategy IDs unchanged, adding tenant-default-backed selection for CloudTrail log buckets and Config delivery modes, buckets, and KMS inputs.
   - Threaded the same CloudTrail.1 and Config.1 decision through options, preview, create, runtime probes, and CloudTrail bundle defaults so unsupported or under-proven branches now downgrade explicitly instead of appearing executable.

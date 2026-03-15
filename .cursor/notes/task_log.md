@@ -1,5 +1,43 @@
 # Task Log
 
+## Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)
+
+**Task:** Document the completed remediation-profile Wave 6 control-family migration work on current `master` only, based on the landed Prompt 1 through Prompt 5 code, and integrate that summary into the remediation-profile docs navigation plus task history.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md** - added the landed-only Wave 6 summary covering the real migration order, preserved public strategy IDs, internal branches, downgrade rules, tenant-default inputs, runtime/preservation gates, artifact persistence, and mixed-tier bundle outcomes.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - replaced the stale inlined Wave 6 note with navigation to the dedicated Wave 6 summary doc and the remaining live-validation boundary.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this documentation/task-history integration task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, remediation-profile docs, and the actual landed Wave 6 service code before editing.
+- Verified the five landed Wave 6 prompt commits on `master` in the order:
+  - `f41a935d` - EC2.53 shared family branching
+  - `ba92ca2f` - IAM.4 metadata-only generic surfaces with preserved root-key authority
+  - `679087be` - S3.2, S3.5, S3.11
+  - `c001c7ce` - S3.9, S3.15
+  - `791e59d8` - CloudTrail.1, Config.1
+- Added a dedicated Wave 6 doc that records landed behavior only, including:
+  - preserved public compatibility strategies per family
+  - new internal profiles and review/manual fallback branches
+  - executable versus review/manual downgrade rules
+  - tenant-default inputs actually consumed by the resolver
+  - runtime-safety and preservation-evidence gates
+  - the canonical `artifacts.resolution` / grouped `action_resolutions[]` safety boundary
+  - the Wave 5 mixed-tier grouped bundle outcome for downgraded branches
+- Updated the remediation-profile README so navigation points to the new Wave 6 doc instead of leaving a stale partially-complete inline summary.
+- Preserved the documented assumptions that customer-run PR bundles remain the supported model, direct-fix boundaries are unchanged, IAM.4/root-key routes remain untouched, and legacy CloudFront OAC compatibility still exists.
+
+**Validation:**
+- Documentation-only verification from current `master` source and commit history; no pytest scopes were rerun because the task changed docs/task-history only.
+- Confirmed the remediation-profile README links `wave-6-control-family-migration.md`.
+- Confirmed `.cursor/notes/task_log.md` and `.cursor/notes/task_index.md` were updated for discoverability.
+
+**Open questions / TODOs:**
+- Wave 6 control-family migration is implemented on `master`, but family-level live validation is still the next gate before any shipped-product claims are updated.
+- Legacy compatibility mirrors (`selected_strategy`, `strategy_inputs`, `pr_bundle_variant`) still remain in place and have not been retired.
+
 ## Remediation-profile Wave 6 CloudTrail.1 and Config.1 family migration on master (2026-03-15)
 
 **Task:** Implement remediation-profile Wave 6 Prompt 5 on current `master` only by migrating CloudTrail.1 and Config.1 onto resolver-backed family/profile selection while keeping public strategy IDs unchanged, preserving strategy-only compatibility, and making unsupported or under-proven branches degrade explicitly instead of appearing executable.
