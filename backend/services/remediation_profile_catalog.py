@@ -39,6 +39,9 @@ SupportTier = Literal[
     "manual_guidance_only",
 ]
 
+CLOUDTRAIL_FAMILY_RESOLVER_KIND = "cloudtrail_delivery"
+CONFIG_FAMILY_RESOLVER_KIND = "config_delivery"
+
 
 @dataclass(frozen=True, slots=True)
 class RemediationProfileDefinition:
@@ -355,6 +358,14 @@ def _profile_rows_for_strategy(
         return _family_clone(action_type, strategy, family_kind=S3_11_FAMILY_RESOLVER_KIND)
     if action_type == "s3_bucket_encryption_kms" and strategy_id == S3_15_STRATEGY_ID:
         return _s3_15_family_profiles()
+    if action_type == "cloudtrail_enabled" and strategy_id == "cloudtrail_enable_guided":
+        return _family_clone(action_type, strategy, family_kind=CLOUDTRAIL_FAMILY_RESOLVER_KIND)
+    if action_type == "aws_config_enabled" and strategy_id in {
+        "config_enable_account_local_delivery",
+        "config_enable_centralized_delivery",
+        "config_keep_exception",
+    }:
+        return _family_clone(action_type, strategy, family_kind=CONFIG_FAMILY_RESOLVER_KIND)
     return (_seed_profile_definition(action_type, strategy),)
 
 

@@ -67,6 +67,7 @@ from backend.services.remediation_run_queue_contract import (
     reconstruct_resend_queue_inputs,
 )
 from backend.services.remediation_run_resolution_view import build_run_detail_resolution
+from backend.services.remediation_settings import normalize_remediation_settings
 from backend.services.remediation_strategy import (
     map_exception_strategy_inputs,
     map_legacy_variant_to_strategy,
@@ -164,6 +165,19 @@ def _normalize_strategy_inputs(value: dict[str, Any] | None) -> dict[str, Any] |
     if not value:
         return None
     return value
+
+
+def _tenant_default_required_input_keys(
+    strategy_id: str | None,
+    tenant_settings: dict[str, Any] | None,
+) -> set[str]:
+    settings = normalize_remediation_settings(tenant_settings)
+    if (
+        strategy_id == "config_enable_centralized_delivery"
+        and settings.get("config", {}).get("default_bucket_name")
+    ):
+        return {"delivery_bucket"}
+    return set()
 
 
 def _run_matches_request_signature(
@@ -1352,7 +1366,14 @@ async def create_remediation_run(
             )
         try:
             selected_strategy = validate_strategy(action.action_type, selected_strategy_id, body.mode)
-            selected_strategy_inputs = validate_strategy_inputs(selected_strategy, body.strategy_inputs)
+            selected_strategy_inputs = validate_strategy_inputs(
+                selected_strategy,
+                body.strategy_inputs,
+                allow_missing_required_keys=_tenant_default_required_input_keys(
+                    selected_strategy["strategy_id"],
+                    getattr(tenant, "remediation_settings", None),
+                ),
+            )
         except ValueError as exc:
             err_text = str(exc).lower()
             reason = "strategy_mode_mismatch" if "requires mode" in err_text else "invalid_strategy_selection"

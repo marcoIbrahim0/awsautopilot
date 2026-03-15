@@ -1780,7 +1780,12 @@ def validate_strategy(action_type: str | None, strategy_id: str | None, mode: Mo
     return strategy
 
 
-def validate_strategy_inputs(strategy: RemediationStrategy, raw_inputs: dict[str, Any] | None) -> dict[str, Any]:
+def validate_strategy_inputs(
+    strategy: RemediationStrategy,
+    raw_inputs: dict[str, Any] | None,
+    *,
+    allow_missing_required_keys: set[str] | None = None,
+) -> dict[str, Any]:
     """
     Validate and normalize strategy inputs according to strategy input schema.
 
@@ -1797,6 +1802,7 @@ def validate_strategy_inputs(strategy: RemediationStrategy, raw_inputs: dict[str
     if not isinstance(raw_inputs, dict):
         raise ValueError("strategy_inputs must be an object.")
 
+    allowed_missing = allow_missing_required_keys or set()
     field_map = {field["key"]: field for field in fields}
     unknown_keys = [key for key in raw_inputs.keys() if key not in field_map]
     if unknown_keys:
@@ -1808,7 +1814,7 @@ def validate_strategy_inputs(strategy: RemediationStrategy, raw_inputs: dict[str
         value = raw_inputs.get(key)
 
         if value is None:
-            if required and not _field_has_implicit_default(field):
+            if required and not _field_has_implicit_default(field) and key not in allowed_missing:
                 raise ValueError(f"strategy_inputs.{key} is required.")
             continue
 

@@ -125,12 +125,35 @@ Related docs:
     - customer-managed branch is selected but `kms_key_arn` is missing
     - customer-managed key is invalid, disabled, or account/region mismatched
     - customer-managed key policy or grant evidence is unavailable or incomplete
+- CloudTrail.1 `cloudtrail_enabled` is now resolver-backed for `cloudtrail_enable_guided`.
+  - executable compatibility branch remains `cloudtrail_enable_guided`
+  - tenant defaults can resolve `trail_bucket_name` and `kms_key_arn` from `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn`
+  - explicit CloudTrail.1 downgrade triggers:
+    - `trail_bucket_name` is unresolved
+    - runtime proof cannot verify the selected log bucket from this account context
+    - `create_bucket_policy=false`
+    - `multi_region=false`
+    - `kms_key_arn` is present before KMS proof exists
+- Config.1 `aws_config_enabled` is now resolver-backed while keeping public strategy rows unchanged:
+  - `config_enable_account_local_delivery`
+  - `config_enable_centralized_delivery`
+  - `config_keep_exception`
+  - tenant defaults can resolve delivery mode, bucket, and KMS from `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn`
+  - executable local-delivery output remains available when generator-safe local-bucket creation is selected
+  - explicit Config.1 downgrade triggers:
+    - centralized delivery bucket is unresolved
+    - centralized or existing-bucket dependencies cannot be proven from runtime evidence
+    - centralized bucket policy compatibility is not proven
+    - KMS delivery is requested but KMS proof is missing or invalid
 - Current implemented surfaces:
   - remediation options and preview expose real EC2.53 `profiles[]` metadata and profile-aware resolution
   - remediation options and preview now also expose S3.2, S3.5, S3.9, S3.11, and S3.15 `preservation_summary`, `blocked_reasons`, and profile-aware downgrade metadata
+  - remediation options and preview now also expose CloudTrail.1 and Config.1 tenant-default-backed profile metadata, blocked reasons, and explicit downgrade decisions
   - single-run create persists canonical `artifacts.resolution` with the resolved EC2.53 profile
   - single-run create now persists the same canonical resolution for S3.2, S3.5, S3.9, S3.11, and S3.15, including explicit non-executable downgrade decisions
+  - single-run create now persists the same canonical resolution for CloudTrail.1 and Config.1, including tenant-default-backed resolved inputs and explicit downgrade decisions
   - single-run worker generation now consumes canonical resolver support tiers for S3.2, S3.5, S3.9, S3.11, and S3.15 so downgraded branches emit metadata-only guidance bundles instead of runnable Terraform or CloudFormation
+  - CloudTrail.1 and Config.1 keep the customer-run PR-bundle model unchanged; this prompt only migrates the selection/default boundary and does not widen direct-fix or root-key authority
   - grouped create routes inherit the same family resolver per action through the shared grouped-run service
   - grouped bundle generation continues using per-action canonical resolutions, and customer-run PR bundles remain the supported execution model
   - IAM.4 options and preview expose additive profile metadata as guidance only, with `manual_guidance_only` support tiers and an explicit `/api/root-key-remediation-runs` execution-authority pointer
@@ -381,8 +404,15 @@ Phase-1 migration rules captured in the source plan:
   - Executable compatibility branch remains the AWS-managed-key path.
   - Explicit customer-managed branch is `s3_enable_sse_kms_customer_managed`.
   - Missing or under-proven customer-managed KMS evidence downgrades explicitly instead of silently falling back to executable output.
-- CloudTrail.1 keeps `cloudtrail_enable_guided` as the public compatibility strategy while unresolved branches downgrade explicitly.
-- Config.1 preserves current strategy families in phase 1 and adds `org_config_manual` as manual-only.
+- CloudTrail.1 stays under `cloudtrail_enabled` and preserves public strategy `cloudtrail_enable_guided`.
+  - `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn` can populate resolver inputs, but missing defaults are never silently invented.
+  - Unresolved log-bucket proof, `create_bucket_policy=false`, `multi_region=false`, or KMS delivery all downgrade explicitly instead of remaining executable by default.
+- Config.1 stays under `aws_config_enabled` and preserves public strategies:
+  - `config_enable_account_local_delivery`
+  - `config_enable_centralized_delivery`
+  - `config_keep_exception`
+  - `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn` can drive resolver-backed defaults without changing the public strategy IDs.
+  - Centralized or existing-bucket paths downgrade explicitly when bucket or KMS dependencies cannot be proven, while the already-safe local create-new path remains executable.
 
 ## Tenant Remediation Settings
 

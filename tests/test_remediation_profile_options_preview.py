@@ -793,6 +793,227 @@ def test_s3_11_preview_requires_lifecycle_document_capture_for_existing_rules(cl
     assert resolution["preservation_summary"]["additive_merge_safe"] is False
 
 
+def test_cloudtrail_options_use_tenant_defaults_and_downgrade_kms_branch(client: TestClient) -> None:
+    tenant = _mock_tenant(
+        {
+            "cloudtrail": {
+                "default_bucket_name": "tenant-cloudtrail-logs",
+                "default_kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/cloudtrail",
+            }
+        }
+    )
+    user = _mock_user(tenant.id)
+    action = _mock_action("cloudtrail_enabled")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={"cloudtrail_log_bucket_reachable": True},
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategy = next(
+        item for item in response.json()["strategies"] if item["strategy_id"] == "cloudtrail_enable_guided"
+    )
+    assert strategy["recommended_profile_id"] == "cloudtrail_enable_guided"
+    assert strategy["profiles"] == [
+        {
+            "profile_id": "cloudtrail_enable_guided",
+            "support_tier": "review_required_bundle",
+            "recommended": True,
+            "requires_inputs": True,
+            "supports_exception_flow": False,
+            "exception_only": False,
+        }
+    ]
+    assert strategy["missing_defaults"] == []
+    assert strategy["blocked_reasons"] == [
+        "CloudTrail KMS-encrypted delivery is review-only until KMS dependency proof is implemented."
+    ]
+    assert strategy["preservation_summary"]["trail_bucket_name_resolved"] is True
+    assert strategy["preservation_summary"]["log_bucket_reachable"] is True
+    assert strategy["preservation_summary"]["kms_delivery_requested"] is True
+
+
+def test_cloudtrail_preview_uses_tenant_bucket_default_when_bucket_is_proven(client: TestClient) -> None:
+    tenant = _mock_tenant({"cloudtrail": {"default_bucket_name": "tenant-cloudtrail-logs"}})
+    user = _mock_user(tenant.id)
+    action = _mock_action("cloudtrail_enabled")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={"cloudtrail_log_bucket_reachable": True},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={"mode": "pr_only", "strategy_id": "cloudtrail_enable_guided"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "cloudtrail_enable_guided"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"] == {
+        "trail_name": "security-autopilot-trail",
+        "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_policy": True,
+        "multi_region": True,
+    }
+    assert resolution["blocked_reasons"] == []
+
+
+def test_config_options_honor_delivery_mode_preference_for_recommendation(client: TestClient) -> None:
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "centralized_delivery",
+                "default_bucket_name": "org-config-bucket",
+            }
+        }
+    )
+    user = _mock_user(tenant.id)
+    action = _mock_action("aws_config_enabled")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "config_delivery_bucket_reachable": True,
+            "config_central_bucket_policy_valid": True,
+        },
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategies = {item["strategy_id"]: item for item in response.json()["strategies"]}
+    assert strategies["config_enable_account_local_delivery"]["recommended"] is False
+    assert strategies["config_enable_centralized_delivery"]["recommended"] is True
+    assert strategies["config_enable_centralized_delivery"]["profiles"] == [
+        {
+            "profile_id": "config_enable_centralized_delivery",
+            "support_tier": "deterministic_bundle",
+            "recommended": True,
+            "requires_inputs": True,
+            "supports_exception_flow": False,
+            "exception_only": False,
+        }
+    ]
+
+
+def test_config_preview_uses_tenant_defaults_and_downgrades_unproven_centralized_branch(client: TestClient) -> None:
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "centralized_delivery",
+                "default_bucket_name": "org-config-bucket",
+                "default_kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/config",
+            }
+        }
+    )
+    user = _mock_user(tenant.id)
+    action = _mock_action("aws_config_enabled")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "config_delivery_bucket_reachable": False,
+            "config_delivery_bucket_error": "HeadBucketFailed",
+            "config_central_bucket_policy_valid": False,
+            "config_central_bucket_policy_error": "Centralized delivery bucket access is denied for this account context.",
+            "config_kms_policy_valid": False,
+            "config_kms_policy_error": "DescribeKeyFailed",
+        },
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={"mode": "pr_only", "strategy_id": "config_enable_centralized_delivery"},
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    resolution = body["resolution"]
+    assert resolution["profile_id"] == "config_enable_centralized_delivery"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["resolved_inputs"] == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "org-config-bucket",
+        "delivery_bucket": "org-config-bucket",
+        "encrypt_with_kms": True,
+        "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/config",
+    }
+    assert resolution["blocked_reasons"] == [
+        "HeadBucketFailed",
+        "Centralized delivery bucket access is denied for this account context.",
+        "DescribeKeyFailed",
+    ]
+    assert body["after_state"]["delivery_bucket"] == "org-config-bucket"
+    assert body["impact_summary"] is None
+
+
 def test_iam_4_options_expose_guidance_only_profile_metadata(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)

@@ -476,12 +476,165 @@ def test_pr_only_create_preserves_profile_and_strategy_inputs_with_review_requir
         "delivery_bucket": "central-config-bucket",
         "encrypt_with_kms": False,
     }
+    assert resolution["blocked_reasons"] == [
+        "AWS Config delivery bucket dependencies have not been proven from this account context."
+    ]
     assert run.artifacts["selected_strategy"] == "config_enable_centralized_delivery"
-    assert run.artifacts["strategy_inputs"] == {"delivery_bucket": "central-config-bucket"}
+    assert run.artifacts["strategy_inputs"] == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "delivery_bucket": "central-config-bucket",
+        "encrypt_with_kms": False,
+    }
     payload = _queued_payload(mock_sqs)
     assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert payload["resolution"] == resolution
     assert "profile_id" not in payload
+
+
+def test_cloudtrail_create_uses_tenant_bucket_default_when_runtime_proves_bucket(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"cloudtrail": {"default_bucket_name": "tenant-cloudtrail-logs"}})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={"cloudtrail_log_bucket_reachable": True},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "cloudtrail_enable_guided"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"] == {
+        "trail_name": "security-autopilot-trail",
+        "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_policy": True,
+        "multi_region": True,
+    }
+    assert run.artifacts["strategy_inputs"] == {
+        "trail_name": "security-autopilot-trail",
+        "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_policy": True,
+        "multi_region": True,
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_config_local_create_uses_tenant_defaults_and_stays_executable(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "account_local_delivery",
+                "default_bucket_name": "tenant-config-bucket",
+            }
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="aws_config_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "config_enable_account_local_delivery",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "config_enable_account_local_delivery"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"] == {
+        "delivery_bucket": "tenant-config-bucket",
+        "delivery_bucket_mode": "create_new",
+    }
+    assert run.artifacts["strategy_inputs"] == {
+        "delivery_bucket": "tenant-config-bucket",
+        "delivery_bucket_mode": "create_new",
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_config_centralized_create_uses_tenant_defaults_when_runtime_proves_dependencies(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "centralized_delivery",
+                "default_bucket_name": "org-config-bucket",
+                "default_kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/config",
+            }
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="aws_config_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "config_enable_centralized_delivery",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "config_delivery_bucket_reachable": True,
+            "config_central_bucket_policy_valid": True,
+            "config_kms_policy_valid": True,
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "config_enable_centralized_delivery"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"] == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "org-config-bucket",
+        "delivery_bucket": "org-config-bucket",
+        "encrypt_with_kms": True,
+        "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/config",
+    }
+    assert run.artifacts["strategy_inputs"] == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "org-config-bucket",
+        "delivery_bucket": "org-config-bucket",
+        "encrypt_with_kms": True,
+        "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/config",
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_pr_only_create_rejects_invalid_ec2_53_profile_id(client: TestClient) -> None:
@@ -544,6 +697,52 @@ def test_strategy_only_pr_only_client_still_succeeds_with_defaulted_inputs(clien
         "create_bucket_policy": True,
         "multi_region": True,
     }
+    assert resolution["missing_defaults"] == ["cloudtrail.default_bucket_name"]
+    assert resolution["blocked_reasons"] == [
+        "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
+    ]
+
+
+def test_cloudtrail_create_downgrades_under_proven_multi_region_override(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"cloudtrail": {"default_bucket_name": "tenant-cloudtrail-logs"}})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "strategy_inputs": {
+                "multi_region": False,
+            },
+            "risk_acknowledged": True,
+        },
+        runtime_signals={"cloudtrail_log_bucket_reachable": True},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "cloudtrail_enable_guided"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "CloudTrail.1 multi-region coverage is under-proven when multi_region=false."
+    ]
+    assert run.artifacts["strategy_inputs"] == {
+        "trail_name": "security-autopilot-trail",
+        "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_policy": True,
+        "multi_region": False,
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
 
 
 def test_ec2_53_strategy_only_create_persists_safe_resolved_profile(client: TestClient) -> None:

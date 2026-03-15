@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 
 from backend.services.remediation_profile_catalog import (
+    CLOUDTRAIL_FAMILY_RESOLVER_KIND,
+    CONFIG_FAMILY_RESOLVER_KIND,
     PROFILE_REGISTRY,
     build_profile_registry,
     default_profile_id_for_strategy,
@@ -225,6 +227,22 @@ def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
         S3_15_FAMILY_RESOLVER_KIND,
         S3_15_FAMILY_RESOLVER_KIND,
     ]
+
+
+def test_cloudtrail_and_config_profiles_use_family_resolver_kinds() -> None:
+    cloudtrail = list_profiles_for_strategy("cloudtrail_enabled", "cloudtrail_enable_guided")
+    config_local = list_profiles_for_strategy("aws_config_enabled", "config_enable_account_local_delivery")
+    config_central = list_profiles_for_strategy("aws_config_enabled", "config_enable_centralized_delivery")
+    config_exception = list_profiles_for_strategy("aws_config_enabled", "config_keep_exception")
+
+    assert len(cloudtrail) == 1
+    assert cloudtrail[0].family_resolver_kind == CLOUDTRAIL_FAMILY_RESOLVER_KIND
+    assert len(config_local) == 1
+    assert config_local[0].family_resolver_kind == CONFIG_FAMILY_RESOLVER_KIND
+    assert len(config_central) == 1
+    assert config_central[0].family_resolver_kind == CONFIG_FAMILY_RESOLVER_KIND
+    assert len(config_exception) == 1
+    assert config_exception[0].family_resolver_kind == CONFIG_FAMILY_RESOLVER_KIND
 
 
 def test_invalid_profile_catalog_combinations_fail_safely() -> None:

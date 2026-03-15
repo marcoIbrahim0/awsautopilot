@@ -19,6 +19,7 @@ from backend.services.remediation_risk import (
     requires_risk_ack,
 )
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
+from backend.services.remediation_settings import normalize_remediation_settings
 from backend.services.remediation_strategy import (
     RemediationStrategy,
     map_exception_strategy_inputs,
@@ -155,8 +156,19 @@ def build_grouped_run_persistence_plan(
 ) -> GroupedRunPersistencePlan:
     """Build grouped artifacts and normalized queue-compatible mirrors."""
     sorted_actions = _validate_grouped_action_set(actions, scope=scope)
-    override_map = _resolve_override_map(request.action_overrides, sorted_actions, action_type=scope.action_type)
-    default_selection = _resolve_default_selection(request, sorted_actions, override_map, action_type=scope.action_type)
+    override_map = _resolve_override_map(
+        request.action_overrides,
+        sorted_actions,
+        action_type=scope.action_type,
+        tenant_settings=tenant_settings,
+    )
+    default_selection = _resolve_default_selection(
+        request,
+        sorted_actions,
+        override_map,
+        action_type=scope.action_type,
+        tenant_settings=tenant_settings,
+    )
     normalized_request = _normalized_request(request, default_selection)
     action_resolutions = _build_action_resolutions(
         sorted_actions,
@@ -321,6 +333,7 @@ def _resolve_override_map(
     actions: Sequence[Any],
     *,
     action_type: str,
+    tenant_settings: Mapping[str, Any] | None,
 ) -> dict[str, _ResolvedSelection]:
     action_ids = {_action_id(action) for action in actions}
     override_map: dict[str, _ResolvedSelection] = {}
@@ -341,6 +354,7 @@ def _resolve_override_map(
             strategy_id=override.strategy_id,
             profile_id=override.profile_id,
             strategy_inputs=override.strategy_inputs,
+            tenant_settings=tenant_settings,
         )
     return override_map
 
@@ -351,6 +365,7 @@ def _resolve_default_selection(
     override_map: Mapping[str, _ResolvedSelection],
     *,
     action_type: str,
+    tenant_settings: Mapping[str, Any] | None,
 ) -> _ResolvedSelection | None:
     strategy_id = _mapped_strategy_id(action_type, request.strategy_id, request.pr_bundle_variant)
     if strategy_id is None:
@@ -361,6 +376,7 @@ def _resolve_default_selection(
         strategy_id=strategy_id,
         profile_id=None,
         strategy_inputs=request.strategy_inputs,
+        tenant_settings=tenant_settings,
     )
 
 
@@ -410,6 +426,7 @@ def _resolve_selection(
     strategy_id: str | None,
     profile_id: str | None,
     strategy_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
 ) -> _ResolvedSelection:
     if strategy_id is None:
         raise GroupedRemediationRunValidationError(
@@ -417,7 +434,11 @@ def _resolve_selection(
             "action_overrides[].strategy_id is required.",
         )
     strategy = _validated_strategy(action_type, strategy_id, strategy_inputs=strategy_inputs)
-    normalized_inputs = validate_strategy_inputs(strategy, dict(strategy_inputs or {}))
+    normalized_inputs = validate_strategy_inputs(
+        strategy,
+        dict(strategy_inputs or {}),
+        allow_missing_required_keys=_tenant_default_required_input_keys(strategy_id, tenant_settings),
+    )
     resolved_profile_id = _validated_profile_id(action_type, strategy_id, profile_id)
     return _ResolvedSelection(
         strategy=strategy,
@@ -425,6 +446,19 @@ def _resolve_selection(
         strategy_inputs=normalized_inputs,
         requested_profile_id=resolved_profile_id,
     )
+
+
+def _tenant_default_required_input_keys(
+    strategy_id: str,
+    tenant_settings: Mapping[str, Any] | None,
+) -> set[str]:
+    settings = normalize_remediation_settings(tenant_settings)
+    if (
+        strategy_id == "config_enable_centralized_delivery"
+        and settings.get("config", {}).get("default_bucket_name")
+    ):
+        return {"delivery_bucket"}
+    return set()
 
 
 def _validated_strategy(

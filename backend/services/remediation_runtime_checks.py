@@ -721,6 +721,26 @@ def collect_runtime_risk_signals(
         default_inputs.setdefault("create_bucket_policy", True)
         default_inputs.setdefault("multi_region", True)
         context_payload["default_inputs"] = default_inputs
+        trail_bucket_name = str(strategy_inputs.get("trail_bucket_name", "")).strip()
+        if trail_bucket_name:
+            evidence_payload["trail_bucket_name"] = trail_bucket_name
+            session = _get_read_session()
+            if session is None:
+                signals["cloudtrail_log_bucket_reachable"] = False
+                signals["cloudtrail_log_bucket_error"] = (
+                    "CloudTrail log bucket could not be verified because ReadRole runtime probe is unavailable."
+                )
+            else:
+                s3 = session.client("s3")
+                try:
+                    s3.head_bucket(Bucket=trail_bucket_name)
+                    signals["cloudtrail_log_bucket_reachable"] = True
+                except ClientError as exc:
+                    code = _error_code(exc) or "HeadBucketFailed"
+                    signals["cloudtrail_log_bucket_reachable"] = False
+                    signals["cloudtrail_log_bucket_error"] = (
+                        f"CloudTrail log bucket '{trail_bucket_name}' could not be verified from this account context ({code})."
+                    )
 
     if strategy_id in ("config_enable_centralized_delivery", "config_enable_account_local_delivery"):
         session = _get_read_session()

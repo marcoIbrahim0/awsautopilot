@@ -1635,17 +1635,24 @@ def test_pr_bundle_cloudtrail_terraform_strategy_inputs_map_defaults() -> None:
         "terraform",
         strategy_inputs={
             "trail_name": "org-audit-trail",
+            "trail_bucket_name": "org-cloudtrail-logs",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/cloudtrail",
             "multi_region": False,
             "create_bucket_policy": False,
         },
     )
     content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
 
+    assert 'variable "trail_bucket_name"' in content
+    assert 'default     = "org-cloudtrail-logs"' in content
     assert 'variable "trail_name"' in content
     assert 'default     = "org-audit-trail"' in content
+    assert 'variable "kms_key_arn"' in content
+    assert 'default     = "arn:aws:kms:us-east-1:123456789012:key/cloudtrail"' in content
     assert 'variable "multi_region"' in content
     assert "default     = false" in content
     assert "name                          = var.trail_name" in content
+    assert 'kms_key_id                    = var.kms_key_arn != "" ? var.kms_key_arn : null' in content
     assert "is_multi_region_trail          = var.multi_region" in content
     assert 'resource "null_resource" "cloudtrail_bucket_policy"' not in content
 
@@ -1662,6 +1669,8 @@ def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> N
         "cloudformation",
         strategy_inputs={
             "trail_name": "org-audit-trail",
+            "trail_bucket_name": "org-cloudtrail-logs",
+            "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/cloudtrail",
             "multi_region": False,
             "create_bucket_policy": False,
         },
@@ -1670,6 +1679,12 @@ def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> N
 
     assert "TrailName:" in content
     assert 'Default: "org-audit-trail"' in content
+    assert "TrailBucketName:" in content
+    assert 'Default: "org-cloudtrail-logs"' in content
+    assert "KmsKeyArn:" in content
+    assert 'Default: "arn:aws:kms:us-east-1:123456789012:key/cloudtrail"' in content
+    assert "HasKmsKeyArn" in content
+    assert "KMSKeyId: !If [HasKmsKeyArn, !Ref KmsKeyArn, !Ref AWS::NoValue]" in content
     assert "MultiRegion:" in content
     assert 'Default: "false"' in content
     assert 'IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]' in content

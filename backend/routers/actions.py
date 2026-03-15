@@ -73,9 +73,10 @@ from backend.services.remediation_profile_read_path import (
     build_preview_resolution,
     build_strategy_profile_metadata,
 )
-from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
+from backend.services.remediation_profile_selection import resolve_profile_selection, resolve_runtime_probe_inputs
 from backend.services.remediation_risk import evaluate_strategy_impact
 from backend.services.remediation_runtime_checks import collect_runtime_risk_signals
+from backend.services.remediation_settings import normalize_remediation_settings
 from backend.services.remediation_strategy import (
     build_remediation_state_simulation,
     get_blast_radius,
@@ -537,6 +538,18 @@ _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
     "s3_bucket_lifecycle_configuration": "Applies lifecycle rules to enforce retention and cost-control posture.",
     "s3_bucket_encryption_kms": "Enforces SSE-KMS encryption policy for the affected S3 bucket.",
 }
+
+
+def _option_recommended(strategy: dict[str, Any], tenant_settings: dict[str, Any] | None) -> bool:
+    if strategy.get("action_type") != "aws_config_enabled":
+        return bool(strategy["recommended"])
+    config_settings = normalize_remediation_settings(tenant_settings).get("config", {})
+    delivery_mode = str(config_settings.get("delivery_mode") or "").strip()
+    if delivery_mode == "account_local_delivery":
+        return strategy["strategy_id"] == "config_enable_account_local_delivery"
+    if delivery_mode == "centralized_delivery":
+        return strategy["strategy_id"] == "config_enable_centralized_delivery"
+    return bool(strategy["recommended"])
 
 
 def _action_target_label(action: Action) -> str:
@@ -1898,6 +1911,7 @@ async def get_remediation_options(
         # Defensive validation: ensures registry entries stay internally consistent.
         validate_strategy(action.action_type, strategy["strategy_id"], strategy["mode"])
         runtime_signals: dict[str, Any] = {}
+        risk_inputs: dict[str, Any] = {}
         if (
             strategy["strategy_id"] in _RUNTIME_RISK_OPTION_STRATEGIES
             or strategy["strategy_id"] in _RUNTIME_CONTEXT_OPTION_STRATEGIES
@@ -1910,6 +1924,7 @@ async def get_remediation_options(
                 tenant_settings=tenant_settings,
                 action=action,
             )
+            risk_inputs = probe_inputs
             runtime_signals = collect_runtime_risk_signals(
                 action=action,
                 strategy=strategy,
@@ -1922,7 +1937,7 @@ async def get_remediation_options(
         risk_snapshot = evaluate_strategy_impact(
             action,
             strategy,
-            {},
+            risk_inputs,
             account=account,
             runtime_signals=runtime_signals,
         )
@@ -1940,7 +1955,7 @@ async def get_remediation_options(
                 label=strategy["label"],
                 mode=strategy["mode"],
                 risk_level=strategy["risk_level"],
-                recommended=strategy["recommended"],
+                recommended=_option_recommended(strategy, tenant_settings),
                 requires_inputs=strategy["requires_inputs"],
                 input_schema=strategy["input_schema"],
                 dependency_checks=checks,
@@ -2266,22 +2281,40 @@ async def get_remediation_preview(
     runtime_context = runtime_signals.get("context")
     if not isinstance(runtime_context, dict):
         runtime_context = {}
+    preview_strategy_inputs = parsed_strategy_inputs or {}
+    if selected_strategy is not None:
+        try:
+            preview_selection = resolve_profile_selection(
+                action_type=action.action_type,
+                strategy=selected_strategy,
+                requested_profile_id=profile_id,
+                explicit_inputs=parsed_strategy_inputs,
+                tenant_settings=tenant_settings,
+                runtime_signals=runtime_signals,
+                action=action,
+            )
+            preview_strategy_inputs = preview_selection.persisted_strategy_inputs
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid profile_id", "detail": str(exc)},
+            ) from exc
     dependency_checks: list[dict[str, Any]] = []
     if selected_strategy is not None:
         dependency_checks = evaluate_strategy_impact(
             action,
             selected_strategy,
-            parsed_strategy_inputs or {},
+            preview_strategy_inputs,
             account=account,
             runtime_signals=runtime_signals,
         )["checks"]
 
     state_simulation = build_remediation_state_simulation(
         strategy_id=strategy_id,
-        strategy_inputs=parsed_strategy_inputs,
+        strategy_inputs=preview_strategy_inputs,
         runtime_signals=runtime_signals,
     )
-    impact_summary = get_impact_summary(strategy_id, parsed_strategy_inputs) or None
+    impact_summary = get_impact_summary(strategy_id, preview_strategy_inputs) or None
     try:
         resolution = build_preview_resolution(
             action_type=action.action_type,

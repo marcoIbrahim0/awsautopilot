@@ -1,5 +1,51 @@
 # Task Log
 
+## Remediation-profile Wave 6 CloudTrail.1 and Config.1 family migration on master (2026-03-15)
+
+**Task:** Implement remediation-profile Wave 6 Prompt 5 on current `master` only by migrating CloudTrail.1 and Config.1 onto resolver-backed family/profile selection while keeping public strategy IDs unchanged, preserving strategy-only compatibility, and making unsupported or under-proven branches degrade explicitly instead of appearing executable.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py** - tagged CloudTrail.1 and Config.1 compatibility rows with dedicated family resolver kinds while keeping public strategy/profile IDs unchanged.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py** - added resolver-backed CloudTrail.1 and Config.1 selection, tenant-default input mapping, downgrade triggers, persisted legacy input mirrors, and family-specific rationale/preservation metadata.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py** - preserved CloudTrail.1 and Config.1 create-time support tiers at the resolver-selected value so safe branches stay aligned with options and preview after risk acknowledgement.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py** - added CloudTrail log-bucket reachability probing so runtime evidence matches the same resolver-selected bucket inputs used by options, preview, and create.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - extended CloudTrail bundle generation so resolved `trail_bucket_name` and `kms_key_arn` flow into Terraform and CloudFormation defaults without changing the customer-run PR-bundle model.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py** - fed branch-aware probe inputs into remediation options and preview, and aligned Config strategy recommendation with tenant `config.delivery_mode`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py** - added catalog coverage for the new CloudTrail.1 and Config.1 family resolver kinds.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py** - added and updated focused CloudTrail.1 and Config.1 options/preview coverage for tenant defaults, strategy recommendations, and explicit downgrade behavior.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - added focused create coverage for CloudTrail.1 tenant/default persistence, CloudTrail under-proven multi-region downgrade, Config local executable defaults, Config centralized tenant defaults, and strategy-only compatibility.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py** - added focused CloudTrail log-bucket runtime probe coverage.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - added focused CloudTrail generator assertions proving Terraform and CloudFormation honor resolved bucket and KMS defaults.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented the landed CloudTrail.1 and Config.1 branches, tenant-default inputs, downgrade triggers, and unchanged worker/customer-run boundaries.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/implementation-plan.md** - updated Step 9.7 status notes to record the landed CloudTrail.1 and Config.1 migration boundary on `master`.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Wave 6 Prompt 5 task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Migrated CloudTrail.1 `cloudtrail_enabled` onto resolver-backed family selection while keeping public strategy `cloudtrail_enable_guided` unchanged.
+- Threaded CloudTrail tenant defaults `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn` through remediation options, preview, create, runtime probes, and CloudTrail PR-bundle defaults.
+- Added explicit CloudTrail downgrade rules so the compatibility branch becomes non-executable when:
+  - the log bucket name is unresolved
+  - the selected log bucket cannot be proven reachable from the runtime account context
+  - `create_bucket_policy=false`
+  - `multi_region=false`
+  - `kms_key_arn` is present before KMS safety proof exists
+- Migrated Config.1 `aws_config_enabled` onto resolver-backed family selection while keeping public strategies `config_enable_account_local_delivery`, `config_enable_centralized_delivery`, and `config_keep_exception` unchanged.
+- Threaded Config tenant defaults `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn` through remediation options, preview, and create without silently inventing missing tenant defaults.
+- Preserved the already-safe Config local create-new path as executable, while centralized or existing-bucket paths now downgrade explicitly when delivery-bucket reachability, centralized policy compatibility, or KMS proof is missing.
+- Preserved strategy-only client compatibility, customer-run PR bundles, root-key boundaries, and `artifacts.resolution` as the worker-side safety authority.
+
+**Validation:**
+- `env TMPDIR=/private/tmp PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -s /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py`
+- `env TMPDIR=/private/tmp PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -s /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `env TMPDIR=/private/tmp PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -s /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `env TMPDIR=/private/tmp PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -s /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py -k 'cloudtrail or aws_config_enabled'`
+
+**Open questions / TODOs:**
+- Prompt 6 must preserve `artifacts.resolution` as the safety authority for CloudTrail.1 and Config.1 executability; mirrored `selected_strategy` and `strategy_inputs` remain compatibility artifacts only.
+- Prompt 6 must preserve customer-run PR bundles as the supported model and must not reintroduce SaaS-managed PR-bundle execution.
+- Prompt 6 must preserve unchanged IAM.4/root-key authority boundaries and the legacy CloudFront OAC compatibility path.
+
 ## Remediation-profile Wave 6 S3.9 and S3.15 family migration on master (2026-03-15)
 
 **Task:** Implement remediation-profile Wave 6 Prompt 4 on current `master` only by migrating S3.9 and S3.15 onto resolver-backed family/profile selection with explicit branching, explicit downgrade behavior, and worker-side non-executable bundle enforcement while preserving the proven Wave 5 mixed-tier grouped S3.9 path.

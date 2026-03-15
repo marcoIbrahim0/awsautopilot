@@ -92,6 +92,7 @@ def build_single_run_resolution(
         profile_selection.support_tier,
         risk_snapshot,
         risk_acknowledged=risk_acknowledged,
+        strategy_id=strategy["strategy_id"],
     )
     return build_compat_resolution_decision(
         strategy_id=strategy["strategy_id"],
@@ -144,14 +145,25 @@ def _support_tier(
     risk_snapshot: Mapping[str, Any] | None,
     *,
     risk_acknowledged: bool,
+    strategy_id: str,
 ) -> SupportTier:
     support_tier = selected_support_tier
     if not risk_acknowledged:
+        return support_tier
+    if _preserve_selection_support_tier(strategy_id):
         return support_tier
     checks = risk_snapshot.get("checks") if isinstance(risk_snapshot, Mapping) else None
     if isinstance(checks, list) and requires_risk_ack(checks):
         support_tier = _max_support_tier(support_tier, "review_required_bundle")
     return support_tier
+
+
+def _preserve_selection_support_tier(strategy_id: str) -> bool:
+    return strategy_id in {
+        "cloudtrail_enable_guided",
+        "config_enable_account_local_delivery",
+        "config_enable_centralized_delivery",
+    }
 
 
 def _max_support_tier(left: SupportTier, right: SupportTier) -> SupportTier:

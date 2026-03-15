@@ -8,6 +8,8 @@ from typing import Any, Mapping
 
 from backend.models.action import Action
 from backend.services.remediation_profile_catalog import (
+    CLOUDTRAIL_FAMILY_RESOLVER_KIND,
+    CONFIG_FAMILY_RESOLVER_KIND,
     RemediationProfileDefinition,
     default_profile_id_for_strategy,
     get_profile_definition,
@@ -40,6 +42,14 @@ _EC2_53_ACCESS_MODES = {
     "restrict_to_cidr",
 }
 _TENANT_DEFAULT_INPUT_PATHS: dict[str, tuple[tuple[str, str], ...]] = {
+    "cloudtrail_enable_guided": (
+        ("trail_bucket_name", "cloudtrail.default_bucket_name"),
+        ("kms_key_arn", "cloudtrail.default_kms_key_arn"),
+    ),
+    "config_enable_account_local_delivery": (
+        ("delivery_bucket", "config.default_bucket_name"),
+        ("kms_key_arn", "config.default_kms_key_arn"),
+    ),
     "config_enable_centralized_delivery": (
         ("delivery_bucket", "config.default_bucket_name"),
         ("existing_bucket_name", "config.default_bucket_name"),
@@ -145,6 +155,26 @@ def resolve_profile_selection(
             runtime_signals=runtime_signals,
             action=action,
         )
+    if family_kind == CLOUDTRAIL_FAMILY_RESOLVER_KIND:
+        return _resolve_cloudtrail_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    if family_kind == CONFIG_FAMILY_RESOLVER_KIND:
+        return _resolve_config_family_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
     return _resolve_compatibility_selection(
         action_type=action_type,
         strategy=strategy,
@@ -167,6 +197,24 @@ def resolve_runtime_probe_inputs(
 ) -> dict[str, Any]:
     """Resolve non-runtime defaults so callers can collect branch-aware runtime probes."""
     profile = _profile_or_error(action_type, strategy["strategy_id"], requested_profile_id)
+    if profile.family_resolver_kind == CLOUDTRAIL_FAMILY_RESOLVER_KIND:
+        return _cloudtrail_resolved_inputs(
+            strategy=strategy,
+            profile=profile,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=None,
+            action=action,
+        )
+    if profile.family_resolver_kind == CONFIG_FAMILY_RESOLVER_KIND:
+        return _config_resolved_inputs(
+            strategy=strategy,
+            profile=profile,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=None,
+            action=action,
+        )
     return _resolved_inputs(
         strategy=strategy,
         profile=profile,
@@ -573,6 +621,125 @@ def _resolve_s3_15_family_selection(
     )
 
 
+def _resolve_cloudtrail_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    profile = _profile_or_error(action_type, strategy["strategy_id"], requested_profile_id)
+    resolved_inputs = _cloudtrail_resolved_inputs(
+        strategy=strategy,
+        profile=profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    blocked_reasons = _cloudtrail_blocked_reasons(resolved_inputs, runtime_signals=runtime_signals)
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome={
+            "profile_id": profile.profile_id,
+            "support_tier": "review_required_bundle" if blocked_reasons else "deterministic_bundle",
+            "blocked_reasons": blocked_reasons,
+            "preservation_summary": _cloudtrail_preservation_summary(
+                resolved_inputs=resolved_inputs,
+                runtime_signals=runtime_signals,
+            ),
+            "decision_rationale": _family_rationale(
+                strategy_id=strategy["strategy_id"],
+                profile_id=profile.profile_id,
+                blocked_reasons=blocked_reasons,
+            ),
+        },
+        resolved_inputs=resolved_inputs,
+        missing_defaults=_cloudtrail_missing_defaults(resolved_inputs),
+        persisted_strategy_inputs=_cloudtrail_persisted_inputs(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+        ),
+    )
+
+
+def _resolve_config_family_selection(
+    *,
+    action_type: str | None,
+    strategy: RemediationStrategy,
+    requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> ProfileSelectionResolution:
+    if strategy.get("exception_only"):
+        return _resolve_compatibility_selection(
+            action_type=action_type,
+            strategy=strategy,
+            requested_profile_id=requested_profile_id,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    profile = _profile_or_error(action_type, strategy["strategy_id"], requested_profile_id)
+    resolved_inputs = _config_resolved_inputs(
+        strategy=strategy,
+        profile=profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+    blocked_reasons = _config_blocked_reasons(
+        strategy_id=strategy["strategy_id"],
+        resolved_inputs=resolved_inputs,
+        runtime_signals=runtime_signals,
+    )
+    return _family_selection_resolution(
+        action_type=action_type,
+        strategy=strategy,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+        outcome={
+            "profile_id": profile.profile_id,
+            "support_tier": "review_required_bundle" if blocked_reasons else "deterministic_bundle",
+            "blocked_reasons": blocked_reasons,
+            "preservation_summary": _config_preservation_summary(
+                strategy_id=strategy["strategy_id"],
+                resolved_inputs=resolved_inputs,
+                runtime_signals=runtime_signals,
+            ),
+            "decision_rationale": _config_rationale(
+                strategy_id=strategy["strategy_id"],
+                profile_id=profile.profile_id,
+                tenant_settings=tenant_settings,
+                blocked_reasons=blocked_reasons,
+            ),
+        },
+        resolved_inputs=resolved_inputs,
+        missing_defaults=_config_missing_defaults(
+            strategy_id=strategy["strategy_id"],
+            resolved_inputs=resolved_inputs,
+        ),
+        persisted_strategy_inputs=_config_persisted_inputs(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+        ),
+    )
+
+
 def _family_selection_resolution(
     *,
     action_type: str | None,
@@ -650,9 +817,62 @@ def _resolved_inputs(
     return {key: value for key, value in values.items() if _present(value)}
 
 
+def _cloudtrail_resolved_inputs(
+    *,
+    strategy: RemediationStrategy,
+    profile: RemediationProfileDefinition,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> dict[str, Any]:
+    return _resolved_inputs(
+        strategy=strategy,
+        profile=profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
+
+
+def _config_resolved_inputs(
+    *,
+    strategy: RemediationStrategy,
+    profile: RemediationProfileDefinition,
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+    action: Action | None,
+) -> dict[str, Any]:
+    values = _schema_defaults_without_keys(strategy, action=action, ignored_keys={"delivery_bucket"})
+    values.update(_runtime_default_inputs(strategy["strategy_id"], profile.profile_id, runtime_signals))
+    values.update(_tenant_default_inputs(strategy["strategy_id"], profile.profile_id, tenant_settings))
+    values.update(dict(explicit_inputs or {}))
+    values.update(dict(profile.default_inputs))
+    if strategy["strategy_id"] == "config_enable_account_local_delivery":
+        values.setdefault("delivery_bucket_mode", "create_new")
+    elif strategy["strategy_id"] == "config_enable_centralized_delivery":
+        values.setdefault("delivery_bucket_mode", "use_existing")
+    if "encrypt_with_kms" not in dict(explicit_inputs or {}) and _present(values.get("kms_key_arn")):
+        values["encrypt_with_kms"] = True
+    return {key: value for key, value in values.items() if _present(value)}
+
+
 def _schema_defaults(strategy: RemediationStrategy, *, action: Action | None) -> dict[str, Any]:
+    return _schema_defaults_without_keys(strategy, action=action, ignored_keys=set())
+
+
+def _schema_defaults_without_keys(
+    strategy: RemediationStrategy,
+    *,
+    action: Action | None,
+    ignored_keys: set[str],
+) -> dict[str, Any]:
     values: dict[str, Any] = {}
     for field in strategy["input_schema"].get("fields", []):
+        if field["key"] in ignored_keys:
+            continue
         default_value = _render_field_default(field, action=action)
         if default_value is not _MISSING:
             values[field["key"]] = default_value
@@ -698,6 +918,8 @@ def _tenant_default_inputs(
     normalized_settings = normalize_remediation_settings(tenant_settings)
     if strategy_id == _EC2_53_STRATEGY_ID:
         return _ec2_53_tenant_inputs(profile_id, normalized_settings)
+    if strategy_id.startswith("config_"):
+        return _config_tenant_inputs(strategy_id, normalized_settings)
     values: dict[str, Any] = {}
     for input_key, settings_path in _TENANT_DEFAULT_INPUT_PATHS.get(strategy_id, ()):
         raw_value = _settings_value(normalized_settings, settings_path)
@@ -715,6 +937,23 @@ def _ec2_53_tenant_inputs(profile_id: str, tenant_settings: Mapping[str, Any]) -
         values["allowed_cidr"] = approved_cidrs[0]
     if profile_id == "bastion_sg_reference" and bastion_ids:
         values["approved_bastion_security_group_ids"] = bastion_ids
+    return values
+
+
+def _config_tenant_inputs(strategy_id: str, tenant_settings: Mapping[str, Any]) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    delivery_mode = _clean_text(_settings_value(tenant_settings, "config.delivery_mode"))
+    if strategy_id == "config_enable_account_local_delivery" and delivery_mode == "account_local_delivery":
+        values["delivery_bucket_mode"] = "create_new"
+    if strategy_id == "config_enable_centralized_delivery" and delivery_mode == "centralized_delivery":
+        values["delivery_bucket_mode"] = "use_existing"
+    for input_key, settings_path in _TENANT_DEFAULT_INPUT_PATHS.get(strategy_id, ()):
+        raw_value = _settings_value(tenant_settings, settings_path)
+        translated = _translate_setting_value(strategy_id, input_key, raw_value)
+        if _present(translated):
+            values[input_key] = translated
+    if strategy_id == "config_enable_centralized_delivery" and _present(values.get("delivery_bucket")):
+        values.setdefault("existing_bucket_name", values["delivery_bucket"])
     return values
 
 
@@ -817,6 +1056,189 @@ def _ec2_53_persisted_inputs(
     return values
 
 
+def _cloudtrail_missing_defaults(resolved_inputs: Mapping[str, Any]) -> list[str]:
+    if _present(resolved_inputs.get("trail_bucket_name")):
+        return []
+    return ["cloudtrail.default_bucket_name"]
+
+
+def _cloudtrail_blocked_reasons(
+    resolved_inputs: Mapping[str, Any],
+    *,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    reasons: list[str] = []
+    if not _present(resolved_inputs.get("trail_bucket_name")):
+        reasons.append(
+            "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
+        )
+    if runtime_signals and resolved_inputs.get("trail_bucket_name"):
+        if runtime_signals.get("cloudtrail_log_bucket_reachable") is False:
+            reasons.append(
+                str(runtime_signals.get("cloudtrail_log_bucket_error") or "CloudTrail log bucket could not be verified from this account context.")
+            )
+        elif runtime_signals.get("cloudtrail_log_bucket_reachable") is not True:
+            reasons.append("CloudTrail log bucket reachability has not been proven from this account context.")
+    if resolved_inputs.get("create_bucket_policy") is False:
+        reasons.append(
+            "CloudTrail bundle is review-only when create_bucket_policy=false because required delivery policy is managed outside the bundle."
+        )
+    if resolved_inputs.get("multi_region") is False:
+        reasons.append("CloudTrail.1 multi-region coverage is under-proven when multi_region=false.")
+    if _present(resolved_inputs.get("kms_key_arn")):
+        reasons.append("CloudTrail KMS-encrypted delivery is review-only until KMS dependency proof is implemented.")
+    return _dedupe_strings(reasons)
+
+
+def _cloudtrail_preservation_summary(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    runtime_signals: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "trail_bucket_name_resolved": _present(resolved_inputs.get("trail_bucket_name")),
+        "log_bucket_reachable": bool(runtime_signals and runtime_signals.get("cloudtrail_log_bucket_reachable") is True),
+        "kms_delivery_requested": _present(resolved_inputs.get("kms_key_arn")),
+        "external_bucket_policy_management": resolved_inputs.get("create_bucket_policy") is False,
+        "multi_region_requested": resolved_inputs.get("multi_region") is not False,
+    }
+
+
+def _cloudtrail_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    for key in ("trail_name", "trail_bucket_name", "kms_key_arn", "create_bucket_policy", "multi_region"):
+        if _present(resolved_inputs.get(key)):
+            values[key] = resolved_inputs[key]
+    return values
+
+
+def _config_missing_defaults(
+    *,
+    strategy_id: str,
+    resolved_inputs: Mapping[str, Any],
+) -> list[str]:
+    if strategy_id != "config_enable_centralized_delivery":
+        return []
+    if _present(resolved_inputs.get("delivery_bucket")) or _present(resolved_inputs.get("existing_bucket_name")):
+        return []
+    return ["config.default_bucket_name"]
+
+
+def _config_blocked_reasons(
+    *,
+    strategy_id: str,
+    resolved_inputs: Mapping[str, Any],
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    if strategy_id == "config_enable_account_local_delivery":
+        return _config_local_blocked_reasons(resolved_inputs, runtime_signals=runtime_signals)
+    return _config_centralized_blocked_reasons(resolved_inputs, runtime_signals=runtime_signals)
+
+
+def _config_local_blocked_reasons(
+    resolved_inputs: Mapping[str, Any],
+    *,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    reasons: list[str] = []
+    if resolved_inputs.get("delivery_bucket_mode") == "use_existing":
+        reasons.extend(_config_existing_bucket_reasons(runtime_signals))
+    reasons.extend(_config_kms_reasons(resolved_inputs, runtime_signals=runtime_signals))
+    return _dedupe_strings(reasons)
+
+
+def _config_centralized_blocked_reasons(
+    resolved_inputs: Mapping[str, Any],
+    *,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    reasons: list[str] = []
+    if not (_present(resolved_inputs.get("delivery_bucket")) or _present(resolved_inputs.get("existing_bucket_name"))):
+        reasons.append(
+            "Centralized AWS Config delivery bucket is unresolved. Configure config.default_bucket_name or provide strategy_inputs.delivery_bucket."
+        )
+    reasons.extend(_config_existing_bucket_reasons(runtime_signals))
+    reasons.extend(_config_kms_reasons(resolved_inputs, runtime_signals=runtime_signals))
+    return _dedupe_strings(reasons)
+
+
+def _config_existing_bucket_reasons(runtime_signals: Mapping[str, Any] | None) -> list[str]:
+    if not runtime_signals:
+        return ["AWS Config delivery bucket dependencies have not been proven from this account context."]
+    reasons: list[str] = []
+    if runtime_signals.get("config_delivery_bucket_reachable") is False:
+        reasons.append(
+            str(runtime_signals.get("config_delivery_bucket_error") or "Configured delivery bucket is unreachable from this account context.")
+        )
+    elif runtime_signals.get("config_delivery_bucket_reachable") is not True:
+        reasons.append("AWS Config delivery bucket reachability has not been proven from this account context.")
+    if runtime_signals.get("config_central_bucket_policy_valid") is False:
+        reasons.append(
+            str(runtime_signals.get("config_central_bucket_policy_error") or "Centralized delivery bucket policy is not proven for this account context.")
+        )
+    elif runtime_signals.get("config_central_bucket_policy_valid") is not True:
+        reasons.append("AWS Config delivery bucket policy compatibility has not been proven from this account context.")
+    return reasons
+
+
+def _config_kms_reasons(
+    resolved_inputs: Mapping[str, Any],
+    *,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    if not _present(resolved_inputs.get("kms_key_arn")):
+        return []
+    if not runtime_signals:
+        return ["AWS Config delivery KMS dependency proof is under-specified."]
+    if runtime_signals.get("config_kms_policy_valid") is True:
+        return []
+    return [
+        str(runtime_signals.get("config_kms_policy_error") or "AWS Config delivery KMS dependency proof is under-specified.")
+    ]
+
+
+def _config_preservation_summary(
+    *,
+    strategy_id: str,
+    resolved_inputs: Mapping[str, Any],
+    runtime_signals: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "delivery_mode": "centralized_delivery"
+        if strategy_id == "config_enable_centralized_delivery"
+        else "account_local_delivery",
+        "existing_bucket_path": resolved_inputs.get("delivery_bucket_mode") == "use_existing",
+        "delivery_bucket_resolved": _present(resolved_inputs.get("delivery_bucket"))
+        or _present(resolved_inputs.get("existing_bucket_name")),
+        "delivery_bucket_reachable": bool(runtime_signals and runtime_signals.get("config_delivery_bucket_reachable") is True),
+        "delivery_policy_proven": bool(runtime_signals and runtime_signals.get("config_central_bucket_policy_valid") is True),
+        "kms_delivery_requested": _present(resolved_inputs.get("kms_key_arn")),
+    }
+
+
+def _config_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    for key in (
+        "recording_scope",
+        "delivery_bucket_mode",
+        "existing_bucket_name",
+        "delivery_bucket",
+        "encrypt_with_kms",
+        "kms_key_arn",
+    ):
+        if _present(resolved_inputs.get(key)):
+            values[key] = resolved_inputs[key]
+    return values
+
+
 def _s3_9_persisted_inputs(
     *,
     resolved_inputs: Mapping[str, Any],
@@ -867,6 +1289,38 @@ def _s3_15_persisted_inputs(
     if key_mode == "custom" and _present(resolved_inputs.get("kms_key_arn")):
         values["kms_key_arn"] = resolved_inputs["kms_key_arn"]
     return values
+
+
+def _family_rationale(
+    *,
+    strategy_id: str,
+    profile_id: str,
+    blocked_reasons: list[str],
+) -> str:
+    if not blocked_reasons:
+        return f"Family resolver kept compatibility profile '{profile_id}' executable for strategy '{strategy_id}'."
+    return (
+        f"Family resolver kept compatibility profile '{profile_id}' for strategy '{strategy_id}' "
+        f"but downgraded executability. {' '.join(blocked_reasons)}"
+    )
+
+
+def _config_rationale(
+    *,
+    strategy_id: str,
+    profile_id: str,
+    tenant_settings: Mapping[str, Any] | None,
+    blocked_reasons: list[str],
+) -> str:
+    preferred_mode = _clean_text(_settings_value(tenant_settings, "config.delivery_mode"))
+    prefix = _family_rationale(
+        strategy_id=strategy_id,
+        profile_id=profile_id,
+        blocked_reasons=blocked_reasons,
+    )
+    if not preferred_mode:
+        return prefix
+    return f"{prefix} Tenant config.delivery_mode preference is '{preferred_mode}'."
 
 
 def _compatibility_rationale(

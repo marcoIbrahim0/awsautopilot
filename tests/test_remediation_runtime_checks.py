@@ -532,3 +532,51 @@ def test_collect_runtime_risk_signals_cloudtrail_marks_absent_trail_when_none_ex
     assert default_inputs["create_bucket_policy"] is True
     assert default_inputs["multi_region"] is True
     assert signals["cloudtrail_existing_trail_present"] is False
+
+
+def test_collect_runtime_risk_signals_cloudtrail_validates_log_bucket_reachability(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "cloudtrail": _FakeCloudTrailClient(trail_name="existing-trail", multi_region=True),
+            "s3": _FakeS3Client(),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="cloudtrail_enabled"),
+        strategy=_cloudtrail_strategy(),
+        strategy_inputs={"trail_bucket_name": "tenant-cloudtrail-logs"},
+        account=_make_account(),
+    )
+
+    assert signals["cloudtrail_log_bucket_reachable"] is True
+    assert signals["evidence"]["trail_bucket_name"] == "tenant-cloudtrail-logs"
+
+
+def test_collect_runtime_risk_signals_cloudtrail_surfaces_log_bucket_probe_failure(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "cloudtrail": _FakeCloudTrailClient(trail_name="existing-trail", multi_region=True),
+            "s3": _FakeS3Client(head_bucket_error_code="AccessDenied"),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="cloudtrail_enabled"),
+        strategy=_cloudtrail_strategy(),
+        strategy_inputs={"trail_bucket_name": "tenant-cloudtrail-logs"},
+        account=_make_account(),
+    )
+
+    assert signals["cloudtrail_log_bucket_reachable"] is False
+    assert signals["cloudtrail_log_bucket_error"] == (
+        "CloudTrail log bucket 'tenant-cloudtrail-logs' could not be verified from this account context (AccessDenied)."
+    )

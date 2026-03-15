@@ -647,6 +647,17 @@ External dependencies that cannot be proven safe in phase 1 must downgrade expli
 
 Specify that CloudTrail.1 and Config.1 keep their existing public strategy families while unresolved or unsupported branches are represented as review/manual instead of executable.
 
+Implemented on `master` on 2026-03-15 for the Prompt 5 local contract scope:
+
+- CloudTrail.1 keeps public strategy `cloudtrail_enable_guided`.
+  - Resolver-backed defaults now read `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn`.
+  - Executable output remains limited to the compatibility branch with a resolved, runtime-proven log bucket and default-safe `create_bucket_policy=true` plus `multi_region=true`.
+  - `create_bucket_policy=false`, `multi_region=false`, unresolved bucket defaults, unreachable bucket proof, and KMS delivery all downgrade explicitly.
+- Config.1 keeps public strategies `config_enable_account_local_delivery`, `config_enable_centralized_delivery`, and `config_keep_exception`.
+  - Resolver-backed defaults now read `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn`.
+  - Generator-safe local create-new delivery remains executable where runtime proof is not required.
+  - Centralized or existing-bucket paths downgrade explicitly when delivery-bucket reachability, centralized policy compatibility, or KMS validity cannot be proven.
+
 ### 9.8 Re-state the explicit downgrade rule
 
 Lock the rule that unsupported or under-proven branches must downgrade to:

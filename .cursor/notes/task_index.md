@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 CloudTrail.1 and Config.1 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-cloudtrail1-and-config1-family-migration-on-master-2026-03-15)
+  - Migrated CloudTrail.1 and Config.1 onto resolver-backed family selection while keeping public strategy IDs unchanged, adding tenant-default-backed selection for CloudTrail log buckets and Config delivery modes, buckets, and KMS inputs.
+  - Threaded the same CloudTrail.1 and Config.1 decision through options, preview, create, runtime probes, and CloudTrail bundle defaults so unsupported or under-proven branches now downgrade explicitly instead of appearing executable.
 - [Remediation-profile Wave 6 S3.9 and S3.15 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-s39-and-s315-family-migration-on-master-2026-03-15)
   - Migrated S3.9 and S3.15 onto resolver-backed family selection while keeping public strategy IDs unchanged, adding an explicit S3.9 destination-safety review branch and an explicit S3.15 customer-managed KMS branch.
   - Threaded the same branch-aware decision through options, preview, create, grouped create, runtime probes, risk checks, and worker bundle gating so unsafe or under-proven S3.9/S3.15 paths stay metadata-only by default.
