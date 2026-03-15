@@ -136,6 +136,14 @@ flowchart LR
 - CloudTrail.1 keeps one public compatibility branch but now has explicit executable versus review boundaries driven by log-bucket reachability, external bucket-policy management, multi-region selection, and KMS proof.
 - Config.1 keeps local, centralized, and exception public branches. The executable boundary currently stays with safe local create-new delivery, while centralized delivery, existing-bucket reuse, and KMS-backed delivery require proof before they remain executable.
 
+## Live AWS readiness notes from March 15, 2026
+
+- The readiness package under [`docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/final-summary.md) found fresh live-AWS control drift in isolated account `696505809372`.
+- Direct Security Hub `EC2.53` in `eu-north-1` was `DISABLED`, but seeded public-admin security groups still produced live `EC2.18` and `EC2.19` findings that current product logic canonicalized into `EC2.53` actions.
+- Direct Security Hub `S3.11` in `eu-north-1` was `DISABLED` and titled `S3 general purpose buckets should have event notifications enabled`, which does not match the product's current `s3_bucket_lifecycle_configuration` family semantics.
+- Direct Security Hub `S3.15` in `eu-north-1` was `DISABLED` and titled `S3 general purpose buckets should have Object Lock enabled`, which does not match the product's current `s3_bucket_encryption_kms` family semantics.
+- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do mean the next live-AWS gate must treat `EC2.53` canonicalization and the `S3.11` / `S3.15` mapping gap as explicit validation notes rather than assuming direct control parity.
+
 ## Post-Wave-6 Boundary
 
 - Wave 6 control-family migration is implemented on `master`, but live validation is still required per migrated family before any shipped-product claim is updated.

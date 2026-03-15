@@ -1,5 +1,134 @@
 # Task Log
 
+## Remediation-profile Wave 6 environment readiness for the next live AWS validation on master (2026-03-15)
+
+**Task:** Execute the Wave 6 environment-readiness task on current `master` only so the next live AWS validation run can start from a concrete readiness matrix instead of exploratory searching, while keeping customer-run PR bundles as the supported model, preserving `/api/root-key-remediation-runs` as the only IAM.4 execution authority, and leaving `docs/Production/` untouched.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/family-readiness-matrix.md** - recorded per-family executable/downgrade readiness, exact action and resource IDs, credential requirements, cleanup plans, and exact remaining blockers.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/final-summary.md** - summarized the readiness outcome, the fresh March 15 live-AWS evidence changes, the repaired credential path, retained resources, and the recommendation for the next Wave 6 live run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/aws-cleanup-summary.md** - recorded disposable-runtime cleanup, retained target-account fixtures, and follow-up cleanup commands for the next live run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/evidence/api/** - saved signup, account registration, ingest, remediation settings, per-family options/preview/create/run-detail, and root-key route evidence for the readiness run.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/evidence/aws/** - saved caller-identity proof, Security Hub control-status output, direct finding probes, import-role bucket probes, temporary SQS queue lifecycle, and cleanup evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/evidence/runtime/** - saved isolated runtime bootstrap, migrations, API/worker logs, and local cleanup evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/evidence/seeding/** - saved the target-account resource manifest, seeded bucket policies, VPC ID, and seeded security-group ingress evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - added the Wave 6 environment-readiness package to the recent targeted runs index.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md** - added the fresh March 15 live-AWS readiness note covering EC2.53 canonicalization and the current S3.11/S3.15 Security Hub control drift.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this readiness task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**Manual Console Changes:**
+- Signed into isolated AWS account `696505809372` through the AWS console browser session.
+- Confirmed the active principal was the root user for `maromaher54@icloud.com`.
+- Created a temporary root access key in **My security credentials** to repair local AWS CLI profile `test28-root` after the prior key path failed with `InvalidClientTokenId`.
+- Used the new credentials only to restore the operator-owned customer-run apply/rollback path for this isolated readiness task. The secret value was not written into the repository or evidence package.
+
+**What was done:**
+- Re-read the required `.cursor` rules, project notes, remediation-profile docs, March 15 Wave 6 live summary, and the required backend files on current `master` before making any changes.
+- Built a disposable isolated runtime on local `master` (`HEAD=b6952f2ab9c7a3ae2aa7a17faa7104312f6402e5`) with:
+  - disposable Postgres at `/tmp/rpw6-envready-pg-20260315T201821Z` on port `55438`
+  - five temporary SaaS-account SQS queues in account `029037611564`
+  - isolated tenant `4cc07fb3-c45f-4be3-936d-2253d3e69548`
+  - isolated account registration for `696505809372`
+- Enabled IAM.4 in the isolated runtime only through env overrides:
+  - `ROOT_KEY_SAFE_REMEDIATION_ENABLED=true`
+  - `ROOT_KEY_SAFE_REMEDIATION_API_ENABLED=true`
+  - `ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS=true`
+- Proved the IAM.4 boundary after enablement:
+  - generic remediation-profile preview stayed `manual_guidance_only`
+  - generic create failed closed with `reason=root_key_execution_authority`
+  - `/api/root-key-remediation-runs` returned `201` and created run `a850f4a0-b25d-4fe4-8593-6b50e8bdb94f`
+- Triggered fresh ingest on the isolated tenant and captured the pre-seeding action inventory, confirming the earlier blocker list still matched current master behavior before any target-account seeding.
+- Repaired the customer-run credential path by updating local profile `test28-root` until `aws sts get-caller-identity --profile test28-root` returned account `696505809372` and ARN `arn:aws:iam::696505809372:root`.
+- Seeded dedicated target-account resources in `eu-north-1` for the next live run:
+  - security groups `sg-06f6252fa8a95b61d` and `sg-0ef32ca8805a55a8b`
+  - buckets `security-autopilot-w6-envready-accesslogs-696505809372`, `security-autopilot-w6-envready-cloudtrail-696505809372`, `security-autopilot-w6-envready-config-696505809372`, `security-autopilot-w6-envready-s311-exec-696505809372`, `security-autopilot-w6-envready-s311-review-696505809372`, and `security-autopilot-w6-envready-s315-exec-696505809372`
+  - import-role-readable policies, bucket public-access blocks, and lifecycle/encryption proofs tailored to the Wave 6 families
+- Updated isolated tenant remediation settings to point S3 access logs, CloudTrail, and centralized Config delivery at the seeded buckets, then ran a fresh ingest/materialization pass.
+- Captured focused family probes after seeding:
+  - `EC2.53` now materializes actions `7eba03c7-2145-43fe-9b64-acc313aa5dfe` and `a58547f3-4e20-49c7-8fea-360ab1e6811b`
+  - `S3.9`, `CloudTrail.1`, and `Config.1` now have bucket-proof-backed executable previews and successful runnable bundle runs
+  - `S3.2` stayed downgrade/manual only
+  - `S3.5` gained a bucket-scoped action but still downgraded at create/run detail to a non-executable review bundle
+- Captured fresh live-AWS control-status drift:
+  - direct `EC2.53` is `DISABLED`, while live `EC2.18` / `EC2.19` findings canonicalize to product `EC2.53`
+  - direct `S3.11` is `DISABLED` and currently represents `event notifications`
+  - direct `S3.15` is `DISABLED` and currently represents `Object Lock`
+  - no product actions materialized for `S3.11` or `S3.15` after seeding because the current live AWS controls no longer line up with the product-family assumptions
+- Wrote the readiness package under `docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/` with the final summary, family matrix, cleanup summary, and full evidence folders.
+- Cleaned the disposable local runtime after evidence capture:
+  - stopped backend PID `5473`
+  - stopped worker PID `5500`
+  - stopped Postgres
+  - deleted the five temporary SaaS-account queues and probed them until AWS returned `NonExistentQueue`
+- Intentionally retained the target-account seeded buckets, security groups, and the repaired local `test28-root` credential path for the next live run.
+
+**AWS resources touched:**
+- SaaS queue/runtime account `029037611564` in `eu-north-1`
+  - temporary SQS queues `security-autopilot-rpw6-envready-20260315t201821z-ingest`, `security-autopilot-rpw6-envready-20260315t201821z-contract-quarantine`, `security-autopilot-rpw6-envready-20260315t201821z-events-fastlane`, `security-autopilot-rpw6-envready-20260315t201821z-inventory-reconcile`, and `security-autopilot-rpw6-envready-20260315t201821z-export-report`
+- Isolated AWS test account `696505809372` in `eu-north-1` and `us-east-1`
+  - read-path role `arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole`
+  - local apply/rollback profile `test28-root`
+  - retained target-account seeded buckets:
+    - `security-autopilot-w6-envready-accesslogs-696505809372`
+    - `security-autopilot-w6-envready-cloudtrail-696505809372`
+    - `security-autopilot-w6-envready-config-696505809372`
+    - `security-autopilot-w6-envready-s311-exec-696505809372`
+    - `security-autopilot-w6-envready-s311-review-696505809372`
+    - `security-autopilot-w6-envready-s315-exec-696505809372`
+  - retained target-account seeded security groups:
+    - `sg-06f6252fa8a95b61d`
+    - `sg-0ef32ca8805a55a8b`
+
+**Rollback / cleanup status:**
+- Target-account AWS rollback status: no customer-run bundle was manually applied during this readiness task, so no target-account rollback was executed yet.
+- Local backend status: stopped.
+- Local worker status: stopped.
+- Disposable Postgres status: stopped.
+- Temporary SaaS-account SQS queues: deleted and probed as non-existent.
+- Intentionally retained AWS resources: the seeded buckets/security groups in account `696505809372` plus the repaired local `test28-root` profile path for the next live run.
+
+**Validation:**
+- `aws sts get-caller-identity --profile test28-root` returned account `696505809372` and ARN `arn:aws:iam::696505809372:root`.
+- `POST /api/root-key-remediation-runs` returned `201` and run `a850f4a0-b25d-4fe4-8593-6b50e8bdb94f`.
+- Fresh post-seeding action inventory showed:
+  - `EC2.53` `2`
+  - `IAM.4` `1`
+  - `S3.2` `1`
+  - `S3.5` `8`
+  - `S3.9` `8`
+  - `CloudTrail.1` `2`
+  - `Config.1` `2`
+  - `S3.11` `0`
+  - `S3.15` `0`
+- Successful runnable or review-bundle run detail evidence exists for:
+  - `EC2.53` run `9910cdcd-253d-478e-847f-4f8f0112a0cd`
+  - `S3.5` run `caa4c343-369f-4a32-9d66-03a2cef9f1a2`
+  - `S3.9` run `a597f78b-47a2-40c0-afd8-512268050aaf`
+  - `CloudTrail.1` run `878705c2-dc6b-466a-b562-42b20fb9f785`
+  - `Config.1` run `5dd45a6f-fa8b-4a1b-bd8b-aa55cca84f94`
+- Import-role bucket probes after seeding confirmed:
+  - `HeadBucket` succeeds on the dedicated access-logs, CloudTrail, and Config buckets
+  - `GetLifecycleConfiguration` distinguishes the S3.11 executable vs downgrade buckets
+  - `GetBucketEncryption` succeeds on the seeded S3.15 bucket
+- Security Hub control-status evidence confirmed:
+  - `EC2.53` `DISABLED`
+  - `IAM.4` `ENABLED`
+  - `S3.2` `ENABLED`
+  - `S3.5` `ENABLED`
+  - `S3.9` `ENABLED`
+  - `S3.11` `DISABLED`
+  - `S3.15` `DISABLED`
+  - `CloudTrail.1` `ENABLED`
+  - `Config.1` `ENABLED`
+
+**Open questions / TODOs:**
+- Execute the next Wave 6 live AWS validation from this readiness matrix and perform manual apply/rollback only for the families now marked executable-ready.
+- Replace the temporary root-user credential path with a safer operator-owned target-account profile after the next isolated run. This readiness task unblocked execution, but it did not make root the recommended steady-state operator model.
+- Decide how current product mapping should handle the fresh direct-control drift for `S3.11` (`event notifications`) and `S3.15` (`Object Lock`) before those families can be considered live-ready.
+- Investigate the `S3.5` preview-vs-create support-tier mismatch and the `S3.9` account-scoped preview parsing issue before claiming full family closure.
+- `S3.2` still needs a reproducible bucket-scoped case or a deliberate AWS-backed restoration path if the next live run must validate its executable branch.
+
 ## Remediation-profile Wave 6 W6-LIVE-07 grouped override inheritance and fail-closed validation fix on master (2026-03-15)
 
 **Task:** Fix the remediation-profile Wave 6 live-AWS blocker `W6-LIVE-07` on current `master` only by removing the grouped `500` from `POST /api/action-groups/{group_id}/bundle-run` when per-action overrides relied on top-level grouped `strategy_inputs`, while keeping grouped action resolution canonical and customer-run bundle behavior unchanged.

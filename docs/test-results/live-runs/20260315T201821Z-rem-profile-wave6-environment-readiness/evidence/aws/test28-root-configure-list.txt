@@ -1,0 +1,5 @@
+NAME       : VALUE                    : TYPE             : LOCATION
+profile    : test28-root              : manual           : --profile
+access_key : ****************JZ4Y     : shared-credentials-file : 
+secret_key : ****************o15U     : shared-credentials-file : 
+region     : eu-north-1               : config-file      : ~/.aws/config

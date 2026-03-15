@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 environment readiness for the next live AWS validation on master (2026-03-15)](task_log.md#remediation-profile-wave-6-environment-readiness-for-the-next-live-aws-validation-on-master-2026-03-15)
+  - Built the readiness package under `docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`, enabled the IAM.4 authoritative route in the isolated runtime only, repaired the target-account customer-run credential path, seeded dedicated AWS fixtures, and captured the per-family readiness matrix plus cleanup plan.
+  - Reclassified the March 15 Wave 6 blockers from fresh live evidence: `EC2.53`, `S3.9`, `CloudTrail.1`, and `Config.1` now have executable-ready cases; `S3.2` and `S3.5` remain downgrade-only; IAM.4 runtime authority is resolved; and `S3.11` / `S3.15` remain blocked by current Security Hub control drift.
 - [Remediation-profile Wave 6 W6-LIVE-07 grouped override inheritance and fail-closed validation fix on master (2026-03-15)](task_log.md#remediation-profile-wave-6-w6-live-07-grouped-override-inheritance-and-fail-closed-validation-fix-on-master-2026-03-15)
   - Fixed the shared grouped-run service so same-strategy overrides inherit top-level grouped `strategy_inputs`, eliminating the live S3.9 grouped-create `500` when callers selected only the review profile per action.
   - Added focused grouped service, action-groups route, and remediation-runs grouped-route regressions; grouped requests with missing required inherited inputs now fail closed with deterministic `400` validation responses instead of internal errors.

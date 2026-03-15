@@ -1,0 +1,50 @@
+[
+  {
+    "control_id": "CloudTrail.1",
+    "count": 2
+  },
+  {
+    "control_id": "Config.1",
+    "count": 2
+  },
+  {
+    "control_id": "EC2.182",
+    "count": 3
+  },
+  {
+    "control_id": "EC2.53",
+    "count": 2
+  },
+  {
+    "control_id": "EC2.7",
+    "count": 2
+  },
+  {
+    "control_id": "GuardDuty.1",
+    "count": 2
+  },
+  {
+    "control_id": "IAM.4",
+    "count": 1
+  },
+  {
+    "control_id": "S3.1",
+    "count": 2
+  },
+  {
+    "control_id": "S3.2",
+    "count": 1
+  },
+  {
+    "control_id": "S3.5",
+    "count": 8
+  },
+  {
+    "control_id": "S3.9",
+    "count": 8
+  },
+  {
+    "control_id": "SSM.7",
+    "count": 2
+  }
+]

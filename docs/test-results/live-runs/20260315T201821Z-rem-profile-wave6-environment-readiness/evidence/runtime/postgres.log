@@ -1,0 +1,20 @@
+2026-03-15 22:19:27.049 EET [5250] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 22:19:27.054 EET [5250] LOG:  listening on IPv6 address "::1", port 55438
+2026-03-15 22:19:27.054 EET [5250] LOG:  listening on IPv4 address "127.0.0.1", port 55438
+2026-03-15 22:19:27.054 EET [5250] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55438"
+2026-03-15 22:19:27.059 EET [5251] LOG:  database system was shut down at 2026-03-15 22:19:26 EET
+2026-03-15 22:19:27.070 EET [5250] LOG:  database system is ready to accept connections
+2026-03-15 22:19:50.256 EET [5325] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-15 22:19:50.256 EET [5325] HINT:  New enum values must be committed before they can be used.
+2026-03-15 22:19:50.256 EET [5325] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-15 22:20:04.450 EET [5381] ERROR:  relation "alembic_version" does not exist at character 25
+2026-03-15 22:20:04.450 EET [5381] STATEMENT:  select version_num from alembic_version order by version_num;
+2026-03-15 22:55:31.180 EET [29833] ERROR:  column "workflow_state" does not exist at character 20
+2026-03-15 22:55:31.180 EET [29833] STATEMENT:  select control_id, workflow_state, compliance_status, resource_id, id from findings where tenant_id='4cc07fb3-c45f-4be3-936d-2253d3e69548' and resource_id in ('arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d','arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b') order by resource_id, control_id;
+2026-03-15 23:07:21.113 EET [5250] LOG:  received fast shutdown request
+2026-03-15 23:07:21.114 EET [5250] LOG:  aborting any active transactions
+2026-03-15 23:07:21.115 EET [36192] FATAL:  terminating connection due to administrator command
+2026-03-15 23:07:21.115 EET [36320] FATAL:  terminating connection due to administrator command
+2026-03-15 23:07:21.117 EET [5250] LOG:  background worker "logical replication launcher" (PID 5257) exited with exit code 1
+2026-03-15 23:07:21.118 EET [5252] LOG:  shutting down
+2026-03-15 23:07:21.128 EET [5250] LOG:  database system is shut down

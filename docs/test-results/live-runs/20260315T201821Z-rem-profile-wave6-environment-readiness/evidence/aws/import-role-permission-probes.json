@@ -1,0 +1,52 @@
+{
+  "describe_configuration_recorders": {
+    "error_code": "AccessDeniedException",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: config:DescribeConfigurationRecorders on resource: arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ewm8xn7xrw2dcvo8 because no identity-based policy allows the config:DescribeConfigurationRecorders action",
+    "ok": false
+  },
+  "describe_delivery_channels": {
+    "error_code": "AccessDeniedException",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: config:DescribeDeliveryChannels because no identity-based policy allows the config:DescribeDeliveryChannels action",
+    "ok": false
+  },
+  "describe_security_groups": {
+    "error_code": "UnauthorizedOperation",
+    "error_message": "You are not authorized to perform this operation. User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: ec2:DescribeSecurityGroups because no identity-based policy allows the ec2:DescribeSecurityGroups action",
+    "ok": false
+  },
+  "describe_trails": {
+    "error_code": "AccessDeniedException",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: cloudtrail:DescribeTrails because no identity-based policy allows the cloudtrail:DescribeTrails action",
+    "ok": false
+  },
+  "get_bucket_logging_config_bucket": {
+    "error_code": "AccessDenied",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: s3:GetBucketLogging on resource: \"arn:aws:s3:::config-bucket-696505809372\" because no identity-based policy allows the s3:GetBucketLogging action",
+    "ok": false
+  },
+  "get_bucket_policy_status_config_bucket": {
+    "error_code": "AccessDenied",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: s3:GetBucketPolicyStatus on resource: \"arn:aws:s3:::config-bucket-696505809372\" because no identity-based policy allows the s3:GetBucketPolicyStatus action",
+    "ok": false
+  },
+  "get_encryption_config_config_bucket": {
+    "error_code": "AccessDenied",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: s3:GetEncryptionConfiguration on resource: \"arn:aws:s3:::config-bucket-696505809372\" because no identity-based policy allows the s3:GetEncryptionConfiguration action",
+    "ok": false
+  },
+  "get_lifecycle_config_config_bucket": {
+    "error_code": "AccessDenied",
+    "error_message": "User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wave6-envready-direct is not authorized to perform: s3:GetLifecycleConfiguration on resource: \"arn:aws:s3:::config-bucket-696505809372\" because no identity-based policy allows the s3:GetLifecycleConfiguration action",
+    "ok": false
+  },
+  "head_bucket_access_logs_bucket": {
+    "error_code": "404",
+    "error_message": "Not Found",
+    "ok": false
+  },
+  "head_bucket_config_bucket": {
+    "error_code": "403",
+    "error_message": "Forbidden",
+    "ok": false
+  }
+}

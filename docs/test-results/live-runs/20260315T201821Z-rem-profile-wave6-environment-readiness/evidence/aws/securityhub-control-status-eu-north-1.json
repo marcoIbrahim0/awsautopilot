@@ -1,0 +1,118 @@
+{
+    "SecurityControls": [
+        {
+            "SecurityControlId": "EC2.53",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.53",
+            "Title": "EC2 security groups should not allow ingress from 0.0.0.0/0 to remote server administration ports",
+            "Description": "This control checks whether an Amazon EC2 security group allows ingress from 0.0.0.0/0 to remote server administration ports (ports 22 and 3389). The control fails if the security group allows ingress from 0.0.0.0/0 to port 22 or 3389.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.53/remediation",
+            "SeverityRating": "HIGH",
+            "SecurityControlStatus": "DISABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "IAM.4",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/IAM.4",
+            "Title": "IAM root user access key should not exist",
+            "Description": "This AWS control checks whether the root user access key is available.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/IAM.4/remediation",
+            "SeverityRating": "CRITICAL",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "S3.2",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2",
+            "Title": "S3 general purpose buckets should block public read access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket permits public read access. It evaluates the block public access settings, the bucket policy, and the bucket access control list (ACL). The control fails if the bucket permits public read access.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/S3.2/remediation",
+            "SeverityRating": "CRITICAL",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "S3.5",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5",
+            "Title": "S3 general purpose buckets should require requests to use SSL",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket has a policy that requires requests to use SSL. The control fails if the bucket policy doesn't require requests to use SSL.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/S3.5/remediation",
+            "SeverityRating": "MEDIUM",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "S3.9",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.9",
+            "Title": "S3 general purpose buckets should have server access logging enabled",
+            "Description": "This control checks whether server access logging is enabled for an Amazon S3 general purpose bucket. The control fails if server access logging isn't enabled. When logging is enabled, Amazon S3 delivers access logs for a source bucket to a chosen target bucket. The target bucket must be in the same AWS Region as the source bucket and must not have a default retention period configured. The target logging bucket does not need to have server access logging enabled, and you should suppress findings for this bucket.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/S3.9/remediation",
+            "SeverityRating": "MEDIUM",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "S3.11",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11",
+            "Title": "S3 general purpose buckets should have event notifications enabled",
+            "Description": "This control checks whether S3 Event Notifications are enabled on an Amazon S3 general purpose bucket. The control fails if S3 Event Notifications are not enabled on a bucket. If you provide custom values for the 'eventTypes' parameter, the control passes only if event notifications are enabled for the specified types of events.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/S3.11/remediation",
+            "SeverityRating": "MEDIUM",
+            "SecurityControlStatus": "DISABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {
+                "eventTypes": {
+                    "ValueType": "DEFAULT"
+                }
+            }
+        },
+        {
+            "SecurityControlId": "S3.15",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15",
+            "Title": "S3 general purpose buckets should have Object Lock enabled",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket has Object Lock enabled. The control fails if Object Lock isn’t enabled for the bucket. If you provide a custom value for the 'mode' parameter, the control passes only if S3 Object Lock uses the specified retention mode.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/S3.15/remediation",
+            "SeverityRating": "MEDIUM",
+            "SecurityControlStatus": "DISABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {
+                "mode": {
+                    "ValueType": "DEFAULT"
+                }
+            }
+        },
+        {
+            "SecurityControlId": "CloudTrail.1",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/CloudTrail.1",
+            "Title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events",
+            "Description": "This AWS control checks that there is at least one multi-region AWS CloudTrail trail includes read and write management events.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.1/remediation",
+            "SeverityRating": "HIGH",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {}
+        },
+        {
+            "SecurityControlId": "Config.1",
+            "SecurityControlArn": "arn:aws:securityhub:eu-north-1:696505809372:security-control/Config.1",
+            "Title": "AWS Config should be enabled and use the service-linked role for resource recording",
+            "Description": "This control checks whether AWS Config is enabled in your account in the current AWS Region, records all resources that correspond to controls that are enabled in the current Region, and uses the service-linked AWS Config role.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Config.1/remediation",
+            "SeverityRating": "CRITICAL",
+            "SecurityControlStatus": "ENABLED",
+            "UpdateStatus": "READY",
+            "Parameters": {
+                "includeConfigServiceLinkedRoleCheck": {
+                    "ValueType": "DEFAULT",
+                    "Value": {
+                        "Boolean": true
+                    }
+                }
+            }
+        }
+    ]
+}

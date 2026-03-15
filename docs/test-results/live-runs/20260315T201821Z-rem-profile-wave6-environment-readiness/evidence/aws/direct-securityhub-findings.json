@@ -1,0 +1,179 @@
+{
+  "account_id": "696505809372",
+  "external_id": "ocypheris-p2-e2e-20260312",
+  "regions": {
+    "eu-north-1": {
+      "CloudTrail.1": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/CloudTrail.1/finding/ae610c86-1b30-4cda-a17a-3562c930e1c5",
+            "generator_id": "security-control/CloudTrail.1",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "AWS::::Account:696505809372",
+                "region": "eu-north-1",
+                "type": "AwsAccount"
+              }
+            ],
+            "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events",
+            "workflow_status": "NEW"
+          }
+        ]
+      },
+      "Config.1": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/Config.1/finding/f03976b4-12cc-4e4b-b5e5-50b93bef9f4c",
+            "generator_id": "security-control/Config.1",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "AWS::::Account:696505809372",
+                "region": "eu-north-1",
+                "type": "AwsAccount"
+              }
+            ],
+            "title": "AWS Config should be enabled and use the service-linked role for resource recording",
+            "workflow_status": "NEW"
+          }
+        ]
+      },
+      "EC2.53": {
+        "count": 0,
+        "findings": []
+      },
+      "IAM.4": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.11": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.15": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.2": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.5": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/d20ccb01-f588-47d1-946f-c58e0c417a1a",
+            "generator_id": "security-control/S3.5",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "arn:aws:s3:::config-bucket-696505809372",
+                "region": "eu-north-1",
+                "type": "AwsS3Bucket"
+              }
+            ],
+            "title": "S3 general purpose buckets should require requests to use SSL",
+            "workflow_status": "NEW"
+          }
+        ]
+      },
+      "S3.9": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.9/finding/7758799f-e1e9-49ca-9fc4-9eb72a50b1e4",
+            "generator_id": "security-control/S3.9",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "arn:aws:s3:::config-bucket-696505809372",
+                "region": "eu-north-1",
+                "type": "AwsS3Bucket"
+              }
+            ],
+            "title": "S3 general purpose buckets should have server access logging enabled",
+            "workflow_status": "NEW"
+          }
+        ]
+      }
+    },
+    "us-east-1": {
+      "CloudTrail.1": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:us-east-1:696505809372:security-control/CloudTrail.1/finding/447da522-b1c5-4d6e-b1aa-ea0aca66e0cb",
+            "generator_id": "security-control/CloudTrail.1",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "AWS::::Account:696505809372",
+                "region": "us-east-1",
+                "type": "AwsAccount"
+              }
+            ],
+            "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events",
+            "workflow_status": "NEW"
+          }
+        ]
+      },
+      "Config.1": {
+        "count": 1,
+        "findings": [
+          {
+            "compliance_status": "FAILED",
+            "finding_id": "arn:aws:securityhub:us-east-1:696505809372:security-control/Config.1/finding/25ebadd6-b76c-4163-a7bb-feba5f94274b",
+            "generator_id": "security-control/Config.1",
+            "record_state": "ACTIVE",
+            "resources": [
+              {
+                "id": "AWS::::Account:696505809372",
+                "region": "us-east-1",
+                "type": "AwsAccount"
+              }
+            ],
+            "title": "AWS Config should be enabled and use the service-linked role for resource recording",
+            "workflow_status": "NEW"
+          }
+        ]
+      },
+      "EC2.53": {
+        "count": 0,
+        "findings": []
+      },
+      "IAM.4": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.11": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.15": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.2": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.5": {
+        "count": 0,
+        "findings": []
+      },
+      "S3.9": {
+        "count": 0,
+        "findings": []
+      }
+    }
+  },
+  "role_arn": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+}

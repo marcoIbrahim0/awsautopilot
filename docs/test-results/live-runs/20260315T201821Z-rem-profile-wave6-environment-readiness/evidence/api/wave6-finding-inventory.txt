@@ -1,0 +1,10 @@
+  control_id  | finding_count 
+--------------+---------------
+ CloudTrail.1 |             3
+ Config.1     |             6
+ IAM.4        |             5
+ S3.2         |             3
+ S3.5         |             3
+ S3.9         |             3
+(6 rows)
+

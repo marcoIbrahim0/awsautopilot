@@ -1,0 +1,496 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/653ed642-1ac6-4731-be7d-07eb7e7ed0a7",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/EC2.19",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:41.876Z",
+            "LastObservedAt": "2026-03-15T20:45:41.876Z",
+            "CreatedAt": "2026-03-15T20:45:58.193Z",
+            "UpdatedAt": "2026-03-15T20:45:58.193Z",
+            "Severity": {
+                "Label": "CRITICAL",
+                "Normalized": 90,
+                "Original": "CRITICAL"
+            },
+            "Title": "Security groups should not allow unrestricted access to ports with high risk",
+            "Description": "This control checks whether unrestricted incoming traffic for an Amazon EC2 security group is accessible to the specified ports [3389, 20, 23, 110, 143, 3306, 8080, 1433, 9200, 9300, 25, 445, 135, 21, 1434, 4333, 5432, 5500, 5601, 22, 3000, 5000, 8088, 8888] that are considered to be high risk. This control fails if any of the rules in a security group allow ingress traffic from '0.0.0.0/0' or '::/0' to those ports.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/EC2.19/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-vpc-sg-restricted-common-ports-aaa86401",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/653ed642-1ac6-4731-be7d-07eb7e7ed0a7"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsEc2SecurityGroup",
+                    "Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z",
+                        "Scenario": "ec253-review"
+                    },
+                    "Details": {
+                        "AwsEc2SecurityGroup": {
+                            "GroupName": "security-autopilot-w6-envready-ec253-review",
+                            "GroupId": "sg-0ef32ca8805a55a8b",
+                            "OwnerId": "696505809372",
+                            "VpcId": "vpc-0f1bcafc3d529581d",
+                            "IpPermissions": [
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 22,
+                                    "ToPort": 22,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 3389,
+                                    "ToPort": 3389,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "IpPermissionsEgress": [
+                                {
+                                    "IpProtocol": "-1",
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "EC2.19",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "CRITICAL",
+                    "Original": "CRITICAL"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T20:46:01.532Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/2712c6ed-1450-4ba0-b4d3-bbfd8cc45767",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/EC2.19",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:42.121Z",
+            "LastObservedAt": "2026-03-15T20:45:42.121Z",
+            "CreatedAt": "2026-03-15T20:45:58.193Z",
+            "UpdatedAt": "2026-03-15T20:45:58.193Z",
+            "Severity": {
+                "Label": "CRITICAL",
+                "Normalized": 90,
+                "Original": "CRITICAL"
+            },
+            "Title": "Security groups should not allow unrestricted access to ports with high risk",
+            "Description": "This control checks whether unrestricted incoming traffic for an Amazon EC2 security group is accessible to the specified ports [3389, 20, 23, 110, 143, 3306, 8080, 1433, 9200, 9300, 25, 445, 135, 21, 1434, 4333, 5432, 5500, 5601, 22, 3000, 5000, 8088, 8888] that are considered to be high risk. This control fails if any of the rules in a security group allow ingress traffic from '0.0.0.0/0' or '::/0' to those ports.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/EC2.19/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-vpc-sg-restricted-common-ports-aaa86401",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/2712c6ed-1450-4ba0-b4d3-bbfd8cc45767"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsEc2SecurityGroup",
+                    "Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z",
+                        "Scenario": "ec253-exec"
+                    },
+                    "Details": {
+                        "AwsEc2SecurityGroup": {
+                            "GroupName": "security-autopilot-w6-envready-ec253-exec",
+                            "GroupId": "sg-06f6252fa8a95b61d",
+                            "OwnerId": "696505809372",
+                            "VpcId": "vpc-0f1bcafc3d529581d",
+                            "IpPermissions": [
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 22,
+                                    "ToPort": 22,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 3389,
+                                    "ToPort": 3389,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "IpPermissionsEgress": [
+                                {
+                                    "IpProtocol": "-1",
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "EC2.19",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "CRITICAL",
+                    "Original": "CRITICAL"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T20:46:02.015Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/142a0882-472b-426e-a18a-8fd4a6841c8e",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/EC2.18",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:41.846Z",
+            "LastObservedAt": "2026-03-15T20:45:41.846Z",
+            "CreatedAt": "2026-03-15T20:45:58.182Z",
+            "UpdatedAt": "2026-03-15T20:45:58.182Z",
+            "Severity": {
+                "Label": "HIGH",
+                "Normalized": 70,
+                "Original": "HIGH"
+            },
+            "Title": "Security groups should only allow unrestricted incoming traffic for authorized ports",
+            "Description": "This control checks whether an Amazon EC2 security group permits unrestricted incoming traffic from unauthorized ports. The control status is determined as follows: If you use the default value for 'authorizedTcpPorts', the control fails if the security group permits unrestricted incoming traffic from any port other than ports 80 and 443; If you provide custom values for 'authorizedTcpPorts' or 'authorizedUdpPorts', the control fails if the security group permits unrestricted incoming traffic from any unlisted port; If no parameter is used, the control fails for any security group that has an unrestricted inbound traffic rule.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/EC2.18/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-vpc-sg-open-only-to-authorized-ports-c242906d",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "No tcp ['22', '3389'] port is authorized to be open, according to authorizedTcpPorts values ['80,443'] parameter.",
+                "Resources:0/Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/142a0882-472b-426e-a18a-8fd4a6841c8e"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsEc2SecurityGroup",
+                    "Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z",
+                        "Scenario": "ec253-review"
+                    },
+                    "Details": {
+                        "AwsEc2SecurityGroup": {
+                            "GroupName": "security-autopilot-w6-envready-ec253-review",
+                            "GroupId": "sg-0ef32ca8805a55a8b",
+                            "OwnerId": "696505809372",
+                            "VpcId": "vpc-0f1bcafc3d529581d",
+                            "IpPermissions": [
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 22,
+                                    "ToPort": 22,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 3389,
+                                    "ToPort": 3389,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "IpPermissionsEgress": [
+                                {
+                                    "IpProtocol": "-1",
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "EC2.18",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "authorizedUdpPorts",
+                        "Value": []
+                    },
+                    {
+                        "Name": "authorizedTcpPorts",
+                        "Value": [
+                            "80",
+                            "443"
+                        ]
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "HIGH",
+                    "Original": "HIGH"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T20:46:02.785Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/b3531a37-a719-4e7c-b954-9ff36f242f65",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/EC2.18",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-15T20:45:42.099Z",
+            "LastObservedAt": "2026-03-15T20:45:42.099Z",
+            "CreatedAt": "2026-03-15T20:45:58.181Z",
+            "UpdatedAt": "2026-03-15T20:45:58.181Z",
+            "Severity": {
+                "Label": "HIGH",
+                "Normalized": 70,
+                "Original": "HIGH"
+            },
+            "Title": "Security groups should only allow unrestricted incoming traffic for authorized ports",
+            "Description": "This control checks whether an Amazon EC2 security group permits unrestricted incoming traffic from unauthorized ports. The control status is determined as follows: If you use the default value for 'authorizedTcpPorts', the control fails if the security group permits unrestricted incoming traffic from any port other than ports 80 and 443; If you provide custom values for 'authorizedTcpPorts' or 'authorizedUdpPorts', the control fails if the security group permits unrestricted incoming traffic from any unlisted port; If no parameter is used, the control fails for any security group that has an unrestricted inbound traffic rule.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/EC2.18/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-vpc-sg-open-only-to-authorized-ports-c242906d",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "No tcp ['22', '3389'] port is authorized to be open, according to authorizedTcpPorts values ['80,443'] parameter.",
+                "Resources:0/Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/b3531a37-a719-4e7c-b954-9ff36f242f65"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsEc2SecurityGroup",
+                    "Id": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "ManagedBy": "Codex",
+                        "Purpose": "Wave6EnvironmentReadiness",
+                        "RunId": "20260315T201821Z",
+                        "Scenario": "ec253-exec"
+                    },
+                    "Details": {
+                        "AwsEc2SecurityGroup": {
+                            "GroupName": "security-autopilot-w6-envready-ec253-exec",
+                            "GroupId": "sg-06f6252fa8a95b61d",
+                            "OwnerId": "696505809372",
+                            "VpcId": "vpc-0f1bcafc3d529581d",
+                            "IpPermissions": [
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 22,
+                                    "ToPort": 22,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "IpProtocol": "tcp",
+                                    "FromPort": 3389,
+                                    "ToPort": 3389,
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "IpPermissionsEgress": [
+                                {
+                                    "IpProtocol": "-1",
+                                    "IpRanges": [
+                                        {
+                                            "CidrIp": "0.0.0.0/0"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "SecurityControlId": "EC2.18",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "authorizedUdpPorts",
+                        "Value": []
+                    },
+                    {
+                        "Name": "authorizedTcpPorts",
+                        "Value": [
+                            "80",
+                            "443"
+                        ]
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "HIGH",
+                    "Original": "HIGH"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-15T20:46:01.378Z"
+        }
+    ]
+}

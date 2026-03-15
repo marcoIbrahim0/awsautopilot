@@ -1,0 +1,16 @@
+{
+    "TagSet": [
+        {
+            "Key": "RunId",
+            "Value": "20260315T201821Z"
+        },
+        {
+            "Key": "Purpose",
+            "Value": "Wave6EnvironmentReadiness"
+        },
+        {
+            "Key": "ManagedBy",
+            "Value": "Codex"
+        }
+    ]
+}

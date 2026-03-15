@@ -1,0 +1,22 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_initial_models, initial models
+INFO  [alembic.runtime.migration] Running upgrade 0001_initial_models -> 0002_findings, findings table
+INFO  [alembic.runtime.migration] Running upgrade 0002_findings -> 0003_auth_user_fields_invites, Add auth fields to users table and create user_invites table.
+INFO  [alembic.runtime.migration] Running upgrade 0003_auth_user_fields_invites -> 0004_actions, actions table (Step 5.1)
+INFO  [alembic.runtime.migration] Running upgrade 0004_actions -> 0005_action_findings, action_findings association table (Step 5.2)
+INFO  [alembic.runtime.migration] Running upgrade 0005_action_findings -> 0006_exceptions, exceptions table (Step 6.1)
+INFO  [alembic.runtime.migration] Running upgrade 0006_exceptions -> 0007_remediation_runs, remediation_runs table (Step 7.1)
+INFO  [alembic.runtime.migration] Running upgrade 0007_remediation_runs -> 0008_audit_log, audit_log table (Step 7.5)
+INFO  [alembic.runtime.migration] Running upgrade 0008_audit_log -> 0009_evidence_exports, evidence_exports table (Step 10.1)
+INFO  [alembic.runtime.migration] Running upgrade 0009_evidence_exports -> 0010_findings_source, findings.source column (Step 2B.1)
+INFO  [alembic.runtime.migration] Running upgrade 0010_findings_source -> 0011_last_digest_sent_at, tenants.last_digest_sent_at (Step 11.1)
+INFO  [alembic.runtime.migration] Running upgrade 0011_last_digest_sent_at -> 0012_digest_preferences, tenants digest preferences (Step 11.3)
+INFO  [alembic.runtime.migration] Running upgrade 0012_digest_preferences -> 0013_slack_settings, tenants Slack settings (Step 11.4)
+INFO  [alembic.runtime.migration] Running upgrade 0013_slack_settings -> 0014_pack_type, evidence_exports.pack_type (Step 12.2)
+INFO  [alembic.runtime.migration] Running upgrade 0014_pack_type -> 0015_control_mappings, control_mappings table (Step 12.3)
+INFO  [alembic.runtime.migration] Running upgrade 0015_control_mappings -> 0016_baseline_reports, baseline_reports table (Step 13.2)
+INFO  [alembic.runtime.migration] Running upgrade 0016_baseline_reports -> 0017_aws_account_disabled, Add disabled status to aws_account_status enum
+INFO  [alembic.runtime.migration] Running upgrade 0017_aws_account_disabled -> 0018_support_notes_files, support notes and files tables for SaaS admin dashboard
+INFO  [alembic.runtime.migration] Running upgrade 0018_support_notes_files -> 0019_findings_unique_tenant, findings unique constraint scoped by tenant
+INFO  [alembic.runtime.migration] Running upgrade 0019_findings_unique_tenant -> 0020_run_executions, remediation run executions table for SaaS bundle executor

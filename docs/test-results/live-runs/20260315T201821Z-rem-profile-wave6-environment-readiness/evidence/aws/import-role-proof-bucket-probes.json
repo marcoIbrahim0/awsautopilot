@@ -1,0 +1,50 @@
+[
+  {
+    "key": "accesslogs_head",
+    "command": "aws s3api head-bucket --bucket security-autopilot-w6-envready-accesslogs-696505809372",
+    "rc": 0,
+    "output": "{\n    \"BucketArn\": \"arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372\",\n    \"BucketRegion\": \"eu-north-1\",\n    \"AccessPointAlias\": false\n}"
+  },
+  {
+    "key": "accesslogs_logging",
+    "command": "aws s3api get-bucket-logging --bucket security-autopilot-w6-envready-accesslogs-696505809372",
+    "rc": 0,
+    "output": ""
+  },
+  {
+    "key": "cloudtrail_head",
+    "command": "aws s3api head-bucket --bucket security-autopilot-w6-envready-cloudtrail-696505809372",
+    "rc": 0,
+    "output": "{\n    \"BucketArn\": \"arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372\",\n    \"BucketRegion\": \"eu-north-1\",\n    \"AccessPointAlias\": false\n}"
+  },
+  {
+    "key": "cloudtrail_policy_status",
+    "command": "aws s3api get-bucket-policy-status --bucket security-autopilot-w6-envready-cloudtrail-696505809372",
+    "rc": 0,
+    "output": "{\n    \"PolicyStatus\": {\n        \"IsPublic\": false\n    }\n}"
+  },
+  {
+    "key": "config_head",
+    "command": "aws s3api head-bucket --bucket security-autopilot-w6-envready-config-696505809372",
+    "rc": 0,
+    "output": "{\n    \"BucketArn\": \"arn:aws:s3:::security-autopilot-w6-envready-config-696505809372\",\n    \"BucketRegion\": \"eu-north-1\",\n    \"AccessPointAlias\": false\n}"
+  },
+  {
+    "key": "s311_exec_lifecycle",
+    "command": "aws s3api get-bucket-lifecycle-configuration --bucket security-autopilot-w6-envready-s311-exec-696505809372",
+    "rc": 254,
+    "output": "\nAn error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "key": "s311_review_lifecycle",
+    "command": "aws s3api get-bucket-lifecycle-configuration --bucket security-autopilot-w6-envready-s311-review-696505809372",
+    "rc": 0,
+    "output": "{\n    \"TransitionDefaultMinimumObjectSize\": \"all_storage_classes_128K\",\n    \"Rules\": [\n        {\n            \"Expiration\": {\n                \"Days\": 30\n            },\n            \"ID\": \"expire-temp-review\",\n            \"Filter\": {\n                \"Prefix\": \"\"\n            },\n            \"Status\": \"Enabled\"\n        }\n    ]\n}"
+  },
+  {
+    "key": "s315_exec_encryption",
+    "command": "aws s3api get-bucket-encryption --bucket security-autopilot-w6-envready-s315-exec-696505809372",
+    "rc": 0,
+    "output": "{\n    \"ServerSideEncryptionConfiguration\": {\n        \"Rules\": [\n            {\n                \"ApplyServerSideEncryptionByDefault\": {\n                    \"SSEAlgorithm\": \"AES256\"\n                },\n                \"BucketKeyEnabled\": false\n            }\n        ]\n    }\n}"
+  }
+]

@@ -1,0 +1,5 @@
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-envready-20260315t201821z-contract-quarantine
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-envready-20260315t201821z-events-fastlane
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-envready-20260315t201821z-export-report
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-envready-20260315t201821z-ingest
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-envready-20260315t201821z-inventory-reconcile

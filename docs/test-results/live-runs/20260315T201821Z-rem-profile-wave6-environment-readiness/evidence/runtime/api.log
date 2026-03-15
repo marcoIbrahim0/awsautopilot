@@ -1,0 +1,72 @@
+INFO:     Started server process [5473]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18018 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60124 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60133 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60132 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60139 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:60145 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:60148 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60149 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:60209 - "GET /api/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60254 - "GET /api/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60255 - "GET /api/actions/3d40bb66-ab31-4946-8b48-a97fded7710e/remediation-preview?mode=pr_only&strategy_id=iam_root_key_disable&profile_id=iam_root_key_disable HTTP/1.1" 200 OK
+remediation_validation_failure {"action_type": "iam_root_access_key_absent", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "root_key_execution_authority", "strategy_id": "iam_root_key_disable", "value": 1}
+INFO:     127.0.0.1:60256 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:60257 - "POST /api/root-key-remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:60258 - "GET /api/root-key-remediation-runs/a850f4a0-b25d-4fe4-8593-6b50e8bdb94f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60821 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60822 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60823 - "POST /api/aws/accounts/9fd958dd-929f-4195-a5dd-a6351c263e6b/ingest HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:60824 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:60906 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60917 - "GET /api/actions/7eba03c7-2145-43fe-9b64-acc313aa5dfe/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60918 - "GET /api/actions/7eba03c7-2145-43fe-9b64-acc313aa5dfe/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=close_public HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60921 - "GET /api/actions/a58547f3-4e20-49c7-8fea-360ab1e6811b/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=ssm_only HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60924 - "GET /api/actions/5b2c153e-ab45-4436-9113-35cffa16dc4a/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60927 - "GET /api/actions/5b2c153e-ab45-4436-9113-35cffa16dc4a/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard&profile_id=s3_bucket_block_public_access_manual_preservation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60929 - "GET /api/actions/0bb3dc7b-fcbd-42b9-8ea8-ffa37a0b6fcb/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60934 - "GET /api/actions/0bb3dc7b-fcbd-42b9-8ea8-ffa37a0b6fcb/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60937 - "GET /api/actions/0bb3dc7b-fcbd-42b9-8ea8-ffa37a0b6fcb/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny&strategy_inputs=%7b%22preserve_existing_policy%22%3afalse%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60941 - "GET /api/actions/f053a0cb-cd59-426c-97b8-8954dbbcab92/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60947 - "GET /api/actions/f053a0cb-cd59-426c-97b8-8954dbbcab92/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60950 - "GET /api/actions/f2b47105-830a-4fcf-b27f-2b73f9eb2ad2/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60953 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60957 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60961 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided&strategy_inputs=%7b%22trail_bucket_name%22%3a%22config-bucket-696505809372%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60965 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60974 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60981 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery&strategy_inputs=%7b%22delivery_bucket%22%3a%22config-bucket-696505809372%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60977 - "GET /api/actions/f053a0cb-cd59-426c-97b8-8954dbbcab92/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60988 - "GET /api/actions/f053a0cb-cd59-426c-97b8-8954dbbcab92/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60991 - "GET /api/actions/f2b47105-830a-4fcf-b27f-2b73f9eb2ad2/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60997 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61004 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61008 - "GET /api/actions/b0460b2d-5749-4e93-90e5-e5e7130df47d/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided&strategy_inputs=%7b%22trail_bucket_name%22%3a%22config-bucket-696505809372%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61015 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61027 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61032 - "GET /api/actions/481a081a-66ee-4320-bc69-4506dc59cfe3/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery&strategy_inputs=%7b%22delivery_bucket%22%3a%22config-bucket-696505809372%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61037 - "GET /api/actions/f053a0cb-cd59-426c-97b8-8954dbbcab92/remediation-preview?mode=pr_only&strategy_id=s3_enable_access_logging_guided&strategy_inputs=%7b%22log_bucket_name%22%3a%22security-autopilot-w6-envready-config-696505809372%22%7d HTTP/1.1" 200 OK
+remediation_validation_failure {"action_type": "sg_restrict_public_ports", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "sg_restrict_public_ports_guided", "value": 1}
+INFO:     127.0.0.1:61052 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+remediation_validation_failure {"action_type": "s3_bucket_require_ssl", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "s3_enforce_ssl_strict_deny", "value": 1}
+INFO:     127.0.0.1:61055 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+remediation_validation_failure {"action_type": "s3_bucket_access_logging", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "invalid_strategy_selection", "strategy_id": "s3_enable_access_logging_guided", "value": 1}
+INFO:     127.0.0.1:61061 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+remediation_validation_failure {"action_type": "cloudtrail_enabled", "event": "remediation_validation_failure", "mode": "pr_only", "reason": "risk_ack_missing", "strategy_id": "cloudtrail_enable_guided", "value": 1}
+INFO:     127.0.0.1:61062 - "POST /api/remediation-runs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61069 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61082 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61090 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61095 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61101 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61109 - "GET /api/remediation-runs/9910cdcd-253d-478e-847f-4f8f0112a0cd HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61110 - "GET /api/remediation-runs/caa4c343-369f-4a32-9d66-03a2cef9f1a2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61111 - "GET /api/remediation-runs/a597f78b-47a2-40c0-afd8-512268050aaf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61113 - "GET /api/remediation-runs/878705c2-dc6b-466a-b562-42b20fb9f785 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61116 - "GET /api/remediation-runs/5dd45a6f-fa8b-4a1b-bd8b-aa55cca84f94 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [5473]

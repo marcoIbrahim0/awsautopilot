@@ -1,0 +1,15 @@
+  control_id  | action_count 
+--------------+--------------
+ CloudTrail.1 |            2
+ Config.1     |            2
+ EC2.182      |            3
+ EC2.7        |            2
+ GuardDuty.1  |            2
+ IAM.4        |            1
+ S3.1         |            2
+ S3.2         |            1
+ S3.5         |            2
+ S3.9         |            2
+ SSM.7        |            2
+(11 rows)
+

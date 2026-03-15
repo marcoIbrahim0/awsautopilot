@@ -1,0 +1,9 @@
+{
+  "action_id": "3d40bb66-ab31-4946-8b48-a97fded7710e",
+  "strategy_id": "iam_root_key_disable",
+  "mode": "manual",
+  "actor_metadata": {
+    "wave": "wave-6-env-readiness",
+    "probe": "authoritative-route"
+  }
+}
