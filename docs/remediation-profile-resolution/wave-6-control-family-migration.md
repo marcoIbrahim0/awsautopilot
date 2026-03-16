@@ -58,6 +58,7 @@ flowchart LR
 - Public compatibility strategy IDs preserved: `sg_restrict_public_ports_guided`.
 - Internal profiles/branches added: `close_public`, `close_and_revoke`, `restrict_to_ip`, `restrict_to_cidr`, `ssm_only`, `bastion_sg_reference`.
 - Executable vs review/manual behavior: `close_public` and `close_and_revoke` stay executable; `restrict_to_ip` and `restrict_to_cidr` stay executable only when `allowed_cidr` resolves safely, otherwise they downgrade to `review_required_bundle`; `ssm_only` is always `manual_guidance_only`; `bastion_sg_reference` is never executable in Wave 6 and stays `review_required_bundle` or `manual_guidance_only`.
+- Supported-path parity rule: when preview resolves an EC2.53 branch as `deterministic_bundle` with sufficient inputs, the persisted single-run create and grouped customer-run bundle decision must preserve that same executable tier instead of silently reclassifying it to `review_required_bundle` for risk-only reasons.
 - Tenant-default inputs used: `sg_access_path_preference`, `approved_admin_cidrs`, and `approved_bastion_security_group_ids`. Runtime defaults can also supply `detected_public_ipv4_cidr` for `restrict_to_ip`.
 - Runtime/preservation gates: missing `allowed_cidr`, multiple approved CIDRs, missing bastion SG IDs, and the explicit “not implemented in Wave 6” guards for `ssm_only` and `bastion_sg_reference`.
 

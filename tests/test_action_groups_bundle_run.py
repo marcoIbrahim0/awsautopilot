@@ -16,6 +16,7 @@ from backend.main import app
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.services.remediation_risk import evaluate_strategy_impact as real_evaluate_strategy_impact
 from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
 
@@ -305,6 +306,85 @@ def test_create_action_group_bundle_run_accepts_action_overrides(client: TestCli
         "delivery_bucket": "central-config-bucket",
         "encrypt_with_kms": False,
     }
+
+
+def test_create_action_group_bundle_run_preserves_ec2_53_executable_family_tier(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="sg_restrict_public_ports")
+    action1 = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    action1.target_id = "123456789012|eu-north-1|sg-0123456789abcdef0|EC2.53"
+    action1.resource_id = "sg-0123456789abcdef0"
+    action2 = _make_action(action_type=group.action_type, priority=90, minutes_ago=2)
+    action2.target_id = "123456789012|eu-north-1|sg-0fedcba9876543210|EC2.53"
+    action2.resource_id = "sg-0fedcba9876543210"
+    session, added = _mock_group_session(group=group, actions=[action1, action2])
+    _install_action_group_dependencies(session, user)
+
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-ec2-53"}
+    token_expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {},
+    )
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+        real_evaluate_strategy_impact,
+    )
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.routers.action_groups.issue_group_run_reporting_token",
+                return_value=("signed-token", "token-jti", token_expiry),
+            ):
+                try:
+                    response = client.post(
+                        f"/api/action-groups/{group.id}/bundle-run",
+                        json={
+                            "strategy_id": "sg_restrict_public_ports_guided",
+                            "risk_acknowledged": True,
+                            "action_overrides": [
+                                {
+                                    "action_id": str(action1.id),
+                                    "profile_id": "close_and_revoke",
+                                },
+                                {
+                                    "action_id": str(action2.id),
+                                    "profile_id": "ssm_only",
+                                },
+                            ],
+                        },
+                    )
+                finally:
+                    _clear_action_group_dependencies()
+
+    assert response.status_code == 201
+    remediation_run = added[1]
+    resolutions = {
+        entry["action_id"]: entry["resolution"]
+        for entry in remediation_run.artifacts["group_bundle"]["action_resolutions"]
+    }
+    assert resolutions[str(action1.id)]["profile_id"] == "close_and_revoke"
+    assert resolutions[str(action1.id)]["support_tier"] == "deterministic_bundle"
+    assert resolutions[str(action2.id)]["profile_id"] == "ssm_only"
+    assert resolutions[str(action2.id)]["support_tier"] == "manual_guidance_only"
+
+    queue_payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
+    queue_resolutions = {
+        entry["action_id"]: entry["resolution"]
+        for entry in queue_payload["action_resolutions"]
+    }
+    assert queue_resolutions[str(action1.id)]["support_tier"] == "deterministic_bundle"
+    assert queue_resolutions[str(action2.id)]["support_tier"] == "manual_guidance_only"
 
 
 def test_create_action_group_bundle_run_inherits_top_level_inputs_into_same_strategy_profile_overrides(

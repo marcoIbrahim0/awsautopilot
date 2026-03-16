@@ -1,5 +1,41 @@
 # Task Log
 
+## Remediation-profile Wave 6 EC2.53 grouped supported-path parity fix on master (2026-03-16)
+
+**Task:** Fix the supported EC2.53 customer-run grouped PR-bundle mismatch on current `master` only so resolver-selected executable branches such as `close_and_revoke` preserve the same `deterministic_bundle` tier in grouped bundle generation that standalone preview already exposes, while keeping public strategy IDs unchanged, preserving existing downgrade/manual branches, and leaving archived SaaS execution routes untouched.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_run_resolution.py** - treated `sg_restrict_public_ports_guided` as a resolver-owned family strategy whose executable support tier must be preserved through create/grouped resolution instead of being silently escalated to `review_required_bundle` by generic risk-ack-only logic.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py** - added a focused EC2.53 regression comparing standalone preview resolution to grouped persistence for the same `close_and_revoke` branch, while proving the `ssm_only` branch stays `manual_guidance_only`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py** - added a supported action-group bundle-route regression proving the customer-run grouped endpoint persists `close_and_revoke` as `deterministic_bundle` and keeps the manual branch non-executable.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py** - updated stale EC2.53 create expectations so safe executable branches now preserve the resolver tier instead of downgrading to `review_required_bundle`.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented that deterministic EC2.53 executable branches must stay executable across preview, single-run create, and grouped customer-run bundle resolution when inputs are sufficient.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md** - added the explicit supported-path parity rule for EC2.53 executable branches.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this EC2.53 parity fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, docs overview, and the cited March 15-16 Wave 6 EC2.53 evidence before changing code.
+- Confirmed the live mismatch: standalone preview resolved `close_and_revoke` as `deterministic_bundle`, but the supported grouped customer-run bundle persisted the same action as `review_required_bundle`, yielding `runnable_action_count=0`.
+- Traced the divergence to `backend/services/remediation_run_resolution.py`, where generic risk-ack escalation still reclassified EC2.53 create/grouped resolutions even after the Wave 6 family resolver had already authoritatively selected an executable branch.
+- Preserved the public compatibility strategy `sg_restrict_public_ports_guided` and all existing downgrade/manual branches.
+- Fixed the mismatch narrowly by extending the existing “preserve resolver support tier” rule to EC2.53, so resolver-selected executable branches stay executable while truly under-proven/manual branches continue to downgrade or stay manual.
+- Added focused service and action-group route regressions proving preview-to-grouped parity for the executable branch and unchanged manual behavior for `ssm_only`.
+- Updated the stale EC2.53 create expectations so single-run create now matches the landed Wave 6 family contract for safe executable branches.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py -q -k 'ec2_53_grouped_plan_matches_preview_for_executable_branch or s3_access_logging_grouped_plan_splits_bucket_and_account_scopes'` -> `2 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py -q -k 'create_action_group_bundle_run_preserves_ec2_53_executable_family_tier or create_action_group_bundle_run_accepts_action_overrides'` -> `2 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py -q -k 'ec2_53_strategy_only_create_persists_safe_resolved_profile or ec2_53_create_uses_tenant_cidr_preference_when_safe or ec2_53_create_downgrades_unsupported_profiles_explicitly'` -> `3 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py -q -k 'remediation_preview_resolves_real_ec2_53_profile_from_legacy_access_mode'` -> `1 passed`
+
+**Technical debt / gotchas:**
+- The cited March 15-16 Wave 6 live EC2.53 evidence remains historically correct pre-fix evidence. A fresh live rerun is still required before any strict Wave 6 status package can claim the supported-path EC2.53 parity defect is closed in live proof.
+- This fix intentionally preserves the manual/review branches and does not add new runtime support for `ssm_only` or `bastion_sg_reference`.
+
+**Open questions / TODOs:**
+- Re-run the saved Wave 6 EC2.53 grouped scenario or an equivalent fresh live grouped case so the live evidence package captures the post-fix executable grouped tier directly.
+
 ## Remediation-profile Wave 6 grouped customer-run callback wrapper regression fix on master (2026-03-16)
 
 **Task:** Fix the supported grouped customer-run PR-bundle callback wrapper regression on current `master` only by making generated `run_all.sh` started/finished callback payloads shell-safe and JSON-safe, preserving mixed executable plus non-executable reporting, keeping archived SaaS execution routes untouched, and closing grouped runs truthfully after real bundle execution.

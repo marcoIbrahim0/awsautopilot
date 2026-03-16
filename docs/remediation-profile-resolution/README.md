@@ -298,6 +298,7 @@ Phase-1 migration rules captured in the source plan:
   - `close_and_revoke`
   - `restrict_to_ip`
   - `restrict_to_cidr`
+- When those executable EC2.53 branches resolve deterministically with sufficient inputs, preview, single-run create, and grouped customer-run bundle resolution all preserve the same executable tier.
 - `ssm_only` and `bastion_sg_reference` are review/manual profiles until runtime support exists.
 - IAM.4 keeps `iam_root_key_disable` and `iam_root_key_delete`, each starting with `profile_id == strategy_id`.
 - S3.2 keeps current strategy families and adds `website_manual` as manual-only.

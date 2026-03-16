@@ -939,10 +939,11 @@ def test_ec2_53_strategy_only_create_persists_safe_resolved_profile(client: Test
     resolution = run.artifacts["resolution"]
     assert response.status_code == 201
     assert resolution["profile_id"] == "close_public"
-    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["support_tier"] == "deterministic_bundle"
     assert run.artifacts["strategy_inputs"] == {"access_mode": "close_public"}
     payload = _queued_payload(mock_sqs)
     assert payload["resolution"]["profile_id"] == "close_public"
+    assert payload["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_ec2_53_create_uses_tenant_cidr_preference_when_safe(client: TestClient) -> None:
@@ -976,13 +977,14 @@ def test_ec2_53_create_uses_tenant_cidr_preference_when_safe(client: TestClient)
     resolution = run.artifacts["resolution"]
     assert response.status_code == 201
     assert resolution["profile_id"] == "restrict_to_cidr"
-    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["resolved_inputs"]["allowed_cidr"] == "203.0.113.10/32"
     assert run.artifacts["strategy_inputs"] == {
         "access_mode": "restrict_to_cidr",
         "allowed_cidr": "203.0.113.10/32",
     }
     assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == "restrict_to_cidr"
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_ec2_53_create_downgrades_unsupported_profiles_explicitly(client: TestClient) -> None:

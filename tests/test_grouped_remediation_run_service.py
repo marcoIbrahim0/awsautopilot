@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 import uuid
@@ -16,7 +16,9 @@ from backend.services.grouped_remediation_runs import (
     normalize_grouped_request_from_action_group,
     normalize_grouped_request_from_remediation_runs,
 )
+from backend.services.remediation_profile_read_path import build_preview_resolution
 from backend.services.remediation_risk import evaluate_strategy_impact as real_evaluate_strategy_impact
+from backend.services.remediation_strategy import validate_strategy
 from backend.utils.sqs import (
     REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1,
     REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
@@ -336,6 +338,71 @@ def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
     assert resolutions[str(account_action.id)]["support_tier"] == "review_required_bundle"
     assert plan.artifacts["group_bundle"]["action_resolutions"][0]["strategy_id"] == "s3_enable_access_logging_guided"
     assert plan.artifacts["group_bundle"]["action_resolutions"][1]["strategy_id"] == "s3_enable_access_logging_guided"
+
+
+def test_ec2_53_grouped_plan_matches_preview_for_executable_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable_action = replace(
+        _make_action(priority=100, minutes_ago=1, action_type="sg_restrict_public_ports"),
+        target_id="123456789012|eu-north-1|sg-0123456789abcdef0|EC2.53",
+        resource_id="sg-0123456789abcdef0",
+    )
+    manual_action = replace(
+        _make_action(priority=90, minutes_ago=2, action_type="sg_restrict_public_ports"),
+        target_id="123456789012|eu-north-1|sg-0fedcba9876543210|EC2.53",
+        resource_id="sg-0fedcba9876543210",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="sg_restrict_public_ports_guided",
+        risk_acknowledged=True,
+        action_overrides=(
+            GroupedActionOverride(
+                action_id=str(executable_action.id),
+                profile_id="close_and_revoke",
+            ),
+            GroupedActionOverride(
+                action_id=str(manual_action.id),
+                profile_id="ssm_only",
+            ),
+        ),
+    )
+    strategy = validate_strategy("sg_restrict_public_ports", "sg_restrict_public_ports_guided", "pr_only")
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {},
+    )
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+        real_evaluate_strategy_impact,
+    )
+
+    preview = build_preview_resolution(
+        action_type="sg_restrict_public_ports",
+        strategy=strategy,
+        profile_id="close_and_revoke",
+        strategy_inputs={"access_mode": "close_and_revoke"},
+        tenant_settings={},
+        runtime_signals={},
+        dependency_checks=None,
+        action=executable_action,
+    )
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="sg_restrict_public_ports"),
+        actions=[manual_action, executable_action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    assert preview is not None
+    resolutions = {entry.action_id: entry.resolution for entry in plan.action_resolutions}
+    assert preview["profile_id"] == "close_and_revoke"
+    assert preview["support_tier"] == "deterministic_bundle"
+    assert resolutions[str(executable_action.id)]["profile_id"] == preview["profile_id"]
+    assert resolutions[str(executable_action.id)]["support_tier"] == preview["support_tier"]
+    assert resolutions[str(manual_action.id)]["profile_id"] == "ssm_only"
+    assert resolutions[str(manual_action.id)]["support_tier"] == "manual_guidance_only"
 
 
 def test_representative_action_selection_is_deterministic() -> None:

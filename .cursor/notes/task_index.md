@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 EC2.53 grouped supported-path parity fix on master (2026-03-16)](task_log.md#remediation-profile-wave-6-ec253-grouped-supported-path-parity-fix-on-master-2026-03-16)
+  - Fixed the EC2.53 Wave 6 mismatch where grouped customer-run bundles silently downgraded resolver-selected executable branches such as `close_and_revoke` to `review_required_bundle` even though standalone preview resolved them as deterministic.
+  - Added focused preview-vs-grouped parity regressions, preserved manual/downgrade EC2.53 branches, and kept the public `sg_restrict_public_ports_guided` contract unchanged.
 - [Remediation-profile Wave 6 grouped customer-run callback wrapper regression fix on master (2026-03-16)](task_log.md#remediation-profile-wave-6-grouped-customer-run-callback-wrapper-regression-fix-on-master-2026-03-16)
   - Fixed the supported grouped customer-run `run_all.sh` callback wrapper so started/finished payload templates are shell-safe and JSON-safe without reviving any archived SaaS-managed execution route.
   - Added focused wrapper-execution and grouped-finalization regressions, preserved mixed executable plus non-executable reporting, and kept grouped runs callback-managed until a truthful finished payload lands.

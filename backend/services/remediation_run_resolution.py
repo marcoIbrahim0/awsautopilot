@@ -160,6 +160,8 @@ def _support_tier(
 
 def _preserve_selection_support_tier(strategy_id: str) -> bool:
     return strategy_id in {
+        # Family resolvers already determine whether these EC2.53 branches remain executable.
+        "sg_restrict_public_ports_guided",
         "cloudtrail_enable_guided",
         "config_enable_account_local_delivery",
         "config_enable_centralized_delivery",
