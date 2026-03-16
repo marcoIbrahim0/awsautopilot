@@ -1,0 +1,16 @@
+{
+  "runnable_action_count": 1,
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 0,
+    "review_required": 0
+  },
+  "actions": [
+    {
+      "action_id": "0bd41810-447a-4b57-bd09-d729f291b4ad",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "cloudtrail_enable_guided",
+      "has_runnable_terraform": true
+    }
+  ]
+}

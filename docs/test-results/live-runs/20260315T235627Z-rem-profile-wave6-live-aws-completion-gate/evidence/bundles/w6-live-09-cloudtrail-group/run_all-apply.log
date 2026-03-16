@@ -1,0 +1,136 @@
+./run_all.sh: line 6: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJmYTAzY2NkZi0xZDc4LTQzOGItYjEwYS0wOGE1ODY3YzRiNDMiLCJncm91cF9ydW5faWQiOiJkYWNkNDUxYS04N2Q0LTQ2YmUtYmE2MC0wNTUwNmIzZGMwNmQiLCJncm91cF9pZCI6ImJiMWFkODc0LTViYWQtNDIwMC05ZWNlLWNiNzBjNjgzNjU3MyIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwYmQ0MTgxMC00NDdhLTRiNTctYmQwOS1kNzI5ZjI5MWI0YWQiXSwianRpIjoiNWJlNjg4MDgtY2EyMC00N2ZmLWFjYWUtN2NmMzg4ZGQ4MTc3IiwiaWF0IjoxNzczNjIwMzc0LCJleHAiOjE3NzM3MDY3NzR9.GevwOC3e6d67aQd2B-i4WU4YwpG1umgGJzvfQcvzmcA,: command not found
+./run_all.sh: line 7: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJmYTAzY2NkZi0xZDc4LTQzOGItYjEwYS0wOGE1ODY3YzRiNDMiLCJncm91cF9ydW5faWQiOiJkYWNkNDUxYS04N2Q0LTQ2YmUtYmE2MC0wNTUwNmIzZGMwNmQiLCJncm91cF9pZCI6ImJiMWFkODc0LTViYWQtNDIwMC05ZWNlLWNiNzBjNjgzNjU3MyIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwYmQ0MTgxMC00NDdhLTRiNTctYmQwOS1kNzI5ZjI5MWI0YWQiXSwianRpIjoiNWJlNjg4MDgtY2EyMC00N2ZmLWFjYWUtN2NmMzg4ZGQ4MTc3IiwiaWF0IjoxNzczNjIwMzc0LCJleHAiOjE3NzM3MDY3NzR9.GevwOC3e6d67aQd2B-i4WU4YwpG1umgGJzvfQcvzmcA,: command not found
+./run_all.sh: line 8: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJmYTAzY2NkZi0xZDc4LTQzOGItYjEwYS0wOGE1ODY3YzRiNDMiLCJncm91cF9ydW5faWQiOiJkYWNkNDUxYS04N2Q0LTQ2YmUtYmE2MC0wNTUwNmIzZGMwNmQiLCJncm91cF9pZCI6ImJiMWFkODc0LTViYWQtNDIwMC05ZWNlLWNiNzBjNjgzNjU3MyIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwYmQ0MTgxMC00NDdhLTRiNTctYmQwOS1kNzI5ZjI5MWI0YWQiXSwianRpIjoiNWJlNjg4MDgtY2EyMC00N2ZmLWFjYWUtN2NmMzg4ZGQ4MTc3IiwiaWF0IjoxNzczNjIwMzc0LCJleHAiOjE3NzM3MDY3NzR9.GevwOC3e6d67aQd2B-i4WU4YwpG1umgGJzvfQcvzmcA,: command not found
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+=== Running terraform in executable/actions/01-aws-account-696505809372-0bd41810 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding latest version of hashicorp/null...
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (signed by HashiCorp)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_cloudtrail.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudtrail" "security_autopilot" {
+      [32m+[0m[0m arn                           = (known after apply)
+      [32m+[0m[0m enable_log_file_validation    = false
+      [32m+[0m[0m enable_logging                = true
+      [32m+[0m[0m home_region                   = (known after apply)
+      [32m+[0m[0m id                            = (known after apply)
+      [32m+[0m[0m include_global_service_events = true
+      [32m+[0m[0m is_multi_region_trail         = true
+      [32m+[0m[0m is_organization_trail         = false
+      [32m+[0m[0m name                          = "security-autopilot-trail"
+      [32m+[0m[0m region                        = "eu-north-1"
+      [32m+[0m[0m s3_bucket_name                = "security-autopilot-w6-envready-cloudtrail-696505809372"
+      [32m+[0m[0m sns_topic_arn                 = (known after apply)
+      [32m+[0m[0m tags_all                      = (known after apply)
+    }
+
+[1m  # null_resource.cloudtrail_bucket_policy[0][0m will be created
+[0m  [32m+[0m[0m resource "null_resource" "cloudtrail_bucket_policy" {
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m triggers = {
+          [32m+[0m[0m "account_id"         = "696505809372"
+          [32m+[0m[0m "remediation_region" = "eu-north-1"
+          [32m+[0m[0m "trail_bucket_name"  = "security-autopilot-w6-envready-cloudtrail-696505809372"
+        }
+    }
+
+[1mPlan:[0m [0m2 to add, 0 to change, 0 to destroy.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_cloudtrail.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudtrail" "security_autopilot" {
+      [32m+[0m[0m arn                           = (known after apply)
+      [32m+[0m[0m enable_log_file_validation    = false
+      [32m+[0m[0m enable_logging                = true
+      [32m+[0m[0m home_region                   = (known after apply)
+      [32m+[0m[0m id                            = (known after apply)
+      [32m+[0m[0m include_global_service_events = true
+      [32m+[0m[0m is_multi_region_trail         = true
+      [32m+[0m[0m is_organization_trail         = false
+      [32m+[0m[0m name                          = "security-autopilot-trail"
+      [32m+[0m[0m region                        = "eu-north-1"
+      [32m+[0m[0m s3_bucket_name                = "security-autopilot-w6-envready-cloudtrail-696505809372"
+      [32m+[0m[0m sns_topic_arn                 = (known after apply)
+      [32m+[0m[0m tags_all                      = (known after apply)
+    }
+
+[1m  # null_resource.cloudtrail_bucket_policy[0][0m will be created
+[0m  [32m+[0m[0m resource "null_resource" "cloudtrail_bucket_policy" {
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m triggers = {
+          [32m+[0m[0m "account_id"         = "696505809372"
+          [32m+[0m[0m "remediation_region" = "eu-north-1"
+          [32m+[0m[0m "trail_bucket_name"  = "security-autopilot-w6-envready-cloudtrail-696505809372"
+        }
+    }
+
+[1mPlan:[0m [0m2 to add, 0 to change, 0 to destroy.
+[0m[1mnull_resource.cloudtrail_bucket_policy[0]: Creating...[0m[0m
+[0m[1mnull_resource.cloudtrail_bucket_policy[0]: Provisioning with 'local-exec'...[0m[0m
+[0m[1mnull_resource.cloudtrail_bucket_policy[0] (local-exec):[0m [0mExecuting: ["/bin/bash" "-c" "set -euo pipefail\nTRAIL_BUCKET_NAME=\"security-autopilot-w6-envready-cloudtrail-696505809372\"\nAWS_REGION=\"eu-north-1\"\nACCOUNT_ID=\"696505809372\"\nexport TRAIL_BUCKET_NAME AWS_REGION ACCOUNT_ID\npython3 - <<'PY'\nimport json\nimport os\nimport subprocess\nimport sys\n\nbucket = os.environ[\"TRAIL_BUCKET_NAME\"]\nregion = os.environ[\"AWS_REGION\"]\naccount_id = os.environ[\"ACCOUNT_ID\"]\n\ndef run(cmd):\n    return subprocess.run(cmd, check=True, text=True, capture_output=True)\n\nexisting = {\"Version\": \"2012-10-17\", \"Statement\": []}\ntry:\n    response = run(\n        [\n            \"aws\",\n            \"s3api\",\n            \"get-bucket-policy\",\n            \"--bucket\",\n            bucket,\n            \"--region\",\n            region,\n            \"--output\",\n            \"json\",\n        ]\n    )\n    policy_doc = json.loads(response.stdout).get(\"Policy\", \"\")\n    if policy_doc:\n        existing = json.loads(policy_doc)\nexcept subprocess.CalledProcessError as exc:\n    if \"NoSuchBucketPolicy\" not in (exc.stderr or \"\"):\n        print(exc.stderr, file=sys.stderr)\n        raise\n\nstatements = existing.get(\"Statement\", [])\nif not isinstance(statements, list):\n    statements = []\n\npreserved = [\n    statement\n    for statement in statements\n    if statement.get(\"Sid\") not in {\"AWSCloudTrailAclCheck\", \"AWSCloudTrailWrite\"}\n]\n\npreserved.append(\n    {\n        \"Sid\": \"AWSCloudTrailAclCheck\",\n        \"Effect\": \"Allow\",\n        \"Principal\": {\"Service\": \"cloudtrail.amazonaws.com\"},\n        \"Action\": \"s3:GetBucketAcl\",\n        \"Resource\": \"arn:aws:s3:::\" + bucket,\n    }\n)\npreserved.append(\n    {\n        \"Sid\": \"AWSCloudTrailWrite\",\n        \"Effect\": \"Allow\",\n        \"Principal\": {\"Service\": \"cloudtrail.amazonaws.com\"},\n        \"Action\": \"s3:PutObject\",\n        \"Resource\": \"arn:aws:s3:::\" + bucket + \"/AWSLogs/\" + account_id + \"/CloudTrail/*\",\n        \"Condition\": {\"StringEquals\": {\"s3:x-amz-acl\": \"bucket-owner-full-control\"}},\n    }\n)\n\nmerged = {\n    \"Version\": existing.get(\"Version\", \"2012-10-17\"),\n    \"Statement\": preserved,\n}\nrun(\n    [\n        \"aws\",\n        \"s3api\",\n        \"put-bucket-policy\",\n        \"--bucket\",\n        bucket,\n        \"--region\",\n        region,\n        \"--policy\",\n        json.dumps(merged, separators=(\",\", \":\")),\n    ]\n)\nPY\n"]
+[0m[1mnull_resource.cloudtrail_bucket_policy[0]: Creation complete after 3s [id=179516625035380441][0m
+[0m[1maws_cloudtrail.security_autopilot: Creating...[0m[0m
+[0m[1maws_cloudtrail.security_autopilot: Creation complete after 1s [id=arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail][0m
+[0m[1m[32m
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.[0m
+Bundle run completed.
+  Successful action folders: 1/1
+  Failed action folders: 0/1
+All action folders completed successfully.
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

@@ -1,0 +1,76 @@
+{
+  "runnable_action_count": 11,
+  "tier_counts": {
+    "executable": 11,
+    "manual_guidance": 0,
+    "review_required": 0
+  },
+  "actions": [
+    {
+      "action_id": "023e8b64-4ff6-4f0a-a074-d8ed4e6a31ff",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "080ad0ec-b379-4cb5-9f7a-aecdd997ab11",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "216bc880-fda0-40ec-bf75-caf45d820645",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "2e5d6e74-73e1-47e6-9c00-32c290f1d198",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "31381d3c-04f9-4613-a897-ba95ddbdc0bd",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "3cea24eb-54ca-412e-aa04-f0d0da1d9d9b",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "44196b82-644c-4451-8539-519a81796192",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "6ed02911-7dfc-46f8-96dc-320c25f5793a",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "777749c0-1137-475b-a102-b128b791beaa",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "94253f6e-4bd3-40f5-97e3-7bdc9530fbbf",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "be206765-a453-475d-a722-95adea63dd53",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_sse_kms_guided",
+      "has_runnable_terraform": true
+    }
+  ]
+}

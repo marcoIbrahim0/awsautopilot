@@ -1,0 +1,14 @@
+{
+  "run_id": "20260315T235627Z-rem-profile-wave6-live-aws-completion-gate",
+  "postgres_dir": "/tmp/rpw6-completion-pg-20260315T235627Z",
+  "postgres_port": 55440,
+  "database": "security_autopilot_rpw6_completion_gate",
+  "database_user": "marcomaher",
+  "api_port": 18020,
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-completion-20260315t235627z-ingest",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-completion-20260315t235627z-contract-quarantine",
+  "events_fast_lane_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-completion-20260315t235627z-events-fastlane",
+  "inventory_reconcile_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-completion-20260315t235627z-inventory-reconcile",
+  "export_report_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-completion-20260315t235627z-export-report",
+  "aws_region": "eu-north-1"
+}

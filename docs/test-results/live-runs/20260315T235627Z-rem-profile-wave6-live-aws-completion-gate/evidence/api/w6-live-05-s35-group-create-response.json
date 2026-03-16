@@ -1,0 +1,1 @@
+{"detail":{"error":"Exception-only strategy","detail":"Selected strategy 's3_keep_non_ssl_exception' is exception-only. Use Exception workflow instead of PR bundle.","exception_flow":{"duration_days":30,"reason":""}}}

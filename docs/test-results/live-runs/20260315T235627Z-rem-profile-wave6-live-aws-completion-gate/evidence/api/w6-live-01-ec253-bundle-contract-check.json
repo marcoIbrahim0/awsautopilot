@@ -1,0 +1,28 @@
+{
+  "required_files": {
+    "bundle_manifest.json": true,
+    "decision_log.md": true,
+    "finding_coverage.json": true,
+    "README_GROUP.txt": true,
+    "run_all.sh": true
+  },
+  "has_run_actions": true,
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 0,
+  "support_tiers": [
+    "manual_guidance_only",
+    "review_required_bundle"
+  ],
+  "actions": [
+    {
+      "action_id": "baa158fa-53f5-4a61-a226-e25779c49fa7",
+      "support_tier": "manual_guidance_only",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "fb98ee94-f68b-41c0-84af-64afbbb014b4",
+      "support_tier": "review_required_bundle",
+      "has_runnable_terraform": false
+    }
+  ]
+}

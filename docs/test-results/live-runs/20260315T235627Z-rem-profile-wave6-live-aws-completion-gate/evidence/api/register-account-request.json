@@ -1,0 +1,7 @@
+{
+  "account_id": "696505809372",
+  "role_read_arn": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole",
+  "role_write_arn": null,
+  "regions": ["eu-north-1", "us-east-1"],
+  "tenant_id": "fa03ccdf-1d78-438b-b10a-08a5867c4b43"
+}

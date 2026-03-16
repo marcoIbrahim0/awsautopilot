@@ -1,0 +1,82 @@
+{
+  "runnable_action_count": 7,
+  "tier_counts": {
+    "executable": 7,
+    "manual_guidance": 0,
+    "review_required": 5
+  },
+  "actions": [
+    {
+      "action_id": "16bf867f-5042-4cae-99d2-c406884b4c96",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "17efd185-198a-41c4-8454-10875aa89daa",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "2cb83746-c068-4def-977b-fd4bfead2519",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "344850ee-796d-4fbc-9906-e745aafb2df6",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "38a640b1-62eb-4deb-bd64-2d8aeb249982",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "4b0b3e4f-bbe8-4c58-b9c1-ca39c8683ca2",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "609bb8db-3bd6-4dbc-b562-e9430a4bdaeb",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "adc97f08-1aaf-4280-84f3-854f21361f66",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "bdcc1a33-8d37-4d01-8ac8-5bfa39b11a1d",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "dd64810c-7d83-4b46-9c8e-5f3b400be8d2",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "f04ba1eb-b150-40a0-94a5-4087d0231c32",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "0242a107-32fa-44f3-bca8-820d14c20aff",
+      "support_tier": "review_required_bundle",
+      "profile_id": "s3_enforce_ssl_strict_deny",
+      "has_runnable_terraform": false
+    }
+  ]
+}

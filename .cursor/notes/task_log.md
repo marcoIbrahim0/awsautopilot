@@ -1,5 +1,78 @@
 # Task Log
 
+## Remediation-profile Wave 6 final strict live AWS completion gate on master (2026-03-16)
+
+**Task:** Execute the final strict Wave 6 live-AWS completion gate on current `master` only, using customer-run PR bundles as the supported model, treating `/api/root-key-remediation-runs` as the sole IAM.4 execution authority, and refusing any documentation-only substitute for live executable plus downgrade/manual proof.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/notes/final-summary.md** - recorded the final strict-gate verdict, per-family proof status, highest-severity failures, rollback/cleanup status, and the exact reason Wave 6 is still not complete.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/notes/aws-cleanup-summary.md** - recorded target-account rollback results, manual recovery for Config.1, retained seeded resources, SaaS-account queue cleanup, and local runtime shutdown status.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/tests/w6-live-01.md** through **w6-live-11.md** - recorded the exact API, bundle, AWS, and cleanup outcomes for each strict Wave 6 gate case.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/api/** - saved signup/auth, account registration, ingest, remediation settings, grouped bundle generation, root-key route requests/responses, run detail, and current-run IAM.4 stored evidence payloads.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/aws/** - saved caller identities, live AWS pre/post/rollback evidence for the executed families, root-key state before/after the authoritative IAM.4 attempt, Config recovery evidence, and temporary SQS queue deletion proofs.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/bundles/** - saved downloaded grouped bundle zips, extracted bundle contents, apply/destroy logs, and grouped manifest files inspected during the strict gate.
+- **/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/runtime/** - saved runtime bootstrap, root-key API startup, local process cleanup, and Postgres shutdown evidence.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md** - added the final strict Wave 6 completion-gate package to the recent targeted runs list.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this strict completion-gate task.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, remediation-profile docs, prior March 15 Wave 6 summaries, and the strict blocker-closure package before executing the gate.
+- Confirmed the latest strict blocker-closure package explicitly marked all nine Wave 6 families ready for one truthful live executable proof plus one truthful downgrade/manual proof.
+- Stayed on current `master` and did not create a branch.
+- Built a fresh isolated runtime for this gate:
+  - disposable Postgres at `/tmp/rpw6-completion-pg-20260315T235627Z` on port `55440`
+  - temporary SaaS-account SQS queues in account `029037611564`
+  - isolated tenant `fa03ccdf-1d78-438b-b10a-08a5867c4b43`
+  - isolated AWS account registration for `696505809372`
+- Captured caller identity for every account path used:
+  - SaaS/default credentials => account `029037611564`
+  - operator-owned apply/rollback credentials => root of `696505809372` via local profile `test28-root`
+- Triggered fresh ingest and materialization, confirming `1169` findings updated in the isolated tenant.
+- Executed the strict gate against current live family surfaces:
+  - `EC2.53` manual proof passed, but the supported grouped bundle downgraded the supposedly executable branch to `review_required_bundle`
+  - `IAM.4` generic routes stayed metadata-only as intended; the authoritative root-key route created a live run but the disable transition failed closed on `self_cutoff_guard_not_guaranteed:observer_credentials_overlap_with_mutation_target`
+  - `S3.2` executable proof succeeded on AWS and manual proof succeeded; exact bucket pre-state was restored after explicit cleanup
+  - `S3.9` executable proof succeeded on AWS and manual/review branching proof succeeded
+  - `CloudTrail.1` executable proof succeeded on AWS and manual/review branching proof succeeded
+  - `Config.1` executable apply succeeded, but rollback deleted pre-existing Config state and required manual recovery
+  - `S3.5`, `S3.11`, and `S3.15` still lacked completed live executable proof in this final gate
+- Proved a cross-family supported-path defect on current `master`: grouped `run_all.sh` emits malformed callback JSON shell assignments, causing `command not found` and `json.decoder.JSONDecodeError` in every exercised grouped bundle, with at least one group run left stuck at `started` after a truthful AWS apply.
+- Cleaned up after the run:
+  - restored all mutated target-account resources to pre-state, including manual Config recovery
+  - stopped the secondary root-key API
+  - stopped the disposable Postgres
+  - deleted the five temporary SaaS-account queues and verified `NonExistentQueue`
+
+**AWS resources touched:**
+- SaaS queue/runtime account `029037611564` in `eu-north-1`
+  - temporary SQS queues `security-autopilot-rpw6-completion-20260315t235627z-ingest`, `security-autopilot-rpw6-completion-20260315t235627z-contract-quarantine`, `security-autopilot-rpw6-completion-20260315t235627z-events-fastlane`, `security-autopilot-rpw6-completion-20260315t235627z-inventory-reconcile`, and `security-autopilot-rpw6-completion-20260315t235627z-export-report`
+- Isolated AWS test account `696505809372` in `eu-north-1`
+  - live customer-run bundle apply/rollback on retained seeded S3 and CloudTrail resources
+  - live authoritative IAM.4 route attempt against the root key
+  - manual Config recovery to restore the pre-existing default recorder and delivery channel
+
+**Rollback / cleanup status:**
+- `S3.2`: exact pre-state restored.
+- `S3.9`: exact pre-state restored.
+- `CloudTrail.1`: exact pre-state restored.
+- `Config.1`: bundle rollback failed, then exact pre-state was manually restored and verified.
+- Temporary SQS queues: deleted and verified as non-existent.
+- Disposable Postgres: stopped.
+- Retained AWS fixtures: preserved intentionally for future strict reruns.
+
+**Validation:**
+- Confirmed the run package contains `notes/final-summary.md`, `notes/aws-cleanup-summary.md`, and `tests/w6-live-01.md` through `tests/w6-live-11.md`.
+- Confirmed the final gate verdict is `Wave 6 complete = NO`.
+- Confirmed `.cursor/notes/task_log.md`, `.cursor/notes/task_index.md`, and `docs/live-e2e-testing/README.md` were updated for discoverability.
+
+**Open questions / TODOs:**
+- Fix the grouped customer-run `run_all.sh` callback templating so bundle execution can report `started`/`finished` cleanly and close group runs without replay ambiguity.
+- Fix `Config.1` rollback so the supported path restores pre-existing recorder and delivery-channel state instead of deleting it.
+- Resolve the `EC2.53` standalone-preview versus grouped-bundle tier mismatch.
+- Provide a safe IAM.4 separate-observer execution context so the authoritative root-key route can produce a truthful disable proof without self-cutoff overlap.
+- Re-run strict live executable proofs for `S3.5`, `S3.11`, and `S3.15` after the blocking issues above are addressed.
+
 ## Remediation-profile Wave 6 environment readiness for the next live AWS validation on master (2026-03-15)
 
 **Task:** Execute the Wave 6 environment-readiness task on current `master` only so the next live AWS validation run can start from a concrete readiness matrix instead of exploratory searching, while keeping customer-run PR bundles as the supported model, preserving `/api/root-key-remediation-runs` as the only IAM.4 execution authority, and leaving `docs/Production/` untouched.

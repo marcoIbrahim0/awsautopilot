@@ -1,0 +1,39 @@
+{
+  "action_id": "0bd41810-447a-4b57-bd09-d729f291b4ad",
+  "action_type": "cloudtrail_enabled",
+  "blocked_reasons": [],
+  "control_id": "CloudTrail.1",
+  "decision_rationale": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' executable for strategy 'cloudtrail_enable_guided'. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' executable for strategy 'cloudtrail_enable_guided'. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-aws-account-696505809372-0bd41810",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "external_bucket_policy_management": false,
+    "kms_delivery_requested": false,
+    "log_bucket_reachable": true,
+    "multi_region_requested": true,
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "trail_bucket_name_resolved": true
+  },
+  "profile_id": "cloudtrail_enable_guided",
+  "rejected_profiles": [],
+  "strategy_id": "cloudtrail_enable_guided",
+  "strategy_inputs": {
+    "create_bucket_policy": true,
+    "multi_region": true,
+    "trail_bucket_name": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "trail_name": "security-autopilot-trail"
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|CloudTrail.1",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events"
+}

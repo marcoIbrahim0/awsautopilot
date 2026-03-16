@@ -1,0 +1,4 @@
+{
+  "strategy_id": "s3_bucket_block_public_access_standard",
+  "risk_acknowledged": true
+}

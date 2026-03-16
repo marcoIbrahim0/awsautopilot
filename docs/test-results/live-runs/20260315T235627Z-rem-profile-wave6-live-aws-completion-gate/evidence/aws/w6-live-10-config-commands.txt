@@ -1,0 +1,24 @@
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorders
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status
+aws --profile test28-root --region eu-north-1 configservice describe-delivery-channels
+aws --profile test28-root --region eu-north-1 s3api get-bucket-policy --bucket security-autopilot-w6-envready-config-696505809372 --query Policy --output text
+(cd docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/bundles/w6-live-10-config-group && AWS_PROFILE=test28-root AWS_REGION=eu-north-1 bash ./run_all.sh)
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorders
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status
+aws --profile test28-root --region eu-north-1 configservice describe-delivery-channels
+aws --profile test28-root --region eu-north-1 s3api get-bucket-policy --bucket security-autopilot-w6-envready-config-696505809372 --query Policy --output text
+aws --profile test28-root --region eu-north-1 configservice stop-configuration-recorder --configuration-recorder-name default
+aws --profile test28-root --region eu-north-1 configservice delete-delivery-channel --delivery-channel-name default
+aws --profile test28-root --region eu-north-1 configservice delete-configuration-recorder --configuration-recorder-name default
+aws --profile test28-root --region eu-north-1 s3api put-bucket-policy --bucket security-autopilot-w6-envready-config-696505809372 --policy file://docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/aws/w6-live-10-config-pre-bucket-policy.json
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorders
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status
+aws --profile test28-root --region eu-north-1 configservice describe-delivery-channels
+aws --profile test28-root --region eu-north-1 s3api get-bucket-policy --bucket security-autopilot-w6-envready-config-696505809372 --query Policy --output text
+aws --profile test28-root --region eu-north-1 configservice put-configuration-recorder --configuration-recorder file:///Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/aws/w6-live-10-config-cleanup-recorder-input.json
+aws --profile test28-root --region eu-north-1 configservice put-delivery-channel --delivery-channel file:///Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/aws/w6-live-10-config-cleanup-delivery-input.json
+aws --profile test28-root --region eu-north-1 configservice start-configuration-recorder --configuration-recorder-name default
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorders
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status
+aws --profile test28-root --region eu-north-1 configservice describe-delivery-channels
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status

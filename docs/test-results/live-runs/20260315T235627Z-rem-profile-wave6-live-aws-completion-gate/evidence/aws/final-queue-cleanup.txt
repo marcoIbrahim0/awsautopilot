@@ -1,0 +1,5 @@
+delete security-autopilot-rpw6-completion-20260315t235627z-ingest
+delete security-autopilot-rpw6-completion-20260315t235627z-contract-quarantine
+delete security-autopilot-rpw6-completion-20260315t235627z-events-fastlane
+delete security-autopilot-rpw6-completion-20260315t235627z-inventory-reconcile
+delete security-autopilot-rpw6-completion-20260315t235627z-export-report

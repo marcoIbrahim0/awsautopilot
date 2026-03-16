@@ -1,0 +1,6 @@
+aws --profile test28-root --region eu-north-1 s3api get-bucket-logging --bucket security-autopilot-w6-envready-config-696505809372
+aws --profile test28-root --region eu-north-1 s3api get-bucket-logging --bucket security-autopilot-w6-envready-accesslogs-696505809372
+(cd docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/bundles/w6-live-07-s39-group && AWS_PROFILE=test28-root AWS_REGION=eu-north-1 bash ./run_all.sh)
+aws --profile test28-root --region eu-north-1 s3api get-bucket-logging --bucket security-autopilot-w6-envready-config-696505809372
+(cd docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/evidence/bundles/w6-live-07-s39-group/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-config-eabe460f && AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform destroy -auto-approve)
+aws --profile test28-root --region eu-north-1 s3api get-bucket-logging --bucket security-autopilot-w6-envready-config-696505809372

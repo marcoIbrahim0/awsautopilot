@@ -1,0 +1,76 @@
+{
+  "runnable_action_count": 6,
+  "tier_counts": {
+    "executable": 6,
+    "manual_guidance": 5,
+    "review_required": 0
+  },
+  "actions": [
+    {
+      "action_id": "006b6ba6-a9f5-4b15-97c1-2616b7d9b2c8",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "00b8c39c-69a4-4557-8c73-7d96e4d72c19",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "1df0126d-d424-41cd-b05f-c3079742e4b4",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "3f68cef8-5029-43d9-ad41-ee0bb78e8815",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "7df28662-2e76-467c-af12-9128c94f31d9",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "7f624e07-61ea-4cf1-ba9f-93b51899dc7c",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "81625b6a-51fe-4d25-8869-b010421919a3",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "92f5f5a3-d6c0-4cc4-b349-e90940a1e78a",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "9c62231f-8f9f-4972-bbcd-4260f5d5dc02",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "d6eb9cb9-3325-4a5e-a250-760c0026ff10",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "c9716eb3-ee4d-4a92-af2f-464fdabb994e",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "s3_enable_abort_incomplete_uploads",
+      "has_runnable_terraform": false
+    }
+  ]
+}

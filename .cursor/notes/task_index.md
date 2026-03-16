@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 final strict live AWS completion gate on master (2026-03-16)](task_log.md#remediation-profile-wave-6-final-strict-live-aws-completion-gate-on-master-2026-03-16)
+  - Executed the final strict Wave 6 gate on current `master` under the customer-run bundle model, captured the full evidence package under `docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/`, and verified the gate remains negative.
+  - Proved truthful live executable plus manual proofs for `S3.2`, `S3.9`, and `CloudTrail.1`, found blocking failures in `EC2.53`, `IAM.4`, and `Config.1`, documented partial status for `S3.5` / `S3.11` / `S3.15`, and recorded the high-severity grouped `run_all.sh` callback defect that still blocks `Wave 6 complete`.
 - [Wave 6 strict blocker closure for S3.11 and S3.15 live proof (2026-03-16)](task_log.md#wave-6-strict-blocker-closure-for-s311-and-s315-live-proof-2026-03-16)
   - Added truthful live remapping for current Security Hub drift so lifecycle findings now close through `S3.13 -> S3.11` and SSE-KMS findings now close through `S3.17 -> S3.15`, while current live `S3.11` event-notification findings and `S3.15` Object Lock findings are explicitly excluded from family materialization.
   - Captured a fresh strict evidence package under `docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/`, proved truthful executable plus downgrade/manual cases for both `S3.11` and `S3.15`, updated the Wave 6 status docs, and left Wave 6 at `9/9` families ready for the final strict live gate.

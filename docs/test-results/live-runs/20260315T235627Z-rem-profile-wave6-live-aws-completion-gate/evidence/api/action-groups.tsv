@@ -1,0 +1,23 @@
+id	action_type	account_id	region	group_key
+45f72b38-5714-4da6-ab96-336665afdaa5	aws_config_enabled	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|aws_config_enabled|696505809372|eu-north-1
+402ee806-d5ac-4b9f-8f20-23ec09a2ec8a	aws_config_enabled	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|aws_config_enabled|696505809372|us-east-1
+bb1ad874-5bad-4200-9ece-cb70c6836573	cloudtrail_enabled	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|cloudtrail_enabled|696505809372|eu-north-1
+739aae7a-0be4-4cca-b22d-866d53733676	cloudtrail_enabled	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|cloudtrail_enabled|696505809372|us-east-1
+196549a5-887e-4824-a9b9-00f5a504a611	ebs_default_encryption	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ebs_default_encryption|696505809372|eu-north-1
+02799ed5-8611-4a1f-8097-82be048a2212	ebs_default_encryption	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ebs_default_encryption|696505809372|us-east-1
+42d52fa1-a0f1-4779-bf73-b98e5a45b039	ebs_snapshot_block_public_access	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ebs_snapshot_block_public_access|696505809372|eu-north-1
+f5d2219c-8cd4-47ab-8da2-4b3dfc67f9a3	ebs_snapshot_block_public_access	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ebs_snapshot_block_public_access|696505809372|us-east-1
+7ec38e05-0476-4904-99c0-fb7ba79ab2ac	enable_guardduty	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|enable_guardduty|696505809372|eu-north-1
+2890283b-3c0e-4296-9e16-1c4284d8e49f	enable_guardduty	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|enable_guardduty|696505809372|us-east-1
+2adb9368-16d4-4209-b547-77586750731e	iam_root_access_key_absent	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|iam_root_access_key_absent|696505809372|eu-north-1
+e8877541-1080-4df0-9d47-168e3c0c789f	s3_block_public_access	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_block_public_access|696505809372|eu-north-1
+51c3dab7-a9b3-4006-9470-fcc8b0733866	s3_block_public_access	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_block_public_access|696505809372|us-east-1
+4b0c86f0-70fe-46d9-8236-08a0f31709a4	s3_bucket_access_logging	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_bucket_access_logging|696505809372|eu-north-1
+43d8b7e5-6cd5-4d31-915e-f22fc49ebd08	s3_bucket_block_public_access	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_bucket_block_public_access|696505809372|eu-north-1
+8dc3c571-9936-475e-90d1-7dc8b736cb66	s3_bucket_encryption_kms	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_bucket_encryption_kms|696505809372|eu-north-1
+4a9e956c-08bd-4330-88ca-4f8eacae05ea	s3_bucket_lifecycle_configuration	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_bucket_lifecycle_configuration|696505809372|eu-north-1
+765870df-5bbd-4d81-a2a8-24b0932e8dd0	s3_bucket_require_ssl	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|s3_bucket_require_ssl|696505809372|eu-north-1
+5ec0ef59-9ceb-40de-945a-eaf89b9fd78b	sg_restrict_public_ports	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|sg_restrict_public_ports|696505809372|eu-north-1
+057b1590-1127-4a2b-ac20-27ebb4c88fef	ssm_block_public_sharing	696505809372	eu-north-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ssm_block_public_sharing|696505809372|eu-north-1
+95cb154b-3d75-4fdb-9acb-c387efaeadf7	ssm_block_public_sharing	696505809372	us-east-1	fa03ccdf-1d78-438b-b10a-08a5867c4b43|ssm_block_public_sharing|696505809372|us-east-1
+(21 rows)

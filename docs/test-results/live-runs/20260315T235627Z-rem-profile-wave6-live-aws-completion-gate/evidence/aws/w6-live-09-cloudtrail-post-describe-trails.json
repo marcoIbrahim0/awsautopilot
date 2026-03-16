@@ -1,0 +1,16 @@
+{
+    "trailList": [
+        {
+            "Name": "security-autopilot-trail",
+            "S3BucketName": "security-autopilot-w6-envready-cloudtrail-696505809372",
+            "IncludeGlobalServiceEvents": true,
+            "IsMultiRegionTrail": true,
+            "HomeRegion": "eu-north-1",
+            "TrailARN": "arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail",
+            "LogFileValidationEnabled": false,
+            "HasCustomEventSelectors": false,
+            "HasInsightSelectors": false,
+            "IsOrganizationTrail": false
+        }
+    ]
+}

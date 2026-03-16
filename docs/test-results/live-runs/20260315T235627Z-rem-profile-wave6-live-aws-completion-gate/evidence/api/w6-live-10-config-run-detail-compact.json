@@ -1,0 +1,14 @@
+{
+  "id": "740402ec-a9bf-4887-a55c-6d6a2cc101be",
+  "status": "success",
+  "outcome": "Group PR bundle generated (1 actions)",
+  "artifacts": [
+    "control_mapping_context",
+    "diff_summary",
+    "group_bundle",
+    "pr_bundle",
+    "risk_acknowledged",
+    "rollback_notes",
+    "selected_strategy"
+  ]
+}

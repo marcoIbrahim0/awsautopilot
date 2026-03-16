@@ -1,0 +1,42 @@
+{
+  "action_id": "dd64810c-7d83-4b46-9c8e-5f3b400be8d2",
+  "action_type": "s3_bucket_require_ssl",
+  "blocked_reasons": [
+    "AccessDenied",
+    "Bucket policy preservation evidence is missing for merge-safe SSL enforcement.",
+    "Existing bucket policy capture failed (AccessDenied)."
+  ],
+  "control_id": "S3.5",
+  "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because merge-safe bucket policy preservation evidence is incomplete. AccessDenied Bucket policy preservation evidence is missing for merge-safe SSL enforcement. Existing bucket policy capture failed (AccessDenied). Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because merge-safe bucket policy preservation evidence is incomplete. AccessDenied Bucket policy preservation evidence is missing for merge-safe SSL enforcement. Existing bucket policy capture failed (AccessDenied). Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-man-dd64810c",
+  "has_runnable_terraform": false,
+  "index": 10,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "bucket_policy_analysis_possible": false,
+    "executable_policy_merge_allowed": false,
+    "existing_bucket_policy_json_captured": false,
+    "existing_bucket_policy_statement_count": null,
+    "family": "s3_bucket_require_ssl",
+    "family_strategy": "s3_enforce_ssl_strict_deny",
+    "merge_safe_policy_available": false,
+    "preserve_existing_policy": true,
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "unsafe_overwrite_requested": false
+  },
+  "profile_id": "s3_enforce_ssl_strict_deny",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "strategy_inputs": {},
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.5",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}

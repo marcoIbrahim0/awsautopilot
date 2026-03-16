@@ -1,0 +1,65 @@
+{
+  "actions": [
+    {
+      "action_id": "16bf867f-5042-4cae-99d2-c406884b4c96",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "17efd185-198a-41c4-8454-10875aa89daa",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "2cb83746-c068-4def-977b-fd4bfead2519",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "344850ee-796d-4fbc-9906-e745aafb2df6",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "38a640b1-62eb-4deb-bd64-2d8aeb249982",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "4b0b3e4f-bbe8-4c58-b9c1-ca39c8683ca2",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "609bb8db-3bd6-4dbc-b562-e9430a4bdaeb",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "adc97f08-1aaf-4280-84f3-854f21361f66",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "bdcc1a33-8d37-4d01-8ac8-5bfa39b11a1d",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "dd64810c-7d83-4b46-9c8e-5f3b400be8d2",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "f04ba1eb-b150-40a0-94a5-4087d0231c32",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "0242a107-32fa-44f3-bca8-820d14c20aff",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

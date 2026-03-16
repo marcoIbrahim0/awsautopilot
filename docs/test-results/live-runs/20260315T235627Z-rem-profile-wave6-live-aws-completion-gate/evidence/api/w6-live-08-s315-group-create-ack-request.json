@@ -1,0 +1,4 @@
+{
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "risk_acknowledged": true
+}

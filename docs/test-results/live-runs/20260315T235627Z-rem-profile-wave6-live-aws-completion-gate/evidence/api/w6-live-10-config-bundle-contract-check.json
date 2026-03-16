@@ -1,0 +1,16 @@
+{
+  "runnable_action_count": 1,
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 0,
+    "review_required": 0
+  },
+  "actions": [
+    {
+      "action_id": "0e4108d7-3985-416d-b6cd-7659e8e45113",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "config_enable_centralized_delivery",
+      "has_runnable_terraform": true
+    }
+  ]
+}

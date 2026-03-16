@@ -1,0 +1,34 @@
+{
+  "required_files": {
+    "bundle_manifest.json": true,
+    "decision_log.md": true,
+    "finding_coverage.json": true,
+    "README_GROUP.txt": true,
+    "run_all.sh": true
+  },
+  "has_run_actions": true,
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 1,
+  "non_executable_action_count": null,
+  "support_tiers": [
+    "deterministic_bundle",
+    "manual_guidance_only"
+  ],
+  "actions": [
+    {
+      "action_id": "4b9462e5-2391-4d1d-9d8f-425e124ac9cf",
+      "support_tier": "manual_guidance_only",
+      "has_runnable_terraform": false
+    },
+    {
+      "action_id": "638c6b43-32ab-4104-a1da-29be5cd9a35a",
+      "support_tier": "deterministic_bundle",
+      "has_runnable_terraform": true
+    },
+    {
+      "action_id": "02a1f4a9-2ae6-4e42-bd0e-7ac659b3c0e5",
+      "support_tier": "manual_guidance_only",
+      "has_runnable_terraform": false
+    }
+  ]
+}

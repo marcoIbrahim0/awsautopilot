@@ -1,0 +1,271 @@
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/networks.py", line 965, in import_email_validator
+    import email_validator
+ModuleNotFoundError: No module named 'email_validator'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.12/bin/uvicorn", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/click/core.py", line 1442, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/click/core.py", line 1363, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/click/core.py", line 1226, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/main.py", line 424, in main
+    run(
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/main.py", line 594, in run
+    server.run()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/Users/marcomaher/AWS Security Autopilot/backend/main.py", line 11, in <module>
+    from backend.routers.auth import router as auth_router
+  File "/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py", line 76, in <module>
+    class SignupRequest(BaseModel):
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_model_construction.py", line 255, in __new__
+    complete_model_class(
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_model_construction.py", line 648, in complete_model_class
+    schema = gen_schema.generate_schema(cls)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 729, in generate_schema
+    schema = self._generate_schema_inner(obj)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 1023, in _generate_schema_inner
+    return self._model_schema(obj)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 856, in _model_schema
+    {k: self._generate_md_field_schema(k, v, decorators) for k, v in fields.items()},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 1228, in _generate_md_field_schema
+    schema, metadata = self._common_field_schema(name, field_info, decorators)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 1282, in _common_field_schema
+    schema = self._apply_annotations(
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 2227, in _apply_annotations
+    schema = get_inner_schema(source_type)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_schema_generation_shared.py", line 83, in __call__
+    schema = self._handler(source_type)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 2203, in inner_handler
+    schema = self._generate_schema_from_get_schema_method(obj, source_type)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py", line 919, in _generate_schema_from_get_schema_method
+    schema = get_schema(
+             ^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/networks.py", line 1005, in __get_pydantic_core_schema__
+    import_email_validator()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pydantic/networks.py", line 967, in import_email_validator
+    raise ImportError("email-validator is not installed, run `pip install 'pydantic[email]'`") from e
+ImportError: email-validator is not installed, run `pip install 'pydantic[email]'`
+INFO:     Started server process [32994]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63356 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63360 - "POST /api/auth/signup HTTP/1.1" 202 Accepted
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [32994]
+INFO:     Started server process [33193]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63371 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63382 - "POST /api/auth/signup HTTP/1.1" 202 Accepted
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33193]
+INFO:     Started server process [35847]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63390 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63394 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63399 - "POST /api/auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63403 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63407 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63408 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63409 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63419 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63421 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63428 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63432 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63435 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63439 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63443 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63445 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63450 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63453 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63459 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63501 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-16T00:01:59Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63519 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63557 - "GET /api/actions/fb98ee94-f68b-41c0-84af-64afbbb014b4/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63558 - "GET /api/actions/baa158fa-53f5-4a61-a226-e25779c49fa7/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63559 - "GET /api/actions/6d495cf7-358b-45a6-9dd0-d047adc50445/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63563 - "GET /api/actions/638c6b43-32ab-4104-a1da-29be5cd9a35a/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63569 - "GET /api/actions/4b9462e5-2391-4d1d-9d8f-425e124ac9cf/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63574 - "GET /api/actions/38a640b1-62eb-4deb-bd64-2d8aeb249982/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63579 - "GET /api/actions/0242a107-32fa-44f3-bca8-820d14c20aff/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63581 - "GET /api/actions/eabe460f-fe71-44d0-a055-4cff617b4062/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63584 - "GET /api/actions/0bd41810-447a-4b57-bd09-d729f291b4ad/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63588 - "GET /api/actions/0e4108d7-3985-416d-b6cd-7659e8e45113/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63597 - "GET /api/actions/1df0126d-d424-41cd-b05f-c3079742e4b4/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63603 - "GET /api/actions/d6eb9cb9-3325-4a5e-a250-760c0026ff10/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63606 - "GET /api/actions/080ad0ec-b379-4cb5-9f7a-aecdd997ab11/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63609 - "GET /api/actions/31381d3c-04f9-4613-a897-ba95ddbdc0bd/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63623 - "GET /api/actions/fb98ee94-f68b-41c0-84af-64afbbb014b4/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63626 - "GET /api/actions/baa158fa-53f5-4a61-a226-e25779c49fa7/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63624 - "GET /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63627 - "GET /api/actions/6d495cf7-358b-45a6-9dd0-d047adc50445/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63631 - "GET /api/actions/638c6b43-32ab-4104-a1da-29be5cd9a35a/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63630 - "GET /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63636 - "GET /api/actions/4b9462e5-2391-4d1d-9d8f-425e124ac9cf/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63637 - "GET /api/action-groups/765870df-5bbd-4d81-a2a8-24b0932e8dd0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63642 - "GET /api/actions/38a640b1-62eb-4deb-bd64-2d8aeb249982/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63648 - "GET /api/actions/0242a107-32fa-44f3-bca8-820d14c20aff/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63644 - "GET /api/action-groups/4b0c86f0-70fe-46d9-8236-08a0f31709a4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63650 - "GET /api/actions/eabe460f-fe71-44d0-a055-4cff617b4062/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63651 - "GET /api/action-groups/4a9e956c-08bd-4330-88ca-4f8eacae05ea HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63654 - "GET /api/actions/0bd41810-447a-4b57-bd09-d729f291b4ad/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63656 - "GET /api/action-groups/8dc3c571-9936-475e-90d1-7dc8b736cb66 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63659 - "GET /api/actions/0e4108d7-3985-416d-b6cd-7659e8e45113/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63661 - "GET /api/action-groups/bb1ad874-5bad-4200-9ece-cb70c6836573 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63669 - "GET /api/actions/1df0126d-d424-41cd-b05f-c3079742e4b4/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63670 - "GET /api/action-groups/45f72b38-5714-4da6-ab96-336665afdaa5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63673 - "GET /api/actions/d6eb9cb9-3325-4a5e-a250-760c0026ff10/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63674 - "GET /api/action-groups/2adb9368-16d4-4209-b547-77586750731e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63677 - "GET /api/actions/080ad0ec-b379-4cb5-9f7a-aecdd997ab11/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63680 - "GET /api/actions/31381d3c-04f9-4613-a897-ba95ddbdc0bd/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/actions/6d495cf7-358b-45a6-9dd0-d047adc50445/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63684 - "GET /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63688 - "GET /api/actions/638c6b43-32ab-4104-a1da-29be5cd9a35a/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63689 - "GET /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63694 - "GET /api/actions/4b9462e5-2391-4d1d-9d8f-425e124ac9cf/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63696 - "GET /api/action-groups/765870df-5bbd-4d81-a2a8-24b0932e8dd0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63701 - "GET /api/actions/38a640b1-62eb-4deb-bd64-2d8aeb249982/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63703 - "GET /api/action-groups/4b0c86f0-70fe-46d9-8236-08a0f31709a4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63707 - "GET /api/actions/0242a107-32fa-44f3-bca8-820d14c20aff/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63709 - "GET /api/action-groups/4a9e956c-08bd-4330-88ca-4f8eacae05ea HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /api/actions/eabe460f-fe71-44d0-a055-4cff617b4062/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63712 - "GET /api/action-groups/8dc3c571-9936-475e-90d1-7dc8b736cb66 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63714 - "GET /api/actions/0bd41810-447a-4b57-bd09-d729f291b4ad/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63716 - "GET /api/action-groups/bb1ad874-5bad-4200-9ece-cb70c6836573 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63719 - "GET /api/actions/0e4108d7-3985-416d-b6cd-7659e8e45113/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63720 - "GET /api/action-groups/45f72b38-5714-4da6-ab96-336665afdaa5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63729 - "GET /api/actions/1df0126d-d424-41cd-b05f-c3079742e4b4/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63730 - "GET /api/action-groups/2adb9368-16d4-4209-b547-77586750731e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63733 - "GET /api/actions/d6eb9cb9-3325-4a5e-a250-760c0026ff10/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63736 - "GET /api/actions/080ad0ec-b379-4cb5-9f7a-aecdd997ab11/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63739 - "GET /api/actions/31381d3c-04f9-4613-a897-ba95ddbdc0bd/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63754 - "GET /api/actions/02a1f4a9-2ae6-4e42-bd0e-7ac659b3c0e5/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63758 - "GET /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /api/actions/638c6b43-32ab-4104-a1da-29be5cd9a35a/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63762 - "GET /api/actions/4b9462e5-2391-4d1d-9d8f-425e124ac9cf/remediation-preview?mode=pr_only&strategy_id=s3_bucket_block_public_access_standard&profile_id=s3_bucket_block_public_access_manual_preservation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63765 - "GET /api/actions/02a1f4a9-2ae6-4e42-bd0e-7ac659b3c0e5/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63769 - "POST /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08/bundle-run HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63772 - "POST /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63779 - "GET /api/remediation-runs/62050c71-fd3e-4b91-8257-cbe2b8b813c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63782 - "GET /api/remediation-runs/62050c71-fd3e-4b91-8257-cbe2b8b813c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63783 - "GET /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63784 - "GET /api/remediation-runs/62050c71-fd3e-4b91-8257-cbe2b8b813c1/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63785 - "POST /api/internal/group-runs/report HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63802 - "POST /api/internal/group-runs/report HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63819 - "GET /api/action-groups/43d8b7e5-6cd5-4d31-915e-f22fc49ebd08/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63821 - "GET /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63822 - "GET /api/actions/fb98ee94-f68b-41c0-84af-64afbbb014b4/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=close_and_revoke HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63825 - "GET /api/actions/baa158fa-53f5-4a61-a226-e25779c49fa7/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=ssm_only HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63828 - "POST /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63834 - "GET /api/remediation-runs/4895fe06-e9a0-4bee-b1cc-71ee2ea9a367 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63837 - "GET /api/remediation-runs/4895fe06-e9a0-4bee-b1cc-71ee2ea9a367 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63838 - "GET /api/action-groups/5ec0ef59-9ceb-40de-945a-eaf89b9fd78b/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63839 - "GET /api/remediation-runs/4895fe06-e9a0-4bee-b1cc-71ee2ea9a367/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63847 - "GET /api/action-groups/765870df-5bbd-4d81-a2a8-24b0932e8dd0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63848 - "GET /api/actions/38a640b1-62eb-4deb-bd64-2d8aeb249982/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63851 - "GET /api/actions/0242a107-32fa-44f3-bca8-820d14c20aff/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63853 - "POST /api/action-groups/765870df-5bbd-4d81-a2a8-24b0932e8dd0/bundle-run HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63854 - "GET /api/action-groups/bb1ad874-5bad-4200-9ece-cb70c6836573 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63855 - "GET /api/actions/0bd41810-447a-4b57-bd09-d729f291b4ad/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63860 - "POST /api/action-groups/bb1ad874-5bad-4200-9ece-cb70c6836573/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63865 - "GET /api/remediation-runs/268c9478-739e-479b-9175-d94e84961c61 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63868 - "GET /api/remediation-runs/268c9478-739e-479b-9175-d94e84961c61 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63869 - "GET /api/remediation-runs/268c9478-739e-479b-9175-d94e84961c61/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63874 - "GET /api/action-groups/45f72b38-5714-4da6-ab96-336665afdaa5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63875 - "GET /api/actions/0e4108d7-3985-416d-b6cd-7659e8e45113/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "POST /api/action-groups/45f72b38-5714-4da6-ab96-336665afdaa5/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63886 - "GET /api/remediation-runs/740402ec-a9bf-4887-a55c-6d6a2cc101be HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63887 - "GET /api/remediation-runs/740402ec-a9bf-4887-a55c-6d6a2cc101be HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63888 - "GET /api/remediation-runs/740402ec-a9bf-4887-a55c-6d6a2cc101be/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63894 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63895 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63896 - "GET /api/actions/0bd41810-447a-4b57-bd09-d729f291b4ad/remediation-preview?mode=pr_only&strategy_id=cloudtrail_enable_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63900 - "GET /api/actions/0e4108d7-3985-416d-b6cd-7659e8e45113/remediation-preview?mode=pr_only&strategy_id=config_enable_centralized_delivery HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63905 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63907 - "GET /api/action-groups/4a9e956c-08bd-4330-88ca-4f8eacae05ea HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63908 - "POST /api/action-groups/4a9e956c-08bd-4330-88ca-4f8eacae05ea/bundle-run HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63911 - "POST /api/action-groups/4a9e956c-08bd-4330-88ca-4f8eacae05ea/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63935 - "GET /api/remediation-runs/74c684ee-1136-407f-a649-ec1b89395455 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63937 - "GET /api/remediation-runs/74c684ee-1136-407f-a649-ec1b89395455 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63938 - "GET /api/remediation-runs/74c684ee-1136-407f-a649-ec1b89395455/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63939 - "POST /api/action-groups/8dc3c571-9936-475e-90d1-7dc8b736cb66/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63965 - "GET /api/remediation-runs/66547851-25ce-44ae-9512-622ef1d5e359 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63966 - "GET /api/remediation-runs/66547851-25ce-44ae-9512-622ef1d5e359 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63967 - "GET /api/remediation-runs/66547851-25ce-44ae-9512-622ef1d5e359/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63968 - "GET /api/action-groups/4b0c86f0-70fe-46d9-8236-08a0f31709a4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63969 - "POST /api/action-groups/4b0c86f0-70fe-46d9-8236-08a0f31709a4/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63993 - "GET /api/remediation-runs/57a65c99-496e-419b-b050-583e43b34851 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63994 - "GET /api/remediation-runs/57a65c99-496e-419b-b050-583e43b34851 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63995 - "GET /api/remediation-runs/57a65c99-496e-419b-b050-583e43b34851/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64000 - "POST /api/internal/group-runs/report HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:64010 - "GET /api/actions/1df0126d-d424-41cd-b05f-c3079742e4b4/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64013 - "GET /api/actions/d6eb9cb9-3325-4a5e-a250-760c0026ff10/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64016 - "GET /api/actions/080ad0ec-b379-4cb5-9f7a-aecdd997ab11/remediation-preview?mode=pr_only&strategy_id=s3_enable_sse_kms_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64019 - "GET /api/actions/31381d3c-04f9-4613-a897-ba95ddbdc0bd/remediation-preview?mode=pr_only&strategy_id=s3_enable_sse_kms_guided&profile_id=s3_enable_sse_kms_customer_managed&kms_key_mode=custom&kms_key_arn=arn%3aaws%3akms%3aeu-north-1%3a696505809372%3akey%2fef0cca31-8328-41e6-ab28-64cbedc1a44c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64055 - "GET /api/actions/31381d3c-04f9-4613-a897-ba95ddbdc0bd/remediation-preview?mode=pr_only&strategy_id=s3_enable_sse_kms_guided&strategy_inputs=%7b%22kms_key_mode%22%3a%22custom%22%2c%22kms_key_arn%22%3a%22arn%3aaws%3akms%3aeu-north-1%3a696505809372%3akey%2fef0cca31-8328-41e6-ab28-64cbedc1a44c%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64103 - "GET /api/actions/38a640b1-62eb-4deb-bd64-2d8aeb249982/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /api/actions/0242a107-32fa-44f3-bca8-820d14c20aff/remediation-preview?mode=pr_only&strategy_id=s3_enforce_ssl_strict_deny HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64109 - "POST /api/action-groups/765870df-5bbd-4d81-a2a8-24b0932e8dd0/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64136 - "GET /api/remediation-runs/4d69f51a-5114-4762-b8ef-618928bc1032 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64140 - "GET /api/remediation-runs/4d69f51a-5114-4762-b8ef-618928bc1032 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64141 - "GET /api/remediation-runs/4d69f51a-5114-4762-b8ef-618928bc1032/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64148 - "POST /api/internal/group-runs/report HTTP/1.1" 422 Unprocessable Entity

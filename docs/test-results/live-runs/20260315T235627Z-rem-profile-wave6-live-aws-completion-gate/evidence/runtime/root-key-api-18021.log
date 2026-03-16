@@ -1,0 +1,15 @@
+INFO:     Started server process [79001]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18021 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52423 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52425 - "POST /api/root-key-remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52428 - "POST /api/root-key-remediation-runs/20543195-f548-4c68-ba70-414729357535/disable HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52437 - "GET /api/root-key-remediation-runs/20543195-f548-4c68-ba70-414729357535 HTTP/1.1" 200 OK
+Access denied when assuming role arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole: Roles may not be assumed by root accounts.
+INFO:     127.0.0.1:52447 - "GET /api/actions/6d495cf7-358b-45a6-9dd0-d047adc50445/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52449 - "GET /api/actions/6d495cf7-358b-45a6-9dd0-d047adc50445/remediation-preview?mode=pr_only&strategy_id=iam_root_key_disable HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [79001]

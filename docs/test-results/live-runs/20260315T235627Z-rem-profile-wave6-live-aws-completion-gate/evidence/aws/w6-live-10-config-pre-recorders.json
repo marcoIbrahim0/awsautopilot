@@ -1,0 +1,30 @@
+{
+    "ConfigurationRecorders": [
+        {
+            "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ewm8xn7xrw2dcvo8",
+            "name": "default",
+            "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+            "recordingGroup": {
+                "allSupported": false,
+                "includeGlobalResourceTypes": false,
+                "resourceTypes": [],
+                "exclusionByResourceTypes": {
+                    "resourceTypes": [
+                        "AWS::IAM::Policy",
+                        "AWS::IAM::User",
+                        "AWS::IAM::Role",
+                        "AWS::IAM::Group"
+                    ]
+                },
+                "recordingStrategy": {
+                    "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+                }
+            },
+            "recordingMode": {
+                "recordingFrequency": "CONTINUOUS",
+                "recordingModeOverrides": []
+            },
+            "recordingScope": "PAID"
+        }
+    ]
+}

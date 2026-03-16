@@ -1,0 +1,19 @@
+2026-03-16 01:57:43.001 EET [32754] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-16 01:57:43.002 EET [32754] LOG:  listening on IPv6 address "::1", port 55440
+2026-03-16 01:57:43.002 EET [32754] LOG:  listening on IPv4 address "127.0.0.1", port 55440
+2026-03-16 01:57:43.002 EET [32754] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55440"
+2026-03-16 01:57:43.004 EET [32755] LOG:  database system was shut down at 2026-03-16 01:57:42 EET
+2026-03-16 01:57:43.006 EET [32754] LOG:  database system is ready to accept connections
+2026-03-16 01:59:48.060 EET [33135] ERROR:  invalid input syntax for type uuid: "null" at character 54
+2026-03-16 01:59:48.060 EET [33135] STATEMENT:  select id, name, external_id from tenants where id = 'null';
+2026-03-16 02:00:33.504 EET [35752] ERROR:  invalid input syntax for type uuid: "null" at character 54
+2026-03-16 02:00:33.504 EET [35752] STATEMENT:  select id, name, external_id from tenants where id = 'null';
+2026-03-16 02:02:51.836 EET [38789] ERROR:  column "target_resource_id" does not exist at character 52
+2026-03-16 02:02:51.836 EET [38789] STATEMENT:  select id, action_type, title, account_id, region, target_resource_id, status from actions where tenant_id = 'fa03ccdf-1d78-438b-b10a-08a5867c4b43' and account_id = '696505809372' order by action_type, target_resource_id nulls first;
+2026-03-16 02:03:28.474 EET [41568] ERROR:  column "status" does not exist at character 56
+2026-03-16 02:03:28.474 EET [41568] STATEMENT:  select id, tenant_id, action_type, account_id, region, status, action_count from action_groups where tenant_id = 'fa03ccdf-1d78-438b-b10a-08a5867c4b43' and account_id='696505809372' order by action_type, region;
+2026-03-16 15:07:53.287 EET [32754] LOG:  received fast shutdown request
+2026-03-16 15:07:53.289 EET [32754] LOG:  aborting any active transactions
+2026-03-16 15:07:53.298 EET [32754] LOG:  background worker "logical replication launcher" (PID 32761) exited with exit code 1
+2026-03-16 15:07:53.305 EET [32756] LOG:  shutting down
+2026-03-16 15:07:53.320 EET [32754] LOG:  database system is shut down

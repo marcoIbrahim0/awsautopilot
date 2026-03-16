@@ -1,0 +1,7 @@
+ postgres                                | marcomaher | UTF8     | C.UTF-8 | C.UTF-8 | 
+ security_autopilot_rpw6_completion_gate | marcomaher | UTF8     | C.UTF-8 | C.UTF-8 | 
+ template0                               | marcomaher | UTF8     | C.UTF-8 | C.UTF-8 | =c/marcomaher            +
+                                         |            |          |         |         | marcomaher=CTc/marcomaher
+ template1                               | marcomaher | UTF8     | C.UTF-8 | C.UTF-8 | =c/marcomaher            +
+                                         |            |          |         |         | marcomaher=CTc/marcomaher
+
