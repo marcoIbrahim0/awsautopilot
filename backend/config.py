@@ -355,6 +355,34 @@ class Settings(BaseSettings):
             "Enables guarded executor-worker behavior for root-key disable/rollback/delete operations."
         ),
     )
+    ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE: str = Field(
+        default="",
+        description=(
+            "Optional AWS profile name used as the separate observer base context for "
+            "authoritative root-key disable/delete execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID: str = Field(
+        default="",
+        description=(
+            "Optional static AWS access key for the separate observer base context used by "
+            "authoritative root-key disable/delete execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY: str = Field(
+        default="",
+        description=(
+            "Optional static AWS secret key for the separate observer base context used by "
+            "authoritative root-key disable/delete execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN: str = Field(
+        default="",
+        description=(
+            "Optional static AWS session token for the separate observer base context used by "
+            "authoritative root-key disable/delete execution."
+        ),
+    )
     ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED: bool = Field(
         default=False,
         description=(

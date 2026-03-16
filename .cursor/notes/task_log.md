@@ -1,5 +1,38 @@
 # Task Log
 
+## IAM.4 authoritative observer-context fix on master (2026-03-16)
+
+**Task:** Fix the authoritative IAM.4 execution path on current `master` only so `/api/root-key-remediation-runs` uses a safely separated observer context for disable/delete, preserves generic IAM.4 routes as metadata-only, keeps the self-cutoff guard for real overlap, and fails closed when no separate observer context is available.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/config.py** - added explicit observer AWS profile/static credential settings for authoritative root-key disable/delete execution.
+- **/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py** - added observer-context loading and tenant read-role assumption for authoritative IAM.4 disable/delete execution, with fail-closed `observer_context_unavailable` handling when no separate observer path can be built.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_executor_worker.py** - added a focused rollback regression proving the authoritative worker reactivates the disabled root key and records rollback evidence.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py** - added focused authoritative-route regressions proving disable fails closed without observer config and proceeds through an observer-backed worker when separate observer context is configured.
+- **/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md** - updated the root-key spec to describe the observer-context requirement and the new observer runtime settings.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md** - documented that authoritative IAM.4 disable/delete now require separate observer context while generic surfaces remain metadata-only.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this IAM.4 execution fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, root-key route/worker code, and the March 15-16 Wave 6 live evidence before changing code.
+- Confirmed the worker already supported distinct mutation and observer sessions, but the authoritative route still instantiated it with the default same-session observer path.
+- Added explicit observer runtime settings for `/api/root-key-remediation-runs` so the route can build a separate observer base session from either an AWS profile or static credentials.
+- Kept `/api/root-key-remediation-runs` as the only IAM.4 execution authority and left generic options/preview/create/grouped surfaces unchanged.
+- Changed authoritative disable/delete preflight to load the tenant-scoped `role_read_arn`, assume that read role through the configured observer base session, and inject the resulting observer session into `RootKeyRemediationExecutorWorker`.
+- Kept the existing self-cutoff guard unchanged inside the worker so same-credential overlap still lands in `needs_attention`.
+- Failed closed with `503 observer_context_unavailable` when the observer base credentials are unset, invalid, or cannot assume the tenant read role.
+- Left rollback on the authoritative route executable through the worker so the root key can be reactivated and the system can produce truthful rollback proof after a successful disable.
+
+**Validation:**
+- `./venv/bin/pytest tests/test_root_key_remediation_executor_worker.py -q -k 'self_cutoff_regression_marks_needs_attention or disable_clean_window_success or rollback_reactivates_root_key'` -> `3 passed`
+- `./venv/bin/pytest tests/test_root_key_remediation_runs_api.py -q -k 'disable_uses_executor_worker_when_enabled or disable_fails_closed_when_observer_context_is_unavailable or disable_fails_closed_when_observer_profile_cannot_load or delete_fails_closed_when_executor_disabled'` -> `4 passed`
+- `./venv/bin/pytest tests/test_remediation_profile_options_preview.py tests/test_action_groups_bundle_run.py tests/test_remediation_runs_api.py -q -k 'iam_4_preview_returns_guidance_only_resolution_metadata or root_key_requires_dedicated_route or group_pr_bundle_root_key_strategy_requires_dedicated_route or resend_root_key_run_requires_dedicated_route'` -> `4 passed`
+
+**Open questions / TODOs:**
+- A fresh live IAM.4 rerun is still required to prove the configured observer context in the isolated runtime and close `W6-LIVE-03` under the strict Wave 6 gate.
+- The route now depends on explicit observer AWS credentials plus the tenant read role for authoritative disable/delete execution; the next live runtime bootstrap must set those observer credentials intentionally.
+
 ## Remediation-profile Wave 6 Config.1 executable rollback proof fix on master (2026-03-16)
 
 **Task:** Fix the Config.1 supported customer-run executable rollback defect on current `master` only so grouped Terraform bundles preserve and restore exact pre-existing AWS Config recorder, recording mode, delivery-channel, target-bucket, optional KMS, and merged bucket-policy state instead of deleting live state during rollback, while keeping public strategy IDs unchanged and leaving manual/review downgrade behavior intact.

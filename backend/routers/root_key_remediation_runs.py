@@ -4,6 +4,7 @@ import boto3
 import hashlib
 import inspect
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
@@ -18,6 +19,7 @@ from backend.auth import get_optional_user
 from backend.config import settings
 from backend.database import get_db
 from backend.models.action import Action
+from backend.models.aws_account import AwsAccount
 from backend.models.finding import Finding
 from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
 from backend.models.root_key_external_task import RootKeyExternalTask
@@ -63,6 +65,28 @@ _SECRET_TOKENS = (
     "access_key",
     "session_key",
 )
+
+
+@dataclass(frozen=True)
+class _RootKeyObserverRoleContext:
+    account_id: str
+    region: str | None
+    role_read_arn: str
+    external_id: str
+
+
+class _RootKeyObserverContextError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        code: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.details = details
 
 
 class RootKeyError(BaseModel):
@@ -223,6 +247,10 @@ def _new_correlation_id(correlation_header: str | None) -> str:
     return value or uuid.uuid4().hex
 
 
+def _normalized_text(value: Any, *, default: str = "") -> str:
+    return value.strip() if isinstance(value, str) else default
+
+
 def _set_common_headers(response: Response, *, correlation_id: str) -> None:
     response.headers["X-Correlation-Id"] = correlation_id
     response.headers["X-Root-Key-Contract-Version"] = ROOT_KEY_CONTRACT_VERSION
@@ -285,6 +313,247 @@ def _error_response(
             "X-Correlation-Id": correlation_id,
             "X-Root-Key-Contract-Version": ROOT_KEY_CONTRACT_VERSION,
         },
+    )
+
+
+def _observer_context_error_response(
+    *,
+    correlation_id: str,
+    exc: _RootKeyObserverContextError,
+) -> JSONResponse:
+    return _error_response(
+        correlation_id=correlation_id,
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code=exc.code,
+        message=exc.message,
+        retryable=True,
+        details=exc.details,
+    )
+
+
+def _root_key_observer_region(region: str | None) -> str:
+    configured_region = _normalized_text(getattr(settings, "AWS_REGION", ""), default="eu-north-1")
+    return _normalized_text(region) or configured_region or "eu-north-1"
+
+
+def _root_key_observer_session_name() -> str:
+    base_name = _normalized_text(getattr(settings, "ROLE_SESSION_NAME", ""), default="security-autopilot-session")
+    return f"{base_name}-root-key-observer"[:64]
+
+
+def _build_root_key_observer_base_session(region: str | None) -> Any:
+    resolved_region = _root_key_observer_region(region)
+    profile = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE", ""))
+    access_key_id = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID", ""))
+    secret_access_key = _normalized_text(
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY", "")
+    )
+    session_token = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN", ""))
+
+    if profile and (access_key_id or secret_access_key or session_token):
+        raise _RootKeyObserverContextError(
+            code="observer_context_invalid",
+            message=(
+                "Root-key remediation observer context is invalid. Configure either "
+                "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE or the static observer credentials, not both."
+            ),
+            details={"reason": "observer_profile_and_static_credentials_conflict"},
+        )
+    if profile:
+        try:
+            return boto3.Session(profile_name=profile, region_name=resolved_region)
+        except Exception as exc:
+            raise _RootKeyObserverContextError(
+                code="observer_context_unavailable",
+                message=(
+                    "Root-key remediation observer context could not load the configured observer AWS profile. "
+                    "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+                ),
+                details={
+                    "reason": f"observer_profile_unavailable:{type(exc).__name__}",
+                    "profile": profile,
+                },
+            ) from exc
+    if access_key_id or secret_access_key or session_token:
+        if not access_key_id or not secret_access_key:
+            raise _RootKeyObserverContextError(
+                code="observer_context_invalid",
+                message=(
+                    "Root-key remediation observer context is incomplete. Static observer credentials require both "
+                    "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID and "
+                    "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY."
+                ),
+                details={"reason": "observer_static_credentials_incomplete"},
+            )
+        try:
+            return boto3.Session(
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key,
+                aws_session_token=session_token or None,
+                region_name=resolved_region,
+            )
+        except Exception as exc:
+            raise _RootKeyObserverContextError(
+                code="observer_context_unavailable",
+                message=(
+                    "Root-key remediation observer context could not load the configured static observer credentials. "
+                    "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+                ),
+                details={"reason": f"observer_static_session_unavailable:{type(exc).__name__}"},
+            ) from exc
+    raise _RootKeyObserverContextError(
+        code="observer_context_unavailable",
+        message=(
+            "Root-key remediation observer context is unavailable. Configure a separate observer AWS profile or "
+            "static observer credentials for /api/root-key-remediation-runs."
+        ),
+        details={"reason": "observer_base_credentials_unconfigured"},
+    )
+
+
+def _assume_root_key_observer_role_session(context: _RootKeyObserverRoleContext) -> Any:
+    resolved_region = _root_key_observer_region(context.region)
+    base_session = _build_root_key_observer_base_session(context.region)
+    try:
+        response = base_session.client("sts", region_name=resolved_region).assume_role(
+            RoleArn=context.role_read_arn,
+            RoleSessionName=_root_key_observer_session_name(),
+            ExternalId=context.external_id,
+        )
+    except Exception as exc:
+        raise _RootKeyObserverContextError(
+            code="observer_context_unavailable",
+            message=(
+                "Root-key remediation observer context could not assume the tenant read role. "
+                "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+            ),
+            details={
+                "reason": f"observer_role_assume_failed:{type(exc).__name__}",
+                "account_id": context.account_id,
+            },
+        ) from exc
+
+    credentials = response.get("Credentials") if isinstance(response, dict) else None
+    if not isinstance(credentials, dict):
+        raise _RootKeyObserverContextError(
+            code="observer_context_unavailable",
+            message="Root-key remediation observer context returned no usable credentials.",
+            details={
+                "reason": "observer_role_credentials_missing",
+                "account_id": context.account_id,
+            },
+        )
+
+    access_key_id = _normalized_text(credentials.get("AccessKeyId"))
+    secret_access_key = _normalized_text(credentials.get("SecretAccessKey"))
+    session_token = _normalized_text(credentials.get("SessionToken"))
+    if not access_key_id or not secret_access_key:
+        raise _RootKeyObserverContextError(
+            code="observer_context_unavailable",
+            message="Root-key remediation observer context returned incomplete credentials.",
+            details={
+                "reason": "observer_role_credentials_incomplete",
+                "account_id": context.account_id,
+            },
+        )
+    return boto3.Session(
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
+        aws_session_token=session_token or None,
+        region_name=resolved_region,
+    )
+
+
+async def _load_root_key_observer_role_context(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    correlation_id: str,
+) -> tuple[_RootKeyObserverRoleContext | None, JSONResponse | None]:
+    run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_id)
+    if run is None:
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="run_not_found",
+            message="Root-key remediation run not found in tenant scope.",
+        )
+    result = await db.execute(
+        select(AwsAccount).where(
+            AwsAccount.tenant_id == tenant_id,
+            AwsAccount.account_id == run.account_id,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="observer_context_unavailable",
+            message=(
+                "Root-key remediation observer context is unavailable because the tenant read role for this account "
+                "could not be resolved."
+            ),
+            retryable=True,
+            details={
+                "reason": "observer_account_registration_missing",
+                "account_id": run.account_id,
+            },
+        )
+    role_read_arn = _normalized_text(getattr(account, "role_read_arn", ""))
+    external_id = _normalized_text(getattr(account, "external_id", ""))
+    if not role_read_arn or not external_id:
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="observer_context_unavailable",
+            message=(
+                "Root-key remediation observer context is unavailable because the tenant read-role configuration is "
+                "incomplete."
+            ),
+            retryable=True,
+            details={
+                "reason": "observer_account_configuration_incomplete",
+                "account_id": run.account_id,
+            },
+        )
+    return (
+        _RootKeyObserverRoleContext(
+            account_id=run.account_id,
+            region=run.region,
+            role_read_arn=role_read_arn,
+            external_id=external_id,
+        ),
+        None,
+    )
+
+
+async def _build_executor_worker_with_observer_context(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    correlation_id: str,
+) -> tuple[RootKeyRemediationExecutorWorker | None, JSONResponse | None]:
+    observer_context, observer_err = await _load_root_key_observer_role_context(
+        db,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        correlation_id=correlation_id,
+    )
+    if observer_err is not None:
+        return None, observer_err
+    assert observer_context is not None
+    try:
+        observer_session = _assume_root_key_observer_role_session(observer_context)
+    except _RootKeyObserverContextError as exc:
+        return None, _observer_context_error_response(correlation_id=correlation_id, exc=exc)
+    return (
+        RootKeyRemediationExecutorWorker(
+            observer_session_factory=lambda *_: observer_session,
+        ),
+        None,
     )
 
 
@@ -1320,7 +1589,16 @@ async def disable_root_key_remediation_run(
     assert run_uuid is not None
     assert idempotency_key is not None
     override_reason = _operator_override_reason(operator_override_reason_header)
-    executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
+    executor_worker = None
+    if _use_executor_worker():
+        executor_worker, executor_err = await _build_executor_worker_with_observer_context(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            correlation_id=correlation_id,
+        )
+        if executor_err is not None:
+            return executor_err
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -1470,7 +1748,16 @@ async def delete_root_key_remediation_run(
     assert run_uuid is not None
     assert idempotency_key is not None
     override_reason = _operator_override_reason(operator_override_reason_header)
-    executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
+    executor_worker = None
+    if _use_executor_worker():
+        executor_worker, executor_err = await _build_executor_worker_with_observer_context(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            correlation_id=correlation_id,
+        )
+        if executor_err is not None:
+            return executor_err
     if executor_worker is None:
         return _error_response(
             correlation_id=correlation_id,

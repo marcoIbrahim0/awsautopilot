@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [IAM.4 authoritative observer-context fix on master (2026-03-16)](task_log.md#iam4-authoritative-observer-context-fix-on-master-2026-03-16)
+  - Added explicit observer AWS configuration and tenant read-role assumption for `/api/root-key-remediation-runs` so authoritative disable/delete can use a separate observer context instead of the same ambient mutation credential.
+  - Preserved generic IAM.4 metadata-only surfaces, kept real same-credential overlap fail-closed, added focused route/worker regressions, and documented the new observer runtime requirement.
 - [Remediation-profile Wave 6 Config.1 executable rollback proof fix on master (2026-03-16)](task_log.md#remediation-profile-wave-6-config1-executable-rollback-proof-fix-on-master-2026-03-16)
   - Fixed the Config.1 supported customer-run executable rollback defect by snapshotting exact pre-state into the Terraform bundle, shipping a bundle-local restore helper, and failing closed when exact cleanup cannot be proven.
   - Added focused Config bundle, grouped bundle metadata, and PR-automation rollback-note regressions, while preserving public strategy IDs and the existing manual/review downgrade boundaries.

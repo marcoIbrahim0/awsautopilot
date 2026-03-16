@@ -68,7 +68,7 @@ flowchart LR
 - Internal profiles/branches added: no new executable profile IDs; existing compatibility rows are wrapped by the root-key family adapter for generic read surfaces only.
 - Executable vs review/manual behavior: generic options and preview always surface `manual_guidance_only`; generic single-run create, grouped create, resend, and action-group bundle routes fail closed with `root_key_execution_authority`.
 - Tenant-default inputs used: none.
-- Runtime/preservation gates: additive metadata only; `preservation_summary.execution_authority` explicitly points to `/api/root-key-remediation-runs`.
+- Runtime/preservation gates: additive metadata only on generic surfaces; `preservation_summary.execution_authority` explicitly points to `/api/root-key-remediation-runs`. The authoritative disable/delete runtime now also requires a separate observer context built from explicit observer AWS credentials plus the tenant read role and fails closed when that observer path cannot be built.
 
 ### S3.2 `s3_bucket_block_public_access`
 

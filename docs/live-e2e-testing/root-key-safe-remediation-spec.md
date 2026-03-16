@@ -277,12 +277,15 @@ State transition contracts:
 - `POST /api/root-key-remediation-runs` now gates auto-forward transitions through discovery/classification when `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED=true`:
   - safe managed discovery (`unknown_count=0`, `partial_data=false`) -> transition to `migration`,
   - unknown dependency, partial discovery data, or discovery execution failure -> fail-closed transition to `needs_attention`.
-- `validate` and `rollback` are routed through `RootKeyRemediationStateMachineService`.
+- `validate` is routed through `RootKeyRemediationStateMachineService`.
+- `rollback` uses `RootKeyRemediationStateMachineService` when executor-worker runtime is disabled and `RootKeyRemediationExecutorWorker` when executor-worker runtime is enabled.
 - `delete` requires executor-worker runtime path:
   - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=false`, endpoint fails closed with `503 executor_unavailable`,
   - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=true`, delete execution is routed through `RootKeyRemediationExecutorWorker`.
 - When executor-worker path is enabled, `disable`/`rollback`/`delete` are executed through `RootKeyRemediationExecutorWorker` with:
   - self-cutoff prevention guard requiring a safe observer context,
+  - authoritative `disable` and `delete` preflight that eagerly builds a separate observer session from explicit observer base credentials plus the tenant `role_read_arn`,
+  - fail-closed `503 observer_context_unavailable` behavior when that observer context cannot be built or cannot assume the tenant read role,
   - disable monitor-window evidence (`health + usage`) capture,
   - automatic rollback + rollback alert task creation on breakage signals,
   - fail-closed delete gating (`validation passed`, `disable window clean`, `delete flag enabled`, `no unknown active dependencies`).
@@ -359,6 +362,10 @@ All defaults preserve current behavior:
 | `ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS` | `false` | Enforces transition guardrail checks in runtime path. |
 | `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED` | `false` | Enables root-key usage discovery and dependency classification path. |
 | `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED` | `false` | Enables guarded executor-worker behavior for disable/rollback/delete. |
+| `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE` | `""` | Optional AWS profile used as the separate observer base context for authoritative disable/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID` | `""` | Optional static AWS access key used as the separate observer base context for authoritative disable/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY` | `""` | Optional static AWS secret key used as the separate observer base context for authoritative disable/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN` | `""` | Optional static AWS session token used with the separate observer base context for authoritative disable/delete execution. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED` | `false` | Enables deterministic percent-based canary rollout on create-run. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT` | `100` | Canary selection percent when canary gating is enabled. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST` | `""` | Comma-separated tenant UUID bypass list for canary gating. |

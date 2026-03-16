@@ -272,6 +272,61 @@ def test_disable_clean_window_success(monkeypatch: pytest.MonkeyPatch) -> None:
     assert metadata.get("window_clean") is True
 
 
+def test_rollback_reactivates_root_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([("AKIAROLLBACK00001", "Inactive")])
+    mutation_session = _FakeSession("AKIAMUTATE000015", iam_client)
+    observer_session = _FakeSession("AKIAOBSERVER00015", iam_client)
+    usage_service = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=False, retries_used=0)
+    )
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: mutation_session,
+        observer_session_factory=lambda *_: observer_session,
+        usage_discovery_factory=lambda: usage_service,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    artifact_mock = AsyncMock(return_value=(MagicMock(), True))
+    task_mock = AsyncMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(f"{module}.create_root_key_remediation_artifact_idempotent", artifact_mock)
+    monkeypatch.setattr(f"{module}.create_root_key_external_task_idempotent", task_mock)
+
+    result = _run(
+        worker.execute_rollback(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-rollback-success",
+            rollback_reason="manual_validation_failed",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.rolled_back
+    assert service.rollback.await_count == 1
+    assert iam_client.update_calls == [("AKIAROLLBACK00001", "Active")]
+    rollback_artifacts = [
+        call for call in artifact_mock.await_args_list if call.kwargs.get("artifact_type") == "rollback_evidence"
+    ]
+    assert len(rollback_artifacts) == 1
+    metadata = rollback_artifacts[0].kwargs.get("metadata_json")
+    assert isinstance(metadata, dict)
+    assert metadata.get("rollback_summary", {}).get("reactivated_count") == 1
+    assert task_mock.await_count == 1
+
+
 def test_disable_breakage_signal_triggers_rollback_alert(monkeypatch: pytest.MonkeyPatch) -> None:
     tenant_id = uuid.uuid4()
     run = _build_run(
