@@ -74,6 +74,11 @@ def _make_action(
     })()
 
 
+def _bundle_file_content(bundle: dict[str, object], path: str) -> str:
+    file_item = next(item for item in bundle["files"] if item["path"] == path)
+    return str(file_item["content"])
+
+
 def test_pr_bundle_returns_dict_with_format_files_steps() -> None:
     """generate_pr_bundle returns format, files, steps."""
     action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
@@ -357,16 +362,17 @@ def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload(
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    content = _bundle_file_content(r, "aws_config_enabled.tf")
+    apply_script = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert 'RECORDER_PAYLOAD=$(cat <<JSON' in content
-    assert '"recordingGroup":{"allSupported":true,"includeGlobalResourceTypes":true}' in content
-    assert '--configuration-recorder "$RECORDER_PAYLOAD"' in content
-    assert 'recordingGroup={allSupported=true,includeGlobalResourceTypes=true}' not in content
     assert 'variable "overwrite_recording_group"' in content
     assert "default     = false" in content
-    assert 'OVERWRITE_RECORDING_GROUP="${var.overwrite_recording_group}"' in content
-    assert '[ "$OVERWRITE_RECORDING_GROUP" = "true" ]' in content
+    assert 'ROLLBACK_DIR=".aws-config-rollback"' in content
+    assert "python3 ./scripts/aws_config_apply.py" in content
+    assert "put-configuration-recorder" in apply_script
+    assert '"allSupported": True' in apply_script
+    assert '"includeGlobalResourceTypes": True' in apply_script
+    assert 'put_structured_payload("put-configuration-recorder"' in apply_script
 
 
 def test_pr_bundle_aws_config_enabled_preserves_selective_recorder_by_default() -> None:
@@ -378,11 +384,13 @@ def test_pr_bundle_aws_config_enabled_preserves_selective_recorder_by_default() 
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    content = _bundle_file_content(r, "aws_config_enabled.tf")
+    apply_script = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert 'RECORDER_ALL_SUPPORTED=$(aws configservice describe-configuration-recorders' in content
-    assert 'if [ "$RECORDER_EXISTS" = "false" ] || [ "$OVERWRITE_RECORDING_GROUP" = "true" ]; then' in content
-    assert "Preserving existing selective AWS Config recorder" in content
+    assert 'default     = false' in content
+    assert 'load_or_capture_snapshot(snapshot_dir, region=region, bucket=bucket)' in apply_script
+    assert 'if not bool(summary.get("recorder_exists")) or overwrite_recording_group:' in apply_script
+    assert "Preserving existing selective AWS Config recorder" in apply_script
 
 
 def test_pr_bundle_aws_config_enabled_reuses_existing_recorder_name() -> None:
@@ -394,12 +402,16 @@ def test_pr_bundle_aws_config_enabled_reuses_existing_recorder_name() -> None:
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    apply_script = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert "--query 'ConfigurationRecorders[0].name'" in content
-    assert '{"name":"$RECORDER_NAME","roleARN":"$ROLE_ARN"' in content
-    assert '--configuration-recorder-name "$RECORDER_NAME"' in content
-    assert 'RECORDER_NAME="security-autopilot-recorder"' in content
+    assert 'pre_configuration_recorders.json' in apply_script
+    assert 'recorder_name = str(summary.get("recorder_name") or "") or "security-autopilot-recorder"' in apply_script
+    assert 'delivery_name = str(summary.get("delivery_channel_name") or "") or "security-autopilot-delivery-channel"' in apply_script
+    assert 'target_bucket_created_by_apply' in apply_script
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/aws_config_restore.py",
+        "runner": "python3",
+    }
 
 
 def test_pr_bundle_aws_config_enabled_delivery_bucket_mismatch_warning_surfaces_in_readme() -> None:
@@ -411,13 +423,14 @@ def test_pr_bundle_aws_config_enabled_delivery_bucket_mismatch_warning_surfaces_
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
-    readme = next(f for f in r["files"] if f["path"] == "README.txt")["content"]
+    content = _bundle_file_content(r, "scripts/aws_config_apply.py")
+    readme = _bundle_file_content(r, "README.txt")
 
     assert "WARNING: Existing AWS Config delivery channel" in content
     assert "Config.1 preflight safeguards" in readme
     assert "Delivery safety: if an existing delivery channel points to a different bucket" in readme
     assert "Delivery fail-closed" in readme
+    assert "rollback/aws_config_restore.py" in readme
 
 
 def test_pr_bundle_aws_config_enabled_uses_explicit_region_for_s3_bucket_create() -> None:
@@ -429,14 +442,11 @@ def test_pr_bundle_aws_config_enabled_uses_explicit_region_for_s3_bucket_create(
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    content = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert 'aws s3api head-bucket --bucket "$BUCKET" --region "$REGION"' in content
-    assert 'aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null' in content
-    assert (
-        'aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" '
-        '--create-bucket-configuration LocationConstraint="$REGION" >/dev/null'
-    ) in content
+    assert '["aws", "s3api", "head-bucket", "--bucket", bucket, "--region", region]' in content
+    assert 'args = ["aws", "s3api", "create-bucket", "--bucket", bucket, "--region", region]' in content
+    assert 'f"LocationConstraint={region}"' in content
 
 
 def test_pr_bundle_aws_config_enabled_centralized_delivery_fails_closed_on_unreachable_bucket() -> None:
@@ -453,12 +463,12 @@ def test_pr_bundle_aws_config_enabled_centralized_delivery_fails_closed_on_unrea
         strategy_id="config_enable_centralized_delivery",
         strategy_inputs={"delivery_bucket": "centralized-config-bucket-111122223333"},
     )
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    content = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert 'if ! aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null 2>&1; then' in content
-    assert "create_local_bucket=false and delivery bucket '$BUCKET' is unreachable" in content
-    assert 'EXISTING_DELIVERY_BUCKET_STALE="false"' in content
-    assert "points to unreachable bucket '$EXISTING_DELIVERY_BUCKET'" in content
+    assert "create_local_bucket=false and delivery bucket" in content
+    assert "create_local_bucket=false and delivery bucket '{bucket}' is unreachable" in content
+    assert "points to unreachable bucket " in content
+    assert "'{existing_delivery_bucket}' and create_local_bucket=false cannot repair it." in content
     assert "create_local_bucket=false cannot repair it" in content
 
 
@@ -471,16 +481,56 @@ def test_pr_bundle_aws_config_enabled_merges_bucket_policy_before_put() -> None:
         control_id="Config.1",
     )
     r = generate_pr_bundle(action, "terraform")
-    content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.tf")["content"]
+    content = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
-    assert "get-bucket-policy" in content
-    assert 'REQUIRED_CONFIG_BUCKET_POLICY=$(cat <<JSON' in content
-    assert 'MERGED_CONFIG_BUCKET_POLICY=$(EXISTING_BUCKET_POLICY_RAW="$EXISTING_BUCKET_POLICY_RAW"' in content
-    assert "python3 - <<'PY'" in content
-    assert "merged_by_key" in content
-    assert '"Sid":"AWSConfigBucketPermissionsCheck"' in content
-    assert '"Sid":"AWSConfigBucketDelivery"' in content
-    assert '--policy "$MERGED_CONFIG_BUCKET_POLICY"' in content
+    assert "pre_target_bucket_state.json" in content
+    assert "build_required_bucket_policy" in content
+    assert "merge_bucket_policies" in content
+    assert '"Sid": "AWSConfigBucketPermissionsCheck"' in content
+    assert '"Sid": "AWSConfigBucketDelivery"' in content
+    assert "put_bucket_policy(bucket, region, merged_policy)" in content
+
+
+def test_pr_bundle_aws_config_enabled_captures_exact_pre_state_for_rollback() -> None:
+    """Config.1 executable bundle snapshots exact pre-state before mutation."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    apply_script = _bundle_file_content(r, "scripts/aws_config_apply.py")
+
+    assert "pre_configuration_recorders.json" in apply_script
+    assert "pre_configuration_recorder_status.json" in apply_script
+    assert "pre_delivery_channels.json" in apply_script
+    assert "pre_target_bucket_state.json" in apply_script
+    assert "pre_state_summary.json" in apply_script
+    assert "Exact AWS Config rollback is unsupported when multiple configuration recorders exist." in apply_script
+    assert "Exact AWS Config rollback is unsupported when multiple delivery channels exist." in apply_script
+
+
+def test_pr_bundle_aws_config_enabled_restore_script_restores_prior_state_instead_of_deleting_it() -> None:
+    """Config.1 rollback helper should restore captured state and fail closed on unsafe cleanup."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    restore_script = _bundle_file_content(r, "rollback/aws_config_restore.py")
+
+    assert "pre_configuration_recorders.json" in restore_script
+    assert "pre_delivery_channels.json" in restore_script
+    assert "pre_target_bucket_state.json" in restore_script
+    assert 'put_structured_payload("put-configuration-recorder", pre_recorder, region=region)' in restore_script
+    assert 'put_structured_payload("put-delivery-channel", pre_delivery, region=region)' in restore_script
+    assert '"delete-delivery-channel"' in restore_script
+    assert '"delete-configuration-recorder"' in restore_script
+    assert "Rollback would need to delete non-empty bucket" in restore_script
+    assert "exact rollback is not guaranteed." in restore_script
 
 
 def test_pr_bundle_aws_config_enabled_cloudformation_overwrite_toggle_defaults_safe() -> None:

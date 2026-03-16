@@ -320,7 +320,7 @@ Phase-1 migration rules captured in the source plan:
   - `config_enable_centralized_delivery`
   - `config_keep_exception`
   - `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn` can drive resolver-backed defaults without changing the public strategy IDs.
-  - Centralized or existing-bucket paths downgrade explicitly when bucket or KMS dependencies cannot be proven, while the already-safe local create-new path remains executable.
+  - Centralized or existing-bucket paths downgrade explicitly when bucket or KMS dependencies cannot be proven, while the supported Terraform customer-run executable path now snapshots exact pre-state and carries a bundle-local restore command that fails closed if exact rollback is no longer guaranteed.
 
 ## Tenant Remediation Settings
 

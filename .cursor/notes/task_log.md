@@ -1,5 +1,39 @@
 # Task Log
 
+## Remediation-profile Wave 6 Config.1 executable rollback proof fix on master (2026-03-16)
+
+**Task:** Fix the Config.1 supported customer-run executable rollback defect on current `master` only so grouped Terraform bundles preserve and restore exact pre-existing AWS Config recorder, recording mode, delivery-channel, target-bucket, optional KMS, and merged bucket-policy state instead of deleting live state during rollback, while keeping public strategy IDs unchanged and leaving manual/review downgrade behavior intact.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/aws_config_bundle_support.py** - added the dedicated Config bundle apply/restore helper templates that snapshot exact pre-state, preserve recorder and delivery-channel structure during apply, and fail closed during rollback when exact restoration is ambiguous.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py** - switched the Terraform Config.1 bundle to call the dedicated apply helper, ship the bundle-local restore helper, preserve rollback metadata through README generation, and document the exact rollback safeguards in the generated README.
+- **/Users/marcomaher/AWS Security Autopilot/backend/services/pr_automation.py** - taught PR automation rollback notes to prefer bundle-local rollback entries over the stale generic rollback command when a generated bundle declares an authoritative restore path.
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - preserved per-action bundle rollback metadata through both grouped bundle layouts so grouped customer-run bundles keep prefixed Config restore commands in the final bundle metadata and manifest.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py** - updated Config.1 bundle regressions to assert snapshot-backed apply behavior, exact restore-script generation, and fail-closed rollback handling for pre-existing default recorder and delivery-channel state.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_3_repo_aware_pr_automation.py** - added a focused regression proving grouped PR automation rollback notes use the prefixed bundle-local Config restore command instead of the generic stop-recorder placeholder.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - added grouped bundle generation coverage proving prefixed Config rollback metadata survives into mixed-tier bundle metadata and manifest output.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md** - documented that the supported Config Terraform path now depends on exact snapshot-backed rollback proof.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md** - updated the Wave 6 Config.1 family section and explicit boundary notes to reflect the new snapshot-backed executable rollback contract.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this Config.1 rollback fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, docs overview, and the cited March 15-16 Wave 6 Config.1 live evidence before changing code.
+- Confirmed the live defect: grouped Config.1 apply reused the pre-existing default recorder and delivery channel, redirected delivery to the remediation bucket, and then exposed only a generic stop-recorder rollback note, which led the live rollback sequence to delete existing AWS Config state.
+- Replaced the old inline Terraform `local-exec` mutation block with a dedicated Python apply helper that snapshots exact pre-state under `.aws-config-rollback/` before any mutation, preserves existing recorder and delivery-channel structure where possible, and records the mutation context needed for exact cleanup.
+- Added a dedicated bundle-local restore helper that replays the exact pre-remediation recorder, recorder status, delivery channel, and target-bucket policy state and refuses destructive cleanup when drift or non-empty created buckets make exact restoration uncertain.
+- Preserved the current public Config strategy IDs and existing downgrade/manual branches. The supported executable path remains the customer-run Terraform bundle path; the fix does not revive any archived SaaS-managed execution route.
+- Threaded bundle-local rollback metadata through grouped bundle generation and PR automation so grouped rollback notes now point at the real per-action restore helper instead of the stale generic `stop-configuration-recorder` placeholder.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py -q -k 'aws_config_enabled'` -> `13 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_3_repo_aware_pr_automation.py -q -k 'bundle_specific_grouped_config_restore_path'` -> `1 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q -k 'prefixed_config_rollback_entry_metadata or mixed_tier_layout_for_executable_and_review_required_actions'` -> `2 passed`
+
+**Technical debt / gotchas:**
+- The March 15-16 Wave 6 Config.1 live evidence remains pre-fix historical proof. A fresh live rerun is still required before any strict Wave 6 status package can claim the rollback defect is closed in live AWS evidence.
+- This fix lands on the supported Terraform customer-run bundle path. If CloudFormation Config execution ever needs authoritative support, it still needs equivalent snapshot-and-restore guarantees before it can be treated as the same executable safety boundary.
+
 ## Remediation-profile Wave 6 EC2.53 grouped supported-path parity fix on master (2026-03-16)
 
 **Task:** Fix the supported EC2.53 customer-run grouped PR-bundle mismatch on current `master` only so resolver-selected executable branches such as `close_and_revoke` preserve the same `deterministic_bundle` tier in grouped bundle generation that standalone preview already exposes, while keeping public strategy IDs unchanged, preserving existing downgrade/manual branches, and leaving archived SaaS execution routes untouched.

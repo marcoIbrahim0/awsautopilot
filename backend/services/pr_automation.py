@@ -5,7 +5,7 @@ import hashlib
 import json
 import posixpath
 import re
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from backend.models.action import Action
 from backend.services.remediation_strategy import get_rollback_command
@@ -36,7 +36,7 @@ def build_pr_automation_artifacts(
         return bundle, {}
     normalized_target = normalize_repo_target(repo_target, run_id=run_id, actions=actions)
     diff_summary = _build_diff_summary(bundle_files, normalized_target)
-    rollback_notes = _build_rollback_notes(actions, strategy_id)
+    rollback_notes = _build_rollback_notes(actions, strategy_id, bundle=bundle)
     control_context = _build_control_mapping_context(actions, control_mapping_rows)
     pr_payload = _build_pr_payload(actions, normalized_target, diff_summary, rollback_notes, control_context)
     enriched = dict(bundle)
@@ -122,8 +122,21 @@ def _diff_entry(file_item: dict[str, str], repo_target: dict[str, str] | None) -
     }
 
 
-def _build_rollback_notes(actions: Sequence[Action], strategy_id: str | None) -> dict[str, Any]:
-    entries = [_rollback_entry(action, strategy_id) for action in actions]
+def _build_rollback_notes(
+    actions: Sequence[Action],
+    strategy_id: str | None,
+    *,
+    bundle: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    bundle_rollback_entries = _bundle_rollback_entries(bundle)
+    entries = [
+        _rollback_entry(
+            action,
+            strategy_id,
+            bundle_rollback_entry=bundle_rollback_entries.get(str(action.id)),
+        )
+        for action in actions
+    ]
     return {
         "version": _ARTIFACT_VERSION,
         "artifact_type": "rollback_notes",
@@ -133,15 +146,47 @@ def _build_rollback_notes(actions: Sequence[Action], strategy_id: str | None) ->
     }
 
 
-def _rollback_entry(action: Action, strategy_id: str | None) -> dict[str, Any]:
+def _rollback_entry(
+    action: Action,
+    strategy_id: str | None,
+    *,
+    bundle_rollback_entry: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     return {
         "action_id": str(action.id),
         "action_type": action.action_type,
         "control_id": _clean(action.control_id) or "",
         "title": _clean(action.title) or action.action_type,
         "target_id": _clean(action.target_id) or "",
-        "rollback_command": _hydrate_rollback_command(action, strategy_id),
+        "rollback_command": _bundle_rollback_command(bundle_rollback_entry)
+        or _hydrate_rollback_command(action, strategy_id),
     }
+
+
+def _bundle_rollback_entries(bundle: Mapping[str, Any] | None) -> dict[str, dict[str, str]]:
+    metadata = bundle.get("metadata") if isinstance(bundle, Mapping) else None
+    raw_entries = metadata.get("bundle_rollback_entries") if isinstance(metadata, Mapping) else None
+    if not isinstance(raw_entries, Mapping):
+        return {}
+    entries: dict[str, dict[str, str]] = {}
+    for action_id, raw_entry in raw_entries.items():
+        if not isinstance(raw_entry, Mapping):
+            continue
+        path = _clean(raw_entry.get("path"))
+        runner = _clean(raw_entry.get("runner"))
+        if path and runner:
+            entries[str(action_id)] = {"path": path, "runner": runner}
+    return entries
+
+
+def _bundle_rollback_command(entry: Mapping[str, Any] | None) -> str:
+    if not isinstance(entry, Mapping):
+        return ""
+    path = _clean(entry.get("path"))
+    runner = _clean(entry.get("runner"))
+    if not path or not runner:
+        return ""
+    return f"{runner} ./{path}"
 
 
 def _build_control_mapping_context(

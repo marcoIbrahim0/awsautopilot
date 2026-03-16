@@ -905,6 +905,35 @@ def _prefixed_group_bundle_files(
     return files, has_terraform
 
 
+def _bundle_rollback_entry_for_action(
+    bundle: Mapping[str, Any],
+    *,
+    action_id: str,
+    folder: str | None = None,
+) -> dict[str, str] | None:
+    metadata = bundle.get("metadata")
+    raw_entries = metadata.get("bundle_rollback_entries") if isinstance(metadata, Mapping) else None
+    raw_entry = raw_entries.get(action_id) if isinstance(raw_entries, Mapping) else None
+    if not isinstance(raw_entry, Mapping):
+        return None
+    path = str(raw_entry.get("path") or "").strip().lstrip("./")
+    runner = str(raw_entry.get("runner") or "").strip()
+    if not path or not runner:
+        return None
+    prefixed_path = f"{folder}/{path}" if folder else path
+    return {"path": prefixed_path, "runner": runner}
+
+
+def _bundle_rollback_command(entry: Mapping[str, Any] | None) -> str:
+    if not isinstance(entry, Mapping):
+        return ""
+    path = str(entry.get("path") or "").strip()
+    runner = str(entry.get("runner") or "").strip()
+    if not path or not runner:
+        return ""
+    return f"{runner} ./{path}"
+
+
 def _grouped_action_record(
     action: Action,
     decision: _GroupedActionDecision,
@@ -914,6 +943,7 @@ def _grouped_action_record(
     tier_root: str,
     outcome: str,
     has_runnable_terraform: bool,
+    bundle_rollback_entry: Mapping[str, Any] | None = None,
     generation_error: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     action_id = str(action.id)
@@ -948,6 +978,11 @@ def _grouped_action_record(
         "finding_coverage": copy.deepcopy(dict(resolution.get("finding_coverage") or {})),
         "preservation_summary": copy.deepcopy(dict(resolution.get("preservation_summary") or {})),
     }
+    rollback_command = _bundle_rollback_command(bundle_rollback_entry)
+    if rollback_command:
+        record["bundle_rollback_command"] = rollback_command
+        record["bundle_rollback_path"] = str(bundle_rollback_entry.get("path") or "")
+        record["bundle_rollback_runner"] = str(bundle_rollback_entry.get("runner") or "")
     if generation_error is not None:
         record["generation_error"] = copy.deepcopy(dict(generation_error))
     return record
@@ -1275,6 +1310,7 @@ def _generate_group_pr_bundle(
     files: list[dict[str, str]] = []
     generated_action_ids: list[uuid.UUID] = []
     generated_action_count = 0
+    bundle_rollback_entries: dict[str, dict[str, str]] = {}
     skipped_actions: list[dict[str, str]] = []
     first_generation_error: PRBundleGenerationError | None = None
     run_all_script = """#!/usr/bin/env bash
@@ -1633,6 +1669,13 @@ echo "All action folders completed successfully."
         generated_action_count += 1
         generated_action_ids.append(action.id)
         manifest_lines.append(action_line)
+        rollback_entry = _bundle_rollback_entry_for_action(
+            per_action_bundle,
+            action_id=str(action.id),
+            folder=folder,
+        )
+        if rollback_entry is not None:
+            bundle_rollback_entries[str(action.id)] = rollback_entry
         for file_item in per_action_bundle.get("files", []):
             if not isinstance(file_item, dict):
                 continue
@@ -1710,6 +1753,7 @@ echo "All action folders completed successfully."
             "generated_action_count": generated_action_count,
             "skipped_action_count": len(skipped_actions),
             "skipped_actions": skipped_actions,
+            "bundle_rollback_entries": bundle_rollback_entries,
         },
     }
 
@@ -1724,6 +1768,7 @@ def _generate_mixed_tier_group_pr_bundle(
     files: list[dict[str, str]] = []
     records: list[dict[str, Any]] = []
     runnable_action_ids: list[uuid.UUID] = []
+    bundle_rollback_entries: dict[str, dict[str, str]] = {}
     skipped_actions: list[dict[str, Any]] = []
     first_generation_error: PRBundleGenerationError | None = None
     action_type = actions[0].action_type if actions else None
@@ -1746,6 +1791,7 @@ def _generate_mixed_tier_group_pr_bundle(
         folder = _safe_group_folder_name(action, index, root=tier_root)
         has_runnable_terraform = False
         generation_error: dict[str, Any] | None = None
+        rollback_entry: dict[str, str] | None = None
         if decision.support_tier == "deterministic_bundle":
             try:
                 per_action_bundle = generate_pr_bundle(
@@ -1782,6 +1828,13 @@ def _generate_mixed_tier_group_pr_bundle(
                     )
                 files.extend(action_files)
                 runnable_action_ids.append(action.id)
+                rollback_entry = _bundle_rollback_entry_for_action(
+                    per_action_bundle,
+                    action_id=str(action.id),
+                    folder=folder,
+                )
+                if rollback_entry is not None:
+                    bundle_rollback_entries[str(action.id)] = rollback_entry
         outcome = _grouped_action_outcome(
             decision.support_tier,
             has_runnable_terraform=has_runnable_terraform,
@@ -1794,6 +1847,7 @@ def _generate_mixed_tier_group_pr_bundle(
             tier_root=tier_root,
             outcome=outcome,
             has_runnable_terraform=has_runnable_terraform,
+            bundle_rollback_entry=rollback_entry,
             generation_error=generation_error,
         )
         records.append(record)
@@ -1883,6 +1937,7 @@ def _generate_mixed_tier_group_pr_bundle(
             "executable_action_count": int(tier_counts["executable"]),
             "review_required_action_count": int(tier_counts["review_required"]),
             "manual_guidance_action_count": int(tier_counts["manual_guidance"]),
+            "bundle_rollback_entries": bundle_rollback_entries,
         },
     }
 

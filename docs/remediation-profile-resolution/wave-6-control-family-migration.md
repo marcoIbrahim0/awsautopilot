@@ -122,9 +122,9 @@ flowchart LR
 
 - Public compatibility strategy IDs preserved: `config_enable_account_local_delivery`, `config_enable_centralized_delivery`, `config_keep_exception`.
 - Internal profiles/branches added: no new profile IDs; the local and centralized compatibility strategies now resolve through the Config delivery family, while `config_keep_exception` stays on the compatibility exception path.
-- Executable vs review/manual behavior: `config_enable_account_local_delivery` stays executable on the create-new local-delivery branch, but existing-bucket reuse and any requested KMS path downgrade unless their proof is present; `config_enable_centralized_delivery` downgrades to `review_required_bundle` until centralized bucket resolution, reachability, bucket-policy compatibility, and any requested KMS proof are present; `config_keep_exception` remains exception-only.
+- Executable vs review/manual behavior: `config_enable_account_local_delivery` stays executable on the supported Terraform customer-run branch only when the bundle can capture exact recorder, recorder-status, delivery-channel, and target-bucket-policy pre-state and ship a bundle-local restore command; existing-bucket reuse and any requested KMS path downgrade unless their proof is present; `config_enable_centralized_delivery` downgrades to `review_required_bundle` until centralized bucket resolution, reachability, bucket-policy compatibility, and any requested KMS proof are present; `config_keep_exception` remains exception-only.
 - Tenant-default inputs used: `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn`.
-- Preservation/runtime gates: runtime defaults from existing recorder/delivery-channel discovery, resolved `delivery_bucket_mode`, `HeadBucket` reachability, centralized bucket-policy compatibility, and KMS key validation.
+- Preservation/runtime gates: runtime defaults from existing recorder/delivery-channel discovery, resolved `delivery_bucket_mode`, exact pre-state snapshot capture for the recorder, recording mode, delivery channel, and target-bucket policy, `HeadBucket` reachability, centralized bucket-policy compatibility, and KMS key validation.
 
 ## Explicit Landed Boundaries
 
@@ -135,7 +135,7 @@ flowchart LR
 - S3.9 downgrades when source-bucket scope is ambiguous, the destination bucket is unresolved or equal to the source, or destination safety cannot be proven.
 - S3.15 downgrades when bucket scope is unproven, the customer-managed branch lacks `kms_key_arn`, the key is invalid/disabled/account-region mismatched, or key-policy/grant evidence is incomplete.
 - CloudTrail.1 keeps one public compatibility branch but now has explicit executable versus review boundaries driven by log-bucket reachability, external bucket-policy management, multi-region selection, and KMS proof.
-- Config.1 keeps local, centralized, and exception public branches. The executable boundary currently stays with safe local create-new delivery, while centralized delivery, existing-bucket reuse, and KMS-backed delivery require proof before they remain executable.
+- Config.1 keeps local, centralized, and exception public branches. The supported executable Terraform boundary now includes exact pre-state snapshot and bundle-local restore proof for the local branch, while centralized delivery, existing-bucket reuse, and KMS-backed delivery still require proof before they remain executable.
 
 ## Live AWS readiness notes from March 15, 2026
 

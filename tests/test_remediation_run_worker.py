@@ -1345,6 +1345,77 @@ def test_group_pr_bundle_mixed_tier_layout_for_executable_and_review_required_ac
     assert group_bundle.get("execution_root") == "executable/actions"
 
 
+def test_group_pr_bundle_mixed_tier_preserves_prefixed_config_rollback_entry_metadata() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("aws_config_enabled")
+    run.action.region = "eu-north-1"
+    run.action.control_id = "Config.1"
+    run.action.target_id = "123456789012|eu-north-1|AWS::::Account:123456789012|Config.1"
+    run.action.resource_id = run.action.target_id
+    review_action = _mock_group_action(
+        action_type="aws_config_enabled",
+        target_id="123456789012|eu-north-1|AWS::::Account:123456789012|Config.1-review",
+        title="Config review action",
+        control_id="Config.1",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(review_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="config_enable_account_local_delivery",
+            support_tier="deterministic_bundle",
+            decision_rationale="Exact rollback bundle",
+        ),
+        _group_action_resolution_payload(
+            action_id=review_action.id,
+            strategy_id="config_keep_exception",
+            support_tier="review_required_bundle",
+            decision_rationale="Metadata-only review action",
+        ),
+    ]
+    run.artifacts = {"selected_strategy": "config_enable_account_local_delivery"}
+    mock_session = _mock_group_session(run, [run.action, review_action])
+    bundle = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider"},
+            {"path": "aws_config_enabled.tf", "content": 'resource "null_resource" "config" {}'},
+            {"path": "rollback/aws_config_restore.py", "content": "# restore"},
+        ],
+        "steps": ["step one"],
+        "metadata": {
+            "bundle_rollback_entries": {
+                str(run.action.id): {
+                    "path": "rollback/aws_config_restore.py",
+                    "runner": "python3",
+                }
+            }
+        },
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle):
+            execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert isinstance(run.artifacts, dict)
+    pr_bundle = run.artifacts["pr_bundle"]
+    metadata = pr_bundle["metadata"]
+    rollback_entry = metadata["bundle_rollback_entries"][str(run.action.id)]
+    assert rollback_entry["runner"] == "python3"
+    assert rollback_entry["path"].startswith("executable/actions/")
+    assert rollback_entry["path"].endswith("/rollback/aws_config_restore.py")
+    manifest = json.loads(_bundle_files_by_path(run)["bundle_manifest.json"])
+    action_entry = next(item for item in manifest["actions"] if item["action_id"] == str(run.action.id))
+    assert action_entry["bundle_rollback_command"].startswith("python3 ./executable/actions/")
+    assert action_entry["bundle_rollback_command"].endswith("/rollback/aws_config_restore.py")
+
+
 def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> None:
     job = _make_job(mode="pr_only")
     run = _mock_run_with_action("s3_bucket_block_public_access")

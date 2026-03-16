@@ -32,6 +32,19 @@ def _action() -> SimpleNamespace:
     )
 
 
+def _config_action() -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
+        action_type="aws_config_enabled",
+        account_id="123456789012",
+        region="eu-north-1",
+        title="Enable AWS Config",
+        control_id="Config.1",
+        target_id="123456789012|eu-north-1|AWS::::Account:123456789012|Config.1",
+        resource_id="123456789012",
+    )
+
+
 def _repo_target() -> dict[str, str]:
     return {
         "provider": "gitlab",
@@ -238,3 +251,35 @@ def test_non_repo_bundle_flow_still_generates_bundle_without_pr_payload() -> Non
     paths = [item["path"] for item in files if isinstance(item, dict)]
     assert "providers.tf" in paths
     assert "pr_automation/diff_summary.json" in paths
+
+
+def test_repo_aware_rollback_notes_use_bundle_specific_grouped_config_restore_path() -> None:
+    action = _config_action()
+    grouped_path = "executable/actions/01-config/rollback/aws_config_restore.py"
+    bundle = {
+        "format": "terraform",
+        "files": [
+            {"path": "bundle_manifest.json", "content": "{}\n"},
+            {"path": grouped_path, "content": "# restore\n"},
+        ],
+        "steps": ["review", "apply"],
+        "metadata": {
+            "bundle_rollback_entries": {
+                str(action.id): {
+                    "path": grouped_path,
+                    "runner": "python3",
+                }
+            }
+        },
+    }
+
+    _bundle, artifacts = build_pr_automation_artifacts(
+        run_id="22222222-2222-2222-2222-222222222222",
+        actions=[action],
+        bundle=bundle,
+        repo_target=_repo_target(),
+        strategy_id="config_enable_account_local_delivery",
+        control_mapping_rows=_control_rows(),
+    )
+
+    assert artifacts["rollback_notes"]["entries"][0]["rollback_command"] == f"python3 ./{grouped_path}"
