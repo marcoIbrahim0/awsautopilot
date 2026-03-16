@@ -222,6 +222,7 @@ Each `non_executable_results[]` item includes:
 
 - executable actions stay in `action_results[]`
 - metadata-only review/manual actions are emitted through `non_executable_results[]`
+- the wrapper emits its callback templates as shell-quoted JSON literals, so tokens, blocked reasons, and mixed-result payloads survive bash parsing before `curl` submits them
 - wrapper failures still report metadata-only actions as non-executable instead of converting them into failed execution results
 - when grouped callback reporting is configured, successful bundle generation sets `started_at` but leaves the `ActionGroupRun` non-terminal until the later valid `finished` callback arrives
 - when grouped callback reporting is not configured, the legacy immediate-finish worker lifecycle remains unchanged

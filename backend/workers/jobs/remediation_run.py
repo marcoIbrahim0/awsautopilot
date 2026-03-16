@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import logging
 import json
+import shlex
 import time
 import uuid
 from dataclasses import dataclass
@@ -1177,14 +1178,20 @@ def _build_reporting_wrapper_script(
     if reporting_non_executable_results:
         finished_failed_template["non_executable_results"] = reporting_non_executable_results
 
+    shell_callback_url = shlex.quote(callback_url)
+    shell_report_token = shlex.quote(report_token)
+    shell_started_template = shlex.quote(json.dumps(started_template, separators=(",", ":")))
+    shell_finished_success_template = shlex.quote(json.dumps(finished_success_template, separators=(",", ":")))
+    shell_finished_failed_template = shlex.quote(json.dumps(finished_failed_template, separators=(",", ":")))
+
     return f"""#!/usr/bin/env bash
 set +e
 
-REPORT_URL={json.dumps(callback_url)}
-REPORT_TOKEN={json.dumps(report_token)}
-STARTED_TEMPLATE={json.dumps(started_template)}
-FINISHED_SUCCESS_TEMPLATE={json.dumps(finished_success_template)}
-FINISHED_FAILED_TEMPLATE={json.dumps(finished_failed_template)}
+REPORT_URL={shell_callback_url}
+REPORT_TOKEN={shell_report_token}
+STARTED_TEMPLATE={shell_started_template}
+FINISHED_SUCCESS_TEMPLATE={shell_finished_success_template}
+FINISHED_FAILED_TEMPLATE={shell_finished_failed_template}
 REPLAY_DIR="./.bundle-callback-replay"
 RUNNER="./run_actions.sh"
 

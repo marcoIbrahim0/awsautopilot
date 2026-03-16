@@ -1,5 +1,37 @@
 # Task Log
 
+## Remediation-profile Wave 6 grouped customer-run callback wrapper regression fix on master (2026-03-16)
+
+**Task:** Fix the supported grouped customer-run PR-bundle callback wrapper regression on current `master` only by making generated `run_all.sh` started/finished callback payloads shell-safe and JSON-safe, preserving mixed executable plus non-executable reporting, keeping archived SaaS execution routes untouched, and closing grouped runs truthfully after real bundle execution.
+
+**Files modified:**
+- **/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py** - changed the grouped reporting wrapper generator to emit shell-quoted JSON template assignments for `started` / `finished` callback payloads so bash preserves the full JSON bodies before the Python timestamp injector and `curl` post.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py** - added focused grouped-bundle regressions that reject the old malformed `STARTED_TEMPLATE={...}` shape and execute the generated wrapper end-to-end with stubbed `run_actions.sh` plus `curl`, proving valid started/finished JSON payloads and preserved mixed `non_executable_results[]`.
+- **/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py** - added a focused lifecycle regression proving a truthful `started` callback followed by a mixed executable plus non-executable `finished` callback finalizes the grouped run exactly once and persists the metadata-only action result.
+- **/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-5-mixed-tier-grouped-bundles.md** - documented that grouped `run_all.sh` now serializes callback templates as shell-quoted JSON literals so mixed callback payloads survive bash parsing intact.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md** - logged this grouped callback-wrapper fix.
+- **/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md** - added discoverability entry.
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index/log, docs overview, and the cited March 15-16 Wave 6 failure evidence before changing code.
+- Confirmed the supported customer-run grouped bundles emitted raw JSON object assignments such as `STARTED_TEMPLATE={...}` in `run_all.sh`, which caused shell `command not found` errors and then `json.decoder.JSONDecodeError` before the callback POSTs could complete.
+- Kept the supported customer-run PR-bundle model unchanged and did not touch any archived SaaS-managed plan/apply route.
+- Fixed the wrapper generation narrowly in `backend/workers/jobs/remediation_run.py` by shell-quoting the callback URL, token, and JSON payload templates before embedding them in `run_all.sh`.
+- Preserved the existing additive callback contract, including mixed executable `action_results[]` plus metadata-only `non_executable_results[]`.
+- Added a focused execution regression that runs the generated wrapper with stubbed `curl` and proves both callback bodies parse as JSON and preserve blocked-reason text that would have broken naive shell embedding.
+- Added a focused internal reporting regression that exercises the truthful grouped lifecycle (`started` then mixed `finished`) and proves the run reaches terminal `finished` state with the non-executable action persisted as `result_type=non_executable`.
+
+**Validation:**
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py -q -k 'group_pr_bundle_reporting_wrapper_includes_non_executable_results or reporting_wrapper_script_posts_shell_safe_json_payloads'` -> `2 passed`
+- `pytest /Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py -q -k 'group_runs_report_started_then_finished_succeeds or group_runs_report_finished_accepts_non_executable_results or group_runs_report_started_then_finished_with_non_executable_results_finalizes_run'` -> `3 passed`
+
+**Technical debt / gotchas:**
+- The cited March 15-16 Wave 6 live evidence folders still capture the pre-fix broken wrapper output. They remain historically correct; a fresh live rerun is still required before any strict Wave 6 status doc can claim the grouped callback defect is closed in live evidence.
+- The main worktree still contains unrelated dirty files and cache noise outside this fix; only the scoped worker, tests, docs, and task-history files should be staged or committed.
+
+**Open questions / TODOs:**
+- Re-run the saved Wave 6 grouped customer-run bundles or a fresh minimal live grouped scenario so the historical failure package gains a post-fix companion proving callback closure on AWS-backed execution.
+
 ## Remediation-profile Wave 6 final strict live AWS completion gate on master (2026-03-16)
 
 **Task:** Execute the final strict Wave 6 live-AWS completion gate on current `master` only, using customer-run PR bundles as the supported model, treating `/api/root-key-remediation-runs` as the sole IAM.4 execution authority, and refusing any documentation-only substitute for live executable plus downgrade/manual proof.

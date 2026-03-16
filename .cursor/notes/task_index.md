@@ -4,6 +4,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Remediation-profile Wave 6 grouped customer-run callback wrapper regression fix on master (2026-03-16)](task_log.md#remediation-profile-wave-6-grouped-customer-run-callback-wrapper-regression-fix-on-master-2026-03-16)
+  - Fixed the supported grouped customer-run `run_all.sh` callback wrapper so started/finished payload templates are shell-safe and JSON-safe without reviving any archived SaaS-managed execution route.
+  - Added focused wrapper-execution and grouped-finalization regressions, preserved mixed executable plus non-executable reporting, and kept grouped runs callback-managed until a truthful finished payload lands.
 - [Remediation-profile Wave 6 final strict live AWS completion gate on master (2026-03-16)](task_log.md#remediation-profile-wave-6-final-strict-live-aws-completion-gate-on-master-2026-03-16)
   - Executed the final strict Wave 6 gate on current `master` under the customer-run bundle model, captured the full evidence package under `docs/test-results/live-runs/20260315T235627Z-rem-profile-wave6-live-aws-completion-gate/`, and verified the gate remains negative.
   - Proved truthful live executable plus manual proofs for `S3.2`, `S3.9`, and `CloudTrail.1`, found blocking failures in `EC2.53`, `IAM.4`, and `Config.1`, documented partial status for `S3.5` / `S3.11` / `S3.15`, and recorded the high-severity grouped `run_all.sh` callback defect that still blocks `Wave 6 complete`.

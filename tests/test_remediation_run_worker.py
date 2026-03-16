@@ -10,8 +10,11 @@ Tests cover:
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,6 +38,7 @@ from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
 )
 from backend.workers.jobs.remediation_run import (
+    _build_reporting_wrapper_script as build_reporting_wrapper_script,
     _sync_download_bundle_group_runs as sync_download_bundle_group_runs,
     execute_remediation_run_job,
 )
@@ -1397,8 +1401,96 @@ def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> 
     assert str(second_action.id) in files_by_path["run_all.sh"]
     assert "review_required_bundle" in files_by_path["run_all.sh"]
     assert "review_required_metadata_only" in files_by_path["run_all.sh"]
+    assert 'STARTED_TEMPLATE={"token":' not in files_by_path["run_all.sh"]
+    assert "STARTED_TEMPLATE='" in files_by_path["run_all.sh"]
     assert 'RUNNER="./run_actions.sh"' in files_by_path["run_all.sh"]
     assert 'EXECUTION_ROOT="executable/actions"' in files_by_path["run_actions.sh"]
+
+
+def test_reporting_wrapper_script_posts_shell_safe_json_payloads(tmp_path: Path) -> None:
+    executable_action_id = uuid.uuid4()
+    review_action_id = uuid.uuid4()
+    payload_log = tmp_path / "payloads.jsonl"
+    run_all_path = tmp_path / "run_all.sh"
+    run_actions_path = tmp_path / "run_actions.sh"
+    bin_dir = tmp_path / "bin"
+    curl_path = bin_dir / "curl"
+
+    bin_dir.mkdir()
+    run_all_path.write_text(
+        build_reporting_wrapper_script(
+            callback_url="https://api.example.com/api/internal/group-runs/report",
+            report_token="signed-token",
+            action_ids=[executable_action_id],
+            non_executable_results=[
+                {
+                    "action_id": str(review_action_id),
+                    "support_tier": "review_required_bundle",
+                    "profile_id": "s3_review_profile",
+                    "strategy_id": "s3_review_strategy",
+                    "reason": "review_required_metadata_only",
+                    "blocked_reasons": ["operator's approval required"],
+                }
+            ],
+        ),
+        encoding="utf-8",
+    )
+    run_all_path.chmod(0o755)
+    run_actions_path.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    run_actions_path.chmod(0o755)
+    curl_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "payload=\"\"\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  case \"$1\" in\n"
+        "    -d)\n"
+        "      shift\n"
+        "      payload=\"$1\"\n"
+        "      ;;\n"
+        "  esac\n"
+        "  shift || true\n"
+        "done\n"
+        "printf '%s\\n' \"$payload\" >> \"$BUNDLE_TEST_PAYLOADS\"\n",
+        encoding="utf-8",
+    )
+    curl_path.chmod(0o755)
+
+    env = os.environ.copy()
+    env["BUNDLE_TEST_PAYLOADS"] = str(payload_log)
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+
+    completed = subprocess.run(
+        [str(run_all_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    payloads = [json.loads(line) for line in payload_log.read_text(encoding="utf-8").splitlines()]
+    assert [payload["event"] for payload in payloads] == ["started", "finished"]
+    assert payloads[0]["token"] == "signed-token"
+    assert "started_at" in payloads[0]
+    assert payloads[1]["action_results"] == [
+        {
+            "action_id": str(executable_action_id),
+            "execution_status": "success",
+        }
+    ]
+    assert payloads[1]["non_executable_results"] == [
+        {
+            "action_id": str(review_action_id),
+            "support_tier": "review_required_bundle",
+            "profile_id": "s3_review_profile",
+            "strategy_id": "s3_review_strategy",
+            "reason": "review_required_metadata_only",
+            "blocked_reasons": ["operator's approval required"],
+        }
+    ]
+    assert "finished_at" in payloads[1]
 
 
 def test_group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success() -> None:
