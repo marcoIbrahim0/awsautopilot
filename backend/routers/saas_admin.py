@@ -103,6 +103,16 @@ class AccountItemResponse(BaseModel):
     status: str
     last_validated_at: str | None
     created_at: str
+    ai_live_lookup_enabled: bool = False
+    ai_live_lookup_scope: str | None = None
+    ai_live_lookup_enabled_at: str | None = None
+    ai_live_lookup_enabled_by_user_id: str | None = None
+    ai_live_lookup_notes: str | None = None
+
+
+class AccountAiLiveLookupUpdateRequest(BaseModel):
+    enabled: bool
+    notes: str | None = Field(default=None, max_length=1000)
 
 
 class FindingItemResponse(BaseModel):
@@ -2060,9 +2070,52 @@ async def list_tenant_accounts(
             status=getattr(account.status, "value", account.status),
             last_validated_at=account.last_validated_at.isoformat() if account.last_validated_at else None,
             created_at=account.created_at.isoformat() if account.created_at else "",
+            ai_live_lookup_enabled=bool(account.ai_live_lookup_enabled),
+            ai_live_lookup_scope=account.ai_live_lookup_scope,
+            ai_live_lookup_enabled_at=account.ai_live_lookup_enabled_at.isoformat() if account.ai_live_lookup_enabled_at else None,
+            ai_live_lookup_enabled_by_user_id=str(account.ai_live_lookup_enabled_by_user_id) if account.ai_live_lookup_enabled_by_user_id else None,
+            ai_live_lookup_notes=account.ai_live_lookup_notes,
         )
         for account in accounts
     ]
+
+
+@router.patch("/tenants/{tenant_id}/aws-accounts/{account_id}/ai-live-lookup", response_model=AccountItemResponse)
+async def update_tenant_account_ai_live_lookup(
+    tenant_id: Annotated[str, Path()],
+    account_id: Annotated[str, Path(pattern=r"^\d{12}$")],
+    body: AccountAiLiveLookupUpdateRequest,
+    admin: Annotated[User, Depends(require_saas_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AccountItemResponse:
+    tenant_uuid = _parse_tenant_id(tenant_id)
+    await _get_tenant_or_404(db, tenant_uuid)
+    result = await db.execute(
+        select(AwsAccount).where(AwsAccount.tenant_id == tenant_uuid, AwsAccount.account_id == account_id)
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        raise HTTPException(status_code=404, detail="AWS account not found")
+    account.ai_live_lookup_enabled = body.enabled
+    account.ai_live_lookup_scope = "iam_readonly_v1" if body.enabled else None
+    account.ai_live_lookup_enabled_at = datetime.now(timezone.utc) if body.enabled else None
+    account.ai_live_lookup_enabled_by_user_id = admin.id if body.enabled else None
+    account.ai_live_lookup_notes = body.notes.strip() if body.notes else None
+    await db.commit()
+    await db.refresh(account)
+    return AccountItemResponse(
+        id=str(account.id),
+        account_id=account.account_id,
+        regions=account.regions or [],
+        status=getattr(account.status, "value", account.status),
+        last_validated_at=account.last_validated_at.isoformat() if account.last_validated_at else None,
+        created_at=account.created_at.isoformat() if account.created_at else "",
+        ai_live_lookup_enabled=bool(account.ai_live_lookup_enabled),
+        ai_live_lookup_scope=account.ai_live_lookup_scope,
+        ai_live_lookup_enabled_at=account.ai_live_lookup_enabled_at.isoformat() if account.ai_live_lookup_enabled_at else None,
+        ai_live_lookup_enabled_by_user_id=str(account.ai_live_lookup_enabled_by_user_id) if account.ai_live_lookup_enabled_by_user_id else None,
+        ai_live_lookup_notes=account.ai_live_lookup_notes,
+    )
 
 
 @router.get("/tenants/{tenant_id}/findings", response_model=FindingsListResponse)

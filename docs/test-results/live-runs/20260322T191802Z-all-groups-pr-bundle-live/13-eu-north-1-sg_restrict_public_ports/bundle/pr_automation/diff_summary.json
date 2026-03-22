@@ -1,0 +1,245 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 26,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 5534,
+      "change_type": "create_or_update",
+      "content_sha256": "abe9a6ee18ed4bc269761a7595546dfdd0374859442a4967b463911420c674ea",
+      "line_count": 72,
+      "repo_path": "run_all.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 9181,
+      "change_type": "create_or_update",
+      "content_sha256": "84f322dc00b4cd85839bdd84a577cc3e9b9a1473e60891b3eb218daa8ea1a5c8",
+      "line_count": 324,
+      "repo_path": "run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 1281,
+      "change_type": "create_or_update",
+      "content_sha256": "0715ad30764d7aaa48d787f13bb01b68deda8afa5479f942ff0ccad5f40837e8",
+      "line_count": 24,
+      "repo_path": "README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 6764,
+      "change_type": "create_or_update",
+      "content_sha256": "ed1a423efb18c90ab3dfadd54884f03db9fbc9d1c98a7ad508fec78db0f56ad3",
+      "line_count": 145,
+      "repo_path": "bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 1852,
+      "change_type": "create_or_update",
+      "content_sha256": "325570be547715fc337c71dc31b470d32d90572413f1f58de5d9ac1b425e7d6d",
+      "line_count": 30,
+      "repo_path": "decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 662,
+      "change_type": "create_or_update",
+      "content_sha256": "35feab37141acb5abd55a17bc3e236b9e0a13712567138252359088185410505",
+      "line_count": 25,
+      "repo_path": "finding_coverage.json"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/sg_restrict_public_ports.tf",
+      "byte_count": 5329,
+      "change_type": "create_or_update",
+      "content_sha256": "20265096a0d9e1f1622c9619d47013551406503ffe0afb682bfd19821c3ed1d9",
+      "line_count": 109,
+      "repo_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/sg_restrict_public_ports.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README.txt",
+      "byte_count": 2229,
+      "change_type": "create_or_update",
+      "content_sha256": "488827faf236d901b5267dd6493e09ef7e39a01b48f59ccd42d6066adafd40f1",
+      "line_count": 45,
+      "repo_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README_ACTION.txt",
+      "byte_count": 573,
+      "change_type": "create_or_update",
+      "content_sha256": "5112f11fdb7321ab811eb537282dadfed8b2d1dcedd082c573a52881b74fcd8c",
+      "line_count": 12,
+      "repo_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/decision.json",
+      "byte_count": 1457,
+      "change_type": "create_or_update",
+      "content_sha256": "f4c471091f6353e810c294137de54e72443f579e1bfa2c5d14947cb1a72cf85a",
+      "line_count": 31,
+      "repo_path": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/sg_restrict_public_ports.tf",
+      "byte_count": 5329,
+      "change_type": "create_or_update",
+      "content_sha256": "f8af654a1bebf70d0f607b36baf023b51325dd1722eb1529ab4389220dbdebce",
+      "line_count": 109,
+      "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/sg_restrict_public_ports.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README.txt",
+      "byte_count": 2229,
+      "change_type": "create_or_update",
+      "content_sha256": "488827faf236d901b5267dd6493e09ef7e39a01b48f59ccd42d6066adafd40f1",
+      "line_count": 45,
+      "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README_ACTION.txt",
+      "byte_count": 573,
+      "change_type": "create_or_update",
+      "content_sha256": "1660ee330dd7a0caff22e7d6670bc65d5a27a73eee4c2f188baac89ae00d5e7f",
+      "line_count": 12,
+      "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/decision.json",
+      "byte_count": 1457,
+      "change_type": "create_or_update",
+      "content_sha256": "e414d19da4cb6b1ac4dd91a75734d0023949f9ce4aec7a9947ab7c51483acf75",
+      "line_count": 31,
+      "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/sg_restrict_public_ports.tf",
+      "byte_count": 5337,
+      "change_type": "create_or_update",
+      "content_sha256": "c8ed997665175f6a516479e40fad74260cb1d5add239dcbac95c09af98c99532",
+      "line_count": 109,
+      "repo_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/sg_restrict_public_ports.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README.txt",
+      "byte_count": 2229,
+      "change_type": "create_or_update",
+      "content_sha256": "488827faf236d901b5267dd6493e09ef7e39a01b48f59ccd42d6066adafd40f1",
+      "line_count": 45,
+      "repo_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README_ACTION.txt",
+      "byte_count": 581,
+      "change_type": "create_or_update",
+      "content_sha256": "94202a735974a6116997dab1bd6072fcc3607ce37a5d4ea8cb4a3916a79e6078",
+      "line_count": 12,
+      "repo_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/decision.json",
+      "byte_count": 1386,
+      "change_type": "create_or_update",
+      "content_sha256": "6d58f6d5f28c0db828de139fb0903ca299fbe4c9504d4cce5f420b85794f1204",
+      "line_count": 31,
+      "repo_path": "executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/sg_restrict_public_ports.tf",
+      "byte_count": 5337,
+      "change_type": "create_or_update",
+      "content_sha256": "54113f8baf7077e969b6a629aa801bac66e376cfc3b791b33d56f779ef85b2b2",
+      "line_count": 109,
+      "repo_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/sg_restrict_public_ports.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README.txt",
+      "byte_count": 2229,
+      "change_type": "create_or_update",
+      "content_sha256": "488827faf236d901b5267dd6493e09ef7e39a01b48f59ccd42d6066adafd40f1",
+      "line_count": 45,
+      "repo_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README_ACTION.txt",
+      "byte_count": 581,
+      "change_type": "create_or_update",
+      "content_sha256": "91b58c89f977ee063f4e3c3ad25d83b69eb94d43604b4a46b9d0f22b8e2e33c6",
+      "line_count": 12,
+      "repo_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/decision.json",
+      "byte_count": 1386,
+      "change_type": "create_or_update",
+      "content_sha256": "354c628d51ce8c73e5fcd31bf17303bb54451a59bc552fa4526955b9cd2f2938",
+      "line_count": 31,
+      "repo_path": "executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "a65ccda9a1377fb27c72124a7d75961dfc08c7b131b929d5015d34405eb92d05",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`run_all.sh` <- `run_all.sh` (72 lines, sha256:abe9a6ee18ed)",
+    "`run_actions.sh` <- `run_actions.sh` (324 lines, sha256:84f322dc00b4)",
+    "`README_GROUP.txt` <- `README_GROUP.txt` (24 lines, sha256:0715ad30764d)",
+    "`bundle_manifest.json` <- `bundle_manifest.json` (145 lines, sha256:ed1a423efb18)",
+    "`decision_log.md` <- `decision_log.md` (30 lines, sha256:325570be5477)",
+    "`finding_coverage.json` <- `finding_coverage.json` (25 lines, sha256:35feab37141a)",
+    "`executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/providers.tf` <- `executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/sg_restrict_public_ports.tf` <- `executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/sg_restrict_public_ports.tf` (109 lines, sha256:20265096a0d9)",
+    "`executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README.txt` <- `executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README.txt` (45 lines, sha256:488827faf236)",
+    "`executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README_ACTION.txt` <- `executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/README_ACTION.txt` (12 lines, sha256:5112f11fdb73)",
+    "`executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/decision.json` <- `executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0abc603d/decision.json` (31 lines, sha256:f4c471091f63)",
+    "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/providers.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/sg_restrict_public_ports.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/sg_restrict_public_ports.tf` (109 lines, sha256:f8af654a1beb)",
+    "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README.txt` (45 lines, sha256:488827faf236)",
+    "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README_ACTION.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/README_ACTION.txt` (12 lines, sha256:1660ee330dd7)",
+    "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/decision.json` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-647784a7/decision.json` (31 lines, sha256:e414d19da4cb)",
+    "`executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/providers.tf` <- `executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/sg_restrict_public_ports.tf` <- `executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/sg_restrict_public_ports.tf` (109 lines, sha256:c8ed99766517)",
+    "`executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README.txt` <- `executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README.txt` (45 lines, sha256:488827faf236)",
+    "`executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README_ACTION.txt` <- `executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/README_ACTION.txt` (12 lines, sha256:94202a735974)",
+    "`executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/decision.json` <- `executable/actions/03-sg-0ef32ca8805a55a8b-970a2bf8/decision.json` (31 lines, sha256:6d58f6d5f28c)",
+    "`executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/providers.tf` <- `executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/sg_restrict_public_ports.tf` <- `executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/sg_restrict_public_ports.tf` (109 lines, sha256:54113f8baf70)",
+    "`executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README.txt` <- `executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README.txt` (45 lines, sha256:488827faf236)",
+    "`executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README_ACTION.txt` <- `executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/README_ACTION.txt` (12 lines, sha256:91b58c89f977)",
+    "`executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/decision.json` <- `executable/actions/04-sg-06f6252fa8a95b61d-9a8a19b3/decision.json` (31 lines, sha256:354c628d51ce)"
+  ],
+  "version": 1
+}

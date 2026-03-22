@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import uuid
 from dataclasses import asdict, dataclass
@@ -14,6 +15,7 @@ from backend.config import settings
 from backend.models.help_assistant_interaction import HelpAssistantInteraction
 from backend.models.user import User
 from backend.services.help_center import HelpArticleMatch
+from backend.services.help_live_iam import HelpLiveLookupState
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,14 @@ _MAX_ARTICLES = 3
 _MAX_ARTICLE_CHARS = 1200
 _MAX_FOLLOW_UPS = 3
 _MAX_CONTEXT_GAPS = 3
+_MAX_ANSWER_CHARS = 420
+_MAX_ANSWER_SENTENCES = 3
+_SECRET_PATTERNS = (
+    re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    re.compile(r"-----BEGIN [A-Z ]+PRIVATE KEY-----"),
+    re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9._-]+\.[A-Za-z0-9._-]+"),
+    re.compile(r"(?i)\bauthorization:\s*bearer\s+[A-Za-z0-9._-]+"),
+)
 
 
 @dataclass(slots=True)
@@ -59,6 +69,7 @@ class HelpAssistantRunResult:
     response_payload: dict[str, object]
     latency_ms: int | None
     error_code: str | None
+    live_lookup: dict[str, object] | None = None
 
 
 @dataclass(slots=True)
@@ -75,6 +86,7 @@ class HelpAssistantTurn:
     feedback_text: str | None
     created_at: str
     escalated_case_id: str | None
+    live_lookup: dict[str, object] | None = None
 
 
 @dataclass(slots=True)
@@ -103,8 +115,8 @@ def _citation_pool(matches: list[HelpArticleMatch]) -> dict[str, HelpAssistantCi
 def _fallback_result(matches: list[HelpArticleMatch], reason: str) -> HelpAssistantRunResult:
     citations = list(_citation_pool(matches).values())
     answer = (
-        "The AI assistant is temporarily unavailable for a grounded answer. "
-        "Open a support case so the team can review the exact tenant context."
+        "I can’t produce a grounded answer right now. "
+        "If you want, I can help open a support case."
     )
     if citations:
         answer = f"{answer}\n\nRelevant Help Center articles are still attached below."
@@ -125,12 +137,59 @@ def _fallback_result(matches: list[HelpArticleMatch], reason: str) -> HelpAssist
         response_payload={"fallback_reason": reason},
         latency_ms=None,
         error_code=reason,
+        live_lookup=None,
+    )
+
+
+def build_system_answer(
+    *,
+    answer: str,
+    matches: list[HelpArticleMatch],
+    confidence: str = "medium",
+    suggested_case: bool = False,
+    context_gaps: list[str] | None = None,
+    live_lookup: HelpLiveLookupState | None = None,
+) -> HelpAssistantRunResult:
+    citations = list(_citation_pool(matches).values())
+    result = HelpAssistantStructuredResult(
+        answer=answer.strip(),
+        confidence=confidence,
+        suggested_case=suggested_case,
+        citations=citations,
+        follow_up_questions=[],
+        context_gaps=context_gaps or [],
+    )
+    payload = {
+        "system": True,
+        "live_lookup": live_lookup.serialize() if live_lookup else None,
+    }
+    return HelpAssistantRunResult(
+        result=result,
+        provider_name="system",
+        model_name=None,
+        reasoning_effort=None,
+        usage=HelpAssistantUsage(),
+        response_payload=payload,
+        latency_ms=None,
+        error_code=None,
+        live_lookup=payload["live_lookup"],
     )
 
 
 def _sanitize_context(context: dict[str, object]) -> dict[str, object]:
     payload: dict[str, object] = {"current_path": context.get("current_path")}
-    for key in ("account", "action", "finding", "tenant_settings", "referenced_entities"):
+    for key in (
+        "account",
+        "action",
+        "finding",
+        "tenant_settings",
+        "referenced_entities",
+        "platform_summary",
+        "live_lookup",
+        "live_iam_snapshot",
+        "security_references",
+        "resolved_account_id",
+    ):
         value = context.get(key)
         if value:
             payload[key] = value
@@ -165,11 +224,16 @@ def _developer_prompt() -> str:
     return "\n".join(
         [
             "You are the Help Hub assistant for AWS Security Autopilot.",
-            "Use only the provided help articles and SaaS context.",
+            "Respond naturally and briefly to greetings or vague questions. Ask for clarification if needed.",
+            "Default to at most 2 short sentences or 3 short bullets unless the user explicitly asks for detail.",
+            "Use only the provided help articles and platform-visible SaaS context to inform your answers.",
+            "When discussing the customer's current posture or score, use only metrics present in platform_summary.",
+            "Do not mention hidden totals, backend-only data, raw payloads, request context internals, or internal field names.",
+            "When live IAM observations are provided, treat them as current read-only account state.",
             "Do not invent product state, hidden data, secrets, or unsupported features.",
-            "If the provided evidence is weak or incomplete, set suggested_case to true.",
+            "If the user asks a specific technical question and the provided evidence is weak or incomplete, set suggested_case to true and OFFER to help them open a support case. Do not state that you have opened or created a case automatically.",
             "Citations must use only article slugs present in the supplied article packets.",
-            "Keep answers concise, product-specific, and read-only.",
+            "Keep answers product-specific, read-only, concise, and clearly separate platform data from live observations.",
         ]
     )
 
@@ -333,10 +397,43 @@ def _structured_result(payload: dict[str, object], matches: list[HelpArticleMatc
 
 def _validated_result(payload: dict[str, object], matches: list[HelpArticleMatch]) -> HelpAssistantStructuredResult:
     result = _structured_result(payload, matches)
-    if not result.citations:
-        raise ValueError("missing_citations")
     if result.confidence == "low":
         result.suggested_case = True
+    return _finalize_result(result)
+
+
+def _contains_secret_like_content(text: str) -> bool:
+    return any(pattern.search(text or "") for pattern in _SECRET_PATTERNS)
+
+
+def _trim_answer(answer: str) -> str:
+    compact = re.sub(r"\s+", " ", (answer or "").strip())
+    if len(compact) <= _MAX_ANSWER_CHARS:
+        return compact
+    sentences = re.split(r"(?<=[.!?])\s+", compact)
+    shortened = " ".join(sentences[:_MAX_ANSWER_SENTENCES]).strip()
+    if shortened and len(shortened) <= _MAX_ANSWER_CHARS:
+        return shortened
+    return compact[: _MAX_ANSWER_CHARS - 3].rstrip() + "..."
+
+
+def _blocked_secret_result(result: HelpAssistantStructuredResult) -> HelpAssistantStructuredResult:
+    gaps = list(result.context_gaps)
+    gaps.append("I can only share platform-visible information and cannot expose secrets or internal-only data.")
+    return HelpAssistantStructuredResult(
+        answer="I can only share platform-visible information. I can’t reveal secrets or internal-only data.",
+        confidence="medium",
+        suggested_case=True,
+        citations=result.citations,
+        follow_up_questions=[],
+        context_gaps=gaps[:_MAX_CONTEXT_GAPS],
+    )
+
+
+def _finalize_result(result: HelpAssistantStructuredResult) -> HelpAssistantStructuredResult:
+    if _contains_secret_like_content(result.answer):
+        return _blocked_secret_result(result)
+    result.answer = _trim_answer(result.answer)
     return result
 
 
@@ -388,6 +485,7 @@ async def generate_help_assistant_answer(
         response_payload=payload,
         latency_ms=latency_ms,
         error_code=None,
+        live_lookup=None,
     )
 
 
@@ -455,6 +553,7 @@ def _serialize_citations(raw: object, slugs: list[str]) -> list[HelpAssistantCit
 
 
 def _serialize_turn(interaction: HelpAssistantInteraction) -> HelpAssistantTurn:
+    live_lookup = interaction.response_payload.get("live_lookup") if isinstance(interaction.response_payload, dict) else None
     return HelpAssistantTurn(
         interaction_id=str(interaction.id),
         question=interaction.question,
@@ -468,6 +567,7 @@ def _serialize_turn(interaction: HelpAssistantInteraction) -> HelpAssistantTurn:
         feedback_text=interaction.feedback_text,
         created_at=interaction.created_at.isoformat() if interaction.created_at else "",
         escalated_case_id=str(interaction.escalated_case_id) if interaction.escalated_case_id else None,
+        live_lookup=live_lookup if isinstance(live_lookup, dict) else None,
     )
 
 
@@ -489,6 +589,7 @@ def serialize_help_thread(thread: HelpAssistantThread) -> dict[str, object]:
                 "feedback_text": turn.feedback_text,
                 "created_at": turn.created_at,
                 "escalated_case_id": turn.escalated_case_id,
+                "live_lookup": turn.live_lookup,
             }
             for turn in thread.turns
         ],

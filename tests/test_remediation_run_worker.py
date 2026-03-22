@@ -857,6 +857,9 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert 'terraform init -input=false -lockfile=readonly' in content
     assert 'grep -q "Provider dependency changes detected" "$log_file"' in content
     assert "refreshing lockfile." in content
+    assert "prepare_action_workspace" in content
+    assert "cleanup_action_workspace" in content
+    assert "aws-security-autopilot-tf-" in content
     assert 'include = ["registry.terraform.io/hashicorp/aws"]' in content
     assert 'version = "= 5.100.0"' in content
     assert "5.100.0" in content
@@ -1303,6 +1306,7 @@ def test_group_pr_bundle_mixed_tier_layout_for_executable_and_review_required_ac
     assert review_entry["has_runnable_terraform"] is False
     run_all = files_by_path["run_all.sh"]
     assert 'EXECUTION_ROOT="executable/actions"' in run_all
+    assert "prepare_action_workspace" in run_all
     assert "review_required/actions" not in run_all
     assert "manual_guidance/actions" not in run_all
     decision_log = files_by_path["decision_log.md"]
@@ -1457,6 +1461,7 @@ def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> 
     assert "STARTED_TEMPLATE='" in files_by_path["run_all.sh"]
     assert 'RUNNER="./run_actions.sh"' in files_by_path["run_all.sh"]
     assert 'EXECUTION_ROOT="executable/actions"' in files_by_path["run_actions.sh"]
+    assert "prepare_action_workspace" in files_by_path["run_actions.sh"]
 
 
 def test_reporting_wrapper_script_posts_shell_safe_json_payloads(tmp_path: Path) -> None:

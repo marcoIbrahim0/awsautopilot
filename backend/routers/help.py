@@ -18,6 +18,7 @@ from backend.models.help_case import HelpCase
 from backend.models.help_case_message import HelpCaseMessage
 from backend.models.user import User
 from backend.services.help_assistant import (
+    build_system_answer,
     generate_help_assistant_answer,
     get_help_thread,
     list_thread_history,
@@ -45,6 +46,11 @@ from backend.services.help_center import (
     serialize_help_match,
 )
 from backend.services.help_context import build_help_context
+from backend.services.help_live_iam import (
+    build_ingested_security_references,
+    resolve_live_lookup_state,
+    run_live_iam_lookup,
+)
 from backend.services.help_notifications import (
     create_help_case_notification,
     send_help_case_admin_email,
@@ -145,6 +151,7 @@ class HelpAssistantRequest(BaseModel):
     action_id: str | None = Field(default=None, max_length=64)
     finding_id: str | None = Field(default=None, max_length=64)
     request_human: bool = False
+    confirm_live_lookup: bool = False
 
 
 class HelpAssistantFeedbackRequest(BaseModel):
@@ -161,8 +168,8 @@ class HelpAssistantResponse(BaseModel):
     citations: list[dict[str, str]]
     follow_up_questions: list[str] = Field(default_factory=list)
     context_gaps: list[str] = Field(default_factory=list)
-    context: dict[str, Any]
     escalated_case_id: str | None = None
+    live_lookup: dict[str, Any] | None = None
 
 
 class HelpAssistantTurnResponse(BaseModel):
@@ -178,6 +185,7 @@ class HelpAssistantTurnResponse(BaseModel):
     feedback_text: str | None = None
     created_at: str
     escalated_case_id: str | None = None
+    live_lookup: dict[str, Any] | None = None
 
 
 class HelpAssistantThreadResponse(BaseModel):
@@ -243,6 +251,27 @@ def _help_subject(question: str) -> str:
     if len(compact) <= 120:
         return compact
     return f"{compact[:117]}..."
+
+
+def _interaction_live_lookup(interaction: HelpAssistantInteraction) -> dict[str, Any] | None:
+    if not isinstance(interaction.response_payload, dict):
+        return None
+    return interaction.response_payload.get("live_lookup")
+
+
+def _assistant_response(interaction: HelpAssistantInteraction) -> HelpAssistantResponse:
+    return HelpAssistantResponse(
+        thread_id=str(interaction.thread_id),
+        interaction_id=str(interaction.id),
+        answer=interaction.response_text,
+        confidence=interaction.confidence,
+        suggested_case=bool(interaction.suggested_case),
+        citations=list(interaction.citations or []),
+        follow_up_questions=list(interaction.follow_up_questions or []),
+        context_gaps=list(interaction.context_gaps or []),
+        escalated_case_id=str(interaction.escalated_case_id) if interaction.escalated_case_id else None,
+        live_lookup=_interaction_live_lookup(interaction),
+    )
 
 
 def _parse_optional_thread_id(thread_id: str | None) -> uuid.UUID | None:
@@ -478,12 +507,52 @@ async def query_help_assistant(
         published_only=True,
     )
     history = await list_thread_history(db, current_user=current_user, thread_id=thread_uuid)
-    answer_run = await generate_help_assistant_answer(
+    live_lookup_state, live_lookup_account = await resolve_live_lookup_state(
+        db,
+        current_user=current_user,
         question=body.question,
         context=context,
-        matches=matches,
-        history=history,
+        confirm_live_lookup=body.confirm_live_lookup,
     )
+    if live_lookup_state.status == "account_selection_required":
+        answer_run = build_system_answer(
+            answer=live_lookup_state.message or "Select an account before I run a live IAM security check.",
+            matches=matches,
+            confidence="medium",
+            live_lookup=live_lookup_state,
+        )
+    elif live_lookup_state.status == "pending_confirmation":
+        references = await build_ingested_security_references(
+            db,
+            tenant_id=current_user.tenant_id,
+            account_id=live_lookup_state.account_id,
+        )
+        context["live_lookup"] = live_lookup_state.serialize()
+        context["security_references"] = references
+        answer_run = build_system_answer(
+            answer=live_lookup_state.message or "Confirm if you want me to run a live read-only IAM check.",
+            matches=matches,
+            confidence="medium",
+            live_lookup=live_lookup_state,
+        )
+    else:
+        if live_lookup_state.status == "ready" and live_lookup_account is not None:
+            executed_lookup = await run_live_iam_lookup(account=live_lookup_account, current_user=current_user)
+            context["live_iam_snapshot"] = executed_lookup.serialize()
+            live_lookup_state = executed_lookup
+        elif live_lookup_state.status in {"disabled", "failed"}:
+            context["live_lookup"] = live_lookup_state.serialize()
+        answer_run = await generate_help_assistant_answer(
+            question=body.question,
+            context=context,
+            matches=matches,
+            history=history,
+        )
+        answer_run.live_lookup = live_lookup_state.serialize()
+        answer_run.response_payload = {
+            "provider_payload": answer_run.response_payload,
+            "live_lookup": answer_run.live_lookup,
+        }
     answer = answer_run.result
     interaction = HelpAssistantInteraction(
         tenant_id=current_user.tenant_id,
@@ -510,7 +579,7 @@ async def query_help_assistant(
     )
     db.add(interaction)
     escalated_case_id = None
-    if answer.suggested_case or body.request_human:
+    if body.request_human:
         assistant_case_message = _assistant_case_message(
             history=history,
             answer_text=answer.answer,
@@ -545,18 +614,10 @@ async def query_help_assistant(
         )
     await db.commit()
     await db.refresh(interaction)
-    return HelpAssistantResponse(
-        thread_id=str(interaction.thread_id),
-        interaction_id=str(interaction.id),
-        answer=interaction.response_text,
-        confidence=interaction.confidence,
-        suggested_case=bool(interaction.suggested_case),
-        citations=interaction.citations,
-        follow_up_questions=list(interaction.follow_up_questions or []),
-        context_gaps=list(interaction.context_gaps or []),
-        context=context,
-        escalated_case_id=escalated_case_id,
-    )
+    response = _assistant_response(interaction)
+    response.escalated_case_id = escalated_case_id
+    response.live_lookup = answer_run.live_lookup
+    return response
 
 
 @router.post("/assistant/{interaction_id}/feedback", response_model=HelpAssistantResponse)
@@ -583,18 +644,65 @@ async def update_help_assistant_feedback(
     interaction.helpful = body.helpful
     interaction.feedback_text = body.feedback_text.strip() if body.feedback_text else None
     await db.commit()
-    return HelpAssistantResponse(
-        thread_id=str(interaction.thread_id),
-        interaction_id=str(interaction.id),
-        answer=interaction.response_text,
-        confidence=interaction.confidence,
-        suggested_case=bool(interaction.suggested_case),
-        citations=list(interaction.citations or []),
-        follow_up_questions=list(interaction.follow_up_questions or []),
-        context_gaps=list(interaction.context_gaps or []),
-        context=interaction.request_context,
-        escalated_case_id=str(interaction.escalated_case_id) if interaction.escalated_case_id else None,
+    return _assistant_response(interaction)
+
+
+@router.post("/assistant/{interaction_id}/approve-case", response_model=HelpAssistantResponse)
+async def approve_help_assistant_case(
+    interaction_id: Annotated[str, Path(min_length=1, max_length=64)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> HelpAssistantResponse:
+    try:
+        interaction_uuid = uuid.UUID(interaction_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="interaction_id must be a valid UUID") from exc
+    result = await db.execute(
+        select(HelpAssistantInteraction).where(
+            HelpAssistantInteraction.id == interaction_uuid,
+            HelpAssistantInteraction.user_id == current_user.id,
+            HelpAssistantInteraction.tenant_id == current_user.tenant_id,
+        )
     )
+    interaction = result.scalar_one_or_none()
+    if interaction is None:
+        raise HTTPException(status_code=404, detail="Help assistant interaction not found")
+    if interaction.escalated_case_id is None:
+        history = await list_thread_history(db, current_user=current_user, thread_id=interaction.thread_id)
+        assistant_case_message = _assistant_case_message(
+            history=history[:-1],
+            answer_text=interaction.response_text,
+            citations=list(interaction.citations or []),
+            context_gaps=list(interaction.context_gaps or []),
+        )
+        case = await _create_case(
+            db,
+            current_user=current_user,
+            subject=_help_subject(interaction.question),
+            category="other",
+            priority="normal",
+            source="ai_escalation",
+            body=interaction.question,
+            current_path=interaction.current_path,
+            referenced_entities=list(interaction.referenced_entities or []),
+            include_assistant_message=assistant_case_message,
+        )
+        interaction.escalated_case_id = case.id
+        await create_help_case_notification(
+            db,
+            recipient=current_user,
+            case=case,
+            event="created",
+            message="Your AI escalation was converted into a support case.",
+        )
+        send_help_case_admin_email(
+            case=case,
+            subject="New help case from AI escalation",
+            summary=f"{current_user.email} escalated a help request from {interaction.current_path or 'the app'}.",
+        )
+        await db.commit()
+        await db.refresh(interaction)
+    return _assistant_response(interaction)
 
 
 @router.get("/assistant/threads/{thread_id}", response_model=HelpAssistantThreadResponse)

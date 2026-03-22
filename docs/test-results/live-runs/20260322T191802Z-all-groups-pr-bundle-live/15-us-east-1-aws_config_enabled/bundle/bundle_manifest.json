@@ -1,0 +1,237 @@
+{
+  "action_count": 5,
+  "actions": [
+    {
+      "action_id": "202e02c7-f2c1-4c24-b81a-11168acad054",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [
+        "AWS Config delivery bucket reachability has not been proven from this account context.",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+      ],
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/01-aws-account-696505809372-202e02c7",
+      "has_runnable_terraform": false,
+      "index": 1,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "config-bucket-696505809372",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "config-bucket-696505809372",
+        "recording_scope": "keep_existing"
+      },
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|us-east-1|AWS::::Account:696505809372|Config.1",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+    },
+    {
+      "action_id": "73097c11-174c-4597-85a2-9af793842e8d",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [
+        "AWS Config delivery bucket reachability has not been proven from this account context.",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+      ],
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/02-arn-aws-config-us-east-1-696505809372-config-rul-73097c11",
+      "has_runnable_terraform": false,
+      "index": 2,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "config-bucket-696505809372",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "config-bucket-696505809372",
+        "recording_scope": "keep_existing"
+      },
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|us-east-1|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev|Config.1",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Synthetic Config finding with trusted threat intel"
+    },
+    {
+      "action_id": "5acc7d0e-e361-474f-9efa-c200a0358f0d",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [
+        "AWS Config delivery bucket reachability has not been proven from this account context.",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+      ],
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/03-arn-aws-config-us-east-1-696505809372-config-rul-5acc7d0e",
+      "has_runnable_terraform": false,
+      "index": 3,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "config-bucket-696505809372",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "config-bucket-696505809372",
+        "recording_scope": "keep_existing"
+      },
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|us-east-1|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-lowconf|Config.1",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Synthetic Config finding with low-confidence threat intel"
+    },
+    {
+      "action_id": "a3d1ad9b-8cb7-47cc-b271-cb15f26dffd1",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [
+        "AWS Config delivery bucket reachability has not been proven from this account context.",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+      ],
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/04-arn-aws-config-us-east-1-696505809372-config-rul-a3d1ad9b",
+      "has_runnable_terraform": false,
+      "index": 4,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "config-bucket-696505809372",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "config-bucket-696505809372",
+        "recording_scope": "keep_existing"
+      },
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|us-east-1|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-no-ti|Config.1",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Synthetic Config finding without trusted threat intel"
+    },
+    {
+      "action_id": "18de803d-b7cd-4df8-ad30-1604dcb05cd5",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [
+        "AWS Config delivery bucket reachability has not been proven from this account context.",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+      ],
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' for strategy 'config_enable_account_local_delivery' but downgraded executability. AWS Config delivery bucket reachability has not been proven from this account context. AWS Config delivery bucket policy compatibility has not been proven from this account context. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "review_required/actions/05-arn-aws-config-us-east-1-696505809372-config-rul-18de803d",
+      "has_runnable_terraform": false,
+      "index": 5,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "review_required_metadata_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "config-bucket-696505809372",
+        "delivery_bucket_mode": "use_existing",
+        "existing_bucket_name": "config-bucket-696505809372",
+        "recording_scope": "keep_existing"
+      },
+      "support_tier": "review_required_bundle",
+      "target_id": "696505809372|us-east-1|arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-aged-kev|Config.1",
+      "tier": "review_required",
+      "tier_root": "review_required/actions",
+      "title": "Synthetic Config finding with aged trusted threat intel"
+    }
+  ],
+  "execution_root": "executable/actions",
+  "grouped_actions": [
+    "202e02c7-f2c1-4c24-b81a-11168acad054",
+    "73097c11-174c-4597-85a2-9af793842e8d",
+    "5acc7d0e-e361-474f-9efa-c200a0358f0d",
+    "a3d1ad9b-8cb7-47cc-b271-cb15f26dffd1",
+    "18de803d-b7cd-4df8-ad30-1604dcb05cd5"
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 0,
+  "runner_template_source": "embedded_mixed_tier",
+  "runner_template_version": "grouped_bundle_mixed_tier/v1",
+  "tier_counts": {
+    "executable": 0,
+    "manual_guidance": 0,
+    "review_required": 5
+  }
+}

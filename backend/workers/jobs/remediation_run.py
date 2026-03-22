@@ -666,6 +666,46 @@ terraform_init_with_lockfile_fallback() {{
   )
 }}
 
+copy_action_folder_to_workspace() {{
+  local source_dir="$1"
+  local workspace_dir="$2"
+
+  mkdir -p "$workspace_dir"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' "$source_dir"/ "$workspace_dir"/
+    return 0
+  fi
+
+  (
+    cd "$source_dir"
+    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .
+  ) | (
+    cd "$workspace_dir"
+    tar -xf -
+  )
+}}
+
+prepare_action_workspace() {{
+  local source_dir="$1"
+  local workspace_root workspace_dir
+
+  workspace_root=$(mktemp -d "${{TMPDIR:-/tmp}}/aws-security-autopilot-tf-XXXXXX")
+  workspace_dir="${{workspace_root}}/action"
+  if ! copy_action_folder_to_workspace "$source_dir" "$workspace_dir"; then
+    rm -rf "$workspace_root"
+    return 1
+  fi
+  printf '%s\\n' "$workspace_dir"
+}}
+
+cleanup_action_workspace() {{
+  local workspace_dir="$1"
+  local workspace_root
+
+  workspace_root=$(dirname "$workspace_dir")
+  rm -rf "$workspace_root"
+}}
+
 collect_action_dirs() {{
   local dir
   while IFS= read -r dir; do
@@ -791,6 +831,7 @@ FAILED_COUNT=0
 FAILED_ACTIONS=()
 
 for dir in "${{ACTION_DIRS[@]}}"; do
+  workspace_dir=""
   echo ""
   echo "=== Running terraform in $dir ==="
 
@@ -801,8 +842,16 @@ for dir in "${{ACTION_DIRS[@]}}"; do
     continue
   fi
 
-  if ! run_terraform_init_with_retry "$dir"; then
+  workspace_dir=$(prepare_action_workspace "$dir") || {{
+    echo "ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (workspace)")
+    continue
+  }}
+
+  if ! run_terraform_init_with_retry "$workspace_dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (init)")
     continue
@@ -810,25 +859,29 @@ for dir in "${{ACTION_DIRS[@]}}"; do
 
   set +e
   (
-    cd "$dir"
+    cd "$workspace_dir"
+    export TF_DATA_DIR="${{workspace_dir}}/.terraform-data"
     terraform plan -input=false
   )
   plan_rc=$?
   set -e
   if [ "$plan_rc" -ne 0 ]; then
     echo "ERROR: terraform plan failed for $dir. Skipping apply for this action folder."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (plan)")
     continue
   fi
 
-  if ! apply_with_duplicate_tolerance "$dir"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (apply)")
     continue
   fi
 
+  cleanup_action_workspace "$workspace_dir"
   SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
 done
 
@@ -1497,6 +1550,46 @@ terraform_init_with_lockfile_fallback() {
   )
 }
 
+copy_action_folder_to_workspace() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+
+  mkdir -p "$workspace_dir"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' "$source_dir"/ "$workspace_dir"/
+    return 0
+  fi
+
+  (
+    cd "$source_dir"
+    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .
+  ) | (
+    cd "$workspace_dir"
+    tar -xf -
+  )
+}
+
+prepare_action_workspace() {
+  local source_dir="$1"
+  local workspace_root workspace_dir
+
+  workspace_root=$(mktemp -d "${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX")
+  workspace_dir="${workspace_root}/action"
+  if ! copy_action_folder_to_workspace "$source_dir" "$workspace_dir"; then
+    rm -rf "$workspace_root"
+    return 1
+  fi
+  printf '%s\n' "$workspace_dir"
+}
+
+cleanup_action_workspace() {
+  local workspace_dir="$1"
+  local workspace_root
+
+  workspace_root=$(dirname "$workspace_dir")
+  rm -rf "$workspace_root"
+}
+
 bootstrap_provider_cache
 write_tfrc_with_mirror "${ACTIVE_TF_PROVIDER_MIRROR_DIR}"
 
@@ -1674,6 +1767,7 @@ while IFS= read -r dir; do
   i=$((i + 1))
   CURRENT_INDEX="$i"
   CURRENT_ACTION="$dir"
+  workspace_dir=""
 
   render_progress "$((i - 1))" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
   echo ""
@@ -1687,8 +1781,17 @@ while IFS= read -r dir; do
     continue
   fi
 
-  if ! run_terraform_init_with_retry "$dir"; then
+  workspace_dir=$(prepare_action_workspace "$dir") || {
+    echo "ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder."
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("$dir (workspace)")
+    render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
+    continue
+  }
+
+  if ! run_terraform_init_with_retry "$workspace_dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (init)")
     render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
@@ -1698,13 +1801,15 @@ while IFS= read -r dir; do
 
   set +e
   (
-    cd "$dir"
+    cd "$workspace_dir"
+    export TF_DATA_DIR="${workspace_dir}/.terraform-data"
     terraform plan -input=false
   )
   plan_rc=$?
   set -e
   if [ "$plan_rc" -ne 0 ]; then
     echo "ERROR: terraform plan failed for $dir. Skipping apply for this action folder."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (plan)")
     render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
@@ -1712,13 +1817,15 @@ while IFS= read -r dir; do
   fi
   render_progress "$((i - 1))" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
 
-  if ! apply_with_duplicate_tolerance "$dir"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
+    cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     FAILED_ACTIONS+=("$dir (apply)")
     render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
     continue
   fi
+  cleanup_action_workspace "$workspace_dir"
   SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
   render_progress "$i" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
 done < <(find actions -mindepth 1 -maxdepth 1 -type d | sort)

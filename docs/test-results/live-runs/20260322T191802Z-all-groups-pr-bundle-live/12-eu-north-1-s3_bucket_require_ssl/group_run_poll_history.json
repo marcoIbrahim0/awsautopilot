@@ -1,0 +1,166 @@
+[
+  {
+    "ts": "2026-03-22T19:30:51.143094+00:00",
+    "status_code": 200,
+    "body": {
+      "id": "afcd4687-44cc-4aef-b5f7-5fe201bef63a",
+      "remediation_run_id": "57c57605-617a-4342-8559-de254f4019d6",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "finished",
+      "started_at": "2026-03-22T19:28:33.470585+00:00",
+      "finished_at": "2026-03-22T19:30:21+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T19:28:15.482644+00:00",
+      "updated_at": "2026-03-22T19:30:21.617861+00:00",
+      "results": [
+        {
+          "action_id": "0ca99079-34e6-4c17-b121-b1f1727494eb",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "129fa65e-11e1-4eb0-bf8f-dff5fec13487",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "23bf691b-8ec2-4920-80a8-09bca2b8e218",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "4da3d806-4084-4075-8f3c-221d08ef5c2c",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "61552073-d604-4ba5-8430-b04485f90a5c",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "967d71a9-8027-4223-b6c6-aa5578d1d2d5",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "9e4562df-9922-4f75-b4e4-2d17c2c615f8",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "b84115cb-a701-48d7-832c-4fbcf80b8724",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "b8a67bbf-1255-40f1-ab21-569689459a36",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "c1c2ed6d-408b-4743-86d9-0fedeff97ce6",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "830944d9-30ad-432f-a84e-e09c0dde3d5d",
+          "execution_status": "success",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        },
+        {
+          "action_id": "2ac461ec-b4c1-4fcd-8ae1-a6d18f53c8d4",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle",
+          "reason": "review_required_metadata_only",
+          "blocked_reasons": [
+            "Bucket policy preservation evidence is missing for merge-safe SSL enforcement."
+          ],
+          "execution_started_at": "2026-03-22T19:28:33.470585+00:00",
+          "execution_finished_at": "2026-03-22T19:30:21+00:00"
+        }
+      ]
+    }
+  }
+]

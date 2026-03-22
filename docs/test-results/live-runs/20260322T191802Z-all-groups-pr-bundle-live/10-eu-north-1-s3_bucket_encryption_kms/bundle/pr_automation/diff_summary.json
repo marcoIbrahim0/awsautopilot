@@ -1,0 +1,758 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 83,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 8866,
+      "change_type": "create_or_update",
+      "content_sha256": "cb1bd5f8685ab0d1d9f2b9511de56c5dc60267c60dc468708a35a5e198a39bee",
+      "line_count": 72,
+      "repo_path": "run_all.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 9181,
+      "change_type": "create_or_update",
+      "content_sha256": "84f322dc00b4cd85839bdd84a577cc3e9b9a1473e60891b3eb218daa8ea1a5c8",
+      "line_count": 324,
+      "repo_path": "run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 2633,
+      "change_type": "create_or_update",
+      "content_sha256": "e2aa7f7565d126280b5c6f9459aa53ce0d8a833eeecf856ab0208322014e4d20",
+      "line_count": 31,
+      "repo_path": "README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 27891,
+      "change_type": "create_or_update",
+      "content_sha256": "ffd5faef7c360cb4280bbe14f7bd6140f5c1f1a2e440ebb0b24cabcaed2f763c",
+      "line_count": 512,
+      "repo_path": "bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 4858,
+      "change_type": "create_or_update",
+      "content_sha256": "0f6faa679e8cc655726c147fbfac2d6f5d3822bec861451f074ab5160b7f7f9a",
+      "line_count": 79,
+      "repo_path": "decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 1691,
+      "change_type": "create_or_update",
+      "content_sha256": "f79a34eb47b3d78b033733ae1ddd742dca2346cc9dcd6dad9dc8d45fe140890a",
+      "line_count": 60,
+      "repo_path": "finding_coverage.json"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/s3_bucket_encryption_kms.tf",
+      "byte_count": 846,
+      "change_type": "create_or_update",
+      "content_sha256": "6c5ead1ac77edcbe9b5af90b6ab2d88818efb3e32fd568362516f004a39ed164",
+      "line_count": 22,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/scripts/s3_encryption_capture.py",
+      "byte_count": 3202,
+      "change_type": "create_or_update",
+      "content_sha256": "f1e67ee066e531c0b3facb185b47ecd74cf6d853c299fe07563b0e88e1e16ae3",
+      "line_count": 97,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "ebfbc4070e1e55723df2d1e8a3d36d18078ef5ff96fc3d3acd058f3b572584c1",
+      "line_count": 12,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/decision.json",
+      "byte_count": 2286,
+      "change_type": "create_or_update",
+      "content_sha256": "4b906b9d80be072a82c62293e81e92612e7fa1c4b2261eb249d6e34c5926c1b9",
+      "line_count": 44,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/s3_bucket_encryption_kms.tf",
+      "byte_count": 848,
+      "change_type": "create_or_update",
+      "content_sha256": "d736e03eea16236f2b9e3368da23f7c255be23105fe85ad0e44f5d4bb41ed480",
+      "line_count": 22,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/scripts/s3_encryption_capture.py",
+      "byte_count": 3203,
+      "change_type": "create_or_update",
+      "content_sha256": "8682fd80edfc5d5ec9474595563eeaea8d82287567d4dc2aba12fba99c257399",
+      "line_count": 97,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "e8834de2eec17dd7dcd0d841d8f40553c4c4ac2a35bae0599c12518dea872e53",
+      "line_count": 12,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/decision.json",
+      "byte_count": 2288,
+      "change_type": "create_or_update",
+      "content_sha256": "3defd6a46e3fa048862b06dff16428cb4ed891735212a8d10fc523fd4d5a0d86",
+      "line_count": 44,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/s3_bucket_encryption_kms.tf",
+      "byte_count": 850,
+      "change_type": "create_or_update",
+      "content_sha256": "e283115da361d885caac893da1fe64995936846a577cad2bb7b65b1a2cbda5ea",
+      "line_count": 22,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/scripts/s3_encryption_capture.py",
+      "byte_count": 3204,
+      "change_type": "create_or_update",
+      "content_sha256": "50fbcc47b5177cd4ed3ab4f6e385190106c6aa4beca3b2c6e8867e0051fb0413",
+      "line_count": 97,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "7a27c540dc19ad9e8a1af085a5583b0e43fa84a721a26f9f6d541047cf3abc01",
+      "line_count": 12,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/decision.json",
+      "byte_count": 2290,
+      "change_type": "create_or_update",
+      "content_sha256": "48ad905b79aa4a5b8653f91b4013ec381ae17c09747f3df655d52ced6b76066a",
+      "line_count": 44,
+      "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/s3_bucket_encryption_kms.tf",
+      "byte_count": 846,
+      "change_type": "create_or_update",
+      "content_sha256": "c15a727dbe6ca3579df763bc11e5b16863c5b256d8d8120e50c97f5c12f471bb",
+      "line_count": 22,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/scripts/s3_encryption_capture.py",
+      "byte_count": 3202,
+      "change_type": "create_or_update",
+      "content_sha256": "5786be2edecb260cc94cc16fee3665b5a29cc3e8048fe945dec84fbcfc839ce0",
+      "line_count": 97,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "4e20e3dcd2885e64578c1a60d31910f33f50a42683b76501564e639b9978cec9",
+      "line_count": 12,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/decision.json",
+      "byte_count": 2286,
+      "change_type": "create_or_update",
+      "content_sha256": "7445bb60ddb48fceb0dea2b4c0f9fcfa915cc5abfb20716983bc949bc1c61160",
+      "line_count": 44,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/s3_bucket_encryption_kms.tf",
+      "byte_count": 848,
+      "change_type": "create_or_update",
+      "content_sha256": "ce134b58d8c9ecf08e11cb543fb92f32de6a2f656047d286d80930aa82a0ca4c",
+      "line_count": 22,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/scripts/s3_encryption_capture.py",
+      "byte_count": 3203,
+      "change_type": "create_or_update",
+      "content_sha256": "07dbaf2eefa4786c94c54e6ea9768dbd45d5cf4d94d39f146d8e4976df097ac3",
+      "line_count": 97,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "81aac70b40461a8e44c0893fbec31ea85a53a6d16523260fdc7810a3fb1c174d",
+      "line_count": 12,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/decision.json",
+      "byte_count": 2288,
+      "change_type": "create_or_update",
+      "content_sha256": "beca1a2049466b0db396dc0677406a19cc66effefe17bc37d318136a17644141",
+      "line_count": 44,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/s3_bucket_encryption_kms.tf",
+      "byte_count": 842,
+      "change_type": "create_or_update",
+      "content_sha256": "4f81944400829653ced46981bc7988e712807d6a9ec42a3c082db0d7e2aef274",
+      "line_count": 22,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/scripts/s3_encryption_capture.py",
+      "byte_count": 3200,
+      "change_type": "create_or_update",
+      "content_sha256": "7533b0f95bdce9859489befffda412c77e1b755c6ccf1c3984c107acfbca05e0",
+      "line_count": 97,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "b4e4a6f2bd4c19fb9c72b9106a1256a5e182bf98a9a1b37d2ad43b51a0d08864",
+      "line_count": 12,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/decision.json",
+      "byte_count": 2282,
+      "change_type": "create_or_update",
+      "content_sha256": "e9acc6b617f186434ce72b51dc9a89b881ebbe031fc033716a81a139648d2147",
+      "line_count": 44,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/s3_bucket_encryption_kms.tf",
+      "byte_count": 846,
+      "change_type": "create_or_update",
+      "content_sha256": "588e2c2b72bcc01eb24717b18c01ff968d826f82eefc15efdc86ebd3aba4d1c0",
+      "line_count": 22,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/scripts/s3_encryption_capture.py",
+      "byte_count": 3202,
+      "change_type": "create_or_update",
+      "content_sha256": "22944371065bec564cf9cceb8e2ef7c695c7caa1a1a7f7744777357bc48774a9",
+      "line_count": 97,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "602154d2d7ddd83e0d74e515aa29d29e6b51f7cfda7fc6934a260499cfb71090",
+      "line_count": 12,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/decision.json",
+      "byte_count": 2286,
+      "change_type": "create_or_update",
+      "content_sha256": "b60defd10699d4f1eebb6639d606200f72899d1a26eda7611f28a2296a86a71b",
+      "line_count": 44,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/s3_bucket_encryption_kms.tf",
+      "byte_count": 840,
+      "change_type": "create_or_update",
+      "content_sha256": "4e8a547ec6f67425cb1b7016cd65b13c998860378e83d0381e6247fffd477943",
+      "line_count": 22,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/scripts/s3_encryption_capture.py",
+      "byte_count": 3199,
+      "change_type": "create_or_update",
+      "content_sha256": "b68abbd348fddbf75893c8050445c50ef7c438097972c907c42200d7226a7c57",
+      "line_count": 97,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "1d838a2658fbcc0a00f0830f43fcf1a46a2bf1c46af08d0a9bfa70ab79fd0be0",
+      "line_count": 12,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/decision.json",
+      "byte_count": 2280,
+      "change_type": "create_or_update",
+      "content_sha256": "f8998b18c5ff7d76c8b95d43a2589696110ae7a07e148ea96fa1dc359d41ad47",
+      "line_count": 44,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/s3_bucket_encryption_kms.tf",
+      "byte_count": 846,
+      "change_type": "create_or_update",
+      "content_sha256": "7aac1b8c959d63b6ea6fdcf3cb17eadfe0eadb85efb75204c28a07c2d5795206",
+      "line_count": 22,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/scripts/s3_encryption_capture.py",
+      "byte_count": 3202,
+      "change_type": "create_or_update",
+      "content_sha256": "3062ec8c238725a47b356d218f499c1922bd81f8034a0a0b7ad7e59780d2b163",
+      "line_count": 97,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "bb57b3b34085b7c4cf4d86e687be2552d38cb55597d3ce12c866fcb8ef002c88",
+      "line_count": 12,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/decision.json",
+      "byte_count": 2286,
+      "change_type": "create_or_update",
+      "content_sha256": "47197aaa272e50e76728cd818bb7e69827b633255833b65aed916297cb67adc1",
+      "line_count": 44,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/s3_bucket_encryption_kms.tf",
+      "byte_count": 842,
+      "change_type": "create_or_update",
+      "content_sha256": "af2a8a22e8aa99916f06c680cab4f95a13ff280abc6382c9b659a7805b56b554",
+      "line_count": 22,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/scripts/s3_encryption_capture.py",
+      "byte_count": 3200,
+      "change_type": "create_or_update",
+      "content_sha256": "23a1d830953f0a449177e35976b73d4ec7e052dcb82276aeb1ae7da029c9fc08",
+      "line_count": 97,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "ef363e2915cd0248d8c055f95a132422586f4ca827c5597e330d18668cdc4727",
+      "line_count": 12,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/decision.json",
+      "byte_count": 2283,
+      "change_type": "create_or_update",
+      "content_sha256": "bcd3b3222157051821011124b677d20cc6383cef853e729f456e3fb9601ab023",
+      "line_count": 44,
+      "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/s3_bucket_encryption_kms.tf",
+      "byte_count": 792,
+      "change_type": "create_or_update",
+      "content_sha256": "71801d668d46f56970f5b74a9b48f034f4512bf957b68ac5063ee02bc0e6aeb7",
+      "line_count": 22,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/s3_bucket_encryption_kms.tf"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/scripts/s3_encryption_capture.py",
+      "byte_count": 3175,
+      "change_type": "create_or_update",
+      "content_sha256": "137a7bd4d2ea7f6b0acd3444e4d5d38005fb3ef46447b04d62cba7a3d71ac0b8",
+      "line_count": 97,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/scripts/s3_encryption_capture.py"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/rollback/s3_encryption_restore.py",
+      "byte_count": 3181,
+      "change_type": "create_or_update",
+      "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+      "line_count": 95,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/rollback/s3_encryption_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README.txt",
+      "byte_count": 1568,
+      "change_type": "create_or_update",
+      "content_sha256": "71fab065fca69170a57e5526d085313db8b7fd4876999bd87bab856e9dad561f",
+      "line_count": 31,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README_ACTION.txt",
+      "byte_count": 558,
+      "change_type": "create_or_update",
+      "content_sha256": "5936f5fa32dbb3145e1719f9aa90028eef4d465b12ea1f786fc7c312bdc7df67",
+      "line_count": 12,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/decision.json",
+      "byte_count": 2200,
+      "change_type": "create_or_update",
+      "content_sha256": "6258560c7047c1369c5d52dae8554934a9cbfc0112bd913172253764a0390d08",
+      "line_count": 44,
+      "repo_path": "executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "a29029cd6ab61f7967c1751b6f392b6264c8c6683233392d5fea454ed32f210b",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`run_all.sh` <- `run_all.sh` (72 lines, sha256:cb1bd5f8685a)",
+    "`run_actions.sh` <- `run_actions.sh` (324 lines, sha256:84f322dc00b4)",
+    "`README_GROUP.txt` <- `README_GROUP.txt` (31 lines, sha256:e2aa7f7565d1)",
+    "`bundle_manifest.json` <- `bundle_manifest.json` (512 lines, sha256:ffd5faef7c36)",
+    "`decision_log.md` <- `decision_log.md` (79 lines, sha256:0f6faa679e8c)",
+    "`finding_coverage.json` <- `finding_coverage.json` (60 lines, sha256:f79a34eb47b3)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/providers.tf` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/s3_bucket_encryption_kms.tf` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/s3_bucket_encryption_kms.tf` (22 lines, sha256:6c5ead1ac77e)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/scripts/s3_encryption_capture.py` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/scripts/s3_encryption_capture.py` (97 lines, sha256:f1e67ee066e5)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/rollback/s3_encryption_restore.py` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README.txt` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/README_ACTION.txt` (12 lines, sha256:ebfbc4070e1e)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/decision.json` <- `executable/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-26b6f037/decision.json` (44 lines, sha256:4b906b9d80be)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/s3_bucket_encryption_kms.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/s3_bucket_encryption_kms.tf` (22 lines, sha256:d736e03eea16)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/scripts/s3_encryption_capture.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/scripts/s3_encryption_capture.py` (97 lines, sha256:8682fd80edfc)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/rollback/s3_encryption_restore.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/README_ACTION.txt` (12 lines, sha256:e8834de2eec1)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-27b03b08/decision.json` (44 lines, sha256:3defd6a46e3f)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/providers.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/s3_bucket_encryption_kms.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/s3_bucket_encryption_kms.tf` (22 lines, sha256:e283115da361)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/scripts/s3_encryption_capture.py` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/scripts/s3_encryption_capture.py` (97 lines, sha256:50fbcc47b517)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/rollback/s3_encryption_restore.py` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README_ACTION.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/README_ACTION.txt` (12 lines, sha256:7a27c540dc19)",
+    "`executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/decision.json` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-2a74e447/decision.json` (44 lines, sha256:48ad905b79aa)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/providers.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/s3_bucket_encryption_kms.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/s3_bucket_encryption_kms.tf` (22 lines, sha256:c15a727dbe6c)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/scripts/s3_encryption_capture.py` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/scripts/s3_encryption_capture.py` (97 lines, sha256:5786be2edecb)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/rollback/s3_encryption_restore.py` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README_ACTION.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/README_ACTION.txt` (12 lines, sha256:4e20e3dcd288)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/decision.json` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-2aa81941/decision.json` (44 lines, sha256:7445bb60ddb4)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/providers.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/s3_bucket_encryption_kms.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/s3_bucket_encryption_kms.tf` (22 lines, sha256:ce134b58d8c9)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/scripts/s3_encryption_capture.py` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/scripts/s3_encryption_capture.py` (97 lines, sha256:07dbaf2eefa4)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/rollback/s3_encryption_restore.py` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README_ACTION.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/README_ACTION.txt` (12 lines, sha256:81aac70b4046)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/decision.json` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-5612223f/decision.json` (44 lines, sha256:beca1a204946)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/providers.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/s3_bucket_encryption_kms.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/s3_bucket_encryption_kms.tf` (22 lines, sha256:4f8194440082)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/scripts/s3_encryption_capture.py` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/scripts/s3_encryption_capture.py` (97 lines, sha256:7533b0f95bdc)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/rollback/s3_encryption_restore.py` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README_ACTION.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/README_ACTION.txt` (12 lines, sha256:b4e4a6f2bd4c)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/decision.json` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s315-exe-56ab9e32/decision.json` (44 lines, sha256:e9acc6b617f1)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/providers.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/s3_bucket_encryption_kms.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/s3_bucket_encryption_kms.tf` (22 lines, sha256:588e2c2b72bc)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/scripts/s3_encryption_capture.py` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/scripts/s3_encryption_capture.py` (97 lines, sha256:22944371065b)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/rollback/s3_encryption_restore.py` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README_ACTION.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/README_ACTION.txt` (12 lines, sha256:602154d2d7dd)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/decision.json` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-6bfdbc7b/decision.json` (44 lines, sha256:b60defd10699)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/providers.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/s3_bucket_encryption_kms.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/s3_bucket_encryption_kms.tf` (22 lines, sha256:4e8a547ec6f6)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/scripts/s3_encryption_capture.py` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/scripts/s3_encryption_capture.py` (97 lines, sha256:b68abbd348fd)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/rollback/s3_encryption_restore.py` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README_ACTION.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/README_ACTION.txt` (12 lines, sha256:1d838a2658fb)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/decision.json` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-config-96d2e53b/decision.json` (44 lines, sha256:f8998b18c5ff)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/providers.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/s3_bucket_encryption_kms.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/s3_bucket_encryption_kms.tf` (22 lines, sha256:7aac1b8c959d)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/scripts/s3_encryption_capture.py` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/scripts/s3_encryption_capture.py` (97 lines, sha256:3062ec8c2387)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/rollback/s3_encryption_restore.py` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README_ACTION.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/README_ACTION.txt` (12 lines, sha256:bb57b3b34085)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/decision.json` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-strict-s311-man-cce5e3c4/decision.json` (44 lines, sha256:47197aaa272e)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/providers.tf` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/s3_bucket_encryption_kms.tf` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/s3_bucket_encryption_kms.tf` (22 lines, sha256:af2a8a22e8aa)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/scripts/s3_encryption_capture.py` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/scripts/s3_encryption_capture.py` (97 lines, sha256:23a1d830953f)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/rollback/s3_encryption_restore.py` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README.txt` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README_ACTION.txt` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/README_ACTION.txt` (12 lines, sha256:ef363e2915cd)",
+    "`executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/decision.json` <- `executable/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-cef91c15/decision.json` (44 lines, sha256:bcd3b3222157)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/providers.tf` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/s3_bucket_encryption_kms.tf` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/s3_bucket_encryption_kms.tf` (22 lines, sha256:71801d668d46)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/scripts/s3_encryption_capture.py` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/scripts/s3_encryption_capture.py` (97 lines, sha256:137a7bd4d2ea)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/rollback/s3_encryption_restore.py` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README.txt` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README.txt` (31 lines, sha256:71fab065fca6)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README_ACTION.txt` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/README_ACTION.txt` (12 lines, sha256:5936f5fa32db)",
+    "`executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/decision.json` <- `executable/actions/11-arn-aws-s3-config-bucket-696505809372-d9e9b47f/decision.json` (44 lines, sha256:6258560c7047)"
+  ],
+  "version": 1
+}

@@ -127,6 +127,10 @@ Grounding inputs:
   - AWS account summary
   - action summary
   - finding summary
+- platform-visible security summary:
+  - actionable risk score derived from the same Top Risks formula shown in-product
+  - critical/high open finding counts behind that visible score
+  - account validation and live-lookup eligibility metadata
 - tenant settings summary:
   - `digest_enabled`
   - `slack_digest_enabled`
@@ -136,9 +140,16 @@ Current behavior:
 
 - every model response is requested as structured JSON and must include article citations
 - the backend sends only approved article excerpts plus requester-visible SaaS context; no hidden support notes, secrets, or unrelated tenant data are included in prompts
-- low-confidence answers, missing-citation responses, provider failures, or explicit human-support requests create a support case with the AI summary captured in the case thread
+- the prompt instructs the model to answer briefly by default unless the user asks for more detail
+- low-confidence answers can suggest opening a support case, but the case is created only after explicit user approval
 - Help Hub AI chats are grouped by `thread_id`; the backend persists bounded turn history, follow-up prompts, context gaps, provider metadata, token usage, and latency on each interaction row
 - the assistant never triggers remediation, AWS mutations, or any action execution side effects
+- live IAM lookup is a separate bounded read-only path:
+  - default source remains ingested SaaS data
+  - live lookup is available only for accounts explicitly enabled by a SaaS admin
+  - the assistant asks for confirmation before executing a live IAM read
+  - v1 live scope is limited to role posture, user/access-key posture, root posture, trust-risk indicators, and attached-policy summaries
+  - if the assistant cannot resolve exactly one enabled account, it asks the user to choose an account first instead of guessing
 
 Runtime configuration:
 
@@ -150,6 +161,18 @@ Runtime configuration:
 - `OPENAI_HELP_TIMEOUT_SECONDS=30`
 
 The production serverless runtime resolves `OPENAI_API_KEY` from the Secrets Manager secret referenced by `OPENAI_API_KEY_SECRET_ID`; local development may still set `OPENAI_API_KEY` directly in `backend/.env`.
+
+Live IAM enablement on AWS accounts:
+
+- `ai_live_lookup_enabled`
+- `ai_live_lookup_scope`
+- `ai_live_lookup_enabled_at`
+- `ai_live_lookup_enabled_by_user_id`
+- `ai_live_lookup_notes`
+
+Current scope value:
+
+- `iam_readonly_v1`
 
 ## Case lifecycle and RBAC
 

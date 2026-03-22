@@ -43,14 +43,19 @@ Use `Help Center` when you want product guidance first:
 Use `Ask AI` when you want a quick answer tied to the page you are on:
 
 - the assistant cites Help Center articles
-- the assistant can include the current route and visible account, action, or finding context
+- the assistant can include the current route, visible account/action/finding context, and platform-visible security metrics already shown in the product
+- the assistant keeps responses short by default unless you explicitly ask for more detail
 - AI follow-up turns stay grouped in one Help Hub thread until you start a new thread
-- if the evidence is weak, the citations are missing, or you ask for a human, the request escalates into a support case
+- if the evidence is weak, the assistant can offer to open a support case; the case is created only after you approve
+- for some accounts, support may enable a bounded live IAM inspection mode; when available, the assistant asks for confirmation before running a read-only check against your connected AWS account
 
 Current AI limitations:
 
 - the assistant is read-only and cannot trigger remediation or AWS changes
-- the assistant answers only from published Help Center articles plus the visible SaaS context attached to your current route
+- the assistant answers from published Help Center articles plus the visible SaaS context attached to your current route
+- the assistant does not expose secrets, hidden backend-only metrics, or raw internal payloads
+- live account inspection is available only on specific accounts that have been enabled by a SaaS admin
+- live inspection currently covers only a small IAM-focused scope and may ask you to choose one account before it can continue
 - if the AI service is unavailable, Help Hub falls back to a support escalation path instead of returning an ungrounded answer
 
 Use `My Cases` when the issue needs a human reply:

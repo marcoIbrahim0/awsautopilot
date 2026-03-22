@@ -1,5 +1,421 @@
 # Task Log
 
+## Restore the actual March 22 frontend build with `Remember me` after the wrong rollback target (2026-03-22)
+
+**Task:** Correct the mistaken rollback target by restoring the real March 22 frontend build from the current workspace state so the live site includes the newer login/session and Help Hub/chat surfaces again.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed the previous rollback target was wrong because it restored a frontend worktree based on March 14 (`dbc4f01` / `6b6f87a` lineage), which predates the March 20 `remember_me` work and the March 22 Help Hub/chatbot work.
+- Rechecked the current frontend workspace and confirmed it still contains the live login/session changes:
+  - `src/app/login/page.tsx` includes the `Remember me` checkbox
+  - `src/contexts/AuthContext.tsx` passes `remember_me` through login and MFA flows
+- Redeployed the frontend from the real current workspace at `/Users/marcomaher/AWS Security Autopilot/frontend` instead of the old March 14-based worktree.
+- Confirmed the backend runtime remained healthy after the March 22 backend restore finished.
+
+**Validation:**
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run deploy`
+  - Cloudflare `Current Version ID: ece9eb34-e454-4590-a723-0e49817c7253`
+- `GET https://api.ocypheris.com/health`
+  - `200 {"status":"ok","app":"AWS Security Autopilot"}`
+- CLI browser check against `https://ocypheris.com/login`
+  - live snapshot shows:
+    - `heading "Sign in to your account"`
+    - `checkbox "Remember me"`
+    - `button "Forgot password?"`
+    - `button "Sign in"`
+
+**Open questions / TODOs:**
+- The backend was restored from the March 22 grouped-note bundle while the frontend was restored from the current workspace state. If you want the entire stack pinned to one exact auditable source snapshot, capture and deploy that snapshot explicitly instead of reconstructing it from mixed local states.
+
+## Roll back live backend and frontend to the previous deployed commits (2026-03-22)
+
+**Task:** Roll production back by one commit for both the backend and frontend after an incorrect deploy source was used.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Identified the currently live deploy bases as backend commit `d99bb6bbf6b7e3f6dd253447bf134081fd88cbce` and frontend commit `dbc4f018adc7c6e92d9934e665b9e4d52bb58781`.
+- Selected the immediate parent commits as the rollback targets:
+  - backend `e9a362b3` (`Fix IAM.4 authoritative observer context`)
+  - frontend `6b6f87a` (`fix: restore no-drawer action detail modal`)
+- Created fresh clean worktrees pinned exactly to those target commits instead of reusing the overlaid deploy worktrees.
+- Redeployed the backend serverless runtime from `/tmp/ocypheris-backend-rollback-31rjG5` with `./scripts/deploy_saas_serverless.sh`.
+- Reinstalled frontend dependencies in `/tmp/ocypheris-frontend-rollback-BQTJn2`, copied the canonical frontend `.env`, and published the rollback with `npm run deploy`.
+
+**Validation:**
+- `GET https://api.ocypheris.com/health`
+  - `200 {"status":"ok","app":"AWS Security Autopilot"}`
+- `cd /tmp/ocypheris-frontend-rollback-BQTJn2 && npx wrangler deployments list | tail -n 20`
+  - latest frontend deployment created at `2026-03-22T21:50:55.017Z`
+  - current version `0c52bacd-da21-4c1a-ad8b-f75f59f2f877`
+
+**Open questions / TODOs:**
+- If you want an exact browser-visible E2E against the rolled-back frontend/backend pair, run that as a separate verification pass after the rollback settles globally through caches/CDN.
+
+## Harden Help Hub platform-visible answers, shorten responses, and gate support-case creation by approval (2026-03-22)
+
+**Task:** Restrict the chatbot to platform-visible information only, shorten default responses, prevent secret/internal-data leakage, and change support escalation so the assistant offers a ticket first and creates it only after user approval.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_context.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_assistant.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/help.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/help/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/help/FloatingChat.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_help_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/help-hub.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/help-desk-platform.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Replaced the Help Hub backend-only IAM security snapshot with a platform-visible summary built from the Top Risks score contract, so the model no longer receives hidden IAM-only totals such as `iam_findings_total`.
+- Tightened the assistant prompt to stay brief by default, use only platform-visible metrics for posture/score answers, and avoid hidden data, internal fields, secrets, or raw payloads.
+- Added answer post-processing that trims overly long responses and blocks secret-like output patterns before a reply is stored or returned.
+- Removed the internal assistant `context` object from the public Help Hub API response so backend-only context is no longer sent to the browser.
+- Changed AI escalation behavior so `suggested_case=true` only offers support escalation; the backend now creates a case only on explicit approval.
+- Added `POST /api/help/assistant/{interaction_id}/approve-case` and wired both Help Hub and Floating Chat to show an `Open support case` button that redirects to the created case after approval.
+- Updated the Help Hub docs to reflect the short-answer, visible-data-only, approval-gated support-case contract.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_help_api.py`
+  - `13 passed`
+- `cd frontend && npm run typecheck`
+  - passed
+- `./venv/bin/python -m py_compile backend/services/help_context.py backend/services/help_assistant.py backend/routers/help.py`
+  - passed
+- `./venv/bin/ruff check backend/services/help_context.py backend/services/help_assistant.py backend/routers/help.py tests/test_help_api.py`
+  - `All checks passed`
+
+**Open questions / TODOs:**
+- The assistant now uses the Top Risks scoring contract for posture answers, not an arbitrary findings-page count. If you want the findings page and score surfaces to share one explicit backend read model later, that should be a separate follow-up.
+- The current secret guard blocks obvious token/key patterns in assistant output; if you want broader policy enforcement later, add a dedicated redaction/classification layer instead of growing prompt-only rules.
+
+## Deploy grouped pending-confirmation UX and `EC2.19` runner hardening updates (2026-03-22)
+
+**Task:** Publish the backend and frontend changes for grouped pending-confirmation UX and the isolated Terraform-workspace runner fix to the live production environments.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Deployed the serverless backend/runtime with `./scripts/deploy_saas_serverless.sh`.
+- Confirmed the runtime stack update completed successfully for `security-autopilot-saas-serverless-runtime` in `eu-north-1`.
+- Verified Wrangler authentication, then published the frontend with `cd frontend && npm run deploy`.
+- Confirmed Cloudflare registered a fresh frontend deployment at `2026-03-22T20:38:39.370Z` with version `73b162fc-2120-4478-92ad-9d22ddce1178`.
+- Stopped the silent local `npm run deploy` process after verifying the Cloudflare deployment had already completed; the publish itself succeeded.
+
+**Validation:**
+- `GET https://api.ocypheris.com/health`
+  - `200 {"status":"ok","app":"AWS Security Autopilot"}`
+- `HEAD https://ocypheris.com/actions/group`
+  - `200`
+- `cd frontend && npx wrangler deployments list`
+  - latest deployment created at `2026-03-22T20:38:39.370Z`
+
+**Open questions / TODOs:**
+- Perform a browser-visible live UI spot check of a finding card and `/actions/group` against real pending-confirmation data if you want proof of the rendered note, not just the successful code/runtime publish.
+
+## Floating Chat Optimistic UI and Rate Limiting (2026-03-22)
+
+**Task:** Improve the perceived performance of the floating chat by displaying user messages immediately (Optimistic UI) and enforce local history constraints (expire chats after 3 hours, restrict users to 5 messages per 6 hours).
+
+**Files modified:**
+- `frontend/src/components/help/FloatingChat.tsx`
+- `.cursor/notes/task_log.md`
+- `.cursor/notes/task_index.md`
+
+**What was done:**
+- Added an `activeQuestion` state to immediately render the pending query so the message visually appears in the chat before the API responds.
+- Added `localStorage` tracking using `floating_assistant_usage` to maintain an array of timestamped message sends.
+- Enforced a rate limit: blocked the send button and displayed an expiration warning message if 5 or more queries exist within the last 6 rolling hours.
+- Set up a rolling 3-hour expiry limit using `floating_assistant_thread_time`. Threads older than 3 hours are automatically scrubbed from local storage on component reload or poll.
+- Published the frontend to Cloudflare.
+
+**Validation:**
+- Frontend built successfully via `npm run build`.
+- Local UI handles `activeQuestion` loading states and correctly tracks limits via JS date logic without backend reliance.
+
+## Add grouped pending-confirmation UX notes and isolate `EC2.19` bundle Terraform workspaces (2026-03-22)
+
+**Task:** Implement the approved follow-up plan from the March 22 grouped live run: show users when a grouped PR bundle finished but AWS source-of-truth confirmation is still pending, escalate that message after `12` hours, and harden the grouped runner so `sg_restrict_public_ports` / `EC2.19` future bundles do not collide on local Terraform state between action folders.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/infrastructure/templates/run_all.sh`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/PendingConfirmationNote.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added backend-derived pending-confirmation fields for grouped members and finding remediation hints:
+  - `pending_confirmation`
+  - `pending_confirmation_started_at`
+  - `pending_confirmation_deadline_at`
+  - `pending_confirmation_message`
+  - `pending_confirmation_severity`
+- Derived the note from existing grouped confirmation semantics so it appears only when the latest grouped run finished successfully but the action is still not AWS-confirmed.
+- Added a `12`-hour escalation window:
+  - `info` note before `12` hours
+  - `warning` note after `12` hours if the item is still open/unconfirmed
+- Exposed the additive finding-level `remediation_action_group_id` so finding cards and finding detail can deep-link directly to the persistent group route.
+- Added one shared frontend `PendingConfirmationNote` presenter and rendered it:
+  - once near the top of the PR bundle group detail page when any members are pending confirmation
+  - per member on the same group page
+  - on finding cards and finding detail when the linked grouped run is pending AWS confirmation
+- Hardened grouped runner scripts in both the checked-in `run_all.sh` template and embedded fallbacks:
+  - each action folder is copied into an isolated temporary workspace before `terraform init/plan/apply`
+  - temporary workspaces exclude `.terraform` and `terraform.tfstate*`
+  - duplicate-rule tolerance remains intact, but failures now no longer share local Terraform artifacts across action folders
+- Added targeted regression coverage for:
+  - grouped detail API response fields
+  - pending-confirmation helper semantics
+  - finding response hint propagation
+  - finding/group UI rendering
+  - grouped runner script content including isolated workspace helpers
+
+**Validation:**
+- `./venv/bin/pytest tests/test_action_groups_api.py tests/test_wave4_contract_fixes.py tests/test_remediation_run_worker.py`
+- `cd frontend && npm run test:ui -- src/app/actions/group/page.test.tsx src/app/findings/FindingCard.test.tsx`
+- `cd frontend && npm run typecheck`
+
+**Open questions / TODOs:**
+- The code path is hardened locally, but I did not perform a fresh live rerun of `sg_restrict_public_ports` in this task; that should be the next step to confirm the grouped run now records `finished` on the target account.
+- The live `400/500` bundle-generation failures from the March 22 retained run (`cloudtrail_enabled`, `ebs_default_encryption`, `s3_bucket_access_logging`, and grouped `IAM.4`) remain separate follow-up items.
+
+## Execute all available grouped PR bundles live for account `696505809372` (2026-03-22)
+
+**Task:** Run a live end-to-end exercise that generates, downloads, and executes every currently available grouped PR bundle for the single connected account whose ID starts with `6`, then capture what changed immediately in grouped-run state versus what still depends on later reconciliation/AWS confirmation.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T191802Z-all-groups-pr-bundle-live/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T191802Z-all-groups-pr-bundle-live/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Identified the single matching live account as tenant `Valens` account `696505809372`.
+- Minted a valid tenant-admin bearer token against the live SaaS runtime and enumerated all current grouped action families for that account.
+- Executed a retained live run under `docs/test-results/live-runs/20260322T191802Z-all-groups-pr-bundle-live/`:
+  - generated grouped PR bundles through the public API
+  - downloaded successful bundles
+  - executed them locally with `AWS_PROFILE=test28-root`
+  - observed grouped execution state through `action_group_runs` and `action_group_run_results`
+  - triggered reconcile/compute for `eu-north-1` and `us-east-1`
+- Recorded a human-readable retained summary plus per-group evidence.
+
+**Validation:**
+- Live run window: `2026-03-22T19:18:03.933127+00:00` to `2026-03-22T19:34:55.710408+00:00`
+- Final outcome across `22` groups:
+  - `15` grouped runs finished successfully
+  - `1` grouped run failed after successful bundle generation and local execution attempt (`sg_restrict_public_ports` in `eu-north-1`)
+  - `6` groups failed at bundle creation
+- Representative failure causes captured live:
+  - `cloudtrail_enabled` returned `500 Internal Server Error` in both regions
+  - `ebs_default_encryption` returned `500 Internal Server Error` in `us-east-1`
+  - `iam_root_access_key_absent` correctly denied grouped execution with `400` and pointed to `/api/root-key-remediation-runs`
+  - `s3_bucket_access_logging` returned `400 invalid_strategy_inputs` because `strategy_inputs.log_bucket_name` was missing
+  - `sg_restrict_public_ports` recorded grouped status `failed`; retained execution logs show duplicate-rule tolerance in one folder and Terraform plan/state-lock failures in others
+- The run also proved that `action_group_runs` can persist `finished` even when the generated `run_all.sh` callback `curl` hangs client-side; `s3_bucket_encryption_kms` in `eu-north-1` was recorded `finished` in the DB despite the bundled callback process never returning cleanly.
+
+**Open questions / TODOs:**
+- Investigate the live `500` bundle-generation failures for `cloudtrail_enabled` and `ebs_default_encryption` in `us-east-1`.
+- Investigate why grouped `s3_bucket_access_logging` creation does not resolve or prompt for `strategy_inputs.log_bucket_name`.
+- Investigate the `sg_restrict_public_ports` grouped runner failure path, especially the Terraform state-lock collision and multi-folder plan failures, before treating that family as safely repeatable in live grouped mode.
+
+## Improve Help Hub conversational handling for greetings and generic queries (2026-03-22)
+
+**Task:** Adjust the Help Hub AI assistant system prompt to naturally respond to greetings and generic questions without dumping SaaS context or failing closed into a support-case fallback.
+
+**Files modified:**
+- `backend/services/help_assistant.py`
+- `.cursor/notes/task_log.md`
+- `.cursor/notes/task_index.md`
+
+**What was done:**
+- Updated the `_developer_prompt` in `backend/services/help_assistant.py` to instruct the model to respond naturally to greetings or vague questions.
+- Removed the strict `ValueError("missing_citations")` check in `_validated_result` to allow the assistant to reply relationally to greetings without failing.
+- Added a directive ensuring the assistant does not dump provided SaaS context (like all open findings) unless specifically asked for a summary or status.
+- Relaxed the support-case escalation constraint to trigger only during specific technical questions where evidence is weak or incomplete, rather than immediately filtering conversational turns.
+- Clarified the prompt to ensure the chatbot **offers** to open a support case rather than trying to open one automatically.
+- Deployed the updated serverless backend runtime (API and worker).
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_help_api.py` passed successfully.
+- Deployment of production backend via `scripts/deploy_saas_serverless.sh` successfully compiled and applied to CloudFormation (image tag `20260322T192338Z`).
+
+## Fix chatbot UI transparency and perform final production rollout (2026-03-22)
+
+**Task:** Resolve the transparency issue in the globally floating "Ask AI" chatbot by pinning the container background to `var(--bg)` and execute the full-stack deployment (backend runtime, migrations, and Cloudflare frontend) to publish the fix live.
+
+**Files modified:**
+- `frontend/src/components/help/FloatingChat.tsx`
+- `.cursor/notes/task_log.md`
+- `.cursor/notes/task_index.md`
+
+**What was done:**
+- Corrected the container background styling in `FloatingChat.tsx` to use the primary theme background color, ensuring an opaque chat window.
+- Ran `./scripts/deploy_saas_serverless.sh` to update the backend runtime to the latest build.
+- Executed `alembic upgrade heads` to confirm the production database is at the latest migration state.
+- Published the optimized frontend build to Cloudflare via `npm run deploy` to bring the UI enhancements live.
+- Verified the chatbot icon and opaque background on `ocypheris.com` using the browser subagent.
+
+**Validation:**
+- Site verified live at `https://ocypheris.com`.
+- Chat window confirmed opaque and functional with a solid dark theme.
+
+## Implement and deploy globally floating "Ask AI" chatbot with session persistence (2026-03-22)
+
+**Task:** Implement a multi-turn "Ask AI" chatbot that floats across the dashboard, persists chat history via localStorage, and deploy the full stack (backend, migrations, frontend) to production.
+
+**Files modified:**
+- `frontend/src/components/help/FloatingChat.tsx`
+- `frontend/src/app/layout.tsx`
+- `.cursor/notes/task_log.md`
+- `.cursor/notes/task_index.md`
+
+**What was done:**
+- Created `FloatingChat.tsx` providing a persistent, multi-turn chat interface available globally via a floating icon.
+- Integrated `FloatingChat` into the main `layout.tsx`.
+- Implemented temporary history persistence using `localStorage` for `floating_assistant_thread_id`.
+- Stopped local development servers (API, Worker, Frontend).
+- Deployed the production backend runtime via `scripts/deploy_saas_serverless.sh`.
+- Applied production database migrations via `alembic upgrade heads`.
+- Published the optimized production frontend build to Cloudflare via `npm run deploy`.
+
+**Validation:**
+- `npm run typecheck` passed in the frontend.
+- `npm run lint` passed in the frontend.
+- `scripts/deploy_saas_serverless.sh` completed with `UPDATE_COMPLETE`.
+- `alembic upgrade heads` verified DB at `heads`.
+- `npm run deploy` successfully uploaded assets and updated the Cloudflare worker.
+
+**Open questions / TODOs:**
+- Final live visual verification of the floating icon on `ocypheris.com`.
+
+## Deploy hybrid Help Hub live-IAM rollout to production (2026-03-22)
+
+**Task:** Deploy the hybrid Help Hub assistant changes to production, apply the `0047_help_assistant_live_iam_lookup` migration, publish the frontend, and verify the new confirmation-gated live IAM chat path against the live SaaS runtime.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Deployed the serverless backend runtime with the hybrid Help Hub live-IAM code path.
+- Applied the production Alembic head `0047_help_assistant_live_iam_lookup`.
+- Published the frontend to Cloudflare so the updated Help Hub UI is live.
+- Minted short-lived production bearer tokens through the existing JWT contract for:
+  - the target tenant user `marco.ibrahim@ocypheris.com`
+  - an allowlisted SaaS admin user `marcoibrahim11@outlook.com`
+- Enabled the new per-account live-IAM gate in production for tenant `Valens` account `696505809372` through `PATCH /api/saas/tenants/{tenant_id}/aws-accounts/{account_id}/ai-live-lookup`.
+- Verified the live Help Hub assistant on `https://api.ocypheris.com`:
+  - first turn returned the new `pending_confirmation` response for an IAM question on the enabled account
+  - second turn on the same `thread_id` executed the confirmed path and persisted the follow-up turn
+  - thread reload returned both turns and the additive `live_lookup` metadata
+
+**Validation:**
+- `./scripts/deploy_saas_serverless.sh` with `config/.env.ops`
+- `./venv/bin/alembic upgrade heads` with `config/.env.ops`
+- `cd frontend && npm run deploy`
+- `GET https://api.ocypheris.com/health`
+  - `200 {"status":"ok","app":"AWS Security Autopilot"}`
+- `GET https://api.ocypheris.com/ready`
+  - `200` with `ready=true`
+- `HEAD https://ocypheris.com/help`
+  - `200`
+- `HEAD https://ocypheris.com/help-center`
+  - `200`
+- `PATCH https://api.ocypheris.com/api/saas/tenants/9f7616d8-af04-43ca-99cd-713625357b70/aws-accounts/696505809372/ai-live-lookup`
+  - `200` with `ai_live_lookup_enabled=true`
+- `POST https://api.ocypheris.com/api/help/assistant/query`
+  - turn 1: `200`, `status=pending_confirmation`, `thread_id=d1fbef67-836f-454d-bd80-b8a324b80eb7`
+- follow-up `POST https://api.ocypheris.com/api/help/assistant/query` on the same `thread_id` with `confirm_live_lookup=true`
+  - `200`, persisted second turn, returned bounded live-lookup failure metadata instead of failing open
+- `GET https://api.ocypheris.com/api/help/assistant/threads/d1fbef67-836f-454d-bd80-b8a324b80eb7`
+  - `200`, returned both turns with `live_lookup`
+
+**Open questions / TODOs:**
+- The production account used for live validation does not currently grant enough `ReadRole` permission for the bounded live IAM investigation, so the assistant correctly fell back to ingested SaaS data and returned `live_lookup.status="failed"`. If you want full live IAM observations, the customer `ReadRole` policy needs the additional read-only IAM permissions required by `help_live_iam.py`.
+- There is still no SaaS-admin UI for account enablement; production enablement is API-only as designed in v1.
+
+## Implement hybrid tenant-aware Help Hub chat with bounded live IAM investigation (2026-03-22)
+
+**Task:** Upgrade the Help Hub assistant into a tenant-aware security chat that keeps multi-turn threads, uses ingested SaaS data by default, and adds a confirmation-gated live IAM lookup path for SaaS-admin-enabled accounts only.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/aws_account.py`
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0047_help_assistant_live_iam_lookup.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_context.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_live_iam.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_assistant.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/help.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/saas_admin.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/help/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_help_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/help-desk-platform.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/help-hub.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added dedicated `aws_accounts` fields for Help Hub live AI enablement and the new Alembic head `0047_help_assistant_live_iam_lookup`.
+- Expanded Help Hub context building so the assistant now receives a bounded ingested security snapshot, including recent IAM/security findings, actions, account health, and tenant-visible references.
+- Added a new bounded live IAM service that:
+  - classifies IAM/security questions
+  - resolves eligible enabled accounts
+  - requires confirmation before live execution
+  - runs a read-only `ReadRole` IAM inspection for role trust, attached policies, IAM users, access keys, and root posture
+  - returns normalized summaries only, not raw AWS payloads
+- Kept the existing threaded chat model, but added deterministic assistant turns for:
+  - account-selection-required
+  - pending live-check confirmation
+- Extended Help Hub responses and thread turns with additive `live_lookup` metadata so the UI can render:
+  - account choice buttons
+  - a `Run live IAM check` confirmation action
+  - normalized live observation cards
+  - disabled/failed lookup notices
+- Added a SaaS-admin-only backend/API control to enable or disable live IAM lookup on a specific tenant AWS account.
+- Updated the Help Hub docs to describe the new hybrid behavior and the per-account enablement contract.
+
+**Validation:**
+- `./venv/bin/python -m py_compile backend/services/help_context.py backend/services/help_live_iam.py backend/services/help_assistant.py backend/routers/help.py backend/routers/saas_admin.py backend/models/aws_account.py`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_help_api.py`
+  - `10 passed`
+- `./venv/bin/ruff check backend/services/help_context.py backend/services/help_live_iam.py backend/services/help_assistant.py backend/routers/help.py backend/routers/saas_admin.py backend/models/aws_account.py tests/test_help_api.py`
+  - passed
+- `cd frontend && npm run typecheck`
+  - passed
+
+**Open questions / TODOs:**
+- The current live IAM scope is intentionally narrow and summary-only. If users later need policy-document excerpts or Access Analyzer expansion, that should be a separate scoped follow-up.
+- There is still no SaaS-admin UI for toggling account enablement; v1 exposes the control through backend/API only as requested.
+- This task did not deploy. Production still needs the `0047_help_assistant_live_iam_lookup` migration and a backend/frontend rollout before the new live-IAM behavior is available live.
+
 ## Implement dashboard visual-system unification across shell, settings, help, and remediation workflows (2026-03-22)
 
 **Task:** Implement the approved dashboard visual-system unification plan so the product stops feeling visually fragmented, pushes the logo identity into the shell and action surfaces, normalizes shared primitives, and removes the weak generic card/button treatment from the targeted pages.
@@ -27069,6 +27485,35 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 - The shared `Badge` primitive is now stronger globally; if any secondary surfaces feel too visually heavy after wider review, they should be tuned with focused page-level class overrides rather than reverting the Action Detail lift.
 - This pass stayed local to Action Detail and the shared badge primitive; a later cleanup could apply the same stronger CTA treatment to additional attack-path entry points if needed.
 
+## Shared dark-mode border hierarchy pass for shell, cards, and buttons (2026-03-22)
+
+**Task:** Improve dark-mode borders across the top navbar, left sidebar, cards, and button variants so the website no longer uses the same weak border treatment everywhere.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/globals.css`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/Sidebar.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/TopBar.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/Button.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added explicit shared border roles in the theme tokens for shell, cards, stronger interactive controls, and softer inset surfaces.
+- Updated the shared remediation/card primitives so dark-mode cards and grouped sections use the new card/inset border roles instead of the same generic border line.
+- Updated button variants so dark-mode control borders are stronger and more differentiated on hover/active states.
+- Applied the new shell border role to the top navbar, left sidebar, mobile notification sheet, and shared nav hover states.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+- `cd frontend && npx eslint src/app/globals.css src/components/layout/Sidebar.tsx src/components/layout/TopBar.tsx src/components/ui/Button.tsx src/components/ui/remediation-surface.tsx`
+  - completed with the existing `next/image` warnings in `Sidebar.tsx` and no lint errors
+
+**Open questions / TODOs:**
+- The sidebar still uses raw `<img>` tags for the logo asset and continues to emit the existing Next.js warning during targeted lint.
+- If any individual page still has hard-coded custom borders outside the shared primitives, those will need a smaller follow-up pass after visual review.
+
 ## Implement Attack Path materialized read model and async refresh path (2026-03-22)
 
 **Task:** Implement the Attack Path production-readiness optimization plan by moving shared-path list/detail reads onto a materialized read model with bounded background refresh and scoped rebuild tooling.
@@ -27206,3 +27651,117 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - None for this local branding update.
+
+## Implement shared operator-surface hover explainers across remediation, accounts, settings, and run views (2026-03-22)
+
+**Task:** Add a dense, shared hover-explainer system across operator surfaces so the same concepts used in Action Detail are explained consistently across Generate PR Bundle, Suppress, Connected AWS Accounts, Settings, Remediation Run, and shared dashboard primitives.
+
+**Files created/modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/operatorExplainers.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/ExplainerHint.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/ExplainerHint.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/Input.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/settings-ui.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountDetailModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/ConnectAccountModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/accounts/AccountServiceStatusCheck.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/RemediationDefaultsTab.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/IntegrationsSettingsTab.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/GovernanceSettingsTab.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/CreateExceptionModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a central operator explainer registry with stable concept ids and plain-language copy aligned to the Action Detail vocabulary.
+- Added a reusable `ExplainerHint` wrapper on top of the existing animated tooltip so operator surfaces can attach consistent hover/focus/tap help affordances without reimplementing tooltip behavior.
+- Extended shared dashboard/remediation primitives plus settings field helpers so sections, stat cards, and form labels can accept explainer hints as first-class props.
+- Rolled the hints into the named weak spots:
+  - remediation / PR bundle workflow
+  - suppress / exception workflow
+  - connected AWS account views
+  - settings hero and high-signal settings tabs
+  - remediation run progress/detail rail
+- Kept the change frontend-only and reused shared concepts where possible instead of introducing page-specific one-off copy systems.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+- `cd frontend && npm run test:ui -- src/components/ui/ExplainerHint.test.tsx src/app/accounts/page.test.tsx src/app/settings/page.test.tsx src/components/RemediationModal.test.tsx`
+  - `21 passed`
+
+**Open questions / TODOs:**
+- The shared explainer system is now in the core operator surfaces, but there are still additional non-blocking opportunities to attach existing concept ids to more findings/action list labels and attack-path workflow labels where the same terms appear.
+
+## Deploy backend/frontend operator-surface explainer updates live (2026-03-22)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Deployed the serverless backend runtime with `./scripts/deploy_saas_serverless.sh`; the build stack remained unchanged and the runtime stack completed successfully in `eu-north-1`.
+- Applied the database head against the deploy target with `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade heads'`.
+- Deployed the Cloudflare frontend bundle with `cd frontend && npm run deploy`.
+- Confirmed the public API health endpoint and the public frontend root both return successful live responses after the rollout.
+
+**Validation:**
+- `./scripts/deploy_saas_serverless.sh`
+- `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade heads'`
+- `cd frontend && npm run deploy`
+- `curl -sS https://api.ocypheris.com/health`
+  - `{"status":"ok","app":"AWS Security Autopilot"}`
+- `curl -I -sS https://ocypheris.com`
+  - `HTTP/2 200`
+
+**Open questions / TODOs:**
+- The Cloudflare/OpenNext build still emits non-blocking duplicate-key warnings from the generated handler bundle during deploy.
+
+## Fix Attack Path shared-detail 404 for legacy-resolvable `path:<id>` requests (2026-03-22)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p3_5_1_attack_path_view.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Fixed `GET /api/actions/attack-paths/{path_id}` so a miss in the materialized shared-path table no longer becomes an immediate `404` when the tenant already has some materialized rows.
+- Added a bounded legacy fallback for the detail route: if the requested `path:<id>` is not currently present in the materialized read model but the legacy shared-path builder can still resolve it, the API now returns the legacy detail and schedules a refresh instead of failing.
+- Kept the refresh behavior scoped so it only queues on stale materialized detail or when the route had to use the legacy fallback path.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_phase3_p3_5_1_attack_path_view.py -q`
+  - `17 passed`
+
+**Open questions / TODOs:**
+- This patch fixes the read-path miss contract, but production will still need a backend deploy before `https://api.ocypheris.com/api/actions/attack-paths/path:d3f0ac620327694afaa9` picks up the behavior.
+
+## Fix Run progress light/dark card colors (2026-03-22)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reworked the Run progress surface onto shared dashboard-style panel, inset, and control backgrounds instead of the older mixed `nm-neu-*` and `bg-bg` card treatments.
+- Cleaned up light mode so the run hero, rail, closure proof, technical details, generated-file cards, and compact-mode action/evidence/artifact cards use clearer branded surfaces and more consistent borders.
+- Removed near-black card fills from dark mode by replacing `bg-bg` card usage with tokenized `card`, `card-inset`, and `control` surfaces across the run progress screen.
+- Updated the focused test harness to include the `AnimatePresence` passthrough required by the current explainer/tooltip stack.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+- `cd frontend && npm run test:ui -- src/components/RemediationRunProgress.test.tsx`
+  - `1 passed`
+
+**Open questions / TODOs:**
+- I did not run a live browser pass on `/remediation-runs/[id]` or the in-modal Run progress view in both themes, so any remaining spacing-only polish would need visual verification in-browser.

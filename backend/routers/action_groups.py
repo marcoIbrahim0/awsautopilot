@@ -93,6 +93,11 @@ class ActionGroupMemberResponse(BaseModel):
     last_attempt_at: str | None
     last_confirmed_at: str | None
     last_confirmation_source: str | None
+    pending_confirmation: bool = False
+    pending_confirmation_started_at: str | None = None
+    pending_confirmation_deadline_at: str | None = None
+    pending_confirmation_message: str | None = None
+    pending_confirmation_severity: str | None = None
     latest_run: ActionGroupMemberLatestRunResponse
 
 
@@ -601,6 +606,11 @@ async def get_action_group_detail(
                 last_attempt_at=_as_iso(member.get("last_attempt_at")),
                 last_confirmed_at=_as_iso(member.get("last_confirmed_at")),
                 last_confirmation_source=member.get("last_confirmation_source"),
+                pending_confirmation=bool(member.get("pending_confirmation")),
+                pending_confirmation_started_at=_as_iso(member.get("pending_confirmation_started_at")),
+                pending_confirmation_deadline_at=_as_iso(member.get("pending_confirmation_deadline_at")),
+                pending_confirmation_message=member.get("pending_confirmation_message"),
+                pending_confirmation_severity=member.get("pending_confirmation_severity"),
                 latest_run=ActionGroupMemberLatestRunResponse(
                     id=member.get("latest_run_id"),
                     status=member.get("latest_run_status"),

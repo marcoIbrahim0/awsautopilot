@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from sqlalchemy import select
@@ -20,6 +20,16 @@ from backend.models.enums import (
 from backend.models.finding import Finding
 
 logger = logging.getLogger(__name__)
+
+PENDING_CONFIRMATION_WINDOW = timedelta(hours=12)
+PENDING_CONFIRMATION_INFO_MESSAGE = (
+    "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours "
+    "to confirm the finding is resolved."
+)
+PENDING_CONFIRMATION_WARNING_MESSAGE = (
+    "The fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. "
+    "Check Security Hub/reconciliation and investigate why the resolved state has not propagated."
+)
 
 
 def _utcnow() -> datetime:
@@ -45,6 +55,55 @@ def _get_membership(session: Session, action_id: uuid.UUID) -> ActionGroupMember
         .filter(ActionGroupMembership.action_id == action_id)
         .one_or_none()
     )
+
+
+def derive_pending_confirmation_state(
+    *,
+    status_bucket: ActionGroupStatusBucket | str | None,
+    latest_run_status: ActionGroupExecutionStatus | str | None,
+    latest_run_finished_at: datetime | None,
+    last_confirmed_at: datetime | None = None,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    bucket_value = (
+        status_bucket.value
+        if status_bucket is not None and hasattr(status_bucket, "value")
+        else str(status_bucket or ActionGroupStatusBucket.not_run_yet.value)
+    )
+    run_status_value = (
+        latest_run_status.value
+        if latest_run_status is not None and hasattr(latest_run_status, "value")
+        else str(latest_run_status or "")
+    )
+    finished_at = _to_utc(latest_run_finished_at)
+    confirmed_at = _to_utc(last_confirmed_at)
+
+    if (
+        bucket_value == ActionGroupStatusBucket.run_successful_confirmed.value
+        or confirmed_at is not None
+        or run_status_value not in {"finished", "success"}
+        or finished_at is None
+    ):
+        return {
+            "pending_confirmation": False,
+            "pending_confirmation_started_at": None,
+            "pending_confirmation_deadline_at": None,
+            "pending_confirmation_message": None,
+            "pending_confirmation_severity": None,
+        }
+
+    current_time = _to_utc(now) or _utcnow()
+    deadline_at = finished_at + PENDING_CONFIRMATION_WINDOW
+    escalated = current_time >= deadline_at
+    return {
+        "pending_confirmation": True,
+        "pending_confirmation_started_at": finished_at,
+        "pending_confirmation_deadline_at": deadline_at,
+        "pending_confirmation_message": (
+            PENDING_CONFIRMATION_WARNING_MESSAGE if escalated else PENDING_CONFIRMATION_INFO_MESSAGE
+        ),
+        "pending_confirmation_severity": "warning" if escalated else "info",
+    }
 
 
 def _get_or_create_state(

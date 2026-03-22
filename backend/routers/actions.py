@@ -2872,6 +2872,7 @@ async def get_attack_path(
 ) -> AttackPathDetailResponse:
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     await get_tenant(tenant_uuid, db)
+    used_legacy_fallback = False
     detail, is_stale = await get_materialized_attack_path(db, tenant_id=tenant_uuid, path_id=path_id)
     has_any_materialized = False
     if detail is None:
@@ -2890,11 +2891,19 @@ async def get_attack_path(
             detail = await _get_attack_path_legacy(db, tenant_uuid=tenant_uuid, path_id=path_id)
             is_stale = False
     if detail is None:
+        try:
+            detail = await _get_attack_path_legacy(db, tenant_uuid=tenant_uuid, path_id=path_id)
+            is_stale = False
+            used_legacy_fallback = detail is not None
+        except Exception:
+            logger.warning("Attack-path legacy fallback failed on detail read.", exc_info=True)
+            detail = None
+    if detail is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Attack path not found", "detail": f"No attack path found with ID {path_id}"},
         )
-    if is_stale:
+    if is_stale or used_legacy_fallback:
         maybe_schedule_attack_path_refresh(tenant_id=tenant_uuid)
     return AttackPathDetailResponse(**detail)
 

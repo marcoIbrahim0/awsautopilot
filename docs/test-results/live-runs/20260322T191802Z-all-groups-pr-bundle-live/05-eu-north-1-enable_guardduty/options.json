@@ -1,0 +1,80 @@
+{
+  "action_id": "bdc592bd-3165-4e28-9e48-0851fcd59c3d",
+  "action_type": "enable_guardduty",
+  "mode_options": [
+    "pr_only"
+  ],
+  "strategies": [
+    {
+      "strategy_id": "guardduty_enable_pr_bundle",
+      "label": "Enable GuardDuty (PR bundle)",
+      "mode": "pr_only",
+      "risk_level": "low",
+      "recommended": false,
+      "requires_inputs": false,
+      "input_schema": {
+        "fields": []
+      },
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "warnings": [
+        "Apply the generated bundle to enable a GuardDuty detector in this region."
+      ],
+      "supports_exception_flow": false,
+      "exception_only": false,
+      "impact_text": "Amazon GuardDuty will be enabled in this region.",
+      "rollback_command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+      "estimated_resolution_time": "~1 hour",
+      "supports_immediate_reeval": false,
+      "blast_radius": "account",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "guardduty_enable_pr_bundle",
+          "support_tier": "deterministic_bundle",
+          "recommended": true,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        }
+      ],
+      "recommended_profile_id": "guardduty_enable_pr_bundle",
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'."
+    }
+  ],
+  "recommendation": {
+    "mode": "pr_only",
+    "default_mode": "pr_only",
+    "advisory": true,
+    "enforced_by_policy": null,
+    "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=0.00, privilege_level=1.00, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied.",
+    "matrix_position": {
+      "risk_tier": "medium",
+      "business_criticality": "high",
+      "cell": "risk_medium__criticality_high"
+    },
+    "evidence": {
+      "score": 41,
+      "context_incomplete": true,
+      "data_sensitivity": 0.0,
+      "internet_exposure": 0.0,
+      "privilege_level": 1.0,
+      "exploit_signals": 0.0,
+      "matched_signals": []
+    }
+  },
+  "manual_high_risk": false,
+  "pre_execution_notice": null,
+  "runbook_url": null
+}

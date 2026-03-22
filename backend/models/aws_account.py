@@ -1,6 +1,6 @@
 # backend/models/aws_account.py
 import uuid
-from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,6 +40,20 @@ class AwsAccount(Base):
         nullable=False,
         default=AwsAccountStatus.pending,
     )
+    ai_live_lookup_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    ai_live_lookup_scope: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ai_live_lookup_enabled_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ai_live_lookup_enabled_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    ai_live_lookup_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     last_validated_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

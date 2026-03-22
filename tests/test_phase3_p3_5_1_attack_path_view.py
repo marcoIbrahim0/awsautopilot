@@ -1150,3 +1150,95 @@ def test_get_attack_path_bootstraps_materialized_model_when_empty(client: TestCl
     has_mock.assert_awaited_once()
     materialize_mock.assert_awaited_once()
     session.commit.assert_awaited_once()
+
+
+def test_get_attack_path_falls_back_to_legacy_when_materialized_path_missing(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = MagicMock()
+    tenant.id = tenant_id
+
+    session = MagicMock()
+    tenant_result = MagicMock()
+    tenant_result.scalar_one_or_none.return_value = tenant
+    session.execute = AsyncMock(return_value=tenant_result)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        user = MagicMock()
+        user.id = uuid.uuid4()
+        user.tenant_id = tenant_id
+        return user
+
+    detail_payload = {
+        "id": "path:d3f0ac620327694afaa9",
+        "status": "available",
+        "rank": 91,
+        "rank_factors": [],
+        "confidence": 0.92,
+        "freshness": {"score": 1.0, "observed_at": "2026-03-22T12:00:00+00:00"},
+        "path_nodes": [
+            {"node_id": "entry", "kind": "entry_point", "label": "Internet", "detail": None, "badges": []},
+            {"node_id": "asset", "kind": "target_asset", "label": "Prod workload", "detail": None, "badges": []},
+        ],
+        "path_edges": [{"source_node_id": "entry", "target_node_id": "asset", "label": "reaches"}],
+        "entry_points": [{"node_id": "entry", "kind": "entry_point", "label": "Internet", "detail": None, "badges": []}],
+        "target_assets": [{"node_id": "asset", "kind": "target_asset", "label": "Prod workload", "detail": None, "badges": []}],
+        "summary": "Legacy fallback detail.",
+        "business_impact": {"summary": "Critical", "criticality_tier": "critical", "matrix_position": None},
+        "risk_reasons": ["Internet reachable route to production workload."],
+        "owners": [{"key": "team:platform", "label": "Platform"}],
+        "recommended_fix": {"summary": "Tighten the exposed path", "action_type": None},
+        "linked_actions": [],
+        "evidence": [],
+        "provenance": [{"source": "legacy", "kind": "fallback"}],
+        "remediation_summary": None,
+        "runtime_signals": None,
+        "exposure_validation": None,
+        "code_context": None,
+        "linked_repositories": [],
+        "implementation_artifacts": [],
+        "closure_targets": None,
+        "external_workflow_summary": None,
+        "exception_summary": None,
+        "evidence_exports": None,
+        "access_scope": None,
+        "truncated": False,
+        "availability_reason": None,
+        "computed_at": "2026-03-22T12:00:00+00:00",
+        "stale_after": "2026-03-22T12:05:00+00:00",
+        "is_stale": False,
+        "refresh_status": "ready",
+    }
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        with patch(
+            "backend.routers.actions.get_materialized_attack_path",
+            new=AsyncMock(return_value=(None, False)),
+        ) as get_mock:
+            with patch(
+                "backend.routers.actions.has_materialized_attack_paths",
+                new=AsyncMock(return_value=True),
+            ) as has_mock:
+                with patch(
+                    "backend.routers.actions._get_attack_path_legacy",
+                    new=AsyncMock(return_value=detail_payload),
+                ) as legacy_mock:
+                    with patch(
+                        "backend.routers.actions.maybe_schedule_attack_path_refresh",
+                        return_value=True,
+                    ) as refresh_mock:
+                        response = client.get("/api/actions/attack-paths/path:d3f0ac620327694afaa9")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "path:d3f0ac620327694afaa9"
+    get_mock.assert_awaited_once()
+    has_mock.assert_awaited_once()
+    legacy_mock.assert_awaited_once()
+    refresh_mock.assert_called_once_with(tenant_id=tenant_id)

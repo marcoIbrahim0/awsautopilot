@@ -15,6 +15,7 @@ from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupStatusBucket
+from backend.services.action_run_confirmation import derive_pending_confirmation_state
 
 logger = logging.getLogger(__name__)
 
@@ -366,6 +367,16 @@ async def get_group_detail(
                 ),
                 "latest_run_started_at": row.latest_run_started_at,
                 "latest_run_finished_at": row.latest_run_finished_at,
+                **derive_pending_confirmation_state(
+                    status_bucket=bucket,
+                    latest_run_status=(
+                        row.latest_run_status.value
+                        if row.latest_run_status is not None and hasattr(row.latest_run_status, "value")
+                        else str(row.latest_run_status) if row.latest_run_status is not None else None
+                    ),
+                    latest_run_finished_at=row.latest_run_finished_at,
+                    last_confirmed_at=row.last_confirmed_at,
+                ),
             }
         )
 

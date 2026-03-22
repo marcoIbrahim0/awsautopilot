@@ -1,0 +1,30 @@
+{
+  "actions": [
+    {
+      "action_id": "202e02c7-f2c1-4c24-b81a-11168acad054",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "73097c11-174c-4597-85a2-9af793842e8d",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "5acc7d0e-e361-474f-9efa-c200a0358f0d",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "a3d1ad9b-8cb7-47cc-b271-cb15f26dffd1",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "18de803d-b7cd-4df8-ad30-1604dcb05cd5",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

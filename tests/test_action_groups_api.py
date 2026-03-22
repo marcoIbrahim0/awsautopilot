@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -140,6 +140,79 @@ def test_get_action_group_detail_not_found(client: TestClient) -> None:
             response = client.get(f"/api/action-groups/{uuid.uuid4()}")
 
     assert response.status_code == 404
+
+
+def test_get_action_group_detail_includes_pending_confirmation_fields(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    db = MagicMock()
+    now = datetime.now(timezone.utc)
+    deadline = now + timedelta(hours=12)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield db
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.action_groups.get_tenant", AsyncMock(return_value=MagicMock())):
+        with patch(
+            "backend.routers.action_groups.get_group_detail",
+            AsyncMock(
+                return_value={
+                    "group": {
+                        "id": str(uuid.uuid4()),
+                        "tenant_id": str(tenant_id),
+                        "group_key": "tenant|type|account|global",
+                        "action_type": "aws_config_enabled",
+                        "account_id": "123456789012",
+                        "region": "eu-north-1",
+                        "created_at": now,
+                        "updated_at": now,
+                        "metadata": {},
+                    },
+                    "counters": {
+                        "run_successful": 1,
+                        "run_not_successful": 0,
+                        "not_run_yet": 0,
+                        "total_actions": 1,
+                    },
+                    "members": [
+                        {
+                            "action_id": str(uuid.uuid4()),
+                            "title": "Enable AWS Config",
+                            "control_id": "Config.1",
+                            "resource_id": "resource-1",
+                            "action_status": "open",
+                            "priority": 10,
+                            "assigned_at": None,
+                            "status_bucket": "run_not_successful",
+                            "last_attempt_at": now,
+                            "last_confirmed_at": None,
+                            "last_confirmation_source": None,
+                            "latest_run_id": str(uuid.uuid4()),
+                            "latest_run_status": "finished",
+                            "latest_run_started_at": now,
+                            "latest_run_finished_at": now,
+                            "pending_confirmation": True,
+                            "pending_confirmation_started_at": now.isoformat(),
+                            "pending_confirmation_deadline_at": deadline.isoformat(),
+                            "pending_confirmation_message": "Waiting for AWS confirmation.",
+                            "pending_confirmation_severity": "info",
+                        }
+                    ],
+                }
+            ),
+        ):
+            response = client.get(f"/api/action-groups/{uuid.uuid4()}")
+
+    assert response.status_code == 200
+    member = response.json()["members"][0]
+    assert member["pending_confirmation"] is True
+    assert member["pending_confirmation_message"] == "Waiting for AWS confirmation."
+    assert member["pending_confirmation_severity"] == "info"
 
 
 def test_get_action_group_runs_includes_mixed_per_action_results(client: TestClient) -> None:

@@ -63,6 +63,26 @@
    - `Recommended check` now reads as a branded `Recommended next step` surface
    - command text is presented in a stronger inset panel aligned with the remediation/dashboard card system
 
+### 1.6 Dark-Mode Border Hierarchy Follow-Up (Implemented 2026-03-22)
+1. Dark mode no longer relies on one generic border line across shell, cards, and controls.
+2. Shared border roles now distinguish:
+   - shell chrome borders for the top and left navigation
+   - standard card borders
+   - stronger interactive control borders for buttons, tabs, and hover states
+   - softer inset/group borders for nested panels
+3. The new dark-mode border hierarchy was applied through the shared tokens and primitives so it propagates across the website instead of being patched per page.
+
+### 1.7 Remediation Run Progress Surface Follow-Up (Implemented 2026-03-22)
+1. The Run progress screen now uses the same dashboard-native panel/inset/control surfaces as the rest of the operator UI instead of older mixed `nm-neu-*` and `bg-bg` card treatments.
+2. Light mode was cleaned up so the primary run hero, side rail, closure sections, technical details, and generated-file cards all sit on clearer branded blue-white surfaces instead of flatter washed-out boxes.
+3. Dark mode no longer drops any Run progress card onto near-black fills:
+   - activity log cards
+   - execution workspace cards
+   - generated file/code preview cards
+   - apply-guide/tab content cards
+   - compact-mode action/evidence/artifact cards
+4. The change stays frontend-only and keeps the same run states, evidence links, and workflow actions while aligning the run detail view with the shared dashboard system in both themes.
+
 ## 2) New Information Architecture + Navigation Model
 
 ### 2.1 Primary Navigation

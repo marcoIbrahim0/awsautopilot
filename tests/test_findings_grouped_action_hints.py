@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -35,6 +36,11 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
             "open",
             "696505809372",
             "eu-north-1",
+            None,
+            None,
+            None,
+            None,
+            None,
             "AWS::::Account:696505809372",
             "AWS::::Account:696505809372",
         ),
@@ -45,6 +51,11 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
             "resolved",
             "696505809372",
             "us-east-1",
+            None,
+            None,
+            None,
+            None,
+            None,
             "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev",
             "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev",
         ),
@@ -61,6 +72,12 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
         "remediation_action_status": "resolved",
         "remediation_action_account_id": "696505809372",
         "remediation_action_region": "us-east-1",
+        "remediation_action_group_id": None,
+        "pending_confirmation": False,
+        "pending_confirmation_started_at": None,
+        "pending_confirmation_deadline_at": None,
+        "pending_confirmation_message": None,
+        "pending_confirmation_severity": None,
     }
     assert hints[("Config.1", "AwsAccount")] == {
         "remediation_action_id": str(action_id_account),
@@ -68,6 +85,12 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
         "remediation_action_status": "open",
         "remediation_action_account_id": "696505809372",
         "remediation_action_region": "eu-north-1",
+        "remediation_action_group_id": None,
+        "pending_confirmation": False,
+        "pending_confirmation_started_at": None,
+        "pending_confirmation_deadline_at": None,
+        "pending_confirmation_message": None,
+        "pending_confirmation_severity": None,
     }
 
 
@@ -106,6 +129,11 @@ async def test_list_findings_grouped_returns_group_specific_remediation_action_h
             "resolved",
             "696505809372",
             "us-east-1",
+            uuid.uuid4(),
+            "run_not_successful",
+            None,
+            "finished",
+            datetime.fromisoformat("2026-03-22T19:33:10+00:00"),
             "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev",
             "arn:aws:config:us-east-1:696505809372:config-rule/ocypheris-p2-config-fresh-kev",
         ),
@@ -138,3 +166,6 @@ async def test_list_findings_grouped_returns_group_specific_remediation_action_h
     assert response.items[0].remediation_action_id == str(action_id)
     assert response.items[0].remediation_action_type == "aws_config_enabled"
     assert response.items[0].remediation_action_status == "resolved"
+    assert response.items[0].pending_confirmation is True
+    assert response.items[0].pending_confirmation_message is not None
+    assert response.items[0].pending_confirmation_severity == "info"

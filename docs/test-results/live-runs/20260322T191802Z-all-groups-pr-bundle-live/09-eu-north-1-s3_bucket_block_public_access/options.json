@@ -1,0 +1,260 @@
+{
+  "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+  "action_type": "s3_bucket_block_public_access",
+  "mode_options": [
+    "pr_only"
+  ],
+  "strategies": [
+    {
+      "strategy_id": "s3_bucket_block_public_access_standard",
+      "label": "Block public access on bucket",
+      "mode": "pr_only",
+      "risk_level": "high",
+      "recommended": false,
+      "requires_inputs": false,
+      "input_schema": {
+        "fields": []
+      },
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        },
+        {
+          "code": "access_path_evidence_unavailable",
+          "status": "fail",
+          "message": "Unable to inspect bucket website configuration (AccessDenied)."
+        }
+      ],
+      "warnings": [
+        "May break workloads that depend on direct public S3 access. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, dependency validation can be automated."
+      ],
+      "supports_exception_flow": false,
+      "exception_only": false,
+      "impact_text": "All four bucket-level public access block settings will be enabled for this bucket.",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": true,
+      "blast_radius": "resource",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "s3_bucket_block_public_access_standard",
+          "support_tier": "manual_guidance_only",
+          "recommended": false,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        },
+        {
+          "profile_id": "s3_bucket_block_public_access_manual_preservation",
+          "support_tier": "manual_guidance_only",
+          "recommended": true,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        }
+      ],
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "missing_defaults": [],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+        "Unable to inspect bucket website configuration (AccessDenied)."
+      ],
+      "preservation_summary": {
+        "single_profile_compatible": false,
+        "strategy_only_supported": true,
+        "family": "s3_bucket_block_public_access",
+        "selected_branch": "s3_bucket_block_public_access_manual_preservation",
+        "bucket_policy_public": false,
+        "website_configured": null,
+        "existing_bucket_policy_statement_count": null,
+        "existing_bucket_policy_json_captured": false,
+        "access_path_evidence_available": false,
+        "executable_preservation_allowed": false,
+        "manual_preservation_required": true,
+        "family_strategy": "s3_bucket_block_public_access_standard"
+      },
+      "decision_rationale": "Family resolver downgraded strategy 's3_bucket_block_public_access_standard' to manual S3.2 preservation profile 's3_bucket_block_public_access_manual_preservation'. Runtime evidence could not prove the bucket is private and website hosting is disabled. Unable to inspect bucket website configuration (AccessDenied)."
+    },
+    {
+      "strategy_id": "s3_migrate_cloudfront_oac_private",
+      "label": "Migrate to CloudFront + OAC + private S3",
+      "mode": "pr_only",
+      "risk_level": "medium",
+      "recommended": true,
+      "requires_inputs": false,
+      "input_schema": {
+        "fields": []
+      },
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        },
+        {
+          "code": "access_path_evidence_unavailable",
+          "status": "fail",
+          "message": "Unable to inspect bucket website configuration (AccessDenied)."
+        }
+      ],
+      "warnings": [
+        "Requires careful validation of bucket policies and KMS permissions. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, dependency validation can be automated."
+      ],
+      "supports_exception_flow": false,
+      "exception_only": false,
+      "impact_text": "Bucket-level public access block settings will be enabled and access will be served through CloudFront + OAC.",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": true,
+      "blast_radius": "resource",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "s3_migrate_cloudfront_oac_private",
+          "support_tier": "manual_guidance_only",
+          "recommended": false,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        },
+        {
+          "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+          "support_tier": "manual_guidance_only",
+          "recommended": true,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        }
+      ],
+      "recommended_profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+      "missing_defaults": [],
+      "blocked_reasons": [
+        "Unable to inspect bucket website configuration (AccessDenied)."
+      ],
+      "preservation_summary": {
+        "single_profile_compatible": false,
+        "strategy_only_supported": true,
+        "family": "s3_bucket_block_public_access",
+        "selected_branch": "s3_migrate_cloudfront_oac_private_manual_preservation",
+        "bucket_policy_public": false,
+        "website_configured": null,
+        "existing_bucket_policy_statement_count": 1,
+        "existing_bucket_policy_json_captured": true,
+        "access_path_evidence_available": false,
+        "executable_preservation_allowed": false,
+        "manual_preservation_required": true,
+        "family_strategy": "s3_migrate_cloudfront_oac_private"
+      },
+      "decision_rationale": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Unable to inspect bucket website configuration (AccessDenied)."
+    },
+    {
+      "strategy_id": "s3_keep_public_exception",
+      "label": "Keep intentionally public (exception path)",
+      "mode": "pr_only",
+      "risk_level": "high",
+      "recommended": false,
+      "requires_inputs": true,
+      "input_schema": {
+        "fields": [
+          {
+            "key": "exception_duration_days",
+            "type": "select",
+            "required": false,
+            "description": "How long should this exception remain active?",
+            "default_value": "30",
+            "group": "Exception",
+            "options": [
+              {
+                "value": "7",
+                "label": "7 days"
+              },
+              {
+                "value": "14",
+                "label": "14 days"
+              },
+              {
+                "value": "30",
+                "label": "30 days"
+              },
+              {
+                "value": "90",
+                "label": "90 days"
+              }
+            ]
+          },
+          {
+            "key": "exception_reason",
+            "type": "string",
+            "required": false,
+            "description": "Why can't you apply this fix right now?",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "group": "Exception"
+          }
+        ]
+      },
+      "dependency_checks": [
+        {
+          "code": "s3_public_exception",
+          "status": "warn",
+          "message": "Public access remains enabled; exception must include business approval and review date."
+        }
+      ],
+      "warnings": [
+        "Keeps public exposure; requires explicit business approval and compensating controls."
+      ],
+      "supports_exception_flow": true,
+      "exception_only": true,
+      "impact_text": "Bucket-level public access block settings remain unchanged while exception workflow is used.",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": false,
+      "blast_radius": "resource",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "s3_keep_public_exception",
+          "support_tier": "manual_guidance_only",
+          "recommended": true,
+          "requires_inputs": true,
+          "supports_exception_flow": true,
+          "exception_only": true
+        }
+      ],
+      "recommended_profile_id": "s3_keep_public_exception",
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_keep_public_exception' for strategy 's3_keep_public_exception'."
+    }
+  ],
+  "recommendation": {
+    "mode": "exception_review",
+    "default_mode": "exception_review",
+    "advisory": true,
+    "enforced_by_policy": null,
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=0.80, privilege_level=0.60, internet_exposure=0.90, matched_signals=none. Relationship context is complete enough for advisory matrix placement.",
+    "matrix_position": {
+      "risk_tier": "high",
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high"
+    },
+    "evidence": {
+      "score": 91,
+      "context_incomplete": false,
+      "data_sensitivity": 0.8,
+      "internet_exposure": 0.9,
+      "privilege_level": 0.6,
+      "exploit_signals": 0.7333,
+      "matched_signals": []
+    }
+  },
+  "manual_high_risk": false,
+  "pre_execution_notice": null,
+  "runbook_url": null
+}

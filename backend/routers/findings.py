@@ -20,12 +20,16 @@ from backend.config import settings
 from backend.database import get_db
 from backend.models.action import Action
 from backend.models.action_finding import ActionFinding
+from backend.models.action_group_action_state import ActionGroupActionState
+from backend.models.action_group_membership import ActionGroupMembership
+from backend.models.action_group_run import ActionGroupRun
 from backend.models.finding import Finding
 from backend.models.enums import RemediationRunMode
 from backend.models.remediation_run import RemediationRun
 from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
+from backend.services.action_run_confirmation import derive_pending_confirmation_state
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +116,13 @@ class FindingResponse(BaseModel):
     remediation_action_status: str | None = None
     remediation_action_account_id: str | None = None
     remediation_action_region: str | None = None
+    remediation_action_group_id: str | None = None
     latest_pr_bundle_run_id: str | None = None
+    pending_confirmation: bool = False
+    pending_confirmation_started_at: str | None = None
+    pending_confirmation_deadline_at: str | None = None
+    pending_confirmation_message: str | None = None
+    pending_confirmation_severity: str | None = None
 
 
 class FindingsListResponse(BaseModel):
@@ -135,6 +145,12 @@ class FindingGroupItem(BaseModel):
     remediation_action_id: str | None = None
     remediation_action_type: str | None = None
     remediation_action_status: str | None = None
+    remediation_action_group_id: str | None = None
+    pending_confirmation: bool = False
+    pending_confirmation_started_at: str | None = None
+    pending_confirmation_deadline_at: str | None = None
+    pending_confirmation_message: str | None = None
+    pending_confirmation_severity: str | None = None
 
 
 class FindingsGroupedResponse(BaseModel):
@@ -221,7 +237,13 @@ def finding_to_response(
         remediation_action_status=hints.get("remediation_action_status"),
         remediation_action_account_id=hints.get("remediation_action_account_id"),
         remediation_action_region=hints.get("remediation_action_region"),
+        remediation_action_group_id=hints.get("remediation_action_group_id"),
         latest_pr_bundle_run_id=hints.get("latest_pr_bundle_run_id"),
+        pending_confirmation=bool(hints.get("pending_confirmation")),
+        pending_confirmation_started_at=hints.get("pending_confirmation_started_at"),
+        pending_confirmation_deadline_at=hints.get("pending_confirmation_deadline_at"),
+        pending_confirmation_message=hints.get("pending_confirmation_message"),
+        pending_confirmation_severity=hints.get("pending_confirmation_severity"),
     )
 
 
@@ -247,10 +269,31 @@ async def get_remediation_hints_for_findings(
             Action.status,
             Action.account_id,
             Action.region,
+            ActionGroupMembership.group_id,
+            ActionGroupActionState.latest_run_status_bucket,
+            ActionGroupActionState.last_confirmed_at,
+            ActionGroupRun.status,
+            ActionGroupRun.finished_at,
             Action.target_id,
             Action.resource_id,
         )
         .join(Action, Action.id == ActionFinding.action_id)
+        .outerjoin(
+            ActionGroupMembership,
+            (ActionGroupMembership.action_id == Action.id)
+            & (ActionGroupMembership.tenant_id == Action.tenant_id),
+        )
+        .outerjoin(
+            ActionGroupActionState,
+            (ActionGroupActionState.tenant_id == ActionGroupMembership.tenant_id)
+            & (ActionGroupActionState.group_id == ActionGroupMembership.group_id)
+            & (ActionGroupActionState.action_id == ActionGroupMembership.action_id),
+        )
+        .outerjoin(
+            ActionGroupRun,
+            (ActionGroupRun.id == ActionGroupActionState.latest_run_id)
+            & (ActionGroupRun.tenant_id == ActionGroupMembership.tenant_id),
+        )
         .where(
             ActionFinding.finding_id.in_(finding_ids),
             Action.tenant_id == tenant_id,
@@ -266,17 +309,37 @@ async def get_remediation_hints_for_findings(
         finding_uuid = row[0]
         action_uuid = row[1]
         action_type = row[2]
-        if not _is_executable_action_target(action_type, row[6], row[7]):
+        if not _is_executable_action_target(action_type, row[11], row[12]):
             continue
         if finding_uuid in hints_by_finding:
             continue
+        pending_confirmation = derive_pending_confirmation_state(
+            status_bucket=row[7],
+            latest_run_status=row[9],
+            latest_run_finished_at=row[10],
+            last_confirmed_at=row[8],
+        )
         hints_by_finding[finding_uuid] = {
             "remediation_action_id": str(action_uuid),
             "remediation_action_type": action_type,
             "remediation_action_status": row[3],
             "remediation_action_account_id": row[4],
             "remediation_action_region": row[5],
+            "remediation_action_group_id": str(row[6]) if row[6] else None,
             "latest_pr_bundle_run_id": None,
+            "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
+            "pending_confirmation_started_at": (
+                pending_confirmation["pending_confirmation_started_at"].isoformat()
+                if pending_confirmation["pending_confirmation_started_at"]
+                else None
+            ),
+            "pending_confirmation_deadline_at": (
+                pending_confirmation["pending_confirmation_deadline_at"].isoformat()
+                if pending_confirmation["pending_confirmation_deadline_at"]
+                else None
+            ),
+            "pending_confirmation_message": pending_confirmation["pending_confirmation_message"],
+            "pending_confirmation_severity": pending_confirmation["pending_confirmation_severity"],
         }
         action_ids.add(action_uuid)
 
@@ -494,10 +557,31 @@ async def _fetch_action_hints_for_group_rows(
             Action.status,
             Action.account_id,
             Action.region,
+            ActionGroupMembership.group_id,
+            ActionGroupActionState.latest_run_status_bucket,
+            ActionGroupActionState.last_confirmed_at,
+            ActionGroupRun.status,
+            ActionGroupRun.finished_at,
             Action.target_id,
             Action.resource_id,
         )
         .join(Action, Action.id == ActionFinding.action_id)
+        .outerjoin(
+            ActionGroupMembership,
+            (ActionGroupMembership.action_id == Action.id)
+            & (ActionGroupMembership.tenant_id == Action.tenant_id),
+        )
+        .outerjoin(
+            ActionGroupActionState,
+            (ActionGroupActionState.tenant_id == ActionGroupMembership.tenant_id)
+            & (ActionGroupActionState.group_id == ActionGroupMembership.group_id)
+            & (ActionGroupActionState.action_id == ActionGroupMembership.action_id),
+        )
+        .outerjoin(
+            ActionGroupRun,
+            (ActionGroupRun.id == ActionGroupActionState.latest_run_id)
+            & (ActionGroupRun.tenant_id == ActionGroupMembership.tenant_id),
+        )
         .where(
             ActionFinding.finding_id.in_(list(finding_to_group.keys())),
             Action.tenant_id == tenant_id,
@@ -506,7 +590,15 @@ async def _fetch_action_hints_for_group_rows(
     )
 
     hints: dict[tuple[str, str], dict] = {}
-    for finding_id, action_id, action_type, action_status, account_id, region, target_id, resource_id in rows_result.all():
+    for row in rows_result.all():
+        finding_id = row[0]
+        action_id = row[1]
+        action_type = row[2]
+        action_status = row[3]
+        account_id = row[4]
+        region = row[5]
+        target_id = row[11]
+        resource_id = row[12]
         group_key = finding_to_group.get(finding_id)
         if group_key is None:
             continue
@@ -514,12 +606,32 @@ async def _fetch_action_hints_for_group_rows(
             continue
         if group_key in hints:
             continue
+        pending_confirmation = derive_pending_confirmation_state(
+            status_bucket=row[7],
+            latest_run_status=row[9],
+            latest_run_finished_at=row[10],
+            last_confirmed_at=row[8],
+        )
         hints[group_key] = {
             "remediation_action_id": str(action_id),
             "remediation_action_type": action_type,
             "remediation_action_status": action_status,
             "remediation_action_account_id": account_id,
             "remediation_action_region": region,
+            "remediation_action_group_id": str(row[6]) if row[6] else None,
+            "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
+            "pending_confirmation_started_at": (
+                pending_confirmation["pending_confirmation_started_at"].isoformat()
+                if pending_confirmation["pending_confirmation_started_at"]
+                else None
+            ),
+            "pending_confirmation_deadline_at": (
+                pending_confirmation["pending_confirmation_deadline_at"].isoformat()
+                if pending_confirmation["pending_confirmation_deadline_at"]
+                else None
+            ),
+            "pending_confirmation_message": pending_confirmation["pending_confirmation_message"],
+            "pending_confirmation_severity": pending_confirmation["pending_confirmation_severity"],
         }
     return hints
 
@@ -540,6 +652,12 @@ def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
         remediation_action_id=hint.get("remediation_action_id"),
         remediation_action_type=hint.get("remediation_action_type"),
         remediation_action_status=hint.get("remediation_action_status"),
+        remediation_action_group_id=hint.get("remediation_action_group_id"),
+        pending_confirmation=bool(hint.get("pending_confirmation")),
+        pending_confirmation_started_at=hint.get("pending_confirmation_started_at"),
+        pending_confirmation_deadline_at=hint.get("pending_confirmation_deadline_at"),
+        pending_confirmation_message=hint.get("pending_confirmation_message"),
+        pending_confirmation_severity=hint.get("pending_confirmation_severity"),
     )
 
 

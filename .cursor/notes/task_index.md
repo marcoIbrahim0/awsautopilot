@@ -4,6 +4,38 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Restore the actual March 22 frontend build with `Remember me` after the wrong rollback target (2026-03-22)](task_log.md#restore-the-actual-march-22-frontend-build-with-remember-me-after-the-wrong-rollback-target-2026-03-22)
+  - Corrected the bad rollback by redeploying the frontend from the real current workspace instead of the March 14-based worktree that lacked `Remember me` and later Help Hub/chatbot work.
+  - Verified the live login page snapshot now shows `Remember me`, `Forgot password?`, and `Sign in`, and confirmed the live API health endpoint still returns `200`.
+- [Roll back live backend and frontend to the previous deployed commits (2026-03-22)](task_log.md#roll-back-live-backend-and-frontend-to-the-previous-deployed-commits-2026-03-22)
+  - Rolled production back one commit from the incorrect deploy bases to backend `e9a362b3` and frontend `6b6f87a` using fresh clean worktrees pinned to those exact commits.
+  - Verified the live API health endpoint returned `200` again and confirmed the latest Cloudflare deployment version `0c52bacd-da21-4c1a-ad8b-f75f59f2f877` created at `2026-03-22T21:50:55.017Z`.
+- [Harden Help Hub platform-visible answers, shorten responses, and gate support-case creation by approval (2026-03-22)](task_log.md#harden-help-hub-platform-visible-answers-shorten-responses-and-gate-support-case-creation-by-approval-2026-03-22)
+  - Replaced the assistant's backend-only IAM snapshot with platform-visible Top Risks metrics, removed internal context from the public API response, and added output guards against long replies and secret-like content.
+  - Added an approval-gated Help Hub escalation flow so the assistant can offer a support case, then create and redirect only after the user explicitly approves.
+- [Deploy grouped pending-confirmation UX and `EC2.19` runner hardening updates (2026-03-22)](task_log.md#deploy-grouped-pending-confirmation-ux-and-ec219-runner-hardening-updates-2026-03-22)
+  - Deployed the serverless backend/runtime and published the Cloudflare frontend for the grouped pending-confirmation UX plus isolated Terraform workspace runner fix.
+  - Verified the live API health endpoint, the public `/actions/group` route, and the latest Cloudflare deployment record created at `2026-03-22T20:38:39.370Z`.
+- [Floating Chat Optimistic UI and Rate Limiting (2026-03-22)](task_log.md#floating-chat-optimistic-ui-and-rate-limiting-2026-03-22)
+  - Implemented an optimistic UI display for user queries and enforced a local limit of 5 chats per 6 hours with 3-hour thread expiration.
+- [Add grouped pending-confirmation UX notes and isolate `EC2.19` bundle Terraform workspaces (2026-03-22)](task_log.md#add-grouped-pending-confirmation-ux-notes-and-isolate-ec219-bundle-terraform-workspaces-2026-03-22)
+  - Added additive grouped-member and finding-level pending-confirmation fields so the UI can explain why a successfully run PR bundle can still remain open until AWS source-of-truth confirmation arrives, with escalation after `12` hours.
+  - Hardened grouped bundle runners to execute each action folder inside its own isolated temporary Terraform workspace, closing the local state/workdir collision path seen in the retained March 22 `sg_restrict_public_ports` live run.
+- [Execute all available grouped PR bundles live for account `696505809372` (2026-03-22)](task_log.md#execute-all-available-grouped-pr-bundles-live-for-account-696505809372-2026-03-22)
+  - Ran a retained live all-groups PR-bundle E2E against the single connected `6...` account and captured `22` grouped-family outcomes under `docs/test-results/live-runs/20260322T191802Z-all-groups-pr-bundle-live/`.
+  - Final live outcome: `15` grouped runs finished, `1` grouped run failed after bundle generation (`sg_restrict_public_ports`), and `6` groups failed earlier at bundle creation with live `400/500` responses.
+- [Improve Help Hub conversational handling for greetings and generic queries (2026-03-22)](task_log.md#improve-help-hub-conversational-handling-for-greetings-and-generic-queries-2026-03-22)
+  - Updated the system prompt to gracefully handle greetings and vague questions without over-sharing context or failing closed, and deployed the backend updates.
+- [Fix chatbot UI transparency and perform final production rollout (2026-03-22)](task_log.md#fix-chatbot-ui-transparency-and-perform-final-production-rollout-2026-03-22)
+  - Resolved the transparency issue in the newly implemented floating chatbot and performed a full-stack production rollout to publish the fix.
+- [Implement and deploy globally floating "Ask AI" chatbot with session persistence (2026-03-22)](task_log.md#implement-and-deploy-globally-floating-ask-ai-chatbot-with-session-persistence-2026-03-22)
+  - Shipped a globally floating multi-turn chat interface with localStorage-based session persistence and performed a full-stack production rollout.
+- [Deploy hybrid Help Hub live-IAM rollout to production (2026-03-22)](task_log.md#deploy-hybrid-help-hub-live-iam-rollout-to-production-2026-03-22)
+  - Deployed the hybrid Help Hub assistant runtime, applied `0047_help_assistant_live_iam_lookup`, and published the updated frontend.
+  - Verified the live confirmation-gated IAM chat path, thread persistence, and per-account enablement on `https://api.ocypheris.com`, while confirming the target customer ReadRole is still too narrow for full live IAM observations.
+- [Implement hybrid tenant-aware Help Hub chat with bounded live IAM investigation (2026-03-22)](task_log.md#implement-hybrid-tenant-aware-help-hub-chat-with-bounded-live-iam-investigation-2026-03-22)
+  - Expanded the Help Hub assistant to use ingested tenant security context by default and added a confirmation-gated live IAM investigation path for SaaS-admin-enabled accounts.
+  - Added per-account backend/API enablement controls, additive live-lookup thread metadata, bounded role/user/access-key summaries, and focused Help Hub regression coverage.
 - [Implement Attack Path materialized read model and async refresh path (2026-03-22)](task_log.md#implement-attack-path-materialized-read-model-and-async-refresh-path-2026-03-22)
   - Added tenant-scoped materialized summary/detail/membership tables plus a rebuild script so shared Attack Path list/detail reads stop rebuilding graph grouping on every request.
   - Cut the Attack Path routes over to the persisted read model, added additive freshness metadata, and wired bounded background refresh through the worker queue.
@@ -16,6 +48,15 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Replace dashboard shell branding icon and favicon with the provided Ocypheris mark (2026-03-22)](task_log.md#replace-dashboard-shell-branding-icon-and-favicon-with-the-provided-ocypheris-mark-2026-03-22)
   - Copied the provided transparent PNG into the frontend branding assets, switched the left sidebar brand mark to it, and removed the old top-navbar icon chip.
   - Added the same PNG as the app icon source and removed the old SVG favicon asset, keeping the change local only with no deploy.
+- [Implement shared operator-surface hover explainers across remediation, accounts, settings, and run views (2026-03-22)](task_log.md#implement-shared-operator-surface-hover-explainers-across-remediation-accounts-settings-and-run-views-2026-03-22)
+  - Added a central concept-based explainer registry plus a reusable `ExplainerHint` wrapper so operator surfaces can reuse Action Detail vocabulary with one consistent tooltip pattern.
+  - Wired the new hints into shared remediation/settings primitives and rolled them through PR bundle, suppress, accounts, settings, and remediation-run surfaces with focused UI regressions.
+- [Deploy backend/frontend operator-surface explainer updates live (2026-03-22)](task_log.md#deploy-backendfrontend-operator-surface-explainer-updates-live-2026-03-22)
+  - Deployed the serverless backend runtime, applied the target database head, and pushed the Cloudflare frontend bundle live.
+  - Verified the live public runtimes respond successfully at `https://api.ocypheris.com/health` and `https://ocypheris.com`.
+- [Fix Attack Path shared-detail 404 for legacy-resolvable `path:<id>` requests (2026-03-22)](task_log.md#fix-attack-path-shared-detail-404-for-legacy-resolvable-pathid-requests-2026-03-22)
+  - Fixed the shared Attack Path detail route so a materialized-table miss now falls back to the legacy shared-path builder instead of returning `404` for still-resolvable `path:<id>` records.
+  - Added a focused regression covering the case where the tenant has materialized rows but the requested shared path is only available through the legacy builder.
 - [Implement dashboard visual-system unification across shell, settings, help, and remediation workflows (2026-03-22)](task_log.md#implement-dashboard-visual-system-unification-across-shell-settings-help-and-remediation-workflows-2026-03-22)
   - Reworked the dashboard theme tokens and shared UI primitives so the shell, cards, badges, buttons, and form controls now follow one logo-driven operator design system in both light and dark mode.
   - Refit Settings, Help Hub, PR bundle creation, suppress workflow surfaces, and the action-detail entry chrome onto the new shared system, while keeping Accounts/Top Risks as reference surfaces.
@@ -1937,3 +1978,11 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Reworked the Action Detail hero, workflow rail, and badge cluster so the surface matches the shared dashboard visual system more closely in both light and dark modes.
   - Promoted `Open Attack Paths` into a dedicated top-of-surface CTA card and rebuilt the priority-storyboard `Recommended next step` panel.
   - Verified the refinement with frontend typecheck and focused Action Detail UI tests.
+- [Shared dark-mode border hierarchy pass for shell, cards, and buttons (2026-03-22)](task_log.md#shared-dark-mode-border-hierarchy-pass-for-shell-cards-and-buttons-2026-03-22)
+  - Added explicit dark-mode border roles for shell chrome, cards, strong controls, and soft inset surfaces in the shared theme tokens.
+  - Applied the new border hierarchy through the top navbar, left sidebar, shared card primitives, and button variants so the fix propagates across the site.
+  - Verified the shared UI changes with frontend typecheck and targeted lint, with only the existing sidebar `next/image` warnings remaining.
+- [Fix Run progress light/dark card colors (2026-03-22)](task_log.md#fix-run-progress-lightdark-card-colors-2026-03-22)
+  - Reworked `RemediationRunProgress` onto the shared dashboard card/inset/control palette instead of the older mixed neumorphic and `bg-bg` surfaces.
+  - Cleaned up light-mode card colors and removed near-black dark-mode card fills across the full-page and compact run-progress layouts.
+  - Verified the pass with frontend typecheck and the focused `RemediationRunProgress` UI test.
