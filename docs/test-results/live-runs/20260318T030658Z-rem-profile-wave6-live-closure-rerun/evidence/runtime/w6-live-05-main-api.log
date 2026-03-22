@@ -1,0 +1,50 @@
+INFO:     Started server process [96662]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18022 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60643 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60644 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60664 - "GET /api/actions/8e4a902d-b01d-4fea-9e84-fefe33831ec9/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60669 - "GET /api/actions/c89e2c01-cda1-4d35-8945-cca8096b8b60/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60680 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "POST /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:60709 - "GET /api/remediation-runs/92503289-42aa-4676-a6d4-4494d3ec7fee HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60708 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60724 - "GET /api/remediation-runs/92503289-42aa-4676-a6d4-4494d3ec7fee HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60723 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60727 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60728 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60729 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60730 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60731 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60736 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60741 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60743 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60744 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60745 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60746 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60747 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60748 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60749 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60750 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60751 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60752 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60753 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60761 - "GET /api/remediation-runs/92503289-42aa-4676-a6d4-4494d3ec7fee/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60816 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60818 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60820 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60870 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60901 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60954 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61027 - "POST /api/internal/group-runs/report HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:61037 - "GET /api/remediation-runs/92503289-42aa-4676-a6d4-4494d3ec7fee HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61038 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61186 - "POST /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61219 - "GET /api/remediation-runs/be5c9492-3ac6-48fc-9055-d5eeb6a82f00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61220 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /api/remediation-runs/be5c9492-3ac6-48fc-9055-d5eeb6a82f00/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61239 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61289 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61290 - "GET /api/action-groups/3bda23a8-b803-417d-92c4-96a4110c4bc1/runs HTTP/1.1" 200 OK

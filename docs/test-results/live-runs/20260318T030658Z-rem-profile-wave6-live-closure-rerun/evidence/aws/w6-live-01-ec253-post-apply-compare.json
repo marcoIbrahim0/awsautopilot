@@ -1,0 +1,31 @@
+{
+  "exec_public_admin_rules_remaining": [],
+  "exec_restricted_admin_rules": [
+    {
+      "FromPort": 3389,
+      "ToPort": 3389,
+      "Cidr": "10.0.0.0/8",
+      "Description": "RDP from allowed CIDR - Security Autopilot"
+    },
+    {
+      "FromPort": 22,
+      "ToPort": 22,
+      "Cidr": "10.0.0.0/8",
+      "Description": "SSH from allowed CIDR - Security Autopilot"
+    }
+  ],
+  "manual_public_admin_rules": [
+    {
+      "FromPort": 22,
+      "ToPort": 22,
+      "Cidr": "0.0.0.0/0",
+      "Description": "Wave6 env readiness SSH exposure"
+    },
+    {
+      "FromPort": 3389,
+      "ToPort": 3389,
+      "Cidr": "0.0.0.0/0",
+      "Description": "Wave6 env readiness RDP exposure"
+    }
+  ]
+}

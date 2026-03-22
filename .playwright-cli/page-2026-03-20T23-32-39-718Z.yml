@@ -1,0 +1,154 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+        - link "Audit Log" [ref=e36] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e38]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e43]:
+        - img [ref=e44]
+    - generic [ref=e46]:
+      - banner [ref=e47]:
+        - heading "Accounts" [level=1] [ref=e49]
+        - generic [ref=e50]:
+          - button "Switch to light mode" [ref=e51]:
+            - img [ref=e52]
+          - button "Notifications" [ref=e55]:
+            - img [ref=e56]
+          - button "Profile menu" [ref=e58]:
+            - generic [ref=e59]: M
+      - main [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - generic [ref=e66]:
+                - paragraph [ref=e67]: Account hub
+                - heading "Connected AWS accounts" [level=3] [ref=e68]
+                - paragraph [ref=e69]: Operate onboarding handoff, refresh findings, and manage connected-account lifecycle from the same dashboard surface language used by the rest of the product.
+              - generic [ref=e71]:
+                - link "Run onboarding checks" [ref=e72] [cursor=pointer]:
+                  - /url: /onboarding
+                  - generic [ref=e73]: Run onboarding checks
+                - button "Connect AWS account" [ref=e74]:
+                  - generic [ref=e75]: Connect AWS account
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - generic [ref=e79]:
+                  - paragraph [ref=e80]: Operator flow
+                  - heading "Validate once in onboarding, operate continuously from Accounts." [level=3] [ref=e81]
+                  - paragraph [ref=e82]: "This surface is optimized for live account operations: confirm connection state, refresh data sources, inspect role posture, and hand operators back to onboarding whenever a required verification must be rerun."
+                - generic [ref=e83]:
+                  - generic [ref=e84]:
+                    - paragraph [ref=e85]: Quick action
+                    - paragraph [ref=e86]: Open details for refresh, reconciliation, and lifecycle actions.
+                  - generic [ref=e87]:
+                    - paragraph [ref=e88]: Required checks
+                    - paragraph [ref=e89]: Inspector, Security Hub, AWS Config, and forwarder validation stay in onboarding.
+                  - generic [ref=e90]:
+                    - paragraph [ref=e91]: Connection contract
+                    - paragraph [ref=e92]: Accounts stores ReadRole scope and regions; onboarding final checks confirm readiness.
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - paragraph [ref=e95]: Total accounts
+                  - paragraph [ref=e96]: "1"
+                  - paragraph [ref=e97]: Accounts currently registered to this tenant.
+                - generic [ref=e98]:
+                  - paragraph [ref=e99]: Healthy
+                  - paragraph [ref=e100]: "1"
+                  - paragraph [ref=e101]: Validated accounts ready for ingest and reconciliation.
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: Needs attention
+                  - paragraph [ref=e104]: "0"
+                  - paragraph [ref=e105]: Accounts pending validation, paused, or requiring follow-up.
+                - generic [ref=e106]:
+                  - paragraph [ref=e107]: Monitored regions
+                  - paragraph [ref=e108]: "2"
+                  - paragraph [ref=e109]: Distinct AWS regions currently in scope across all accounts.
+          - tablist "Account sections" [ref=e112]:
+            - tab "Connection health Live validation state, regions, and quick operator actions." [selected] [ref=e113]:
+              - paragraph [ref=e114]: Connection health
+              - paragraph [ref=e115]: Live validation state, regions, and quick operator actions.
+            - tab "Roles & permissions ReadRole posture and monitored-region scope across connected accounts." [ref=e116]:
+              - paragraph [ref=e117]: Roles & permissions
+              - paragraph [ref=e118]: ReadRole posture and monitored-region scope across connected accounts.
+            - tab "Integrations Required service checks and onboarding handoff for each account." [ref=e119]:
+              - paragraph [ref=e120]: Integrations
+              - paragraph [ref=e121]: Required service checks and onboarding handoff for each account.
+            - tab "Usage & lifecycle Lifecycle timestamps and monitoring posture over time." [ref=e122]:
+              - paragraph [ref=e123]: Usage & lifecycle
+              - paragraph [ref=e124]: Lifecycle timestamps and monitoring posture over time.
+          - generic [ref=e126]:
+            - generic [ref=e127]:
+              - generic [ref=e128]:
+                - paragraph [ref=e129]: Connection health
+                - heading "Connection state and quick account actions" [level=3] [ref=e130]
+                - paragraph [ref=e131]: Open the account detail workflow, rerun onboarding-only checks, or queue source refreshes directly from the health grid.
+              - generic [ref=e133]: 1 account
+            - table [ref=e137]:
+              - rowgroup [ref=e138]:
+                - row "Account Coverage Status Connection health Last validated Actions" [ref=e139]:
+                  - columnheader "Account" [ref=e140]
+                  - columnheader "Coverage" [ref=e141]
+                  - columnheader "Status" [ref=e142]
+                  - columnheader "Connection health" [ref=e143]
+                  - columnheader "Last validated" [ref=e144]
+                  - columnheader "Actions" [ref=e145]
+              - rowgroup [ref=e146]:
+                - row "696505809372 Open detail workflow 2 regions eu-north-1, us-east-1 validated Healthy 3/20/26, 5:14 AM UTC Open details Onboarding checks Finding source to refresh Refresh All sources Account-read checks run during onboarding only." [ref=e147]:
+                  - cell "696505809372 Open detail workflow" [ref=e148]:
+                    - button "696505809372 Open detail workflow" [ref=e149]:
+                      - text: "696505809372"
+                      - generic [ref=e150]: Open detail workflow
+                  - cell "2 regions eu-north-1, us-east-1" [ref=e151]:
+                    - paragraph [ref=e152]: 2 regions
+                    - paragraph [ref=e153]: eu-north-1, us-east-1
+                  - cell "validated" [ref=e154]:
+                    - generic [ref=e155]: validated
+                  - cell "Healthy" [ref=e156]:
+                    - generic [ref=e157]: Healthy
+                  - cell "3/20/26, 5:14 AM UTC" [ref=e158]
+                  - cell "Open details Onboarding checks Finding source to refresh Refresh All sources Account-read checks run during onboarding only." [ref=e159]:
+                    - generic [ref=e160]:
+                      - generic [ref=e161]:
+                        - button "Open details" [ref=e162]:
+                          - generic [ref=e163]: Open details
+                        - link "Onboarding checks" [ref=e164] [cursor=pointer]:
+                          - /url: /onboarding
+                          - generic [ref=e165]: Onboarding checks
+                        - generic [ref=e168]:
+                          - button "Finding source to refresh" [ref=e169]:
+                            - generic [ref=e170]:
+                              - generic [ref=e171]: Security Hub
+                              - img [ref=e172]
+                          - button "Refresh" [ref=e174]:
+                            - generic [ref=e175]: Refresh
+                          - button "All sources" [ref=e176]:
+                            - generic [ref=e177]: All sources
+                      - generic [ref=e178]: Account-read checks run during onboarding only.
+  - alert [ref=e179]

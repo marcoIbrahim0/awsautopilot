@@ -1,0 +1,12 @@
+{
+  "cloudtrail": {
+    "default_bucket_name": "security-autopilot-w6-envready-cloudtrail-696505809372"
+  },
+  "config": {
+    "delivery_mode": "centralized_delivery",
+    "default_bucket_name": "security-autopilot-w6-envready-config-696505809372"
+  },
+  "s3_access_logs": {
+    "default_target_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809372"
+  }
+}

@@ -30,6 +30,8 @@ QUEUE_LAG_METRIC_NAMESPACE = "AWS/SQS"
 QUEUE_LAG_METRIC_NAME = "ApproximateAgeOfOldestMessage"
 QUEUE_LAG_METRIC_LOOKBACK_MINUTES = 5
 QUEUE_LAG_METRIC_PERIOD_SECONDS = 60
+QUEUE_LAG_METRIC_ACCESS_DENIED = "metric_access_denied"
+QUEUE_LAG_METRIC_UNAVAILABLE = "metric_unavailable"
 
 READINESS_SIMULATION_ENV = "READINESS_SIMULATION_MODE"
 SIM_MODE_FAILURE = "dependency_failure"
@@ -79,6 +81,14 @@ def _latest_metric_max(datapoints: list[dict[str, Any]]) -> float | None:
     return float(maximum)
 
 
+def _queue_metric_error_marker(exc: Exception) -> str:
+    if isinstance(exc, ClientError):
+        code = str(exc.response.get("Error", {}).get("Code") or "").strip()
+        if code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation"}:
+            return QUEUE_LAG_METRIC_ACCESS_DENIED
+    return QUEUE_LAG_METRIC_UNAVAILABLE
+
+
 def _queue_oldest_message_age_seconds(
     cloudwatch_client: Any,
     queue_name: str,
@@ -95,7 +105,7 @@ def _queue_oldest_message_age_seconds(
             Statistics=["Maximum"],
         )
     except (ClientError, BotoCoreError, Exception) as exc:
-        return None, str(exc)
+        return None, _queue_metric_error_marker(exc)
     return _latest_metric_max(response.get("Datapoints") or []), None
 
 
@@ -232,7 +242,7 @@ def _queue_snapshot(
                     checked_at,
                 )
             except (ClientError, BotoCoreError, Exception) as exc:
-                oldest_message_age_error = str(exc)
+                oldest_message_age_error = _queue_metric_error_marker(exc)
 
         if oldest_message_age_seconds is not None:
             oldest_message_seconds.append(oldest_message_age_seconds)

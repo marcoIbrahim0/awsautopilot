@@ -1,7 +1,7 @@
 # Reconciliation Quality Review
 
 Cross-reference:
-- [E2E no-UI agent debug reference](e2e_no_ui_agent_debug_reference.md)
+- [E2E no-UI agent debug reference](runbooks/e2e-no-ui-agent-debug-reference.md)
 - [Item 17 medium/low-confidence control coverage plan](prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 
 Scope audited:

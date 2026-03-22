@@ -1,0 +1,60 @@
+{
+  "exec_exact_match": true,
+  "manual_exact_match": true,
+  "exec_restored": [
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 22,
+      "ToPort": 22,
+      "Ipv4": [
+        {
+          "Cidr": "0.0.0.0/0",
+          "Description": "Wave6 env readiness SSH exposure"
+        }
+      ],
+      "Ipv6": [],
+      "UserIdGroupPairs": []
+    },
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 3389,
+      "ToPort": 3389,
+      "Ipv4": [
+        {
+          "Cidr": "0.0.0.0/0",
+          "Description": "Wave6 env readiness RDP exposure"
+        }
+      ],
+      "Ipv6": [],
+      "UserIdGroupPairs": []
+    }
+  ],
+  "manual_restored": [
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 22,
+      "ToPort": 22,
+      "Ipv4": [
+        {
+          "Cidr": "0.0.0.0/0",
+          "Description": "Wave6 env readiness SSH exposure"
+        }
+      ],
+      "Ipv6": [],
+      "UserIdGroupPairs": []
+    },
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 3389,
+      "ToPort": 3389,
+      "Ipv4": [
+        {
+          "Cidr": "0.0.0.0/0",
+          "Description": "Wave6 env readiness RDP exposure"
+        }
+      ],
+      "Ipv6": [],
+      "UserIdGroupPairs": []
+    }
+  ]
+}

@@ -2,16 +2,18 @@
 
 > Scope date: 2026-03-14
 >
-> Status: Current state - code-derived baseline
+> ⚠️ Status: Historical snapshot captured on 2026-03-14 and superseded as the live contract on 2026-03-19.
 >
-> This file documents the currently shipped remediation API surface only. It is intentionally descriptive, not aspirational. Planned remediation-profile work lives in [the remediation-profile-resolution spec](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md) and [the implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md); those planned changes are not treated here as active contract.
+> Current contract note (2026-03-19): current `master` exposes `pr_only` preview/create flows only, rejects `direct_fix`, and does not require or expose customer `WriteRole`. The direct-fix and `WriteRole` references below are preserved to document the pre-de-scope Wave 0 baseline only.
+
+This file documents the remediation API surface as it existed on 2026-03-14 before the 2026-03-19 PR-only de-scope. It is intentionally descriptive, not aspirational. Planned remediation-profile work lives in [the remediation-profile-resolution spec](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md) and [the implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md); those planned changes are not treated here as active contract.
 
 Related docs:
 
 - [Remediation safety model](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-safety-model.md)
 - [Root-key safe remediation technical spec](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
 
-## Shared current-state notes
+## Shared 2026-03-14 baseline notes
 
 - For `GET /api/actions/*` read surfaces, tenant resolution goes through `resolve_tenant_id(...)`: authenticated callers use `current_user.tenant_id`; unauthenticated callers only get `tenant_id` query fallback when `settings.is_local` is true. This is current compatibility behavior, not a generic production auth contract.
 - `POST /api/remediation-runs` and `POST /api/remediation-runs/group-pr-bundle` do not accept `tenant_id`; they are always scoped to `current_user.tenant_id`.
@@ -81,7 +83,7 @@ List the currently available remediation modes and strategy rows for one action,
 
 **Known compatibility constraints visible in code**
 
-- `mode_options` comes from the strategy registry when strategies exist. If no strategies exist, current fallback is `["pr_only"]` plus `direct_fix` only when the runtime says that action type supports direct-fix.
+- In the 2026-03-14 baseline, `mode_options` came from the strategy registry when strategies existed. If no strategies existed, the fallback was `["pr_only"]` plus `direct_fix` only when the runtime said that action type supported direct-fix.
 - `strategy_id` is still the public compatibility key. Strategy-mapped actions still expose `strategies[]` even though some create routes may reject missing `strategy_id`.
 - Current "strategy optional" compatibility is intentionally limited to `enable_security_hub` and `enable_guardduty`.
 - Dependency checks in this endpoint are computed with empty `strategy_inputs` (`{}`). Input-dependent validation can still change later at run creation time once real `strategy_inputs` are supplied.
@@ -111,7 +113,7 @@ List the currently available remediation modes and strategy rows for one action,
 
 **Purpose**
 
-Return a preview object for one action. In current code this serves two distinct roles:
+Return a preview object for one action. In the 2026-03-14 baseline this served two distinct roles:
 
 - direct-fix pre-check and preview bridge
 - informational state simulation for selected `pr_only` strategies
@@ -130,8 +132,8 @@ Return a preview object for one action. In current code this serves two distinct
 **Additive optional fields already supported**
 
 - Query: `mode`
-  - defaults to `direct_fix`
-  - accepted values are `direct_fix` and `pr_only`
+  - in the baseline it defaulted to `direct_fix`
+  - in the baseline accepted values were `direct_fix` and `pr_only`
 - Query: `strategy_id`
 - Query: `strategy_inputs`
   - current contract is a JSON object string, not repeated query keys
@@ -149,24 +151,24 @@ Return a preview object for one action. In current code this serves two distinct
 
 **Known compatibility constraints visible in code**
 
-- This route returns `200` for many non-happy-path cases instead of raising a structured `4xx`:
-  - action type does not support direct-fix
-  - direct-fix runtime module is not packaged in this API deployment
-  - AWS account row is missing
-  - WriteRole is missing
-  - STS assume-role fails
-  - preview bridge raises an unexpected exception
-  - `strategy_inputs` is invalid for `mode=direct_fix`
-- `mode=pr_only` is explicitly accepted today and returns an informational preview rather than an error.
-- `strategy_inputs` JSON parse failures are ignored for `mode=pr_only`, but surfaced as a message for `mode=direct_fix`.
+- In the historical baseline, this route returned `200` for many non-happy-path cases instead of raising a structured `4xx`:
+  - action type did not support direct-fix
+  - the direct-fix runtime module was not packaged in that API deployment
+  - the AWS account row was missing
+  - `WriteRole` was missing
+  - STS assume-role failed
+  - the preview bridge raised an unexpected exception
+  - `strategy_inputs` was invalid for `mode=direct_fix`
+- In the historical baseline, `mode=pr_only` was explicitly accepted and returned an informational preview rather than an error.
+- In the historical baseline, `strategy_inputs` JSON parse failures were ignored for `mode=pr_only`, but surfaced as a message for `mode=direct_fix`.
 - State simulation is only implemented for these strategy IDs:
   - `sg_restrict_public_ports_guided`
   - `s3_enforce_ssl_strict_deny`
   - `s3_enforce_ssl_with_principal_exemptions`
   - `config_enable_centralized_delivery`
   - `config_enable_account_local_delivery`
-- If no state simulation exists, the current baseline response falls back to `{}` / `[]` unless the direct-fix preview bridge returns richer before/after data.
-- The route description says direct-fix preview "requires WriteRole", but current code does not require WriteRole for the `pr_only` informational path.
+- If no state simulation existed, the baseline response fell back to `{}` / `[]` unless the direct-fix preview bridge returned richer before/after data.
+- The route description in that baseline said direct-fix preview depended on `WriteRole`, but even then the `pr_only` informational path did not require `WriteRole`.
 
 **Exact source files that currently define behavior**
 
@@ -180,7 +182,7 @@ Return a preview object for one action. In current code this serves two distinct
 
 **Purpose**
 
-Create one remediation run row for one action and enqueue the generic remediation worker for either `pr_only` or `direct_fix`.
+Create one remediation run row for one action and enqueue the generic remediation worker for either `pr_only` or `direct_fix` in the 2026-03-14 baseline.
 
 **Auth / tenant expectations**
 
@@ -233,15 +235,15 @@ Create one remediation run row for one action and enqueue the generic remediatio
   - failing dependency checks reject the request
   - `warn` / `unknown` checks require `risk_acknowledged=true`
   - rejection payloads currently include `risk_snapshot`
-- Direct-fix creation adds additional gates:
-  - direct-fix runtime module must be available in this API deployment
-  - action type must be in the runtime-supported direct-fix set
-  - tenant account row must exist
-  - `role_write_arn` must exist
-  - permission probe must not return a hard failure
-- Creating the run is the approval act:
-  - `approved_by_user_id` is stamped for both `direct_fix` and `pr_only`
-  - direct-fix creation also stamps `artifacts.direct_fix_approval`
+- Historical baseline direct-fix creation added additional gates:
+  - the direct-fix runtime module had to be available in that API deployment
+  - the action type had to be in the runtime-supported direct-fix set
+  - the tenant account row had to exist
+  - `role_write_arn` had to exist
+  - the permission probe could not return a hard failure
+- In the historical baseline, creating the run was the approval act:
+  - `approved_by_user_id` was stamped for both `direct_fix` and `pr_only`
+  - direct-fix creation also stamped `artifacts.direct_fix_approval`
 - Duplicate and rate-limit behavior is already part of the contract:
   - active `pending|running|awaiting_approval` runs block duplicates with `409`
   - non-PR identical requests are blocked for 30 seconds

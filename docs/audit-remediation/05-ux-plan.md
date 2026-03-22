@@ -29,8 +29,8 @@ This plan must deliver:
 
 | Phase | In-Scope IDs | Expected Outputs |
 | --- | --- | --- |
-| Phase 1 | `UX-001` | Evidence export and baseline report paths are reachable from primary settings navigation |
-| Phase 2 | `UX-002`, `UX-006` | Settings actions align with real behavior and URL state is deterministic/shareable |
+| Phase 1 | `UX-001` | Exports/compliance and baseline-report workflows are reachable from canonical Settings tabs, with `/exports` retained only as an entry surface |
+| Phase 2 | `UX-002`, `UX-006` | Settings/actions align with real behavior, Organization is read-only, and URL state is deterministic/shareable |
 | Phase 3 | `UX-004`, `UX-005` | Accessibility controls in CI and faster onboarding time-to-value with measured outcomes |
 
 ## Deliverable and Evidence Matrix
@@ -48,13 +48,15 @@ This plan must deliver:
 ### UX-001: Evidence export and baseline report are unreachable
 
 **Implementation actions**
-1. Add `Evidence Export` and `Baseline Report` entries to Settings navigation.
-2. Support route-based deep links (`/settings?tab=evidence-export` and `/settings?tab=baseline-report`).
-3. Ensure tab state initialization from URL query params.
-4. Add integration tests for navigation, refresh, and direct-link behavior.
+1. Make `/settings` the canonical reporting surface with `Exports & Compliance` and `Baseline Report` tabs.
+2. Support route-based deep links (`/settings?tab=exports-compliance` and `/settings?tab=baseline-report`) while normalizing the legacy `evidence-export` alias into `exports-compliance`.
+3. Replace `/exports` with a thin entry page and redirect `/baseline-report` into Settings.
+4. Add route tests for direct-link behavior and tab-state synchronization.
 
 **Code touchpoints**
 - `frontend/src/app/settings/page.tsx`
+- `frontend/src/app/exports/page.tsx`
+- `frontend/src/app/baseline-report/page.tsx`
 
 **Validation**
 - Manual smoke test confirms both views accessible from primary settings flow.
@@ -63,24 +65,37 @@ This plan must deliver:
 **Acceptance criteria**
 - Users can reliably access export/report workflows without hidden UI paths.
 
+**Execution status (2026-03-20)**
+- Completed.
+- Landed canonical Settings tabs plus thin `/exports` and redirecting `/baseline-report` surfaces.
+- Added route coverage in `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.test.tsx`.
+
 ### UX-002: "Validate Read Role" action is no-op
 
 **Implementation actions**
-1. Connect button to real backend validation endpoint.
-2. If immediate backend integration is not ready, relabel as informational and remove action affordance.
-3. Display actionable result states (`success`, `warnings`, `failed`) with next steps.
-4. Add telemetry event for validation usage and outcomes.
+1. Remove inline validation/readiness actions from Settings and Accounts surfaces.
+2. Route users to onboarding final checks for required account-read validation.
+3. Remove stale `WriteRole` / direct-fix copy from account-management surfaces so the frontend matches the current PR-only contract.
+4. Keep Organization as a read-only tenant/account-coverage handoff.
 
 **Code touchpoints**
 - `frontend/src/app/settings/page.tsx`
-- related backend validation endpoint wiring if needed
+- `frontend/src/app/settings/OrganizationSettingsTab.tsx`
+- `frontend/src/app/accounts/page.tsx`
+- `frontend/src/app/accounts/AccountDetailModal.tsx`
+- `frontend/src/app/accounts/ConnectAccountModal.tsx`
 
 **Validation**
-- E2E test verifies click triggers actual validation behavior.
-- UX copy review ensures no misleading call-to-action remains.
+- Focused UI tests verify stale validation affordances and WriteRole copy are gone.
+- UX copy review ensures account/settings surfaces route users to onboarding for checks.
 
 **Acceptance criteria**
 - UI affordance accurately matches actual system behavior.
+
+**Execution status (2026-03-20)**
+- Completed.
+- Settings no longer runs account-read validation from the Organization tab.
+- Accounts and connect/detail modals now reflect read-role-only connection management and onboarding-owned final checks.
 
 ### UX-004: Accessibility readiness unknown
 
@@ -163,6 +178,11 @@ This plan must deliver:
 
 **Acceptance criteria**
 - Settings navigation state is stable, shareable, and support-friendly.
+
+**Execution status (2026-03-20)**
+- Completed.
+- `/settings` now uses query-param-backed tabs for `account`, `team`, `organization`, `notifications`, `integrations`, `governance`, `remediation-defaults`, `exports-compliance`, and `baseline-report`.
+- Route tests cover direct loads, legacy alias normalization, and tab-click URL updates.
 
 ## Milestones
 

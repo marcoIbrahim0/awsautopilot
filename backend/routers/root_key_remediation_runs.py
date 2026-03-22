@@ -89,6 +89,12 @@ class _RootKeyObserverContextError(RuntimeError):
         self.details = details
 
 
+class _RootKeyTransitionResponseError(RuntimeError):
+    def __init__(self, response: JSONResponse) -> None:
+        super().__init__("root-key transition returned an explicit response")
+        self.response = response
+
+
 class RootKeyError(BaseModel):
     code: str = Field(..., description="Stable machine-readable error code.")
     message: str = Field(..., description="Human-readable failure message.")
@@ -1439,6 +1445,9 @@ async def _run_transition_operation(
     except RootKeyStateMachineError as exc:
         await _safe_rollback(db)
         return None, _state_machine_error_response(correlation_id=correlation_id, exc=exc)
+    except _RootKeyTransitionResponseError as exc:
+        await _safe_rollback(db)
+        return None, exc.response
     except Exception:
         await _safe_rollback(db)
         return None, _error_response(
@@ -1497,6 +1506,28 @@ async def _transition_preflight(
     if run_uuid_err is not None:
         return None, None, None, run_uuid_err
     return tenant_id, run_uuid, idempotency_key, None
+
+
+async def _advance_disable_to_validation_if_needed(
+    db: AsyncSession,
+    *,
+    service: RootKeyRemediationStateMachineService,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    transition_id: str,
+    actor_metadata: dict[str, Any] | None,
+) -> None:
+    run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_id)
+    if run is None or run.state != RootKeyRemediationState.migration:
+        return
+    await service.advance_to_validation(
+        db,
+        tenant_id=tenant_id,
+        run_id=run_id,
+        transition_id=f"{transition_id}:validation",
+        actor_metadata=actor_metadata,
+        evidence_metadata={"operation": "auto_advance_validation_before_disable"},
+    )
 
 
 @router.post(
@@ -1589,16 +1620,45 @@ async def disable_root_key_remediation_run(
     assert run_uuid is not None
     assert idempotency_key is not None
     override_reason = _operator_override_reason(operator_override_reason_header)
-    executor_worker = None
-    if _use_executor_worker():
-        executor_worker, executor_err = await _build_executor_worker_with_observer_context(
+    transition_actor_metadata = _build_transition_metadata(current_user, override_reason=override_reason)
+
+    async def _disable_operation(
+        service: RootKeyRemediationStateMachineService,
+        transition_id: str,
+    ) -> Any:
+        await _advance_disable_to_validation_if_needed(
+            db,
+            service=service,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            transition_id=transition_id,
+            actor_metadata=transition_actor_metadata,
+        )
+        if _use_executor_worker():
+            executor_worker, executor_err = await _build_executor_worker_with_observer_context(
+                db,
+                tenant_id=tenant_id,
+                run_id=run_uuid,
+                correlation_id=correlation_id,
+            )
+            if executor_err is not None:
+                raise _RootKeyTransitionResponseError(executor_err)
+            return await executor_worker.execute_disable(
+                db,
+                tenant_id=tenant_id,
+                run_id=run_uuid,
+                transition_id=transition_id,
+                state_machine=service,
+                actor_metadata=transition_actor_metadata,
+            )
+        return await service.start_disable_window(
             db,
             tenant_id=tenant_id,
             run_id=run_uuid,
-            correlation_id=correlation_id,
+            transition_id=transition_id,
+            actor_metadata=transition_actor_metadata,
         )
-        if executor_err is not None:
-            return executor_err
+
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -1607,28 +1667,8 @@ async def disable_root_key_remediation_run(
         idempotency_key=idempotency_key,
         operation="disable",
         operator_override_reason=override_reason,
-        operator_override_actor_metadata=_build_transition_metadata(
-            current_user,
-            override_reason=override_reason,
-        ),
-        operation_call=lambda service, transition_id: (
-            executor_worker.execute_disable(
-                db,
-                tenant_id=tenant_id,
-                run_id=run_uuid,
-                transition_id=transition_id,
-                state_machine=service,
-                actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
-            )
-            if executor_worker is not None
-            else service.start_disable_window(
-                db,
-                tenant_id=tenant_id,
-                run_id=run_uuid,
-                transition_id=transition_id,
-                actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
-            )
-        ),
+        operator_override_actor_metadata=transition_actor_metadata,
+        operation_call=_disable_operation,
     )
     if err is not None:
         return err
@@ -1748,17 +1788,8 @@ async def delete_root_key_remediation_run(
     assert run_uuid is not None
     assert idempotency_key is not None
     override_reason = _operator_override_reason(operator_override_reason_header)
-    executor_worker = None
-    if _use_executor_worker():
-        executor_worker, executor_err = await _build_executor_worker_with_observer_context(
-            db,
-            tenant_id=tenant_id,
-            run_id=run_uuid,
-            correlation_id=correlation_id,
-        )
-        if executor_err is not None:
-            return executor_err
-    if executor_worker is None:
+    transition_actor_metadata = _build_transition_metadata(current_user, override_reason=override_reason)
+    if not _use_executor_worker():
         return _error_response(
             correlation_id=correlation_id,
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1766,6 +1797,28 @@ async def delete_root_key_remediation_run(
             message="Delete execution worker path is unavailable while executor is disabled.",
             retryable=True,
         )
+
+    async def _delete_operation(
+        service: RootKeyRemediationStateMachineService,
+        transition_id: str,
+    ) -> Any:
+        executor_worker, executor_err = await _build_executor_worker_with_observer_context(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            correlation_id=correlation_id,
+        )
+        if executor_err is not None:
+            raise _RootKeyTransitionResponseError(executor_err)
+        return await executor_worker.execute_delete(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            transition_id=transition_id,
+            state_machine=service,
+            actor_metadata=transition_actor_metadata,
+        )
+
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -1774,18 +1827,8 @@ async def delete_root_key_remediation_run(
         idempotency_key=idempotency_key,
         operation="delete",
         operator_override_reason=override_reason,
-        operator_override_actor_metadata=_build_transition_metadata(
-            current_user,
-            override_reason=override_reason,
-        ),
-        operation_call=lambda service, transition_id: executor_worker.execute_delete(
-            db,
-            tenant_id=tenant_id,
-            run_id=run_uuid,
-            transition_id=transition_id,
-            state_machine=service,
-            actor_metadata=_build_transition_metadata(current_user, override_reason=override_reason),
-        ),
+        operator_override_actor_metadata=transition_actor_metadata,
+        operation_call=_delete_operation,
     )
     if err is not None:
         return err

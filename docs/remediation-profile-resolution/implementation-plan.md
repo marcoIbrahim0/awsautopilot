@@ -2,7 +2,7 @@
 
 > Scope date: 2026-03-14
 >
-> ⚠️ Status: Partially implemented on `master` — later steps and live product-claim updates remain planned
+> ⚠️ Status: Implemented on `master` through Step 10 validation closure — legacy compatibility cleanup remains planned follow-on work
 >
 > Source spec: [Remediation Profile Resolution](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/README.md)
 
@@ -10,9 +10,13 @@
 
 This implementation plan converts the remediation profile resolution spec into `10 ordered steps`, each broken into numbered substeps so an implementer can focus on one slice at a time. The plan preserves the current public `strategy_id` contract, keeps grouped runs on the single-row persistence model, and keeps IAM.4 execution authority exclusively under `/api/root-key-remediation-runs`.
 
+Validation closure note:
+
+- [`20260318T030658Z-rem-profile-wave6-live-closure-rerun`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/notes/final-summary.md) is the authoritative Step 10 closure package. It records exact HEAD `e9a362b3f543154838a72665dcd2866919b5089b` and `Wave 6 complete = YES`.
+
 Guardrails for every step:
 
-- `direct_fix` remains out of scope.
+- `direct_fix` remains disabled and out of scope in the active product contract.
 - No public strategy ID semantics change for existing clients.
 - No grouped route may bypass shared resolver-backed safety.
 - No root-key lifecycle behavior may become profile-driven in this phase.
@@ -314,17 +318,18 @@ The additive run-detail surface should include:
 
 Keep `direct_fix` explicitly outside this migration:
 
-- no preview behavior changes
-- no approval behavior changes
-- no validation behavior changes
-- no queue payload changes
-- no worker runtime changes
+- do not treat this plan as re-enabling the current disabled direct-fix path
+- no preview behavior changes unless a future explicit re-scope reopens the feature
+- no approval behavior changes unless a future explicit re-scope reopens the feature
+- no validation behavior changes unless a future explicit re-scope reopens the feature
+- no queue payload changes unless a future explicit re-scope reopens the feature
+- no worker runtime changes unless a future explicit re-scope reopens the feature
 
 ### Step 4 Definition of Done
 
 - Single-run create, preview, and run-detail behavior are resolution-consistent.
 - Canonical persistence and legacy mirror writes are both specified.
-- The direct-fix out-of-scope boundary remains explicit.
+- The direct-fix disabled/out-of-scope boundary remains explicit.
 
 ## Step 5: Shared Grouped-Run Service for Both Grouped Entry Points
 
@@ -713,7 +718,7 @@ This boundary prevents accidental cleanup before all compatibility consumers are
 The implementation is complete only when all of the following remain true:
 
 - `strategy_id` is still the public compatibility contract.
-- `direct_fix` is unchanged and still out of scope.
+- `direct_fix` remains disabled in the active product contract and is still out of scope for this plan.
 - Both grouped bundle routes share one resolver-backed safety path.
 - Grouped runs still use one `RemediationRun` row per group in phase 1.
 - `/api/root-key-remediation-runs` remains the only IAM.4 execution authority.

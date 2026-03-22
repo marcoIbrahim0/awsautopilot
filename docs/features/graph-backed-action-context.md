@@ -13,6 +13,8 @@ Implemented source files:
 
 Implemented in Phase 3 P1.2.
 
+Attack Path Phase 1 did not replace this contract. `graph_context` remains the conservative bounded detail builder while `attack_path_view` and `GET /api/actions/attack-paths` now use the persisted security graph directly.
+
 ## What it does
 
 - Adds additive `graph_context` to action detail responses.
@@ -118,7 +120,7 @@ flowchart TD
 
 ## Limitations
 
-- This slice does not yet traverse the persisted `security_graph_nodes` / `security_graph_edges` tables directly; it builds the detail payload from the persisted relationship metadata and inventory rows already used by the rest of the product.
+- This slice still does not traverse the persisted `security_graph_nodes` / `security_graph_edges` tables directly; it builds the detail payload from the persisted relationship metadata and inventory rows already used by the rest of the product.
 - `identity_path` is only populated when linked finding payloads contain concrete identity hints such as principals or IAM resources.
 - The current neighborhood remains intentionally narrow; it is explainability-focused, not a tenant-wide free-form graph explorer.
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
+import json
 from types import SimpleNamespace
 import uuid
 
@@ -338,6 +339,59 @@ def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
     assert resolutions[str(account_action.id)]["support_tier"] == "review_required_bundle"
     assert plan.artifacts["group_bundle"]["action_resolutions"][0]["strategy_id"] == "s3_enable_access_logging_guided"
     assert plan.artifacts["group_bundle"]["action_resolutions"][1]["strategy_id"] == "s3_enable_access_logging_guided"
+
+
+def test_s3_ssl_grouped_plan_persists_bucket_policy_evidence_for_executable_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    action = replace(
+        _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_require_ssl"),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::ssl-bucket|S3.5",
+        resource_id="arn:aws:s3:::ssl-bucket",
+    )
+    existing_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowTrustedRead",
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "arn:aws:iam::123456789012:role/Reader"},
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::ssl-bucket/*",
+                }
+            ],
+        }
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enforce_ssl_strict_deny",
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {
+            "s3_policy_analysis_possible": True,
+            "evidence": {
+                "existing_bucket_policy_statement_count": 1,
+                "existing_bucket_policy_json": existing_policy,
+            },
+        },
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_require_ssl"),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    persisted_inputs = plan.action_resolutions[0].strategy_inputs
+    assert persisted_inputs["existing_bucket_policy_statement_count"] == 1
+    assert persisted_inputs["existing_bucket_policy_json"] == existing_policy
+    bundle_entry = plan.artifacts["group_bundle"]["action_resolutions"][0]
+    assert bundle_entry["strategy_inputs"]["existing_bucket_policy_statement_count"] == 1
+    assert bundle_entry["strategy_inputs"]["existing_bucket_policy_json"] == existing_policy
 
 
 def test_ec2_53_grouped_plan_matches_preview_for_executable_branch(

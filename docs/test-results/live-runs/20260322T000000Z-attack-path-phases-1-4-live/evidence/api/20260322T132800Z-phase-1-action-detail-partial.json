@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-03-22T13:28:00Z",
+  "method": "GET",
+  "endpoint": "https://api.ocypheris.com/api/actions/0abc603d-b75a-4b49-9a5f-431a0aa82a4e",
+  "http_status": 200,
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "path_id": "path:96bdb7a6b4e43c63343c",
+  "attack_path_view": {
+    "status": "partial",
+    "confidence": 1.0,
+    "availability_reason": "bounded_context_truncated",
+    "summary": "Actively exploited path can reach sg-06f6252fa8a95b61d in the current bounded view, but some path context is truncated or unresolved. Critical technical risk intersects with explicit unknown criticality in matrix cell critical:unknown. The action is already overdue. Safest next step: Secure remote admin access (guided choices) via PR only.",
+    "node_count": 4,
+    "edge_count": 3,
+    "entry_point_count": 2,
+    "target_asset_count": 1
+  }
+}

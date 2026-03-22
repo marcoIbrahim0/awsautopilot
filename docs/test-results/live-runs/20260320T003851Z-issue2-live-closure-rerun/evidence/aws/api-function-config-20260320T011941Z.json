@@ -1,0 +1,93 @@
+{
+    "FunctionName": "security-autopilot-dev-api",
+    "FunctionArn": "arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api",
+    "Role": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+    "CodeSize": 0,
+    "Description": "",
+    "Timeout": 30,
+    "MemorySize": 1024,
+    "LastModified": "2026-03-20T01:18:26.000+0000",
+    "CodeSha256": "eabef2cadf118a8f0a329380cd03427c6fa3fbc67d1da2f861f9a1a768ed3582",
+    "Version": "$LATEST",
+    "VpcConfig": {
+        "SubnetIds": [],
+        "SecurityGroupIds": [],
+        "VpcId": "",
+        "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+        "Variables": {
+            "EMAIL_SMTP_PORT": "587",
+            "SQS_INVENTORY_RECONCILE_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-dlq",
+            "APP_NAME": "AWS Security Autopilot",
+            "SQS_EXPORT_REPORT_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-dlq",
+            "BUNDLE_REPORTING_TOKEN_SECRET": "8Y4g9lRTC7gdjK6h-x1V4I9hXOlwggF-VgYnqm882tj1rym_m-AYL3tXStbElwb9",
+            "CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml",
+            "S3_SUPPORT_BUCKET": "autopilot-s3-support-bucket",
+            "API_PUBLIC_URL": "https://api.ocypheris.com",
+            "EMAIL_SMTP_PASSWORD": "BFkYD5agsNNGtv2X+pV4YQCibGdXoikkf/iKkUutrPLT",
+            "JWT_SECRET": "HEnMzDQwgzRqwtYI-mp1OnG3vVHFLKidSlivMEszh7aBitluAlQnSO_EAnWZlcNBxNsK_-RclzP50HWCOGsw4w",
+            "SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI": "s3://autopilot-prbundle-run/run_all.sh",
+            "LOG_LEVEL": "INFO",
+            "SQS_EVENTS_FAST_LANE_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-dlq",
+            "FIREBASE_EMAIL_CONTINUE_URL_BASE": "https://ocypheris.com",
+            "CORS_ORIGINS": "https://dev.ocypheris.com,https://ocypheris.com,https://www.ocypheris.com,http://localhost:3000,http://127.0.0.1:3000",
+            "EMAIL_SMTP_HOST": "email-smtp.eu-north-1.amazonaws.com",
+            "SAAS_ADMIN_EMAILS": "marcoibrahim11@outlook.com,Messi3amak@gmail.com",
+            "ROLE_SESSION_NAME": "security-autopilot-session",
+            "SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS": "300",
+            "SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION": "v1.6.7",
+            "SAAS_AWS_ACCOUNT_ID": "029037611564",
+            "FIREBASE_SERVICE_ACCOUNT_JSON": "",
+            "ACTIONS_THREAT_INTELLIGENCE_HALF_LIFE_HOURS": "72",
+            "SQS_CONTRACT_QUARANTINE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-contract-quarantine-queue",
+            "SQS_EVENTS_FAST_LANE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-queue",
+            "S3_SUPPORT_BUCKET_REGION": "eu-north-1",
+            "SQS_INVENTORY_RECONCILE_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-queue",
+            "SAAS_BUNDLE_EXECUTOR_ENABLED": "true",
+            "S3_EXPORT_BUCKET_REGION": "eu-north-1",
+            "ENV": "prod",
+            "EMAIL_FROM": "noreply@ocypheris.com",
+            "SAAS_EXECUTION_ROLE_ARNS": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api,arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker",
+            "CONTROL_PLANE_SHADOW_MODE": "true",
+            "DATABASE_URL": "postgresql+asyncpg://neondb_owner:npg_B0mzItrhx6KJ@ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+            "ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED": "false",
+            "EMAIL_SMTP_USER": "AKIAQNQWGZIWDXYOZQUW",
+            "FIREBASE_PROJECT_ID": "aws-security-autopilot",
+            "TENANT_RECONCILIATION_ENABLED": "true",
+            "TENANT_RECONCILIATION_PILOT_TENANTS": "",
+            "S3_EXPORT_BUCKET": "security-autopilot-exports",
+            "SQS_INGEST_DLQ_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-dlq",
+            "CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES": "60",
+            "FRONTEND_URL": "https://ocypheris.com",
+            "SQS_INGEST_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-queue",
+            "CONTROL_PLANE_SOURCE": "event_monitor_shadow",
+            "SQS_EXPORT_REPORT_QUEUE_URL": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-queue",
+            "EMAIL_SMTP_STARTTLS": "true",
+            "CONTROL_PLANE_EVENTS_SECRET": "raxC6h_UT6qTADqhu9LLebRjLwxLtF5yaT65y3J52B0A1F6qRrFg-jlgnzDe34CIzD1nuup9K4GW5_KpnjgMlbw",
+            "FIREBASE_SERVICE_ACCOUNT_PATH": "/var/task/backend/.firebase/firebase-service-account.json",
+            "CONTROL_PLANE_AUTHORITATIVE_CONTROLS": "S3.1,SecurityHub.1,GuardDuty.1,S3.2,S3.4,EC2.53,CloudTrail.1,Config.1,SSM.7,EC2.182,EC2.7,S3.5,IAM.4,S3.9,S3.11,S3.15"
+        }
+    },
+    "TracingConfig": {
+        "Mode": "PassThrough"
+    },
+    "RevisionId": "c7fb0dea-97b3-4f4a-b734-3fac5b6359d2",
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "PackageType": "Image",
+    "Architectures": [
+        "x86_64"
+    ],
+    "EphemeralStorage": {
+        "Size": 512
+    },
+    "SnapStart": {
+        "ApplyOn": "None",
+        "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+        "LogFormat": "Text",
+        "LogGroup": "/aws/lambda/security-autopilot-dev-api"
+    }
+}

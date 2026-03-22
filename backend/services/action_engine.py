@@ -27,7 +27,11 @@ from backend.services.action_groups import ensure_membership_for_actions
 from backend.services.action_ownership import resolve_action_owner
 from backend.services.action_remediation_sync import apply_canonical_action_status
 from backend.services.action_scoring import score_action_group
-from backend.services.aws import assume_role
+from backend.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.services.control_scope import (
     action_type_from_control as _action_type_from_control_impl,
     canonical_control_id_for_action_type,
@@ -137,7 +141,12 @@ class _ActionExpansionContext:
             return None
 
         try:
-            aws_session = assume_role(role_arn=account.role_read_arn, external_id=external_id)
+            aws_session = assume_role(
+                role_arn=account.role_read_arn,
+                external_id=external_id,
+                source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="worker", tenant_id=self._tenant_id),
+            )
         except Exception as exc:  # pragma: no cover - defensive runtime guard
             self._session_error_by_account[account_id] = f"assume_role_failed:{type(exc).__name__}"
             self._boto_session_by_account[account_id] = None

@@ -111,6 +111,7 @@ The easiest way is to use the provided deployment script:
 # Set required variables
 export DATABASE_URL="postgresql+asyncpg://user:pass@host:5432/db"
 export JWT_SECRET="your-jwt-secret-here"
+export BUNDLE_REPORTING_TOKEN_SECRET="your-separate-reporting-secret-here"
 export CONTROL_PLANE_EVENTS_SECRET="your-secret-here"
 
 # Run deployment script
@@ -200,7 +201,7 @@ aws ecs execute-command \
   --cluster "$CLUSTER" \
   --task "$TASK_ARN" \
   --container api \
-  --command "alembic upgrade head" \
+  --command "alembic upgrade heads" \
   --interactive
 ```
 

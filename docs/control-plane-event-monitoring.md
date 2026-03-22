@@ -171,13 +171,13 @@ PM/ops rollout policy, rollback triggers, and go/no-go checklist are documented 
 - [Item 17 Medium/Low-Confidence Control Coverage Plan](./prod-readiness/17-medium-low-confidence-control-coverage-plan.md)
 
 ## Deployment Safety (No Schema Drift)
-- API and worker now run a hard startup guard: DB revision must equal Alembic head or process exits.
+- API and worker now run a hard startup guard: DB revision must match the repo Alembic heads or the process exits.
 - CI gate runs:
   - `alembic heads`
   - `alembic current`
-  - and fails if current != head.
+  - and fails if current does not match the repo heads.
 - Deployment order is mandatory:
-  1. `alembic upgrade head`
+  1. `alembic upgrade heads`
   2. restart API
   3. restart workers
 
@@ -279,7 +279,7 @@ After a successful PR-bundle `apply` execution:
    - prereq skip log: `post_apply_reconcile_prereq_skip ... reason_codes=[...]`
 
 ## IAM/Trust Hardening
-- ReadRole template rollout target: `v1.5.4`.
+- ReadRole template rollout target: `v1.5.9`.
 - Account validation output now includes:
   - `required_permissions`
   - `authoritative_mode_allowed`

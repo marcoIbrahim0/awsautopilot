@@ -3,7 +3,6 @@ Actions API: compute trigger (Step 5.4), list/detail/PATCH (Step 5.5), remediati
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import uuid
@@ -16,6 +15,7 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Integer, String, and_, case, cast, exists, func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,6 +26,8 @@ from backend.models.action import Action
 from backend.models.action_finding import ActionFinding
 from backend.models.action_group import ActionGroup
 from backend.models.action_group_membership import ActionGroupMembership
+from backend.models.action_external_link import ActionExternalLink
+from backend.models.action_remediation_sync_state import ActionRemediationSyncState
 from backend.models.aws_account import AwsAccount
 from backend.models.enums import EntityType
 from backend.models.exception import Exception
@@ -47,12 +49,9 @@ from backend.services.action_sla import (
     action_sla_overdue_expr,
     compute_action_sla,
 )
-from backend.services.aws import assume_role
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
 from backend.services.direct_fix_bridge import (
-    DirectFixModuleUnavailable,
-    get_supported_direct_fix_action_types,
-    run_remediation_preview_bridge,
+    DIRECT_FIX_OUT_OF_SCOPE_MESSAGE,
 )
 from backend.services.action_scoring import build_score_factors
 from backend.services.action_business_impact import (
@@ -62,10 +61,24 @@ from backend.services.action_business_impact import (
 from backend.services.action_execution_guidance import build_action_execution_guidance
 from backend.services.action_attack_path_view import build_action_attack_path_view
 from backend.services.action_graph_context import build_action_graph_context
+from backend.services.attack_paths import (
+    attack_path_id_for_graph_context,
+    build_attack_path_detail_record,
+    build_attack_path_graph_context,
+    build_shared_attack_path_records,
+)
+from backend.services.attack_path_materialized import (
+    get_materialized_attack_path,
+    has_materialized_attack_paths,
+    list_materialized_attack_paths,
+    materialize_attack_paths,
+    maybe_schedule_attack_path_refresh,
+)
 from backend.services.integration_sync import dispatch_sync_tasks, plan_action_sync_tasks
 from backend.services.action_recommendation import build_action_recommendation
 from backend.services.remediation_handoff import (
     ActionImplementationArtifactLink,
+    build_run_artifact_metadata,
     build_action_implementation_artifacts,
 )
 from backend.services.remediation_profile_read_path import (
@@ -344,8 +357,8 @@ class ActionRecommendationEvidence(BaseModel):
 class ActionRecommendationResponse(BaseModel):
     """Recommendation mode derived from the risk x criticality matrix."""
 
-    mode: Literal["direct_fix_candidate", "pr_only", "exception_review"]
-    default_mode: Literal["direct_fix_candidate", "pr_only", "exception_review"]
+    mode: Literal["pr_only", "exception_review"]
+    default_mode: Literal["pr_only", "exception_review"]
     advisory: bool
     enforced_by_policy: str | None = None
     rationale: str
@@ -392,6 +405,7 @@ class ActionDetailResponse(BaseModel):
     implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
     graph_context: "ActionGraphContext"
     attack_path_view: "ActionAttackPathView"
+    path_id: str | None = None
 
 
 class ExecutionGuidanceCheck(BaseModel):
@@ -415,7 +429,7 @@ class ActionExecutionGuidance(BaseModel):
 
     strategy_id: str
     label: str
-    mode: Literal["pr_only", "direct_fix"]
+    mode: Literal["pr_only"]
     recommended: bool
     blast_radius: Literal["account", "resource", "access_changing"]
     blast_radius_summary: str
@@ -520,6 +534,250 @@ class ActionAttackPathView(BaseModel):
     availability_reason: str | None = None
 
 
+class AttackPathSummaryItem(BaseModel):
+    """One ranked attack-path summary row."""
+
+    id: str
+    status: Literal["available", "partial", "unavailable", "context_incomplete"]
+    rank: int
+    confidence: float = 0.0
+    entry_points: list[ActionAttackPathNode] = Field(default_factory=list)
+    target_assets: list[ActionAttackPathNode] = Field(default_factory=list)
+    summary: str
+    business_impact_summary: str | None = None
+    recommended_fix_summary: str | None = None
+    owner_labels: list[str] = Field(default_factory=list)
+    linked_action_ids: list[str] = Field(default_factory=list)
+    rank_factors: list["AttackPathRankFactor"] = Field(default_factory=list)
+    freshness: Optional["AttackPathFreshness"] = None
+    remediation_summary: Optional["AttackPathRemediationSummary"] = None
+    runtime_signals: Optional["AttackPathRuntimeSignals"] = None
+    closure_targets: Optional["AttackPathClosureTargets"] = None
+    governance_summary: Optional["AttackPathExternalWorkflowSummary"] = None
+    access_scope: Optional["AttackPathAccessScope"] = None
+    computed_at: str | None = None
+    stale_after: str | None = None
+    is_stale: bool = False
+
+
+class AttackPathRankFactor(BaseModel):
+    """Explainable factor contributing to attack-path rank."""
+
+    name: str
+    label: str
+    direction: Literal["positive", "negative"]
+    score: float
+    weight: float
+    weighted_impact: float
+    explanation: str
+
+
+class AttackPathFreshness(BaseModel):
+    """Freshness summary for one attack path."""
+
+    score: float
+    observed_at: str | None = None
+
+
+class AttackPathRuntimeSignals(BaseModel):
+    """Additive runtime and reachability truth for a shared path."""
+
+    workload_presence: Literal["present", "unknown"]
+    publicly_reachable: bool
+    sensitive_target_count: int = 0
+    identity_hops: int = 0
+    confidence: float = 0.0
+    summary: str
+
+
+class AttackPathExposureValidation(BaseModel):
+    """Bounded exposure validation summary."""
+
+    status: Literal["verified", "partial", "unverified"]
+    summary: str
+    observed_at: str | None = None
+
+
+class AttackPathRepositoryLink(BaseModel):
+    """One repo-aware code target tied to the path."""
+
+    provider: str
+    repository: str
+    base_branch: str | None = None
+    root_path: str | None = None
+    source_run_id: str | None = None
+
+
+class AttackPathCodeContext(BaseModel):
+    """Code-to-cloud linkage summary for a shared path."""
+
+    owner_label: str
+    service_owner_key: str | None = None
+    repository_count: int = 0
+    implementation_artifact_count: int = 0
+    summary: str
+
+
+class AttackPathClosureTargets(BaseModel):
+    """Closure projection for linked actions on a shared path."""
+
+    open_action_ids: list[str] = Field(default_factory=list)
+    in_progress_action_ids: list[str] = Field(default_factory=list)
+    resolved_action_ids: list[str] = Field(default_factory=list)
+    summary: str
+
+
+class AttackPathExternalWorkflowSummary(BaseModel):
+    """External ticket/chat workflow projection for a shared path."""
+
+    provider_count: int = 0
+    drifted_count: int = 0
+    in_sync_count: int = 0
+    linked_items: list[str] = Field(default_factory=list)
+    summary: str
+
+
+class AttackPathExceptionSummary(BaseModel):
+    """Exception visibility for linked actions on a shared path."""
+
+    active_count: int = 0
+    expiring_count: int = 0
+    summary: str
+
+
+class AttackPathEvidenceExports(BaseModel):
+    """Evidence/export readiness summary for a shared path."""
+
+    evidence_item_count: int = 0
+    implementation_artifact_count: int = 0
+    export_ready: bool = False
+    summary: str
+
+
+class AttackPathAccessScope(BaseModel):
+    """Tenant-scoped access and evidence-visibility summary."""
+
+    scope: Literal["tenant_scoped"]
+    evidence_visibility: Literal["full"]
+    restricted_sections: list[str] = Field(default_factory=list)
+    export_allowed: bool = True
+
+
+class AttackPathOwner(BaseModel):
+    """One owner attached to a shared path."""
+
+    key: str | None = None
+    label: str
+
+
+class AttackPathLinkedAction(BaseModel):
+    """One linked action attached to a shared path."""
+
+    id: str
+    title: str
+    priority: int
+    status: str
+    owner_label: str
+
+
+class AttackPathBusinessImpact(BaseModel):
+    """Shared business-impact summary for a path."""
+
+    summary: str | None = None
+    criticality_tier: str | None = None
+    criticality_score: int | float | None = None
+
+
+class AttackPathRecommendedFix(BaseModel):
+    """Recommended fix summary for a path."""
+
+    summary: str | None = None
+    action_type: str | None = None
+
+
+class AttackPathEvidenceItem(BaseModel):
+    """One evidence item contributing to the path record."""
+
+    type: str
+    id: str
+    label: str
+    updated_at: str | None = None
+
+
+class AttackPathProvenanceItem(BaseModel):
+    """One provenance source contributing to the path record."""
+
+    source: str
+    kind: str
+
+
+class AttackPathDetailResponse(BaseModel):
+    """Full bounded detail for a shared attack path."""
+
+    id: str
+    status: Literal["available", "partial", "unavailable", "context_incomplete"]
+    rank: int
+    rank_factors: list[AttackPathRankFactor] = Field(default_factory=list)
+    confidence: float = 0.0
+    freshness: AttackPathFreshness | None = None
+    path_nodes: list[ActionAttackPathNode] = Field(default_factory=list)
+    path_edges: list[ActionAttackPathEdge] = Field(default_factory=list)
+    entry_points: list[ActionAttackPathNode] = Field(default_factory=list)
+    target_assets: list[ActionAttackPathNode] = Field(default_factory=list)
+    business_impact: AttackPathBusinessImpact
+    risk_reasons: list[str] = Field(default_factory=list)
+    owners: list[AttackPathOwner] = Field(default_factory=list)
+    recommended_fix: AttackPathRecommendedFix
+    linked_actions: list[AttackPathLinkedAction] = Field(default_factory=list)
+    evidence: list[AttackPathEvidenceItem] = Field(default_factory=list)
+    provenance: list[AttackPathProvenanceItem] = Field(default_factory=list)
+    remediation_summary: Optional["AttackPathRemediationSummary"] = None
+    runtime_signals: Optional["AttackPathRuntimeSignals"] = None
+    exposure_validation: Optional["AttackPathExposureValidation"] = None
+    code_context: Optional["AttackPathCodeContext"] = None
+    linked_repositories: list["AttackPathRepositoryLink"] = Field(default_factory=list)
+    implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
+    closure_targets: Optional["AttackPathClosureTargets"] = None
+    external_workflow_summary: Optional["AttackPathExternalWorkflowSummary"] = None
+    exception_summary: Optional["AttackPathExceptionSummary"] = None
+    evidence_exports: Optional["AttackPathEvidenceExports"] = None
+    access_scope: Optional["AttackPathAccessScope"] = None
+    computed_at: str | None = None
+    stale_after: str | None = None
+    is_stale: bool = False
+    refresh_status: str | None = None
+    truncated: bool = False
+    availability_reason: str | None = None
+
+
+class AttackPathRemediationSummary(BaseModel):
+    """Bounded remediation-rollup summary for linked actions on a path."""
+
+    linked_actions_total: int = 0
+    open_actions: int = 0
+    in_progress_actions: int = 0
+    resolved_actions: int = 0
+    highest_priority_open: int | None = None
+    coverage_summary: str
+
+
+class AttackPathViewOption(BaseModel):
+    """One bounded preset view available on the Attack Paths surface."""
+
+    key: str
+    label: str
+    description: str
+
+
+class AttackPathsListResponse(BaseModel):
+    """Paginated list of ranked attack paths."""
+
+    items: list[AttackPathSummaryItem] = Field(default_factory=list)
+    total: int = 0
+    selected_view: str | None = None
+    available_views: list[AttackPathViewOption] = Field(default_factory=list)
+
+
 _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
     "s3_block_public_access": "Enables account-level S3 Block Public Access to stop broad public exposure.",
     "enable_security_hub": "Enables Security Hub and default standards to restore security visibility.",
@@ -538,6 +796,8 @@ _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
     "s3_bucket_lifecycle_configuration": "Applies lifecycle rules to enforce retention and cost-control posture.",
     "s3_bucket_encryption_kms": "Enforces SSE-KMS encryption policy for the affected S3 bucket.",
 }
+
+_ATTACK_PATH_ACTION_SCAN_HARD_CAP = 20
 
 
 def _option_recommended(strategy: dict[str, Any], tenant_settings: dict[str, Any] | None) -> bool:
@@ -648,7 +908,7 @@ class RemediationOptionResponse(BaseModel):
 
     strategy_id: str
     label: str
-    mode: Literal["pr_only", "direct_fix"]
+    mode: Literal["pr_only"]
     risk_level: Literal["low", "medium", "high"]
     recommended: bool
     requires_inputs: bool
@@ -752,7 +1012,7 @@ class RemediationOptionsResponse(BaseModel):
 
     action_id: str
     action_type: str
-    mode_options: list[Literal["pr_only", "direct_fix"]]
+    mode_options: list[Literal["pr_only"]]
     strategies: list[RemediationOptionResponse]
     recommendation: ActionRecommendationResponse
     manual_high_risk: bool = False
@@ -760,16 +1020,13 @@ class RemediationOptionsResponse(BaseModel):
     runbook_url: str | None = None
 
 
-def _mode_options_for_action(action_type: str) -> list[Literal["pr_only", "direct_fix"]]:
+def _mode_options_for_action(action_type: str) -> list[Literal["pr_only"]]:
     strategies = list_strategies_for_action_type(action_type)
     if strategies:
         return list_mode_options_for_action_type(action_type)
 
     # Backward-compatible behavior for action types not yet migrated to strategy catalog.
-    mode_options: list[Literal["pr_only", "direct_fix"]] = ["pr_only"]
-    if action_type in get_supported_direct_fix_action_types():
-        mode_options.append("direct_fix")
-    return mode_options
+    return ["pr_only"]
 
 
 def _action_score_value(action: Action) -> int:
@@ -817,7 +1074,7 @@ def _context_incomplete_payload(action: Action | None) -> bool:
 def _action_recommendation_payload(
     action: Action,
     *,
-    mode_options: list[Literal["pr_only", "direct_fix"]] | None = None,
+    mode_options: list[Literal["pr_only"]] | None = None,
     manual_high_risk: bool = False,
 ) -> ActionRecommendationResponse:
     payload = build_action_recommendation(
@@ -1217,6 +1474,7 @@ def _action_to_detail_response(
     recommendation: ActionRecommendationResponse | None = None,
     implementation_artifacts: list[ActionImplementationArtifactLink] | None = None,
     graph_context: dict[str, Any] | None = None,
+    attack_path_graph_context: dict[str, Any] | None = None,
 ) -> ActionDetailResponse:
     """Build detail response from Action; action_finding_links and finding must be loaded."""
     state = exception_state or {}
@@ -1248,7 +1506,7 @@ def _action_to_detail_response(
     resolved_graph_context = ActionGraphContext(**(graph_context or _default_graph_context_payload()))
     attack_path_view = _attack_path_view_payload(
         action,
-        graph_context=resolved_graph_context,
+        graph_context=attack_path_graph_context or resolved_graph_context.model_dump(),
         business_impact=business_impact,
         recommendation=resolved_recommendation,
         score_factors=score_factors,
@@ -1291,13 +1549,14 @@ def _action_to_detail_response(
         implementation_artifacts=implementation_artifacts or [],
         graph_context=resolved_graph_context,
         attack_path_view=attack_path_view,
+        path_id=attack_path_id_for_graph_context(attack_path_graph_context or {}, action),
     )
 
 
 def _attack_path_view_payload(
     action: Action,
     *,
-    graph_context: ActionGraphContext,
+    graph_context: dict[str, Any],
     business_impact: ActionBusinessImpact,
     recommendation: ActionRecommendationResponse,
     score_factors: list[ActionScoreFactor],
@@ -1306,7 +1565,7 @@ def _attack_path_view_payload(
 ) -> ActionAttackPathView:
     payload = build_action_attack_path_view(
         action,
-        graph_context=graph_context.model_dump(),
+        graph_context=graph_context,
         business_impact=business_impact.model_dump(),
         recommendation=recommendation.model_dump(),
         score_factors=[factor.model_dump() for factor in score_factors],
@@ -1339,6 +1598,15 @@ async def _load_action_graph_context(
     action: Action,
 ) -> dict[str, Any]:
     return await build_action_graph_context(db, tenant_id=tenant_uuid, action=action)
+
+
+async def _load_action_attack_path_graph_context(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action: Action,
+) -> dict[str, Any]:
+    return await build_attack_path_graph_context(db, tenant_id=tenant_uuid, action=action)
 
 
 def _default_graph_context_payload() -> dict[str, Any]:
@@ -1395,6 +1663,8 @@ async def list_actions(
     control_id: Annotated[str | None, Query(description="Filter by control ID (e.g., S3.1)")] = None,
     resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
     action_type: Annotated[str | None, Query(description="Filter by remediation action type")] = None,
+    q: Annotated[str | None, Query(description="Case-insensitive text search across key action fields")] = None,
+    ids: Annotated[str | None, Query(description="Comma-separated action IDs to load explicitly")] = None,
     status_filter: Annotated[
         str | None,
         Query(alias="status", description="Filter by status (open, in_progress, resolved, suppressed)"),
@@ -1444,6 +1714,16 @@ async def list_actions(
     if owner_key is not None:
         normalized_owner_key = normalize_owner_lookup_key(owner_key, normalized_owner_type)
     normalized_owner_queue = owner_queue.strip().lower() if owner_queue is not None else None
+    normalized_query = q.strip() if q is not None and q.strip() else None
+    requested_action_ids: list[uuid.UUID] = []
+    if ids is not None and ids.strip():
+        try:
+            requested_action_ids = [uuid.UUID(raw_id.strip()) for raw_id in ids.split(",") if raw_id.strip()]
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid action id in ids filter.",
+            ) from exc
     active_exception_sq = _active_action_exception_subquery(tenant_uuid, now)
     unresolved_expr = _unresolved_action_expr(use_effective_visibility, effective_open_expr)
     status_filter_expr = None
@@ -1461,6 +1741,20 @@ async def list_actions(
         action_filters.append(Action.resource_id == resource_id.strip())
     if action_type is not None:
         action_filters.append(Action.action_type == action_type.strip())
+    if requested_action_ids:
+        action_filters.append(Action.id.in_(requested_action_ids))
+    if normalized_query is not None:
+        query_pattern = f"%{normalized_query}%"
+        action_filters.append(
+            or_(
+                Action.title.ilike(query_pattern),
+                Action.action_type.ilike(query_pattern),
+                Action.control_id.ilike(query_pattern),
+                Action.resource_id.ilike(query_pattern),
+                Action.account_id.ilike(query_pattern),
+                Action.region.ilike(query_pattern),
+            )
+        )
     if normalized_owner_type is not None:
         action_filters.append(Action.owner_type == normalized_owner_type)
     if normalized_owner_key is not None:
@@ -1741,6 +2035,870 @@ async def list_actions(
     return ActionsListResponse(items=items, total=total, owner_queue_counters=owner_queue_counters)
 
 
+@router.get("/attack-paths", response_model=AttackPathsListResponse)
+async def list_attack_paths(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+    account_id: Annotated[str | None, Query(description="Filter by AWS account ID")] = None,
+    action_id: Annotated[str | None, Query(description="Filter by one action UUID")] = None,
+    owner_key: Annotated[str | None, Query(description="Filter by normalized owner key.")] = None,
+    resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
+    status_filter: Annotated[
+        Literal["available", "partial", "unavailable", "context_incomplete"] | None,
+        Query(alias="status", description="Filter by attack-path status."),
+    ] = None,
+    view: Annotated[str | None, Query(description="Optional bounded Attack Paths preset view.")] = None,
+    limit: Annotated[int, Query(ge=1, le=200, description="Max items per page")] = 50,
+    offset: Annotated[int, Query(ge=0, description="Items to skip")] = 0,
+) -> AttackPathsListResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+    selected_view = _normalize_attack_path_view(view)
+    has_any_materialized = False
+    try:
+        items, total, stale_seen = await list_materialized_attack_paths(
+            db,
+            tenant_id=tenant_uuid,
+            account_id=account_id,
+            action_id=action_id,
+            owner_key=owner_key,
+            resource_id=resource_id,
+            status_filter=status_filter,
+            view=selected_view,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Invalid action_id", "detail": str(exc)},
+        ) from exc
+    try:
+        has_any_materialized = bool(items or total) or await has_materialized_attack_paths(db, tenant_id=tenant_uuid)
+    except Exception:
+        logger.warning("Attack-path materialized presence check failed; considering fallback.", exc_info=True)
+        has_any_materialized = bool(items or total)
+    if not has_any_materialized:
+        try:
+            await materialize_attack_paths(db, tenant_id=tenant_uuid)
+            await db.commit()
+            items, total, stale_seen = await list_materialized_attack_paths(
+                db,
+                tenant_id=tenant_uuid,
+                account_id=account_id,
+                action_id=action_id,
+                owner_key=owner_key,
+                resource_id=resource_id,
+                status_filter=status_filter,
+                view=selected_view,
+                limit=limit,
+                offset=offset,
+            )
+            has_any_materialized = bool(items or total)
+        except Exception:
+            logger.warning("Attack-path materialized bootstrap failed; using bounded legacy fallback.", exc_info=True)
+            items, total = await _list_attack_paths_legacy(
+                db,
+                tenant_uuid=tenant_uuid,
+                account_id=account_id,
+                action_id=action_id,
+                owner_key=owner_key,
+                resource_id=resource_id,
+                status_filter=status_filter,
+                view=selected_view,
+                limit=limit,
+                offset=offset,
+            )
+            stale_seen = False
+    if stale_seen:
+        maybe_schedule_attack_path_refresh(tenant_id=tenant_uuid)
+    return AttackPathsListResponse(
+        items=items,
+        total=total,
+        selected_view=selected_view,
+        available_views=_attack_path_view_options(),
+    )
+
+
+def _normalize_attack_path_view(view: str | None) -> str | None:
+    if view is None:
+        return None
+    value = view.strip()
+    if not value:
+        return None
+    valid = {item.key for item in _attack_path_view_options()}
+    return value if value in valid else None
+
+
+def _text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _attack_path_view_options() -> list[AttackPathViewOption]:
+    return [
+        AttackPathViewOption(
+            key="highest_blast_radius",
+            label="Highest blast radius",
+            description="Shared paths with broader linked-action and asset spread.",
+        ),
+        AttackPathViewOption(
+            key="business_critical",
+            label="Business critical",
+            description="Shared paths tied to high or critical business impact.",
+        ),
+        AttackPathViewOption(
+            key="actively_exploited",
+            label="Actively exploited",
+            description="Shared paths where exploitability pressure is prominent.",
+        ),
+        AttackPathViewOption(
+            key="owned_by_my_team",
+            label="Owned by my team",
+            description="Best used with an owner filter to stay on your team backlog.",
+        ),
+    ]
+
+
+def _apply_attack_path_view_filter(records: list[dict[str, Any]], view: str | None) -> list[dict[str, Any]]:
+    if view is None:
+        return records
+    handlers = {
+        "highest_blast_radius": _record_matches_blast_radius_view,
+        "business_critical": _record_matches_business_critical_view,
+        "actively_exploited": _record_matches_actively_exploited_view,
+        "owned_by_my_team": _record_matches_owned_by_team_view,
+    }
+    matcher = handlers.get(view)
+    if matcher is None:
+        return records
+    return [record for record in records if matcher(record)]
+
+
+async def _list_attack_paths_legacy(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    account_id: str | None,
+    action_id: str | None,
+    owner_key: str | None,
+    resource_id: str | None,
+    status_filter: str | None,
+    view: str | None,
+    limit: int,
+    offset: int,
+) -> tuple[list[AttackPathSummaryItem], int]:
+    now = datetime.now(timezone.utc)
+    action_scan_limit = _attack_path_action_scan_limit(
+        action_id=action_id,
+        account_id=account_id,
+        owner_key=owner_key,
+        resource_id=resource_id,
+        limit=limit,
+        offset=offset,
+    )
+    actions = await _load_attack_path_actions(
+        db,
+        tenant_uuid=tenant_uuid,
+        account_id=account_id,
+        action_id=action_id,
+        owner_key=owner_key,
+        resource_id=resource_id,
+        max_actions=action_scan_limit,
+    )
+    accounts = await _load_attack_path_accounts(db, tenant_uuid=tenant_uuid, actions=actions)
+    records = await _load_shared_attack_path_records(
+        db,
+        tenant_uuid=tenant_uuid,
+        actions=actions,
+        status_filter=status_filter,
+    )
+    records = _apply_attack_path_view_filter(records, view)
+    records = await _enrich_attack_path_records(db, tenant_uuid=tenant_uuid, records=records, now=now)
+    grouped = await _build_attack_path_summary_items(
+        db,
+        tenant_uuid=tenant_uuid,
+        records=records,
+        accounts=accounts,
+    )
+    total = len(grouped)
+    return grouped[offset : offset + limit], total
+
+
+async def _get_attack_path_legacy(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    path_id: str,
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    actions = await _load_attack_path_actions(
+        db,
+        tenant_uuid=tenant_uuid,
+        account_id=None,
+        action_id=None,
+        owner_key=None,
+        resource_id=None,
+    )
+    records = await _load_shared_attack_path_records(
+        db,
+        tenant_uuid=tenant_uuid,
+        actions=actions,
+        status_filter=None,
+    )
+    records = await _enrich_attack_path_records(db, tenant_uuid=tenant_uuid, records=records, now=now)
+    record = next((item for item in records if item["id"] == path_id), None)
+    if record is None:
+        return None
+    accounts = await _load_attack_path_accounts(db, tenant_uuid=tenant_uuid, actions=actions)
+    representative_action = record["representative_action"]
+    view = _attack_path_view_for_action(
+        representative_action,
+        graph_context=record["representative_graph_context"],
+        account=accounts.get(representative_action.account_id),
+    )
+    detail = build_attack_path_detail_record(
+        record,
+        path_nodes=[node.model_dump() for node in view.path_nodes],
+        path_edges=[edge.model_dump() for edge in view.path_edges],
+        entry_points=[node.model_dump() for node in view.entry_points],
+        target_assets=[node.model_dump() for node in view.target_assets],
+    )
+    detail["runtime_signals"] = record.get("runtime_signals")
+    detail["exposure_validation"] = record.get("exposure_validation")
+    detail["code_context"] = record.get("code_context")
+    detail["linked_repositories"] = record.get("linked_repositories") or []
+    detail["implementation_artifacts"] = record.get("implementation_artifacts") or []
+    detail["closure_targets"] = record.get("closure_targets")
+    detail["external_workflow_summary"] = record.get("external_workflow_summary")
+    detail["exception_summary"] = record.get("exception_summary")
+    detail["evidence_exports"] = record.get("evidence_exports")
+    detail["access_scope"] = record.get("access_scope")
+    return detail
+
+
+def _record_matches_blast_radius_view(record: dict[str, Any]) -> bool:
+    return any(
+        item.get("name") == "blast_radius" and float(item.get("weighted_impact") or 0) > 0
+        for item in record.get("rank_factors") or []
+    )
+
+
+def _record_matches_business_critical_view(record: dict[str, Any]) -> bool:
+    tier = _text((record.get("business_impact") or {}).get("criticality_tier"))
+    return tier in {"critical", "high"}
+
+
+def _record_matches_actively_exploited_view(record: dict[str, Any]) -> bool:
+    if any("exploit" in str(reason).lower() for reason in record.get("risk_reasons") or []):
+        return True
+    return any(
+        item.get("name") == "exploitability" and float(item.get("weighted_impact") or 0) >= 0.1
+        for item in record.get("rank_factors") or []
+    )
+
+
+def _record_matches_owned_by_team_view(record: dict[str, Any]) -> bool:
+    return bool(record.get("owners"))
+
+
+async def _load_attack_path_actions(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    account_id: str | None,
+    action_id: str | None,
+    owner_key: str | None,
+    resource_id: str | None,
+    max_actions: int | None = None,
+) -> list[Action]:
+    query = (
+        select(Action)
+        .where(Action.tenant_id == tenant_uuid)
+        .options(
+            selectinload(Action.action_finding_links)
+            .selectinload(ActionFinding.finding)
+            .load_only(
+                Finding.id,
+                Finding.finding_id,
+                Finding.severity_label,
+                Finding.title,
+                Finding.resource_id,
+                Finding.resource_type,
+                Finding.resource_key,
+                Finding.account_id,
+                Finding.region,
+                Finding.updated_at,
+                Finding.raw_json,
+            ),
+        )
+    )
+    if account_id is not None:
+        query = query.where(Action.account_id == account_id)
+    if resource_id is not None:
+        query = query.where(Action.resource_id == resource_id.strip())
+    if owner_key is not None:
+        query = query.where(Action.owner_key == owner_key.strip())
+    if action_id is not None:
+        try:
+            query = query.where(Action.id == uuid.UUID(action_id))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "Invalid action_id", "detail": "action_id must be a valid UUID"},
+            ) from exc
+    ordered_query = query.order_by(Action.priority.desc(), Action.updated_at.desc().nullslast(), Action.id.asc())
+    if max_actions is not None:
+        ordered_query = ordered_query.limit(max_actions)
+    result = await db.execute(ordered_query)
+    return list(result.scalars().all())
+
+
+def _attack_path_action_scan_limit(
+    *,
+    action_id: str | None,
+    account_id: str | None,
+    owner_key: str | None,
+    resource_id: str | None,
+    limit: int,
+    offset: int,
+) -> int | None:
+    if action_id is not None:
+        return 1
+    if account_id is not None or owner_key is not None or resource_id is not None:
+        return min(max(offset + limit, limit), _ATTACK_PATH_ACTION_SCAN_HARD_CAP)
+    return min(max(offset + limit, 10), _ATTACK_PATH_ACTION_SCAN_HARD_CAP)
+
+
+async def _load_attack_path_accounts(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    actions: list[Action],
+) -> dict[str, AwsAccount]:
+    account_ids = sorted({action.account_id for action in actions if action.account_id})
+    if not account_ids:
+        return {}
+    result = await db.execute(
+        select(AwsAccount).where(
+            AwsAccount.tenant_id == tenant_uuid,
+            AwsAccount.account_id.in_(account_ids),
+        )
+    )
+    return {account.account_id: account for account in result.scalars().all()}
+
+
+async def _load_shared_attack_path_records(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    actions: list[Action],
+    status_filter: str | None,
+) -> list[dict[str, Any]]:
+    records = await build_shared_attack_path_records(db, tenant_id=tenant_uuid, actions=actions)
+    if status_filter is not None:
+        records = [record for record in records if record["status"] == status_filter]
+    return records
+
+
+def _attack_path_action_ids(records: list[dict[str, Any]]) -> list[uuid.UUID]:
+    action_ids: list[uuid.UUID] = []
+    for record in records:
+        for raw_id in record.get("linked_action_ids") or []:
+            try:
+                action_ids.append(uuid.UUID(str(raw_id)))
+            except (TypeError, ValueError):
+                continue
+    return sorted(set(action_ids), key=str)
+
+
+async def _load_attack_path_exceptions(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action_ids: list[uuid.UUID],
+    now: datetime,
+) -> dict[uuid.UUID, list[Exception]]:
+    if not action_ids:
+        return {}
+    result = await db.execute(
+        select(Exception).where(
+            Exception.tenant_id == tenant_uuid,
+            Exception.entity_type == EntityType.action,
+            Exception.entity_id.in_(action_ids),
+            Exception.expires_at > now,
+        )
+    )
+    grouped: defaultdict[uuid.UUID, list[Exception]] = defaultdict(list)
+    for row in result.scalars().all():
+        grouped[row.entity_id].append(row)
+    return dict(grouped)
+
+
+async def _load_attack_path_runs(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, list[RemediationRun]]:
+    if not action_ids:
+        return {}
+    result = await db.execute(
+        select(RemediationRun)
+        .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.action_id.in_(action_ids))
+        .order_by(RemediationRun.created_at.desc())
+    )
+    grouped: defaultdict[uuid.UUID, list[RemediationRun]] = defaultdict(list)
+    for run in result.scalars().all():
+        grouped[run.action_id].append(run)
+    return dict(grouped)
+
+
+async def _load_attack_path_sync_state(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    action_ids: list[uuid.UUID],
+) -> tuple[dict[uuid.UUID, list[ActionRemediationSyncState]], dict[uuid.UUID, list[ActionExternalLink]]]:
+    if not action_ids:
+        return {}, {}
+    sync_result = await db.execute(
+        select(ActionRemediationSyncState).where(
+            ActionRemediationSyncState.tenant_id == tenant_uuid,
+            ActionRemediationSyncState.action_id.in_(action_ids),
+        )
+    )
+    link_result = await db.execute(
+        select(ActionExternalLink).where(
+            ActionExternalLink.tenant_id == tenant_uuid,
+            ActionExternalLink.action_id.in_(action_ids),
+        )
+    )
+    states: defaultdict[uuid.UUID, list[ActionRemediationSyncState]] = defaultdict(list)
+    for row in sync_result.scalars().all():
+        states[row.action_id].append(row)
+    links: defaultdict[uuid.UUID, list[ActionExternalLink]] = defaultdict(list)
+    for row in link_result.scalars().all():
+        links[row.action_id].append(row)
+    return dict(states), dict(links)
+
+
+def _artifact_links_for_runs(runs: list[RemediationRun], *, action_status: str) -> list[ActionImplementationArtifactLink]:
+    try:
+        return build_action_implementation_artifacts(runs[:8], action_status=action_status)
+    except Exception:
+        logger.warning("Attack-path artifact projection failed; dropping additive remediation artifacts.", exc_info=True)
+        return []
+
+
+def _repositories_from_artifacts(artifacts: list[ActionImplementationArtifactLink]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, str, str | None, str | None, str | None]] = set()
+    items: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        metadata = artifact.metadata if isinstance(artifact.metadata, dict) else {}
+        repository = metadata.get("repository")
+        provider = metadata.get("provider") or "generic_git"
+        if not isinstance(repository, str) or not repository.strip():
+            continue
+        item = (
+            str(provider),
+            repository.strip(),
+            _text(metadata.get("base_branch")),
+            _text(metadata.get("root_path")),
+            artifact.run_id,
+        )
+        if item in seen:
+            continue
+        seen.add(item)
+        items.append(
+            {
+                "provider": item[0],
+                "repository": item[1],
+                "base_branch": item[2],
+                "root_path": item[3],
+                "source_run_id": item[4],
+            }
+        )
+    return items
+
+
+def _runtime_signals_payload(
+    record: dict[str, Any],
+    *,
+    representative_action: Action,
+) -> dict[str, Any]:
+    graph_context = record.get("representative_graph_context") or {}
+    entry_points = graph_context.get("entry_points") or []
+    connected_assets = graph_context.get("connected_assets") or []
+    identity_path = graph_context.get("identity_path") or []
+    status = _text(record.get("status")) or "unavailable"
+    confidence = float(record.get("confidence") or 0.0)
+    publicly_reachable = bool(entry_points)
+    sensitive_targets = sum(
+        1
+        for asset in connected_assets
+        if "sensitive" in str(asset.get("label", "")).lower() or "data" in str(asset.get("relationship", "")).lower()
+    )
+    workload_presence = "present" if connected_assets else "unknown"
+    summary = (
+        f"{len(entry_points)} entry point(s), {len(identity_path)} identity hop(s), and {len(connected_assets)} connected asset(s) inform this path."
+        if status in {"available", "partial"}
+        else "Runtime truth is not fully verified for this path yet."
+    )
+    return {
+        "workload_presence": workload_presence,
+        "publicly_reachable": publicly_reachable,
+        "sensitive_target_count": sensitive_targets,
+        "identity_hops": len(identity_path),
+        "confidence": confidence,
+        "summary": summary,
+    }
+
+
+def _exposure_validation_payload(record: dict[str, Any]) -> dict[str, Any]:
+    status = _text(record.get("status")) or "unavailable"
+    freshness = record.get("freshness") or {}
+    if status == "available":
+        validation = "verified"
+        summary = "Persisted graph evidence resolves a bounded entry point and target path."
+    elif status == "partial":
+        validation = "partial"
+        summary = "The path is supported by graph evidence, but some runtime or graph detail is truncated."
+    else:
+        validation = "unverified"
+        summary = "The path remains bounded and fail-closed because runtime or graph evidence is incomplete."
+    return {
+        "status": validation,
+        "summary": summary,
+        "observed_at": freshness.get("observed_at"),
+    }
+
+
+def _closure_targets_payload(record: dict[str, Any]) -> dict[str, Any]:
+    linked_actions = record.get("linked_actions") or []
+    open_ids = [item["id"] for item in linked_actions if item.get("status") == "open"]
+    in_progress_ids = [item["id"] for item in linked_actions if item.get("status") == "in_progress"]
+    resolved_ids = [item["id"] for item in linked_actions if item.get("status") == "resolved"]
+    if in_progress_ids:
+        summary = f"{len(in_progress_ids)} linked action(s) are in progress; closing the remaining open items will reduce this path."
+    elif open_ids:
+        summary = f"{len(open_ids)} open linked action(s) remain before this path can materially drop."
+    else:
+        summary = "All currently linked actions are resolved; monitor for drift or reopen."
+    return {
+        "open_action_ids": open_ids,
+        "in_progress_action_ids": in_progress_ids,
+        "resolved_action_ids": resolved_ids,
+        "summary": summary,
+    }
+
+
+def _external_workflow_summary_payload(
+    *,
+    action_ids: list[uuid.UUID],
+    sync_states_by_action: dict[uuid.UUID, list[ActionRemediationSyncState]],
+    links_by_action: dict[uuid.UUID, list[ActionExternalLink]],
+) -> dict[str, Any]:
+    drifted_count = 0
+    in_sync_count = 0
+    linked_items: list[str] = []
+    providers: set[str] = set()
+    for action_id in action_ids:
+        for state in sync_states_by_action.get(action_id, []):
+            providers.add(state.provider)
+            if state.sync_status == "drifted":
+                drifted_count += 1
+            else:
+                in_sync_count += 1
+        for link in links_by_action.get(action_id, []):
+            providers.add(link.provider)
+            ref = link.external_key or link.external_id or link.provider
+            linked_items.append(f"{link.provider}:{ref}")
+    if not providers:
+        summary = "No external workflow links are attached to this path."
+    elif drifted_count:
+        summary = f"{drifted_count} linked external workflow item(s) are drifted across {len(providers)} provider(s)."
+    else:
+        summary = f"External workflow links are present across {len(providers)} provider(s) and currently aligned."
+    return {
+        "provider_count": len(providers),
+        "drifted_count": drifted_count,
+        "in_sync_count": in_sync_count,
+        "linked_items": sorted(linked_items),
+        "summary": summary,
+    }
+
+
+def _exception_summary_payload(
+    *,
+    action_ids: list[uuid.UUID],
+    exceptions_by_action: dict[uuid.UUID, list[Exception]],
+    now: datetime,
+) -> dict[str, Any]:
+    active_count = 0
+    expiring_count = 0
+    for action_id in action_ids:
+        for row in exceptions_by_action.get(action_id, []):
+            active_count += 1
+            if row.expires_at <= now + timedelta(days=settings.ACTIONS_OWNER_QUEUE_EXPIRING_EXCEPTION_DAYS):
+                expiring_count += 1
+    if not active_count:
+        summary = "No active action exceptions are attached to this path."
+    elif expiring_count:
+        summary = f"{expiring_count} active exception(s) are nearing expiry across linked actions."
+    else:
+        summary = f"{active_count} active exception(s) currently govern linked actions on this path."
+    return {
+        "active_count": active_count,
+        "expiring_count": expiring_count,
+        "summary": summary,
+    }
+
+
+def _evidence_exports_payload(
+    record: dict[str, Any],
+    *,
+    artifacts: list[ActionImplementationArtifactLink],
+    runs: list[RemediationRun],
+    action_status: str,
+) -> dict[str, Any]:
+    evidence_count = len(record.get("evidence") or [])
+    artifact_count = len(artifacts)
+    export_ready = bool(evidence_count or artifact_count or runs)
+    if export_ready:
+        summary = f"{evidence_count} evidence item(s) and {artifact_count} implementation artifact(s) are available for closure review."
+    else:
+        summary = "No exportable implementation or evidence artifacts are attached yet."
+    return {
+        "evidence_item_count": evidence_count,
+        "implementation_artifact_count": artifact_count,
+        "export_ready": export_ready,
+        "summary": summary,
+    }
+
+
+def _access_scope_payload() -> dict[str, Any]:
+    return {
+        "scope": "tenant_scoped",
+        "evidence_visibility": "full",
+        "restricted_sections": [],
+        "export_allowed": True,
+    }
+
+
+def _code_context_payload(
+    representative_action: Action,
+    *,
+    repositories: list[dict[str, Any]],
+    artifacts: list[ActionImplementationArtifactLink],
+) -> dict[str, Any]:
+    owner_label = representative_action.owner_label or "Unassigned"
+    repository_count = len(repositories)
+    artifact_count = len(artifacts)
+    if repositories:
+        repo_summary = f"{repository_count} linked repo target(s) and {artifact_count} implementation artifact(s) are available."
+    else:
+        repo_summary = f"{artifact_count} implementation artifact(s) are available, but no repo-aware target is attached yet."
+    return {
+        "owner_label": owner_label,
+        "service_owner_key": representative_action.owner_key,
+        "repository_count": repository_count,
+        "implementation_artifact_count": artifact_count,
+        "summary": repo_summary,
+    }
+
+
+async def _enrich_attack_path_records(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    records: list[dict[str, Any]],
+    now: datetime,
+) -> list[dict[str, Any]]:
+    action_ids = _attack_path_action_ids(records)
+    try:
+        exceptions_by_action = await _load_attack_path_exceptions(
+            db,
+            tenant_uuid=tenant_uuid,
+            action_ids=action_ids,
+            now=now,
+        )
+    except SQLAlchemyError:
+        logger.warning("Attack-path exception enrichment failed; continuing without exception summaries.", exc_info=True)
+        exceptions_by_action = {}
+    try:
+        runs_by_action = await _load_attack_path_runs(db, tenant_uuid=tenant_uuid, action_ids=action_ids)
+    except SQLAlchemyError:
+        logger.warning("Attack-path remediation-run enrichment failed; continuing without remediation artifacts.", exc_info=True)
+        runs_by_action = {}
+    try:
+        sync_states_by_action, links_by_action = await _load_attack_path_sync_state(
+            db,
+            tenant_uuid=tenant_uuid,
+            action_ids=action_ids,
+        )
+    except SQLAlchemyError:
+        logger.warning("Attack-path external workflow enrichment failed; continuing without sync projections.", exc_info=True)
+        sync_states_by_action, links_by_action = {}, {}
+    enriched: list[dict[str, Any]] = []
+    for record in records:
+        linked_action_rows = record.get("linked_actions") or []
+        linked_action_ids: list[uuid.UUID] = []
+        for row in linked_action_rows:
+            try:
+                linked_action_ids.append(uuid.UUID(str(row.get("id"))))
+            except (TypeError, ValueError):
+                continue
+        representative_action = record["representative_action"]
+        path_runs = [run for action_id in linked_action_ids for run in runs_by_action.get(action_id, [])]
+        artifacts = _artifact_links_for_runs(path_runs, action_status=representative_action.status)
+        repositories = _repositories_from_artifacts(artifacts)
+        enriched_record = dict(record)
+        enriched_record["runtime_signals"] = _runtime_signals_payload(record, representative_action=representative_action)
+        enriched_record["exposure_validation"] = _exposure_validation_payload(record)
+        enriched_record["linked_repositories"] = repositories
+        enriched_record["implementation_artifacts"] = [artifact.model_dump() for artifact in artifacts]
+        enriched_record["code_context"] = _code_context_payload(
+            representative_action,
+            repositories=repositories,
+            artifacts=artifacts,
+        )
+        enriched_record["closure_targets"] = _closure_targets_payload(record)
+        workflow = _external_workflow_summary_payload(
+            action_ids=linked_action_ids,
+            sync_states_by_action=sync_states_by_action,
+            links_by_action=links_by_action,
+        )
+        enriched_record["external_workflow_summary"] = workflow
+        enriched_record["governance_summary"] = workflow
+        enriched_record["exception_summary"] = _exception_summary_payload(
+            action_ids=linked_action_ids,
+            exceptions_by_action=exceptions_by_action,
+            now=now,
+        )
+        enriched_record["evidence_exports"] = _evidence_exports_payload(
+            record,
+            artifacts=artifacts,
+            runs=path_runs,
+            action_status=representative_action.status,
+        )
+        enriched_record["access_scope"] = _access_scope_payload()
+        enriched.append(enriched_record)
+    return enriched
+
+
+async def _build_attack_path_summary_items(
+    db: AsyncSession,
+    *,
+    tenant_uuid: uuid.UUID,
+    records: list[dict[str, Any]],
+    accounts: dict[str, AwsAccount],
+) -> list[AttackPathSummaryItem]:
+    items: list[AttackPathSummaryItem] = []
+    for record in records:
+        representative_action = record["representative_action"]
+        account = accounts.get(representative_action.account_id)
+        view = _attack_path_view_for_action(
+            representative_action,
+            graph_context=record["representative_graph_context"],
+            account=account,
+        )
+        items.append(
+            AttackPathSummaryItem(
+                id=record["id"],
+                status=record["status"],
+                rank=int(record["rank"]),
+                confidence=float(record["confidence"]),
+                entry_points=view.entry_points,
+                target_assets=view.target_assets,
+                summary=view.summary,
+                business_impact_summary=record.get("business_impact_summary"),
+                recommended_fix_summary=(record.get("recommended_fix") or {}).get("summary"),
+                owner_labels=list(record.get("owner_labels") or []),
+                linked_action_ids=list(record.get("linked_action_ids") or []),
+                rank_factors=record.get("rank_factors") or [],
+                freshness=record.get("freshness"),
+                remediation_summary=record.get("remediation_summary"),
+                runtime_signals=record.get("runtime_signals"),
+                closure_targets=record.get("closure_targets"),
+                governance_summary=record.get("governance_summary"),
+                access_scope=record.get("access_scope"),
+            )
+        )
+    return items
+
+
+def _attack_path_view_for_action(
+    action: Action,
+    *,
+    graph_context: dict[str, Any],
+    account: AwsAccount | None,
+) -> ActionAttackPathView:
+    recommendation = _action_recommendation_payload(
+        action,
+        mode_options=_mode_options_for_action(action.action_type),
+        manual_high_risk=is_root_credentials_required_action(action.action_type),
+    )
+    execution_guidance = [
+        ActionExecutionGuidance(**payload)
+        for payload in build_action_execution_guidance(action, account=account)
+    ]
+    return _attack_path_view_payload(
+        action,
+        graph_context=graph_context,
+        business_impact=_business_impact_payload(action),
+        recommendation=recommendation,
+        score_factors=_score_factors_payload(action),
+        execution_guidance=execution_guidance,
+        sla=_action_sla_payload(action, exception_state=None, now=datetime.now(timezone.utc)),
+    )
+
+
+@router.get("/attack-paths/{path_id}", response_model=AttackPathDetailResponse)
+async def get_attack_path(
+    path_id: Annotated[str, Path(description="Shared attack path ID")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[
+        Optional[str],
+        Query(description="Tenant ID (UUID). Optional when authenticated via Bearer token."),
+    ] = None,
+) -> AttackPathDetailResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+    detail, is_stale = await get_materialized_attack_path(db, tenant_id=tenant_uuid, path_id=path_id)
+    has_any_materialized = False
+    if detail is None:
+        try:
+            has_any_materialized = await has_materialized_attack_paths(db, tenant_id=tenant_uuid)
+        except Exception:
+            logger.warning("Attack-path materialized presence check failed on detail read.", exc_info=True)
+            has_any_materialized = False
+    if detail is None and not has_any_materialized:
+        try:
+            await materialize_attack_paths(db, tenant_id=tenant_uuid)
+            await db.commit()
+            detail, is_stale = await get_materialized_attack_path(db, tenant_id=tenant_uuid, path_id=path_id)
+        except Exception:
+            logger.warning("Attack-path materialized bootstrap failed on detail read; using legacy fallback.", exc_info=True)
+            detail = await _get_attack_path_legacy(db, tenant_uuid=tenant_uuid, path_id=path_id)
+            is_stale = False
+    if detail is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Attack path not found", "detail": f"No attack path found with ID {path_id}"},
+        )
+    if is_stale:
+        maybe_schedule_attack_path_refresh(tenant_id=tenant_uuid)
+    return AttackPathDetailResponse(**detail)
+
+
 @router.get("/{action_id}", response_model=ActionDetailResponse)
 async def get_action(
     action_id: Annotated[str, Path(description="Action UUID")],
@@ -1807,6 +2965,11 @@ async def get_action(
         tenant_uuid=tenant_uuid,
         action=action,
     )
+    attack_path_graph_context = await _load_action_attack_path_graph_context(
+        db,
+        tenant_uuid=tenant_uuid,
+        action=action,
+    )
     account_result = await db.execute(
         select(AwsAccount).where(
             AwsAccount.tenant_id == tenant_uuid,
@@ -1827,6 +2990,7 @@ async def get_action(
         recommendation=recommendation,
         implementation_artifacts=implementation_artifacts,
         graph_context=graph_context,
+        attack_path_graph_context=attack_path_graph_context,
     )
 
 
@@ -2159,18 +3323,26 @@ async def trigger_action_reevaluation(
     "/{action_id}/remediation-preview",
     response_model=RemediationPreviewResponse,
     summary="Remediation preview (dry-run)",
-    description="Run pre-check only for direct fix. Returns compliant, message, will_apply. Requires WriteRole.",
+    description=(
+        "Return an informational preview for the currently supported PR-bundle path. "
+        "Deprecated direct-fix requests fail closed."
+    ),
     responses={
-        400: {"description": "Action not fixable or WriteRole not configured"},
+        400: {"description": "Action not found or direct-fix request rejected"},
         404: {"description": "Action not found"},
     },
 )
 async def get_remediation_preview(
     action_id: Annotated[str, Path(description="Action UUID")],
     mode: Annotated[
-        Literal["direct_fix", "pr_only"],
-        Query(description="Remediation mode. Accepts values advertised in remediation-options mode_options."),
-    ] = "direct_fix",
+        str,
+        Query(
+            description=(
+                "Remediation mode. The only supported value is `pr_only`. "
+                "Deprecated `direct_fix` requests are rejected."
+            )
+        ),
+    ] = "pr_only",
     strategy_id: Annotated[
         str | None,
         Query(description="Optional remediation strategy ID for direct-fix preview."),
@@ -2188,8 +3360,10 @@ async def get_remediation_preview(
     tenant_id: Annotated[Optional[str], Query(description="Tenant ID. Optional when authenticated.")] = None,
 ) -> RemediationPreviewResponse:
     """
-    Pre-check only (dry-run) for direct fix. Shows current state before user approves.
-    Requires action to be fixable and account to have WriteRole.
+    Informational preview for the supported PR-bundle path.
+
+    Direct-fix requests are intentionally rejected while direct-fix and
+    customer WriteRole stay out of scope.
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
     tenant = await get_tenant(tenant_uuid, db)
@@ -2360,99 +3534,28 @@ async def get_remediation_preview(
             will_apply=False,
         )
 
-    if mode == "pr_only":
+    normalized_mode = mode.strip()
+
+    if normalized_mode == "direct_fix":
+        return _preview_response(
+            compliant=False,
+            message=DIRECT_FIX_OUT_OF_SCOPE_MESSAGE,
+            will_apply=False,
+        )
+
+    if normalized_mode != "pr_only":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Unsupported remediation mode",
+                "detail": "Only `pr_only` is supported for remediation preview.",
+            },
+        )
+
+    if normalized_mode == "pr_only":
         return _preview_response(
             compliant=False,
             message="Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
-            will_apply=False,
-        )
-
-    supported_direct_fix_action_types = get_supported_direct_fix_action_types()
-    if not supported_direct_fix_action_types:
-        return _preview_response(
-            compliant=False,
-            message="Direct-fix preview is unavailable in this API deployment. Use PR bundle mode.",
-            will_apply=False,
-        )
-    if action.action_type not in supported_direct_fix_action_types:
-        return _preview_response(
-            compliant=False,
-            message=f"Action type '{action.action_type}' does not support direct fix.",
-            will_apply=False,
-        )
-
-    if account is None:
-        acc_result = await db.execute(
-            select(AwsAccount).where(
-                AwsAccount.tenant_id == tenant_uuid,
-                AwsAccount.account_id == action.account_id,
-            )
-        )
-        account = acc_result.scalar_one_or_none()
-
-    if not account:
-        return _preview_response(
-            compliant=False,
-            message="AWS account not found for this action.",
-            will_apply=False,
-        )
-    if not account.role_write_arn:
-        return _preview_response(
-            compliant=False,
-            message="WriteRole not configured. Add WriteRole in account settings.",
-            will_apply=False,
-        )
-
-    try:
-        wr_session = await asyncio.to_thread(
-            assume_role,
-            role_arn=account.role_write_arn,
-            external_id=account.external_id,
-        )
-        preview = await asyncio.to_thread(
-            run_remediation_preview_bridge,
-            wr_session,
-            action.action_type,
-            action.account_id,
-            action.region,
-            strategy_id,
-            parsed_strategy_inputs,
-        )
-        preview_before = state_simulation["before_state"]
-        preview_after = state_simulation["after_state"]
-        preview_diff_lines = state_simulation["diff_lines"]
-        if isinstance(getattr(preview, "before_state", None), dict) and preview.before_state:
-            preview_before = preview.before_state
-        if isinstance(getattr(preview, "after_state", None), dict) and preview.after_state:
-            preview_after = preview.after_state
-        if isinstance(getattr(preview, "diff_lines", None), list) and preview.diff_lines:
-            preview_diff_lines = preview.diff_lines
-        return _preview_response(
-            compliant=preview.compliant,
-            message=preview.message,
-            will_apply=preview.will_apply,
-            before_state=preview_before,
-            after_state=preview_after,
-            diff_lines=preview_diff_lines,
-        )
-    except ClientError as e:
-        code = e.response.get("Error", {}).get("Code", "Unknown")
-        return _preview_response(
-            compliant=False,
-            message=f"Could not assume WriteRole: {code}",
-            will_apply=False,
-        )
-    except DirectFixModuleUnavailable as e:
-        return _preview_response(
-            compliant=False,
-            message=str(e),
-            will_apply=False,
-        )
-    except Exception as e:
-        logger.exception("Remediation preview failed for action %s: %s", action_id, e)
-        return _preview_response(
-            compliant=False,
-            message=f"Preview failed: {e}",
             will_apply=False,
         )
 

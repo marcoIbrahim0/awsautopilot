@@ -1,0 +1,53 @@
+{
+    "Stacks": [
+        {
+            "StackId": "arn:aws:cloudformation:eu-north-1:696505809372:stack/SecurityAutopilotReadRole/bb553d20-1d54-11f1-a2da-0ef71c28793d",
+            "StackName": "SecurityAutopilotReadRole",
+            "Description": "Creates a read-only IAM role in the customer's AWS account for Security Hub findings ingestion. Your SaaS assumes this role using STS AssumeRole + ExternalId (no long-lived keys). Uses a custom resource so deployment does not fail if roles or policies already exist (idempotent).\n",
+            "Parameters": [
+                {
+                    "ParameterKey": "SaaSAccountId",
+                    "ParameterValue": "029037611564"
+                },
+                {
+                    "ParameterKey": "ExternalId",
+                    "ParameterValue": "****"
+                },
+                {
+                    "ParameterKey": "SaaSExecutionRoleArns",
+                    "ParameterValue": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api,arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+                }
+            ],
+            "CreationTime": "2026-03-11T14:15:18.369000+00:00",
+            "LastUpdatedTime": "2026-03-20T00:40:15.719000+00:00",
+            "RollbackConfiguration": {
+                "RollbackTriggers": []
+            },
+            "StackStatus": "UPDATE_COMPLETE",
+            "DisableRollback": false,
+            "NotificationARNs": [],
+            "Capabilities": [
+                "CAPABILITY_IAM",
+                "CAPABILITY_NAMED_IAM"
+            ],
+            "Outputs": [
+                {
+                    "OutputKey": "ReadRoleArn",
+                    "OutputValue": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+                    "Description": "ARN of the created or existing ReadRole (copy this into your SaaS Connect AWS screen)."
+                }
+            ],
+            "Tags": [],
+            "EnableTerminationProtection": false,
+            "DriftInformation": {
+                "StackDriftStatus": "NOT_CHECKED"
+            },
+            "LastOperations": [
+                {
+                    "OperationType": "UPDATE_STACK",
+                    "OperationId": "06ae639d-c264-4f0b-92b9-059db6597988"
+                }
+            ]
+        }
+    ]
+}

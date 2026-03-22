@@ -1,0 +1,137 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "securityhub:GetFindings",
+        "securityhub:DescribeHub"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "SecurityHubReadFindings"
+    },
+    {
+      "Action": [
+        "config:DescribeConfigurationRecorders",
+        "config:DescribeConfigurationRecorderStatus",
+        "config:DescribeDeliveryChannels",
+        "config:DescribeConfigRules",
+        "config:DescribeComplianceByConfigRule",
+        "config:GetComplianceDetailsByConfigRule"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "ConfigReadinessChecks"
+    },
+    {
+      "Action": [
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "Ec2SecurityGroupReadChecks"
+    },
+    {
+      "Action": [
+        "s3:GetBucketPolicyStatus",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketAcl",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketLocation",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketLogging",
+        "s3:GetLifecycleConfiguration"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:s3:::*",
+      "Sid": "S3AccessPathReadChecks"
+    },
+    {
+      "Action": [
+        "s3:ListAllMyBuckets"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "S3InventoryListBuckets"
+    },
+    {
+      "Action": [
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetTrailStatus"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "CloudTrailInventoryChecks"
+    },
+    {
+      "Action": [
+        "iam:GetAccountSummary"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "IAMInventoryChecks"
+    },
+    {
+      "Action": [
+        "ec2:GetEbsEncryptionByDefault",
+        "ec2:GetSnapshotBlockPublicAccessState"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "Ec2InventoryChecks"
+    },
+    {
+      "Action": [
+        "rds:DescribeDBInstances"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "RdsInventoryChecks"
+    },
+    {
+      "Action": [
+        "eks:ListClusters",
+        "eks:DescribeCluster"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "EksInventoryChecks"
+    },
+    {
+      "Action": [
+        "ssm:GetServiceSetting"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "SsmInventoryChecks"
+    },
+    {
+      "Action": [
+        "sts:GetCallerIdentity"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "STSIdentityValidation"
+    },
+    {
+      "Action": [
+        "access-analyzer:ListAnalyzers",
+        "access-analyzer:ListFindings",
+        "access-analyzer:GetFinding"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "AccessAnalyzerReadFindings"
+    },
+    {
+      "Action": [
+        "inspector2:ListFindings",
+        "inspector2:BatchGetAccountStatus"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "Inspector2ReadFindings"
+    }
+  ],
+  "Version": "2012-10-17"
+}

@@ -1,0 +1,12 @@
+[GET] http://127.0.0.1:18002/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 => [200] OK
+[GET] http://127.0.0.1:18002/api/aws/accounts?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 => [200] OK
+[GET] http://127.0.0.1:18002/api/auth/me => [401] Unauthorized
+[GET] http://127.0.0.1:18002/api/remediation-runs?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70&action_id=0ca64b94-9dcb-4a97-91b0-27b0341865bc&limit=10&offset=0 => [200] OK
+[GET] http://127.0.0.1:18002/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc/remediation-options?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 => [200] OK
+[GET] http://127.0.0.1:18002/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 => [200] OK
+[GET] http://127.0.0.1:18002/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315/execution => [401] Unauthorized
+[GET] http://127.0.0.1:18002/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315?tenant_id=9f7616d8-af04-43ca-99cd-713625357b70 => [200] OK
+[GET] http://127.0.0.1:18002/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315/execution => [401] Unauthorized
+[GET] http://127.0.0.1:3000/session-expired => [FAILED] net::ERR_ABORTED
+[GET] http://127.0.0.1:3000/session-expired => [FAILED] net::ERR_ABORTED
+[GET] http://127.0.0.1:18002/api/auth/me => [401] Unauthorized

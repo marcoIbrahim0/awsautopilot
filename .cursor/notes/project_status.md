@@ -4,10 +4,10 @@
 
 | Section | Purpose |
 |---------|---------|
-| **High-Level Goal** | AWS Security Autopilot for SMB — A SaaS that operationalizes AWS-native security (Security Hub / GuardDuty / IAM Access Analyzer) by converting findings into prioritized actions, managing exceptions, executing hybrid remediation (safe direct fixes + IaC PR/patches), and generating audit-ready evidence packs (SOC 2 / ISO readiness). |
+| **High-Level Goal** | AWS Security Autopilot for SMB — A SaaS that operationalizes AWS-native security (Security Hub / GuardDuty / IAM Access Analyzer) by converting findings into prioritized actions, managing exceptions, generating customer-run IaC PR bundles, and producing audit-ready evidence packs (SOC 2 / ISO readiness). |
 | **Current Phase** | MVP Build Plan (Phase 0 → Phase 1): Foundation + Read-only onboarding + Security Hub ingestion + basic Actions view. |
-| **Infrastructure** | AWS hosting: ECS Fargate (API + Worker), RDS Postgres, SQS, S3 (exports), Secrets Manager, CloudWatch. Customer AWS integration via STS AssumeRole + ExternalId with separate ReadRole (required) and WriteRole (required at account connection). |
-| **Known Blockers** | (1) Finalizing least-privilege IAM policies for ReadRole/WriteRole across regions/accounts. (2) ~~PR generation approach~~ — Implementation plan Step 9 specifies patch bundles with real Terraform/CloudFormation per action type. (3) Defining a minimal, safe auto-remediation allowlist and safety checks. |
+| **Infrastructure** | AWS hosting: ECS Fargate (API + Worker), RDS Postgres, SQS, S3 (exports), Secrets Manager, CloudWatch. Customer AWS integration currently uses STS AssumeRole + ExternalId with ReadRole only; customer WriteRole and direct-fix execution are out of scope. |
+| **Known Blockers** | (1) Finalizing least-privilege ReadRole policies across regions/accounts. (2) ~~PR generation approach~~ — Implementation plan Step 9 specifies patch bundles with real Terraform/CloudFormation per action type. (3) Finishing PR-only contract cleanup across docs/templates while WriteRole/direct-fix remain disabled. |
 
 ## Product Definition
 
@@ -19,7 +19,7 @@
 
 - Faster time-to-secure (baseline enabled + tuned)
 - Reduced noise (actions > raw findings)
-- Fixes shipped (approved direct fixes + PR bundles)
+- Fixes shipped (reviewed PR bundles + closure evidence)
 - Compliance readiness (evidence pack + exception governance)
 
 ## System Architecture
@@ -38,8 +38,8 @@
 ### Customer AWS Data Plane
 
 - ReadRole (required): ingest Security Hub (and minimal describe calls)
-- WriteRole (required): limited to safe remediations only; required at account connection
-- Access method: STS AssumeRole + ExternalId (no long-lived keys)
+- WriteRole (out of scope): retained only as a deprecated/backward-compatible concept while active remediation stays PR-only
+- Access method: STS AssumeRole + ExternalId for ReadRole (no long-lived keys)
 
 ## MVP Scope
 
@@ -49,9 +49,8 @@
 - Security Hub findings ingestion (start 1 region; expand)
 - Action engine v1: dedupe + prioritize + "Top risks"
 - Exceptions/suppressions with expiry + approvals
-- Hybrid remediation:
-  - **7 real action types** (3 direct fix + 4 PR bundle): S3 account-level, Security Hub, GuardDuty (direct fix); S3 bucket block, S3 bucket encryption, SG restrict, CloudTrail (PR bundle)
-  - PR/patch bundle for most fixes
+- PR-bundle remediation for supported action types
+- Customer-run bundle execution and closure evidence
 - Evidence export v1 (CSV/JSON zipped)
 
 ### MVP Excludes (initially)
@@ -61,19 +60,18 @@
 - High-risk auto-remediation without guardrails
 - Broad multi-cloud CNAPP scope
 
-## Remediation Strategy (Hybrid)
+## Remediation Strategy (Current Scope)
 
 | Mode | Pros | Cons | Best For |
 |------|------|------|----------|
-| Direct Fix (approved) | Fastest value, strongest differentiation | Needs strict safety, fear of write access | Safe, idempotent remediations |
 | PR / Patch Bundle | Safer, fits IaC workflows | Slower perceived value if PRs aren't merged | Medium/high-risk changes |
+| Direct Fix + WriteRole | Out of scope | Not exposed in active API/UI flows | N/A |
 
-### Safe Direct-Fix Starter List (v1)
+### Direct-Fix Status
 
-- Enable S3 Block Public Access (account-level)
-- Enable Security Hub / GuardDuty (if disabled)
-- (Optional) Restrict SG 0.0.0.0/0 on 22/3389 with allowlist + exemptions
-- Everything else → PR/patch until proven safe
+- Customer WriteRole and direct-fix execution are intentionally disabled for now.
+- New onboarding, previews, and remediation runs must stay PR-only.
+- Historical direct-fix code paths remain on disk only for future reactivation after explicit re-scoping.
 
 ## Data Model (Core Tables)
 
@@ -127,13 +125,13 @@
 
 **Done when:** findings collapse into a manageable action list.
 
-### Phase 3 — Hybrid Remediation v1
+### Phase 3 — PR-Bundle Remediation v1
 
 - Remediation runs + audit logs
 - PR/patch bundle output
-- 7 real action types (3 direct fix + 4 PR bundle) behind approval / PR bundle
+- Supported remediation strategy families delivered through reviewed PR bundles
 
-**Done when:** approve → (fix or PR bundle) with before/after checks and logs.
+**Done when:** approve → PR bundle with before/after checks, execution guidance, and logs.
 
 ### Phase 3 — Feature Addition: Context-Driven Prioritization + Fix Workflow Intelligence
 
@@ -161,13 +159,13 @@ Priority order for rollout:
     - Expose graph-backed context on action detail ("connected assets", "identity path", "blast-radius neighborhood") to support explainable decision-making.
   - Cloud-to-code remediation PR automation
     - Extend PR bundle output to repository-aware pull request generation (Terraform/CloudFormation), including generated diff, rollback notes, and control mapping context.
-    - Keep execution approval-gated; no autonomous production mutation outside explicit approved direct-fix scope.
+    - Keep execution approval-gated and customer-run; no autonomous production mutation in the current scope.
   - Integration-first remediation operations
     - Add bi-directional integration support for Jira/ServiceNow/Slack workflows: ticket creation, status sync, assignee sync, reopen on regression.
     - Keep platform as system-of-record for remediation state while integrating into existing engineering/ITSM operating rhythm.
   - Business impact matrix (risk x criticality)
     - Add an executive-facing matrix that combines technical risk score with business criticality (customer-facing, revenue-path, regulated data).
-    - Use matrix position to drive default recommendation mode (direct-fix candidate vs PR-only vs exception review).
+    - Use matrix position to drive default recommendation mode (PR-only vs exception review).
 
 - `P2`: Prioritization quality refinement
   - Threat-intelligence weighting
@@ -224,7 +222,7 @@ Reference:
 | Requirement | Implementation |
 |-------------|----------------|
 | No long-lived AWS keys | STS AssumeRole + ExternalId |
-| Least privilege | Separate ReadRole vs WriteRole, tight permissions |
+| Least privilege | ReadRole-only live onboarding; WriteRole/direct-fix out of scope |
 | Auditability | Remediation run logs + approval records + exports |
 | Idempotency | Safe to re-run jobs/remediations |
 | Failure handling | Retries + DLQ for SQS + run status visible |
@@ -257,7 +255,7 @@ Reference:
 - **Step 5** (Action Grouping + Dedupe) — ✅ Done
 - **Step 6** (Exceptions + Expiry) — ✅ Done
 - **Step 7** (Remediation Runs Model + PR Bundle Scaffold) — ✅ Done (replaced by Step 9 real IaC)
-- **Step 8** (7 Real Action Types: Direct Fix + WriteRole) — ✅ Done
+- **Step 8** (7 Real Action Types: Direct Fix + WriteRole) — ✅ Implemented historically; currently disabled / out of scope
 - **Step 9** (Real PR Bundle IaC per Action Type) — ✅ Done
 - **Step 11.1** (Scheduled job: EventBridge/cron, payload per tenant) — ✅ Done (last_digest_sent_at, weekly_digest job, POST /api/internal/weekly-digest, DIGEST_CRON_SECRET)
 - **Step 11.2** (Digest content: email subject/body, Slack blocks, View in app link) — ✅ Done (digest_content.py, expiring_exceptions in payload)
@@ -289,8 +287,8 @@ Reference:
 
 | Risk | Mitigation |
 |------|------------|
-| Auto-remediation breaks prod | Approval required, safe list only, pre/post checks, allowlists |
-| IAM permissions too broad | Start narrow, expand per feature, document every permission |
+| Unsupported write mutation erodes trust | Keep active remediation PR-only and reject direct-fix at API entry points |
+| IAM permissions too broad | Keep live onboarding ReadRole-only while WriteRole stays out of scope |
 | "Just another dashboard" perception | Focus UI on actions + fixes + evidence, not raw findings |
-| Slow value if PR-only | Hybrid: a few safe direct fixes to demonstrate immediate impact |
+| Slow value if PR-only | Offset with better bundles, execution guidance, and closure evidence while trust boundary hardening continues |
 | Support load | Clear scope, runbooks, plan-based support boundaries |

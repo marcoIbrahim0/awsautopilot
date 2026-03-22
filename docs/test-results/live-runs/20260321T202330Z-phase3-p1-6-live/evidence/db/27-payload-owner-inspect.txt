@@ -1,0 +1,11 @@
+Output format is unaligned.
+Field separator is "	".
+owner_type	owner_key	owner_label
+service	ebs	Amazon EBS
+(1 row)
+?column?
+---PAYLOAD---
+(1 row)
+payload_json
+{"title": "EBS default encryption should be enabled", "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc", "operation": "create", "description": "This control checks whether Amazon Elastic Block Store (EBS) encryption is enabled by default. The control fails if EBS default encryption is not enabled.", "action_status": "open", "external_status": "To Do", "external_assignee_key": "ebs", "external_assignee_label": "Amazon EBS"}
+(1 row)

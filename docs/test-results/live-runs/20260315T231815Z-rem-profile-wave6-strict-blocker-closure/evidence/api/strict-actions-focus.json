@@ -1,0 +1,128 @@
+{
+  "id": "304d216e-0af9-443e-aef5-4dd0d5ce947b",
+  "control_id": "S3.5",
+  "action_type": "s3_bucket_require_ssl",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.5",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}
+{
+  "id": "3cb368ce-8b41-4cc8-b4e2-cc25409c926c",
+  "control_id": "S3.5",
+  "action_type": "s3_bucket_require_ssl",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.5",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}
+{
+  "id": "3d036827-146e-4c81-bd6d-475d47349b3d",
+  "control_id": "S3.5",
+  "action_type": "s3_bucket_require_ssl",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.5",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}
+{
+  "id": "a2993192-069d-4938-b02d-a5972a728ff4",
+  "control_id": "S3.5",
+  "action_type": "s3_bucket_require_ssl",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.5",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}
+{
+  "id": "432c4574-4f30-4ddc-9366-8bb7a8cafe30",
+  "control_id": "S3.15",
+  "action_type": "s3_bucket_encryption_kms",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.15",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+  "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+}
+{
+  "id": "91af3fe1-fd43-4fe2-b8d2-e89ec857cc8a",
+  "control_id": "S3.15",
+  "action_type": "s3_bucket_encryption_kms",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.15",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+  "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+}
+{
+  "id": "9405f465-5b90-4fee-b4f7-030660683e52",
+  "control_id": "S3.15",
+  "action_type": "s3_bucket_encryption_kms",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.15",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+  "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+}
+{
+  "id": "a6585d13-e010-415e-823c-334a4c40bdf8",
+  "control_id": "S3.15",
+  "action_type": "s3_bucket_encryption_kms",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.15",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+  "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+}
+{
+  "id": "2fd0f251-b9a4-4653-9a06-bc4860ba6c42",
+  "control_id": "S3.9",
+  "action_type": "s3_bucket_access_logging",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.9",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}
+{
+  "id": "33df634d-c9ff-48dd-9d55-4f8d1ad83a0b",
+  "control_id": "S3.9",
+  "action_type": "s3_bucket_access_logging",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.9",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}
+{
+  "id": "3bee66f4-7c42-42ad-9c52-824be39db6a4",
+  "control_id": "S3.9",
+  "action_type": "s3_bucket_access_logging",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.9",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}
+{
+  "id": "bf4649ea-eaca-4389-809d-797f46de85ab",
+  "control_id": "S3.9",
+  "action_type": "s3_bucket_access_logging",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.9",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}
+{
+  "id": "4f550979-f521-471a-8246-1a24ca7c48d7",
+  "control_id": "S3.11",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.11",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}
+{
+  "id": "93ea54f4-2942-4ac0-bd51-c23e420d250c",
+  "control_id": "S3.11",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.11",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}
+{
+  "id": "a769c380-0bfb-45b7-b358-c41b176521e1",
+  "control_id": "S3.11",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.11",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}
+{
+  "id": "dfc9c726-c3ff-4235-a47f-58793faa3775",
+  "control_id": "S3.11",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.11",
+  "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}

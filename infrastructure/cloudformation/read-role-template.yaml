@@ -11,6 +11,13 @@ Parameters:
     AllowedPattern: "^[0-9]{12}$"
     ConstraintDescription: "Must be a 12-digit AWS Account ID."
 
+  SaaSExecutionRoleArns:
+    Type: String
+    Default: ""
+    Description: "Optional during rollout. Comma-separated SaaS execution role ARNs used to constrain trust to exact SaaS runtime roles."
+    AllowedPattern: '(^$)|(^arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role/[^,]+(,arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role/[^,]+)*$)'
+    ConstraintDescription: "Must be blank or one or more comma-separated IAM role ARNs."
+
   ExternalId:
     Type: String
     NoEcho: true
@@ -80,17 +87,37 @@ Resources:
           READ_ROLE_NAME = "SecurityAutopilotReadRole"
           READ_POLICY_NAME = "SecurityAutopilotReadRolePolicy"
 
-          def trust_policy(saas_account_id, external_id, partition="aws"):
-              return {
-                  "Version": "2012-10-17",
-                  "Statement": [{
+          def _trusted_role_arns(saas_execution_role_arns=""):
+              return [value.strip() for value in str(saas_execution_role_arns or "").split(",") if value.strip()]
+
+          def trust_policy(saas_account_id, external_id, saas_execution_role_arns="", partition="aws"):
+              principal_arns = _trusted_role_arns(saas_execution_role_arns)
+              assume_conditions = {"StringEquals": {"sts:ExternalId": external_id}}
+              if principal_arns:
+                  assume_conditions["ArnEquals"] = {
+                      "aws:PrincipalArn": principal_arns[0] if len(principal_arns) == 1 else principal_arns
+                  }
+              statements = [{
                       "Sid": "AllowAssumeFromSaaSAccountWithExternalId",
                       "Effect": "Allow",
                       "Principal": {"AWS": f"arn:{partition}:iam::{saas_account_id}:root"},
                       "Action": "sts:AssumeRole",
-                      "Condition": {"StringEquals": {"sts:ExternalId": external_id}}
+                      "Condition": assume_conditions
                   }]
+              session_statement = {
+                  "Sid": "AllowSessionAuditContextFromSaaSAccount",
+                  "Effect": "Allow",
+                  "Principal": {"AWS": f"arn:{partition}:iam::{saas_account_id}:root"},
+                  "Action": ["sts:SetSourceIdentity", "sts:TagSession"],
               }
+              if principal_arns:
+                  session_statement["Condition"] = {
+                      "ArnEquals": {
+                          "aws:PrincipalArn": principal_arns[0] if len(principal_arns) == 1 else principal_arns
+                      }
+                  }
+              statements.append(session_statement)
+              return {"Version": "2012-10-17", "Statement": statements}
 
           def read_policy_document():
               return {
@@ -102,14 +129,13 @@ Resources:
                       {"Sid": "S3AccessPathReadChecks", "Effect": "Allow", "Action": ["s3:GetBucketPolicyStatus", "s3:GetBucketPolicy", "s3:GetBucketAcl", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation", "s3:GetEncryptionConfiguration", "s3:GetBucketLogging", "s3:GetLifecycleConfiguration"], "Resource": "arn:aws:s3:::*"},
                       {"Sid": "S3InventoryListBuckets", "Effect": "Allow", "Action": ["s3:ListAllMyBuckets"], "Resource": "*"},
                       {"Sid": "CloudTrailInventoryChecks", "Effect": "Allow", "Action": ["cloudtrail:DescribeTrails", "cloudtrail:GetTrailStatus"], "Resource": "*"},
-                      {"Sid": "IAMInventoryChecks", "Effect": "Allow", "Action": ["iam:GetAccountSummary", "iam:GetAccountSummaryReport"], "Resource": "*"},
+                      {"Sid": "IAMInventoryChecks", "Effect": "Allow", "Action": ["iam:GetAccountSummary"], "Resource": "*"},
                       {"Sid": "Ec2InventoryChecks", "Effect": "Allow", "Action": ["ec2:GetEbsEncryptionByDefault", "ec2:GetSnapshotBlockPublicAccessState"], "Resource": "*"},
                       {"Sid": "RdsInventoryChecks", "Effect": "Allow", "Action": ["rds:DescribeDBInstances"], "Resource": "*"},
                       {"Sid": "EksInventoryChecks", "Effect": "Allow", "Action": ["eks:ListClusters", "eks:DescribeCluster"], "Resource": "*"},
                       {"Sid": "SsmInventoryChecks", "Effect": "Allow", "Action": ["ssm:GetServiceSetting"], "Resource": "*"},
                       {"Sid": "STSIdentityValidation", "Effect": "Allow", "Action": ["sts:GetCallerIdentity"], "Resource": "*"},
                       {"Sid": "AccessAnalyzerReadFindings", "Effect": "Allow", "Action": ["access-analyzer:ListAnalyzers", "access-analyzer:ListFindings", "access-analyzer:GetFinding"], "Resource": "*"},
-                      {"Sid": "AutopilotCleanupIAMResources", "Effect": "Allow", "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:DetachRolePolicy", "iam:ListRolePolicies", "iam:DeleteRolePolicy", "iam:DeleteRole", "iam:ListPolicies", "iam:GetPolicy", "iam:ListPolicyVersions", "iam:DeletePolicyVersion", "iam:DeletePolicy"], "Resource": "*"},
                       {"Sid": "Inspector2ReadFindings", "Effect": "Allow", "Action": ["inspector2:ListFindings", "inspector2:BatchGetAccountStatus"], "Resource": "*"}
                   ]
               }
@@ -203,6 +229,7 @@ Resources:
                   request_type = event.get("RequestType", "Create")
                   props = event.get("ResourceProperties", {})
                   saas = props.get("SaaSAccountId", "")
+                  saas_execution_role_arns = props.get("SaaSExecutionRoleArns", "")
                   external = props.get("ExternalId", "")
                   iam = boto3.client("iam")
 
@@ -216,7 +243,7 @@ Resources:
                       return
 
                   partition = get_partition()
-                  trust = trust_policy(saas, external, partition)
+                  trust = trust_policy(saas, external, saas_execution_role_arns, partition)
                   read_role_arn = ensure_role_and_policy(
                       iam=iam,
                       role_name=READ_ROLE_NAME,
@@ -239,7 +266,9 @@ Resources:
     DependsOn: ReadRoleHelperFunction
     Properties:
       ServiceToken: !GetAtt ReadRoleHelperFunction.Arn
+      TemplateVersion: "v1.5.9"
       SaaSAccountId: !Ref SaaSAccountId
+      SaaSExecutionRoleArns: !Ref SaaSExecutionRoleArns
       ExternalId: !Ref ExternalId
 
 Outputs:

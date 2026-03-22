@@ -1,0 +1,4 @@
+[     657ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:8000/api/auth/me:0
+[    9235ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:8000/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315/execution:0
+[    9239ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:8000/api/remediation-runs/3c47f1bb-2d8f-4489-b498-22b72405b315/execution:0
+[   10851ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:8000/api/auth/me:0

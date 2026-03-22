@@ -1,0 +1,4 @@
+postgres
+security_autopilot_20260318024357_w6live
+template0
+template1

@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - alert [ref=e10]
+  - generic [ref=e44]:
+    - button "Switch to light mode" [ref=e46]:
+      - img [ref=e47]
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - heading "Check your inbox" [level=2] [ref=e51]
+        - paragraph [ref=e52]: Email verification is required before sign-in.
+      - generic [ref=e53]:
+        - paragraph [ref=e54]: We sent a verification link to codex.firebase.e2e.20260321.1807@example.com. Click it to activate your account.
+        - button "Resend verification email" [ref=e55] [cursor=pointer]
+        - paragraph [ref=e56]:
+          - text: Already verified?
+          - link "Sign in" [ref=e57] [cursor=pointer]:
+            - /url: /login

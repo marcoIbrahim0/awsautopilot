@@ -185,4 +185,4 @@ Current fix:
 
 - [Control-Plane Event Monitoring](../control-plane-event-monitoring.md)
 - [Deployer Runbook (Phase 1-3)](../audit-remediation/deployer-runbook-phase1-phase3.md)
-- [Manual Test Use Cases](../manual-test-use-cases.md)
+- [Manual Test Use Cases](manual-test-use-cases.md)

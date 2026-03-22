@@ -1,0 +1,15 @@
+[GET] https://ocypheris.com/attack-paths => [404] 
+[POST] https://ocypheris.com/cdn-cgi/rum? => [FAILED] net::ERR_ABORTED
+[POST] https://ocypheris.com/cdn-cgi/rum? => [FAILED] net::ERR_ABORTED
+[POST] https://ocypheris.com/cdn-cgi/rum? => [FAILED] net::ERR_ABORTED
+[POST] https://ocypheris.com/cdn-cgi/rum? => [FAILED] net::ERR_ABORTED
+[POST] https://ocypheris.com/cdn-cgi/rum? => [204] 
+[GET] https://api.ocypheris.com/api/auth/me => [200] 
+[GET] https://ocypheris.com/findings?_rsc=65jui => [200] 
+[GET] https://ocypheris.com/findings?_rsc=19hu7 => [200] 
+[GET] https://ocypheris.com/findings?_rsc=1dg5o => [200] 
+[GET] https://ocypheris.com/findings?_rsc=3talp => [200] 
+[GET] https://ocypheris.com/findings?_rsc=nvztx => [200] 
+[POST] https://api.ocypheris.com/api/auth/refresh => [200] 
+[GET] https://api.ocypheris.com/api/notifications?limit=50 => [200] 
+[PUT] https://api.ocypheris.com/api/notifications/jobs/1773334973337-dg06wc => [200] 

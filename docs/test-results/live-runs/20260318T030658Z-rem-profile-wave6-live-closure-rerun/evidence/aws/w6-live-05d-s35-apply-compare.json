@@ -1,0 +1,58 @@
+[
+  {
+    "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "pre_statement_count": 3,
+    "post_apply_statement_count": 4,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "8f99245fa11a899a68a8857a94f27384a026af94c4a28b925125d9d83a7cb65f"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s315-exec-696505809372",
+    "pre_statement_count": 1,
+    "post_apply_statement_count": 2,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "b11e2e5a0ceb03d467e2e012f4a4b534f397275684d574c1f54c75b2cdd9f58f"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "pre_statement_count": 1,
+    "post_apply_statement_count": 2,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "93038672736a0cfb5b24644da35c92dc6e17cc5e0e790da3e821efddb1705a42"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-config-696505809372",
+    "pre_statement_count": 3,
+    "post_apply_statement_count": 4,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "d9f8fbc6f48dd06361d13f14fd25bf143f91a70e5e7224c7a4038d4cbec36bd3"
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-exec-696505809372",
+    "pre_statement_count": 1,
+    "post_apply_statement_count": 2,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "eb937ea3044966debc9f0756655caa4b18d53865e2ae189ffd97357607009b1f"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "pre_statement_count": 1,
+    "post_apply_statement_count": 2,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "55c32e08e481d518dbbaa0387000e3815e1824a3f92a969a5df7bac59e2e15e3"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-review-696505809372",
+    "pre_statement_count": 1,
+    "post_apply_statement_count": 2,
+    "deny_present": true,
+    "pre_statements_preserved": true,
+    "post_apply_sha256": "91c4153f4ad8294cc66735f3b07ef8b76557e0945349ea2c371fd548e93e4c8a"
+  }
+]

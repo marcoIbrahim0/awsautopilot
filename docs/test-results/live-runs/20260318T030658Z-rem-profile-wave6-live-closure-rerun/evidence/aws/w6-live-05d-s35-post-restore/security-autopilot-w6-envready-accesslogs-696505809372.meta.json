@@ -1,0 +1,6 @@
+{
+  "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+  "policy_exists": true,
+  "statement_count": 1,
+  "sha256": "494be205ccf0d9eed3ee32671ef533a1927a4e182e8ce02d6a19ce216aeb8592"
+}

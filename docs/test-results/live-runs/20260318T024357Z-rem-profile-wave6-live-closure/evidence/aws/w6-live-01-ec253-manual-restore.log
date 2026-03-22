@@ -1,0 +1,30 @@
+Restoring sg-06f6252fa8a95b61d to captured pre-apply state
+{
+    "Return": true,
+    "SecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-07b0518b3c0f015c9",
+            "GroupId": "sg-06f6252fa8a95b61d",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness SSH exposure",
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-07b0518b3c0f015c9"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-0e3cbd483ebe59343",
+            "GroupId": "sg-06f6252fa8a95b61d",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 3389,
+            "ToPort": 3389,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness RDP exposure",
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-0e3cbd483ebe59343"
+        }
+    ]
+}

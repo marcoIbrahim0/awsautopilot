@@ -5,7 +5,7 @@ This runbook operationalizes end-to-end live testing for AWS Security Autopilot 
 ## Scope and Source of Truth
 
 - Primary tracker: `docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`
-- Live frontend target: `https://dev.ocypheris.com`
+- Live frontend target: `https://ocypheris.com`
 - Live backend target: `https://api.ocypheris.com`
 - Required execution order: Wave 1 -> Wave 9 (Tests 01 -> 35)
 
@@ -72,6 +72,7 @@ bash scripts/init_live_e2e_run.sh
    - response status/body
    - UTC timestamp
    - screenshot for UI-visible defects
+   - browser console dump for UI-visible flows
 6. Mark per-test outcome: `PASS`, `FAIL`, `PARTIAL`, or `BLOCKED`.
 7. Update tracker sections immediately:
    - Section 1: missing endpoint (`404`)
@@ -129,6 +130,7 @@ Do not leave `TBD` in observed behavior after execution.
 4. Contract-shape compatibility with frontend requirements
 5. Idempotency/retry behavior for mutating operations
 6. Auditability (evidence exists and is traceable)
+7. Console cleanliness for UI flows (no React production errors, hydration mismatches, or other unexpected runtime errors)
 
 ## Acceptance Criteria for a Completed Run
 

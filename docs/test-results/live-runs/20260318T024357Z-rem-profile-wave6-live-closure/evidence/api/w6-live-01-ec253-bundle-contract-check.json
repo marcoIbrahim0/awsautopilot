@@ -1,0 +1,24 @@
+{
+  "runnable_action_count": 1,
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 1,
+    "review_required": 0
+  },
+  "actions": [
+    {
+      "action_id": "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+      "support_tier": "manual_guidance_only",
+      "profile_id": "ssm_only",
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53"
+    },
+    {
+      "action_id": "d740b079-2fe0-40ec-baa0-efe3e0e01a2b",
+      "support_tier": "deterministic_bundle",
+      "profile_id": "close_and_revoke",
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53"
+    }
+  ]
+}

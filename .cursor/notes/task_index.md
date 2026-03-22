@@ -4,6 +4,204 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Implement Attack Path materialized read model and async refresh path (2026-03-22)](task_log.md#implement-attack-path-materialized-read-model-and-async-refresh-path-2026-03-22)
+  - Added tenant-scoped materialized summary/detail/membership tables plus a rebuild script so shared Attack Path list/detail reads stop rebuilding graph grouping on every request.
+  - Cut the Attack Path routes over to the persisted read model, added additive freshness metadata, and wired bounded background refresh through the worker queue.
+- [Deploy backend/frontend with Attack Path materialized read model live (2026-03-22)](task_log.md#deploy-backendfrontend-with-attack-path-materialized-read-model-live-2026-03-22)
+  - Deployed the serverless backend, applied the `0046_attack_path_materialized_read_model` migration, and pushed the Cloudflare frontend build live.
+  - Confirmed the public runtimes respond successfully at `https://api.ocypheris.com/health` and `https://ocypheris.com/attack-paths`.
+- [Remove login-page tenant-ID dev-mode entry point (2026-03-22)](task_log.md#remove-login-page-tenant-id-dev-mode-entry-point-2026-03-22)
+  - Removed the `Continue with tenant ID (dev mode)` link from the login page.
+  - Added a focused login-page regression and kept the change local only with no deploy.
+- [Replace dashboard shell branding icon and favicon with the provided Ocypheris mark (2026-03-22)](task_log.md#replace-dashboard-shell-branding-icon-and-favicon-with-the-provided-ocypheris-mark-2026-03-22)
+  - Copied the provided transparent PNG into the frontend branding assets, switched the left sidebar brand mark to it, and removed the old top-navbar icon chip.
+  - Added the same PNG as the app icon source and removed the old SVG favicon asset, keeping the change local only with no deploy.
+- [Implement dashboard visual-system unification across shell, settings, help, and remediation workflows (2026-03-22)](task_log.md#implement-dashboard-visual-system-unification-across-shell-settings-help-and-remediation-workflows-2026-03-22)
+  - Reworked the dashboard theme tokens and shared UI primitives so the shell, cards, badges, buttons, and form controls now follow one logo-driven operator design system in both light and dark mode.
+  - Refit Settings, Help Hub, PR bundle creation, suppress workflow surfaces, and the action-detail entry chrome onto the new shared system, while keeping Accounts/Top Risks as reference surfaces.
+- [Scaffold live production test package for Attack Path Phases 1-4 (2026-03-22)](task_log.md#scaffold-live-production-test-package-for-attack-path-phases-1-4-2026-03-22)
+  - Created a retained production live-run package under `docs/test-results/live-runs/20260322T000000Z-attack-path-phases-1-4-live/` using the standard init script.
+  - Added four phase-specific execution files plus a final-summary template so another engineer can run and evidence the shipped Attack Path Phases 1-4 surface without inventing the structure.
+- [Fix live remediation system-of-record webhook behavior and rerun Phase 3 P1.6 up to the Jira credential blocker (2026-03-21)](task_log.md#fix-live-remediation-system-of-record-webhook-behavior-and-rerun-phase-3-p16-up-to-the-jira-credential-blocker-2026-03-21)
+  - Fixed the inbound provider webhook path so external status drift no longer overwrites `Action.status`, added/updated the focused P1.5/P1.6 regression coverage, and validated the contract locally with `15` passing tests.
+  - Redeployed production to image tag `20260321T203011Z`, captured fresh live evidence under `docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/`, and proved the remaining blocker is an invalid Jira API token returning Atlassian `401 AUTHENTICATED_FAILED`.
+- [Implement Attack Path Phase 4 bounded runtime/code-to-cloud/workflow projections (2026-03-21)](task_log.md#implement-attack-path-phase-4-bounded-runtimecode-to-cloudworkflow-projections-2026-03-21)
+  - Added additive shared-path projections for runtime truth, code-to-cloud linkage, closure targets, workflow sync state, exceptions, and evidence export readiness.
+  - Upgraded `/attack-paths` detail to show bounded `Runtime truth`, `Code to cloud`, and `Workflow controls` sections without introducing a new explorer or path-level mutation workflow.
+- [Implement Attack Path Phase 3 bounded triage workflow on `/attack-paths` (2026-03-21)](task_log.md#implement-attack-path-phase-3-bounded-triage-workflow-on-attack-paths-2026-03-21)
+  - Added bounded preset-view metadata plus linked-action remediation rollups to the shared Attack Paths contracts.
+  - Upgraded `/attack-paths` into a Phase 3 triage workflow without introducing a second score model or a free-form graph explorer.
+- [Reframe Attack Path enterprise plan Phase 3 around the shipped `/attack-paths` surface (2026-03-21)](task_log.md#reframe-attack-path-enterprise-plan-phase-3-around-the-shipped-attack-paths-surface-2026-03-21)
+  - Updated the enterprise Attack Path plan so Phase 3 now starts from the already-shipped `/attack-paths` surface instead of restating that page as future work.
+  - Added bounded Phase-3 productization slices for triage views, owner/remediation workflow, and evidence/closure projection without introducing a second risk model.
+- [Implement Phase 2 frontend attack-path slice with shared `path_id` routing (2026-03-21)](task_log.md#implement-phase-2-frontend-attack-path-slice-with-shared-path-routing-2026-03-21)
+  - Added the frontend `ActionAttackPathDetail` contract, wired `/attack-paths` to select and fetch shared path detail by `path_id`, and updated the action-detail deep link to use the shared path record.
+  - Added page and modal regressions for `path_id` selection plus shared-path deep-link coverage, and kept the UI bounded/list-first.
+- [Implement graph-native Attack Path Phase 1 with `/api/actions/attack-paths` and `/attack-paths` UI (2026-03-21)](task_log.md#implement-graph-native-attack-path-phase-1-with-apiactionsattack-paths-and-attack-paths-ui-2026-03-21)
+  - Added a graph-native attack-path read service on top of `security_graph_nodes` / `security_graph_edges`, then cut over action detail to use it for `attack_path_view` while preserving the existing fail-closed contract.
+  - Added `GET /api/actions/attack-paths`, shipped the bounded `/attack-paths` page plus action-detail deep links, and updated the active Attack Path/security-graph docs to reflect the new Phase-1 state.
+- [Move Help Hub OpenAI key to Secrets Manager and redeploy the live runtime (2026-03-21)](task_log.md#move-help-hub-openai-key-to-secrets-manager-and-redeploy-the-live-runtime-2026-03-21)
+  - Removed the plaintext Help Hub OpenAI key from `config/.env.ops`, created the `security-autopilot-dev/OPENAI_API_KEY` secret, and updated the serverless runtime to resolve the key from `OPENAI_API_KEY_SECRET_ID`.
+  - Redeployed production and confirmed the live authenticated Help Hub assistant still returns grounded answers with citations.
+- [Deploy Help Hub true-LLM runtime live and verify production assistant answers (2026-03-21)](task_log.md#deploy-help-hub-true-llm-runtime-live-and-verify-production-assistant-answers-2026-03-21)
+  - Wired the live serverless deploy path to pass the Help Hub `OPENAI_*` runtime settings, deployed the backend/frontend, and applied the DB head.
+  - Verified production health plus real authenticated Help Hub assistant answers, citations, thread persistence, and thread reload on `https://api.ocypheris.com`.
+- [Add 4-phase enterprise Attack Path implementation plan doc (2026-03-21)](task_log.md#add-4-phase-enterprise-attack-path-implementation-plan-doc-2026-03-21)
+  - Added a new active feature doc that captures the agreed enterprise-grade Attack Path roadmap in four ordered phases.
+  - Linked the plan from the top-level docs index, features index, and the existing Phase 3.5 roadmap.
+- [Wire local OpenAI key, fix model-specific Responses request shape, and rerun local Help Hub E2E (2026-03-21)](task_log.md#wire-local-openai-key-fix-model-specific-responses-request-shape-and-rerun-local-help-hub-e2e-2026-03-21)
+  - Wired the local Help Hub runtime to OpenAI, confirmed the quota issue was resolved, then switched the local model override to `gpt-4.1-mini` because the account is not yet verified for `gpt-5-mini`.
+  - Fixed the `Responses` request builder so `reasoning.effort` is sent only for GPT-5-family models, then revalidated the local Help Hub assistant with a real grounded answer plus citations.
+- [Deploy attack-path fallback fix live and rerun account-scoped E2E (2026-03-21)](task_log.md#deploy-attack-path-fallback-fix-live-and-rerun-account-scoped-e2e-2026-03-21)
+  - Deployed the live serverless runtime to image tag `20260321T185016Z`, then revalidated representative live `SSM.7`, `IAM.4`, and `Config.1` actions.
+  - Confirmed the live API and browser now render bounded `partial` attack-path stories for the affected account-scoped actions without any scoped recompute.
+- [Run live E2E for account-scoped attack-path fallback (2026-03-21)](task_log.md#run-live-e2e-for-account-scoped-attack-path-fallback-2026-03-21)
+  - Verified on live production that the affected `SSM.7`, `IAM.4`, and `Config.1` account-scoped actions still return and render the fail-closed attack-path message.
+  - Confirmed the live detail mismatch: representative findings still carry complete `raw_json.relationship_context`, but representative action details still expose `score_components.relationship_context=null` and `attack_path_view.status=context_incomplete`.
+- [Fix attack-path fallback for account-scoped actions (2026-03-21)](task_log.md#fix-attack-path-fallback-for-account-scoped-actions-2026-03-21)
+  - Decoupled attack-path `context_incomplete` rendering from the toxic-combination scorer flag so account-scoped actions with complete `relationship_context` can still render bounded attack stories.
+  - Added a focused IAM.4 account-scope regression, preserved fail-closed behavior for true missing-context cases, and clarified the attack-path doc wording.
+- [Patch Firebase verification callback to accept token-only redirects (2026-03-21)](task_log.md#patch-firebase-verification-callback-to-accept-token-only-redirects-2026-03-21)
+  - Fixed the production verification callback so the app can complete local sync from the one-time `vt` token even when Firebase does not return `mode=verifyEmail&oobCode=...` to the app route.
+  - Updated the backend sync endpoint to resolve by sync-token hash, added focused callback regressions, redeployed both stacks, and live-validated the real production redirect to `/login?verified=1`.
+- [Deploy Firebase-managed verification fallback and run live signup E2E (2026-03-21)](task_log.md#deploy-firebase-managed-verification-fallback-and-run-live-signup-e2e-2026-03-21)
+  - Deployed the serverless backend and Cloudflare frontend, applied `alembic upgrade heads`, and verified live `/health` and `/ready` on the production stack.
+  - Proved on `https://ocypheris.com` and `https://api.ocypheris.com` that production signup now redirects to `/verify-email/pending`, the pending page reaches Firebase-managed delivery, and the live signed-ticket resend endpoint returns the expected rotated `resend_ticket` plus `firebase_delivery` payload.
+- [Implement Firebase-managed verification email fallback (2026-03-21)](task_log.md#implement-firebase-managed-verification-email-fallback-2026-03-21)
+  - Replaced backend SMTP delivery for signup verification with a Firebase custom-token bootstrap handled in the frontend, while preserving Firebase verification authority and local sync/login gating.
+  - Changed resend from anonymous email lookup to a signed `resend_ticket` flow, added focused backend/UI regressions, and updated the active verification/email docs to reflect that SMTP is no longer required for signup verification.
+- [Integrate true OpenAI-backed Help Hub assistant with thread history (2026-03-21)](task_log.md#integrate-true-openai-backed-help-hub-assistant-with-thread-history-2026-03-21)
+  - Replaced the deterministic Help Hub assistant with a real OpenAI `Responses` API integration, persisted thread-aware interaction metadata, and added `GET /api/help/assistant/threads/{thread_id}` for reloadable AI chats.
+  - Updated the `/help` Ask AI tab to preserve thread state, render follow-up prompts, and document the new runtime env/config requirements.
+- [Implement native Help Hub, support cases, and public Help Center (2026-03-21)](task_log.md#implement-native-help-hub-support-cases-and-public-help-center-2026-03-21)
+  - Added a native help desk with shipped help articles, deterministic search, a citation-required assistant, requester-private support cases, case attachments in `S3_SUPPORT_BUCKET`, and a dedicated SaaS-admin inbox.
+  - Added `/help`, `/help-center`, and `/admin/help`, redirected `/support-files` into the Help Hub, added contextual `Need help?` CTAs, and updated the active docs with both implementation and customer-facing Help Hub guidance.
+- [Run live E2E for notification center rollout state rerun and production recovery (2026-03-20-21)](task_log.md#run-live-e2e-for-notification-center-rollout-state-rerun-and-production-recovery-2026-03-20-21)
+  - Redeployed the backend, applied the missing `0044_help_desk_platform` migration, and fixed the notification job upsert response path so the live API now returns `200` instead of `500`.
+  - Re-ran the production Accounts refresh flow and verified the unified bell now shows the live job progression, clears unread state, and archives the completed item cleanly in `docs/test-results/live-runs/20260320T232930Z/`.
+- [Run live E2E for notification center rollout state (2026-03-20)](task_log.md#run-live-e2e-for-notification-center-rollout-state-2026-03-20)
+  - Captured a fresh retained live run for the notification-center feature under `docs/test-results/live-runs/20260320T172617Z/`.
+  - Proved production still serves the old client-only bell UI and that `GET /api/notifications` is not deployed live yet even though a real ingest job still queues and appears in the old bell.
+- [Implement unified notification center and responsive navbar bell (2026-03-20)](task_log.md#implement-unified-notification-center-and-responsive-navbar-bell-2026-03-20)
+  - Added a persistent `/api/notifications` contract plus bell storage tables so governance `in_app` alerts and user-triggered async jobs now share one dashboard notification center.
+  - Replaced the old job-only top-bar bell with a responsive desktop dropdown/mobile sheet, per-user unread/archive state, and a frontend provider that syncs local job progress into the persisted bell timeline.
+- [Implement remember-me auth persistence and rerun live Wave 2 password/session E2E (2026-03-20)](task_log.md#implement-remember-me-auth-persistence-and-rerun-live-wave-2-passwordsession-e2e-2026-03-20)
+  - Added the missing `remember_me` auth path across backend cookies/JWTs and the login UI, then closed the stale-token-version login regression that was breaking `/settings` with `/session-expired`.
+  - Captured fresh live Wave 2 evidence proving remember-me cookie modes, refresh persistence, forgot-password, wrong-old-password rejection, successful password change, temporary-password login, and final password revert all pass on `https://ocypheris.com`.
+- [Fix Accounts React hydration, `/ready` queue-lag noise, and API Lambda cold-start timeout bursts (2026-03-20)](task_log.md#fix-accounts-react-hydration-ready-queue-lag-noise-and-api-lambda-cold-start-timeout-bursts-2026-03-20)
+  - Reworked the Accounts route CTA markup and tenant/date hydration so the live page no longer throws the React production `#418` error and now renders with a clean browser console.
+  - Kept queue-lag metrics in `/ready`, added the missing CloudWatch metric-read permission, moved API bootstrap plus the DB guard into a memoized first-invoke Lambda path, and retained fresh live proof showing no post-deploy timeout/import errors in the API log window.
+- [Refresh Settings IA and consolidate reporting/admin surfaces (2026-03-20)](task_log.md#refresh-settings-ia-and-consolidate-reportingadmin-surfaces-2026-03-20)
+  - Replaced the old monolithic Settings page with a deep-linked tabbed admin surface, added integrations/governance/remediation-defaults tabs, and merged exports plus control mappings into one canonical Settings implementation.
+  - Cleaned the related Accounts surfaces to remove WriteRole/direct-fix and inline-validation affordances, made `/exports` a handoff page, redirected `/baseline-report` into Settings, and updated the active docs to match the new route contract.
+- [Publish template v1.5.9 / v1.4.7 live, recover broken deploy, and rerun live E2E (2026-03-20)](task_log.md#publish-template-v159--v147-live-recover-broken-deploy-and-rerun-live-e2e-2026-03-20)
+  - Published the hardened customer templates live as `read-role/v1.5.9` and `write-role/v1.4.7`, then repaired the broken live auth/template-helper deploy by redeploying a clean snapshot with the matching CloudFormation helper dependency.
+  - Captured fresh retained proof under `docs/test-results/live-runs/20260320T044428Z/` showing `/api/auth/me` advertises the new versions, account `696505809372` validates again, the Accounts page is Healthy, and the ReadRole/WriteRole Launch Stack flows preserve `param_SaaSExecutionRoleArns`.
+- [Remove grouped runner S3 override and build buyer trust package (2026-03-20)](task_log.md#remove-grouped-runner-s3-override-and-build-buyer-trust-package-2026-03-20)
+  - Deleted the grouped-bundle `run_all.sh` S3 override from worker/config/deploy surfaces, so current bundles always use the checked-in repo template and emit repo-derived runner metadata.
+  - Added `/docs/trust/` plus a fresh sanitized evidence package under `docs/test-results/trust-package/20260320T023532Z-buyer-trust-package/`, and hardened the role templates to analyzer-clean trust/policy shape (`read-role v1.5.9`, `write-role v1.4.7` in repo).
+- [Issue 2 authoritative live closure rerun and validation pass (2026-03-20)](task_log.md#issue-2-authoritative-live-closure-rerun-and-validation-pass-2026-03-20)
+  - Updated the real connected customer account `696505809372` to the current ReadRole trust contract, then reran the live API/browser gates until the account returned to `validated` and the Accounts page showed it as Healthy.
+  - The winning fix path was a Lambda-session `RoleSessionName` fallback for customer-role assumes plus an AWS Config probe bug fix; the March 20 rerun package is now the authoritative Issue 2 closure proof.
+- [Issue 2 live rollout, frontend launch-link preservation fix, and targeted live E2E (2026-03-20)](task_log.md#issue-2-live-rollout-frontend-launch-link-preservation-fix-and-targeted-live-e2e-2026-03-20)
+  - Published the issue-2 templates live as `read-role/v1.5.6` / `write-role/v1.4.4`, deployed the serverless runtime with `SAAS_EXECUTION_ROLE_ARNS`, and proved the live API now advertises execution-role-aware Launch Stack URLs while the old connected customer account still truthfully stays in `error` until its stack is updated.
+  - Live browser validation exposed a frontend Launch Stack URL regression for custom stack names; fixed it, redeployed the Cloudflare frontend, and re-proved on `https://ocypheris.com` that both custom ReadRole and WriteRole links now preserve `param_SaaSExecutionRoleArns`.
+- [Issue 2 staged trust-boundary narrowing and STS session audit context (2026-03-20)](task_log.md#issue-2-staged-trust-boundary-narrowing-and-sts-session-audit-context-2026-03-20)
+  - Added rollout-safe `SaaSExecutionRoleArn` support to the customer role templates plus launch/update parameter helpers so trust can narrow from SaaS-account root to an exact execution role without breaking existing stacks immediately.
+  - Extended ReadRole assumptions across API and worker code to send STS `SourceIdentity` plus tenant-tagged session tags, and added focused tests/docs for the new audit contract.
+- [Redeploy live serverless runtime and verify issue 1 guard with targeted live smoke (2026-03-19)](task_log.md#redeploy-live-serverless-runtime-and-verify-issue-1-guard-with-targeted-live-smoke-2026-03-19)
+  - Redeployed the live testing serverless runtime from a clean temporary worktree snapshot to avoid shipping unrelated dirty local changes, then ran the required Alembic upgrade.
+  - Live verification proved `/api/auth/me` now returns `read_role_template_url=v1.5.5` and `write_role_template_url=v1.4.3`, while the real connected account `696505809372` now rejects `cleanup_resources=true` with the new `400` fail-closed message and remains connected afterward.
+- [Publish safer role templates and rotate defaults to v1.5.5 / v1.4.3 (2026-03-19)](task_log.md#publish-safer-role-templates-and-rotate-defaults-to-v155--v143-2026-03-19)
+  - Published the issue-1-fixed templates to `security-autopilot-templates` as `read-role/v1.5.5.yaml` and `write-role/v1.4.3.yaml`.
+  - Rotated backend defaults, upload/publish helper scripts, and active deployment/local docs so new links now target the published safe objects.
+- [Issue 1 fail-closed AWS account disconnect cleanup and remove destructive role teardown permissions (2026-03-19)](task_log.md#issue-1-fail-closed-aws-account-disconnect-cleanup-and-remove-destructive-role-teardown-permissions-2026-03-19)
+  - Removed destructive IAM teardown permissions from the customer ReadRole and historical WriteRole templates, and made account disconnect safe by default with `cleanup_resources=false`.
+  - Added a disabled-by-default `ALLOW_RUNTIME_IAM_CLEANUP` gate, cleanup-service authorization guard, focused delete-account regressions, and active docs that now tell customers to remove the onboarding stack through CloudFormation.
+- [Align prod-readiness and remediation-profile docs with the PR-only current vision (2026-03-19)](task_log.md#align-prod-readiness-and-remediation-profile-docs-with-the-pr-only-current-vision-2026-03-19)
+  - Rewrote the two folder READMEs and the most reviewer-visible summary docs so they now state the live PR-only contract directly.
+  - Labeled the remaining `direct_fix` / `WriteRole` references in baseline and extraction files as historical snapshot evidence instead of current capability docs.
+- [De-scope direct-fix and WriteRole from active code and docs (2026-03-19)](task_log.md#de-scope-direct-fix-and-writerole-from-active-code-and-docs-2026-03-19)
+  - Disabled active `direct_fix` / WriteRole entry points, deprecated `role_write_arn` in the live account APIs, and aligned recommendation/baseline-report contracts to PR-only execution.
+  - Rewrote the current customer/operator docs and focused tests so the repo now presents ReadRole-only onboarding plus customer-run PR bundles as the live contract.
+- [Trust-gap item 4 split bundle-reporting signing from auth signing (2026-03-19)](task_log.md#trust-gap-item-4-split-bundle-reporting-signing-from-auth-signing-2026-03-19)
+  - Removed the bundle-reporting token fallback to `JWT_SECRET`, added explicit `503` fail-closed behavior for missing dedicated reporting-secret config, and proved the dedicated-signing contract with focused token + API tests.
+  - Updated ECS/serverless deploy wiring plus the affected deployment/local docs so `BUNDLE_REPORTING_TOKEN_SECRET` is now required and documented as a separate runtime secret.
+- [Grouped runner current-head test drift cleanup for version-scoped provider probes (2026-03-19)](task_log.md#grouped-runner-current-head-test-drift-cleanup-for-version-scoped-provider-probes-2026-03-19)
+  - Confirmed the March 18 grouped runner mirror/cache hardening was still the intended contract and that the failing assertion was stale test coverage, not a `run_all.sh` regression.
+  - Updated the grouped-bundle worker test to assert the current version-scoped plugin-cache and mirror probes, then re-ran `tests/test_remediation_run_worker.py` to `43 passed`.
+- [Archive outdated planning docs and re-home active runbook references (2026-03-19)](task_log.md#archive-outdated-planning-docs-and-re-home-active-runbook-references-2026-03-19)
+  - Archived the old Phase 2 planning folder, the Phase 3 todo, and three root-level planning/spec docs into `docs/archive/2026-03-doc-cleanup/` so they no longer clutter active navigation.
+  - Re-homed the no-UI debug reference and manual test guide into `docs/runbooks/`, then refreshed `docs/README.md`, `docs/runbooks/README.md`, and affected cross-links to the new paths.
+- [Local storage cleanup of extra worktree and rebuildable caches (2026-03-19)](task_log.md#local-storage-cleanup-of-extra-worktree-and-rebuildable-caches-2026-03-19)
+  - Removed the unused `codex/rem-profile-w2-action-detail-hydration-fix` worktree at `/Users/marcomaher/AWS Security Autopilot-w2-action-detail-hydration-fix`, reclaiming `39G` without touching branch history.
+  - Deleted the agreed rebuildable frontend output and `infrastructure/finding-scenarios/*/.terraform` caches, reducing `frontend` to `44M` and `infrastructure/finding-scenarios` to `396K`.
+- [Action-group frontend outcomes finalized with persisted run-result rendering (2026-03-19)](task_log.md#action-group-frontend-outcomes-finalized-with-persisted-run-result-rendering-2026-03-19)
+  - Fixed the action-groups timestamp serializer regression, added stronger API assertions for ISO timestamps, and exposed the single-run action-group client helper on the frontend.
+  - The `/actions/group` timeline now renders persisted executable plus metadata-only per-action results with blocked reasons and timestamps, and the Wave 5 mixed-tier doc now records that UI surface.
+- [Action-group run results surfaced on action-groups read API (2026-03-19)](task_log.md#action-group-run-results-surfaced-on-action-groups-read-api-2026-03-19)
+  - Added persisted per-action `results[]` to `GET /api/action-groups/{group_id}/runs` and a new `GET /api/action-groups/{group_id}/runs/{run_id}` detail route without any schema or model change.
+  - Added focused API coverage for mixed executable plus non-executable result serialization and documented the new public read contract in the Wave 5 mixed-tier bundle doc.
+- [Repo AGENTS.md creation and workflow canon sync (2026-03-19)](task_log.md#repo-agentsmd-creation-and-workflow-canon-sync-2026-03-19)
+  - Added a root `AGENTS.md` that points agents to `.cursor` as binding startup context and records the repo’s canonical local, deploy, and advanced grouped-bundle workflows.
+  - Synced the active docs to the multi-head Alembic reality (`alembic upgrade heads`) and the preferred local `./venv/bin` command style, while intentionally leaving the protected production doc and one historical issue-tracker entry untouched.
+- [Wave 6 Task 8 retained closure gate completion on the March 18 package (2026-03-19)](task_log.md#wave-6-task-8-retained-closure-gate-completion-on-the-march-18-package-2026-03-19)
+  - Promoted `docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/` to the authoritative Wave 6 closure gate by adding the explicit nine-family matrix and `Wave 6 complete = YES` language required by desktop `Task 8`.
+  - Synced the retained summary, live-testing index, remediation-profile docs, desktop plan, and task history so current docs no longer describe Wave 6 as merely “ready for the final strict gate.”
+- [Wave 6 W6-LIVE-11 grouped runner callback finalization proof closure (2026-03-18)](task_log.md#wave-6-w6-live-11-grouped-runner-callback-finalization-proof-closure-2026-03-18)
+  - Fresh retained reruns for `S3.2`, `S3.9`, and `CloudTrail.1` now all finish via `bundle_callback` on current `master`, proving the grouped wrapper quoting fix on the supported customer-run path.
+  - Mixed `S3.2` / `S3.9` bundles persisted metadata-only non-executable results, none of the three wrapper logs showed `command not found` or `JSONDecodeError`, and the retained runtime plus queue family were cleaned again after proof capture.
+- [Wave 6 W6-LIVE-10 Config.1 rollback restoration live proof closure (2026-03-18)](task_log.md#wave-6-w6-live-10-config1-rollback-restoration-live-proof-closure-2026-03-18)
+  - Closed `W6-LIVE-10` with the authoritative retained rerun: one executable Config.1 action, truthful delivery-channel redirection during apply, exact recorder plus delivery-channel plus bucket-policy restoration during rollback, and a final `finished` callback-managed group run.
+  - Patched the remaining customer-run bundle contract by exporting the Config `local-exec` environment and embedding bundle defaults into the generated apply and restore helpers, then re-stopped the retained runtime and re-deleted the queue family after proof capture.
+- [Wave 6 W6-LIVE-08 S3.15 grouped live proof closure with exact encryption rollback (2026-03-18)](task_log.md#wave-6-w6-live-08-s315-grouped-live-proof-closure-with-exact-encryption-rollback-2026-03-18)
+  - Added exact S3.15 bundle-local rollback support with encryption capture and restore helpers plus truthful rollback metadata and generic rollback guidance updates.
+  - Reused the retained March 18 closure package, aligned grouped Terraform execution to the working local `hashicorp/aws 5.100.0` mirror, proved a truthful `10` executable plus `1` review-required grouped rerun, restored exact pre-state across all 11 buckets, and closed `W6-LIVE-08` as `PASS`.
+- [Wave 6 W6-LIVE-06 S3.11 grouped live proof closure and runner mirror hardening (2026-03-18)](task_log.md#wave-6-w6-live-06-s311-grouped-live-proof-closure-and-runner-mirror-hardening-2026-03-18)
+  - Closed `W6-LIVE-06` with the authoritative clean grouped rerun: one executable lifecycle action, four manual-guidance-only actions, a `finished` callback-managed group run, and final restoration back to `NoSuchLifecycleConfiguration` plus `NoSuchBucketPolicy`.
+  - Hardened the grouped Terraform runner against the live rerun defects by separating provider mirror from plugin cache and making provider detection symlink-aware with `find -L`.
+- [Wave 6 Task 4 W6-LIVE-06 runner cache alignment and evidence correction (2026-03-18)](task_log.md#wave-6-task-4-w6-live-06-runner-cache-alignment-and-evidence-correction-2026-03-18)
+  - Fixed the grouped Terraform runner's stale AWS provider warm-up logic so cache bootstrap now follows the same `>= 4.0` provider constraint the generated bundles use, then reuses the warm cache as a local mirror.
+  - Corrected the retained March 15 `W6-LIVE-06` notes: the saved apply log shows executable lifecycle mutations progressed past init, but the package still lacks trustworthy post-apply and rollback evidence, so Task 4 remains open for a fresh live rerun.
+- [Wave 6 W6-LIVE-05 grouped evidence-persistence fix and live proof closure (2026-03-18)](task_log.md#wave-6-w6-live-05-grouped-evidence-persistence-fix-and-live-proof-closure-2026-03-18)
+  - The first post-fix grouped rerun still failed closed because grouped action resolutions did not persist S3 preservation evidence into worker-visible `strategy_inputs`, leaving all seven deterministic S3.5 actions non-runnable.
+  - Patched grouped S3 persistence, reran the retained live proof end to end, verified truthful apply plus exact rollback on all seven executable buckets, persisted a `finished` group run, cleaned up the retained runtime, and closed `W6-LIVE-05` as `PASS`.
+- [Wave 6 Task 3.1 S3.5 bundle evidence-gating and rollback-restoration implementation (2026-03-18)](task_log.md#wave-6-task-31-s35-bundle-evidence-gating-and-rollback-restoration-implementation-2026-03-18)
+  - Implemented the S3.5 code fix: bundle generation now fails closed on missing preservation evidence, preserved-policy Terraform bundles ship exact S3 capture/restore helpers plus rollback metadata, and generic rollback guidance no longer advertises `delete-bucket-policy`.
+  - Added focused S3 bundle and remediation-options regressions; the targeted validation slice passed, but `W6-LIVE-05` still needs the live rerun before Task 3 can close.
+- [Wave 6 Task 3.1 S3.5 fix plan re-review confirms implementation-ready scope (2026-03-18)](task_log.md#wave-6-task-31-s35-fix-plan-re-review-confirms-implementation-ready-scope-2026-03-18)
+  - Re-checked the updated desktop Task 3.1 and confirmed it now includes rollback metadata wiring, generic rollback-guidance updates, and the missing automated-test scope.
+  - Final review verdict: Task 3.1 is ready to implement; Task 3 still stays open until code, tests, and live rerun all pass.
+- [Wave 6 Task 3.1 S3.5 fix plan review for bundle evidence gating and rollback restoration (2026-03-18)](task_log.md#wave-6-task-31-s35-fix-plan-review-for-bundle-evidence-gating-and-rollback-restoration-2026-03-18)
+  - Validated the new Task 3.1 root-cause claims against current S3.5 code paths and confirmed the apply fail-open plus destroy-delete behaviors are real.
+  - Identified missing implementation scope: S3 bundle rollback metadata wiring, generic rollback-guidance contract updates, and regression coverage for the exact missing-evidence branch.
+- [Wave 6 W6-LIVE-05 S3.5 live executable proof exposes destructive bundle apply and non-exact rollback (2026-03-18)](task_log.md#wave-6-w6-live-05-s35-live-executable-proof-exposes-destructive-bundle-apply-and-non-exact-rollback-2026-03-18)
+  - Reused the retained March 18 runtime, generated the grouped S3.5 bundle, captured exact pre-state bucket policies, and proved live apply currently clobbers preserved policies down to a single `DenyInsecureTransport` statement while generated rollback deletes bucket policies entirely.
+  - Ran a clean rerun to separate callback-state noise from bundle behavior, proved the preservation-gated account action still stays review-only and the clean group run reaches `finished`, manually restored exact pre-state afterward, and left `W6-LIVE-05` open as a high-severity bundle truthfulness defect.
+- [Wave 6 W6-LIVE-03 rollback restoration + mutation-signal fallback fix and live proof closure (2026-03-18)](task_log.md#wave-6-w6-live-03-rollback-restoration--mutation-signal-fallback-fix-and-live-proof-closure-2026-03-18)
+  - Fixed the root-key executor so automatic breakage-signal rollback really reactivates disabled keys, while disable-window signal collection can fall back from the weak observer role to the preserved mutation session for IAM and CloudTrail health reads.
+  - Reused the retained March 18 runtime, proved a fresh IAM.4 disable + rollback on run `aecccbd7-6c3a-4619-94ce-b1a5b9732b98` with caller key preservation, deleted the disposable key afterward, and closed `W6-LIVE-03` as `PASS`.
+- [Wave 6 W6-LIVE-03 manual root-key rotation restores test28-root but temporary root sessions still fail IAM access-key ops (2026-03-18)](task_log.md#wave-6-w6-live-03-manual-root-key-rotation-restores-test28-root-but-temporary-root-sessions-still-fail-iam-access-key-ops-2026-03-18)
+  - The user manually rotated the target-account root key and local profile `test28-root` is valid again, with fresh evidence showing the old March 15 key inactive and the new March 18 key active.
+  - The deeper live blocker remains: a short-lived root session can call STS but still fails `iam list-access-keys`, so the safe API disable/rollback proof is still not executable on current `master`.
+- [Local backend env pins IAM.4 observer profile to default (2026-03-18)](task_log.md#local-backend-env-pins-iam4-observer-profile-to-default-2026-03-18)
+  - Added `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE="default"` to `backend/.env` and explicitly cleared the static observer credential fields so the local root-key API uses the known-good profile-based observer path.
+  - The observer-side local env wiring is complete; the separate mutation-side blocker is tracked in the newer `W6-LIVE-03` entries above.
+- [Wave 6 W6-LIVE-03 IAM.4 disable transition fix and live rerun blocked by invalid root credentials (2026-03-18)](task_log.md#wave-6-w6-live-03-iam4-disable-transition-fix-and-live-rerun-blocked-by-invalid-root-credentials-2026-03-18)
+  - Fixed the authoritative IAM.4 disable lifecycle so safe runs created in `migration` now auto-advance through `validation` before `disable_window`, and deferred executor-worker construction until after pause gating so paused runs fail closed correctly.
+  - Reused the retained March 18 rerun runtime, kept generic IAM.4 surfaces metadata-only, verified the affected root-key suites pass `39/39`, and recorded that the live disable + rollback proof is now blocked by external `test28-root` credential drift (`InvalidClientTokenId`) rather than the earlier observer-overlap defect.
+- [Wave 6 W6-LIVE-01 EC2.53 rollback fix and live rerun closure (2026-03-18)](task_log.md#wave-6-w6-live-01-ec253-rollback-fix-and-live-rerun-closure-2026-03-18)
+  - Fixed the generated EC2.53 `close_and_revoke` bundle helpers so SG pre-state capture no longer uses the invalid `describe-security-group-rules` filter, preserves rule descriptions, and ships truthful bundle-local capture plus rollback guidance.
+  - Reused the isolated rerun runtime under `docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/`, proved grouped apply plus finished callback plus exact rollback restoration, and closed `W6-LIVE-01` as `PASS`.
+- [Wave 6 W6-LIVE-01 EC2.53 live execution proves grouped apply and exposes rollback gap (2026-03-18)](task_log.md#wave-6-w6-live-01-ec253-live-execution-proves-grouped-apply-and-exposes-rollback-gap-2026-03-18)
+  - Executed the focused live rerun under `docs/test-results/live-runs/20260318T024357Z-rem-profile-wave6-live-closure/`, proved the grouped customer-run bundle now stays executable, applies truthfully, and reports a `finished` group run with one executable action plus one manual action.
+  - Found a new high-severity rollback defect: `terraform destroy` removes the restricted EC2.53 ingress rules but does not restore the original public `22/3389` rules on `sg-06f6252fa8a95b61d`, so manual AWS CLI cleanup was required and `W6-LIVE-01` remains open until exact rollback is implemented.
+- [Wave 6 Task 1 EC2.53 code investigation confirms no further patch needed (2026-03-18)](task_log.md#wave-6-task-1-ec253-code-investigation-confirms-no-further-patch-needed-2026-03-18)
+  - Verified the grouped EC2.53 path from `collect_runtime_risk_signals(...)` through `resolve_create_profile_selection(...)` and confirmed `close_and_revoke` still lands in `deterministic_bundle` with resolver-tier preservation enabled for `sg_restrict_public_ports_guided`.
+  - Concluded that `W6-LIVE-01` now needs only the live apply/rollback proof and downgrade/manual capture during the rerun package; no more code changes are required unless the live evidence disproves the contract.
+- [Wave 6 closure Task 0 automated test baseline on clean e9a362b3 (2026-03-18)](task_log.md#wave-6-closure-task-0-automated-test-baseline-on-clean-e9a362b3-2026-03-18)
+  - Ran the implementation-plan step 0 pytest baseline in a temporary clean worktree at `e9a362b3` because the main workspace was dirty; the required four-file suite passed `44/44`.
+  - Confirmed `tests/test_remediation_runs_api.py` still reports `11` failures on clean `e9a362b3` and recorded the current failing test names for follow-up without blocking Wave 6 step 0.
 - [IAM.4 authoritative observer-context fix on master (2026-03-16)](task_log.md#iam4-authoritative-observer-context-fix-on-master-2026-03-16)
   - Added explicit observer AWS configuration and tenant read-role assumption for `/api/root-key-remediation-runs` so authoritative disable/delete can use a separate observer context instead of the same ambient mutation credential.
   - Preserved generic IAM.4 metadata-only surfaces, kept real same-credential overlap fail-closed, added focused route/worker regressions, and documented the new observer runtime requirement.
@@ -1719,3 +1917,23 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 6 strict-gate revert for S3.11 and S3.15 split-path framing (2026-03-16)](task_log.md#wave-6-strict-gate-revert-for-s311-and-s315-split-path-framing-2026-03-16)
   - Removed the Step 10 provider-drift exception and restored the strict Wave 6 requirement that every family needs both truthful live executable and truthful live downgrade/manual proof before shipped-claim closure.
   - Restored `S3.15` to the default S3 campaign, deleted the separate remap follow-up framing, and updated Wave 6 docs so `S3.11` remains not fully closed, `S3.15` remains blocked, and Wave 6 remains incomplete.
+- [Attack Path Phase 2 reusable path records + ranking (2026-03-21)](task_log.md#attack-path-phase-2-reusable-path-records--ranking-2026-03-21)
+  - Added shared on-read `path_id` records, explainable path ranking, and bounded `GET /api/actions/attack-paths/{id}` detail.
+  - Kept `/api/actions` backlog order on action score while making attack-path rank a separate lens on `/attack-paths`.
+  - Updated the bounded `/attack-paths` page, action-detail deep links, focused tests, and active docs for the Phase 2 contract.
+- [Attack Path Phases 1-4 live production execution and failure capture (2026-03-22)](task_log.md#attack-path-phases-1-4-live-production-execution-and-failure-capture-2026-03-22)
+  - Executed the retained production run package on `https://ocypheris.com` as tenant `Valens` and stored real screenshots, console logs, network logs, and JSON evidence.
+  - Proved action-detail Attack Path rendering is still live for representative `available` and `partial` cases.
+  - Captured the release-blocking production regression: `/attack-paths` returns `404` and `/api/actions/attack-paths*` returns `500`, making the overall Attack Path Phases 1-4 run a `NO-GO`.
+- [Attack Path production recovery, redeploy, and live rerun closure (2026-03-22)](task_log.md#attack-path-production-recovery-redeploy-and-live-rerun-closure-2026-03-22)
+  - Fixed the shared-path backend crash/timeout path and the frontend production route/API-base regressions, then redeployed both stacks.
+  - Reran the retained production package and proved `/attack-paths`, `/api/actions/attack-paths`, and `/api/actions/attack-paths/{id}` are live again with Phase 3/4 UI evidence.
+  - Updated the retained run verdict from `FAIL / NO-GO` to `PASS / GO`, while documenting residual latency and live-data proof gaps.
+- [Action detail / PR bundle / suppress responsiveness pass (2026-03-22)](task_log.md#action-detail--pr-bundle--suppress-responsiveness-pass-2026-03-22)
+  - Added additive `/api/actions` search/id filters and removed the PR Bundle create/summary fetch-all loops.
+  - Made Action Detail render cached core detail first, defer secondary hydration, preserve suppress draft context, and reconcile exception success in the background.
+  - Debounced remediation previews, reused per-session remediation options, and verified the targeted flows with typecheck, focused UI tests, and lint-with-warnings-only.
+- [Action Detail visual consistency and CTA refinement (2026-03-22)](task_log.md#action-detail-visual-consistency-and-cta-refinement-2026-03-22)
+  - Reworked the Action Detail hero, workflow rail, and badge cluster so the surface matches the shared dashboard visual system more closely in both light and dark modes.
+  - Promoted `Open Attack Paths` into a dedicated top-of-surface CTA card and rebuilt the priority-storyboard `Recommended next step` panel.
+  - Verified the refinement with frontend typecheck and focused Action Detail UI tests.

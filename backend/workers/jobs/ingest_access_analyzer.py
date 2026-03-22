@@ -26,7 +26,11 @@ from backend.workers.services.access_analyzer import (
     fetch_all_access_analyzer_findings,
     normalize_aa_finding,
 )
-from backend.workers.services.aws import assume_role
+from backend.workers.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 
 logger = logging.getLogger("worker.jobs.ingest_access_analyzer")
 
@@ -134,7 +138,12 @@ def execute_ingest_access_analyzer_job(job: dict) -> None:
             account_id,
             region,
         )
-        session_boto = assume_role(role_arn=role_arn, external_id=external_id)
+        session_boto = assume_role(
+            role_arn=role_arn,
+            external_id=external_id,
+            source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="worker", tenant_id=tenant_id),
+        )
         try:
             findings_raw = fetch_all_access_analyzer_findings(
                 session_boto, region=region, account_id=account_id

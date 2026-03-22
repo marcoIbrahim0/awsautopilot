@@ -30,18 +30,21 @@ def test_signup_returns_pending_response_when_firebase_enabled(client: TestClien
     async def override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
 
-    async def fake_build_link(user: User) -> str:
+    async def fake_build_delivery(user: User) -> auth_router.FirebaseDeliveryResponse:
         user.firebase_uid = "fb-user-123"
         user.email_verification_sync_token_hash = "sync-hash"
         user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
+        return auth_router.FirebaseDeliveryResponse(
+            custom_token="firebase-custom-token",
+            continue_url="https://app.example.com/verify-email/callback?vt=sync-token",
+        )
 
     app.dependency_overrides[get_db] = override_get_db
 
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
-        patch("backend.routers.auth.email_service.send_verification_link_email", return_value=True) as mocked_send,
+        patch("backend.routers.auth._build_firebase_delivery", side_effect=fake_build_delivery),
+        patch("backend.routers.auth._issue_verification_resend_ticket", return_value="resend-ticket-123"),
     ):
         response = client.post(
             "/api/auth/signup",
@@ -60,20 +63,17 @@ def test_signup_returns_pending_response_when_firebase_enabled(client: TestClien
         assert 'csrf_token=""' in set_cookie
     payload = response.json()
     assert payload["email"] == "admin@acme.com"
-    assert "verification link" in payload["message"].lower()
+    assert payload["resend_ticket"] == "resend-ticket-123"
+    assert payload["firebase_delivery"]["custom_token"] == "firebase-custom-token"
     assert "access_token" not in payload
 
     tenant_obj = next(call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], Tenant))
     user_obj = next(call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], User))
     assert tenant_obj.control_plane_token is not None
     assert user_obj.firebase_uid == "fb-user-123"
-    mocked_send.assert_called_once_with(
-        to_email="admin@acme.com",
-        verification_link="https://verify.example.com/link",
-    )
+    
 
-
-def test_signup_rejects_when_verification_delivery_is_unavailable(client: TestClient) -> None:
+def test_signup_ignores_smtp_for_firebase_pending_flow(client: TestClient) -> None:
     session = MagicMock()
     session.execute = AsyncMock(return_value=_result(None))
     session.flush = AsyncMock()
@@ -83,6 +83,15 @@ def test_signup_rejects_when_verification_delivery_is_unavailable(client: TestCl
 
     async def override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
+
+    async def fake_build_delivery(user: User) -> auth_router.FirebaseDeliveryResponse:
+        user.firebase_uid = "fb-user-123"
+        user.email_verification_sync_token_hash = "sync-hash"
+        user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        return auth_router.FirebaseDeliveryResponse(
+            custom_token="firebase-custom-token",
+            continue_url="https://app.example.com/verify-email/callback?vt=sync-token",
+        )
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -91,92 +100,8 @@ def test_signup_rejects_when_verification_delivery_is_unavailable(client: TestCl
         patch.object(auth_router.settings, "ENV", "prod"),
         patch.object(auth_router.email_service, "smtp_host", None),
         patch.object(auth_router.email_service, "from_address", ""),
-        patch("backend.routers.auth._build_firebase_verification_link") as mocked_build,
-    ):
-        response = client.post(
-            "/api/auth/signup",
-            json={
-                "company_name": "Acme Security",
-                "email": "admin@acme.com",
-                "name": "Acme Admin",
-                "password": "supersafepassword",
-            },
-        )
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == auth_router.VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE
-    mocked_build.assert_not_called()
-    session.add.assert_not_called()
-    session.commit.assert_not_awaited()
-
-
-def test_signup_fails_closed_when_verification_email_send_fails(client: TestClient) -> None:
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=_result(None))
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    session.add = MagicMock()
-
-    async def override_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def fake_build_link(user: User) -> str:
-        user.firebase_uid = "fb-user-123"
-        user.email_verification_sync_token_hash = "sync-hash"
-        user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with (
-        patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch.object(auth_router.settings, "ENV", "prod"),
-        patch.object(auth_router.email_service, "smtp_host", "smtp.example.com"),
-        patch.object(auth_router.email_service, "from_address", "verify@ocypheris.com"),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
-        patch("backend.routers.auth.email_service.send_verification_link_email", return_value=False),
-    ):
-        response = client.post(
-            "/api/auth/signup",
-            json={
-                "company_name": "Acme Security",
-                "email": "admin@acme.com",
-                "name": "Acme Admin",
-                "password": "supersafepassword",
-            },
-        )
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == auth_router.VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE
-    session.commit.assert_awaited_once()
-
-
-def test_signup_keeps_local_log_only_behavior_without_smtp(client: TestClient) -> None:
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=_result(None))
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    session.add = MagicMock()
-
-    async def override_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def fake_build_link(user: User) -> str:
-        user.firebase_uid = "fb-user-123"
-        user.email_verification_sync_token_hash = "sync-hash"
-        user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with (
-        patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch.object(auth_router.settings, "ENV", "local"),
-        patch.object(auth_router.email_service, "smtp_host", None),
-        patch.object(auth_router.email_service, "from_address", ""),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
+        patch("backend.routers.auth._build_firebase_delivery", side_effect=fake_build_delivery),
+        patch("backend.routers.auth._issue_verification_resend_ticket", return_value="resend-ticket-123"),
     ):
         response = client.post(
             "/api/auth/signup",
@@ -191,5 +116,5 @@ def test_signup_keeps_local_log_only_behavior_without_smtp(client: TestClient) -
     assert response.status_code == 202
     payload = response.json()
     assert payload["email"] == "admin@acme.com"
-    assert "verification link" in payload["message"].lower()
+    assert payload["resend_ticket"] == "resend-ticket-123"
     session.commit.assert_awaited_once()

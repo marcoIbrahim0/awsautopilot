@@ -1,0 +1,1 @@
+AWS CLI error: An error occurred (InvalidParameterValue) when calling the DescribeSecurityGroupRules operation: The filter 'is-egress' is invalid

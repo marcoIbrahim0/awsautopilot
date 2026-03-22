@@ -19,6 +19,7 @@ from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.email import email_service
 from backend.services.governance_templates import GOVERNANCE_STAGES, render_governance_template
+from backend.services.notification_center import mirror_governance_notification
 from backend.services.slack_digest import is_valid_slack_webhook_url
 
 logger = logging.getLogger(__name__)
@@ -274,6 +275,12 @@ async def dispatch_governance_notification(
             row.last_error = skip_reason
             row.payload = redacted_payload
             row.delivered_at = now if status_value == STATUS_SENT else None
+            if channel == CHANNEL_IN_APP:
+                await mirror_governance_notification(
+                    db,
+                    tenant_id=tenant.id,
+                    governance_notification=row,
+                )
             await db.flush()
             if status_value == STATUS_SENT:
                 result.delivered += 1

@@ -1,10 +1,12 @@
 # Remediation Profile Resolution
 
-> Scope date: 2026-03-15
+> Scope date: 2026-03-18
 >
-> ⚠️ Status: Wave 0 through Wave 6 are implemented on `master` — live product-claim validation and legacy compatibility cleanup are still planned
+> ⚠️ Status: Wave 0 through Wave 6 are implemented on `master`, and the Wave 6 live closure gate passed on March 18, 2026. Legacy compatibility cleanup remains planned follow-on work.
 >
 > This document defines the planned backend-centered remediation profile resolution model for generic remediation flows that produce PR bundles, review bundles, or manual guidance artifacts.
+>
+> Current contract note (2026-03-19): onboarding is ReadRole-only, customer-run PR bundles are the only supported remediation path, and customer `WriteRole` / `direct_fix` are out of scope. The Wave 0 baseline docs below still mention pre-de-scope `direct_fix` / `WriteRole` behavior because they preserve the March 14 compatibility snapshot used during the migration.
 
 ## Summary
 
@@ -15,7 +17,7 @@
 - Persist resolved decisions in `remediation_runs.artifacts`, using `artifacts.resolution` for single-action runs and `artifacts.group_bundle.action_resolutions` for grouped runs.
 - Keep grouped runs on the current single-`RemediationRun`-row model in phase 1.
 - Store tenant-scoped remediation defaults on `Tenant.remediation_settings` JSONB and expose them through `GET/PATCH /api/users/me/remediation-settings`.
-- Keep `direct_fix` explicitly out of scope for this migration. Existing direct-fix preview, approval, validation, queueing, and execution remain unchanged in this phase, and `WriteRole` remains relevant only there.
+- Keep `direct_fix` explicitly out of scope for this migration and for the current active product contract. Historical Wave 0 references to direct-fix preview, approval, validation, queueing, or `WriteRole` are preserved only as baseline context.
 
 Related docs:
 
@@ -55,14 +57,15 @@ Related docs:
 ## Wave 6 Control-Family Migration
 
 - [Wave 6 control-family migration](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md)
+- Latest authoritative closure package: [`20260318T030658Z-rem-profile-wave6-live-closure-rerun`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/notes/final-summary.md)
 - Wave 6 is now fully documented as landed-on-`master` behavior across EC2.53, IAM.4, S3.2, S3.5, S3.9, S3.11, S3.15, CloudTrail.1, and Config.1.
 - The Wave 6 summary doc records the exact migration order, preserved public strategy IDs, added internal branches, downgrade rules, tenant-default inputs, runtime/preservation gates, and the artifact-to-mixed-tier bundle flow.
 - Latest strict blocker-closure note: [`20260315T231815Z-rem-profile-wave6-strict-blocker-closure`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T231815Z-rem-profile-wave6-strict-blocker-closure/notes/final-summary.md) closes `S3.11` and `S3.15` under the strict standard without exceptions:
   - live lifecycle findings materialize on `S3.13` and canonicalize truthfully to family `S3.11`
   - live SSE-KMS findings materialize on `S3.17` and canonicalize truthfully to family `S3.15`
   - current live `S3.11` event-notification findings and current live `S3.15` Object Lock findings are explicitly excluded from those families
-- All nine Wave 6 families now have truthful live executable plus downgrade/manual proof and are ready for the final strict live gate.
-- The final full nine-family live gate rerun is still the next step. `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority; this doc is not claiming that final E2E rerun already passed.
+- All nine Wave 6 families now have truthful live executable plus downgrade/manual proof, and the retained March 18 closure package records `Wave 6 complete = YES` on exact HEAD `e9a362b3f543154838a72665dcd2866919b5089b`.
+- The March 15 strict gate and blocker-closure packages remain historical evidence of the blocked and pre-closure states they preceded; the March 18 retained closure package is the authoritative final gate outcome.
 - `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority for executability, while legacy mirror fields remain compatibility-only rollout artifacts.
 
 ## Scope and Non-Goals

@@ -19,7 +19,11 @@ from backend.models.tenant import Tenant
 from backend.models.tenant_reconcile_run import TenantReconcileRun
 from backend.models.tenant_reconcile_run_shard import TenantReconcileRunShard
 from backend.models.user import User
-from backend.services.aws import assume_role
+from backend.services.aws import (
+    API_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.services.aws_config_probe import (
     CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
     describe_non_compliant_config_rule_summary,
@@ -202,7 +206,12 @@ async def run_preflight_for_services(
         service_checks: list[dict[str, Any]] = []
 
         try:
-            session = assume_role(role_arn=account.role_read_arn, external_id=tenant.external_id)
+            session = assume_role(
+                role_arn=account.role_read_arn,
+                external_id=tenant.external_id,
+                source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="api", tenant_id=tenant.id),
+            )
         except Exception as exc:
             return {
                 "ok": False,

@@ -151,6 +151,18 @@ def generate_verification_link(email: str, continue_url: str) -> str:
         raise _wrap_sdk_error(exc, operation="generate_email_verification_link") from exc
 
 
+def create_custom_token(uid: str) -> str:
+    firebase_auth, _, firebase_exceptions, _, _ = _load_sdk()
+    normalized_uid = (uid or "").strip()
+    if not normalized_uid:
+        raise FirebaseAuthUnavailableError("Firebase user id is required.")
+    try:
+        token = firebase_auth.create_custom_token(normalized_uid, app=_firebase_app())
+    except firebase_exceptions.FirebaseError as exc:
+        raise _wrap_sdk_error(exc, operation="create_custom_token") from exc
+    return token.decode("utf-8") if isinstance(token, bytes) else str(token)
+
+
 def is_firebase_email_verified(uid: str) -> bool:
     return bool(get_firebase_user(uid).email_verified)
 

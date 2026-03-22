@@ -5,6 +5,8 @@
 > Status: Implemented Wave 4 slice only
 >
 > This document records the exact Wave 4 queue-contract and worker-migration behavior landed on `master`.
+>
+> Current contract note (2026-03-19): Wave 4 remains the queue/worker history for PR-only flows. Active `direct_fix` entry points were later disabled globally, so direct-fix references below are migration-history context only.
 
 Related docs:
 
@@ -23,7 +25,7 @@ Wave 4 completes the landed queue-contract migration for generic `pr_only` remed
 - duplicate detection now treats canonical single-run `profile_id`, grouped override maps, and `repo_target` as part of the request identity.
 - resend reconstructs resolution-aware payloads when canonical `artifacts.resolution` or `artifacts.group_bundle.action_resolutions` exist.
 - grouped worker generation now consumes per-action decisions instead of assuming one shared grouped strategy whenever canonical grouped decisions are available.
-- `direct_fix` remains unchanged and out of scope for this migration.
+- Wave 4 did not re-scope `direct_fix`; current `master` later disabled active direct-fix entry points entirely.
 
 ## Scope Boundary
 
@@ -38,7 +40,7 @@ Wave 4 changes only the queue-contract and worker-consumption layer in:
 
 Wave 4 does not change:
 
-- `direct_fix` approval or execution behavior
+- the historical `direct_fix` approval or execution behavior that existed at Wave 4 landing time
 - the dedicated root-key execution authority
 - Step 7 mixed-tier grouped bundle layout
 - grouped reporting callback schema
@@ -79,7 +81,7 @@ Producer behavior now landed:
 
 - single-run `POST /api/remediation-runs` emits schema `v2` only when create-time canonical resolution exists and `artifacts.resolution` is persisted first in [backend/routers/remediation_runs.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/routers/remediation_runs.py)
 - both grouped create routes emit schema `v2` with `group_action_ids`, `repo_target`, and `action_resolutions`
-- `direct_fix` stays on the unchanged path and does not participate in the schema-`v2` resolution contract
+- the historical `direct_fix` path stayed outside the schema-`v2` resolution contract; current `master` later disabled that path entirely
 
 Important boundary: single-run schema `v2` support is additive queue compatibility, not a new single-run worker decision engine. The worker still reads the preserved top-level mirror fields (`selected_strategy`, `strategy_inputs`, `pr_bundle_variant`) for single-action PR bundle generation, while `resolution` serves as canonical persisted evidence and resend input.
 
@@ -185,7 +187,7 @@ Grouped worker generation no longer assumes one grouped strategy for all actions
 - Step 7 mixed-tier execution is not implemented. Grouped schema-`v2` worker input currently requires every action decision to stay `deterministic_bundle`; `review_required_bundle` or `manual_guidance_only` grouped decisions fail closed instead of generating split-tier output.
 - Reporting callback schema changes are not implemented. The grouped worker still reads the existing `group_bundle.reporting.callback_url` and `token` fields and emits the existing `started` / `finished` callback shape.
 - Root-key profile execution is still unchanged. IAM.4 execution authority remains on `/api/root-key-remediation-runs`; the generic remediation-run queue path still only adds the existing manual-high-risk marker and does not become a second root-key execution authority.
-- `direct_fix` remains unchanged and out of scope. Wave 4 does not introduce profile-aware direct-fix queue payloads or worker behavior.
+- `direct_fix` stays out of scope. Wave 4 did not introduce profile-aware direct-fix queue payloads or worker behavior, and current `master` now rejects active direct-fix use entirely.
 
 ## Landed Coverage
 

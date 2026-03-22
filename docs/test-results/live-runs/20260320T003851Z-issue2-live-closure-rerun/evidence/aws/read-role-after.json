@@ -1,0 +1,40 @@
+{
+    "Role": {
+        "Path": "/",
+        "RoleName": "SecurityAutopilotReadRole",
+        "RoleId": "AROA2EKX3HHODBWFV23HT",
+        "Arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+        "CreateDate": "2026-03-11T14:16:09+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowAssumeFromSaaSAccountWithExternalId",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": [
+                            "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker",
+                            "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                        ]
+                    },
+                    "Action": [
+                        "sts:AssumeRole",
+                        "sts:SetSourceIdentity",
+                        "sts:TagSession"
+                    ],
+                    "Condition": {
+                        "StringEquals": {
+                            "sts:ExternalId": "ext-b7c363e9430a4f60"
+                        }
+                    }
+                }
+            ]
+        },
+        "Description": "Read-only role for Security Hub findings ingestion by SaaS.",
+        "MaxSessionDuration": 3600,
+        "RoleLastUsed": {
+            "LastUsedDate": "2026-03-19T15:23:13+00:00",
+            "Region": "eu-north-1"
+        }
+    }
+}

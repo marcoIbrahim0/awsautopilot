@@ -1,0 +1,369 @@
+{
+  "id": "21f55c01-de18-4ef5-bc75-29fc6be3ee48",
+  "status": "success",
+  "outcome": "Group PR bundle generated (2 actions)",
+  "artifacts": {
+    "pr_bundle": {
+      "files": [
+        {
+          "path": "run_all.sh",
+          "content": "#!/usr/bin/env bash\nset +e\n\nREPORT_URL=http://127.0.0.1:18020/api/internal/group-runs/report\nREPORT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJhYjQwMWFmYi00MzdiLTQ4NDItOTY5Ni01ZDIxMDU2NDBjZmQiLCJncm91cF9ydW5faWQiOiJmYTM4NmJjNi02ZmI0LTQ4ZWQtYTgwNi0xM2VlZmNjMmIwNDAiLCJncm91cF9pZCI6ImYyOWY0NjllLTcxMGEtNGY0YS04ZGIxLWM0YTNhZTIxNzA1YSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwZDViOWEyOS1iZDc5LTQ0NTQtYTljNC1jMGE1YzYyNDc5ZTAiLCJkNzQwYjA3OS0yZmUwLTQwZWMtYmFhMC1lZmUzZTBlMDFhMmIiXSwianRpIjoiZjdhMGJkZjctZGI2YS00YTg1LWFhMmItZTNjMWJkNDM2MGFjIiwiaWF0IjoxNzczODAyMDU5LCJleHAiOjE3NzM4ODg0NTl9.wErgQXW_Bimov-zIdlqF1sEPIYt-6zRU6_fcoqdjjGc\nSTARTED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJhYjQwMWFmYi00MzdiLTQ4NDItOTY5Ni01ZDIxMDU2NDBjZmQiLCJncm91cF9ydW5faWQiOiJmYTM4NmJjNi02ZmI0LTQ4ZWQtYTgwNi0xM2VlZmNjMmIwNDAiLCJncm91cF9pZCI6ImYyOWY0NjllLTcxMGEtNGY0YS04ZGIxLWM0YTNhZTIxNzA1YSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwZDViOWEyOS1iZDc5LTQ0NTQtYTljNC1jMGE1YzYyNDc5ZTAiLCJkNzQwYjA3OS0yZmUwLTQwZWMtYmFhMC1lZmUzZTBlMDFhMmIiXSwianRpIjoiZjdhMGJkZjctZGI2YS00YTg1LWFhMmItZTNjMWJkNDM2MGFjIiwiaWF0IjoxNzczODAyMDU5LCJleHAiOjE3NzM4ODg0NTl9.wErgQXW_Bimov-zIdlqF1sEPIYt-6zRU6_fcoqdjjGc\",\"event\":\"started\",\"reporting_source\":\"bundle_callback\"}'\nFINISHED_SUCCESS_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJhYjQwMWFmYi00MzdiLTQ4NDItOTY5Ni01ZDIxMDU2NDBjZmQiLCJncm91cF9ydW5faWQiOiJmYTM4NmJjNi02ZmI0LTQ4ZWQtYTgwNi0xM2VlZmNjMmIwNDAiLCJncm91cF9pZCI6ImYyOWY0NjllLTcxMGEtNGY0YS04ZGIxLWM0YTNhZTIxNzA1YSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwZDViOWEyOS1iZDc5LTQ0NTQtYTljNC1jMGE1YzYyNDc5ZTAiLCJkNzQwYjA3OS0yZmUwLTQwZWMtYmFhMC1lZmUzZTBlMDFhMmIiXSwianRpIjoiZjdhMGJkZjctZGI2YS00YTg1LWFhMmItZTNjMWJkNDM2MGFjIiwiaWF0IjoxNzczODAyMDU5LCJleHAiOjE3NzM4ODg0NTl9.wErgQXW_Bimov-zIdlqF1sEPIYt-6zRU6_fcoqdjjGc\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[{\"action_id\":\"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\",\"execution_status\":\"success\"}],\"non_executable_results\":[{\"action_id\":\"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\"support_tier\":\"manual_guidance_only\",\"profile_id\":\"ssm_only\",\"strategy_id\":\"sg_restrict_public_ports_guided\",\"reason\":\"manual_guidance_metadata_only\",\"blocked_reasons\":[\"Wave 6 downgrades '\"'\"'ssm_only'\"'\"' because SSM-only execution is not implemented.\"]}]}'\nFINISHED_FAILED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJhYjQwMWFmYi00MzdiLTQ4NDItOTY5Ni01ZDIxMDU2NDBjZmQiLCJncm91cF9ydW5faWQiOiJmYTM4NmJjNi02ZmI0LTQ4ZWQtYTgwNi0xM2VlZmNjMmIwNDAiLCJncm91cF9pZCI6ImYyOWY0NjllLTcxMGEtNGY0YS04ZGIxLWM0YTNhZTIxNzA1YSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwZDViOWEyOS1iZDc5LTQ0NTQtYTljNC1jMGE1YzYyNDc5ZTAiLCJkNzQwYjA3OS0yZmUwLTQwZWMtYmFhMC1lZmUzZTBlMDFhMmIiXSwianRpIjoiZjdhMGJkZjctZGI2YS00YTg1LWFhMmItZTNjMWJkNDM2MGFjIiwiaWF0IjoxNzczODAyMDU5LCJleHAiOjE3NzM4ODg0NTl9.wErgQXW_Bimov-zIdlqF1sEPIYt-6zRU6_fcoqdjjGc\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[{\"action_id\":\"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\",\"execution_status\":\"failed\",\"execution_error_code\":\"bundle_runner_failed\",\"execution_error_message\":\"run_actions.sh exited non-zero\"}],\"non_executable_results\":[{\"action_id\":\"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\"support_tier\":\"manual_guidance_only\",\"profile_id\":\"ssm_only\",\"strategy_id\":\"sg_restrict_public_ports_guided\",\"reason\":\"manual_guidance_metadata_only\",\"blocked_reasons\":[\"Wave 6 downgrades '\"'\"'ssm_only'\"'\"' because SSM-only execution is not implemented.\"]}]}'\nREPLAY_DIR=\"./.bundle-callback-replay\"\nRUNNER=\"./run_actions.sh\"\n\nmkdir -p \"$REPLAY_DIR\"\n\niso_now() {\n  date -u +\"%Y-%m-%dT%H:%M:%SZ\"\n}\n\ninject_timestamp() {\n  local template_json=\"$1\"\n  local field_name=\"$2\"\n  local field_value=\"$3\"\n  python3 - \"$template_json\" \"$field_name\" \"$field_value\" <<'PY'\nimport json\nimport sys\n\npayload = json.loads(sys.argv[1])\npayload[str(sys.argv[2])] = str(sys.argv[3])\nprint(json.dumps(payload, separators=(\",\", \":\")))\nPY\n}\n\npost_payload() {\n  local payload=\"$1\"\n  if [ -z \"$REPORT_URL\" ] || [ -z \"$REPORT_TOKEN\" ]; then\n    return 1\n  fi\n  if command -v curl >/dev/null 2>&1; then\n    curl -sS -X POST \"$REPORT_URL\" -H \"Content-Type: application/json\" -d \"$payload\" >/dev/null 2>&1\n    return $?\n  fi\n  return 1\n}\n\npersist_replay() {\n  local suffix=\"$1\"\n  local payload=\"$2\"\n  local file=\"$REPLAY_DIR/${suffix}-$(date +%s).json\"\n  printf '%s\\n' \"$payload\" > \"$file\"\n}\n\nSTARTED_AT=\"$(iso_now)\"\nSTART_PAYLOAD=\"$(inject_timestamp \"$STARTED_TEMPLATE\" \"started_at\" \"$STARTED_AT\")\"\nif ! post_payload \"$START_PAYLOAD\"; then\n  persist_replay \"started\" \"$START_PAYLOAD\"\nfi\n\nchmod +x \"$RUNNER\"\n\"$RUNNER\"\nRUN_RC=$?\n\nFINISHED_AT=\"$(iso_now)\"\nif [ \"$RUN_RC\" -eq 0 ]; then\n  FINISH_PAYLOAD=\"$(inject_timestamp \"$FINISHED_SUCCESS_TEMPLATE\" \"finished_at\" \"$FINISHED_AT\")\"\nelse\n  FINISH_PAYLOAD=\"$(inject_timestamp \"$FINISHED_FAILED_TEMPLATE\" \"finished_at\" \"$FINISHED_AT\")\"\nfi\n\nif ! post_payload \"$FINISH_PAYLOAD\"; then\n  persist_replay \"finished\" \"$FINISH_PAYLOAD\"\nfi\n\nexit \"$RUN_RC\"\n"
+        },
+        {
+          "path": "run_actions.sh",
+          "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nif [ ! -f \"${TFRC_PATH}\" ]; then\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\nfi\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nbootstrap_provider_cache() {\n  local marker bootstrap_dir\n  marker=\"${CACHE_ROOT}/.aws-provider-6.31.0.ready\"\n\n  if [ -f \"${marker}\" ] && find \"${TF_PLUGIN_CACHE_DIR}\" -type f -path '*registry.terraform.io/hashicorp/aws/6.31.0/*' -print -quit 2>/dev/null | grep -q .; then\n    return 0\n  fi\n\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 6.31.0\"\n    }\n  }\n}\nEOF\n\n  (\n    cd \"${bootstrap_dir}\"\n    terraform init -backend=false -input=false >/dev/null\n  )\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n\n  if ! grep -Eiq \"$duplicate_pattern\" \"$log_file\"; then\n    return 1\n  fi\n  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' \"$log_file\"; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local log_file rc resource existing_id duplicate_line\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    set +e\n    (\n      cd \"$dir\"\n      terraform init -input=false\n    )\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  if ! run_terraform_init_with_retry \"$dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$dir\"\n    terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$dir\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n"
+        },
+        {
+          "path": "README_GROUP.txt",
+          "content": "AWS Security Autopilot — Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- 2. Security groups should not allow unrestricted access to ports with high risk (executable_bundle_generated) -> executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079\n\nReview-required actions:\n- none\n\nManual-guidance actions:\n- 1. Security groups should not allow unrestricted access to ports with high risk (manual_guidance_metadata_only) -> manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29\n"
+        },
+        {
+          "path": "bundle_manifest.json",
+          "content": "{\n  \"action_count\": 2,\n  \"actions\": [\n    {\n      \"action_id\": \"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\n      \"action_type\": \"sg_restrict_public_ports\",\n      \"blocked_reasons\": [\n        \"Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented.\"\n      ],\n      \"control_id\": \"EC2.53\",\n      \"decision_rationale\": \"Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29\",\n      \"has_runnable_terraform\": false,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"manual_guidance_metadata_only\",\n      \"preservation_summary\": {\n        \"single_profile_compatible\": false,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"ssm_only\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"sg_restrict_public_ports_guided\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"manual_guidance_only\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53\",\n      \"tier\": \"manual_guidance\",\n      \"tier_root\": \"manual_guidance/actions\",\n      \"title\": \"Security groups should not allow unrestricted access to ports with high risk\"\n    },\n    {\n      \"action_id\": \"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\",\n      \"action_type\": \"sg_restrict_public_ports\",\n      \"blocked_reasons\": [],\n      \"control_id\": \"EC2.53\",\n      \"decision_rationale\": \"Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079\",\n      \"has_runnable_terraform\": true,\n      \"index\": 2,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"executable_bundle_generated\",\n      \"preservation_summary\": {\n        \"single_profile_compatible\": false,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"close_and_revoke\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"sg_restrict_public_ports_guided\",\n      \"strategy_inputs\": {\n        \"access_mode\": \"close_and_revoke\"\n      },\n      \"support_tier\": \"deterministic_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53\",\n      \"tier\": \"executable\",\n      \"tier_root\": \"executable/actions\",\n      \"title\": \"Security groups should not allow unrestricted access to ports with high risk\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\n    \"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 1,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 1,\n    \"manual_guidance\": 1,\n    \"review_required\": 0\n  }\n}\n"
+        },
+        {
+          "path": "decision_log.md",
+          "content": "# Decision Log\n\n## 1. Security groups should not allow unrestricted access to ports with high risk\n- Action ID: 0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\n- Tier: manual_guidance/actions\n- Outcome: manual_guidance_metadata_only\n- Strategy/Profile: sg_restrict_public_ports_guided / ssm_only\n- Summary: Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\n\n## 2. Security groups should not allow unrestricted access to ports with high risk\n- Action ID: d740b079-2fe0-40ec-baa0-efe3e0e01a2b\n- Tier: executable/actions\n- Outcome: executable_bundle_generated\n- Strategy/Profile: sg_restrict_public_ports_guided / close_and_revoke\n- Summary: Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\n\n"
+        },
+        {
+          "path": "finding_coverage.json",
+          "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"manual_guidance_only\"\n    },\n    {\n      \"action_id\": \"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"deterministic_bundle\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n"
+        },
+        {
+          "path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt",
+          "content": "AWS Security Autopilot — Group action artifact\n\nAction: Security groups should not allow unrestricted access to ports with high risk\nAction ID: 0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\nTier: manual_guidance\nTier root: manual_guidance/actions\nOutcome: manual_guidance_metadata_only\nStrategy: sg_restrict_public_ports_guided\nProfile: ssm_only\n\nDecision summary: Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\nThis folder is metadata only and does not contain runnable Terraform.\n"
+        },
+        {
+          "path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json",
+          "content": "{\n  \"action_id\": \"0d5b9a29-bd79-4454-a9c4-c0a5c62479e0\",\n  \"action_type\": \"sg_restrict_public_ports\",\n  \"blocked_reasons\": [\n    \"Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented.\"\n  ],\n  \"control_id\": \"EC2.53\",\n  \"decision_rationale\": \"Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29\",\n  \"has_runnable_terraform\": false,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"manual_guidance_metadata_only\",\n  \"preservation_summary\": {\n    \"single_profile_compatible\": false,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"ssm_only\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"sg_restrict_public_ports_guided\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"manual_guidance_only\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53\",\n  \"tier\": \"manual_guidance\",\n  \"tier_root\": \"manual_guidance/actions\",\n  \"title\": \"Security groups should not allow unrestricted access to ports with high risk\"\n}\n"
+        },
+        {
+          "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf",
+          "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 4.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n"
+        },
+        {
+          "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf",
+          "content": "# SG restrict public ports (22/3389) - Action: d740b079-2fe0-40ec-baa0-efe3e0e01a2b\n# Remediation for: Security groups should not allow unrestricted access to ports with high risk\n# Account: 696505809372 | Region: eu-north-1 | Security group: sg-06f6252fa8a95b61d\n# Control: EC2.53\n# Safe rollout: identify SG attachments and active traffic first; tighten incrementally and test after each change.\n# Prefer replacing broad sources (0.0.0.0/0 or ::/0) with VPN/office CIDR or source security-group rules.\n\nvariable \"security_group_id\" {\n  type        = string\n  default     = \"sg-06f6252fa8a95b61d\"\n  description = \"Security group ID to restrict\"\n}\n\nvariable \"allowed_cidr\" {\n  type        = string\n  default     = \"10.0.0.0/8\"\n  description = \"CIDR allowed for SSH/RDP (e.g. VPN or bastion)\"\n}\n\nvariable \"allowed_cidr_ipv6\" {\n  type        = string\n  default     = \"\"\n  description = \"Optional IPv6 CIDR allowed for SSH/RDP (e.g. fd00::/8). Leave empty to skip IPv6 ingress.\"\n}\n\nvariable \"remove_existing_public_rules\" {\n  type        = bool\n  default     = true\n  description = \"When true, revoke existing public SSH/RDP ingress (0.0.0.0/0 and ::/0) before adding restricted rules.\"\n}\n\nvariable \"remediation_region\" {\n  type        = string\n  default     = \"eu-north-1\"\n  description = \"Region used by local AWS CLI revoke commands.\"\n}\n\nresource \"null_resource\" \"revoke_public_admin_ingress\" {\n  count = var.remove_existing_public_rules == true ? 1 : 0\n\n  triggers = {\n    security_group_id = var.security_group_id\n    region            = var.remediation_region\n    allowed_cidr      = var.allowed_cidr\n    allowed_cidr_ipv6 = var.allowed_cidr_ipv6\n  }\n\n  provisioner \"local-exec\" {\n    interpreter = [\"/bin/bash\", \"-c\"]\n    command     = <<-EOT\nset +e\naws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\nif [ -n \"${var.allowed_cidr}\" ]; then\n  aws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${var.allowed_cidr}}]' >/dev/null 2>&1 || true\n  aws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{CidrIp=${var.allowed_cidr}}]' >/dev/null 2>&1 || true\nfi\nif [ -n \"${var.allowed_cidr_ipv6}\" ]; then\n  aws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{CidrIpv6=${var.allowed_cidr_ipv6}}]' >/dev/null 2>&1 || true\n  aws ec2 revoke-security-group-ingress --region \"${var.remediation_region}\" --group-id \"${var.security_group_id}\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{CidrIpv6=${var.allowed_cidr_ipv6}}]' >/dev/null 2>&1 || true\nfi\nexit 0\nEOT\n  }\n}\n\nresource \"aws_vpc_security_group_ingress_rule\" \"ssh_restricted\" {\n  security_group_id = var.security_group_id\n  cidr_ipv4         = var.allowed_cidr\n  from_port         = 22\n  to_port           = 22\n  ip_protocol       = \"tcp\"\n  description       = \"SSH from allowed CIDR - Security Autopilot\"\n  depends_on        = [null_resource.revoke_public_admin_ingress]\n}\n\nresource \"aws_vpc_security_group_ingress_rule\" \"rdp_restricted\" {\n  security_group_id = var.security_group_id\n  cidr_ipv4         = var.allowed_cidr\n  from_port         = 3389\n  to_port           = 3389\n  ip_protocol       = \"tcp\"\n  description       = \"RDP from allowed CIDR - Security Autopilot\"\n  depends_on        = [null_resource.revoke_public_admin_ingress]\n}\n\nresource \"aws_vpc_security_group_ingress_rule\" \"ssh_restricted_ipv6\" {\n  count             = var.allowed_cidr_ipv6 != \"\" ? 1 : 0\n  security_group_id = var.security_group_id\n  cidr_ipv6         = var.allowed_cidr_ipv6\n  from_port         = 22\n  to_port           = 22\n  ip_protocol       = \"tcp\"\n  description       = \"SSH from allowed IPv6 CIDR - Security Autopilot\"\n  depends_on        = [null_resource.revoke_public_admin_ingress]\n}\n\nresource \"aws_vpc_security_group_ingress_rule\" \"rdp_restricted_ipv6\" {\n  count             = var.allowed_cidr_ipv6 != \"\" ? 1 : 0\n  security_group_id = var.security_group_id\n  cidr_ipv6         = var.allowed_cidr_ipv6\n  from_port         = 3389\n  to_port           = 3389\n  ip_protocol       = \"tcp\"\n  description       = \"RDP from allowed IPv6 CIDR - Security Autopilot\"\n  depends_on        = [null_resource.revoke_public_admin_ingress]\n}\n"
+        },
+        {
+          "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt",
+          "content": "AWS Security Autopilot — Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-18T02:47:41+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nEC2.53 post-fix access guidance\n-------------------------------\nWhat changes\n- Public SSH/RDP ingress on 22/3389 is restricted; optional preflight may revoke broad rules before adding restricted rules.\n\nHow to access now\n- Use SSM Session Manager for operator access instead of public SSH/RDP:\n  aws ssm start-session --target <instance-id> --region <region>\n- Keep bastion/VPN as fallback for non-SSM-managed workloads.\n\nVerify\n- Confirm no 0.0.0.0/0 or ::/0 remains for 22/3389:\n  aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query \"SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]\" --output json\n\nRollback\n- Re-authorize only temporary, scoped admin ingress if lockout occurs:\n  aws ec2 authorize-security-group-ingress --region <region> --group-id <security-group-id> --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=<admin-cidr>}]'\n\n\nSelected strategy\n-----------------\n- strategy_id: sg_restrict_public_ports_guided\n"
+        },
+        {
+          "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt",
+          "content": "AWS Security Autopilot — Group action artifact\n\nAction: Security groups should not allow unrestricted access to ports with high risk\nAction ID: d740b079-2fe0-40ec-baa0-efe3e0e01a2b\nTier: executable\nTier root: executable/actions\nOutcome: executable_bundle_generated\nStrategy: sg_restrict_public_ports_guided\nProfile: close_and_revoke\n\nDecision summary: Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\nRunnable Terraform is present in this folder.\n"
+        },
+        {
+          "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json",
+          "content": "{\n  \"action_id\": \"d740b079-2fe0-40ec-baa0-efe3e0e01a2b\",\n  \"action_type\": \"sg_restrict_public_ports\",\n  \"blocked_reasons\": [],\n  \"control_id\": \"EC2.53\",\n  \"decision_rationale\": \"Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079\",\n  \"has_runnable_terraform\": true,\n  \"index\": 2,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"executable_bundle_generated\",\n  \"preservation_summary\": {\n    \"single_profile_compatible\": false,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"close_and_revoke\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"sg_restrict_public_ports_guided\",\n  \"strategy_inputs\": {\n    \"access_mode\": \"close_and_revoke\"\n  },\n  \"support_tier\": \"deterministic_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53\",\n  \"tier\": \"executable\",\n  \"tier_root\": \"executable/actions\",\n  \"title\": \"Security groups should not allow unrestricted access to ports with high risk\"\n}\n"
+        },
+        {
+          "path": "pr_automation/diff_summary.json",
+          "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 13,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 4985,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"2e57f4e2efb5275532ef3908047d517dd180406ce694ba141f75b2eee95c2dad\",\n      \"line_count\": 72,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"run_actions.sh\",\n      \"byte_count\": 5888,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f96bb6af9f2bd7843df201826144c87243a0242daa93e64972d210cc60f1beac\",\n      \"line_count\": 228,\n      \"repo_path\": \"run_actions.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 931,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f2cae5b58c510ee6ad26518de60d3b9d2b5ff7f42e6b43bacaceb8ea21dfe35f\",\n      \"line_count\": 21,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 3894,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"3341a65e4b70e17bdcd61952eb69b3b05a831dab17b1f3466c6e11996ae9639d\",\n      \"line_count\": 81,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 1018,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"def118e4759de3904fc695ab522c14b1114064a6c40305b3971c5418c8f9994a\",\n      \"line_count\": 16,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 368,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"2657723df31fed8023f2b86431727e0d93b7f269ea86e2f0b2c76d41236bdf6f\",\n      \"line_count\": 15,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt\",\n      \"byte_count\": 691,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"322f54dafc93ca7260c949b4bbd8f25b5961e1ccf534fbcbaa131e031a5189d8\",\n      \"line_count\": 12,\n      \"repo_path\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json\",\n      \"byte_count\": 1691,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"da6d1e47d083919049b5277d967baa003db23de9e32685c65422405b0798bf84\",\n      \"line_count\": 31,\n      \"repo_path\": \"manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf\",\n      \"byte_count\": 476,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f7dc1ebcd327b31adcad599447eaf386679db3c141c8feef9f13906d2df29ab9\",\n      \"line_count\": 18,\n      \"repo_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf\",\n      \"byte_count\": 5328,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"5bfc002f1dce3cd054fe523d272cf3964e369f753c4f8f0f1a019df3f7656ad5\",\n      \"line_count\": 109,\n      \"repo_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt\",\n      \"byte_count\": 1913,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"ad12cea818ea7ed5a285d8329724355f3896aed642387617ce4f1643f184c407\",\n      \"line_count\": 42,\n      \"repo_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt\",\n      \"byte_count\": 576,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e616c7628cc91cdf5ae1259364907e98771a55191b788a4204efd781b5a33100\",\n      \"line_count\": 12,\n      \"repo_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json\",\n      \"byte_count\": 1463,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"a901b41f2a8c25d89fe8c0814feb23cb168b4ce150d2375cb5bc35a1d6ea8cf4\",\n      \"line_count\": 31,\n      \"repo_path\": \"executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"ea6a958160ea670e961dd1282efd8c8f6dcf527ad6655cd7ec24d4654737ca78\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (72 lines, sha256:2e57f4e2efb5)\",\n    \"`run_actions.sh` <- `run_actions.sh` (228 lines, sha256:f96bb6af9f2b)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:f2cae5b58c51)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (81 lines, sha256:3341a65e4b70)\",\n    \"`decision_log.md` <- `decision_log.md` (16 lines, sha256:def118e4759d)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:2657723df31f)\",\n    \"`manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt` (12 lines, sha256:322f54dafc93)\",\n    \"`manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json` <- `manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json` (31 lines, sha256:da6d1e47d083)\",\n    \"`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf` (18 lines, sha256:f7dc1ebcd327)\",\n    \"`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf` (109 lines, sha256:5bfc002f1dce)\",\n    \"`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt` (42 lines, sha256:ad12cea818ea)\",\n    \"`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt` (12 lines, sha256:e616c7628cc9)\",\n    \"`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json` (31 lines, sha256:a901b41f2a8c)\"\n  ],\n  \"version\": 1\n}\n"
+        },
+        {
+          "path": "pr_automation/rollback_notes.md",
+          "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## Security groups should not allow unrestricted access to ports with high risk\n- Action ID: `0d5b9a29-bd79-4454-a9c4-c0a5c62479e0`\n- Control ID: `EC2.53`\n- Target: `696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53`\n- Rollback command: `aws ec2 authorize-security-group-ingress --group-id sg-0ef32ca8805a55a8b --ip-permissions '[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]},{\"IpProtocol\":\"tcp\",\"FromPort\":3389,\"ToPort\":3389,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]}]'`\n\n## Security groups should not allow unrestricted access to ports with high risk\n- Action ID: `d740b079-2fe0-40ec-baa0-efe3e0e01a2b`\n- Control ID: `EC2.53`\n- Target: `696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53`\n- Rollback command: `aws ec2 authorize-security-group-ingress --group-id sg-06f6252fa8a95b61d --ip-permissions '[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]},{\"IpProtocol\":\"tcp\",\"FromPort\":3389,\"ToPort\":3389,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]}]'`\n"
+        },
+        {
+          "path": "pr_automation/control_mapping_context.json",
+          "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"EC2.53\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"EC2.53\"\n  ],\n  \"version\": 1\n}\n"
+        }
+      ],
+      "steps": [
+        "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+        "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+        "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+      ],
+      "format": "terraform",
+      "metadata": {
+        "tier_counts": {
+          "executable": 1,
+          "manual_guidance": 1,
+          "review_required": 0
+        },
+        "execution_root": "executable/actions",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_actions": [],
+        "skipped_action_count": 0,
+        "automation_file_count": 3,
+        "runnable_action_count": 1,
+        "generated_action_count": 2,
+        "repo_target_configured": false,
+        "requested_action_count": 2,
+        "runner_template_source": "embedded_mixed_tier",
+        "bundle_rollback_entries": {},
+        "diff_fingerprint_sha256": "ea6a958160ea670e961dd1282efd8c8f6dcf527ad6655cd7ec24d4654737ca78",
+        "executable_action_count": 1,
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "represented_action_count": 2,
+        "manual_guidance_action_count": 1,
+        "review_required_action_count": 0
+      }
+    },
+    "diff_summary": {
+      "files": [
+        {
+          "repo_path": "run_all.sh",
+          "byte_count": 4985,
+          "line_count": 72,
+          "bundle_path": "run_all.sh",
+          "change_type": "create_or_update",
+          "content_sha256": "2e57f4e2efb5275532ef3908047d517dd180406ce694ba141f75b2eee95c2dad"
+        },
+        {
+          "repo_path": "run_actions.sh",
+          "byte_count": 5888,
+          "line_count": 228,
+          "bundle_path": "run_actions.sh",
+          "change_type": "create_or_update",
+          "content_sha256": "f96bb6af9f2bd7843df201826144c87243a0242daa93e64972d210cc60f1beac"
+        },
+        {
+          "repo_path": "README_GROUP.txt",
+          "byte_count": 931,
+          "line_count": 21,
+          "bundle_path": "README_GROUP.txt",
+          "change_type": "create_or_update",
+          "content_sha256": "f2cae5b58c510ee6ad26518de60d3b9d2b5ff7f42e6b43bacaceb8ea21dfe35f"
+        },
+        {
+          "repo_path": "bundle_manifest.json",
+          "byte_count": 3894,
+          "line_count": 81,
+          "bundle_path": "bundle_manifest.json",
+          "change_type": "create_or_update",
+          "content_sha256": "3341a65e4b70e17bdcd61952eb69b3b05a831dab17b1f3466c6e11996ae9639d"
+        },
+        {
+          "repo_path": "decision_log.md",
+          "byte_count": 1018,
+          "line_count": 16,
+          "bundle_path": "decision_log.md",
+          "change_type": "create_or_update",
+          "content_sha256": "def118e4759de3904fc695ab522c14b1114064a6c40305b3971c5418c8f9994a"
+        },
+        {
+          "repo_path": "finding_coverage.json",
+          "byte_count": 368,
+          "line_count": 15,
+          "bundle_path": "finding_coverage.json",
+          "change_type": "create_or_update",
+          "content_sha256": "2657723df31fed8023f2b86431727e0d93b7f269ea86e2f0b2c76d41236bdf6f"
+        },
+        {
+          "repo_path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt",
+          "byte_count": 691,
+          "line_count": 12,
+          "bundle_path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt",
+          "change_type": "create_or_update",
+          "content_sha256": "322f54dafc93ca7260c949b4bbd8f25b5961e1ccf534fbcbaa131e031a5189d8"
+        },
+        {
+          "repo_path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json",
+          "byte_count": 1691,
+          "line_count": 31,
+          "bundle_path": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json",
+          "change_type": "create_or_update",
+          "content_sha256": "da6d1e47d083919049b5277d967baa003db23de9e32685c65422405b0798bf84"
+        },
+        {
+          "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf",
+          "byte_count": 476,
+          "line_count": 18,
+          "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf",
+          "change_type": "create_or_update",
+          "content_sha256": "f7dc1ebcd327b31adcad599447eaf386679db3c141c8feef9f13906d2df29ab9"
+        },
+        {
+          "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf",
+          "byte_count": 5328,
+          "line_count": 109,
+          "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf",
+          "change_type": "create_or_update",
+          "content_sha256": "5bfc002f1dce3cd054fe523d272cf3964e369f753c4f8f0f1a019df3f7656ad5"
+        },
+        {
+          "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt",
+          "byte_count": 1913,
+          "line_count": 42,
+          "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt",
+          "change_type": "create_or_update",
+          "content_sha256": "ad12cea818ea7ed5a285d8329724355f3896aed642387617ce4f1643f184c407"
+        },
+        {
+          "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt",
+          "byte_count": 576,
+          "line_count": 12,
+          "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt",
+          "change_type": "create_or_update",
+          "content_sha256": "e616c7628cc91cdf5ae1259364907e98771a55191b788a4204efd781b5a33100"
+        },
+        {
+          "repo_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json",
+          "byte_count": 1463,
+          "line_count": 31,
+          "bundle_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json",
+          "change_type": "create_or_update",
+          "content_sha256": "a901b41f2a8c25d89fe8c0814feb23cb168b4ce150d2375cb5bc35a1d6ea8cf4"
+        }
+      ],
+      "version": 1,
+      "file_count": 13,
+      "artifact_type": "generated_diff_summary",
+      "summary_lines": [
+        "`run_all.sh` <- `run_all.sh` (72 lines, sha256:2e57f4e2efb5)",
+        "`run_actions.sh` <- `run_actions.sh` (228 lines, sha256:f96bb6af9f2b)",
+        "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:f2cae5b58c51)",
+        "`bundle_manifest.json` <- `bundle_manifest.json` (81 lines, sha256:3341a65e4b70)",
+        "`decision_log.md` <- `decision_log.md` (16 lines, sha256:def118e4759d)",
+        "`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:2657723df31f)",
+        "`manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/README_ACTION.txt` (12 lines, sha256:322f54dafc93)",
+        "`manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json` <- `manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-0d5b9a29/decision.json` (31 lines, sha256:da6d1e47d083)",
+        "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/providers.tf` (18 lines, sha256:f7dc1ebcd327)",
+        "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/sg_restrict_public_ports.tf` (109 lines, sha256:5bfc002f1dce)",
+        "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README.txt` (42 lines, sha256:ad12cea818ea)",
+        "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/README_ACTION.txt` (12 lines, sha256:e616c7628cc9)",
+        "`executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json` <- `executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-d740b079/decision.json` (31 lines, sha256:a901b41f2a8c)"
+      ],
+      "fingerprint_sha256": "ea6a958160ea670e961dd1282efd8c8f6dcf527ad6655cd7ec24d4654737ca78",
+      "repo_target_configured": false
+    },
+    "group_bundle": {
+      "region": "eu-north-1",
+      "group_id": "f29f469e-710a-4f4a-8db1-c4a3ae21705a",
+      "group_key": "ab401afb-437b-4842-9696-5d2105640cfd|sg_restrict_public_ports|696505809372|eu-north-1",
+      "reporting": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJhYjQwMWFmYi00MzdiLTQ4NDItOTY5Ni01ZDIxMDU2NDBjZmQiLCJncm91cF9ydW5faWQiOiJmYTM4NmJjNi02ZmI0LTQ4ZWQtYTgwNi0xM2VlZmNjMmIwNDAiLCJncm91cF9pZCI6ImYyOWY0NjllLTcxMGEtNGY0YS04ZGIxLWM0YTNhZTIxNzA1YSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwZDViOWEyOS1iZDc5LTQ0NTQtYTljNC1jMGE1YzYyNDc5ZTAiLCJkNzQwYjA3OS0yZmUwLTQwZWMtYmFhMC1lZmUzZTBlMDFhMmIiXSwianRpIjoiZjdhMGJkZjctZGI2YS00YTg1LWFhMmItZTNjMWJkNDM2MGFjIiwiaWF0IjoxNzczODAyMDU5LCJleHAiOjE3NzM4ODg0NTl9.wErgQXW_Bimov-zIdlqF1sEPIYt-6zRU6_fcoqdjjGc",
+        "callback_url": "http://127.0.0.1:18020/api/internal/group-runs/report",
+        "reporting_source": "bundle_callback"
+      },
+      "account_id": "696505809372",
+      "action_ids": [
+        "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+        "d740b079-2fe0-40ec-baa0-efe3e0e01a2b"
+      ],
+      "action_type": "sg_restrict_public_ports",
+      "tier_counts": {
+        "executable": 1,
+        "manual_guidance": 1,
+        "review_required": 0
+      },
+      "action_count": 2,
+      "group_run_id": "fa386bc6-6fb4-48ed-a806-13eefcc2b040",
+      "execution_root": "executable/actions",
+      "layout_version": "grouped_bundle_mixed_tier/v1",
+      "skipped_actions": [],
+      "action_resolutions": [
+        {
+          "action_id": "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+          "profile_id": "ssm_only",
+          "resolution": {
+            "profile_id": "ssm_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "support_tier": "manual_guidance_only",
+            "missing_inputs": [],
+            "blocked_reasons": [
+              "Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."
+            ],
+            "resolved_inputs": {
+              "access_mode": "close_public"
+            },
+            "decision_version": "resolver/v1",
+            "finding_coverage": {},
+            "missing_defaults": [],
+            "rejected_profiles": [],
+            "decision_rationale": "Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.",
+            "preservation_summary": {
+              "strategy_only_supported": true,
+              "single_profile_compatible": false
+            }
+          },
+          "strategy_id": "sg_restrict_public_ports_guided",
+          "strategy_inputs": {}
+        },
+        {
+          "action_id": "d740b079-2fe0-40ec-baa0-efe3e0e01a2b",
+          "profile_id": "close_and_revoke",
+          "resolution": {
+            "profile_id": "close_and_revoke",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "support_tier": "deterministic_bundle",
+            "missing_inputs": [],
+            "blocked_reasons": [],
+            "resolved_inputs": {
+              "access_mode": "close_and_revoke"
+            },
+            "decision_version": "resolver/v1",
+            "finding_coverage": {},
+            "missing_defaults": [],
+            "rejected_profiles": [],
+            "decision_rationale": "Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.",
+            "preservation_summary": {
+              "strategy_only_supported": true,
+              "single_profile_compatible": false
+            }
+          },
+          "strategy_id": "sg_restrict_public_ports_guided",
+          "strategy_inputs": {
+            "access_mode": "close_and_revoke"
+          }
+        }
+      ],
+      "resolved_action_ids": [
+        "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+        "d740b079-2fe0-40ec-baa0-efe3e0e01a2b"
+      ],
+      "skipped_action_count": 0,
+      "resolved_action_count": 2,
+      "runnable_action_count": 1,
+      "generated_action_count": 2,
+      "repo_target_configured": false,
+      "runner_template_source": "embedded_mixed_tier",
+      "diff_fingerprint_sha256": "ea6a958160ea670e961dd1282efd8c8f6dcf527ad6655cd7ec24d4654737ca78",
+      "executable_action_count": 1,
+      "runner_template_version": "grouped_bundle_mixed_tier/v1",
+      "represented_action_count": 2,
+      "manual_guidance_action_count": 1,
+      "review_required_action_count": 0
+    },
+    "rollback_notes": {
+      "entries": [
+        {
+          "title": "Security groups should not allow unrestricted access to ports with high risk",
+          "action_id": "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+          "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53",
+          "control_id": "EC2.53",
+          "action_type": "sg_restrict_public_ports",
+          "rollback_command": "aws ec2 authorize-security-group-ingress --group-id sg-0ef32ca8805a55a8b --ip-permissions '[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]},{\"IpProtocol\":\"tcp\",\"FromPort\":3389,\"ToPort\":3389,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]}]'"
+        },
+        {
+          "title": "Security groups should not allow unrestricted access to ports with high risk",
+          "action_id": "d740b079-2fe0-40ec-baa0-efe3e0e01a2b",
+          "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53",
+          "control_id": "EC2.53",
+          "action_type": "sg_restrict_public_ports",
+          "rollback_command": "aws ec2 authorize-security-group-ingress --group-id sg-06f6252fa8a95b61d --ip-permissions '[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]},{\"IpProtocol\":\"tcp\",\"FromPort\":3389,\"ToPort\":3389,\"IpRanges\":[{\"CidrIp\":\"0.0.0.0/0\"}]}]'"
+        }
+      ],
+      "version": 1,
+      "entry_count": 2,
+      "artifact_type": "rollback_notes",
+      "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow."
+    },
+    "risk_acknowledged": true,
+    "selected_strategy": "sg_restrict_public_ports_guided",
+    "control_mapping_context": {
+      "version": 1,
+      "mappings": [],
+      "control_ids": [
+        "EC2.53"
+      ],
+      "artifact_type": "control_mapping_context",
+      "mapped_control_ids": [],
+      "unmapped_control_ids": [
+        "EC2.53"
+      ]
+    }
+  }
+}

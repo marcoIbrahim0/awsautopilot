@@ -40,6 +40,7 @@ from backend.services.remediation_runtime_checks import (
     probe_direct_fix_permissions,
 )
 from backend.services.direct_fix_bridge import get_supported_direct_fix_action_types
+from backend.services.direct_fix_bridge import DIRECT_FIX_OUT_OF_SCOPE_MESSAGE
 from backend.services.direct_fix_approval import (
     DIRECT_FIX_APPROVAL_ARTIFACT_KEY,
     build_direct_fix_approval_metadata,
@@ -135,6 +136,24 @@ EXECUTION_STATUS_PROGRESS = {
     RemediationRunExecutionStatus.failed.value: (3, 100),
     RemediationRunExecutionStatus.cancelled.value: (3, 100),
 }
+SAAS_BUNDLE_EXECUTION_ARCHIVED_ERROR = "SaaS bundle execution archived"
+SAAS_BUNDLE_EXECUTION_ARCHIVED_REASON = "saas_bundle_execution_archived"
+SAAS_BUNDLE_EXECUTION_ARCHIVED_DETAIL = (
+    "PR bundles remain supported. Download the bundle, review the generated artifacts, "
+    "and run it with your own credentials or pipeline outside the SaaS. "
+    "Optional grouped reporting callbacks remain supported for customer-run bundles."
+)
+
+
+def _raise_saas_bundle_execution_archived() -> NoReturn:
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail={
+            "error": SAAS_BUNDLE_EXECUTION_ARCHIVED_ERROR,
+            "reason": SAAS_BUNDLE_EXECUTION_ARCHIVED_REASON,
+            "detail": SAAS_BUNDLE_EXECUTION_ARCHIVED_DETAIL,
+        },
+    )
 
 
 def _as_mode_value(value: Any) -> str | None:
@@ -371,9 +390,12 @@ class CreateRemediationRunRequest(BaseModel):
     """Request body for creating a remediation run."""
 
     action_id: str = Field(..., description="UUID of the action to remediate")
-    mode: Literal["pr_only", "direct_fix"] = Field(
+    mode: str = Field(
         ...,
-        description="Whether to generate a PR bundle only or apply a direct fix",
+        description=(
+            "Execution mode. The only supported value is `pr_only`. "
+            "Deprecated `direct_fix` requests are rejected."
+        ),
     )
     strategy_id: str | None = Field(
         None,
@@ -1184,7 +1206,8 @@ def _recent_resend_attempts(artifacts: dict[str, Any] | None, *, cutoff: datetim
     status_code=status.HTTP_201_CREATED,
     summary="Create remediation run",
     description=(
-        "Create a remediation run (PR bundle or direct fix) and enqueue worker job. "
+        "Create a PR-bundle remediation run and enqueue the worker job. "
+        "Deprecated direct-fix requests are rejected fail-closed. "
         "For pr_only runs, optional pr_bundle_variant selects alternative bundle templates "
         "(e.g. cloudfront_oac_private_s3 for S3.2). Requires authentication."
     ),
@@ -1205,11 +1228,8 @@ async def create_remediation_run(
     """
     Create a remediation run and enqueue the worker.
 
-    **Approval (Step 8.4):** For direct_fix, the authenticated user creating the run
-    is the approver. approved_by_user_id is set to current_user.id. No separate
-    approval step—creating the run implies approval. For pr_only, approved_by_user_id
-    is also set for consistency. Once a run completes (success/failed), the audit
-    record (approved_by_user_id, created_at) is immutable.
+    Direct-fix and customer WriteRole are intentionally out of scope for now.
+    This route currently supports PR-bundle creation only.
     """
     tenant_uuid = current_user.tenant_id
     tenant = await get_tenant(tenant_uuid, db)
@@ -1239,6 +1259,35 @@ async def create_remediation_run(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Action not found", "detail": f"No action found with ID {body.action_id}"},
+        )
+    body.mode = body.mode.strip()
+    if body.mode == "direct_fix":
+        emit_validation_failure(
+            logger,
+            reason="direct_fix_out_of_scope",
+            action_type=action.action_type,
+            mode=body.mode,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Direct-fix out of scope",
+                "detail": DIRECT_FIX_OUT_OF_SCOPE_MESSAGE,
+            },
+        )
+    if body.mode != "pr_only":
+        emit_validation_failure(
+            logger,
+            reason="unsupported_mode",
+            action_type=action.action_type,
+            mode=body.mode,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Unsupported remediation mode",
+                "detail": "Only `pr_only` is supported for remediation runs.",
+            },
         )
     if body.mode == "pr_only" and action.action_type == PR_ONLY_ACTION_TYPE:
         emit_validation_failure(
@@ -2279,7 +2328,7 @@ async def list_remediation_runs(
     ] = None,
     mode: Annotated[
         Optional[str],
-        Query(description="Filter by mode (pr_only, direct_fix)"),
+        Query(description="Filter by mode (`pr_only`; `direct_fix` only for historical runs)"),
     ] = None,
     limit: Annotated[int, Query(ge=1, le=200, description="Max items per page")] = 50,
     offset: Annotated[int, Query(ge=0, description="Items to skip")] = 0,
@@ -2328,7 +2377,10 @@ async def list_remediation_runs(
         if mode not in ("pr_only", "direct_fix"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Invalid mode", "detail": "mode must be 'pr_only' or 'direct_fix'"},
+                detail={
+                    "error": "Invalid mode",
+                    "detail": "mode must be 'pr_only' or 'direct_fix' (historical runs only).",
+                },
             )
         query = query.where(RemediationRun.mode == RemediationRunMode(mode))
     if control_id is not None:
@@ -2479,736 +2531,68 @@ async def get_remediation_run(
 
 @router.post(
     "/bulk-execute-pr-bundle",
-    response_model=BulkExecutionResponse,
-    summary="Run plan for multiple PR bundles on SaaS",
-    description="Queues plan executions for multiple PR-only runs and returns accepted/rejected results.",
+    summary="Archived SaaS PR bundle plan endpoint",
+    description=(
+        "This public SaaS-managed PR bundle execution path is archived. "
+        "Download and run PR bundles in customer-owned workflows instead."
+    ),
+    responses={410: {"description": "SaaS-managed PR bundle execution is archived"}},
 )
 async def bulk_execute_pr_bundle_plan(
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    body: BulkExecutePrBundleRequest = Body(default_factory=BulkExecutePrBundleRequest),
-) -> BulkExecutionResponse:
-    if not settings.SAAS_BUNDLE_EXECUTOR_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "SaaS bundle executor disabled",
-                "detail": "Enable SAAS_BUNDLE_EXECUTOR_ENABLED to run PR bundles on SaaS.",
-            },
-        )
-    if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Queue not configured",
-                "detail": "Queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
-            },
-        )
-    if not body.run_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Missing run_ids", "detail": "Provide at least one run ID."},
-        )
-
-    tenant_uuid = current_user.tenant_id
-    max_concurrent = settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT
-    active_count = await _tenant_active_execution_count(db, tenant_uuid)
-    batch_key = _new_batch_key()
-
-    parsed_ids: list[uuid.UUID] = []
-    response = BulkExecutionResponse()
-    seen: set[str] = set()
-    for raw_id in body.run_ids:
-        value = (raw_id or "").strip()
-        if not value or value in seen:
-            continue
-        seen.add(value)
-        try:
-            parsed_ids.append(uuid.UUID(value))
-        except ValueError:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value or "<empty>",
-                    reason="invalid_id",
-                    detail="run_id must be a valid UUID",
-                )
-            )
-
-    if parsed_ids:
-        runs_result = await db.execute(
-            select(RemediationRun)
-            .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.id.in_(parsed_ids))
-            .options(selectinload(RemediationRun.action))
-        )
-        runs = {run.id: run for run in runs_result.scalars().all()}
-    else:
-        runs = {}
-
-    queued: list[tuple[RemediationRunExecution, RemediationRun]] = []
-    for raw_id in body.run_ids:
-        value = (raw_id or "").strip()
-        try:
-            run_uuid = uuid.UUID(value)
-        except ValueError:
-            continue
-        run = runs.get(run_uuid)
-        if run is None:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="not_found",
-                    detail="Remediation run not found.",
-                )
-            )
-            continue
-        if run.mode != RemediationRunMode.pr_only:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="invalid_mode",
-                    detail="Only pr_only runs are supported.",
-                )
-            )
-            continue
-        if _run_requires_root_credentials(run):
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="root_credentials_required",
-                    detail=(
-                        "Root credentials required. This remediation cannot run in SaaS executor mode. "
-                        f"Follow runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
-                    ),
-                )
-            )
-            continue
-        if not isinstance(run.artifacts, dict) or not isinstance(run.artifacts.get("pr_bundle"), dict):
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="missing_bundle",
-                    detail="Run has no pr_bundle artifacts.",
-                )
-            )
-            continue
-        try:
-            bundle_summary = _assert_bundle_has_executable_targets(run)
-        except HTTPException:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="no_executable_bundle",
-                    detail="Mixed-tier grouped bundle has no executable Terraform folders.",
-                )
-            )
-            continue
-        active_result = await db.execute(
-            select(RemediationRunExecution)
-            .where(
-                RemediationRunExecution.run_id == run.id,
-                RemediationRunExecution.tenant_id == tenant_uuid,
-                RemediationRunExecution.status.in_(tuple(ACTIVE_EXECUTION_STATUSES)),
-            )
-            .order_by(RemediationRunExecution.created_at.desc())
-        )
-        active = active_result.scalars().first()
-        if active:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="already_running",
-                    detail="Run already has an active queued/running execution.",
-                )
-            )
-            continue
-        if max_concurrent > 0 and active_count >= max_concurrent:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="capacity_exceeded",
-                    detail="Tenant execution capacity reached.",
-                )
-            )
-            continue
-        execution = RemediationRunExecution(
-            run_id=run.id,
-            tenant_id=tenant_uuid,
-            phase=RemediationRunExecutionPhase.plan,
-            status=RemediationRunExecutionStatus.queued,
-            workspace_manifest=_execution_manifest_seed(
-                fail_fast=bool(body.fail_fast),
-                max_parallel=int(body.max_parallel),
-                batch_key=batch_key,
-                bundle_summary=bundle_summary,
-            ),
-        )
-        db.add(execution)
-        run.status = RemediationRunStatus.running
-        run.outcome = "SaaS plan execution queued."
-        await db.flush()
-        active_count += 1
-        queued.append((execution, run))
-
-    await db.commit()
-    sqs, queue_url = _build_sqs_client()
-    enqueue_failures: list[tuple[RemediationRunExecution, str]] = []
-    for execution, run in queued:
-        try:
-            _enqueue_pr_bundle_execution_message(
-                sqs_client=sqs,
-                queue_url=queue_url,
-                execution_id=execution.id,
-                run_id=run.id,
-                tenant_id=tenant_uuid,
-                phase="plan",
-                requested_by_user_id=current_user.id,
-            )
-            response.accepted.append(
-                BulkExecutionAcceptedItem(
-                    run_id=str(run.id),
-                    execution_id=str(execution.id),
-                    phase="plan",
-                    status=execution.status.value,
-                )
-            )
-        except ClientError as exc:
-            logger.exception("SQS send_message failed for bulk execute-pr-bundle: %s", exc)
-            enqueue_failures.append((execution, str(exc)))
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=str(run.id),
-                    reason="queue_failed",
-                    detail="Could not enqueue execution job.",
-                )
-            )
-
-    if enqueue_failures:
-        for execution, err in enqueue_failures:
-            update_result = await db.execute(
-                select(RemediationRunExecution)
-                .where(RemediationRunExecution.id == execution.id, RemediationRunExecution.tenant_id == tenant_uuid)
-                .options(selectinload(RemediationRunExecution.run))
-            )
-            current_execution = update_result.scalar_one_or_none()
-            if current_execution is None:
-                continue
-            current_execution.status = RemediationRunExecutionStatus.failed
-            current_execution.error_summary = f"queue_failed: {err}"[:500]
-            current_execution.completed_at = datetime.now(timezone.utc)
-            if current_execution.run:
-                current_execution.run.status = RemediationRunStatus.failed
-                current_execution.run.outcome = "SaaS plan enqueue failed."
-        await db.commit()
-
-    return response
+) -> None:
+    _ = current_user
+    _raise_saas_bundle_execution_archived()
 
 
 @router.post(
     "/bulk-approve-apply",
-    response_model=BulkExecutionResponse,
-    summary="Approve and run apply for multiple PR bundles on SaaS",
-    description="Queues apply executions for multiple PR-only runs after plan approval stage.",
+    summary="Archived SaaS PR bundle apply endpoint",
+    description=(
+        "This public SaaS-managed PR bundle execution path is archived. "
+        "Download and run PR bundles in customer-owned workflows instead."
+    ),
+    responses={410: {"description": "SaaS-managed PR bundle execution is archived"}},
 )
 async def bulk_approve_apply_pr_bundle(
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    body: BulkApproveApplyRequest = Body(default_factory=BulkApproveApplyRequest),
-) -> BulkExecutionResponse:
-    if not settings.SAAS_BUNDLE_EXECUTOR_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "SaaS bundle executor disabled",
-                "detail": "Enable SAAS_BUNDLE_EXECUTOR_ENABLED to run PR bundles on SaaS.",
-            },
-        )
-    if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Queue not configured",
-                "detail": "Queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
-            },
-        )
-    if not body.run_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Missing run_ids", "detail": "Provide at least one run ID."},
-        )
-
-    tenant_uuid = current_user.tenant_id
-    max_concurrent = settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT
-    active_count = await _tenant_active_execution_count(db, tenant_uuid)
-    batch_key = _new_batch_key()
-
-    parsed_ids: list[uuid.UUID] = []
-    response = BulkExecutionResponse()
-    seen: set[str] = set()
-    for raw_id in body.run_ids:
-        value = (raw_id or "").strip()
-        if not value or value in seen:
-            continue
-        seen.add(value)
-        try:
-            parsed_ids.append(uuid.UUID(value))
-        except ValueError:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value or "<empty>",
-                    reason="invalid_id",
-                    detail="run_id must be a valid UUID",
-                )
-            )
-
-    if parsed_ids:
-        runs_result = await db.execute(
-            select(RemediationRun)
-            .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.id.in_(parsed_ids))
-            .options(selectinload(RemediationRun.action))
-        )
-        runs = {run.id: run for run in runs_result.scalars().all()}
-    else:
-        runs = {}
-
-    queued: list[tuple[RemediationRunExecution, RemediationRun]] = []
-    for raw_id in body.run_ids:
-        value = (raw_id or "").strip()
-        try:
-            run_uuid = uuid.UUID(value)
-        except ValueError:
-            continue
-        run = runs.get(run_uuid)
-        if run is None:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="not_found",
-                    detail="Remediation run not found.",
-                )
-            )
-            continue
-        if run.mode != RemediationRunMode.pr_only:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="invalid_mode",
-                    detail="Only pr_only runs are supported.",
-                )
-            )
-            continue
-        if _run_requires_root_credentials(run):
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="root_credentials_required",
-                    detail=(
-                        "Root credentials required. This remediation cannot run in SaaS executor mode. "
-                        f"Follow runbook: {ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH}."
-                    ),
-                )
-            )
-            continue
-
-        latest_result = await db.execute(
-            select(RemediationRunExecution)
-            .where(
-                RemediationRunExecution.run_id == run.id,
-                RemediationRunExecution.tenant_id == tenant_uuid,
-            )
-            .order_by(RemediationRunExecution.created_at.desc())
-        )
-        latest = latest_result.scalars().first()
-        if latest is None or latest.phase != RemediationRunExecutionPhase.plan:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="missing_plan",
-                    detail="Run plan phase first before apply.",
-                )
-            )
-            continue
-        if latest.status != RemediationRunExecutionStatus.awaiting_approval:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="not_awaiting_approval",
-                    detail=f"Current plan status is {latest.status.value}; cannot approve apply.",
-                )
-            )
-            continue
-        active_apply_result = await db.execute(
-            select(RemediationRunExecution)
-            .where(
-                RemediationRunExecution.run_id == run.id,
-                RemediationRunExecution.tenant_id == tenant_uuid,
-                RemediationRunExecution.phase == RemediationRunExecutionPhase.apply,
-                RemediationRunExecution.status.in_(tuple(ACTIVE_EXECUTION_STATUSES)),
-            )
-            .order_by(RemediationRunExecution.created_at.desc())
-        )
-        active_apply = active_apply_result.scalars().first()
-        if active_apply:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="already_running",
-                    detail="Run already has an active apply execution.",
-                )
-            )
-            continue
-        if max_concurrent > 0 and active_count >= max_concurrent:
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=value,
-                    reason="capacity_exceeded",
-                    detail="Tenant execution capacity reached.",
-                )
-            )
-            continue
-
-        execution = RemediationRunExecution(
-            run_id=run.id,
-            tenant_id=tenant_uuid,
-            phase=RemediationRunExecutionPhase.apply,
-            status=RemediationRunExecutionStatus.queued,
-            workspace_manifest={
-                **(latest.workspace_manifest if isinstance(latest.workspace_manifest, dict) else {}),
-                "max_parallel": int(body.max_parallel),
-                "batch_key": batch_key,
-            },
-        )
-        db.add(execution)
-        run.status = RemediationRunStatus.running
-        run.outcome = "SaaS apply execution queued."
-        await db.flush()
-        active_count += 1
-        queued.append((execution, run))
-
-    await db.commit()
-    sqs, queue_url = _build_sqs_client()
-    enqueue_failures: list[tuple[RemediationRunExecution, str]] = []
-    for execution, run in queued:
-        try:
-            _enqueue_pr_bundle_execution_message(
-                sqs_client=sqs,
-                queue_url=queue_url,
-                execution_id=execution.id,
-                run_id=run.id,
-                tenant_id=tenant_uuid,
-                phase="apply",
-                requested_by_user_id=current_user.id,
-            )
-            response.accepted.append(
-                BulkExecutionAcceptedItem(
-                    run_id=str(run.id),
-                    execution_id=str(execution.id),
-                    phase="apply",
-                    status=execution.status.value,
-                )
-            )
-        except ClientError as exc:
-            logger.exception("SQS send_message failed for bulk approve-apply: %s", exc)
-            enqueue_failures.append((execution, str(exc)))
-            response.rejected.append(
-                BulkExecutionRejectedItem(
-                    run_id=str(run.id),
-                    reason="queue_failed",
-                    detail="Could not enqueue execution job.",
-                )
-            )
-
-    if enqueue_failures:
-        for execution, err in enqueue_failures:
-            update_result = await db.execute(
-                select(RemediationRunExecution)
-                .where(RemediationRunExecution.id == execution.id, RemediationRunExecution.tenant_id == tenant_uuid)
-                .options(selectinload(RemediationRunExecution.run))
-            )
-            current_execution = update_result.scalar_one_or_none()
-            if current_execution is None:
-                continue
-            current_execution.status = RemediationRunExecutionStatus.failed
-            current_execution.error_summary = f"queue_failed: {err}"[:500]
-            current_execution.completed_at = datetime.now(timezone.utc)
-            if current_execution.run:
-                current_execution.run.status = RemediationRunStatus.failed
-                current_execution.run.outcome = "SaaS apply enqueue failed."
-        await db.commit()
-
-    return response
+) -> None:
+    _ = current_user
+    _raise_saas_bundle_execution_archived()
 
 
 @router.post(
     "/{run_id}/execute-pr-bundle",
-    response_model=StartPrBundleExecutionResponse,
-    summary="Run PR bundle plan on SaaS",
-    description="Creates a plan-phase execution and enqueues worker job for SaaS-managed Terraform plan.",
-    responses={
-        400: {"description": "Invalid run state or missing bundle files"},
-        401: {"description": "Not authenticated"},
-        429: {"description": "Too many in-flight executions for tenant"},
-        404: {"description": "Remediation run not found"},
-        503: {"description": "Feature disabled or queue unavailable"},
-    },
+    summary="Archived SaaS PR bundle plan endpoint",
+    description=(
+        "This public SaaS-managed PR bundle execution path is archived. "
+        "Download and run PR bundles in customer-owned workflows instead."
+    ),
+    responses={410: {"description": "SaaS-managed PR bundle execution is archived"}},
 )
 async def execute_pr_bundle_plan(
     run_id: Annotated[str, Path(description="Remediation run UUID")],
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    body: ExecutePrBundlePlanRequest = Body(default_factory=ExecutePrBundlePlanRequest),
-) -> StartPrBundleExecutionResponse:
-    if not settings.SAAS_BUNDLE_EXECUTOR_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "SaaS bundle executor disabled",
-                "detail": "Enable SAAS_BUNDLE_EXECUTOR_ENABLED to run PR bundles on SaaS.",
-            },
-        )
-    if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Queue not configured",
-                "detail": "Queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
-            },
-        )
-    try:
-        run_uuid = uuid.UUID(run_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Invalid run_id", "detail": "run_id must be a valid UUID"},
-        )
-
-    tenant_uuid = current_user.tenant_id
-    run_result = await db.execute(
-        select(RemediationRun)
-        .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
-        .options(selectinload(RemediationRun.action))
-        .with_for_update()
-    )
-    run = run_result.scalar_one_or_none()
-    if run is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "Remediation run not found", "detail": f"No run found with ID {run_id}"},
-        )
-    if run.mode != RemediationRunMode.pr_only:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Invalid mode", "detail": "SaaS bundle execution is only supported for pr_only runs."},
-        )
-    if _run_requires_root_credentials(run):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=root_credentials_required_error_detail(),
-        )
-    if not isinstance(run.artifacts, dict) or not isinstance(run.artifacts.get("pr_bundle"), dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Missing PR bundle", "detail": "Run has no pr_bundle artifacts to execute."},
-        )
-    bundle_summary = _assert_bundle_has_executable_targets(run)
-
-    active_result = await db.execute(
-        select(RemediationRunExecution)
-        .where(
-            RemediationRunExecution.run_id == run.id,
-            RemediationRunExecution.tenant_id == tenant_uuid,
-            RemediationRunExecution.status.in_(tuple(ACTIVE_EXECUTION_STATUSES)),
-        )
-        .order_by(RemediationRunExecution.created_at.desc())
-    )
-    active = active_result.scalars().first()
-    if active:
-        return StartPrBundleExecutionResponse(execution_id=str(active.id), status=active.status.value)
-
-    await _assert_tenant_execution_capacity(db, tenant_uuid)
-    fail_fast = settings.SAAS_BUNDLE_EXECUTOR_FAIL_FAST if body.fail_fast is None else body.fail_fast
-    execution = RemediationRunExecution(
-        run_id=run.id,
-        tenant_id=tenant_uuid,
-        phase=RemediationRunExecutionPhase.plan,
-        status=RemediationRunExecutionStatus.queued,
-        workspace_manifest=_execution_manifest_seed(
-            fail_fast=bool(fail_fast),
-            bundle_summary=bundle_summary,
-        ),
-    )
-    db.add(execution)
-    run.status = RemediationRunStatus.running
-    run.outcome = "SaaS plan execution queued."
-    await db.commit()
-    await db.refresh(execution)
-
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
-    queue_region = parse_queue_region(queue_url)
-    sqs = boto3.client("sqs", region_name=queue_region)
-    payload = build_pr_bundle_execution_job_payload(
-        execution_id=execution.id,
-        run_id=run.id,
-        tenant_id=tenant_uuid,
-        phase="plan",
-        created_at=datetime.now(timezone.utc).isoformat(),
-        requested_by_user_id=current_user.id,
-    )
-    try:
-        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-    except ClientError as exc:
-        logger.exception("SQS send_message failed for execute_pr_bundle_plan: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Remediation queue unavailable",
-                "detail": "Could not enqueue plan job. Please try again later.",
-            },
-        ) from exc
-
-    return StartPrBundleExecutionResponse(execution_id=str(execution.id), status=execution.status.value)
+) -> None:
+    _ = run_id, current_user
+    _raise_saas_bundle_execution_archived()
 
 
 @router.post(
     "/{run_id}/approve-apply",
-    response_model=StartPrBundleExecutionResponse,
-    summary="Approve and run PR bundle apply on SaaS",
-    description="Creates an apply-phase execution after plan is awaiting approval and enqueues worker job.",
-    responses={
-        400: {"description": "Run is not awaiting approval"},
-        401: {"description": "Not authenticated"},
-        429: {"description": "Too many in-flight executions for tenant"},
-        404: {"description": "Remediation run not found"},
-        503: {"description": "Feature disabled or queue unavailable"},
-    },
+    summary="Archived SaaS PR bundle apply endpoint",
+    description=(
+        "This public SaaS-managed PR bundle execution path is archived. "
+        "Download and run PR bundles in customer-owned workflows instead."
+    ),
+    responses={410: {"description": "SaaS-managed PR bundle execution is archived"}},
 )
 async def approve_apply_pr_bundle(
     run_id: Annotated[str, Path(description="Remediation run UUID")],
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> StartPrBundleExecutionResponse:
-    if not settings.SAAS_BUNDLE_EXECUTOR_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "SaaS bundle executor disabled",
-                "detail": "Enable SAAS_BUNDLE_EXECUTOR_ENABLED to run PR bundles on SaaS.",
-            },
-        )
-    if not settings.SQS_INGEST_QUEUE_URL or not settings.SQS_INGEST_QUEUE_URL.strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Queue not configured",
-                "detail": "Queue URL not configured. Set SQS_INGEST_QUEUE_URL.",
-            },
-        )
-    try:
-        run_uuid = uuid.UUID(run_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Invalid run_id", "detail": "run_id must be a valid UUID"},
-        )
-
-    tenant_uuid = current_user.tenant_id
-    run_result = await db.execute(
-        select(RemediationRun)
-        .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
-        .options(selectinload(RemediationRun.action))
-        .with_for_update()
-    )
-    run = run_result.scalar_one_or_none()
-    if run is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "Remediation run not found", "detail": f"No run found with ID {run_id}"},
-        )
-    if run.mode != RemediationRunMode.pr_only:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Invalid mode", "detail": "SaaS bundle execution is only supported for pr_only runs."},
-        )
-    if _run_requires_root_credentials(run):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=root_credentials_required_error_detail(),
-        )
-
-    latest_result = await db.execute(
-        select(RemediationRunExecution)
-        .where(
-            RemediationRunExecution.run_id == run.id,
-            RemediationRunExecution.tenant_id == tenant_uuid,
-        )
-        .order_by(RemediationRunExecution.created_at.desc())
-    )
-    latest = latest_result.scalars().first()
-    if latest is None or latest.phase != RemediationRunExecutionPhase.plan:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Plan required", "detail": "Run plan phase first before approve/apply."},
-        )
-    if latest.status != RemediationRunExecutionStatus.awaiting_approval:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Run not awaiting approval",
-                "detail": f"Current plan status is {latest.status.value}; cannot approve apply.",
-            },
-        )
-
-    active_apply_result = await db.execute(
-        select(RemediationRunExecution)
-        .where(
-            RemediationRunExecution.run_id == run.id,
-            RemediationRunExecution.tenant_id == tenant_uuid,
-            RemediationRunExecution.phase == RemediationRunExecutionPhase.apply,
-            RemediationRunExecution.status.in_(tuple(ACTIVE_EXECUTION_STATUSES)),
-        )
-        .order_by(RemediationRunExecution.created_at.desc())
-    )
-    active_apply = active_apply_result.scalars().first()
-    if active_apply:
-        return StartPrBundleExecutionResponse(execution_id=str(active_apply.id), status=active_apply.status.value)
-
-    await _assert_tenant_execution_capacity(db, tenant_uuid)
-    execution = RemediationRunExecution(
-        run_id=run.id,
-        tenant_id=tenant_uuid,
-        phase=RemediationRunExecutionPhase.apply,
-        status=RemediationRunExecutionStatus.queued,
-        workspace_manifest=latest.workspace_manifest if isinstance(latest.workspace_manifest, dict) else None,
-    )
-    db.add(execution)
-    run.status = RemediationRunStatus.running
-    run.outcome = "SaaS apply execution queued."
-    await db.commit()
-    await db.refresh(execution)
-
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
-    queue_region = parse_queue_region(queue_url)
-    sqs = boto3.client("sqs", region_name=queue_region)
-    payload = build_pr_bundle_execution_job_payload(
-        execution_id=execution.id,
-        run_id=run.id,
-        tenant_id=tenant_uuid,
-        phase="apply",
-        created_at=datetime.now(timezone.utc).isoformat(),
-        requested_by_user_id=current_user.id,
-    )
-    try:
-        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-    except ClientError as exc:
-        logger.exception("SQS send_message failed for execute_pr_bundle_apply: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "error": "Remediation queue unavailable",
-                "detail": "Could not enqueue apply job. Please try again later.",
-            },
-        ) from exc
-
-    return StartPrBundleExecutionResponse(execution_id=str(execution.id), status=execution.status.value)
+) -> None:
+    _ = run_id, current_user
+    _raise_saas_bundle_execution_archived()
 
 
 @router.get(

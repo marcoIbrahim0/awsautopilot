@@ -898,6 +898,118 @@ def test_disable_uses_executor_worker_when_enabled(client: TestClient) -> None:
     base_sts.assume_role.assert_called_once()
 
 
+def test_disable_auto_advances_validation_from_migration_before_executor(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.migration,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    disabled_run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+        tenant_id=tenant_id,
+    )
+    disabled_run.id = run.id
+    disabled_run.action_id = run.action_id
+    disabled_run.finding_id = run.finding_id
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(return_value=_scalar_result(run))
+
+    transition_result = SimpleNamespace(
+        run=disabled_run,
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    validation_result = SimpleNamespace(
+        run=_mock_run(
+            state=RootKeyRemediationState.validation,
+            status=RootKeyRemediationRunStatus.running,
+            tenant_id=tenant_id,
+        ),
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    worker = MagicMock()
+    worker.execute_disable = AsyncMock(return_value=transition_result)
+    service = MagicMock()
+    service.advance_to_validation = AsyncMock(return_value=validation_result)
+    service.start_disable_window = AsyncMock(return_value=transition_result)
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
+    account = SimpleNamespace(
+        tenant_id=tenant_id,
+        account_id=run.account_id,
+        role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+        external_id="ext-observer",
+    )
+    session.execute = AsyncMock(return_value=_scalar_result(account))
+    base_session = MagicMock()
+    base_sts = MagicMock()
+    base_sts.assume_role.return_value = {
+        "Credentials": {
+            "AccessKeyId": "ASIATEMP00000001",
+            "SecretAccessKey": "secret",
+            "SessionToken": "token",
+        }
+    }
+    base_session.client.return_value = base_sts
+    observer_session = MagicMock()
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+            new=AsyncMock(return_value=None),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                new=AsyncMock(return_value=run),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.boto3.Session",
+                    side_effect=[base_session, observer_session],
+                ):
+                    with patch(
+                        "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                        return_value=worker,
+                    ):
+                        with patch(
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                            return_value=service,
+                        ):
+                            response = client.post(
+                                f"/api/root-key-remediation-runs/{run.id}/disable",
+                                headers={"Idempotency-Key": "rk-disable-worker-migration"},
+                            )
+
+    assert response.status_code == 200
+    assert service.advance_to_validation.await_count == 1
+    assert worker.execute_disable.await_count == 1
+    assert service.start_disable_window.await_count == 0
+    validation_kwargs = service.advance_to_validation.await_args.kwargs
+    assert validation_kwargs["tenant_id"] == tenant_id
+    assert validation_kwargs["run_id"] == run.id
+    assert validation_kwargs["transition_id"].endswith(":validation")
+    assert validation_kwargs["evidence_metadata"] == {
+        "operation": "auto_advance_validation_before_disable"
+    }
+
+
 def test_disable_fails_closed_when_observer_context_is_unavailable(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     user = _mock_user(tenant_id)
@@ -998,6 +1110,83 @@ def test_disable_fails_closed_when_observer_profile_cannot_load(client: TestClie
     assert payload["error"]["code"] == "observer_context_unavailable"
     assert payload["error"]["details"]["reason"] == "observer_profile_unavailable:RuntimeError"
     worker_ctor.assert_not_called()
+
+
+def test_disable_auto_advances_validation_from_migration_without_executor(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.migration,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    disabled_run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+        tenant_id=tenant_id,
+    )
+    disabled_run.id = run.id
+    disabled_run.action_id = run.action_id
+    disabled_run.finding_id = run.finding_id
+
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock()
+
+    validation_result = SimpleNamespace(
+        run=_mock_run(
+            state=RootKeyRemediationState.validation,
+            status=RootKeyRemediationRunStatus.running,
+            tenant_id=tenant_id,
+        ),
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    disable_result = SimpleNamespace(
+        run=disabled_run,
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    service = MagicMock()
+    service.advance_to_validation = AsyncMock(return_value=validation_result)
+    service.start_disable_window = AsyncMock(return_value=disable_result)
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_settings()):
+        with patch(
+            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+            return_value=service,
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+                new=AsyncMock(return_value=None),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                    new=AsyncMock(return_value=run),
+                ):
+                    response = client.post(
+                        f"/api/root-key-remediation-runs/{run.id}/disable",
+                        headers={"Idempotency-Key": "rk-disable-no-worker-migration"},
+                    )
+
+    assert response.status_code == 200
+    assert service.advance_to_validation.await_count == 1
+    assert service.start_disable_window.await_count == 1
+    validation_kwargs = service.advance_to_validation.await_args.kwargs
+    assert validation_kwargs["run_id"] == run.id
+    assert validation_kwargs["transition_id"].endswith(":validation")
 
 
 def test_complete_external_task_happy_path(client: TestClient) -> None:

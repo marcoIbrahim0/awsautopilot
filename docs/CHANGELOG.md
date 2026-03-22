@@ -286,7 +286,7 @@ All notable changes to AWS Security Autopilot are documented in this file. This 
   - `remediation_run_executions` table for plan/apply phases
   - `POST /api/remediation-runs/{id}/executions/{exec_id}/plan` — Terraform plan
   - `POST /api/remediation-runs/{id}/executions/{exec_id}/apply` — Terraform apply
-  - SaaS-managed Terraform runner (optional, via `SAAS_BUNDLE_EXECUTOR_ENABLED`)
+  - Public SaaS-managed PR-bundle plan/apply is archived as of 2026-03-15; customer-run PR bundles remain the supported execution model, and `SAAS_BUNDLE_EXECUTOR_ENABLED` is now a legacy internal flag only
   - Bundle reporting tokens for downloaded bundle execution tracking
 
 ---

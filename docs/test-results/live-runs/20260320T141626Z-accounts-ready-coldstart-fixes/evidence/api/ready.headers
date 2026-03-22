@@ -1,0 +1,11 @@
+HTTP/2 200 
+date: Fri, 20 Mar 2026 14:28:05 GMT
+content-type: application/json
+cf-ray: 9df566965c08d893-MRS
+cf-cache-status: DYNAMIC
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+apigw-requestid: ahrphg8Wgi0EMYA=
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=M13ttBhXe8jz7TwW1WnXwvxRCJJOxN7wXB47%2B6DaKYIw1rhrof%2BFbXepu1v6HKR4LlvIL33BbJPiHcNz4VqOXXKN2bBfEqFuRdiDQvlWTwIT"}]}
+alt-svc: h3=":443"; ma=86400
+

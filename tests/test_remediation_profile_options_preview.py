@@ -1171,7 +1171,7 @@ def test_iam_4_preview_returns_guidance_only_resolution_metadata(client: TestCli
     assert resolution["decision_version"] == RESOLVER_DECISION_VERSION_V1
 
 
-def test_direct_fix_preview_without_strategy_keeps_existing_behavior(client: TestClient) -> None:
+def test_direct_fix_preview_without_strategy_returns_out_of_scope_message(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action("s3_block_public_access")
@@ -1186,34 +1186,20 @@ def test_direct_fix_preview_without_strategy_keeps_existing_behavior(client: Tes
 
     from backend.auth import get_optional_user
 
-    preview_result = MagicMock(
-        compliant=False,
-        message="S3 Block Public Access not configured; will enable.",
-        will_apply=True,
-        before_state={},
-        after_state={},
-        diff_lines=[],
-    )
-
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    with patch("backend.routers.actions.assume_role", return_value=MagicMock()):
-        with patch(
-            "backend.routers.actions.run_remediation_preview_bridge",
-            return_value=preview_result,
-        ):
-            try:
-                response = client.get(
-                    f"/api/actions/{action.id}/remediation-preview",
-                    params={"mode": "direct_fix"},
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_optional_user, None)
+    try:
+        response = client.get(
+            f"/api/actions/{action.id}/remediation-preview",
+            params={"mode": "direct_fix"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
 
     assert response.status_code == 200
     body = response.json()
     assert body["compliant"] is False
-    assert body["will_apply"] is True
-    assert body["message"] == "S3 Block Public Access not configured; will enable."
+    assert body["will_apply"] is False
+    assert "out of scope" in body["message"].lower()
     assert body["resolution"] is None

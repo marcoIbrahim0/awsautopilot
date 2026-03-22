@@ -110,9 +110,16 @@ def assume_and_verify_role_account(
     account_id: str,
     role_label: str,
     assume_role_fn: AssumeRoleFn,
+    source_identity: str | None = None,
+    tags: list[dict[str, str]] | None = None,
 ) -> Any:
     """Assume a role and verify caller identity account match."""
-    session = assume_role_fn(role_arn=role_arn, external_id=external_id)
+    session = assume_role_fn(
+        role_arn=role_arn,
+        external_id=external_id,
+        source_identity=source_identity,
+        tags=tags,
+    )
     caller_account_id = session.client("sts").get_caller_identity().get("Account")
     if caller_account_id != account_id:
         raise ValueError(
@@ -129,6 +136,8 @@ def run_validation_probes(
     configured_regions: Sequence[str] | None,
     default_region: str,
     assume_role_fn: AssumeRoleFn,
+    source_identity: str | None = None,
+    tags: list[dict[str, str]] | None = None,
 ) -> ValidationProbeResult:
     """
     Run baseline ReadRole probes used by POST /validate.
@@ -141,6 +150,8 @@ def run_validation_probes(
         account_id=account_id,
         role_label="ReadRole",
         assume_role_fn=assume_role_fn,
+        source_identity=source_identity,
+        tags=tags,
     )
     region = (list(configured_regions or []) or [default_region])[0]
     missing_permissions: list[str] = []
@@ -357,6 +368,8 @@ async def collect_service_readiness(
     regions: Sequence[str] | None,
     default_region: str,
     assume_role_fn: AssumeRoleFn,
+    source_identity: str | None = None,
+    tags: list[dict[str, str]] | None = None,
 ) -> ServiceReadinessSummary:
     """Evaluate Security Hub/Config/AA/Inspector enablement across regions."""
     session = assume_and_verify_role_account(
@@ -365,6 +378,8 @@ async def collect_service_readiness(
         account_id=account_id,
         role_label="ReadRole",
         assume_role_fn=assume_role_fn,
+        source_identity=source_identity,
+        tags=tags,
     )
 
     resolved_regions = list(regions or []) or [default_region]

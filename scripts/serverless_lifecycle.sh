@@ -312,7 +312,7 @@ PY
 }
 
 runtime_params_override_lines() {
-  python3 - "$RUNTIME_PARAMETERS_FILE" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" <<'PY'
+  python3 - "$RUNTIME_PARAMETERS_FILE" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" <<'PY'
 import json
 import sys
 
@@ -322,6 +322,7 @@ import sys
     worker_image,
     database_url,
     jwt_secret,
+    bundle_reporting_secret,
     cp_secret,
     enable_worker,
     worker_reserved_concurrency,
@@ -336,6 +337,7 @@ overrides = {
     "WorkerImageUri": worker_image,
     "DatabaseUrl": database_url,
     "JwtSecret": jwt_secret,
+    "BundleReportingTokenSecret": bundle_reporting_secret,
     "ControlPlaneEventsSecret": cp_secret,
     "EnableWorker": enable_worker,
     "WorkerReservedConcurrency": worker_reserved_concurrency,
@@ -985,10 +987,12 @@ deploy_runtime_from_bundle() {
   local database_url="$3"
   local enable_worker="$4"
   local worker_reserved="$5"
-  local jwt_secret control_secret
+  local jwt_secret bundle_reporting_secret control_secret
   jwt_secret="${JWT_SECRET:-$(read_env_file_value JWT_SECRET || true)}"
+  bundle_reporting_secret="${BUNDLE_REPORTING_TOKEN_SECRET:-$(read_env_file_value BUNDLE_REPORTING_TOKEN_SECRET || true)}"
   control_secret="${CONTROL_PLANE_EVENTS_SECRET:-$(read_env_file_value CONTROL_PLANE_EVENTS_SECRET || true)}"
   [[ -n "$jwt_secret" ]] || fail "Missing JWT_SECRET in env or ${ENV_FILE}"
+  [[ -n "$bundle_reporting_secret" ]] || fail "Missing BUNDLE_REPORTING_TOKEN_SECRET in env or ${ENV_FILE}"
   [[ -n "$control_secret" ]] || fail "Missing CONTROL_PLANE_EVENTS_SECRET in env or ${ENV_FILE}"
   local params=()
   mapfile -t params < <(
@@ -997,6 +1001,7 @@ deploy_runtime_from_bundle() {
       "$worker_image_uri" \
       "$database_url" \
       "$jwt_secret" \
+      "$bundle_reporting_secret" \
       "$control_secret" \
       "$enable_worker" \
       "$worker_reserved" \

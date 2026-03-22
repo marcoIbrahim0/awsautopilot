@@ -5,23 +5,23 @@ Pytest is the primary test runner.
 ## Run
 
 ```bash
-pytest
-pytest -v
-pytest -k "health"
+PYTHONPATH=. ./venv/bin/pytest
+PYTHONPATH=. ./venv/bin/pytest -v
+PYTHONPATH=. ./venv/bin/pytest -k "health"
 ```
 
 ## Useful Targets
 
 ```bash
-pytest tests/test_health_readiness.py
-pytest tests/test_worker_main_contract_quarantine.py
-pytest tests/test_control_plane_readiness.py
+PYTHONPATH=. ./venv/bin/pytest tests/test_health_readiness.py
+PYTHONPATH=. ./venv/bin/pytest tests/test_worker_main_contract_quarantine.py
+PYTHONPATH=. ./venv/bin/pytest tests/test_control_plane_readiness.py
 ```
 
 ## Coverage
 
 ```bash
-pytest --cov=backend --cov=backend.workers --cov-report=html
+PYTHONPATH=. ./venv/bin/pytest --cov=backend --cov=backend.workers --cov-report=html
 ```
 
 ## Notes

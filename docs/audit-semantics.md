@@ -6,7 +6,7 @@ The **`remediation_runs`** table is the source of truth for every remediation ru
 
 - **Who:** `approved_by_user_id` (user who approved/started the run)
 - **When:** `started_at`, `completed_at`, `created_at`, `updated_at`
-- **What:** `action_id`, `mode` (pr_only | direct_fix)
+- **What:** `action_id`, `mode` (currently `pr_only`; historical runs may still show `direct_fix`)
 - **Outcome:** `status`, `outcome`, `logs`, `artifacts`
 
 ## Immutability of completed runs

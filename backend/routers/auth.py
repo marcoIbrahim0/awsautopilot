@@ -14,6 +14,7 @@ from inspect import isawaitable
 from threading import Lock
 from typing import Annotated, Literal
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
@@ -62,6 +63,8 @@ EMAIL_VERIFICATION_SYNC_TTL_HOURS = 24
 VERIFICATION_RESEND_GENERIC_MESSAGE = "If your account exists, a new link was sent."
 VERIFICATION_RESEND_MAX_ATTEMPTS = 3
 VERIFICATION_RESEND_WINDOW_SECONDS = 600
+VERIFICATION_RESEND_TICKET_TTL_HOURS = 24
+VERIFICATION_RESEND_TICKET_PURPOSE = "email_verification_resend"
 VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE = "verification_email_delivery_unavailable"
 _LOGIN_FAILURES: dict[str, list[datetime]] = defaultdict(list)
 _LOGIN_FAILURES_LOCK = Lock()
@@ -81,15 +84,11 @@ class SignupRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128, description="Password (min 8 chars)")
 
 
-class SignupPendingResponse(BaseModel):
-    message: str
-    email: EmailStr
-
-
 class LoginRequest(BaseModel):
     """Request body for login."""
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password")
+    remember_me: bool = Field(default=True, description="Persist auth cookies across browser restarts")
 
 
 class RefreshResponse(BaseModel):
@@ -125,7 +124,7 @@ class ConfirmVerificationRequest(BaseModel):
 
 
 class FirebaseSyncRequest(BaseModel):
-    email: EmailStr
+    email: EmailStr | None = None
     sync_token: str = Field(..., min_length=1, description="One-time local sync token")
 
 
@@ -133,12 +132,26 @@ class FirebaseSyncResponse(BaseModel):
     verified: bool = True
 
 
-class VerificationResendRequest(BaseModel):
+class FirebaseDeliveryResponse(BaseModel):
+    custom_token: str
+    continue_url: str
+
+
+class SignupPendingResponse(BaseModel):
+    message: str
     email: EmailStr
+    resend_ticket: str
+    firebase_delivery: FirebaseDeliveryResponse
+
+
+class VerificationResendRequest(BaseModel):
+    resend_ticket: str = Field(..., min_length=1)
 
 
 class VerificationResendResponse(BaseModel):
     message: str
+    resend_ticket: str
+    firebase_delivery: FirebaseDeliveryResponse
 
 
 class ResetPasswordRequest(BaseModel):
@@ -174,6 +187,7 @@ class MfaChallengeResponse(BaseModel):
 class LoginMfaRequest(BaseModel):
     mfa_ticket: str = Field(..., min_length=1, max_length=512, description="MFA challenge ticket returned by login")
     code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$", description="6-digit MFA code")
+    remember_me: bool = Field(default=True, description="Persist auth cookies across browser restarts")
 
 
 class MfaSettingsResponse(BaseModel):
@@ -239,8 +253,50 @@ def _issue_access_token(user: User) -> str:
     )
 
 
+def _issue_access_token_for_session(user: User, *, persistent_session: bool) -> str:
+    return create_access_token(
+        user.id,
+        user.tenant_id,
+        token_version=user_token_version(user),
+        persistent_session=persistent_session,
+    )
+
+
 def _invalidate_user_tokens(user: User) -> None:
     user.token_version = user_token_version(user) + 1
+
+
+async def _refresh_user_token_version(db: AsyncSession, user: User) -> None:
+    """Reload token_version from the database before issuing a new session token."""
+    previous = user_token_version(user)
+    refresh_result = db.refresh(user, attribute_names=["token_version"])
+    if isawaitable(refresh_result):
+        await refresh_result
+    current = user_token_version(user)
+    if current != previous:
+        logger.warning(
+            "Refreshed token_version before issuing auth cookie for user=%s previous=%s current=%s",
+            user.id,
+            previous,
+            current,
+        )
+
+
+def _persistent_session_from_token(token: str | None) -> bool:
+    if not token:
+        return True
+    from backend.auth import decode_access_token
+
+    token_data = decode_access_token(token)
+    return True if token_data is None else bool(token_data.persistent_session)
+
+
+def _request_persistent_session(http_request: Request) -> bool:
+    auth_header = (http_request.headers.get("authorization") or "").strip()
+    if auth_header.lower().startswith("bearer "):
+        return _persistent_session_from_token(auth_header[7:].strip())
+    cookie_token = (http_request.cookies.get("access_token") or "").strip()
+    return _persistent_session_from_token(cookie_token)
 
 
 def _login_rate_limit_key(email: str, client_host: str | None) -> str:
@@ -370,6 +426,33 @@ def _assign_email_verification_sync(user: User) -> str:
     return token
 
 
+def _issue_verification_resend_ticket(user: User) -> str:
+    payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "purpose": VERIFICATION_RESEND_TICKET_PURPOSE,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=VERIFICATION_RESEND_TICKET_TTL_HOURS),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+
+def _decode_verification_resend_ticket(ticket: str) -> dict[str, str]:
+    normalized = (ticket or "").strip()
+    try:
+        payload = jwt.decode(normalized, settings.JWT_SECRET, algorithms=["HS256"])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_resend_ticket") from exc
+    if payload.get("purpose") != VERIFICATION_RESEND_TICKET_PURPOSE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_resend_ticket")
+    if not isinstance(payload.get("sub"), str) or not isinstance(payload.get("email"), str):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_resend_ticket")
+    try:
+        uuid.UUID(payload["sub"])
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_resend_ticket") from exc
+    return {"sub": payload["sub"], "email": payload["email"]}
+
+
 def _email_verification_continue_url(sync_token: str) -> str:
     base = (settings.FIREBASE_EMAIL_CONTINUE_URL_BASE or "").strip().rstrip("/")
     if not base:
@@ -377,20 +460,17 @@ def _email_verification_continue_url(sync_token: str) -> str:
     return f"{base}/verify-email/callback?vt={sync_token}"
 
 
-async def _build_firebase_verification_link(user: User) -> str:
+async def _build_firebase_delivery(user: User) -> FirebaseDeliveryResponse:
     sync_token = _assign_email_verification_sync(user)
-    user.firebase_uid = await asyncio.to_thread(firebase_auth.ensure_firebase_user, user.email)
-    return await asyncio.to_thread(
-        firebase_auth.generate_verification_link,
+    continue_url = _email_verification_continue_url(sync_token)
+    if not continue_url:
+        raise firebase_auth.FirebaseAuthUnavailableError("FIREBASE_EMAIL_CONTINUE_URL_BASE is not configured.")
+    user.firebase_uid = (getattr(user, "firebase_uid", None) or "").strip() or await asyncio.to_thread(
+        firebase_auth.ensure_firebase_user,
         user.email,
-        _email_verification_continue_url(sync_token),
     )
-
-
-def _pending_signup_message(email_sent: bool) -> str:
-    if email_sent:
-        return "We sent a verification link to your email. Click it to activate your account."
-    return "Your account was created. If your verification email did not arrive, request a new link."
+    custom_token = await asyncio.to_thread(firebase_auth.create_custom_token, user.firebase_uid)
+    return FirebaseDeliveryResponse(custom_token=custom_token, continue_url=continue_url)
 
 
 def _launch_context(external_id: str) -> tuple[
@@ -410,26 +490,18 @@ def _launch_context(external_id: str) -> tuple[
     return normalize_saas_launch_url(get_saas_and_launch_url(external_id))
 
 
-def _generic_resend_response() -> VerificationResendResponse:
-    return VerificationResendResponse(message=VERIFICATION_RESEND_GENERIC_MESSAGE)
+def _pending_signup_message() -> str:
+    return "Check your inbox for a verification email to activate your account."
 
 
-def _ensure_verification_email_delivery_available() -> None:
-    if email_service.can_deliver_transactional_email():
-        return
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE,
-    )
-
-
-def _require_verification_email_delivery(*, delivered: bool, email: str, action: str) -> None:
-    if delivered:
-        return
-    logger.warning("%s verification email delivery failed for %s", action, email)
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE,
+def _verification_required_response(user: User) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "detail": "email_verification_required",
+            "email": user.email,
+            "resend_ticket": _issue_verification_resend_ticket(user),
+        },
     )
 
 
@@ -483,8 +555,6 @@ async def signup(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already registered",
             )
-        if settings.firebase_enabled:
-            _ensure_verification_email_delivery_available()
         
         # Create tenant with unique external_id + hashed control-plane intake token
         external_id = f"ext-{uuid.uuid4().hex[:16]}"
@@ -553,7 +623,7 @@ async def signup(
                 **control_plane_token_response_fields(tenant, token_reveal=control_plane_token),
             )
 
-        verification_link = await _build_firebase_verification_link(user)
+        firebase_delivery = await _build_firebase_delivery(user)
         firebase_uid = getattr(user, "firebase_uid", None)
         try:
             await db.commit()
@@ -563,16 +633,6 @@ async def signup(
                 await asyncio.to_thread(firebase_auth.delete_firebase_user, firebase_uid)
             raise
 
-        email_sent = email_service.send_verification_link_email(
-            to_email=user.email,
-            verification_link=verification_link,
-        )
-        _require_verification_email_delivery(
-            delivered=email_sent,
-            email=user.email,
-            action="Signup",
-        )
-
         logger.info(
             "New signup pending verification: tenant=%s, user=%s, email=%s, firebase_uid=%s",
             tenant.id,
@@ -581,8 +641,10 @@ async def signup(
             user.firebase_uid,
         )
         payload = SignupPendingResponse(
-            message=_pending_signup_message(email_sent),
+            message=_pending_signup_message(),
             email=user.email,
+            resend_ticket=_issue_verification_resend_ticket(user),
+            firebase_delivery=firebase_delivery,
         )
         res = JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=payload.model_dump())
         if http_request.cookies.get("access_token") or http_request.cookies.get("csrf_token"):
@@ -658,10 +720,7 @@ async def login(
     if settings.firebase_enabled and getattr(user, "email_verified", None) is False:
         firebase_uid = (getattr(user, "firebase_uid", None) or "").strip()
         if not firebase_uid:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="email_verification_required",
-            )
+            return _verification_required_response(user)
         try:
             if await asyncio.to_thread(firebase_auth.is_firebase_email_verified, firebase_uid):
                 user.email_verified = True
@@ -669,10 +728,7 @@ async def login(
                 _clear_email_verification_sync(user)
                 await db.commit()
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="email_verification_required",
-                )
+                return _verification_required_response(user)
         except firebase_auth.FirebaseAuthUnavailableError as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -733,9 +789,12 @@ async def login(
             destination_hint=destination_hint,
         )
     
+    await _refresh_user_token_version(db, user)
+
     # Create JWT
-    access_token = _issue_access_token(user)
-    set_auth_cookies(response, access_token)
+    persistent_session = bool(request.remember_me)
+    access_token = _issue_access_token_for_session(user, persistent_session=persistent_session)
+    set_auth_cookies(response, access_token, persistent_session=persistent_session)
     
     logger.info(f"Login: user={user.id}, email={user.email}")
     
@@ -812,8 +871,11 @@ async def login_with_mfa(
     _clear_mfa_challenge(user)
     await db.commit()
 
-    access_token = _issue_access_token(user)
-    set_auth_cookies(response, access_token)
+    await _refresh_user_token_version(db, user)
+
+    persistent_session = bool(request.remember_me)
+    access_token = _issue_access_token_for_session(user, persistent_session=persistent_session)
+    set_auth_cookies(response, access_token, persistent_session=persistent_session)
 
     (
         saas_id,
@@ -855,14 +917,16 @@ async def login_with_mfa(
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh_auth(
+    request: Request,
     response: Response,
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> RefreshResponse:
     """
     Refresh authenticated session and issue a new access token.
     """
-    access_token = _issue_access_token(current_user)
-    set_auth_cookies(response, access_token)
+    persistent_session = _request_persistent_session(request)
+    access_token = _issue_access_token_for_session(current_user, persistent_session=persistent_session)
+    set_auth_cookies(response, access_token, persistent_session=persistent_session)
     return RefreshResponse(access_token=access_token)
 
 
@@ -884,6 +948,7 @@ async def logout(
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
     request: PasswordChangeRequest,
+    http_request: Request,
     response: Response,
     current_user: Annotated[User, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
@@ -903,8 +968,9 @@ async def change_password(
     _invalidate_user_tokens(current_user)
     await db.commit()
 
-    access_token = _issue_access_token(current_user)
-    set_auth_cookies(response, access_token)
+    persistent_session = _request_persistent_session(http_request)
+    access_token = _issue_access_token_for_session(current_user, persistent_session=persistent_session)
+    set_auth_cookies(response, access_token, persistent_session=persistent_session)
 
 
 @router.post("/verify/firebase-sync", response_model=FirebaseSyncResponse)
@@ -919,13 +985,15 @@ async def sync_firebase_email_verification(
             detail="Firebase email verification is disabled.",
         )
 
-    result = await db.execute(select(User).where(User.email == request.email))
+    token_hash = _hash_security_token(request.sync_token)
+    result = await db.execute(select(User).where(User.email_verification_sync_token_hash == token_hash))
     user = result.scalar_one_or_none()
     now = datetime.now(timezone.utc)
-    token_hash = _hash_security_token(request.sync_token)
     expected_hash = getattr(user, "email_verification_sync_token_hash", None) if user else None
     expires_at = getattr(user, "email_verification_sync_expires_at", None) if user else None
     firebase_uid = (getattr(user, "firebase_uid", None) or "").strip() if user else ""
+    user_email = (getattr(user, "email", None) or "").strip().lower() if user else ""
+    requested_email = (request.email or "").strip().lower()
 
     if (
         user is None
@@ -934,6 +1002,7 @@ async def sync_firebase_email_verification(
         or not expires_at
         or expires_at <= now
         or not firebase_uid
+        or (requested_email and requested_email != user_email)
     ):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_sync_token")
 
@@ -960,15 +1029,14 @@ async def resend_email_verification(
     request: VerificationResendRequest,
     db: AsyncSession = Depends(get_db),
 ) -> VerificationResendResponse:
-    """Resend the email verification link without leaking whether the account exists."""
+    """Return Firebase resend bootstrap data for an unverified account."""
     if not settings.firebase_enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Firebase email verification is disabled.",
         )
-    _ensure_verification_email_delivery_available()
-
-    rate_limit_key = _verification_resend_key(request.email)
+    ticket_payload = _decode_verification_resend_ticket(request.resend_ticket)
+    rate_limit_key = _verification_resend_key(ticket_payload["email"])
     retry_after = _verification_resend_retry_after_seconds(rate_limit_key)
     if retry_after is not None:
         raise HTTPException(
@@ -978,13 +1046,18 @@ async def resend_email_verification(
         )
 
     _record_verification_resend(rate_limit_key)
-    result = await db.execute(select(User).where(User.email == request.email))
+    result = await db.execute(
+        select(User).where(
+            User.id == uuid.UUID(ticket_payload["sub"]),
+            User.email == ticket_payload["email"],
+        )
+    )
     user = result.scalar_one_or_none()
     if user is None or bool(getattr(user, "email_verified", False)):
-        return _generic_resend_response()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_or_expired_resend_ticket")
 
     try:
-        verification_link = await _build_firebase_verification_link(user)
+        firebase_delivery = await _build_firebase_delivery(user)
         await db.commit()
     except firebase_auth.FirebaseAuthUnavailableError as exc:
         await _rollback_db(db)
@@ -993,16 +1066,11 @@ async def resend_email_verification(
             detail=str(exc),
         ) from exc
 
-    delivered = email_service.send_verification_link_email(
-        to_email=user.email,
-        verification_link=verification_link,
+    return VerificationResendResponse(
+        message=VERIFICATION_RESEND_GENERIC_MESSAGE,
+        resend_ticket=_issue_verification_resend_ticket(user),
+        firebase_delivery=firebase_delivery,
     )
-    _require_verification_email_delivery(
-        delivered=delivered,
-        email=user.email,
-        action="Resend",
-    )
-    return _generic_resend_response()
 
 
 @router.post("/verify/send", response_model=SendVerificationResponse)

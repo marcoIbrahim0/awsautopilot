@@ -1,0 +1,10 @@
+{
+  "external_id": "<REDACTED_EXTERNAL_ID>",
+  "repo_template_path": "/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/read-role-template.yaml",
+  "repo_template_version": "v1.5.9",
+  "saas_account_id": "029037611564",
+  "saas_execution_role_arns": [
+    "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+    "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+  ]
+}

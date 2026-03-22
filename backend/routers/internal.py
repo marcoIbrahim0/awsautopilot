@@ -35,7 +35,10 @@ from backend.services.action_run_confirmation import (
     evaluate_confirmation_for_action_async,
     record_execution_result_async,
 )
-from backend.services.bundle_reporting_tokens import verify_group_run_reporting_token
+from backend.services.bundle_reporting_tokens import (
+    BundleReportingTokenSecretNotConfiguredError,
+    verify_group_run_reporting_token,
+)
 from backend.services.control_plane_intake import is_supported_control_plane_event
 from backend.services.internal_reconciliation import (
     authoritative_permissions_precheck as authoritative_permissions_precheck_service,
@@ -695,6 +698,11 @@ async def report_group_run_event(
 ) -> dict:
     try:
         claims = verify_group_run_reporting_token(body.token)
+    except BundleReportingTokenSecretNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

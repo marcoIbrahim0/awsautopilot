@@ -1,0 +1,207 @@
+- generic [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+        - link "Audit Log" [ref=e78] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e80]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Action Detail" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+            - generic [ref=e83]: "1"
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: M
+      - main [ref=e56]:
+        - generic [ref=e59]:
+          - link "Back to Findings" [ref=e60] [cursor=pointer]:
+            - /url: /findings
+            - img [ref=e61]
+            - text: Back to Findings
+          - link "Need help with this action?" [ref=e63] [cursor=pointer]:
+            - /url: /help?tab=assistant&from=%2Factions%2F84a23bb8-d6f7-4c1b-87ff-87f9cc7c469c&action_id=84a23bb8-d6f7-4c1b-87ff-87f9cc7c469c
+            - generic [ref=e64]: Need help with this action?
+  - alert [ref=e65]
+  - dialog "Action Detail" [ref=e68]:
+    - generic [ref=e69]:
+      - generic [ref=e71]:
+        - heading "Action Detail" [level=2] [ref=e73]
+        - paragraph [ref=e84]: IAM root user access key should not exist
+      - button "Close modal" [active] [ref=e74]:
+        - img [ref=e75]
+    - generic [ref=e85]:
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - paragraph [ref=e90]: Action detail
+            - heading "IAM root user access key should not exist" [level=1] [ref=e91]
+            - generic [ref=e92]:
+              - generic [ref=e93]: open
+              - generic [ref=e94]:
+                - generic [ref=e95]: Risk 72
+                - text: "?"
+              - generic [ref=e96]:
+                - generic [ref=e97]: High risk x Medium criticality
+                - text: "?"
+          - button "Refresh State" [ref=e98]:
+            - generic [ref=e99]: Refresh State
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - generic [ref=e102]: Control ID
+            - generic [ref=e103]: IAM.4
+          - generic [ref=e104]:
+            - generic [ref=e105]: Account
+            - generic [ref=e106]: "696505809372"
+          - generic [ref=e107]:
+            - generic [ref=e108]: Region
+            - generic [ref=e109]: eu-north-1
+        - generic [ref=e110]:
+          - button "Generate PR bundle" [ref=e111]:
+            - generic [ref=e112]: Generate PR bundle
+          - button "Suppress" [ref=e113]:
+            - img [ref=e115]
+            - generic [ref=e117]: Suppress
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - heading "What is wrong" [level=3] [ref=e120]
+          - paragraph [ref=e121]: This AWS control checks whether the root user access key is available. (+1 related finding(s))
+        - generic [ref=e122]:
+          - heading "What the fix does" [level=3] [ref=e123]
+          - paragraph [ref=e124]: Guides removal of root user access keys and restoration of safer IAM access.
+      - generic [ref=e127]:
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - img [ref=e131]
+            - generic [ref=e133]:
+              - heading "Attack Path" [level=3] [ref=e134]
+              - generic [ref=e135]:
+                - paragraph [ref=e136]: Bounded decision view
+                - text: "?"
+          - generic [ref=e139]: partial
+        - paragraph [ref=e141]: "Exploitable path can reach AWS::::Account:696505809372 in the current bounded view, but some path context is truncated or unresolved. High technical risk intersects with Medium business criticality. The action is already overdue. Safest next step: Disable root access key via PR only."
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - generic [ref=e146]:
+              - generic [ref=e147]: Entry Point
+              - paragraph [ref=e148]: Exploitable path
+              - paragraph [ref=e149]: "Exploit signals contributed 13 points using: action_type:iam_root_access_key_absent."
+            - generic [ref=e150]:
+              - generic [ref=e151]: →
+              - generic [ref=e152]: reaches
+          - generic [ref=e153]:
+            - generic [ref=e155]:
+              - generic [ref=e156]: Target Asset
+              - paragraph [ref=e157]: AWS::::Account:696505809372
+              - paragraph [ref=e158]: AwsAccount · anchor
+            - generic [ref=e159]:
+              - generic [ref=e160]: →
+              - generic [ref=e161]: puts at risk
+          - generic [ref=e162]:
+            - generic [ref=e164]:
+              - generic [ref=e165]: Business Impact
+              - paragraph [ref=e166]: Business impact
+              - paragraph [ref=e167]: High technical risk intersects with Medium business criticality. · high:medium
+            - generic [ref=e168]:
+              - generic [ref=e169]: →
+              - generic [ref=e170]: prioritize with
+          - generic [ref=e173]:
+            - generic [ref=e174]: Next Step
+            - paragraph [ref=e175]: Disable root access key
+            - paragraph [ref=e176]: Changes live access behavior for AWS::::Account:696505809372.
+      - generic [ref=e177]:
+        - generic [ref=e178]:
+          - img [ref=e180]
+          - heading "Why this is prioritized" [level=3] [ref=e182]
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - paragraph [ref=e185]: Priority storyboard
+            - paragraph [ref=e186]: This is a high-risk issue affecting your shared access boundary.
+            - generic [ref=e187]:
+              - paragraph [ref=e188]: "Focus dimension: Shared access boundary"
+              - text: "?"
+          - generic [ref=e189]:
+            - generic [ref=e190]:
+              - generic [ref=e191]:
+                - generic [ref=e192]:
+                  - generic [ref=e193]:
+                    - paragraph [ref=e194]: Score waterfall
+                    - text: "?"
+                  - paragraph [ref=e195]: Strongest score drivers stay on the rail. Neutral or dampening inputs stay visible but muted.
+                - generic [ref=e196]:
+                  - generic [ref=e197]: Visible lift +72
+                  - text: "?"
+              - generic [ref=e198]:
+                - generic [ref=e200]:
+                  - generic [ref=e201]:
+                    - paragraph [ref=e202]: Severity
+                    - text: "?"
+                  - generic [ref=e203]: "+35"
+                - generic [ref=e208]:
+                  - generic [ref=e209]:
+                    - paragraph [ref=e210]: Privilege Level
+                    - text: "?"
+                  - generic [ref=e211]: "+15"
+                - generic [ref=e216]:
+                  - generic [ref=e217]:
+                    - paragraph [ref=e218]: Exploit Signals
+                    - text: "?"
+                  - generic [ref=e219]: "+13"
+                - generic [ref=e224]:
+                  - generic [ref=e225]:
+                    - paragraph [ref=e226]: Data Sensitivity
+                    - text: "?"
+                  - generic [ref=e227]: "+9"
+            - generic [ref=e231]:
+              - generic [ref=e232]:
+                - generic [ref=e233]:
+                  - paragraph [ref=e234]: Impact constellation
+                  - text: "?"
+                - paragraph [ref=e235]: The strongest business context signal is anchored on the right. Any additional matched signals stay grouped beside it as supporting evidence.
+              - generic [ref=e237]:
+                - paragraph [ref=e238]: Primary dimension
+                - paragraph [ref=e239]: Shared access boundary
+                - generic [ref=e240]:
+                  - paragraph [ref=e241]: Why it matters
+                  - paragraph [ref=e242]: This control affects IAM trust boundaries — a compromise could impact multiple identities.
+          - generic [ref=e245]:
+            - img [ref=e247]
+            - generic [ref=e249]:
+              - paragraph [ref=e250]: Recommended check
+              - paragraph [ref=e251]: Immediately audit break-glass workflows and rotations before deleting active root access keys.
+      - generic [ref=e252]:
+        - generic [ref=e253]:
+          - heading "Remediation History" [level=3] [ref=e254]
+          - generic [ref=e255]: 0 runs found
+        - paragraph [ref=e259]: No activity recorded yet.

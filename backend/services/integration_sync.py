@@ -331,6 +331,14 @@ def _maybe_create_sync_task(
     signature = _request_signature(provider=setting.provider, payload=payload)
     task = _existing_sync_task(session, tenant_id=action.tenant_id, signature=signature)
     if task is not None:
+        if str(task.status or "").strip().lower() == SYNC_STATUS_FAILED:
+            return _requeue_failed_sync_task(
+                task=task,
+                link=link,
+                operation=operation,
+                trigger=trigger,
+                payload=payload,
+            )
         return None
     task = IntegrationSyncTask(
         tenant_id=action.tenant_id,
@@ -345,6 +353,26 @@ def _maybe_create_sync_task(
     )
     session.add(task)
     session.flush()
+    return task
+
+
+def _requeue_failed_sync_task(
+    *,
+    task: IntegrationSyncTask,
+    link: ActionExternalLink | None,
+    operation: str,
+    trigger: str,
+    payload: dict[str, Any],
+) -> IntegrationSyncTask:
+    task.link_id = link.id if link else None
+    task.operation = operation
+    task.status = SYNC_STATUS_QUEUED
+    task.trigger = trigger
+    task.payload_json = payload
+    task.result_json = None
+    task.last_error = None
+    task.started_at = None
+    task.completed_at = None
     return task
 
 
@@ -389,10 +417,14 @@ def _build_sync_payload(
 
 
 def _owner_key(action: Action) -> str | None:
+    if _non_empty_text(getattr(action, "owner_type", None)) != OWNER_TYPE_USER:
+        return None
     return _non_empty_text(getattr(action, "owner_key", None))
 
 
 def _owner_label(action: Action) -> str | None:
+    if _non_empty_text(getattr(action, "owner_type", None)) != OWNER_TYPE_USER:
+        return None
     return _non_empty_text(getattr(action, "owner_label", None))
 
 
@@ -556,13 +588,6 @@ def process_inbound_event(
         )
         return InboundEventResult(provider=provider, replayed=False, applied=False, action_id=link.action_id, action_status=None, owner_key=None, receipt_status="ignored")
     action = _require_action(session, tenant_id=setting.tenant_id, action_id=link.action_id)
-    action_status = _apply_inbound_status(
-        session,
-        action=action,
-        provider=provider,
-        setting=setting,
-        normalized=normalized,
-    )
     sync_result = None
     if normalized["external_status"] is not None:
         sync_result = _record_inbound_status(
@@ -570,7 +595,7 @@ def process_inbound_event(
             action=action,
             provider=provider,
             normalized=normalized,
-            action_status=action_status,
+            action_status=None,
         )
     owner_key = _apply_inbound_assignee(action=action, external_key=normalized["external_assignee_key"], external_label=normalized["external_assignee_label"])
     _update_link_from_inbound(link=link, normalized=normalized)
@@ -590,7 +615,7 @@ def process_inbound_event(
     return InboundEventResult(
         provider=provider,
         replayed=False,
-        applied=bool(action_status or owner_key),
+        applied=bool(sync_result or owner_key),
         action_id=action.id,
         action_status=action.status,
         owner_key=owner_key,
@@ -747,32 +772,6 @@ def _is_stale_inbound(*, link: ActionExternalLink, occurred_at: datetime | None)
     if occurred_at is None or link.last_inbound_event_at is None:
         return False
     return occurred_at <= link.last_inbound_event_at
-
-
-def _apply_inbound_status(
-    session: Session,
-    *,
-    action: Action,
-    provider: str,
-    setting: TenantIntegrationSetting,
-    normalized: dict[str, Any],
-) -> str | None:
-    external_status = _non_empty_text(normalized["external_status"])
-    if external_status is None:
-        return None
-    target = _inbound_status_map(setting).get(external_status.strip().lower())
-    if target is None or action.status == target:
-        return None
-    apply_canonical_action_status(
-        session,
-        action=action,
-        target_status=target,
-        source="integration.webhook",
-        actor_user_id=None,
-        detail=f"Applied inbound {provider} webhook status '{external_status}' to canonical action state.",
-        idempotency_key=f"inbound:{provider}:{normalized['receipt_key']}:canonical",
-    )
-    return target
 
 
 def _apply_inbound_assignee(

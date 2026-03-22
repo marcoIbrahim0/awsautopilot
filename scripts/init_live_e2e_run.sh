@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_ID="${1:-$(date -u +"%Y%m%dT%H%M%SZ")}" 
-FRONTEND_URL="${FRONTEND_URL:-https://dev.ocypheris.com}"
+FRONTEND_URL="${FRONTEND_URL:-https://ocypheris.com}"
 BACKEND_URL="${BACKEND_URL:-https://api.ocypheris.com}"
 TRACKER_REL="docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md"
 RUN_DIR="$ROOT_DIR/docs/test-results/live-runs/$RUN_ID"

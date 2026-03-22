@@ -1,4 +1,7 @@
 RAW ACTION TYPE EXTRACTION
+
+> Historical raw extraction note: these rows were captured before the 2026-03-19 PR-only de-scope. Current `master` rejects `direct_fix` and does not expose customer `WriteRole` onboarding.
+
 | Type Value | Human Name | Execution Method | Source File | Source Line |
 |-----------|------------|-----------------|-------------|-------------|
 | pr_only | unknown | unknown | backend/services/action_engine.py | 69 |

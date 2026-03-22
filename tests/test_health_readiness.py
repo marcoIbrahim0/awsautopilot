@@ -200,7 +200,10 @@ def test_build_readiness_report_keeps_ready_when_queue_lag_metric_is_partially_u
     assert report["dependencies"]["sqs"]["ready"] is True
     assert report["dependencies"]["sqs"]["errors"] == []
     assert report["dependencies"]["sqs"]["queues"]["events_fast_lane"]["oldest_message_age_seconds"] is None
-    assert "AccessDenied" in report["dependencies"]["sqs"]["queues"]["events_fast_lane"]["oldest_message_age_error"]
+    assert (
+        report["dependencies"]["sqs"]["queues"]["events_fast_lane"]["oldest_message_age_error"]
+        == health_checks.QUEUE_LAG_METRIC_ACCESS_DENIED
+    )
     assert report["dependencies"]["sqs"]["queues"]["inventory_reconcile"]["oldest_message_age_seconds"] is None
     assert "oldest_message_age_error" not in report["dependencies"]["sqs"]["queues"]["inventory_reconcile"]
     assert report["slo"]["queue_lag_seconds_max"] == 20.0

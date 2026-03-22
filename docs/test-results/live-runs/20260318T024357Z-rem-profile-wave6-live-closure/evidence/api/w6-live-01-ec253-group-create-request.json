@@ -1,0 +1,16 @@
+{
+  "strategy_id": "sg_restrict_public_ports_guided",
+  "risk_acknowledged": true,
+  "action_overrides": [
+    {
+      "action_id": "0d5b9a29-bd79-4454-a9c4-c0a5c62479e0",
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "profile_id": "ssm_only"
+    },
+    {
+      "action_id": "d740b079-2fe0-40ec-baa0-efe3e0e01a2b",
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "profile_id": "close_and_revoke"
+    }
+  ]
+}

@@ -29,7 +29,7 @@ The report has four sections. Sections 1–3 are mandatory; Section 4 (Appendix)
 
 To make the report operational (not just informational), the in-app payload and HTML renderer also include:
 
-- **Next actions (top 3):** concrete “what to do now” items with severity, readiness, recommended mode (`direct_fix` / `pr_only`), blast radius, and fix path.
+- **Next actions (top 3):** concrete “what to do now” items with severity, readiness, recommended workflow (`pr_only` / `exception_review`), blast radius, and fix path.
 - **Change delta:** counts vs the previous successful baseline (`new_open`, `regressed`, `stale_open`, `closed`) plus narrative summary.
 - **Confidence gaps:** explicit signal-quality caveats (`access_denied`, `partial_data`, `api_error`, `telemetry_gap`) and affected controls.
 - **Closure proof:** recently resolved findings with timestamps and evidence notes (including remediation-run linkage when available).

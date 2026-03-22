@@ -1,4 +1,7 @@
 RAW DIRECT-FIX EXTRACTION
+
+> Historical raw extraction note: this file preserves the pre-2026-03-19 direct-fix implementation inventory. Current `master` keeps the underlying modules on disk for future re-scoping, but the active product contract is PR-only and customer `WriteRole` is out of scope.
+
 | Control ID or Action ID | AWS Service | API Operation | boto3 Call | Source File | Source Line |
 |------------------------|------------|--------------|------------|-------------|-------------|
 | s3_block_public_access | s3control | put_public_access_block | `s3c.put_public_access_block(...)` | `backend/workers/services/direct_fix.py` | 327 |

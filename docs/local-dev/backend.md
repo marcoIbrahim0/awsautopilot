@@ -3,19 +3,20 @@
 ## Run API
 
 ```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+./venv/bin/uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Endpoints:
 - `GET /health`
 - `GET /ready`
 - `GET /health/ready`
-- `PATCH /api/aws/accounts/{account_id}` now supports `role_read_arn`, `role_write_arn`, `regions`, and `status`; ReadRole/region updates revalidate STS before the account record is persisted.
+- `PATCH /api/aws/accounts/{account_id}` supports `role_read_arn`, `role_write_arn`, `regions`, and `status`; `role_write_arn` is deprecated/out of scope and is cleared, while ReadRole/region updates still revalidate STS before the account record is persisted.
 - `POST /api/aws/accounts/{account_id}/validate` now fails closed with `200` + structured `warnings` / `authoritative_mode_block_reasons` when a required AWS probe cannot be executed (for example, AWS Config probe/runtime mismatch), instead of raising `500`.
 
 Health semantics:
 - `GET /health` is liveness-only and returns app process status.
 - `GET /ready` and `GET /health/ready` require a successful DB ping plus supported SQS queue attribute reads; queue lag fields are best-effort CloudWatch metrics and do not fail readiness on their own.
+- When queue-lag metric collection cannot be read, the readiness payload now returns stable `oldest_message_age_error` markers (`metric_access_denied` or `metric_unavailable`) instead of leaking raw AWS exception text into the response body.
 
 Actions owner queues:
 - `GET /api/actions` supports `owner_type`, `owner_key`, and `owner_queue=open|expiring|overdue|expiring_exceptions|blocked_fixes`.
@@ -23,8 +24,8 @@ Actions owner queues:
 - Owner-queue responses include additive `owner_queue_counters` totals for `open`, `expiring`, `overdue`, `blocked_fixes`, and `expiring_exceptions`.
 - Action list/detail payloads include `score`, `score_components`, and `score_factors`; `exploit_signals` can now carry additive threat-intel `provenance[]`, and toxic-combination prioritization can add a separate `toxic_combinations` factor.
 - `GET /api/actions/{id}` also includes additive `context_incomplete` so action detail makes fail-closed toxic-combination gating explicit.
-- `GET /api/actions/{id}` now also includes additive `execution_guidance[]` entries with mode-aware `blast_radius`, `pre_checks`, `expected_outcome`, `post_checks`, and `rollback` guidance per actionable strategy.
-- `GET /api/actions/{id}` now also includes additive `implementation_artifacts[]` entries that deep-link engineering to the latest PR bundle, change summary, or direct-fix record for that action.
+- `GET /api/actions/{id}` now also includes additive `execution_guidance[]` entries with PR-only `blast_radius`, `pre_checks`, `expected_outcome`, `post_checks`, and `rollback` guidance per actionable strategy.
+- `GET /api/actions/{id}` now also includes additive `implementation_artifacts[]` entries that deep-link engineering to the latest PR bundle or change summary for that action; historical runs may still expose legacy direct-fix records.
 - `GET /api/actions/{id}` now also includes additive `graph_context` with explicit `available` / `unavailable` status, bounded `connected_assets[]`, `identity_path[]`, `blast_radius_neighborhood[]`, and `truncated_sections[]` when conservative graph traversal caps are hit.
 - `GET /api/actions/{id}` now also includes additive `attack_path_view` with explicit `available` / `partial` / `unavailable` / `context_incomplete` states plus bounded `path_nodes[]`, `path_edges[]`, `entry_points[]`, `target_assets[]`, and prioritization summaries derived from the existing detail contracts.
 - `GET /api/actions/{id}` and `GET /api/actions/{id}/remediation-options` now also include additive `recommendation` with matrix-derived `default_mode`, effective `mode`, `advisory`, `enforced_by_policy`, `rationale`, `matrix_position`, and auditable `evidence`.
@@ -39,7 +40,7 @@ Actions owner queues:
 - Summary/grouped PR-bundle flows now fail closed on the client side when dependency checks require manual review, required inputs cannot be derived safely, or grouped actions do not converge on the same derived strategy payload.
 - Successful PR-bundle runs now attach additive `diff_summary`, `rollback_notes`, and `control_mapping_context` artifacts; when `repo_target` is configured they also attach `pr_payload`.
 - Downloaded PR bundle zips now include `pr_automation/diff_summary.json`, `pr_automation/rollback_notes.md`, `pr_automation/control_mapping_context.json`, and `pr_automation/pr_payload.json` when repository metadata is present.
-- `POST /api/remediation-runs` now stamps direct-fix runs with additive `artifacts.direct_fix_approval` metadata; the worker fails closed unless the stored run mode is `direct_fix` and the approval path is in the explicit allowlist.
+- Historical direct-fix runs may still carry additive `artifacts.direct_fix_approval` metadata, but current `POST /api/remediation-runs` rejects new `direct_fix` requests and stays PR-only.
 - Blocked unapproved direct-mutation attempts write `audit_log.event_type=remediation_mutation_blocked` before the run is finalized as failed.
 
 Integration-first remediation ops:
@@ -48,6 +49,12 @@ Integration-first remediation ops:
 - `POST /api/integrations/actions/{id}/sync` plans a tenant-scoped outbound sync task for one action and enqueues `job_type=integration_sync` on the ingest queue.
 - `POST /api/integrations/webhooks/{provider}` requires `X-Integration-Webhook-Token` and optional `X-External-Event-Id`; inbound events are receipt-key idempotent, can sync assignee metadata, and record external status drift without overwriting canonical `Action.status`.
 - Provider links and sync persistence now live in tenant-scoped tables: `tenant_integration_settings`, `action_external_links`, `integration_sync_tasks`, `integration_event_receipts`, `action_remediation_sync_states`, and `action_remediation_sync_events`.
+
+Tenant/user settings:
+- `GET /api/users/me/governance-settings` returns the tenant-scoped governance notification toggle and webhook-configured state for the current user context.
+- `PATCH /api/users/me/governance-settings` accepts additive governance settings updates: `governance_notifications_enabled` and `governance_webhook_url`; sending an empty string clears the stored webhook.
+- `GET /api/users/me/remediation-settings` returns the current tenant remediation defaults, including approved CIDRs, bastion groups, CloudTrail defaults, Config defaults, S3 access-log defaults, and S3 encryption defaults.
+- `PATCH /api/users/me/remediation-settings` accepts partial remediation-default updates and preserves omitted fields.
 
 Toxic-combination config:
 - `ACTIONS_TOXIC_COMBINATIONS_ENABLED`
@@ -62,7 +69,7 @@ Threat-intelligence decay config:
 - Security Hub ingest now persists `finding.raw_json.relationship_context` from canonical finding metadata, and `scripts/backfill_finding_relationship_context.py` can enrich older Security Hub rows before a scoped action recompute:
 
 ```bash
-python3 scripts/backfill_finding_relationship_context.py \
+PYTHONPATH=. ./venv/bin/python scripts/backfill_finding_relationship_context.py \
   --tenant-id <YOUR_TENANT_ID_HERE> \
   --account-id <YOUR_ACCOUNT_ID_HERE> \
   --region <YOUR_REGION_HERE> \
@@ -105,6 +112,7 @@ Swagger:
   - `POST /api/auth/verify/resend`
   - `POST /api/auth/verify/firebase-sync`
   - `/verify-email/pending` and `/verify-email/callback` on the frontend
+- In the current fallback, signup verification email delivery is Firebase-managed from the frontend. SMTP is not required for the signup verification path.
 
 ## Quick API Smoke
 
@@ -126,6 +134,10 @@ curl -X POST http://localhost:8000/api/auth/login \
 ## Migration Guard
 
 Startup enforces DB head revision by default via `DB_REVISION_GUARD_ENABLED=true`.
+
+Serverless note:
+- local `uvicorn` still enforces the DB head revision during FastAPI startup/lifespan
+- Lambda serverless runtime now memoizes both FastAPI bootstrap and the DB revision guard on first invocation in [`backend/lambda_handler.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/lambda_handler.py), so the runtime no longer spends its init phase on import-time schema checks
 
 ## Related
 

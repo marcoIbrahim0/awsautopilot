@@ -1,10 +1,11 @@
 # AWS Security Autopilot Documentation
 
-AWS Security Autopilot operationalizes AWS-native security services by turning findings into actions, managing exceptions, executing approved remediation workflows, and producing evidence artifacts.
+AWS Security Autopilot operationalizes AWS-native security services by turning findings into actions, managing exceptions, generating customer-run PR bundles, and producing evidence artifacts. Customer `WriteRole` and `direct_fix` execution are currently out of scope.
 
 ## Quick Navigation
 
 ### Developers
+- [Repo agent instructions](/Users/marcomaher/AWS%20Security%20Autopilot/AGENTS.md)
 - [Local development guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/README.md)
 - [Prod-readiness package](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/README.md)
 - [Reconciliation quality review](/Users/marcomaher/AWS%20Security%20Autopilot/docs/reconciliation_quality_review.md)
@@ -18,10 +19,13 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Security Graph foundation](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/security-graph-foundation.md)
 - [Graph-backed action context](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/graph-backed-action-context.md)
 - [Attack Path view](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/attack-path-view.md)
+  Current shipped bounded action-detail story plus the Phase-1 `/attack-paths` surface, Phase-2 shared path records/ranking, Phase-3 triage workflow views/remediation rollups, the bounded Phase-4 runtime/code-to-cloud/workflow projections, and the March 22 materialized read-model optimization for production-ready list/detail latency
+- [Attack Path enterprise implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/attack-path-enterprise-implementation-plan.md)
 - [Phase 3.5 roadmap](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/phase-3-5-roadmap.md)
 - [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
 - [Communication + Governance layer](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/communication-governance-layer.md)
 - [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md)
+- [UI/UX redesign implementation](/Users/marcomaher/AWS%20Security%20Autopilot/docs/ui-ux-redesign-implementation.md)
 - [Remediation system-of-record sync](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/remediation-system-of-record-sync.md)
 - [Recommendation mode matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/recommendation-mode-matrix.md)
 - [Ownership-based risk queues](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/ownership-risk-queues.md)
@@ -29,9 +33,9 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Handoff-free closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/handoff-free-closure.md)
 - [Repo-aware PR automation](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/repo-aware-pr-automation.md)
 - [Business impact matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/business-impact-matrix.md)
-- [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md)
 - [Firebase email verification signup flow](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/firebase-email-verification-signup.md)
 - [Secret migration connectors](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/secret-migration-connectors.md)
+- [Help Desk Platform](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/help-desk-platform.md)
 - [Queue contract quarantine runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/queue-contract-quarantine-runbook.md)
 - [Final to-do list](/Users/marcomaher/AWS%20Security%20Autopilot/docs/final-to-do/final-to-do)
 
@@ -50,9 +54,11 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 
 ### Customers
 - [Customer guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/README.md)
-- [Connect WriteRole guide](/Users/marcomaher/AWS%20Security%20Autopilot/docs/connect-write-role.md)
+- [Help Hub and support cases](/Users/marcomaher/AWS%20Security%20Autopilot/docs/customer-guide/help-hub.md)
+- [WriteRole status (out of scope)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/connect-write-role.md)
 
 ### Auditors / compliance
+- [Trust package](/Users/marcomaher/AWS%20Security%20Autopilot/docs/trust/README.md)
 - [Audit remediation package](/Users/marcomaher/AWS%20Security%20Autopilot/docs/audit-remediation/README.md)
 - [Phase 4 required-check governance](/Users/marcomaher/AWS%20Security%20Autopilot/docs/audit-remediation/phase4-required-check-governance.md)
 - [Disaster recovery runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/disaster-recovery-runbook.md)
@@ -65,6 +71,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - `/docs/customer-guide/` — customer-facing onboarding and troubleshooting
 - `/docs/runbooks/` — operator runbooks for no-UI and incident workflows
 - `/docs/live-e2e-testing/` — live test tracker, runbook, templates
+- `/docs/trust/` — buyer-facing trust review package and current least-privilege evidence
 - `/docs/remediation-profile-resolution/` — planned remediation profile resolution spec, implementation plan, and Wave 0 contract lock
 - `/docs/prod-readiness/` — production-readiness artifacts and scripts
 - `/docs/audit-remediation/` — audit remediation plans, checklists, evidence references
@@ -74,6 +81,7 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 
 ### Archived snapshots
 - [2026-02 docs cleanup archive](/Users/marcomaher/AWS%20Security%20Autopilot/docs/archive/2026-02-doc-cleanup/README.md)
+- [2026-03 docs cleanup archive](/Users/marcomaher/AWS%20Security%20Autopilot/docs/archive/2026-03-doc-cleanup/README.md)
 
 ### Planned documentation areas (not implemented)
 - API reference docs tree (`docs/api/`)
@@ -93,10 +101,16 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 
 ## Notes on Source of Truth
 
+- Repo-level agent workflow and binding startup instructions live in [AGENTS.md](/Users/marcomaher/AWS%20Security%20Autopilot/AGENTS.md).
+
 For live endpoint and payload behavior, treat source code as authoritative:
 
 - Backend route definitions: `/Users/marcomaher/AWS Security Autopilot/backend/routers/`
 - Frontend API contract calls: `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- Frontend admin/reporting route contract: `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/`
+  - `/settings?tab=...` is canonical
+  - `/exports` is a handoff page
+  - `/baseline-report` redirects into Settings
 
 Historical audit/snapshot docs remain available under `/docs/archive/` and should not be used as current API contract references.
 

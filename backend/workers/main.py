@@ -28,6 +28,7 @@ from tenacity import (
 )
 
 from backend.utils.sqs import (
+    ATTACK_PATH_MATERIALIZATION_JOB_TYPE,
     BACKFILL_ACTION_GROUPS_JOB_TYPE,
     BACKFILL_FINDING_KEYS_JOB_TYPE,
     COMPUTE_ACTIONS_JOB_TYPE,
@@ -240,6 +241,11 @@ BACKFILL_ACTION_GROUPS_REQUIRED_FIELDS = {
     "job_type",
     "created_at",
 }
+ATTACK_PATH_MATERIALIZATION_REQUIRED_FIELDS = {
+    "job_type",
+    "tenant_id",
+    "created_at",
+}
 CONTRACT_VIOLATION_INVALID_JSON = "invalid_json"
 CONTRACT_VIOLATION_MISSING_FIELDS = "missing_fields"
 CONTRACT_VIOLATION_UNKNOWN_JOB_TYPE = "unknown_job_type"
@@ -248,6 +254,7 @@ LEGACY_QUEUE_PAYLOAD_SCHEMA_VERSION = REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V1
 SUPPORTED_QUEUE_SCHEMA_VERSIONS_BY_JOB_TYPE: dict[str, set[int]] = {
     job_type: {QUEUE_PAYLOAD_SCHEMA_VERSION}
     for job_type in {
+        ATTACK_PATH_MATERIALIZATION_JOB_TYPE,
         BACKFILL_ACTION_GROUPS_JOB_TYPE,
         BACKFILL_FINDING_KEYS_JOB_TYPE,
         COMPUTE_ACTIONS_JOB_TYPE,
@@ -422,6 +429,8 @@ def _validate_job(job: dict) -> list[str]:
         required = BACKFILL_FINDING_KEYS_REQUIRED_FIELDS
     elif job_type == BACKFILL_ACTION_GROUPS_JOB_TYPE:
         required = BACKFILL_ACTION_GROUPS_REQUIRED_FIELDS
+    elif job_type == ATTACK_PATH_MATERIALIZATION_JOB_TYPE:
+        required = ATTACK_PATH_MATERIALIZATION_REQUIRED_FIELDS
     else:
         required = REQUIRED_JOB_FIELDS
     return [f for f in required if f not in job or job[f] is None]

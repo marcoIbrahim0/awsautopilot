@@ -1,0 +1,44 @@
+[
+  {
+    "aws_region": "eu-north-1",
+    "error_code": null,
+    "error_message": null,
+    "event_id": "d979257c-c7b0-321b-b090-23460acf42ec",
+    "event_time": "2026-03-20T03:52:11+02:00",
+    "recipient_account_id": "029037611564",
+    "request_parameters": {
+      "role_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+      "role_session_name": "security-autopilot-api"
+    },
+    "source_ip_address": "13.63.69.27",
+    "user_agent": "Boto3/1.42.72 md/Botocore#1.42.72 ua/2.1 os/linux#5.10.251-282.983.amzn2.x86_64 md/arch#x86_64 lang/python#3.12.12 md/pyimpl#CPython exec-env/AWS_Lambda_python3.12 m/D,g,Z,b cfg/retry-mode#legacy Botocore/1.42.72",
+    "user_identity": {
+      "arn": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api",
+      "principal_id": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api",
+      "session_issuer_arn": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+      "session_issuer_user_name": "security-autopilot-dev-lambda-api",
+      "type": "AssumedRole"
+    }
+  },
+  {
+    "aws_region": "eu-north-1",
+    "error_code": null,
+    "error_message": null,
+    "event_id": "4d0974c2-20ac-31b3-bf42-6f6afbd88235",
+    "event_time": "2026-03-20T03:46:24+02:00",
+    "recipient_account_id": "029037611564",
+    "request_parameters": {
+      "role_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+      "role_session_name": "security-autopilot-api"
+    },
+    "source_ip_address": "16.171.198.193",
+    "user_agent": "Boto3/1.42.72 md/Botocore#1.42.72 ua/2.1 os/linux#5.10.251-282.983.amzn2.x86_64 md/arch#x86_64 lang/python#3.12.12 md/pyimpl#CPython exec-env/AWS_Lambda_python3.12 m/Z,b,D,g cfg/retry-mode#legacy Botocore/1.42.72",
+    "user_identity": {
+      "arn": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api",
+      "principal_id": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api",
+      "session_issuer_arn": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+      "session_issuer_user_name": "security-autopilot-dev-lambda-api",
+      "type": "AssumedRole"
+    }
+  }
+]

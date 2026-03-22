@@ -1,0 +1,21 @@
+{
+    "RoleName": "security-autopilot-dev-lambda-worker",
+    "PolicyName": "AssumeTenantRoles",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "sts:AssumeRole",
+                    "sts:SetSourceIdentity",
+                    "sts:TagSession"
+                ],
+                "Resource": [
+                    "arn:aws:iam::*:role/SecurityAutopilotReadRole",
+                    "arn:aws:iam::*:role/SecurityAutopilotWriteRole"
+                ],
+                "Effect": "Allow"
+            }
+        ]
+    }
+}

@@ -39,7 +39,7 @@ flowchart TD
   A["Deployer workstation (.env.ops + AWS creds)"] --> B["Deploy SQS stack: security-autopilot-sqs-queues"]
   B --> C["Sync queue URLs into .env.ops"]
   C --> D["Deploy serverless runtime with worker disabled"]
-  D --> E["Run alembic upgrade head"]
+  D --> E["Run alembic upgrade heads"]
   E --> F["Enable worker mappings"]
   F --> G["Request/validate ACM cert"]
   G --> H["Deploy API custom domain in runtime stack"]
@@ -105,13 +105,13 @@ S3_SUPPORT_BUCKET="autopilot-s3-support-bucket"
 S3_SUPPORT_BUCKET_REGION="eu-north-1"
 
 CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml"
-SAAS_BUNDLE_EXECUTOR_ENABLED="true"
-SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI="s3://autopilot-prbundle-run/run_all.sh"
-SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION="v1.6.7"
-SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS="300"
+SAAS_BUNDLE_EXECUTOR_ENABLED="false"
 TENANT_RECONCILIATION_ENABLED="true"
 ENVVARS
 ```
+
+Customer-run PR bundles are the supported execution model. Leave `SAAS_BUNDLE_EXECUTOR_ENABLED="false"` unless you are debugging legacy internal executor code paths outside the public product surface.
+Grouped bundles always use the checked-in [`infrastructure/templates/run_all.sh`](/Users/marcomaher/AWS%20Security%20Autopilot/infrastructure/templates/run_all.sh) template; there is no `SAAS_BUNDLE_RUNNER_TEMPLATE_*` deployment surface anymore.
 
 Validate required deploy variables:
 ```bash
@@ -153,7 +153,8 @@ Run this before turning worker event-source mappings on.
 
 ```bash
 alembic current
-alembic upgrade head
+alembic heads
+alembic upgrade heads
 python3 scripts/check_migration_gate.py
 ```
 
@@ -400,7 +401,7 @@ Expected success response:
 | Symptom | Likely Cause | Fix |
 | --- | --- | --- |
 | Worker queue grows, runs stay pending | Worker mappings disabled or function throttled | Re-run deploy with `--enable-worker true --worker-reserved-concurrency 0`; verify mappings are `Enabled` |
-| `alembic` mismatch / startup fails | DB not at head revision | Run `alembic upgrade head` and `python3 scripts/check_migration_gate.py` |
+| `alembic` mismatch / startup fails | DB not at repo heads | Run `alembic upgrade heads` and `python3 scripts/check_migration_gate.py` |
 | Browser shows `CORS error` with preflight/login 500 | API Lambda cold-start crash (migration guard fail) despite correct CORS config | Check `/aws/lambda/<name>-api` for `database revision is not at Alembic head`; run migrations from the same deployed code lineage. For emergency availability restore, temporarily set `DB_REVISION_GUARD_ENABLED=false`, then reconcile revision lineage and re-enable. |
 | Browser login fails with CORS despite OPTIONS success | CORS origins/headers mismatch for credentialed requests | Ensure `CORS_ORIGINS` includes frontend origins and API stack has explicit allow methods/headers |
 | `CSRF validation failed` on cross-subdomain | CSRF cookie domain not shared across subdomains | Ensure `FRONTEND_URL` is set correctly and/or set `CSRF_COOKIE_DOMAIN=.ocypheris.com` |
@@ -453,12 +454,12 @@ Fail-closed critical deployment posture (secure config, migrations, auth/cors ba
 ### Must be deployed/configured
 - Runtime stack deployed in `eu-north-1`.
 - `DATABASE_URL`, `JWT_SECRET`, `CONTROL_PLANE_EVENTS_SECRET` set.
-- Database at Alembic head.
+- Database at repo Alembic heads.
 - CORS origins include active frontend domains.
 
 ### Practical verification
 - `aws sts get-caller-identity` returns expected account.
-- `alembic upgrade head` succeeds.
+- `alembic upgrade heads` succeeds.
 - `curl /health` returns HTTP `200`.
 - CORS OPTIONS test returns expected headers.
 - Auth login/me curl tests succeed.

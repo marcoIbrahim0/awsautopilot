@@ -16,7 +16,11 @@ from botocore.exceptions import ClientError
 
 from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
-from backend.services.aws import assume_role
+from backend.services.aws import (
+    API_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.services.remediation_strategy import RemediationStrategy
 
 logger = logging.getLogger(__name__)
@@ -321,7 +325,12 @@ def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[b
         return None, "WriteRole probe skipped: missing role or external_id."
 
     try:
-        session = assume_role(role_arn=role_arn, external_id=external_id)
+        session = assume_role(
+            role_arn=role_arn,
+            external_id=external_id,
+            source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="api", tenant_id=account.tenant_id),
+        )
     except ClientError as exc:
         if _is_access_denied(exc):
             code = _error_code(exc) or "AccessDenied"
@@ -423,7 +432,12 @@ def collect_runtime_risk_signals(
             read_probe_error = "ReadRole is not configured for runtime probes."
             return None
         try:
-            read_session = assume_role(role_arn=role_arn, external_id=external_id)
+            read_session = assume_role(
+                role_arn=role_arn,
+                external_id=external_id,
+                source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="api", tenant_id=account.tenant_id),
+            )
             return read_session
         except Exception as exc:  # pragma: no cover - network-dependent
             read_probe_error = str(exc)

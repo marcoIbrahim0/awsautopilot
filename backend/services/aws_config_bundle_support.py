@@ -21,23 +21,48 @@ def aws_config_bundle_rollback_metadata(action_id: str) -> dict[str, Any]:
     }
 
 
-def aws_config_apply_script_content() -> str:
+def aws_config_apply_script_content(
+    *,
+    region: str,
+    bucket: str,
+    role_arn: str,
+    account_id: str,
+    kms_key_arn: str,
+    create_local_bucket: bool,
+    overwrite_recording_group: bool,
+) -> str:
     """Return the apply helper used by executable AWS Config bundles."""
-    return (
+    template = (
         _apply_header()
         + _apply_helpers()
         + _apply_snapshot_helpers()
         + _apply_main()
     ).rstrip() + "\n"
-
-
-def aws_config_restore_script_content() -> str:
-    """Return the rollback helper used by executable AWS Config bundles."""
     return (
+        template.replace("<<DEFAULT_REGION>>", repr(region))
+        .replace("<<DEFAULT_BUCKET>>", repr(bucket))
+        .replace("<<DEFAULT_ROLE_ARN>>", repr(role_arn))
+        .replace("<<DEFAULT_KMS_ARN>>", repr(kms_key_arn))
+        .replace("<<DEFAULT_ACCOUNT_ID>>", repr(account_id))
+        .replace(
+            "<<DEFAULT_CREATE_LOCAL_BUCKET>>",
+            "True" if create_local_bucket else "False",
+        )
+        .replace(
+            "<<DEFAULT_OVERWRITE_RECORDING_GROUP>>",
+            "True" if overwrite_recording_group else "False",
+        )
+    )
+
+
+def aws_config_restore_script_content(*, region: str) -> str:
+    """Return the rollback helper used by executable AWS Config bundles."""
+    template = (
         _restore_header()
         + _restore_helpers()
         + _restore_main()
     ).rstrip() + "\n"
+    return template.replace("<<DEFAULT_REGION>>", repr(region))
 
 
 def _apply_header() -> str:
@@ -55,6 +80,13 @@ def _apply_header() -> str:
         from typing import Any
 
         SNAPSHOT_VERSION = 1
+        DEFAULT_REGION = <<DEFAULT_REGION>>
+        DEFAULT_BUCKET = <<DEFAULT_BUCKET>>
+        DEFAULT_ROLE_ARN = <<DEFAULT_ROLE_ARN>>
+        DEFAULT_KMS_ARN = <<DEFAULT_KMS_ARN>>
+        DEFAULT_ACCOUNT_ID = <<DEFAULT_ACCOUNT_ID>>
+        DEFAULT_CREATE_LOCAL_BUCKET = <<DEFAULT_CREATE_LOCAL_BUCKET>>
+        DEFAULT_OVERWRITE_RECORDING_GROUP = <<DEFAULT_OVERWRITE_RECORDING_GROUP>>
         """
     )
 
@@ -63,18 +95,23 @@ def _apply_helpers() -> str:
     return dedent(
         """\
 
-        def env_text(name: str, default: str | None = None) -> str:
-            value = os.environ.get(name, default)
-            if value is None or value == "":
-                raise SystemExit(f"{name} is required")
-            return value
+        def env_text(name: str, default: str = "") -> str:
+            value = os.environ.get(name, "").strip()
+            if value:
+                return value
+            fallback = default.strip()
+            if fallback:
+                return fallback
+            raise SystemExit(f"{name} is required")
 
 
-        def env_bool(name: str) -> bool:
-            value = env_text(name).strip().lower()
-            if value not in {"true", "false"}:
+        def env_bool(name: str, default: bool) -> bool:
+            raw_value = os.environ.get(name, "").strip().lower()
+            if not raw_value:
+                return default
+            if raw_value not in {"true", "false"}:
                 raise SystemExit(f"{name} must be 'true' or 'false'")
-            return value == "true"
+            return raw_value == "true"
 
 
         def run_command(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -369,13 +406,16 @@ def _apply_main() -> str:
         """\
 
         def main() -> int:
-            region = env_text("REGION")
-            bucket = env_text("BUCKET")
-            role_arn = env_text("ROLE_ARN")
-            kms_arn = os.environ.get("KMS_ARN", "").strip()
-            account_id = env_text("ACCOUNT_ID")
-            create_local_bucket = env_bool("CREATE_LOCAL_BUCKET")
-            overwrite_recording_group = env_bool("OVERWRITE_RECORDING_GROUP")
+            region = env_text("REGION", DEFAULT_REGION)
+            bucket = env_text("BUCKET", DEFAULT_BUCKET)
+            role_arn = env_text("ROLE_ARN", DEFAULT_ROLE_ARN)
+            kms_arn = os.environ.get("KMS_ARN", DEFAULT_KMS_ARN).strip()
+            account_id = env_text("ACCOUNT_ID", DEFAULT_ACCOUNT_ID)
+            create_local_bucket = env_bool("CREATE_LOCAL_BUCKET", DEFAULT_CREATE_LOCAL_BUCKET)
+            overwrite_recording_group = env_bool(
+                "OVERWRITE_RECORDING_GROUP",
+                DEFAULT_OVERWRITE_RECORDING_GROUP,
+            )
             rollback_dir = Path(os.environ.get("ROLLBACK_DIR") or ".aws-config-rollback")
             snapshot_dir = rollback_dir / "snapshot"
 
@@ -490,6 +530,8 @@ def _restore_header() -> str:
         import tempfile
         from pathlib import Path
         from typing import Any
+
+        DEFAULT_REGION = <<DEFAULT_REGION>>
         """
     )
 
@@ -634,7 +676,7 @@ def _restore_main() -> str:
         """\
 
         def main() -> int:
-            region = os.environ.get("REGION", "").strip()
+            region = os.environ.get("REGION", "").strip() or DEFAULT_REGION.strip()
             if not region:
                 raise SystemExit("REGION is required")
             rollback_dir = Path(os.environ.get("ROLLBACK_DIR") or ".aws-config-rollback")

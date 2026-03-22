@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
@@ -28,6 +29,29 @@ CACHE_TTL_SECONDS = 300  # 5 minutes
 
 # Pre-signed URL expiry: 7 days (CloudFormation fetches within seconds of the user clicking)
 PRESIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
+
+
+def build_role_template_parameter_values(
+    *,
+    external_id: str,
+    saas_account_id: str,
+    saas_execution_role_arns: str = "",
+) -> dict[str, str]:
+    values = {
+        "SaaSAccountId": saas_account_id.strip(),
+        "ExternalId": external_id,
+    }
+    execution_role_arns_value = saas_execution_role_arns.strip()
+    if execution_role_arns_value:
+        values["SaaSExecutionRoleArns"] = execution_role_arns_value
+    return values
+
+
+def build_cloudformation_parameter_list(parameter_values: Mapping[str, str]) -> list[dict[str, str]]:
+    return [
+        {"ParameterKey": key, "ParameterValue": value}
+        for key, value in parameter_values.items()
+    ]
 
 
 def parse_semantic_version(version_str: str) -> tuple[int, int, int] | None:

@@ -6,6 +6,8 @@ This feature makes remediation closure self-serve for engineering by attaching i
 
 Implemented in Phase 3 P0.8 and extended in Phase 3 P1.3.
 
+> ⚠️ Current scope: new implementation artifacts come from PR-only runs. Historical direct-fix runs may still appear in artifact metadata.
+
 ## Implemented source files
 
 - `backend/services/remediation_handoff.py`
@@ -41,7 +43,7 @@ Current normalized action artifacts:
 - `pr_bundle` → engineer-executable bundle link (`/remediation-runs/{run_id}#run-generated-files`)
 - `pr_payload` → provider-agnostic PR draft metadata (`/remediation-runs/{run_id}#run-generated-files`)
 - `change_summary` → applied-change record (`/remediation-runs/{run_id}#run-activity`)
-- `direct_fix` → direct-fix execution record (`/remediation-runs/{run_id}#run-activity`)
+- `direct_fix` → historical direct-fix execution record for older runs only (`/remediation-runs/{run_id}#run-activity`)
 
 ### Remediation run detail
 
@@ -62,7 +64,7 @@ The raw `artifacts` payload remains unchanged for backward compatibility.
 - `pr_bundle.files[]` becomes a bundle artifact with file-count and format metadata.
 - `pr_payload` becomes a non-executable implementation artifact with repository, branch, file-count, and fingerprint metadata.
 - `change_summary.changes[]` becomes an applied-change artifact with `applied_at` and `applied_by`.
-- `direct_fix` becomes a direct-fix record with `recorded_at`, `post_check_passed`, and log metadata.
+- historical `direct_fix` payloads become direct-fix records with `recorded_at`, `post_check_passed`, and log metadata.
 - `risk_snapshot`, `pr_bundle_error`, `diff_summary`, `rollback_notes`, `control_mapping_context`, and the run activity log become evidence pointers.
 - Terminal runs receive a closure checklist for:
   - implementation artifact recorded

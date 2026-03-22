@@ -1,0 +1,11 @@
+01	executable	config-bucket-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+02	executable	security-autopilot-w6-envready-cloudtrail-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+03	executable	security-autopilot-w6-strict-s315-exec-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+04	executable	security-autopilot-w6-envready-accesslogs-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+05	review_required	security-autopilot-w6-strict-s315-manual-696505809372	match	AES256|
+06	executable	security-autopilot-w6-strict-s311-manual-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+07	executable	security-autopilot-w6-strict-s311-exec-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+08	executable	security-autopilot-w6-envready-s315-exec-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+09	executable	security-autopilot-w6-envready-s311-exec-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+10	executable	security-autopilot-w6-envready-s311-review-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3
+11	executable	security-autopilot-w6-envready-config-696505809372	different	aws:kms|arn:aws:kms:eu-north-1:696505809372:alias/aws/s3

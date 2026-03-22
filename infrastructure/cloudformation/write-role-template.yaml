@@ -1,11 +1,12 @@
+# Deprecated / out of scope: customer WriteRole and direct-fix execution are disabled
+# in the current product contract. Retained only for backward-compatible reference.
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  Creates the required Write IAM role in the customer's AWS account for safe direct remediations.
-  Supports: S3 Block Public Access (account-level), Security Hub enablement,
-  GuardDuty enablement, and EBS default encryption enablement.
-  Your SaaS assumes this role using STS AssumeRole + ExternalId (no long-lived keys).
-  This role is required for account connection and for direct fixes. Uses a custom resource
-  so deployment does not fail if the role or policy already exist (idempotent).
+  Deprecated template retained for backward-compatible reference only.
+  Customer WriteRole and direct-fix execution are currently out of scope.
+  Current supported onboarding uses ReadRole plus customer-run PR bundles.
+  Do not deploy this template for new accounts unless the WriteRole scope is
+  explicitly reactivated in the product contract.
 
 Parameters:
   SaaSAccountId:
@@ -13,6 +14,13 @@ Parameters:
     Description: "Your SaaS AWS account ID (12 digits). This account is the only principal allowed to assume the role."
     AllowedPattern: "^[0-9]{12}$"
     ConstraintDescription: "Must be a 12-digit AWS Account ID."
+
+  SaaSExecutionRoleArns:
+    Type: String
+    Default: ""
+    Description: "Optional during rollout. Comma-separated SaaS execution role ARNs used to constrain trust to exact SaaS runtime roles."
+    AllowedPattern: '(^$)|(^arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role/[^,]+(,arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role/[^,]+)*$)'
+    ConstraintDescription: "Must be blank or one or more comma-separated IAM role ARNs."
 
   ExternalId:
     Type: String
@@ -82,17 +90,37 @@ Resources:
           ROLE_NAME = "SecurityAutopilotWriteRole"
           POLICY_NAME = "SecurityAutopilotWriteRolePolicy"
 
-          def trust_policy(saas_account_id, external_id, partition="aws"):
-              return {
-                  "Version": "2012-10-17",
-                  "Statement": [{
+          def _trusted_role_arns(saas_execution_role_arns=""):
+              return [value.strip() for value in str(saas_execution_role_arns or "").split(",") if value.strip()]
+
+          def trust_policy(saas_account_id, external_id, saas_execution_role_arns="", partition="aws"):
+              principal_arns = _trusted_role_arns(saas_execution_role_arns)
+              assume_conditions = {"StringEquals": {"sts:ExternalId": external_id}}
+              if principal_arns:
+                  assume_conditions["ArnEquals"] = {
+                      "aws:PrincipalArn": principal_arns[0] if len(principal_arns) == 1 else principal_arns
+                  }
+              statements = [{
                       "Sid": "AllowAssumeFromSaaSAccountWithExternalId",
                       "Effect": "Allow",
                       "Principal": {"AWS": f"arn:{partition}:iam::{saas_account_id}:root"},
                       "Action": "sts:AssumeRole",
-                      "Condition": {"StringEquals": {"sts:ExternalId": external_id}}
+                      "Condition": assume_conditions
                   }]
+              session_statement = {
+                  "Sid": "AllowSessionAuditContextFromSaaSAccount",
+                  "Effect": "Allow",
+                  "Principal": {"AWS": f"arn:{partition}:iam::{saas_account_id}:root"},
+                  "Action": ["sts:SetSourceIdentity", "sts:TagSession"],
               }
+              if principal_arns:
+                  session_statement["Condition"] = {
+                      "ArnEquals": {
+                          "aws:PrincipalArn": principal_arns[0] if len(principal_arns) == 1 else principal_arns
+                      }
+                  }
+              statements.append(session_statement)
+              return {"Version": "2012-10-17", "Statement": statements}
 
           def policy_document():
               return {
@@ -145,24 +173,6 @@ Resources:
                           "Action": ["sts:GetCallerIdentity"],
                           "Resource": "*"
                       },
-                      {
-                          "Sid": "AutopilotCleanupIAMResources",
-                          "Effect": "Allow",
-                          "Action": [
-                              "iam:GetRole",
-                              "iam:ListAttachedRolePolicies",
-                              "iam:DetachRolePolicy",
-                              "iam:ListRolePolicies",
-                              "iam:DeleteRolePolicy",
-                              "iam:DeleteRole",
-                              "iam:ListPolicies",
-                              "iam:GetPolicy",
-                              "iam:ListPolicyVersions",
-                              "iam:DeletePolicyVersion",
-                              "iam:DeletePolicy"
-                          ],
-                          "Resource": "*"
-                      }
                   ]
               }
 
@@ -177,10 +187,10 @@ Resources:
                           return p["Arn"]
               return None
 
-          def ensure_role_and_policy(saas_account_id, external_id):
+          def ensure_role_and_policy(saas_account_id, external_id, saas_execution_role_arns=""):
               iam = boto3.client("iam")
               partition = get_partition()
-              trust = trust_policy(saas_account_id, external_id, partition)
+              trust = trust_policy(saas_account_id, external_id, saas_execution_role_arns, partition)
               policy_doc = policy_document()
               role_arn = None
 
@@ -260,6 +270,7 @@ Resources:
                   request_type = event.get("RequestType", "Create")
                   props = event.get("ResourceProperties", {})
                   saas = props.get("SaaSAccountId", "")
+                  saas_execution_role_arns = props.get("SaaSExecutionRoleArns", "")
                   external = props.get("ExternalId", "")
 
                   if request_type == "Delete":
@@ -271,7 +282,7 @@ Resources:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="SaaSAccountId and ExternalId required")
                       return
 
-                  role_arn = ensure_role_and_policy(saas, external)
+                  role_arn = ensure_role_and_policy(saas, external, saas_execution_role_arns)
                   if not role_arn:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Could not get or create role")
                       return
@@ -284,12 +295,14 @@ Resources:
     DependsOn: WriteRoleHelperFunction
     Properties:
       ServiceToken: !GetAtt WriteRoleHelperFunction.Arn
+      TemplateVersion: "v1.4.7"
       SaaSAccountId: !Ref SaaSAccountId
+      SaaSExecutionRoleArns: !Ref SaaSExecutionRoleArns
       ExternalId: !Ref ExternalId
 
 Outputs:
   WriteRoleArn:
-    Description: "ARN of the created or existing WriteRole. Required for account connection—copy this into your SaaS Connect AWS screen."
+    Description: "ARN of the created or existing deprecated WriteRole template output. Not used by the current supported onboarding path."
     Value: !Ref WriteRoleCustomResource
     Export:
       Name: !Sub "${AWS::StackName}-WriteRoleArn"

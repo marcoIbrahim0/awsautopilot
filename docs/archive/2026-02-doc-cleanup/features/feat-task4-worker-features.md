@@ -1,3 +1,5 @@
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the inventory below reflects the February 2026 snapshot, not the current product direction.
+
 BACKGROUND JOB FEATURE INVENTORY
 
 | Feature ID | Job Name | File Path | What it does (one sentence) | Trigger type (API-enqueued / scheduled cron / event-driven / manual) | Trigger endpoint or event (which API endpoint or event source) | Input payload (fields expected) | Output / side effects (what it writes, calls, or sends) | AWS services called during execution | Estimated duration (fast <30s / medium 30s-5min / slow >5min) | Retry behavior (retries / no retry / unknown) | Idempotent (yes / no / unknown) | Failure behavior (what happens to the job and related data on failure) | Queue or scheduler mechanism | Implementation status (fully implemented / partial / stub / unknown) | Known issues from audit files (finding ID or none) |

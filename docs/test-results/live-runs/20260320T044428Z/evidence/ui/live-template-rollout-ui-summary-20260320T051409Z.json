@@ -1,0 +1,25 @@
+{
+  "timestamp_utc": "20260320T051409Z",
+  "frontend_base": "https://ocypheris.com",
+  "accounts_page_url": "https://ocypheris.com/accounts?live=template-rollout",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "total_accounts": 1,
+  "healthy_accounts": 1,
+  "needs_attention_accounts": 0,
+  "monitored_regions": 2,
+  "account_id": "696505809372",
+  "account_status": "validated",
+  "account_health": "Healthy",
+  "connect_modal_template_version": "v1.5.9",
+  "read_role_launch_has_execution_roles": true,
+  "write_role_launch_has_execution_roles": true,
+  "write_role_connected": false,
+  "screenshots": [
+    "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260320T044428Z/evidence/screenshots/live-template-rollout-accounts-validated.png",
+    "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260320T044428Z/evidence/screenshots/live-template-rollout-connect-modal-v1.5.9.png",
+    "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260320T044428Z/evidence/screenshots/live-template-rollout-account-detail-v1.4.7.png"
+  ],
+  "console_errors": [
+    "Minified React error #418 on initial page load; UI still rendered and the live account/connect flows completed."
+  ]
+}

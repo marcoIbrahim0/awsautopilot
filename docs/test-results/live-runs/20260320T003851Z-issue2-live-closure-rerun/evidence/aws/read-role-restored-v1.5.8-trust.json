@@ -1,0 +1,28 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowAssumeFromSaaSAccountWithExternalId",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::029037611564:root"
+            },
+            "Action": [
+                "sts:AssumeRole",
+                "sts:SetSourceIdentity",
+                "sts:TagSession"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "ext-b7c363e9430a4f60"
+                },
+                "ArnEquals": {
+                    "aws:PrincipalArn": [
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+                    ]
+                }
+            }
+        }
+    ]
+}

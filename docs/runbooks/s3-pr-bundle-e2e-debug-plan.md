@@ -269,5 +269,5 @@ The debug objective is complete only when all conditions hold in one campaign ru
 
 ## Related Docs
 - [No-UI PR Bundle Agent](no-ui-pr-bundle-agent.md)
-- [Manual Test Use Cases](../manual-test-use-cases.md)
+- [Manual Test Use Cases](manual-test-use-cases.md)
 - [Control-Plane Event Monitoring](../control-plane-event-monitoring.md)

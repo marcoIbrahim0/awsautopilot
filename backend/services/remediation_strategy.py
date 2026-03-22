@@ -22,6 +22,11 @@ BlastRadius = Literal["account", "resource", "access_changing"]
 InputType = Literal["string", "string_array", "select", "boolean", "cidr", "number"]
 DiffLineType = Literal["add", "remove", "unchanged"]
 
+# Direct-fix and customer WriteRole are intentionally out of scope for now.
+# Keep the registry entries on disk for future recovery, but hide them from
+# active strategy discovery and mode selection so current surfaces stay PR-only.
+DIRECT_FIX_OUT_OF_SCOPE = True
+
 
 class StrategyInputOption(TypedDict):
     """One selectable option for a select-style strategy input."""
@@ -906,6 +911,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                 "or the selected customer-managed KMS key."
             ),
             warnings=[
+                "Capture the current bucket encryption configuration before apply so exact rollback can restore it if needed.",
                 "Ensure KMS key policy grants required S3 and workload principals when using a custom key.",
             ],
             legacy_pr_bundle_variant=None,
@@ -944,6 +950,11 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             ),
             warnings=[
                 "Non-TLS clients or legacy integrations will fail after apply.",
+                "If the bucket already has a policy, capture it before apply with "
+                "`aws s3api get-bucket-policy --bucket <BUCKET_NAME> --query Policy --output text "
+                "> pre-remediation-policy.json`; rollback restores it with "
+                "`aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy "
+                "file://pre-remediation-policy.json`.",
             ],
             legacy_pr_bundle_variant=None,
         ),
@@ -986,6 +997,11 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             ),
             warnings=[
                 "Exemptions weaken blanket enforcement and must be tightly scoped.",
+                "If the bucket already has a policy, capture it before apply with "
+                "`aws s3api get-bucket-policy --bucket <BUCKET_NAME> --query Policy --output text "
+                "> pre-remediation-policy.json`; rollback restores it with "
+                "`aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy "
+                "file://pre-remediation-policy.json`.",
             ],
             legacy_pr_bundle_variant=None,
         ),
@@ -1210,12 +1226,14 @@ _ROLLBACK_COMMAND_BY_ACTION_TYPE: dict[str, str] = {
         "aws s3api delete-bucket-lifecycle --bucket <BUCKET_NAME>"
     ),
     "s3_bucket_encryption_kms": (
+        "if [ -f pre-remediation-encryption.json ]; then "
         "aws s3api put-bucket-encryption --bucket <BUCKET_NAME> "
-        "--server-side-encryption-configuration "
-        "'{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'"
+        "--server-side-encryption-configuration file://pre-remediation-encryption.json; "
+        "else aws s3api delete-bucket-encryption --bucket <BUCKET_NAME>; fi"
     ),
     "s3_bucket_require_ssl": (
-        "aws s3api delete-bucket-policy --bucket <BUCKET_NAME>"
+        "aws s3api put-bucket-policy --bucket <BUCKET_NAME> "
+        "--policy file://pre-remediation-policy.json"
     ),
     "sg_restrict_public_ports": (
         "aws ec2 authorize-security-group-ingress --group-id <SECURITY_GROUP_ID> "
@@ -1286,7 +1304,10 @@ def list_strategies_for_action_type(action_type: str | None) -> list[Remediation
     """Return declared strategies for an action_type."""
     if not action_type:
         return []
-    return list(STRATEGY_REGISTRY.get(action_type.strip(), ()))
+    strategies = STRATEGY_REGISTRY.get(action_type.strip(), ())
+    if not DIRECT_FIX_OUT_OF_SCOPE:
+        return list(strategies)
+    return [strategy for strategy in strategies if strategy["mode"] != "direct_fix"]
 
 
 def list_mode_options_for_action_type(action_type: str | None) -> list[Mode]:
@@ -1318,7 +1339,7 @@ def get_strategy(action_type: str | None, strategy_id: str | None) -> Remediatio
         return None
     normalized_action = action_type.strip()
     normalized_strategy = strategy_id.strip()
-    for strategy in STRATEGY_REGISTRY.get(normalized_action, ()):
+    for strategy in list_strategies_for_action_type(normalized_action):
         if strategy["strategy_id"] == normalized_strategy:
             return strategy
     return None

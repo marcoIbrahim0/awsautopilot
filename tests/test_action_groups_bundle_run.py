@@ -16,6 +16,7 @@ from backend.main import app
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.services.bundle_reporting_tokens import BundleReportingTokenSecretNotConfiguredError
 from backend.services.remediation_risk import evaluate_strategy_impact as real_evaluate_strategy_impact
 from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
@@ -42,6 +43,14 @@ def stub_action_group_tenant_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
         return tenant
 
     monkeypatch.setattr("backend.routers.action_groups.get_tenant", _stub_get_tenant)
+
+
+@pytest.fixture(autouse=True)
+def stub_reporting_token_issue(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "backend.routers.action_groups.issue_group_run_reporting_token",
+        lambda **_: ("signed-token", "token-jti", datetime.now(timezone.utc) + timedelta(minutes=5)),
+    )
 
 
 def _mock_scalar_result(value: object) -> MagicMock:
@@ -306,6 +315,38 @@ def test_create_action_group_bundle_run_accepts_action_overrides(client: TestCli
         "delivery_bucket": "central-config-bucket",
         "encrypt_with_kms": False,
     }
+
+
+def test_create_action_group_bundle_run_requires_dedicated_reporting_secret(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="aws_config_enabled")
+    action1 = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    action2 = _make_action(action_type=group.action_type, priority=90, minutes_ago=2)
+    session, _ = _mock_group_session(group=group, actions=[action1, action2])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch(
+            "backend.routers.action_groups.issue_group_run_reporting_token",
+            side_effect=BundleReportingTokenSecretNotConfiguredError(
+                "BUNDLE_REPORTING_TOKEN_SECRET is not configured. Bundle reporting tokens require a dedicated signing secret."
+            ),
+        ):
+            try:
+                response = client.post(
+                    f"/api/action-groups/{group.id}/bundle-run",
+                    json={"strategy_id": "config_enable_account_local_delivery"},
+                )
+            finally:
+                _clear_action_group_dependencies()
+
+    assert response.status_code == 503
+    assert "BUNDLE_REPORTING_TOKEN_SECRET" in response.json()["detail"]
+    assert session.commit.await_count == 0
 
 
 def test_create_action_group_bundle_run_preserves_ec2_53_executable_family_tier(

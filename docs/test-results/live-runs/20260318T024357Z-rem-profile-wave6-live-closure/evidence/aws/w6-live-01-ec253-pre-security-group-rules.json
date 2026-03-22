@@ -1,0 +1,80 @@
+{
+    "SecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-027215189d99bc3ed",
+            "GroupId": "sg-06f6252fa8a95b61d",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": true,
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIpv4": "0.0.0.0/0",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-027215189d99bc3ed"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-048cd4115066d7f6e",
+            "GroupId": "sg-06f6252fa8a95b61d",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness SSH exposure",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-048cd4115066d7f6e"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-07c30b140cf31f9a9",
+            "GroupId": "sg-0ef32ca8805a55a8b",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": true,
+            "IpProtocol": "-1",
+            "FromPort": -1,
+            "ToPort": -1,
+            "CidrIpv4": "0.0.0.0/0",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-07c30b140cf31f9a9"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-0b86f0baeca364a6f",
+            "GroupId": "sg-0ef32ca8805a55a8b",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness SSH exposure",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-0b86f0baeca364a6f"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-0c3dfa8e11a6e1780",
+            "GroupId": "sg-0ef32ca8805a55a8b",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 3389,
+            "ToPort": 3389,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness RDP exposure",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-0c3dfa8e11a6e1780"
+        },
+        {
+            "SecurityGroupRuleId": "sgr-0847980887616772e",
+            "GroupId": "sg-06f6252fa8a95b61d",
+            "GroupOwnerId": "696505809372",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 3389,
+            "ToPort": 3389,
+            "CidrIpv4": "0.0.0.0/0",
+            "Description": "Wave6 env readiness RDP exposure",
+            "Tags": [],
+            "SecurityGroupRuleArn": "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-0847980887616772e"
+        }
+    ]
+}

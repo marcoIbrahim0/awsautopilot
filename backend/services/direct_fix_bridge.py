@@ -9,18 +9,19 @@ from __future__ import annotations
 
 from typing import Any
 
+DIRECT_FIX_OUT_OF_SCOPE_MESSAGE = (
+    "Direct-fix execution and customer WriteRole are currently out of scope. "
+    "Use PR bundle mode instead."
+)
+
 
 class DirectFixModuleUnavailable(RuntimeError):
     """Raised when direct-fix runtime module is not available in this image."""
 
 
 def get_supported_direct_fix_action_types() -> frozenset[str]:
-    """Best-effort list of direct-fix action types; empty when module unavailable."""
-    try:
-        from backend.workers.services.direct_fix import SUPPORTED_ACTION_TYPES
-    except ModuleNotFoundError:
-        return frozenset()
-    return frozenset(str(action_type) for action_type in SUPPORTED_ACTION_TYPES)
+    """Direct-fix is intentionally disabled; active surfaces must stay PR-only."""
+    return frozenset()
 
 
 def run_remediation_preview_bridge(
@@ -31,18 +32,5 @@ def run_remediation_preview_bridge(
     strategy_id: str | None = None,
     strategy_inputs: dict[str, Any] | None = None,
 ) -> Any:
-    """Run worker direct-fix preview or raise an explicit availability error."""
-    try:
-        from backend.workers.services.direct_fix import run_remediation_preview
-    except ModuleNotFoundError as exc:
-        raise DirectFixModuleUnavailable(
-            "Direct-fix preview runtime is not available in this API deployment."
-        ) from exc
-    return run_remediation_preview(
-        session,
-        action_type,
-        account_id,
-        region,
-        strategy_id,
-        strategy_inputs,
-    )
+    """Direct-fix preview is intentionally disabled while the scope stays PR-only."""
+    raise DirectFixModuleUnavailable(DIRECT_FIX_OUT_OF_SCOPE_MESSAGE)

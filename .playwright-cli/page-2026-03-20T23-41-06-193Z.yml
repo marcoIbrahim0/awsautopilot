@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+        - link "Audit Log" [ref=e122] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e124]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e38]:
+        - img [ref=e39]
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - heading "Accounts" [level=1] [ref=e44]
+        - generic [ref=e45]:
+          - button "Switch to light mode" [ref=e46]:
+            - img [ref=e47]
+          - button "Notifications" [ref=e50]:
+            - img [ref=e51]
+          - button "Profile menu" [ref=e53]:
+            - generic [ref=e54]: M
+      - main [ref=e55]:
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - paragraph [ref=e62]: Account hub
+                - heading "Connected AWS accounts" [level=3] [ref=e63]
+                - paragraph [ref=e64]: Operate onboarding handoff, refresh findings, and manage connected-account lifecycle from the same dashboard surface language used by the rest of the product.
+              - generic [ref=e66]:
+                - link "Run onboarding checks" [ref=e67] [cursor=pointer]:
+                  - /url: /onboarding
+                  - generic [ref=e68]: Run onboarding checks
+                - button "Connect AWS account" [ref=e69]:
+                  - generic [ref=e70]: Connect AWS account
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - generic [ref=e74]:
+                  - paragraph [ref=e75]: Operator flow
+                  - heading "Validate once in onboarding, operate continuously from Accounts." [level=3] [ref=e76]
+                  - paragraph [ref=e77]: "This surface is optimized for live account operations: confirm connection state, refresh data sources, inspect role posture, and hand operators back to onboarding whenever a required verification must be rerun."
+                - generic [ref=e78]:
+                  - generic [ref=e79]:
+                    - paragraph [ref=e80]: Quick action
+                    - paragraph [ref=e81]: Open details for refresh, reconciliation, and lifecycle actions.
+                  - generic [ref=e82]:
+                    - paragraph [ref=e83]: Required checks
+                    - paragraph [ref=e84]: Inspector, Security Hub, AWS Config, and forwarder validation stay in onboarding.
+                  - generic [ref=e85]:
+                    - paragraph [ref=e86]: Connection contract
+                    - paragraph [ref=e87]: Accounts stores ReadRole scope and regions; onboarding final checks confirm readiness.
+              - generic [ref=e88]:
+                - generic [ref=e89]:
+                  - paragraph [ref=e90]: Total accounts
+                  - paragraph [ref=e91]: "0"
+                  - paragraph [ref=e92]: Accounts currently registered to this tenant.
+                - generic [ref=e93]:
+                  - paragraph [ref=e94]: Healthy
+                  - paragraph [ref=e95]: "0"
+                  - paragraph [ref=e96]: Validated accounts ready for ingest and reconciliation.
+                - generic [ref=e97]:
+                  - paragraph [ref=e98]: Needs attention
+                  - paragraph [ref=e99]: "0"
+                  - paragraph [ref=e100]: Accounts pending validation, paused, or requiring follow-up.
+                - generic [ref=e101]:
+                  - paragraph [ref=e102]: Monitored regions
+                  - paragraph [ref=e103]: "0"
+                  - paragraph [ref=e104]: Distinct AWS regions currently in scope across all accounts.
+          - tablist "Account sections" [ref=e107]:
+            - tab "Connection health Live validation state, regions, and quick operator actions." [selected] [ref=e108]:
+              - paragraph [ref=e109]: Connection health
+              - paragraph [ref=e110]: Live validation state, regions, and quick operator actions.
+            - tab "Roles & permissions ReadRole posture and monitored-region scope across connected accounts." [ref=e111]:
+              - paragraph [ref=e112]: Roles & permissions
+              - paragraph [ref=e113]: ReadRole posture and monitored-region scope across connected accounts.
+            - tab "Integrations Required service checks and onboarding handoff for each account." [ref=e114]:
+              - paragraph [ref=e115]: Integrations
+              - paragraph [ref=e116]: Required service checks and onboarding handoff for each account.
+            - tab "Usage & lifecycle Lifecycle timestamps and monitoring posture over time." [ref=e117]:
+              - paragraph [ref=e118]: Usage & lifecycle
+              - paragraph [ref=e119]: Lifecycle timestamps and monitoring posture over time.
+          - generic [ref=e120]: Loading accounts...
+  - alert [ref=e121]

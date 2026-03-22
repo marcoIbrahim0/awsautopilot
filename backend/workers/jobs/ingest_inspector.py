@@ -22,7 +22,11 @@ from backend.models import AwsAccount, Finding
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from backend.workers.config import settings
 from backend.workers.database import session_scope
-from backend.workers.services.aws import assume_role
+from backend.workers.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.workers.services.inspector import (
     fetch_all_inspector_findings,
     normalize_inspector_finding,
@@ -125,7 +129,12 @@ def execute_ingest_inspector_job(job: dict) -> None:
             account_id,
             region,
         )
-        session_boto = assume_role(role_arn=role_arn, external_id=external_id)
+        session_boto = assume_role(
+            role_arn=role_arn,
+            external_id=external_id,
+            source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="worker", tenant_id=tenant_id),
+        )
         findings_raw = fetch_all_inspector_findings(
             session_boto, region=region, account_id=account_id
         )

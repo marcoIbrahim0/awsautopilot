@@ -18,7 +18,8 @@
 2. Generated the grouped bundle and inspected the grouped manifest files.
 3. Captured per-bucket lifecycle pre-state for the executable buckets.
 4. Started the grouped bundle with operator-owned credentials.
-5. Stopped the attempt when Terraform remained in provider init and had not reached the first AWS mutation.
+5. Reviewed the retained apply log and confirmed the run emitted callback-wrapper parse errors first, then completed `terraform init`, `terraform plan`, and `terraform apply` for the executable folders.
+6. Marked the retained proof incomplete because this package does not include paired post-apply lifecycle verification or rollback evidence for those executable buckets.
 
 ## Key Evidence
 
@@ -32,7 +33,8 @@
 
 - The downgrade/manual branch is truthful and non-executable.
 - The grouped executable contract exists and is bundle-backed.
-- No truthful live executable proof was completed in this gate because execution was stopped before first mutation.
+- The retained apply log shows the executable path progressed past provider init and reached AWS mutation.
+- No truthful live executable proof was completed in this gate because the retained package lacks post-apply lifecycle verification and rollback capture for the executable buckets.
 
 ## Result
 
@@ -42,4 +44,4 @@
 
 ## Notes
 
-- No target-account lifecycle configuration was intentionally changed during this aborted attempt.
+> ❓ Needs verification: The retained `run_all-apply.log` shows successful lifecycle applies on the executable buckets, but this package does not include post-apply or rollback capture to prove the exact final AWS state for those buckets.

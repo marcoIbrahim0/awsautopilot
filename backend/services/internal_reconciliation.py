@@ -9,7 +9,11 @@ from collections.abc import Sequence
 from botocore.exceptions import ClientError
 
 from backend.models.aws_account import AwsAccount
-from backend.services.aws import assume_role
+from backend.services.aws import (
+    API_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.services.aws_config_probe import (
     CONFIG_COMPLIANCE_SUMMARY_PERMISSION,
     describe_non_compliant_config_rule_summary,
@@ -44,7 +48,12 @@ async def assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> 
 
     def _run() -> tuple[bool, str | None]:
         try:
-            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+            session = assume_role(
+                role_arn=account.role_read_arn,
+                external_id=tenant_external_id,
+                source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="api", tenant_id=account.tenant_id),
+            )
             sts = session.client("sts")
             identity = sts.get_caller_identity()
             caller = str(identity.get("Account") or "")
@@ -67,7 +76,12 @@ async def authoritative_permissions_precheck(
     def _run() -> tuple[bool, list[str]]:
         missing: list[str] = []
         try:
-            session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+            session = assume_role(
+                role_arn=account.role_read_arn,
+                external_id=tenant_external_id,
+                source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="api", tenant_id=account.tenant_id),
+            )
         except Exception as exc:
             return False, [f"assume_role:{extract_error_code(exc)}"]
 

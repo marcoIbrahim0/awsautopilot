@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
+from backend.database import AsyncSessionLocal
 from backend.routers.actions import router as actions_router
 from backend.routers.action_groups import router as action_groups_router
 from backend.routers.audit_log import router as audit_log_router
@@ -17,9 +18,11 @@ from backend.routers.exceptions import router as exceptions_router
 from backend.routers.exports import router as exports_router
 from backend.routers.findings import router as findings_router
 from backend.routers.governance import router as governance_router
+from backend.routers.help import router as help_router, saas_router as saas_help_router
 from backend.routers.integrations import router as integrations_router
 from backend.routers.internal import router as internal_router
 from backend.routers.meta import router as meta_router
+from backend.routers.notifications import router as notifications_router
 from backend.routers.reconciliation import router as reconciliation_router
 from backend.routers.remediation_runs import router as remediation_runs_router
 from backend.routers.root_key_remediation_runs import router as root_key_remediation_runs_router
@@ -28,6 +31,7 @@ from backend.routers.secret_migrations import router as secret_migrations_router
 from backend.routers.support_files import router as support_files_router
 from backend.routers.users import router as users_router
 from backend.services.health_checks import build_readiness_report
+from backend.services.help_center import ensure_help_articles_synced
 from backend.services.migration_guard import assert_database_revision_at_head
 
 
@@ -35,6 +39,9 @@ from backend.services.migration_guard import assert_database_revision_at_head
 async def lifespan(app: FastAPI):
     """Lifespan: startup and shutdown. Replaces deprecated on_event."""
     assert_database_revision_at_head(component="api")
+    async with AsyncSessionLocal() as session:
+        await ensure_help_articles_synced(session)
+        await session.commit()
     yield
     # Shutdown: cleanup if needed
 
@@ -98,14 +105,17 @@ app.include_router(exceptions_router, prefix="/api")
 app.include_router(exports_router, prefix="/api")
 app.include_router(findings_router, prefix="/api")
 app.include_router(governance_router, prefix="/api")
+app.include_router(help_router, prefix="/api")
 app.include_router(integrations_router, prefix="/api")
 app.include_router(control_plane_router, prefix="/api")
 app.include_router(internal_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
 app.include_router(reconciliation_router, prefix="/api")
 app.include_router(remediation_runs_router, prefix="/api")
 app.include_router(root_key_remediation_runs_router, prefix="/api")
 app.include_router(saas_admin_router, prefix="/api")
+app.include_router(saas_help_router, prefix="/api")
 app.include_router(secret_migrations_router, prefix="/api")
 app.include_router(support_files_router, prefix="/api")
 app.include_router(users_router, prefix="/api")

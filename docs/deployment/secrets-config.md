@@ -35,9 +35,14 @@ For the current serverless production path on `ocypheris.com`:
 | Variable | Description | Example | Where Set |
 |----------|-------------|---------|-----------|
 | `JWT_SECRET` | Secret for signing JWT tokens | `your-random-secret-here` | Secrets Manager |
+| `BUNDLE_REPORTING_TOKEN_SECRET` | Dedicated secret for signing customer-run bundle reporting tokens. Do not reuse `JWT_SECRET`. | `your-separate-reporting-secret-here` | Secrets Manager |
 | `CONTROL_PLANE_EVENTS_SECRET` | Secret for control-plane event ingestion | `your-secret-here` | Secrets Manager |
 | `DIGEST_CRON_SECRET` | Secret for weekly digest cron endpoint | `your-secret-here` | Secrets Manager |
 | `SAAS_ADMIN_EMAILS` | Comma-separated SaaS admin emails | `admin@example.com,admin2@example.com` | CloudFormation parameter |
+
+Customer-run grouped bundle reporting requires `BUNDLE_REPORTING_TOKEN_SECRET`. The API and worker no longer fall back to `JWT_SECRET` for those tokens.
+
+`SAAS_EXECUTION_ROLE_ARNS` is environment-specific. Set it to the exact ECS task role ARN or comma-separated Lambda role ARN set used by the SaaS runtime in that environment so customer trust policies can narrow from `:root` to only the live runtime principals.
 
 #### Firebase Email Verification
 
@@ -53,6 +58,7 @@ For the current serverless production path on `ocypheris.com`:
 | Variable | Description | Example | Where Set |
 |----------|-------------|---------|-----------|
 | `SAAS_AWS_ACCOUNT_ID` | Your SaaS AWS account ID (12 digits) | `029037611564` | CloudFormation parameter |
+| `SAAS_EXECUTION_ROLE_ARNS` | Exact SaaS runtime role ARN set to trust in customer ReadRole/WriteRole templates. Use one ARN for ECS/shared-role runtimes or a comma-separated list when API and worker use distinct Lambda roles. | `arn:aws:iam::029037611564:role/<YOUR_VALUE_HERE>` | CloudFormation parameter |
 | `AWS_REGION` | Default AWS region | `eu-north-1` | CloudFormation parameter |
 | `ROLE_SESSION_NAME` | Session name for STS AssumeRole | `security-autopilot-session` | CloudFormation parameter |
 
@@ -77,6 +83,7 @@ For the current serverless production path on `ocypheris.com`:
 | `APP_NAME` | Application name | `AWS Security Autopilot` | CloudFormation parameter |
 | `ENV` | Environment (local/dev/prod) | `prod` | CloudFormation parameter |
 | `LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) | `INFO` | CloudFormation parameter |
+| `ALLOW_RUNTIME_IAM_CLEANUP` | Admin-only escape hatch for runtime IAM teardown. Keep `false` in normal operation and direct customers to delete the `SecurityAutopilotReadRole` CloudFormation stack themselves. | `false` | CloudFormation parameter |
 | `FRONTEND_URL` | Frontend base URL | `https://app.yourcompany.com` | CloudFormation parameter |
 | `CORS_ORIGINS` | Comma-separated CORS origins | `https://app.yourcompany.com` | CloudFormation parameter |
 | `API_PUBLIC_URL` | Public API base URL | `https://api.yourcompany.com` | CloudFormation parameter (derived from ALB/API Gateway) |
@@ -103,8 +110,14 @@ For the current serverless production path on `ocypheris.com`:
 | `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | Secrets Manager secret id/ARN with JSON `{ "user": "...", "password": "..." }` | `security-autopilot-dev/EMAIL_SMTP` | CloudFormation parameter via `config/.env.ops` |
 | `EMAIL_SMTP_USER` | SMTP username injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
 | `EMAIL_SMTP_PASSWORD` | SMTP password injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
+| `OPENAI_API_KEY_SECRET_ID` | Secrets Manager secret id/ARN whose `SecretString` is the Help Hub OpenAI API key | `security-autopilot-dev/OPENAI_API_KEY` | CloudFormation parameter via `config/.env.ops` |
+| `OPENAI_API_KEY` | OpenAI API key for local-only Help Hub runtime setup | `<YOUR_VALUE_HERE>` | `backend/.env` locally, or Lambda runtime env resolved from `OPENAI_API_KEY_SECRET_ID` in production |
+| `OPENAI_HELP_ENABLED` | Enable the OpenAI-backed Help Hub assistant | `true` | CloudFormation parameter via `config/.env.ops` |
+| `OPENAI_HELP_MODEL` | OpenAI model id used by Help Hub | `gpt-4.1-mini` | CloudFormation parameter via `config/.env.ops` |
+| `OPENAI_HELP_REASONING_EFFORT` | GPT-5-family reasoning effort setting | `low` | CloudFormation parameter via `config/.env.ops` |
+| `OPENAI_HELP_TIMEOUT_SECONDS` | OpenAI request timeout for Help Hub | `30` | CloudFormation parameter via `config/.env.ops` |
 
-> ❓ Needs verification: As of `2026-03-11`, `security-autopilot-dev-api` is wired to SES SMTP with `EMAIL_FROM=noreply@ocypheris.com`, `EMAIL_SMTP_HOST=email-smtp.eu-north-1.amazonaws.com`, `EMAIL_SMTP_PORT="587"`, `EMAIL_SMTP_STARTTLS="true"`, and credentials from `security-autopilot-dev/EMAIL_SMTP`. The three DKIM CNAMEs are now published in Cloudflare and externally resolvable, and `marcoibrahim11@outlook.com` is verified as a sandbox recipient, but SES still shows `VerificationStatus=PENDING` for `ocypheris.com` until AWS rechecks the sender domain, the SES production-access review still shows `DENIED`, and a fresh `put-account-details --production-access-enabled` attempt currently returns `ConflictException`.
+> ❓ Needs verification: As of `2026-03-21`, signup verification email delivery no longer uses backend SMTP and is now Firebase-managed from the frontend. The SMTP variables above remain required for other transactional email paths in [`backend/services/email.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/email.py), but not for the signup verification flow.
 
 #### S3 Storage
 
@@ -119,8 +132,8 @@ For the current serverless production path on `ocypheris.com`:
 
 | Variable | Description | Example | Where Set |
 |----------|-------------|---------|-----------|
-| `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` | Read role template URL | `https://templates.s3.region.amazonaws.com/read-role/v1.5.4.yaml` | CloudFormation parameter |
-| `CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL` | Write role template URL | `https://templates.s3.region.amazonaws.com/write-role/v1.4.2.yaml` | CloudFormation parameter |
+| `CLOUDFORMATION_READ_ROLE_TEMPLATE_URL` | Read role template URL | `https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml` | CloudFormation parameter |
+| `CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL` | Write role template URL | `https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml` | CloudFormation parameter |
 | `CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL` | Control-plane forwarder template URL | `https://templates.s3.region.amazonaws.com/forwarder/v1.0.0.yaml` | CloudFormation parameter (optional) |
 
 ### Optional Variables
@@ -163,7 +176,7 @@ Reason:
   - fails the build if `production.NEXT_PUBLIC_API_URL` is missing or points at `localhost` / `127.0.0.1`.
 - Do not use raw `npx opennextjs-cloudflare build`, `deploy`, `preview`, or `upload` for live builds unless you intentionally reproduce the same safeguards.
 
-### Current production blocker
+### Current SMTP scope
 
 - The API runtime now has:
   - `EMAIL_FROM=noreply@ocypheris.com`
@@ -175,16 +188,13 @@ Reason:
   - non-secret SMTP inputs in `config/.env.ops`
   - a Secrets Manager credential secret referenced by `EMAIL_SMTP_CREDENTIALS_SECRET_ID`
   - CloudFormation dynamic references that resolve `EMAIL_SMTP_USER` and `EMAIL_SMTP_PASSWORD` into the Lambda environment
-- The remaining blocker is now SES account state, not app wiring:
-  - live signup/resend attempts reach the SMTP provider
-  - `aws sesv2 get-email-identity --region eu-north-1 --email-identity ocypheris.com` returns `VerifiedForSendingStatus=false`, `VerificationStatus=PENDING`, and `VerificationInfo.ErrorType=HOST_NOT_FOUND`
-  - the published DKIM CNAMEs already resolve publicly, so the current `HOST_NOT_FOUND` result is waiting on the next SES verification poll
-  - `aws sesv2 get-account --region eu-north-1` returns `ProductionAccessEnabled=false`
-  - `aws sesv2 get-account --region eu-north-1` also returns `Details.ReviewDetails.Status=DENIED` with case `177318726300086`
-  - a fresh `aws sesv2 put-account-details --region eu-north-1 ... --production-access-enabled` call currently returns `ConflictException`
-  - `aws sesv2 get-email-identity --region eu-north-1 --email-identity marcoibrahim11@outlook.com` now returns `VerificationStatus=SUCCESS` and `VerifiedForSendingStatus=true`
-  - CloudWatch shows SES rejecting sends with `554 Message rejected: Email address is not verified`
-  - `backend/services/email.py` therefore returns delivery failure in `ENV=prod`, and the live signup route rejects the request with `503 verification_email_delivery_unavailable` instead of falsely returning `202`
+- Signup verification no longer depends on the SES sender state described here.
+- These SMTP settings still matter for:
+  - password-reset email delivery
+  - invite email delivery
+  - MFA email-code delivery
+  - Help Hub/customer-support notifications
+- If SES remains blocked for `ocypheris.com`, those non-signup email paths may still fail until the sender identity or provider is changed.
 
 ### Current SES DKIM DNS records
 
@@ -235,7 +245,24 @@ aws secretsmanager create-secret \
   --region eu-north-1
 ```
 
-#### 3. CONTROL_PLANE_EVENTS_SECRET
+#### 3. BUNDLE_REPORTING_TOKEN_SECRET
+
+Generate a separate secure random secret:
+
+```bash
+# Generate random secret (32 bytes, base64)
+openssl rand -base64 32
+
+# Create secret
+aws secretsmanager create-secret \
+  --name security-autopilot-dev/BUNDLE_REPORTING_TOKEN_SECRET \
+  --secret-string "your-separate-reporting-secret-here" \
+  --region eu-north-1
+```
+
+Use a value distinct from `JWT_SECRET`. This secret is required for customer-run grouped bundle reporting tokens.
+
+#### 4. CONTROL_PLANE_EVENTS_SECRET
 
 ```bash
 # Generate random secret
@@ -248,7 +275,7 @@ aws secretsmanager create-secret \
   --region eu-north-1
 ```
 
-#### 4. DIGEST_CRON_SECRET (Optional)
+#### 5. DIGEST_CRON_SECRET (Optional)
 
 ```bash
 # Generate random secret
@@ -261,7 +288,7 @@ aws secretsmanager create-secret \
   --region eu-north-1
 ```
 
-#### 5. EMAIL_SMTP credentials (JSON secret)
+#### 6. EMAIL_SMTP credentials (JSON secret)
 
 ```bash
 aws secretsmanager create-secret \
@@ -298,6 +325,7 @@ Use format: `{stack-name-prefix}/{SECRET_NAME}`
 Examples:
 - `security-autopilot-dev/DATABASE_URL`
 - `security-autopilot-dev/JWT_SECRET`
+- `security-autopilot-dev/BUNDLE_REPORTING_TOKEN_SECRET`
 - `security-autopilot-prod/DATABASE_URL`
 
 ---
@@ -314,6 +342,8 @@ Secrets:
     ValueFrom: !Ref DatabaseUrlSecret
   - Name: JWT_SECRET
     ValueFrom: !Ref JwtSecretSecret
+  - Name: BUNDLE_REPORTING_TOKEN_SECRET
+    ValueFrom: !Ref BundleReportingTokenSecretSecret
   - Name: CONTROL_PLANE_EVENTS_SECRET
     ValueFrom: !Ref ControlPlaneEventsSecretSecret
 ```
@@ -330,7 +360,7 @@ DatabaseUrlSecret:
 
 ### Lambda Serverless Deployment
 
-Secrets are referenced in Lambda environment:
+Runtime secrets are passed as Lambda environment variables in `infrastructure/cloudformation/saas-serverless-httpapi.yaml`:
 
 ```yaml
 Environment:
@@ -338,9 +368,10 @@ Environment:
     # Non-secret config
     APP_NAME: !Ref AppName
     # ...
-Secrets:
-  - Name: DATABASE_URL
-    ValueFrom: !Ref DatabaseUrlSecret
+    DATABASE_URL: !Ref DatabaseUrl
+    JWT_SECRET: !Ref JwtSecret
+    BUNDLE_REPORTING_TOKEN_SECRET: !Ref BundleReportingTokenSecret
+    CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
 ```
 
 ---
@@ -353,6 +384,7 @@ For local development and ops scripts, use split env files (never commit secrets
 # backend/.env (backend runtime)
 DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/db"
 JWT_SECRET="change-me-in-production-do-not-use-in-prod"
+BUNDLE_REPORTING_TOKEN_SECRET="change-me-separately-from-jwt-secret"
 CONTROL_PLANE_EVENTS_SECRET="local-dev-secret"
 
 # backend/workers/.env (worker runtime)
@@ -398,7 +430,7 @@ config/.env.ops
 2. **Update secret in Secrets Manager**:
    ```bash
    aws secretsmanager update-secret \
-     --secret-id security-autopilot-dev/JWT_SECRET \
+     --secret-id security-autopilot-dev/BUNDLE_REPORTING_TOKEN_SECRET \
      --secret-string "new-secret"
    ```
 
@@ -411,6 +443,7 @@ config/.env.ops
 Consider using AWS Secrets Manager automatic rotation for:
 - Database passwords
 - JWT secrets (if rotation supported)
+- Bundle reporting token secrets
 
 **Note**: Automatic rotation requires Lambda rotation function. Not implemented by default.
 

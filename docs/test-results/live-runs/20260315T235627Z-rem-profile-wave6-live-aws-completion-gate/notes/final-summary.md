@@ -38,7 +38,7 @@
 | `IAM.4` | `No` | `Yes` | `FAIL` | Generic surfaces correctly stayed metadata-only, but the authoritative root-key disable path stopped at the self-cutoff guard and did not mutate the root key. |
 | `S3.2` | `Yes` | `Yes` | `PASS` | Executable grouped bundle changed bucket public-access-block state and cleanup was manually restored to the exact pre-state; manual/downgrade branches also stayed truthful. |
 | `S3.5` | `No` | `Yes` | `PARTIAL` | Review/preservation gating is proven, but no live executable apply plus rollback was completed in this final gate. |
-| `S3.11` | `No` | `Yes` | `PARTIAL` | Manual guidance plus grouped executable contract are proven, but the attempted live bundle execution was stopped during Terraform init before the first AWS mutation. |
+| `S3.11` | `No` | `Yes` | `PARTIAL` | Manual guidance plus grouped executable contract are proven, and the retained apply log shows executable lifecycle mutations progressed past init, but the gate still lacks trustworthy post-apply verification and rollback evidence for those buckets. |
 | `S3.9` | `Yes` | `Yes` | `PASS` | Destination-safe executable branch applied and destroyed cleanly, and the review-required destination-safety branch stayed metadata-only. |
 | `S3.15` | `No` | `Yes` | `PARTIAL` | AWS-managed vs customer-managed KMS branching is proven, but no live executable apply plus rollback was completed in this final gate. |
 | `CloudTrail.1` | `Yes` | `Yes` | `PASS` | Executable grouped bundle created and removed the trail cleanly, and the incompatible-default branch stayed `review_required_bundle`. |

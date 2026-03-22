@@ -1,0 +1,178 @@
+- generic:
+  - status
+  - generic:
+    - generic:
+      - generic:
+        - complementary:
+          - navigation:
+            - link:
+              - /url: /findings
+              - generic:
+                - img
+            - link:
+              - /url: /accounts
+              - generic:
+                - img
+            - link:
+              - /url: /settings
+              - generic:
+                - img
+            - link:
+              - /url: /top-risks
+              - generic:
+                - img
+            - link:
+              - /url: /exports
+              - generic:
+                - img
+            - link:
+              - /url: /support-files
+              - generic:
+                - img
+            - link:
+              - /url: /audit-log
+              - generic:
+                - img
+          - generic:
+            - generic:
+              - button:
+                - img
+        - generic:
+          - banner:
+            - generic:
+              - heading [level=1]: Accounts
+            - generic:
+              - button:
+                - img
+              - button [expanded]:
+                - img
+              - button:
+                - generic: M
+          - main:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - paragraph: Account hub
+                        - heading [level=3]: Connected AWS accounts
+                        - paragraph: Operate onboarding handoff, refresh findings, and manage connected-account lifecycle from the same dashboard surface language used by the rest of the product.
+                      - generic:
+                        - generic:
+                          - link:
+                            - /url: /onboarding
+                            - generic: Run onboarding checks
+                          - button:
+                            - generic: Connect AWS account
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - paragraph: Operator flow
+                            - heading [level=3]: Validate once in onboarding, operate continuously from Accounts.
+                            - paragraph: "This surface is optimized for live account operations: confirm connection state, refresh data sources, inspect role posture, and hand operators back to onboarding whenever a required verification must be rerun."
+                          - generic:
+                            - generic:
+                              - paragraph: Quick action
+                              - paragraph: Open details for refresh, reconciliation, and lifecycle actions.
+                            - generic:
+                              - paragraph: Required checks
+                              - paragraph: Inspector, Security Hub, AWS Config, and forwarder validation stay in onboarding.
+                            - generic:
+                              - paragraph: Connection contract
+                              - paragraph: Accounts stores ReadRole scope and regions; onboarding final checks confirm readiness.
+                        - generic:
+                          - generic:
+                            - paragraph: Total accounts
+                            - paragraph: "1"
+                            - paragraph: Accounts currently registered to this tenant.
+                          - generic:
+                            - paragraph: Healthy
+                            - paragraph: "1"
+                            - paragraph: Validated accounts ready for ingest and reconciliation.
+                          - generic:
+                            - paragraph: Needs attention
+                            - paragraph: "0"
+                            - paragraph: Accounts pending validation, paused, or requiring follow-up.
+                          - generic:
+                            - paragraph: Monitored regions
+                            - paragraph: "2"
+                            - paragraph: Distinct AWS regions currently in scope across all accounts.
+                - generic:
+                  - generic:
+                    - tablist:
+                      - tab [selected]:
+                        - paragraph: Connection health
+                        - paragraph: Live validation state, regions, and quick operator actions.
+                      - tab:
+                        - paragraph: Roles & permissions
+                        - paragraph: ReadRole posture and monitored-region scope across connected accounts.
+                      - tab:
+                        - paragraph: Integrations
+                        - paragraph: Required service checks and onboarding handoff for each account.
+                      - tab:
+                        - paragraph: Usage & lifecycle
+                        - paragraph: Lifecycle timestamps and monitoring posture over time.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - paragraph: Connection health
+                        - heading [level=3]: Connection state and quick account actions
+                        - paragraph: Open the account detail workflow, rerun onboarding-only checks, or queue source refreshes directly from the health grid.
+                      - generic:
+                        - generic: 1 account
+                    - generic:
+                      - generic:
+                        - generic:
+                          - table:
+                            - rowgroup:
+                              - row:
+                                - columnheader: Account
+                                - columnheader: Coverage
+                                - columnheader: Status
+                                - columnheader: Connection health
+                                - columnheader: Last validated
+                                - columnheader: Actions
+                            - rowgroup:
+                              - row:
+                                - cell:
+                                  - button:
+                                    - text: "696505809372"
+                                    - generic: Open detail workflow
+                                - cell:
+                                  - paragraph: 2 regions
+                                  - paragraph: eu-north-1, us-east-1
+                                - cell:
+                                  - generic: validated
+                                - cell:
+                                  - generic: Healthy
+                                - cell: 3/20/26, 5:14 AM UTC
+                                - cell:
+                                  - generic:
+                                    - generic:
+                                      - button:
+                                        - generic: Open details
+                                      - link:
+                                        - /url: /onboarding
+                                        - generic: Onboarding checks
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - button:
+                                              - generic:
+                                                - generic: Security Hub
+                                                - img
+                                            - button:
+                                              - generic: Refresh
+                                            - button:
+                                              - generic: All sources
+                                    - generic: Account-read checks run during onboarding only.
+  - alert
+  - menu "Notifications" [active] [ref=e179]:
+    - generic [ref=e180]:
+      - generic [ref=e181]: Notification Center
+      - button "Clear finished" [ref=e182]
+    - separator [ref=e183]
+    - generic [ref=e184]: No notifications

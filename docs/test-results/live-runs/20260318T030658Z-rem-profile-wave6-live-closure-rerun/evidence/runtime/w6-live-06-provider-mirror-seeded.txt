@@ -1,0 +1,8 @@
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp/aws
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp/aws/6.36.0
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/LICENSE.txt
+/Users/marcomaher/.aws-security-autopilot/terraform/provider-mirror/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5

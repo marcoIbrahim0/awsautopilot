@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import uuid
 
+from backend.services.attack_path_materialized import maybe_schedule_attack_path_refresh
 from backend.services.action_engine import compute_actions_for_tenant
 from backend.services.integration_sync import dispatch_sync_tasks, plan_action_sync_tasks
 from backend.workers.database import session_scope
@@ -51,6 +52,7 @@ def execute_compute_actions_job(job: dict) -> None:
         )
 
     dispatch_sync_tasks(sync_task_ids, tenant_id=tenant_id)
+    maybe_schedule_attack_path_refresh(tenant_id=tenant_id, account_id=account_id, region=region)
 
     logger.info(
         "compute_actions complete tenant_id=%s scope=(account=%s region=%s) created=%d updated=%d resolved=%d links=%d",

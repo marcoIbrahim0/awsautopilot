@@ -1,0 +1,26 @@
+Output format is unaligned.
+Field separator is "	".
+id	provider	operation	status	trigger	created_at	started_at	completed_at	last_error
+d932b185-3ae9-4f7c-a4a4-619230f57f4e	jira	create	failed	api.manual_sync	2026-03-21 20:41:54.068271+00	2026-03-21 20:56:33.114533+00	2026-03-21 20:56:33.652244+00	{"errorMessages":[],"errors":{"assignee":"Specify a valid value for assignee"}}
+(1 row)
+?column?
+---RESULT---
+(1 row)
+coalesce
+<null>
+(1 row)
+?column?
+---LINKS---
+(1 row)
+provider	external_id	external_key	external_url	external_status	last_outbound_at	last_inbound_at
+(0 rows)
+?column?
+---STATES---
+(1 row)
+provider	external_ref	external_status	canonical_internal_status	preferred_external_status	sync_status	resolution_decision	conflict_reason	last_reconciled_at
+(0 rows)
+?column?
+---EVENTS---
+(1 row)
+provider	event_type	source	external_ref	external_status	internal_status_before	internal_status_after	mapped_internal_status	preferred_external_status	resolution_decision	created_at
+(0 rows)

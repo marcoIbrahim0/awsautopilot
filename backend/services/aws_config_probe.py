@@ -31,7 +31,10 @@ def describe_non_compliant_config_rule_summary(
             ),
         )
 
-    kwargs: dict[str, Any] = {"ComplianceTypes": ["NON_COMPLIANT"], "Limit": limit}
+    # describe_compliance_by_config_rule does not accept a Limit argument.
+    # Callers use `limit` only as a low-cost probe hint, so we ignore it here.
+    _ = limit
+    kwargs: dict[str, Any] = {"ComplianceTypes": ["NON_COMPLIANT"]}
     if config_rule_names:
         kwargs["ConfigRuleNames"] = list(config_rule_names)
     return ConfigComplianceSummaryProbe(response=describe(**kwargs))

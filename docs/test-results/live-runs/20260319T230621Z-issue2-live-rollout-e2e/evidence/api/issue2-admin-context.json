@@ -1,0 +1,6 @@
+{
+  "tenant_name": "Valens",
+  "email": "marco.ibrahim@ocypheris.com",
+  "account_id": "696505809372",
+  "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole"
+}

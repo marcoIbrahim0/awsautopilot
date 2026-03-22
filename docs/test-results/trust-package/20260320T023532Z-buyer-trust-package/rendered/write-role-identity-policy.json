@@ -1,0 +1,54 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "s3:GetAccountPublicAccessBlock",
+        "s3:PutAccountPublicAccessBlock"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "S3BlockPublicAccess"
+    },
+    {
+      "Action": [
+        "securityhub:EnableSecurityHub",
+        "securityhub:GetEnabledStandards",
+        "securityhub:DescribeHub"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "SecurityHubEnablement"
+    },
+    {
+      "Action": [
+        "guardduty:CreateDetector",
+        "guardduty:GetDetector",
+        "guardduty:ListDetectors",
+        "guardduty:UpdateDetector"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "GuardDutyEnablement"
+    },
+    {
+      "Action": [
+        "ec2:GetEbsEncryptionByDefault",
+        "ec2:EnableEbsEncryptionByDefault",
+        "ec2:GetEbsDefaultKmsKeyId",
+        "ec2:ModifyEbsDefaultKmsKeyId"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "EBSDefaultEncryption"
+    },
+    {
+      "Action": [
+        "sts:GetCallerIdentity"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "STSIdentityValidation"
+    }
+  ],
+  "Version": "2012-10-17"
+}

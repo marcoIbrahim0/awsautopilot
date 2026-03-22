@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Dev SaaS runtime: ECS Fargate (API + worker) behind an ALB.
   Uses existing SQS stack exports for queue URLs + IAM policies.
-  Stores DATABASE_URL/JWT_SECRET/CONTROL_PLANE_EVENTS_SECRET in Secrets Manager and injects into tasks.
+  Stores DATABASE_URL/JWT_SECRET/BUNDLE_REPORTING_TOKEN_SECRET/CONTROL_PLANE_EVENTS_SECRET in Secrets Manager and injects into tasks.
 
 Parameters:
   NamePrefix:
@@ -92,6 +92,11 @@ Parameters:
     Type: String
     NoEcho: true
     Description: JWT_SECRET.
+
+  BundleReportingTokenSecret:
+    Type: String
+    NoEcho: true
+    Description: Dedicated BUNDLE_REPORTING_TOKEN_SECRET for grouped bundle reporting tokens.
 
   ControlPlaneEventsSecret:
     Type: String
@@ -355,6 +360,12 @@ Resources:
       Name: !Sub "${NamePrefix}/JWT_SECRET"
       SecretString: !Ref JwtSecret
 
+  BundleReportingTokenSecretSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${NamePrefix}/BUNDLE_REPORTING_TOKEN_SECRET"
+      SecretString: !Ref BundleReportingTokenSecret
+
   ControlPlaneEventsSecretSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -392,6 +403,13 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-api-task"
+            Action:
+              - sts:AssumeRole
+              - sts:SetSourceIdentity
+              - sts:TagSession
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
@@ -415,10 +433,14 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: sts:AssumeRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:SetSourceIdentity
+                  - sts:TagSession
                 Resource:
                   - arn:aws:iam::*:role/SecurityAutopilotReadRole
                   - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+                  - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-api-task"
 
   WorkerTaskRole:
     Type: AWS::IAM::Role
@@ -431,6 +453,13 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-worker-task"
+            Action:
+              - sts:AssumeRole
+              - sts:SetSourceIdentity
+              - sts:TagSession
       ManagedPolicyArns:
         - !ImportValue
           "Fn::Sub": "${SqsStackName}-WorkerConsumePolicyArn"
@@ -440,10 +469,14 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: sts:AssumeRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:SetSourceIdentity
+                  - sts:TagSession
                 Resource:
                   - arn:aws:iam::*:role/SecurityAutopilotReadRole
                   - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+                  - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-worker-task"
 
   ApiTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -528,6 +561,8 @@ Resources:
               ValueFrom: !Ref DatabaseUrlSecret
             - Name: JWT_SECRET
               ValueFrom: !Ref JwtSecretSecret
+            - Name: BUNDLE_REPORTING_TOKEN_SECRET
+              ValueFrom: !Ref BundleReportingTokenSecretSecret
             - Name: CONTROL_PLANE_EVENTS_SECRET
               ValueFrom: !Ref ControlPlaneEventsSecretSecret
           LogConfiguration:
@@ -617,6 +652,8 @@ Resources:
               ValueFrom: !Ref DatabaseUrlSecret
             - Name: JWT_SECRET
               ValueFrom: !Ref JwtSecretSecret
+            - Name: BUNDLE_REPORTING_TOKEN_SECRET
+              ValueFrom: !Ref BundleReportingTokenSecretSecret
             - Name: CONTROL_PLANE_EVENTS_SECRET
               ValueFrom: !Ref ControlPlaneEventsSecretSecret
           LogConfiguration:

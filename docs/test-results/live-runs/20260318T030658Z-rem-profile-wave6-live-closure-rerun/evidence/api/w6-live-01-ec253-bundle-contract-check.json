@@ -1,0 +1,21 @@
+{
+  "group_id": null,
+  "action_count": 2,
+  "runnable_action_count": 1,
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 1,
+    "review_required": 0
+  },
+  "executable_action": {
+    "action_id": "ad9328e1-faf2-4fd4-9885-c7f8c50c7d14",
+    "profile_id": "close_and_revoke",
+    "support_tier": "deterministic_bundle",
+    "bundle_rollback_command": "python3 ./executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-ad9328e1/rollback/sg_restore.py"
+  },
+  "manual_action": {
+    "action_id": "2a1c9d2f-b05d-48b3-bcec-d7645c5fd017",
+    "profile_id": "ssm_only",
+    "support_tier": "manual_guidance_only"
+  }
+}

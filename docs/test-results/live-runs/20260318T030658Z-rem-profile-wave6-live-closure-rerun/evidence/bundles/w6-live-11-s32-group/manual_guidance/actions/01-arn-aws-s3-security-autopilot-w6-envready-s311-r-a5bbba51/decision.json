@@ -1,0 +1,47 @@
+{
+  "action_id": "a5bbba51-b5a8-4176-8f93-e9d0c376ade5",
+  "action_type": "s3_bucket_block_public_access",
+  "blocked_reasons": [
+    "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access."
+  ],
+  "control_id": "S3.2",
+  "decision_rationale": "Family resolver downgraded strategy 's3_bucket_block_public_access_standard' to manual S3.2 preservation profile 's3_bucket_block_public_access_manual_preservation'. Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded strategy 's3_bucket_block_public_access_standard' to manual S3.2 preservation profile 's3_bucket_block_public_access_manual_preservation'. Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-envready-s311-r-a5bbba51",
+  "has_runnable_terraform": false,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "manual_guidance_metadata_only",
+  "preservation_summary": {
+    "access_path_evidence_available": true,
+    "bucket_policy_public": false,
+    "executable_preservation_allowed": false,
+    "existing_bucket_policy_json_captured": false,
+    "existing_bucket_policy_statement_count": null,
+    "family": "s3_bucket_block_public_access",
+    "family_strategy": "s3_bucket_block_public_access_standard",
+    "manual_preservation_required": true,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation",
+    "single_profile_compatible": false,
+    "strategy_only_supported": true,
+    "website_configured": true
+  },
+  "profile_id": "s3_bucket_block_public_access_manual_preservation",
+  "rejected_profiles": [
+    {
+      "detail": "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access.",
+      "profile_id": "s3_bucket_block_public_access_standard",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_bucket_block_public_access_standard",
+  "strategy_inputs": {},
+  "support_tier": "manual_guidance_only",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.2",
+  "tier": "manual_guidance",
+  "tier_root": "manual_guidance/actions",
+  "title": "S3 general purpose buckets should block public access"
+}

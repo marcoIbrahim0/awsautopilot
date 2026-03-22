@@ -1,0 +1,164 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+        - link "Audit Log" [ref=e122] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e124]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e38]:
+        - img [ref=e39]
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - heading "Accounts" [level=1] [ref=e44]
+        - generic [ref=e45]:
+          - button "Switch to light mode" [ref=e46]:
+            - img [ref=e47]
+          - button "Notifications" [ref=e50]:
+            - img [ref=e51]
+            - generic [ref=e181]: "1"
+          - button "Profile menu" [ref=e53]:
+            - generic [ref=e54]: M
+      - main [ref=e55]:
+        - generic [ref=e56]:
+          - status [ref=e182]:
+            - generic [ref=e183]:
+              - generic [ref=e184]:
+                - paragraph [ref=e185]: Refreshing Security Hub (696505809372) · Queued
+                - paragraph [ref=e186]: Refresh queued. Waiting for worker pickup.
+                - paragraph [ref=e199]: Elapsed 1s
+              - button "Dismiss banner" [ref=e189]:
+                - img [ref=e191]
+          - generic [ref=e57]:
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - paragraph [ref=e62]: Account hub
+                  - heading "Connected AWS accounts" [level=3] [ref=e63]
+                  - paragraph [ref=e64]: Operate onboarding handoff, refresh findings, and manage connected-account lifecycle from the same dashboard surface language used by the rest of the product.
+                - generic [ref=e66]:
+                  - link "Run onboarding checks" [ref=e67] [cursor=pointer]:
+                    - /url: /onboarding
+                    - generic [ref=e68]: Run onboarding checks
+                  - button "Connect AWS account" [ref=e69]:
+                    - generic [ref=e70]: Connect AWS account
+              - generic [ref=e72]:
+                - generic [ref=e73]:
+                  - generic [ref=e74]:
+                    - paragraph [ref=e75]: Operator flow
+                    - heading "Validate once in onboarding, operate continuously from Accounts." [level=3] [ref=e76]
+                    - paragraph [ref=e77]: "This surface is optimized for live account operations: confirm connection state, refresh data sources, inspect role posture, and hand operators back to onboarding whenever a required verification must be rerun."
+                  - generic [ref=e78]:
+                    - generic [ref=e79]:
+                      - paragraph [ref=e80]: Quick action
+                      - paragraph [ref=e81]: Open details for refresh, reconciliation, and lifecycle actions.
+                    - generic [ref=e82]:
+                      - paragraph [ref=e83]: Required checks
+                      - paragraph [ref=e84]: Inspector, Security Hub, AWS Config, and forwarder validation stay in onboarding.
+                    - generic [ref=e85]:
+                      - paragraph [ref=e86]: Connection contract
+                      - paragraph [ref=e87]: Accounts stores ReadRole scope and regions; onboarding final checks confirm readiness.
+                - generic [ref=e88]:
+                  - generic [ref=e89]:
+                    - paragraph [ref=e90]: Total accounts
+                    - paragraph [ref=e91]: "1"
+                    - paragraph [ref=e92]: Accounts currently registered to this tenant.
+                  - generic [ref=e93]:
+                    - paragraph [ref=e94]: Healthy
+                    - paragraph [ref=e95]: "1"
+                    - paragraph [ref=e96]: Validated accounts ready for ingest and reconciliation.
+                  - generic [ref=e97]:
+                    - paragraph [ref=e98]: Needs attention
+                    - paragraph [ref=e99]: "0"
+                    - paragraph [ref=e100]: Accounts pending validation, paused, or requiring follow-up.
+                  - generic [ref=e101]:
+                    - paragraph [ref=e102]: Monitored regions
+                    - paragraph [ref=e103]: "2"
+                    - paragraph [ref=e104]: Distinct AWS regions currently in scope across all accounts.
+            - tablist "Account sections" [ref=e107]:
+              - tab "Connection health Live validation state, regions, and quick operator actions." [selected] [ref=e108]:
+                - paragraph [ref=e109]: Connection health
+                - paragraph [ref=e110]: Live validation state, regions, and quick operator actions.
+              - tab "Roles & permissions ReadRole posture and monitored-region scope across connected accounts." [ref=e111]:
+                - paragraph [ref=e112]: Roles & permissions
+                - paragraph [ref=e113]: ReadRole posture and monitored-region scope across connected accounts.
+              - tab "Integrations Required service checks and onboarding handoff for each account." [ref=e114]:
+                - paragraph [ref=e115]: Integrations
+                - paragraph [ref=e116]: Required service checks and onboarding handoff for each account.
+              - tab "Usage & lifecycle Lifecycle timestamps and monitoring posture over time." [ref=e117]:
+                - paragraph [ref=e118]: Usage & lifecycle
+                - paragraph [ref=e119]: Lifecycle timestamps and monitoring posture over time.
+            - generic [ref=e201]:
+              - generic [ref=e202]:
+                - generic [ref=e203]:
+                  - paragraph [ref=e204]: Connection health
+                  - heading "Connection state and quick account actions" [level=3] [ref=e205]
+                  - paragraph [ref=e206]: Open the account detail workflow, rerun onboarding-only checks, or queue source refreshes directly from the health grid.
+                - generic [ref=e208]: 1 account
+              - table [ref=e212]:
+                - rowgroup [ref=e213]:
+                  - row "Account Coverage Status Connection health Last validated Actions" [ref=e214]:
+                    - columnheader "Account" [ref=e215]
+                    - columnheader "Coverage" [ref=e216]
+                    - columnheader "Status" [ref=e217]
+                    - columnheader "Connection health" [ref=e218]
+                    - columnheader "Last validated" [ref=e219]
+                    - columnheader "Actions" [ref=e220]
+                - rowgroup [ref=e221]:
+                  - row "696505809372 Open detail workflow 2 regions eu-north-1, us-east-1 validated Healthy 3/20/26, 5:14 AM UTC Open details Onboarding checks Finding source to refresh Refresh All sources Account-read checks run during onboarding only." [ref=e222]:
+                    - cell "696505809372 Open detail workflow" [ref=e223]:
+                      - button "696505809372 Open detail workflow" [ref=e224]:
+                        - text: "696505809372"
+                        - generic [ref=e225]: Open detail workflow
+                    - cell "2 regions eu-north-1, us-east-1" [ref=e226]:
+                      - paragraph [ref=e227]: 2 regions
+                      - paragraph [ref=e228]: eu-north-1, us-east-1
+                    - cell "validated" [ref=e229]:
+                      - generic [ref=e230]: validated
+                    - cell "Healthy" [ref=e231]:
+                      - generic [ref=e232]: Healthy
+                    - cell "3/20/26, 5:14 AM UTC" [ref=e233]
+                    - cell "Open details Onboarding checks Finding source to refresh Refresh All sources Account-read checks run during onboarding only." [ref=e234]:
+                      - generic [ref=e235]:
+                        - generic [ref=e236]:
+                          - button "Open details" [ref=e237]:
+                            - generic [ref=e238]: Open details
+                          - link "Onboarding checks" [ref=e239] [cursor=pointer]:
+                            - /url: /onboarding
+                            - generic [ref=e240]: Onboarding checks
+                          - generic [ref=e243]:
+                            - button "Finding source to refresh" [ref=e244]:
+                              - generic [ref=e245]:
+                                - generic [ref=e246]: Security Hub
+                                - img [ref=e247]
+                            - button "Refresh" [ref=e249]:
+                              - generic [ref=e250]: Refresh
+                            - button "All sources" [ref=e251]:
+                              - generic [ref=e252]: All sources
+                        - generic [ref=e253]: Account-read checks run during onboarding only.
+  - alert [ref=e121]

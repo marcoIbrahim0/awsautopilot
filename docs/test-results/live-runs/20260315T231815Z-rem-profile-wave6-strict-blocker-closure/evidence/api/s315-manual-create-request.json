@@ -1,0 +1,10 @@
+{
+  "action_id": "9405f465-5b90-4fee-b4f7-030660683e52",
+  "mode": "pr_only",
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "strategy_inputs": {
+    "kms_key_mode": "custom",
+    "kms_key_arn": "arn:aws:kms:eu-north-1:696505809372:key/ef0cca31-8328-41e6-ab28-64cbedc1a44c"
+  },
+  "risk_acknowledged": true
+}

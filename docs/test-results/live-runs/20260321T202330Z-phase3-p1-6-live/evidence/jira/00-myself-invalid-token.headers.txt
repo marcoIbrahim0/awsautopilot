@@ -1,0 +1,24 @@
+HTTP/2 401 
+content-type: application/json;charset=UTF-8
+content-length: 53
+date: Sat, 21 Mar 2026 20:35:12 GMT
+server: AtlassianEdge
+timing-allow-origin: *
+x-arequestid: 34a2db16a6b1b82ba8ba7a738bcaa5e6
+x-seraph-loginreason: AUTHENTICATED_FAILED
+set-cookie: atlassian.xsrf.token=e3d1d79ce044883ef2374bc4017bbf203ab039eb_lout; Path=/; SameSite=None; Secure
+cache-control: no-cache, no-store, no-transform
+www-authenticate: OAuth realm="https%3A%2F%2Focypheris.atlassian.net"
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+atl-traceid: e437c184707a481f977961fc2b5bddc7
+atl-request-id: e437c184-707a-481f-9779-61fc2b5bddc7
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+report-to: {"endpoints": [{"url": "https://dz8aopenkvv6s.cloudfront.net"}], "group": "endpoint-1", "include_subdomains": true, "max_age": 600}
+nel: {"failure_fraction": 0.01, "include_subdomains": true, "max_age": 600, "report_to": "endpoint-1"}
+server-timing: atl-edge;dur=82,atl-edge-internal;dur=16,atl-edge-upstream;dur=65,atl-edge-pop;desc="aws-eu-central-2"
+x-cache: Error from cloudfront
+via: 1.1 8aa866631bd1d59989dd7fb1c1caed90.cloudfront.net (CloudFront)
+x-amz-cf-pop: CAI50-P2
+x-amz-cf-id: iGPO7UcZ_kH9NjsNSoBEf9Kr3VTtOIJlqh0rNBvxkKnhHwg0YW2yUg==
+

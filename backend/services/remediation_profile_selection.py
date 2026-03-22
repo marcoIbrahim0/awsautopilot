@@ -439,6 +439,10 @@ def _resolve_s3_2_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
+        persisted_strategy_inputs=_s3_policy_preservation_persisted_inputs(
+            explicit_inputs=explicit_inputs,
+            runtime_signals=runtime_signals,
+        ),
     )
 
 
@@ -520,6 +524,10 @@ def _resolve_s3_5_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
+        persisted_strategy_inputs=_s3_policy_preservation_persisted_inputs(
+            explicit_inputs=explicit_inputs,
+            runtime_signals=runtime_signals,
+        ),
     )
 
 
@@ -1248,6 +1256,34 @@ def _s3_9_persisted_inputs(
     if _present(resolved_inputs.get("log_bucket_name")):
         values["log_bucket_name"] = resolved_inputs["log_bucket_name"]
     return values
+
+
+def _s3_policy_preservation_persisted_inputs(
+    *,
+    explicit_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    evidence = _mapping_value(runtime_signals, "evidence")
+    if not isinstance(evidence, Mapping):
+        return values
+    policy_json = _clean_text(evidence.get("existing_bucket_policy_json"))
+    if policy_json is not None:
+        values["existing_bucket_policy_json"] = policy_json
+    statement_count = _non_negative_int(evidence.get("existing_bucket_policy_statement_count"))
+    if statement_count is not None:
+        values["existing_bucket_policy_statement_count"] = statement_count
+    return values
+
+
+def _non_negative_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _s3_15_missing_inputs(

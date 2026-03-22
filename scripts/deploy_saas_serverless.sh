@@ -24,6 +24,25 @@ read_env_file_value() {
   printf '%s' "$line"
 }
 
+read_secret_string_value() {
+  local secret_id="$1"
+  local secret_value=""
+  if [[ -z "$secret_id" ]]; then
+    return 0
+  fi
+  secret_value="$(
+    aws secretsmanager get-secret-value \
+      --region "$AWS_REGION_EFFECTIVE" \
+      --secret-id "$secret_id" \
+      --query SecretString \
+      --output text 2>/dev/null || true
+  )"
+  if [[ "$secret_value" == "None" ]]; then
+    return 0
+  fi
+  printf '%s' "$secret_value"
+}
+
 AWS_REGION_EFFECTIVE="${AWS_REGION:-$(read_env_file_value AWS_REGION || true)}"
 AWS_REGION_EFFECTIVE="${AWS_REGION_EFFECTIVE:-eu-north-1}"
 
@@ -51,9 +70,6 @@ S3_EXPORT_BUCKET_REGION_VALUE="${S3_EXPORT_BUCKET_REGION:-$(read_env_file_value 
 S3_SUPPORT_BUCKET_VALUE="${S3_SUPPORT_BUCKET:-$(read_env_file_value S3_SUPPORT_BUCKET || true)}"
 S3_SUPPORT_BUCKET_REGION_VALUE="${S3_SUPPORT_BUCKET_REGION:-$(read_env_file_value S3_SUPPORT_BUCKET_REGION || true)}"
 SAAS_BUNDLE_EXECUTOR_ENABLED_VALUE="${SAAS_BUNDLE_EXECUTOR_ENABLED:-$(read_env_file_value SAAS_BUNDLE_EXECUTOR_ENABLED || true)}"
-SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI_VALUE="${SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI:-$(read_env_file_value SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI || true)}"
-SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION_VALUE="${SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION:-$(read_env_file_value SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION || true)}"
-SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS_VALUE="${SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS:-$(read_env_file_value SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS || true)}"
 TENANT_RECONCILIATION_ENABLED_VALUE="${TENANT_RECONCILIATION_ENABLED:-$(read_env_file_value TENANT_RECONCILIATION_ENABLED || true)}"
 TENANT_RECONCILIATION_PILOT_TENANTS_VALUE="${TENANT_RECONCILIATION_PILOT_TENANTS:-$(read_env_file_value TENANT_RECONCILIATION_PILOT_TENANTS || true)}"
 CONTROL_PLANE_SHADOW_MODE_VALUE="${CONTROL_PLANE_SHADOW_MODE:-$(read_env_file_value CONTROL_PLANE_SHADOW_MODE || true)}"
@@ -72,10 +88,33 @@ EMAIL_SMTP_PORT_VALUE="${EMAIL_SMTP_PORT_VALUE:-587}"
 EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS:-$(read_env_file_value EMAIL_SMTP_STARTTLS || true)}"
 EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS_VALUE:-true}"
 EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE="${EMAIL_SMTP_CREDENTIALS_SECRET_ID:-$(read_env_file_value EMAIL_SMTP_CREDENTIALS_SECRET_ID || true)}"
+OPENAI_HELP_ENABLED_VALUE="${OPENAI_HELP_ENABLED:-$(read_env_file_value OPENAI_HELP_ENABLED || true)}"
+OPENAI_API_KEY_VALUE="${OPENAI_API_KEY:-$(read_env_file_value OPENAI_API_KEY || true)}"
+OPENAI_API_KEY_SECRET_ID_VALUE="${OPENAI_API_KEY_SECRET_ID:-$(read_env_file_value OPENAI_API_KEY_SECRET_ID || true)}"
+OPENAI_HELP_MODEL_VALUE="${OPENAI_HELP_MODEL:-$(read_env_file_value OPENAI_HELP_MODEL || true)}"
+OPENAI_HELP_REASONING_EFFORT_VALUE="${OPENAI_HELP_REASONING_EFFORT:-$(read_env_file_value OPENAI_HELP_REASONING_EFFORT || true)}"
+OPENAI_HELP_TIMEOUT_SECONDS_VALUE="${OPENAI_HELP_TIMEOUT_SECONDS:-$(read_env_file_value OPENAI_HELP_TIMEOUT_SECONDS || true)}"
+
+JWT_SECRET_SECRET_ID="${JWT_SECRET_SECRET_ID:-$(read_env_file_value JWT_SECRET_SECRET_ID || true)}"
+JWT_SECRET_SECRET_ID="${JWT_SECRET_SECRET_ID:-${NAME_PREFIX}/JWT_SECRET}"
+BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID="${BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID:-$(read_env_file_value BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID || true)}"
+BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID="${BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID:-${NAME_PREFIX}/BUNDLE_REPORTING_TOKEN_SECRET}"
+CONTROL_PLANE_EVENTS_SECRET_SECRET_ID="${CONTROL_PLANE_EVENTS_SECRET_SECRET_ID:-$(read_env_file_value CONTROL_PLANE_EVENTS_SECRET_SECRET_ID || true)}"
+CONTROL_PLANE_EVENTS_SECRET_SECRET_ID="${CONTROL_PLANE_EVENTS_SECRET_SECRET_ID:-${NAME_PREFIX}/CONTROL_PLANE_EVENTS_SECRET}"
 
 DATABASE_URL="${DATABASE_URL:-$(read_env_file_value DATABASE_URL || true)}"
 JWT_SECRET="${JWT_SECRET:-$(read_env_file_value JWT_SECRET || true)}"
+if [[ -z "$JWT_SECRET" ]]; then
+  JWT_SECRET="$(read_secret_string_value "$JWT_SECRET_SECRET_ID")"
+fi
+BUNDLE_REPORTING_TOKEN_SECRET="${BUNDLE_REPORTING_TOKEN_SECRET:-$(read_env_file_value BUNDLE_REPORTING_TOKEN_SECRET || true)}"
+if [[ -z "$BUNDLE_REPORTING_TOKEN_SECRET" ]]; then
+  BUNDLE_REPORTING_TOKEN_SECRET="$(read_secret_string_value "$BUNDLE_REPORTING_TOKEN_SECRET_SECRET_ID")"
+fi
 CONTROL_PLANE_EVENTS_SECRET="${CONTROL_PLANE_EVENTS_SECRET:-$(read_env_file_value CONTROL_PLANE_EVENTS_SECRET || true)}"
+if [[ -z "$CONTROL_PLANE_EVENTS_SECRET" ]]; then
+  CONTROL_PLANE_EVENTS_SECRET="$(read_secret_string_value "$CONTROL_PLANE_EVENTS_SECRET_SECRET_ID")"
+fi
 
 API_DOMAIN="${SAAS_API_DOMAIN:-api.ocypheris.com}"
 CERT_ARN="${SAAS_CERTIFICATE_ARN:-}"
@@ -138,6 +177,10 @@ if [[ -z "$DATABASE_URL" ]]; then
 fi
 if [[ -z "$JWT_SECRET" ]]; then
   echo "Missing JWT_SECRET (set in env or ${ENV_FILE})." >&2
+  exit 2
+fi
+if [[ -z "$BUNDLE_REPORTING_TOKEN_SECRET" ]]; then
+  echo "Missing BUNDLE_REPORTING_TOKEN_SECRET (set in env or ${ENV_FILE})." >&2
   exit 2
 fi
 if [[ -z "$CONTROL_PLANE_EVENTS_SECRET" ]]; then
@@ -295,6 +338,7 @@ params=(
   "ApiPublicUrlOverride=${API_PUBLIC_URL_VALUE}"
   "DatabaseUrl=${DATABASE_URL}"
   "JwtSecret=${JWT_SECRET}"
+  "BundleReportingTokenSecret=${BUNDLE_REPORTING_TOKEN_SECRET}"
   "ControlPlaneEventsSecret=${CONTROL_PLANE_EVENTS_SECRET}"
   "EnableWorker=${ENABLE_WORKER}"
   "WorkerReservedConcurrency=${WORKER_RESERVED_CONCURRENCY}"
@@ -325,15 +369,6 @@ if [[ -n "$S3_SUPPORT_BUCKET_REGION_VALUE" ]]; then
 fi
 if [[ -n "$SAAS_BUNDLE_EXECUTOR_ENABLED_VALUE" ]]; then
   params+=("SaasBundleExecutorEnabled=${SAAS_BUNDLE_EXECUTOR_ENABLED_VALUE}")
-fi
-if [[ -n "$SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI_VALUE" ]]; then
-  params+=("SaasBundleRunnerTemplateS3Uri=${SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI_VALUE}")
-fi
-if [[ -n "$SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION_VALUE" ]]; then
-  params+=("SaasBundleRunnerTemplateVersion=${SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION_VALUE}")
-fi
-if [[ -n "$SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS_VALUE" ]]; then
-  params+=("SaasBundleRunnerTemplateCacheSeconds=${SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS_VALUE}")
 fi
 if [[ -n "$TENANT_RECONCILIATION_ENABLED_VALUE" ]]; then
   params+=("TenantReconciliationEnabled=${TENANT_RECONCILIATION_ENABLED_VALUE}")
@@ -379,6 +414,24 @@ if [[ -n "$EMAIL_SMTP_STARTTLS_VALUE" ]]; then
 fi
 if [[ -n "$EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE" ]]; then
   params+=("EmailSmtpCredentialsSecretId=${EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE}")
+fi
+if [[ -n "$OPENAI_HELP_ENABLED_VALUE" ]]; then
+  params+=("OpenAiHelpEnabled=${OPENAI_HELP_ENABLED_VALUE}")
+fi
+if [[ -n "$OPENAI_API_KEY_VALUE" ]]; then
+  params+=("OpenAiApiKey=${OPENAI_API_KEY_VALUE}")
+fi
+if [[ -n "$OPENAI_API_KEY_SECRET_ID_VALUE" ]]; then
+  params+=("OpenAiApiKeySecretId=${OPENAI_API_KEY_SECRET_ID_VALUE}")
+fi
+if [[ -n "$OPENAI_HELP_MODEL_VALUE" ]]; then
+  params+=("OpenAiHelpModel=${OPENAI_HELP_MODEL_VALUE}")
+fi
+if [[ -n "$OPENAI_HELP_REASONING_EFFORT_VALUE" ]]; then
+  params+=("OpenAiHelpReasoningEffort=${OPENAI_HELP_REASONING_EFFORT_VALUE}")
+fi
+if [[ -n "$OPENAI_HELP_TIMEOUT_SECONDS_VALUE" ]]; then
+  params+=("OpenAiHelpTimeoutSeconds=${OPENAI_HELP_TIMEOUT_SECONDS_VALUE}")
 fi
 
 # Always pass the custom-domain parameters so a prior domain can be cleared.

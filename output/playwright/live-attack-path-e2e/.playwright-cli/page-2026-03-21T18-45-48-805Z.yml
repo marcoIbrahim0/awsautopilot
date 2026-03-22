@@ -1,0 +1,207 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - alert [ref=e67]
+  - generic [ref=e387]:
+    - complementary [ref=e388]:
+      - navigation [ref=e392]:
+        - link "Findings" [ref=e393] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e395]
+          - generic [ref=e397]: Findings
+        - link "Accounts" [ref=e398] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e400]
+          - generic [ref=e402]: Accounts
+        - link "Settings" [ref=e403] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e405]
+          - generic [ref=e408]: Settings
+        - link "Top Risks" [ref=e409] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e411]
+          - generic [ref=e413]: Top Risks
+        - link "Exports" [ref=e414] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e416]
+          - generic [ref=e418]: Exports
+        - link "Help" [ref=e419] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e421]
+          - generic [ref=e424]: Help
+        - link "Audit Log" [ref=e425] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e427]
+          - generic [ref=e430]: Audit Log
+      - button "Pin sidebar open" [ref=e433]:
+        - img [ref=e434]
+    - generic [ref=e436]:
+      - banner [ref=e437]:
+        - heading "Top Risks" [level=1] [ref=e439]
+        - generic [ref=e440]:
+          - button "Switch to light mode" [ref=e441]:
+            - img [ref=e442]
+          - button "Notifications" [ref=e445]:
+            - img [ref=e446]
+          - button "Profile menu" [ref=e448]:
+            - generic [ref=e449]: M
+      - main [ref=e450]:
+        - generic [ref=e452]:
+          - generic [ref=e453]:
+            - generic [ref=e454]:
+              - img [ref=e455]
+              - generic [ref=e458]:
+                - generic [ref=e459]: "100"
+                - generic [ref=e460]: / 100
+            - generic [ref=e461]:
+              - paragraph [ref=e462]: Actionable Risk Score
+              - paragraph [ref=e463]: Critical risk
+              - paragraph [ref=e464]:
+                - text: Based on
+                - strong [ref=e465]: 8 critical
+                - text: and
+                - strong [ref=e466]: 12 high
+                - text: in-scope findings requiring action. Score = Critical × 10 + High × 4, capped at 100.
+            - generic [ref=e467]:
+              - generic [ref=e468]:
+                - paragraph [ref=e469]: "8"
+                - paragraph [ref=e470]: Critical
+              - generic [ref=e472]:
+                - paragraph [ref=e473]: "12"
+                - paragraph [ref=e474]: High
+          - generic [ref=e475]:
+            - generic [ref=e476]:
+              - generic [ref=e477]:
+                - button "This Week" [ref=e478]
+                - button "30 Days" [ref=e479]
+                - button "All Time" [ref=e480]
+              - generic [ref=e481]:
+                - button "All sources" [ref=e482]
+                - button "Security Hub" [ref=e483]
+                - button "Access Analyzer" [ref=e484]
+                - button "Inspector" [ref=e485]
+            - generic [ref=e486]:
+              - generic [ref=e487]:
+                - paragraph [ref=e488]: "8"
+                - paragraph [ref=e489]: Critical
+              - generic [ref=e491]:
+                - paragraph [ref=e492]: "12"
+                - paragraph [ref=e493]: High
+              - button "Refresh" [ref=e494]:
+                - img [ref=e496]
+                - generic [ref=e498]: Refresh
+          - generic [ref=e499]:
+            - link "#1 SH CRITICAL IAM root user access key should not exist IAM.4 This AWS control checks whether the root user access key is available. AWS::::Account:696505809372 696505809372 • eu-north-1" [ref=e500] [cursor=pointer]:
+              - /url: /findings/8a8d5d6d-c08f-4a2b-a649-ae3e9a0a99b9
+              - generic [ref=e501]:
+                - generic [ref=e502]: "#1"
+                - generic [ref=e503]:
+                  - 'generic "Source: Security Hub" [ref=e504]': SH
+                  - generic [ref=e505]: CRITICAL
+              - heading "IAM root user access key should not exist" [level=3] [ref=e506]
+              - paragraph [ref=e507]: IAM.4
+              - paragraph [ref=e508]: This AWS control checks whether the root user access key is available.
+              - paragraph [ref=e509]: AWS::::Account:696505809372
+              - generic [ref=e510]:
+                - generic [ref=e511]: "696505809372"
+                - generic [ref=e512]: •
+                - generic [ref=e513]: eu-north-1
+            - link "#2 SH CRITICAL SSM documents should have the block public sharing setting enabled SSM.7 AWS::::Account:696505809372 696505809372 • eu-north-1" [ref=e514] [cursor=pointer]:
+              - /url: /findings/97373ebf-4784-41fc-bd90-ecfdae328981
+              - generic [ref=e515]:
+                - generic [ref=e516]: "#2"
+                - generic [ref=e517]:
+                  - 'generic "Source: Security Hub" [ref=e518]': SH
+                  - generic [ref=e519]: CRITICAL
+              - heading "SSM documents should have the block public sharing setting enabled" [level=3] [ref=e520]
+              - paragraph [ref=e521]: SSM.7
+              - paragraph [ref=e522]: AWS::::Account:696505809372
+              - generic [ref=e523]:
+                - generic [ref=e524]: "696505809372"
+                - generic [ref=e525]: •
+                - generic [ref=e526]: eu-north-1
+            - link "#3 SH CRITICAL SSM documents should have the block public sharing setting enabled SSM.7 AWS::::Account:696505809372 696505809372 • us-east-1" [ref=e527] [cursor=pointer]:
+              - /url: /findings/cc4e2b7a-a2d1-443d-9bd6-5fb0ac2d7e25
+              - generic [ref=e528]:
+                - generic [ref=e529]: "#3"
+                - generic [ref=e530]:
+                  - 'generic "Source: Security Hub" [ref=e531]': SH
+                  - generic [ref=e532]: CRITICAL
+              - heading "SSM documents should have the block public sharing setting enabled" [level=3] [ref=e533]
+              - paragraph [ref=e534]: SSM.7
+              - paragraph [ref=e535]: AWS::::Account:696505809372
+              - generic [ref=e536]:
+                - generic [ref=e537]: "696505809372"
+                - generic [ref=e538]: •
+                - generic [ref=e539]: us-east-1
+            - link "#4 SH CRITICAL IAM root user access key should not exist IAM.4 AWS::::Account:696505809372 696505809372 • us-east-1" [ref=e540] [cursor=pointer]:
+              - /url: /findings/f107b626-62a1-4854-970a-1f1646b25d50
+              - generic [ref=e541]:
+                - generic [ref=e542]: "#4"
+                - generic [ref=e543]:
+                  - 'generic "Source: Security Hub" [ref=e544]': SH
+                  - generic [ref=e545]: CRITICAL
+              - heading "IAM root user access key should not exist" [level=3] [ref=e546]
+              - paragraph [ref=e547]: IAM.4
+              - paragraph [ref=e548]: AWS::::Account:696505809372
+              - generic [ref=e549]:
+                - generic [ref=e550]: "696505809372"
+                - generic [ref=e551]: •
+                - generic [ref=e552]: us-east-1
+            - link "#5 SH CRITICAL AWS Config should be enabled and use the service-linked role for resource recording Config.1 AWS::::Account:696505809372 696505809372 • us-east-1" [ref=e553] [cursor=pointer]:
+              - /url: /findings/84262e9e-7c63-42d6-8bb0-d686160725ab
+              - generic [ref=e554]:
+                - generic [ref=e555]: "#5"
+                - generic [ref=e556]:
+                  - 'generic "Source: Security Hub" [ref=e557]': SH
+                  - generic [ref=e558]: CRITICAL
+              - heading "AWS Config should be enabled and use the service-linked role for resource recording" [level=3] [ref=e559]
+              - paragraph [ref=e560]: Config.1
+              - paragraph [ref=e561]: AWS::::Account:696505809372
+              - generic [ref=e562]:
+                - generic [ref=e563]: "696505809372"
+                - generic [ref=e564]: •
+                - generic [ref=e565]: us-east-1
+            - link "#6 SH CRITICAL AWS Config should be enabled and use the service-linked role for resource recording Config.1 AWS::::Account:696505809372 696505809372 • eu-north-1" [ref=e566] [cursor=pointer]:
+              - /url: /findings/125ef68a-1231-40ce-a7bf-bffa97170d2b
+              - generic [ref=e567]:
+                - generic [ref=e568]: "#6"
+                - generic [ref=e569]:
+                  - 'generic "Source: Security Hub" [ref=e570]': SH
+                  - generic [ref=e571]: CRITICAL
+              - heading "AWS Config should be enabled and use the service-linked role for resource recording" [level=3] [ref=e572]
+              - paragraph [ref=e573]: Config.1
+              - paragraph [ref=e574]: AWS::::Account:696505809372
+              - generic [ref=e575]:
+                - generic [ref=e576]: "696505809372"
+                - generic [ref=e577]: •
+                - generic [ref=e578]: eu-north-1
+          - link "View All 20 High-Priority Findings" [ref=e580] [cursor=pointer]:
+            - /url: /findings?severity=CRITICAL,HIGH&status=NEW,NOTIFIED
+            - button "View All 20 High-Priority Findings" [ref=e581]:
+              - generic [ref=e582]:
+                - text: View All 20 High-Priority Findings
+                - img [ref=e583]
+          - generic [ref=e585]:
+            - heading "Quick Actions" [level=2] [ref=e586]
+            - generic [ref=e587]:
+              - link "Critical Findings View all critical issues" [ref=e588] [cursor=pointer]:
+                - /url: /findings?severity=CRITICAL
+                - generic [ref=e589]:
+                  - img [ref=e591]
+                  - generic [ref=e593]:
+                    - paragraph [ref=e594]: Critical Findings
+                    - paragraph [ref=e595]: View all critical issues
+              - link "Refresh Findings Trigger new ingestion" [ref=e596] [cursor=pointer]:
+                - /url: /accounts
+                - generic [ref=e597]:
+                  - img [ref=e599]
+                  - generic [ref=e601]:
+                    - paragraph [ref=e602]: Refresh Findings
+                    - paragraph [ref=e603]: Trigger new ingestion
+              - link "Resolved Findings View fixed issues" [ref=e604] [cursor=pointer]:
+                - /url: /findings?status=RESOLVED
+                - generic [ref=e605]:
+                  - img [ref=e607]
+                  - generic [ref=e609]:
+                    - paragraph [ref=e610]: Resolved Findings
+                    - paragraph [ref=e611]: View fixed issues

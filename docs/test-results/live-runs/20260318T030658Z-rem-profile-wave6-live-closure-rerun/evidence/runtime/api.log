@@ -1,0 +1,13 @@
+INFO:     Started server process [55571]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18022 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55182 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55191 - "POST /api/action-groups/848668f2-5f24-4637-aeaa-6b7e5f9a0271/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:55200 - "GET /api/remediation-runs/ca481913-67e4-4928-a614-8a82e0ebbf65 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55201 - "GET /api/action-groups/848668f2-5f24-4637-aeaa-6b7e5f9a0271/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55202 - "GET /api/remediation-runs/ca481913-67e4-4928-a614-8a82e0ebbf65/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55225 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55320 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55336 - "GET /api/remediation-runs/ca481913-67e4-4928-a614-8a82e0ebbf65 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55338 - "GET /api/action-groups/848668f2-5f24-4637-aeaa-6b7e5f9a0271/runs HTTP/1.1" 200 OK

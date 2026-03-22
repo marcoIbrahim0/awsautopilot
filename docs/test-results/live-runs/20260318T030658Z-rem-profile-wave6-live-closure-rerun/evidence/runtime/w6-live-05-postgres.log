@@ -1,0 +1,11 @@
+2026-03-18 17:34:15.194 EET [96320] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-18 17:34:15.196 EET [96320] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-03-18 17:34:15.196 EET [96320] LOG:  listening on IPv6 address "::1", port 5432
+2026-03-18 17:34:15.197 EET [96320] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-03-18 17:34:15.206 EET [96321] LOG:  database system was shut down at 2026-03-18 16:56:49 EET
+2026-03-18 17:34:15.213 EET [96320] LOG:  database system is ready to accept connections
+2026-03-18 18:04:40.669 EET [96320] LOG:  received fast shutdown request
+2026-03-18 18:04:40.669 EET [96320] LOG:  aborting any active transactions
+2026-03-18 18:04:40.671 EET [96320] LOG:  background worker "logical replication launcher" (PID 96327) exited with exit code 1
+2026-03-18 18:04:40.671 EET [96322] LOG:  shutting down
+2026-03-18 18:04:40.677 EET [96320] LOG:  database system is shut down

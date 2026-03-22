@@ -1,0 +1,1810 @@
+{
+    "Controls": [
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ACM.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.528000+00:00",
+            "ControlId": "ACM.1",
+            "Title": "Imported and ACM-issued certificates should be renewed after a specified time period",
+            "Description": "This control checks whether an AWS Certificate Manager (ACM) certificate is renewed within the specified time period. It checks both imported certificates and certificates provided by ACM. The control fails if the certificate isn't renewed within the specified time period. Unless you provide a custom parameter value for the renewal period, Security Hub uses a default value of 30 days.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ACM.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SC-28(3)",
+                "NIST.800-53.r5 SC-7(16)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.906000+00:00",
+            "ControlId": "APIGateway.1",
+            "Title": "API Gateway REST and WebSocket API execution logging should be enabled",
+            "Description": "This control checks whether all stages of an Amazon API Gateway REST or WebSocket API have logging enabled. The control fails if the 'loggingLevel' isn't 'ERROR' or 'INFO' for all stages of the API. Unless you provide custom parameter values to indicate that a specific log type should be enabled, Security Hub produces a passed finding if the logging level is either 'ERROR' or 'INFO'.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.078000+00:00",
+            "ControlId": "APIGateway.2",
+            "Title": "API Gateway REST API stages should be configured to use SSL certificates for backend authentication",
+            "Description": "This control checks whether Amazon API Gateway REST API stages have SSL certificates configured that backend systems can use to authenticate that incoming requests are from the API Gateway.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-17(2)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 IA-5(1)",
+                "NIST.800-53.r5 SC-12(3)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-23",
+                "NIST.800-53.r5 SC-23(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-8",
+                "NIST.800-53.r5 SC-8(1)",
+                "NIST.800-53.r5 SC-8(2)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.865000+00:00",
+            "ControlId": "APIGateway.3",
+            "Title": "API Gateway REST API stages should have AWS X-Ray tracing enabled",
+            "Description": "This control checks whether AWS X-Ray active tracing is enabled for your Amazon API Gateway REST API stages.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.3/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-7"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.885000+00:00",
+            "ControlId": "APIGateway.4",
+            "Title": "API Gateway should be associated with a WAF Web ACL",
+            "Description": "This control checks to see if an API Gateway stage is using an AWS WAF Web ACL. This control fails if an AWS WAF Web ACL is not attached to a REST API Gateway stage.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.4/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.105000+00:00",
+            "ControlId": "APIGateway.5",
+            "Title": "API Gateway REST API cache data should be encrypted at rest",
+            "Description": "This control checks whether all methods in Amazon API Gateway REST API stages that have cache enabled are encrypted. The control fails if any method in API Gateway REST API stage is configured to cache and the cache is not encrypted.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.5/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.8",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.833000+00:00",
+            "ControlId": "APIGateway.8",
+            "Title": "API Gateway routes should specify an authorization type",
+            "Description": "This control checks if Amazon API Gateway routes have an authorization type. The control fails if the API Gateway route doesn't have any authorization type. Optionally, you can provide a custom parameter value if you want the control to pass only if the route uses the authorization type specified in the 'authorizationType' parameter.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.8/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/APIGateway.9",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.046000+00:00",
+            "ControlId": "APIGateway.9",
+            "Title": "Access logging should be configured for API Gateway V2 Stages",
+            "Description": "This control checks if Amazon API Gateway V2 stages have access logging configured. This control fails if access log settings aren’t defined.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/APIGateway.9/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/Account.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.110000+00:00",
+            "ControlId": "Account.1",
+            "Title": "Security contact information should be provided for an AWS account.",
+            "Description": "This control checks if an Amazon Web Services (AWS) account has security contact information. The control fails if security contact information is not provided for the account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Account.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/Account.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.609000+00:00",
+            "ControlId": "Account.2",
+            "Title": "AWS account should be part of an AWS Organizations organization",
+            "Description": "This control checks if an AWS account is part of an AWS Organizations organization. The control fails if the account is not part of an organization.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Account.2/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AppSync.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.113000+00:00",
+            "ControlId": "AppSync.5",
+            "Title": "AWS AppSync GraphQL APIs should not be authenticated with API keys",
+            "Description": "This control checks whether your application uses an API key to interact with an AWS AppSync GraphQL API. The control fails if an AWS AppSync GraphQL API is authenticated with an API key.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AppSync.5/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(1)",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-6"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AutoScaling.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.064000+00:00",
+            "ControlId": "AutoScaling.1",
+            "Title": "Auto scaling groups associated with a Classic Load Balancer should use load balancer health checks",
+            "Description": "This control checks whether an Amazon EC2 Auto Scaling group that is associated with a load balancer uses Elastic Load Balancing (ELB) health checks. The control fails if the Auto Scaling group doesn't use ELB health checks.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AutoScaling.1/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 CP-2(2)",
+                "NIST.800-53.r5 SI-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AutoScaling.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.484000+00:00",
+            "ControlId": "AutoScaling.2",
+            "Title": "Amazon EC2 Auto Scaling group should cover multiple Availability Zones",
+            "Description": "This control checks whether an Amazon EC2 Auto Scaling group spans at least the specified number of Availability Zones (AZs). The control fails if an Auto Scaling group doesn't span at least the specified number of AZs. Unless you provide a custom parameter value for the minimum number of AZs, Security Hub uses a default value of two AZs.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AutoScaling.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-2(2)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AutoScaling.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.866000+00:00",
+            "ControlId": "AutoScaling.3",
+            "Title": "Auto Scaling group launch configurations should configure EC2 instances to require Instance Metadata Service Version 2 (IMDSv2)",
+            "Description": "This control checks whether IMDSv2 is enabled on all instances launched by Amazon EC2 Auto Scaling groups. The control fails if the Instance Metadata Service (IMDS) version isn't included in the launch configuration or is configured as token optional, which is a setting that allows either IMDSv1 or IMDSv2.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AutoScaling.3/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AutoScaling.6",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.452000+00:00",
+            "ControlId": "AutoScaling.6",
+            "Title": "Auto Scaling groups should use multiple instance types in multiple Availability Zones",
+            "Description": "This control checks whether an Amazon EC2 Auto Scaling group uses multiple instance types. This control fails if the Amazon EC2 Auto Scaling group has only one instance type defined.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AutoScaling.6/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-2(2)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/AutoScaling.9",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.972000+00:00",
+            "ControlId": "AutoScaling.9",
+            "Title": "EC2 Auto Scaling groups should use EC2 launch templates",
+            "Description": "This control checks whether an Amazon EC2 Auto Scaling group is created from an EC2 launch template. This control fails if an Amazon EC2 Auto Scaling group is not created with a launch template or if a launch template is not specified in a mixed instances policy.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/AutoScaling.9/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/Autoscaling.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.848000+00:00",
+            "ControlId": "Autoscaling.5",
+            "Title": "Amazon EC2 instances launched using Auto Scaling group launch configurations should not have Public IP addresses",
+            "Description": "This control checks whether Amazon EC2 Auto Scaling groups have public IP addresses enabled using launch configurations.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Autoscaling.5/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/Backup.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.086000+00:00",
+            "ControlId": "Backup.1",
+            "Title": "AWS Backup recovery points should be encrypted at rest",
+            "Description": "This control checks if an AWS Backup recovery point is encrypted at rest. The control fails if the recovery point isn't encrypted at rest.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Backup.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-9(8)",
+                "NIST.800-53.r5 SI-12"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudTrail.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.427000+00:00",
+            "ControlId": "CloudTrail.1",
+            "Title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events",
+            "Description": "This AWS control checks that there is at least one multi-region AWS CloudTrail trail includes read and write management events.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.1/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 AU-14(1)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)",
+                "NIST.800-53.r5 SA-8(22)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudTrail.10",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.526000+00:00",
+            "ControlId": "CloudTrail.10",
+            "Title": "CloudTrail Lake event data stores should be encrypted with customer managed AWS KMS keys",
+            "Description": "This control checks whether an AWS CloudTrail Lake event data store is encrypted at rest with a customer managed AWS KMS key. The control fails if the event data store isn't encrypted with a customer managed KMS key. You can optionally specify a list of KMS keys for the control to include in the evaluation.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.10/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SC-12(2)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 SI-7(6)",
+                "NIST.800-53.r5 AU-9"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudTrail.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.053000+00:00",
+            "ControlId": "CloudTrail.2",
+            "Title": "CloudTrail should have encryption at-rest enabled",
+            "Description": "This AWS control checks whether AWS CloudTrail is configured to use the server side encryption (SSE) AWS Key Management Service (AWS KMS) customer master key (CMK) encryption. The check will pass if the KmsKeyId is defined.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-9",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudTrail.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.929000+00:00",
+            "ControlId": "CloudTrail.4",
+            "Title": "CloudTrail log file validation should be enabled",
+            "Description": "This AWS control checks whether CloudTrail log file validation is enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.4/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-9",
+                "NIST.800-53.r5 SI-4",
+                "NIST.800-53.r5 SI-7(1)",
+                "NIST.800-53.r5 SI-7(3)",
+                "NIST.800-53.r5 SI-7(7)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudTrail.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.429000+00:00",
+            "ControlId": "CloudTrail.5",
+            "Title": "CloudTrail trails should be integrated with Amazon CloudWatch Logs",
+            "Description": "This AWS control checks whether AWS CloudTrail trails are configured to send logs to Amazon CloudWatch Logs.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudTrail.5/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(1)",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 AU-6(5)",
+                "NIST.800-53.r5 AU-7(1)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-20",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-4(5)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudWatch.15",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.592000+00:00",
+            "ControlId": "CloudWatch.15",
+            "Title": "CloudWatch Alarms should have an action configured for the alarm state",
+            "Description": "This control checks whether an Amazon CloudWatch alarm has at least one action configured for the 'ALARM' state. The control fails if the alarm doesn't have an action configured for the 'ALARM' state. Optionally, you can include custom parameter values to also require alarm actions for the 'INSUFFICIENT_DATA' or 'OK' states.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudWatch.15/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-6(1)",
+                "NIST.800-53.r5 AU-6(5)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 IR-4(1)",
+                "NIST.800-53.r5 IR-4(5)",
+                "NIST.800-53.r5 SI-2",
+                "NIST.800-53.r5 SI-20",
+                "NIST.800-53.r5 SI-4(12)",
+                "NIST.800-53.r5 SI-4(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudWatch.16",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.669000+00:00",
+            "ControlId": "CloudWatch.16",
+            "Title": "CloudWatch log groups should be retained for at least 1 year",
+            "Description": "This control checks whether an Amazon CloudWatch log group has a retention period of at least the specified number of days. The control fails if the retention period is less than the specified number. Unless you provide a custom parameter value for the retention period, Security Hub uses a default value of 365 days.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudWatch.16/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-11",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SI-12"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CloudWatch.17",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.546000+00:00",
+            "ControlId": "CloudWatch.17",
+            "Title": "CloudWatch alarm actions should be enabled",
+            "Description": "This control evaluates if CloudWatch alarm actions are enabled. The control fails if the alarm action is in the disabled state.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CloudWatch.17/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-6(1)",
+                "NIST.800-53.r5 AU-6(5)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SI-2",
+                "NIST.800-53.r5 SI-4(12)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CodeBuild.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.506000+00:00",
+            "ControlId": "CodeBuild.1",
+            "Title": "CodeBuild Bitbucket source repository URLs should not contain sensitive credentials",
+            "Description": "This control checks whether an AWS CodeBuild project Bitbucket source repository URL contains personal access tokens or a user name and password. The control fails if the Bitbucket source repository URL contains personal access tokens or a user name and password.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CodeBuild.1/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SA-3"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CodeBuild.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.489000+00:00",
+            "ControlId": "CodeBuild.2",
+            "Title": "CodeBuild project environment variables should not contain clear text credentials",
+            "Description": "This AWS control checks whether the project contains environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CodeBuild.2/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 IA-5(7)",
+                "NIST.800-53.r5 SA-3"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CodeBuild.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.030000+00:00",
+            "ControlId": "CodeBuild.3",
+            "Title": "CodeBuild S3 logs should be encrypted",
+            "Description": "This control checks if Amazon S3 logs for an AWS CodeBuild project are encrypted. The control fails if encryption is deactivated for S3 Logs for a CodeBuild project.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CodeBuild.3/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/CodeBuild.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.411000+00:00",
+            "ControlId": "CodeBuild.4",
+            "Title": "CodeBuild project environments should have a logging configuration",
+            "Description": "This control checks whether a CodeBuild project environment has at least one log option enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/CodeBuild.4/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(12)",
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 AU-9(7)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/Config.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.069000+00:00",
+            "ControlId": "Config.1",
+            "Title": "AWS Config should be enabled and use the service-linked role for resource recording",
+            "Description": "This control checks whether AWS Config is enabled in your account in the current AWS Region, records all resources that correspond to controls that are enabled in the current Region, and uses the service-linked AWS Config role.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/Config.1/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CM-3",
+                "NIST.800-53.r5 CM-6(1)",
+                "NIST.800-53.r5 CM-8",
+                "NIST.800-53.r5 CM-8(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.467000+00:00",
+            "ControlId": "DMS.1",
+            "Title": "Database Migration Service replication instances should not be public",
+            "Description": "This AWS control checks whether AWS Database Migration Service replication instances are public by examining the PubliclyAccessible field value.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.1/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.10",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.175000+00:00",
+            "ControlId": "DMS.10",
+            "Title": "DMS endpoints for Neptune databases should have IAM authorization enabled",
+            "Description": "This control checks whether an AWS DMS endpoint for an Amazon Neptune database is configured with IAM authorization. The control fails if the DMS endpoint doesn't have IAM authorization enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.10/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 AC-17",
+                "NIST.800-53.r5 IA-2",
+                "NIST.800-53.r5 IA-5"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.11",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.311000+00:00",
+            "ControlId": "DMS.11",
+            "Title": "DMS endpoints for MongoDB should have an authentication mechanism enabled",
+            "Description": "This control checks whether an AWS DMS endpoint for MongoDB is configured with an authentication mechanism. The control fails if an authentication type isn't set for the endpoint.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.11/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 IA-2",
+                "NIST.800-53.r5 IA-5"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.12",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.244000+00:00",
+            "ControlId": "DMS.12",
+            "Title": "DMS endpoints for Redis should have TLS enabled",
+            "Description": "This control checks whether an AWS DMS endpoint for Redis OSS is configured with a TLS connection. The control fails if the endpoint doesn't have TLS enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.12/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SC-8",
+                "NIST.800-53.r5 SC-13"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.6",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.933000+00:00",
+            "ControlId": "DMS.6",
+            "Title": "DMS replication instances should have automatic minor version upgrade enabled",
+            "Description": "This control checks if automatic minor version upgrade is enabled for an AWS DMS replication instance. The control fails if automatic minor version upgrade isn't enabled for a DMS replication instance.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.6/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SI-2",
+                "NIST.800-53.r5 SI-2(2)",
+                "NIST.800-53.r5 SI-2(4)",
+                "NIST.800-53.r5 SI-2(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.7",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.187000+00:00",
+            "ControlId": "DMS.7",
+            "Title": "DMS replication tasks for the target database should have logging enabled",
+            "Description": "This control checks whether logging is enabled with the minimum severity level of LOGGER_SEVERITY_DEFAULT for DMS replication task events TARGET_APPLY and TARGET_LOAD. The control fails if logging isn't enabled for these events or if the minimum severity level is less than LOGGER_SEVERITY_DEFAULT.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.7/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.8",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.107000+00:00",
+            "ControlId": "DMS.8",
+            "Title": "DMS replication tasks for the source database should have logging enabled",
+            "Description": "The control checks whether logging is enabled with the minimum severity level of LOGGER_SEVERITY_DEFAULT for DMS replication task events SOURCE_CAPTURE and SOURCE_UNLOAD. The control fails if logging isn't enabled for these events of the source database or if the minimum severity level is less than LOGGER_SEVERITY_DEFAULT.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.8/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DMS.9",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.964000+00:00",
+            "ControlId": "DMS.9",
+            "Title": "DMS endpoints should use SSL",
+            "Description": "This control checks whether an AWS DMS endpoint uses an SSL connection. The control fails if the endpoint doesn't use SSL.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DMS.9/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-23",
+                "NIST.800-53.r5 SC-23(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-8",
+                "NIST.800-53.r5 SC-8(1)",
+                "NIST.800-53.r5 SC-8(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DataFirehose.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.166000+00:00",
+            "ControlId": "DataFirehose.1",
+            "Title": "Firehose delivery streams should be encrypted at rest",
+            "Description": "This control checks whether an Amazon Data Firehose delivery stream is encrypted at rest with server-side encryption. This control fails if the delivery stream is not encrypted at rest with server-side encryption.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DataFirehose.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 SC-12",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DynamoDB.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.112000+00:00",
+            "ControlId": "DynamoDB.1",
+            "Title": "DynamoDB tables should automatically scale capacity with demand",
+            "Description": "This control checks whether an Amazon DynamoDB table can scale its read and write capacity as needed. The control fails if the table doesn't use on-demand capacity mode or provisioned mode with auto scaling configured. By default, this control only requires that one of these modes be configured, without regard to specific levels of read or write capacity. Optionally, you can provide custom parameter values to require specific levels of read and write capacity.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DynamoDB.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-2(2)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DynamoDB.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.146000+00:00",
+            "ControlId": "DynamoDB.2",
+            "Title": "DynamoDB tables should have point-in-time recovery enabled",
+            "Description": "This control checks whether point-in-time recovery (PITR) is enabled for a DynamoDB table.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DynamoDB.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 CP-9",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-12",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DynamoDB.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.687000+00:00",
+            "ControlId": "DynamoDB.4",
+            "Title": "DynamoDB tables should be present in a backup plan",
+            "Description": "This control evaluates whether an Amazon DynamoDB table in 'ACTIVE' state is covered by a backup plan. The control fails if the DynamoDB table isn’t covered by a backup plan. If you set the backupVaultLockCheck parameter equal to true, the control passes only if the DynamoDB table is backed up in an AWS Backup locked vault.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DynamoDB.4/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6",
+                "NIST.800-53.r5 CP-6(1)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 CP-9",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-12",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/DynamoDB.6",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.182000+00:00",
+            "ControlId": "DynamoDB.6",
+            "Title": "DynamoDB tables should have deletion protection enabled",
+            "Description": "This control checks whether an Amazon DynamoDB table has deletion protection enabled. The control fails if a DynamoDB table doesn't have deletion protection enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/DynamoDB.6/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)",
+                "NIST.800-53.r5 CM-3",
+                "NIST.800-53.r5 SC-5(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.469000+00:00",
+            "ControlId": "EC2.1",
+            "Title": "EBS snapshots should not be publicly restorable",
+            "Description": "This AWS control checks whether Amazon Elastic Block Store snapshots are not publicly restorable.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.1/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.10",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.824000+00:00",
+            "ControlId": "EC2.10",
+            "Title": "Amazon EC2 should be configured to use VPC endpoints that are created for the Amazon EC2 service",
+            "Description": "This control checks whether a service endpoint for Amazon EC2 is created for each VPC. The control fails if a VPC does not have a VPC endpoint created for the Amazon EC2 service.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.10/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.12",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.108000+00:00",
+            "ControlId": "EC2.12",
+            "Title": "Unused EC2 EIPs should be removed",
+            "Description": "This AWS control will assist you maintain an accurate asset inventory of EIPs by checking wheather Elastic IP addresses that are allocated to a VPC are attached to EC2 instances or in-use elastic network interfaces (ENIs).",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.12/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CM-8(1)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.13",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.530000+00:00",
+            "ControlId": "EC2.13",
+            "Title": "Security groups should not allow ingress from 0.0.0.0/0 to port 22",
+            "Description": "This control checks whether an Amazon EC2 security group allows ingress from ‘0.0.0.0/0’ or ‘::/0’ to port 22. The control fails if the security group allows ingress from ‘0.0.0.0/0’ or ‘::/0’ to port 22.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.13/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CM-7",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.15",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.787000+00:00",
+            "ControlId": "EC2.15",
+            "Title": "EC2 subnets should not automatically assign public IP addresses",
+            "Description": "This control checks whether an Amazon Virtual Private Cloud (Amazon VPC) subnet is configured to automatically assign public IP addresses. The control fails if the subnet is configured to automatically assign public IPv4 or IPv6 addresses.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.15/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.16",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.087000+00:00",
+            "ControlId": "EC2.16",
+            "Title": "Unused Network Access Control Lists should be removed",
+            "Description": "This control checks to see if there are any NACLs (Network Access Control List) that are unused. The control will check the item configuration of the resource AWS::EC2::NetworkAcl and determine the relationships of the NACL.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.16/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CM-8(1)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.17",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.873000+00:00",
+            "ControlId": "EC2.17",
+            "Title": "EC2 instances should not use multiple ENIs",
+            "Description": "This control checks to see if Amazon EC2 instance uses multiple ENI/EFA. This control will pass if single network adapters is used.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.17/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.18",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.880000+00:00",
+            "ControlId": "EC2.18",
+            "Title": "Security groups should only allow unrestricted incoming traffic for authorized ports",
+            "Description": "This control checks whether an Amazon EC2 security group permits unrestricted incoming traffic from unauthorized ports. The control status is determined as follows: If you use the default value for 'authorizedTcpPorts', the control fails if the security group permits unrestricted incoming traffic from any port other than ports 80 and 443; If you provide custom values for 'authorizedTcpPorts' or 'authorizedUdpPorts', the control fails if the security group permits unrestricted incoming traffic from any unlisted port; If no parameter is used, the control fails for any security group that has an unrestricted inbound traffic rule.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.18/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.19",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.868000+00:00",
+            "ControlId": "EC2.19",
+            "Title": "Security groups should not allow unrestricted access to ports with high risk",
+            "Description": "This control checks whether unrestricted incoming traffic for an Amazon EC2 security group is accessible to the specified ports [3389, 20, 23, 110, 143, 3306, 8080, 1433, 9200, 9300, 25, 445, 135, 21, 1434, 4333, 5432, 5500, 5601, 22, 3000, 5000, 8088, 8888] that are considered to be high risk. This control fails if any of the rules in a security group allow ingress traffic from '0.0.0.0/0' or '::/0' to those ports.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.19/remediation",
+            "SeverityRating": "CRITICAL",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)",
+                "NIST.800-53.r5 CM-7",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.878000+00:00",
+            "ControlId": "EC2.2",
+            "Title": "VPC default security groups should not allow inbound or outbound traffic",
+            "Description": "This AWS control checks that the default security group of a VPC does not allow inbound or outbound traffic.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.2/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.20",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.432000+00:00",
+            "ControlId": "EC2.20",
+            "Title": "Both VPN tunnels for an AWS Site-to-Site VPN connection should be up",
+            "Description": "This control checks that both VPN tunnels provided by AWS Site-to-Site VPN are in UP status. The control fails if one or both tunnels are in DOWN status.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.20/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.21",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.927000+00:00",
+            "ControlId": "EC2.21",
+            "Title": "Network ACLs should not allow ingress from 0.0.0.0/0 to port 22 or port 3389",
+            "Description": "This control checks whether a network access control list (NACL) allows unrestricted access to the default ports for SSH/RDP ingress traffic. The rule fails if a NACL inbound entry allows a source CIDR block of '0.0.0.0/0' or '::/0' for ports 22 or 3389",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.21/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)",
+                "NIST.800-53.r5 CM-7",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.23",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.009000+00:00",
+            "ControlId": "EC2.23",
+            "Title": "EC2 Transit Gateways should not automatically accept VPC attachment requests",
+            "Description": "This control checks if EC2 Transit Gateways are automatically accepting shared VPC attachments requests. This control will fail for a Transit Gateway that automatically accept shared VPC attachment requests.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.23/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.25",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.807000+00:00",
+            "ControlId": "EC2.25",
+            "Title": "EC2 launch templates should not assign public IPs to network interfaces",
+            "Description": "This control checks if Amazon EC2 launch templates are configured to assign public IP addresses to network interfaces upon launch. The control fails if an EC2 launch template is configured to assign a public IP address to network interfaces or if there is at least one network interface that has a public IP address.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.25/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.28",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.633000+00:00",
+            "ControlId": "EC2.28",
+            "Title": "EBS volumes should be in a backup plan",
+            "Description": "This control evaluates if an Amazon EBS volume in 'in-use' state is covered by a backup plan. The control fails if an EBS volume isn’t covered by a backup plan. If you set the 'backupVaultLockCheck' parameter equal to 'true', the control passes only if the EBS volume is backed up in an AWS Backup locked vault.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.28/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6",
+                "NIST.800-53.r5 CP-6(1)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 CP-9",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-12",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.067000+00:00",
+            "ControlId": "EC2.3",
+            "Title": "Attached EBS volumes should be encrypted at-rest",
+            "Description": "This AWS control checks whether the EBS volumes that are in an attached state are encrypted.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.3/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.907000+00:00",
+            "ControlId": "EC2.4",
+            "Title": "Stopped EC2 instances should be removed after a specified time period",
+            "Description": "This control checks whether an Amazon EC2 instance has been stopped for longer than the allowed number of days. The control fails if an EC2 instance is stopped for longer than the maximum allowed time period. Unless you provide a custom parameter value for the maximum allowed time period, Security Hub uses a default value of 30 days.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.4/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.51",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.147000+00:00",
+            "ControlId": "EC2.51",
+            "Title": "EC2 Client VPN Endpoints should have client connection logging enabled",
+            "Description": "This control checks if an AWS Client VPN endpoint has client connection logging enabled. The control fails if the endpoint doesn't have client connection logging enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.51/remediation",
+            "SeverityRating": "LOW",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(12)",
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 AU-9(7)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.55",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.487000+00:00",
+            "ControlId": "EC2.55",
+            "Title": "VPCs should be configured with an interface endpoint for ECR API",
+            "Description": "This control checks whether a virtual private cloud (VPC) that you manage has an interface VPC endpoint for ECR API. The control fails if the VPC doesn't have an interface VPC endpoint for ECR API. This control evaluates resources in a single account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.55/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": []
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.56",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.484000+00:00",
+            "ControlId": "EC2.56",
+            "Title": "VPCs should be configured with an interface endpoint for Docker Registry",
+            "Description": "This control checks whether a virtual private cloud (VPC) that you manage has an interface VPC endpoint for Docker Registry. The control fails if the VPC doesn't have an interface VPC endpoint for Docker Registry. This control evaluates resources in a single account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.56/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": []
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.57",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.468000+00:00",
+            "ControlId": "EC2.57",
+            "Title": "VPCs should be configured with an interface endpoint for Systems Manager",
+            "Description": "This control checks whether a virtual private cloud (VPC) that you manage has an interface VPC endpoint for Systems Manager. The control fails if the VPC doesn't have an interface VPC endpoint for Systems Manager. This control evaluates resources in a single account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.57/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": []
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.58",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.465000+00:00",
+            "ControlId": "EC2.58",
+            "Title": "VPCs should be configured with an interface endpoint for Systems Manager Incident Manager Contacts",
+            "Description": "This control checks whether a virtual private cloud (VPC) that you manage has an interface VPC endpoint for Systems Manager Incident Manager Contacts. The control fails if the VPC doesn't have an interface VPC endpoint for Systems Manager Incident Manager Contacts. This control evaluates resources in a single account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.58/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": []
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.6",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.044000+00:00",
+            "ControlId": "EC2.6",
+            "Title": "VPC flow logging should be enabled in all VPCs",
+            "Description": "This control checks whether Amazon Virtual Private Cloud flow logs are found and enabled for Amazon VPCs. The traffic type is set to 'Reject'.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.6/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.60",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.492000+00:00",
+            "ControlId": "EC2.60",
+            "Title": "VPCs should be configured with an interface endpoint for Systems Manager Incident Manager",
+            "Description": "This control checks whether a virtual private cloud (VPC) that you manage has an interface VPC endpoint for Systems Manager Incident Manager. The control fails if the VPC doesn't have an interface VPC endpoint for Systems Manager Incident Manager. This control evaluates resources in a single account.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.60/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": []
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.7",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.045000+00:00",
+            "ControlId": "EC2.7",
+            "Title": "EBS default encryption should be enabled",
+            "Description": "This control checks whether Amazon Elastic Block Store (EBS) encryption is enabled by default. The control fails if EBS default encryption is not enabled.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.7/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.8",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.811000+00:00",
+            "ControlId": "EC2.8",
+            "Title": "EC2 instances should use Instance Metadata Service Version 2 (IMDSv2)",
+            "Description": "This control checks whether your Amazon Elastic Compute Cloud (Amazon EC2) instance metadata version is configured with Instance Metadata Service Version 2 (IMDSv2). The control passes if HttpTokens is set to required for IMDSv2. The control fails if HttpTokens is set to optional.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.8/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-6"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EC2.9",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.471000+00:00",
+            "ControlId": "EC2.9",
+            "Title": "EC2 instances should not have a public IPv4 address",
+            "Description": "This control checks whether EC2 instances have a public IP address. The control fails if the publicIp field is present in the EC2 instance configuration item. This control applies to IPv4 addresses only.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EC2.9/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECR.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.604000+00:00",
+            "ControlId": "ECR.1",
+            "Title": "ECR private repositories should have image scanning configured",
+            "Description": "This control checks whether a private ECR repository has image scanning configured. This control fails if a private ECR repository doesn’t have image scanning configured.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECR.1/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 RA-5"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECR.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.945000+00:00",
+            "ControlId": "ECR.2",
+            "Title": "ECR private repositories should have tag immutability configured",
+            "Description": "This control checks whether a private ECR repository has tag immutability configured. This control fails if a private ECR repository has tag immutability disabled. This rule passes if tag immutability is configured and has the value IMMUTABLE",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECR.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-8(1)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECR.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.064000+00:00",
+            "ControlId": "ECR.3",
+            "Title": "ECR repositories should have at least one lifecycle policy configured",
+            "Description": "This control checks whether an ECR repository has at least one lifecycle policy configured. This control fails if an ECR repository does not have any lifecycle policies configured.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECR.3/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 CM-2(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECR.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.504000+00:00",
+            "ControlId": "ECR.5",
+            "Title": "ECR repositories should be encrypted with customer managed AWS KMS keys",
+            "Description": "This control checks whether an Amazon ECR repository is encrypted at rest with a customer managed AWS KMS key. The control fails if the ECR repository isn't encrypted with a customer managed KMS key. You can optionally specify a list of KMS keys for the control to include in the evaluation.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECR.5/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SC-12(2)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 SI-7(6)",
+                "NIST.800-53.r5 AU-9"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.10",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.487000+00:00",
+            "ControlId": "ECS.10",
+            "Title": "ECS Fargate services should run on the latest Fargate platform version",
+            "Description": "This control checks if ECS Fargate services is running the latest Fargate platform version. This control fails if the platform version is not latest.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.10/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SI-2",
+                "NIST.800-53.r5 SI-2(2)",
+                "NIST.800-53.r5 SI-2(4)",
+                "NIST.800-53.r5 SI-2(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.12",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.056000+00:00",
+            "ControlId": "ECS.12",
+            "Title": "ECS clusters should use Container Insights",
+            "Description": "This control checks if ECS clusters use Container Insights. This control fails if Container Insights are not set up for a cluster.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.12/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SI-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.17",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.556000+00:00",
+            "ControlId": "ECS.17",
+            "Title": "ECS task definitions should not use host network mode",
+            "Description": "This control checks whether the latest active revision of an Amazon ECS task definition uses host network mode. The control fails if the latest active revision of the ECS task definition uses host network mode.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.17/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(1)",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-5",
+                "NIST.800-53.r5 AC-6"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.484000+00:00",
+            "ControlId": "ECS.2",
+            "Title": "ECS services should not have public IP addresses assigned to them automatically",
+            "Description": "This control checks whether ECS services are configured to automatically assign public IP addresses. This control fails if AssignPublicIP is ENABLED.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.2/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.151000+00:00",
+            "ControlId": "ECS.3",
+            "Title": "ECS task definitions should not share the host's process namespace",
+            "Description": "This control checks if Amazon ECS task definitions are configured to share a host's process namespace with its containers. This control fails if the task definition shares the host's process namespace with the containers running on it",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.3/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.353000+00:00",
+            "ControlId": "ECS.4",
+            "Title": "ECS containers should run as non-privileged",
+            "Description": "This control checks if the privileged parameter in the container definition of Amazon ECS task definitions is set to 'true'. This control fails if this parameter is equal to 'true'.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.4/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(1)",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-5",
+                "NIST.800-53.r5 AC-6"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.5",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.368000+00:00",
+            "ControlId": "ECS.5",
+            "Title": "ECS containers should be limited to read-only access to root filesystems",
+            "Description": "This control checks if ECS containers are limited to read-only access to mounted root filesystems. This control fails if the ReadonlyRootFilesystem parameter in the container definition of ECS task definitions is set to ‘false’.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.5/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(1)",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(15)",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-5",
+                "NIST.800-53.r5 AC-6"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.8",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.947000+00:00",
+            "ControlId": "ECS.8",
+            "Title": "Secrets should not be passed as container environment variables",
+            "Description": "This control checks if the key value of any variables in the ‘environment’ parameter of container definitions includes - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,  or ECS_ENGINE_AUTH_DATA.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.8/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ECS.9",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.067000+00:00",
+            "ControlId": "ECS.9",
+            "Title": "ECS task definitions should have a logging configuration",
+            "Description": "This control checks if the latest active Amazon ECS task definition has a logging configuration specified. The control fails if the task definition doesn't have the logConfiguration property defined or if the value for logDriver is null in at least one container definition.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ECS.9/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EFS.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.027000+00:00",
+            "ControlId": "EFS.1",
+            "Title": "Elastic File System should be configured to encrypt file data at-rest using AWS KMS",
+            "Description": "This AWS control checks whether Amazon Elastic File System (Amazon EFS) is configured to encrypt the file data using AWS Key Management Service (AWS KMS). The check will fail if the encrypted key is set to false on DescribeFileSystems or if the KmsKeyId key on DescribeFileSystems does not match the KmsKeyId parameter.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EFS.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-3(6)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28",
+                "NIST.800-53.r5 SC-28(1)",
+                "NIST.800-53.r5 SC-7(10)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EFS.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.128000+00:00",
+            "ControlId": "EFS.2",
+            "Title": "Amazon EFS volumes should be in backup plans",
+            "Description": "This control checks whether Amazon Elastic File System (Amazon EFS) file systems are added to the backup plans in AWS Backup. The control fails if EFS file systems are not included in the backup plans.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EFS.2/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6",
+                "NIST.800-53.r5 CP-6(1)",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 CP-9",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-12",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EFS.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.924000+00:00",
+            "ControlId": "EFS.3",
+            "Title": "EFS access points should enforce a root directory",
+            "Description": "This control checks if Amazon Elastic File System (Amazon EFS) access points are configured to enforce a root directory. This control fails if the value of 'Path' is set to '/' (default root directory of the file system).",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EFS.3/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-6(10)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EFS.4",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:29.051000+00:00",
+            "ControlId": "EFS.4",
+            "Title": "EFS access points should enforce a user identity",
+            "Description": "This control checks whether Amazon Elastic File System (Amazon EFS) access points are configured to enforce a user identity. This control fails if ‘PosixUser’ is not defined under ‘configuration’ or if parameters are provided and there is no match in the corresponding parameter.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EFS.4/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-6(2)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EKS.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.612000+00:00",
+            "ControlId": "EKS.1",
+            "Title": "EKS cluster endpoints should not be publicly accessible",
+            "Description": "This control checks whether an Amazon EKS cluster endpoint is publicly accessible. The control fails if an EKS cluster has an endpoint that is publicly accessible.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EKS.1/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-21",
+                "NIST.800-53.r5 AC-3",
+                "NIST.800-53.r5 AC-3(7)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 AC-6",
+                "NIST.800-53.r5 SC-7",
+                "NIST.800-53.r5 SC-7(11)",
+                "NIST.800-53.r5 SC-7(16)",
+                "NIST.800-53.r5 SC-7(20)",
+                "NIST.800-53.r5 SC-7(21)",
+                "NIST.800-53.r5 SC-7(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-7(9)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EKS.2",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.005000+00:00",
+            "ControlId": "EKS.2",
+            "Title": "EKS clusters should run on a supported Kubernetes version",
+            "Description": "This control checks whether an EKS cluster is running on a supported Kubernetes version. The control fails if the EKS cluster is running on an unsupported version.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EKS.2/remediation",
+            "SeverityRating": "HIGH",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2",
+                "NIST.800-53.r5 SI-2",
+                "NIST.800-53.r5 SI-2(2)",
+                "NIST.800-53.r5 SI-2(4)",
+                "NIST.800-53.r5 SI-2(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EKS.3",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.204000+00:00",
+            "ControlId": "EKS.3",
+            "Title": "EKS clusters should use encrypted Kubernetes secrets",
+            "Description": "This control checks whether an Amazon EKS cluster uses encrypted Kubernetes secrets. The control fails if the cluster's Kubernetes secrets aren't encrypted.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EKS.3/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 SC-8",
+                "NIST.800-53.r5 SC-12",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-28"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/EKS.8",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:31.111000+00:00",
+            "ControlId": "EKS.8",
+            "Title": "EKS clusters should have audit logging enabled",
+            "Description": "This control checks whether an Amazon EKS cluster has audit logging enabled. The control fails if audit logging isn't enabled for the cluster.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/EKS.8/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-2(12)",
+                "NIST.800-53.r5 AC-2(4)",
+                "NIST.800-53.r5 AC-4(26)",
+                "NIST.800-53.r5 AC-6(9)",
+                "NIST.800-53.r5 AU-10",
+                "NIST.800-53.r5 AU-12",
+                "NIST.800-53.r5 AU-2",
+                "NIST.800-53.r5 AU-3",
+                "NIST.800-53.r5 AU-6(3)",
+                "NIST.800-53.r5 AU-6(4)",
+                "NIST.800-53.r5 AU-9(7)",
+                "NIST.800-53.r5 CA-7",
+                "NIST.800-53.r5 SC-7(9)",
+                "NIST.800-53.r5 SI-3(8)",
+                "NIST.800-53.r5 SI-4",
+                "NIST.800-53.r5 SI-4(20)",
+                "NIST.800-53.r5 SI-7(8)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.1",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.128000+00:00",
+            "ControlId": "ELB.1",
+            "Title": "Application Load Balancer should be configured to redirect all HTTP requests to HTTPS",
+            "Description": "This AWS control checks whether HTTP to HTTPS redirection is configured on all HTTP listeners of Application Load Balancers. The control will fail if one or more HTTP listeners of Application Load Balancers do not have HTTP to HTTPS redirection configured.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.1/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-17(2)",
+                "NIST.800-53.r5 AC-4",
+                "NIST.800-53.r5 IA-5(1)",
+                "NIST.800-53.r5 SC-12(3)",
+                "NIST.800-53.r5 SC-13",
+                "NIST.800-53.r5 SC-23",
+                "NIST.800-53.r5 SC-23(3)",
+                "NIST.800-53.r5 SC-7(4)",
+                "NIST.800-53.r5 SC-8",
+                "NIST.800-53.r5 SC-8(1)",
+                "NIST.800-53.r5 SC-8(2)",
+                "NIST.800-53.r5 SI-7(6)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.10",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.515000+00:00",
+            "ControlId": "ELB.10",
+            "Title": "Classic Load Balancer should span multiple Availability Zones",
+            "Description": "This control checks whether a Classic Load Balancer has been configured to span at least the specified number of Availability Zones (AZs). The control fails if the Classic Load Balancer does not span at least the specified number of AZs. Unless you provide a custom parameter value for the minimum number of AZs, Security Hub uses a default value of two AZs.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.10/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.12",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.888000+00:00",
+            "ControlId": "ELB.12",
+            "Title": "Application Load Balancer should be configured with defensive or strictest desync mitigation mode",
+            "Description": "This control checks whether the Application Load Balancer is configured with defensive or strictest de-sync mitigation mode. This control fails if the Application Load Balancer is not configured with defensive or strictest desync mitigation mode.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.12/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.13",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.491000+00:00",
+            "ControlId": "ELB.13",
+            "Title": "Application, Network and Gateway Load Balancers should span multiple Availability Zones",
+            "Description": "This control checks whether an Elastic Load Balancer V2 (Application, Network, or Gateway Load Balancer) has registered instances from at least the specified number of Availability Zones (AZs). The control fails if an Elastic Load Balancer V2 doesn't have instances registered in at least the specified number of AZs. Unless you provide a custom parameter value for the minimum number of AZs, Security Hub uses a default value of two AZs.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.13/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 CP-10",
+                "NIST.800-53.r5 CP-6(2)",
+                "NIST.800-53.r5 SC-36",
+                "NIST.800-53.r5 SC-5(2)",
+                "NIST.800-53.r5 SI-13(5)"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.14",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:28.911000+00:00",
+            "ControlId": "ELB.14",
+            "Title": "Classic Load Balancer should be configured with defensive or strictest desync mitigation mode",
+            "Description": "This control checks whether the Classic Load Balancer is configured with defensive or strictest desync mitigation mode. This control will fail if the Classic Load Balancer is not configured with defensive or strictest desync mitigation mode.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.14/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)",
+                "NIST.800-53.r5 CA-9(1)",
+                "NIST.800-53.r5 CM-2"
+            ]
+        },
+        {
+            "StandardsControlArn": "arn:aws:securityhub:eu-north-1:696505809372:control/nist-800-53/v/5.0.0/ELB.16",
+            "ControlStatus": "ENABLED",
+            "ControlStatusUpdatedAt": "2026-03-15T23:28:30.625000+00:00",
+            "ControlId": "ELB.16",
+            "Title": "Application Load Balancers should be associated with an AWS WAF web ACL",
+            "Description": "This control checks whether Application Load Balancers are associated with an AWS WAF web ACL. The control fails if the Enabled field for the WAF configuration is set to false.",
+            "RemediationUrl": "https://docs.aws.amazon.com/console/securityhub/ELB.16/remediation",
+            "SeverityRating": "MEDIUM",
+            "RelatedRequirements": [
+                "NIST.800-53.r5 AC-4(21)"
+            ]
+        }
+    ],
+    "NextToken": "U2FsdGVkX19Bx0zCBGlpdJnFnp/lyDm2Q5UQqMleLeRaqjHzA/5/OXxJD00HzB2UL99kPuitHTO2CJgkNRLhD6C1XDnz9ZFBitqIlk0OPsua5bXZ/k5vjdnD6cG1qnE2pEMavzuzIeOgoGVvBHGBdJ8jorCvRr9qcnjZ3OXUEseRvhE/5FKJ+K2Yh3SMG19GA/Vi54WQw+5dCLg6yVqBYV3iOJd9+O420J318FnISJd6vUC+tOJ4jT+qpxJiykQAiAeElGmbIYXfkhJ7tsqqxQ=="
+}

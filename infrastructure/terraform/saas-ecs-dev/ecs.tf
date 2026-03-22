@@ -68,6 +68,11 @@ resource "aws_iam_role" "api_task" {
         Effect    = "Allow"
         Principal = { Service = "ecs-tasks.amazonaws.com" }
         Action    = "sts:AssumeRole"
+      },
+      {
+        Effect    = "Allow"
+        Principal = { AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-api-task" }
+        Action    = ["sts:AssumeRole", "sts:SetSourceIdentity", "sts:TagSession"]
       }
     ]
   })
@@ -83,6 +88,11 @@ resource "aws_iam_role" "worker_task" {
         Effect    = "Allow"
         Principal = { Service = "ecs-tasks.amazonaws.com" }
         Action    = "sts:AssumeRole"
+      },
+      {
+        Effect    = "Allow"
+        Principal = { AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-worker-task" }
+        Action    = ["sts:AssumeRole", "sts:SetSourceIdentity", "sts:TagSession"]
       }
     ]
   })
@@ -97,10 +107,16 @@ resource "aws_iam_policy" "assume_tenant_roles" {
     Statement = [
       {
         Effect = "Allow"
-        Action = ["sts:AssumeRole"]
+        Action = [
+          "sts:AssumeRole",
+          "sts:SetSourceIdentity",
+          "sts:TagSession",
+        ]
         Resource = [
           "arn:aws:iam::*:role/SecurityAutopilotReadRole",
-          "arn:aws:iam::*:role/SecurityAutopilotWriteRole"
+          "arn:aws:iam::*:role/SecurityAutopilotWriteRole",
+          aws_iam_role.api_task.arn,
+          aws_iam_role.worker_task.arn,
         ]
       }
     ]
@@ -332,4 +348,3 @@ resource "aws_ecs_service" "worker" {
 
   tags = local.tags
 }
-

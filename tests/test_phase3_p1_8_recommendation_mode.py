@@ -99,10 +99,10 @@ def _mock_user(tenant_id: uuid.UUID) -> MagicMock:
 @pytest.mark.parametrize(
     ("score", "data_sensitivity", "expected_cell", "expected_mode"),
     [
-        (10, 0.10, "risk_low__criticality_low", "direct_fix_candidate"),
-        (50, 0.10, "risk_medium__criticality_low", "direct_fix_candidate"),
-        (85, 0.10, "risk_high__criticality_low", "direct_fix_candidate"),
-        (10, 0.55, "risk_low__criticality_medium", "direct_fix_candidate"),
+        (10, 0.10, "risk_low__criticality_low", "pr_only"),
+        (50, 0.10, "risk_medium__criticality_low", "pr_only"),
+        (85, 0.10, "risk_high__criticality_low", "pr_only"),
+        (10, 0.55, "risk_low__criticality_medium", "pr_only"),
         (50, 0.55, "risk_medium__criticality_medium", "pr_only"),
         (85, 0.55, "risk_high__criticality_medium", "pr_only"),
         (10, 0.85, "risk_low__criticality_high", "pr_only"),
@@ -128,16 +128,16 @@ def test_every_matrix_cell_maps_to_one_default_mode(
     assert expected_cell in recommendation["rationale"]
 
 
-def test_direct_fix_candidate_stays_advisory_when_direct_fix_is_not_available() -> None:
+def test_pr_only_recommendation_stays_advisory_when_pr_only_is_available() -> None:
     action = _make_action(score=10, data_sensitivity=0.10)
 
     recommendation = build_action_recommendation(action, mode_options=["pr_only"])
 
-    assert recommendation["default_mode"] == "direct_fix_candidate"
-    assert recommendation["mode"] == "direct_fix_candidate"
+    assert recommendation["default_mode"] == "pr_only"
+    assert recommendation["mode"] == "pr_only"
     assert recommendation["advisory"] is True
     assert recommendation["enforced_by_policy"] is None
-    assert "advisory candidate" in recommendation["rationale"]
+    assert "PR-only" in recommendation["rationale"]
 
 
 def test_manual_high_risk_policy_overrides_default_mode() -> None:
@@ -145,7 +145,7 @@ def test_manual_high_risk_policy_overrides_default_mode() -> None:
 
     recommendation = build_action_recommendation(action, manual_high_risk=True)
 
-    assert recommendation["default_mode"] == "direct_fix_candidate"
+    assert recommendation["default_mode"] == "pr_only"
     assert recommendation["mode"] == "exception_review"
     assert recommendation["advisory"] is False
     assert recommendation["enforced_by_policy"] == "manual_high_risk_root_credentials_required"
@@ -157,7 +157,7 @@ def test_pr_only_policy_overrides_default_mode() -> None:
 
     recommendation = build_action_recommendation(action)
 
-    assert recommendation["default_mode"] == "direct_fix_candidate"
+    assert recommendation["default_mode"] == "pr_only"
     assert recommendation["mode"] == "exception_review"
     assert recommendation["advisory"] is False
     assert recommendation["enforced_by_policy"] == "unsupported_pr_only_action"
@@ -218,8 +218,8 @@ def test_get_action_exposes_recommendation_payload(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["recommendation"]["mode"] == "direct_fix_candidate"
-    assert body["recommendation"]["default_mode"] == "direct_fix_candidate"
+    assert body["recommendation"]["mode"] == "pr_only"
+    assert body["recommendation"]["default_mode"] == "pr_only"
     assert body["recommendation"]["advisory"] is True
     assert body["recommendation"]["matrix_position"]["cell"] == "risk_low__criticality_low"
     assert "Criticality evidence" in body["recommendation"]["rationale"]

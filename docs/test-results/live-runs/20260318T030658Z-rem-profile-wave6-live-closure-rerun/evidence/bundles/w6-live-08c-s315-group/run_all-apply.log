@@ -1,0 +1,614 @@
+
+=== Running terraform in executable/actions/01-arn-aws-s3-config-bucket-696505809372-33bd3255 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/01-arn-aws-s3-config-bucket-696505809372-33bd3255. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s311-man-66a5dd43 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s311-man-66a5dd43. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/07-arn-aws-s3-security-autopilot-w6-strict-s311-exe-7a0e2c57 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/07-arn-aws-s3-security-autopilot-w6-strict-s311-exe-7a0e2c57. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s315-e-7b9ca8b1 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s315-e-7b9ca8b1. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-s311-e-7bf8c034 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-s311-e-7bf8c034. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/10-arn-aws-s3-security-autopilot-w6-envready-s311-r-7f85a353 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/10-arn-aws-s3-security-autopilot-w6-envready-s311-r-7f85a353. Skipping apply for this action folder.
+
+=== Running terraform in executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-config-d5646c71 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+- Installed hashicorp/aws v6.36.0 (unauthenticated)
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mIncomplete lock file information for providers[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mDue to your customized provider installation methods, Terraform was forced
+[33m│[0m [0mto calculate lock file checksums locally for the following providers:
+[33m│[0m [0m  - hashicorp/aws
+[33m│[0m [0m
+[33m│[0m [0mThe current .terraform.lock.hcl file only includes checksums for
+[33m│[0m [0mdarwin_arm64, so Terraform running on another platform will fail to install
+[33m│[0m [0mthese providers.
+[33m│[0m [0m
+[33m│[0m [0mTo calculate additional checksums for another platform, run:
+[33m│[0m [0m  terraform providers lock -platform=linux_amd64
+[33m│[0m [0m(where linux_amd64 is the platform to generate)
+[33m╵[0m[0m
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/aws: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/aws" to obtain schema: Unrecognized remote
+[31m│[0m [0mplugin message: 
+[31m│[0m [0mFailed to read any lines from plugin's stdout
+[31m│[0m [0mThis usually means
+[31m│[0m [0m  the plugin was not compiled for this architecture,
+[31m│[0m [0m  the plugin is missing dynamic-link libraries necessary to run,
+[31m│[0m [0m  the plugin is not executable by this process due to file permissions, or
+[31m│[0m [0m  the plugin failed to negotiate the initial go-plugin protocol handshake
+[31m│[0m [0m
+[31m│[0m [0mAdditional notes about plugin:
+[31m│[0m [0m  Path: .terraform/providers/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64/terraform-provider-aws_v6.36.0_x5
+[31m│[0m [0m  Mode: -rwxr-xr-x
+[31m│[0m [0m  Owner: 501 [marcomaher] (current: 501 [marcomaher])
+[31m│[0m [0m  Group: 20 [staff] (current: 20 [staff])
+[31m│[0m [0m  MachO architecture: CpuArm64 (current architecture: arm64)
+[31m│[0m [0m..
+[31m╵[0m[0m
+ERROR: terraform plan failed for executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-config-d5646c71. Skipping apply for this action folder.
+Bundle run completed.
+  Successful action folders: 0/10
+  Failed action folders: 10/10
+Failed folders summary:
+  - executable/actions/01-arn-aws-s3-config-bucket-696505809372-33bd3255 (plan)
+  - executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f (plan)
+  - executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a (plan)
+  - executable/actions/04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f (plan)
+  - executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s311-man-66a5dd43 (plan)
+  - executable/actions/07-arn-aws-s3-security-autopilot-w6-strict-s311-exe-7a0e2c57 (plan)
+  - executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s315-e-7b9ca8b1 (plan)
+  - executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-s311-e-7bf8c034 (plan)
+  - executable/actions/10-arn-aws-s3-security-autopilot-w6-envready-s311-r-7f85a353 (plan)
+  - executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-config-d5646c71 (plan)

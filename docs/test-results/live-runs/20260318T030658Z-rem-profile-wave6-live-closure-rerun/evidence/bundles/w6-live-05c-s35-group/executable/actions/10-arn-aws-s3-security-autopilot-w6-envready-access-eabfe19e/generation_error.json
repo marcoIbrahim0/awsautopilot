@@ -1,0 +1,8 @@
+{
+  "action_type": "s3_bucket_require_ssl",
+  "code": "bucket_policy_preservation_evidence_missing",
+  "detail": "Unable to guarantee existing bucket policy preservation for CloudFront+OAC migration because policy evidence is missing. Recreate the run after refreshing remediation options or provide strategy_inputs.existing_bucket_policy_json explicitly.",
+  "format": "terraform",
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "variant": ""
+}

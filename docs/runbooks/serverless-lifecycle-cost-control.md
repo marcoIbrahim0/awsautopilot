@@ -45,6 +45,7 @@ It does **not** restore:
 - A valid `config/.env.ops` with:
   - `DATABASE_URL`
   - `JWT_SECRET`
+  - `BUNDLE_REPORTING_TOKEN_SECRET`
   - `CONTROL_PLANE_EVENTS_SECRET`
 
 The script always sets `AWS_PAGER=""` internally to avoid interactive CLI hangs.

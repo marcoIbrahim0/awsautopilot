@@ -13,6 +13,7 @@ provider "aws" {
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
 
 locals {
   name_prefix = var.name_prefix
@@ -24,4 +25,3 @@ locals {
     var.tags
   )
 }
-

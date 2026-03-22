@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "security_group_id": "sg-06f6252fa8a95b61d",
+  "region": "eu-north-1",
+  "captured_rules": [
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 3389,
+      "ToPort": 3389,
+      "IpRanges": [
+        {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "Wave6 env readiness RDP exposure"
+        }
+      ]
+    },
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 22,
+      "ToPort": 22,
+      "IpRanges": [
+        {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "Wave6 env readiness SSH exposure"
+        }
+      ]
+    }
+  ]
+}

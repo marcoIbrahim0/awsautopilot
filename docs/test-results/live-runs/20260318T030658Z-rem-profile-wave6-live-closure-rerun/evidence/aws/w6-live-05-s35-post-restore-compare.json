@@ -1,0 +1,44 @@
+[
+  {
+    "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "pre_hash": "8dbf89535c9ad2056dad205de8cbe5d860e9ff11c3874c9fa78b4ee888985fb7",
+    "current_hash": "8dbf89535c9ad2056dad205de8cbe5d860e9ff11c3874c9fa78b4ee888985fb7",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "pre_hash": "9ffb41ecfbddbb196ad7c1b62d3b572a4ea9c7cbf9e1baeb80e56caf697584a1",
+    "current_hash": "9ffb41ecfbddbb196ad7c1b62d3b572a4ea9c7cbf9e1baeb80e56caf697584a1",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-config-696505809372",
+    "pre_hash": "278be65c58298f3b25ae6103768b760dddc731eb77a39f04640ee432cdca2020",
+    "current_hash": "278be65c58298f3b25ae6103768b760dddc731eb77a39f04640ee432cdca2020",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "pre_hash": "d3620d95594ccaebdf6e33db595f8ed97e86cc7215b14c966aa3818f956d77f2",
+    "current_hash": "d3620d95594ccaebdf6e33db595f8ed97e86cc7215b14c966aa3818f956d77f2",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-review-696505809372",
+    "pre_hash": "8530c41858b7b351dff8fef149f0b960d788b5795f5440730933ae83ec690316",
+    "current_hash": "8530c41858b7b351dff8fef149f0b960d788b5795f5440730933ae83ec690316",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s315-exec-696505809372",
+    "pre_hash": "c527f35e113dc559dd5101faa60c84d69d246a19206c0a4593d23a18a5f71274",
+    "current_hash": "c527f35e113dc559dd5101faa60c84d69d246a19206c0a4593d23a18a5f71274",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-exec-696505809372",
+    "pre_hash": "e6d36ae3c4274dfbd8667640ab6ad2944aceaa04ddff9f4c4127a3320d806c31",
+    "current_hash": "e6d36ae3c4274dfbd8667640ab6ad2944aceaa04ddff9f4c4127a3320d806c31",
+    "exact_match": true
+  }
+]

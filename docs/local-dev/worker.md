@@ -3,7 +3,7 @@
 ## Run Worker
 
 ```bash
-PYTHONPATH=. python -m backend.workers.main
+PYTHONPATH=. ./venv/bin/python -m backend.workers.main
 ```
 
 Worker loads settings from:

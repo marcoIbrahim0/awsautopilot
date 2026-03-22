@@ -1,5 +1,7 @@
 FEATURE DEPENDENCY MAP
 
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the dependency map below reflects the February 2026 snapshot, not the current product direction.
+
 > ⚠️ Input gap: `docs/prod-readiness/05-e2e-test-scenarios.md` is not present in this repository. The 8 required journeys below are inferred from `feat-task2`-`feat-task5`.
 
 | Feature ID | Feature Name | Depends on Feature ID | Dependency type | What breaks if dependency is unavailable |

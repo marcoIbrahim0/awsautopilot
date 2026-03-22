@@ -72,9 +72,16 @@ class _FakeCredentials:
 
 
 class _FakeIamClient:
-    def __init__(self, keys: list[tuple[str, str]], *, account_mfa_enabled: int = 1) -> None:
+    def __init__(
+        self,
+        keys: list[tuple[str, str]],
+        *,
+        account_mfa_enabled: int = 1,
+        get_account_summary_error: Exception | None = None,
+    ) -> None:
         self._keys = [{"AccessKeyId": key_id, "Status": status} for key_id, status in keys]
         self._account_mfa_enabled = account_mfa_enabled
+        self._get_account_summary_error = get_account_summary_error
         self.update_calls: list[tuple[str, str]] = []
         self.delete_calls: list[str] = []
 
@@ -93,6 +100,8 @@ class _FakeIamClient:
         self._keys = [item for item in self._keys if item["AccessKeyId"] != AccessKeyId]
 
     def get_account_summary(self) -> dict[str, Any]:
+        if self._get_account_summary_error is not None:
+            raise self._get_account_summary_error
         return {
             "SummaryMap": {
                 "AccountAccessKeysPresent": len(self._keys),
@@ -371,7 +380,88 @@ def test_disable_breakage_signal_triggers_rollback_alert(monkeypatch: pytest.Mon
     assert result.run.state == RootKeyRemediationState.rolled_back
     assert service.rollback.await_count == 1
     assert task_mock.await_count == 1
-    assert iam_client.update_calls == [("AKIATARGET0000002", "Inactive")]
+    assert iam_client.update_calls == [
+        ("AKIATARGET0000002", "Inactive"),
+        ("AKIATARGET0000002", "Active"),
+    ]
+    rollback_artifacts = [
+        call for call in artifact_mock.await_args_list if call.kwargs.get("artifact_type") == "rollback_evidence"
+    ]
+    assert len(rollback_artifacts) == 1
+    metadata = rollback_artifacts[0].kwargs.get("metadata_json")
+    assert isinstance(metadata, dict)
+    summary = metadata.get("rollback_summary")
+    assert isinstance(summary, dict)
+    assert summary.get("reactivated_count") == 1
+    assert summary.get("disable_summary", {}).get("disabled_count") == 1
+    assert summary.get("signals", {}).get("unknown_usage_count") == 1
+
+
+def test_disable_signal_collection_falls_back_to_preserved_mutation_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.validation,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    mutation_iam_client = _FakeIamClient([("AKIATARGET0000003", "Active")])
+    observer_iam_client = _FakeIamClient(
+        [],
+        get_account_summary_error=RuntimeError("observer health access denied"),
+    )
+    mutation_session = _FakeSession("AKIAMUTATE000003", mutation_iam_client)
+    observer_session = _FakeSession("AKIAOBSERVER0003", observer_iam_client)
+    observer_usage = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=True, retries_used=0)
+    )
+    mutation_usage = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=False, retries_used=0)
+    )
+    usage_services = [observer_usage, mutation_usage]
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: mutation_session,
+        observer_session_factory=lambda *_: observer_session,
+        usage_discovery_factory=lambda: usage_services.pop(0),
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    artifact_mock = AsyncMock(return_value=(MagicMock(), True))
+    task_mock = AsyncMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(f"{module}.create_root_key_remediation_artifact_idempotent", artifact_mock)
+    monkeypatch.setattr(f"{module}.create_root_key_external_task_idempotent", task_mock)
+
+    result = _run(
+        worker.execute_disable(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-disable-mutation-fallback",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.disable_window
+    assert service.rollback.await_count == 0
+    assert task_mock.await_count == 0
+    assert mutation_iam_client.update_calls == [("AKIATARGET0000003", "Inactive")]
+    assert observer_usage.calls[0]["session_boto"] is observer_session
+    assert mutation_usage.calls[0]["session_boto"] is mutation_session
+    disable_artifacts = [
+        call for call in artifact_mock.await_args_list if call.kwargs.get("artifact_type") == "disable_window_evidence"
+    ]
+    assert len(disable_artifacts) == 1
+    metadata = disable_artifacts[0].kwargs.get("metadata_json")
+    assert isinstance(metadata, dict)
+    assert metadata.get("window_clean") is True
+    assert metadata.get("root_keys_present") == 1
 
 
 @pytest.mark.parametrize(

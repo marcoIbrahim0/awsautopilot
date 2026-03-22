@@ -1,0 +1,674 @@
+{
+  "id": "ab24939a-ffe5-41ba-b92f-8d46ed80b1f7",
+  "action_type": "iam_root_access_key_absent",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|IAM.4",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "score": 72,
+  "score_components": {
+    "score": 72,
+    "version": 1,
+    "severity": {
+      "points": 35,
+      "signals": [
+        "severity:CRITICAL"
+      ],
+      "normalized": 1.0
+    },
+    "business_impact": {
+      "summary": "High technical risk intersects with Medium business criticality.",
+      "criticality": {
+        "tier": "medium",
+        "score": 15,
+        "status": "known",
+        "weight": 2,
+        "dimensions": [
+          {
+            "label": "Customer-facing",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "customer_facing",
+            "explanation": "Customer-facing is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Revenue-path",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "revenue_path",
+            "explanation": "Revenue-path is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Regulated-data",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "regulated_data",
+            "explanation": "Regulated-data is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Identity-boundary",
+            "weight": 15,
+            "matched": true,
+            "signals": [
+              "action_type:iam_root_access_key_absent",
+              "resource_type:AwsAccount",
+              "keyword:access key"
+            ],
+            "dimension": "identity_boundary",
+            "explanation": "Identity-boundary contributed 15 criticality points using: action_type:iam_root_access_key_absent, resource_type:AwsAccount, keyword:access key.",
+            "contribution": 15
+          },
+          {
+            "label": "Production-environment",
+            "weight": 10,
+            "matched": false,
+            "signals": [],
+            "dimension": "production_environment",
+            "explanation": "Production-environment is explicit unknown for this action.",
+            "contribution": 0
+          }
+        ],
+        "explanation": "Criticality scored 15 points from: Identity-boundary."
+      },
+      "matrix_position": {
+        "row": "high",
+        "cell": "high:medium",
+        "rank": 30272,
+        "column": "medium",
+        "explanation": "Matrix row uses technical risk tier high from score 72; matrix column uses business criticality tier medium.",
+        "risk_weight": 3,
+        "criticality_weight": 2
+      },
+      "technical_risk_tier": "high",
+      "technical_risk_score": 72
+    },
+    "exploit_signals": {
+      "points": 13,
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "normalized": 0.8667,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+      "heuristic_points": 13,
+      "factor_max_points": 15,
+      "applied_threat_signals": [],
+      "threat_intel_max_points": 10,
+      "threat_intel_points_applied": 0,
+      "threat_intel_points_requested": 0
+    },
+    "privilege_level": {
+      "points": 15,
+      "signals": [
+        "keyword:access key",
+        "keyword:root"
+      ],
+      "normalized": 1.0
+    },
+    "data_sensitivity": {
+      "points": 9,
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "normalized": 0.6
+    },
+    "internet_exposure": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "context_incomplete": true,
+    "toxic_combinations": {
+      "points": 0,
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "max_boost": 15,
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "missing_signals": [
+        "internet_exposure",
+        "privilege_weakness",
+        "sensitive_data"
+      ],
+      "matched_rule_ids": [],
+      "context_incomplete": true,
+      "context_incomplete_rule_ids": [
+        "public_exposure_privilege_sensitive_data"
+      ]
+    },
+    "compensating_controls": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "total_positive_points": 72,
+    "representative_finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/IAM.4/finding/bca98244-ce96-444e-965c-8e9247bea29a",
+    "total_compensating_points": 0,
+    "representative_finding_db_id": "53302239-d685-44f1-94ec-631bf83833c1",
+    "score_before_toxic_combinations": 72
+  },
+  "score_factors": [
+    {
+      "factor_name": "severity",
+      "weight": 35,
+      "contribution": 35,
+      "evidence_source": "finding.severity_label + finding.severity_normalized",
+      "signals": [
+        "severity:CRITICAL"
+      ],
+      "explanation": "Severity contributed 35 points using: severity:CRITICAL.",
+      "provenance": []
+    },
+    {
+      "factor_name": "internet_exposure",
+      "weight": 20,
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json exposure metadata",
+      "signals": [],
+      "explanation": "Internet exposure contributed 0 points using: no matched signals.",
+      "provenance": []
+    },
+    {
+      "factor_name": "privilege_level",
+      "weight": 15,
+      "contribution": 15,
+      "evidence_source": "finding.title + finding.description + selected raw_json identity metadata",
+      "signals": [
+        "keyword:access key",
+        "keyword:root"
+      ],
+      "explanation": "Privilege level contributed 15 points using: keyword:access key, keyword:root.",
+      "provenance": []
+    },
+    {
+      "factor_name": "data_sensitivity",
+      "weight": 15,
+      "contribution": 9,
+      "evidence_source": "finding.title + finding.description + selected raw_json data-impact metadata",
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "explanation": "Data sensitivity contributed 9 points using: action_type:iam_root_access_key_absent.",
+      "provenance": []
+    },
+    {
+      "factor_name": "exploit_signals",
+      "weight": 15,
+      "contribution": 13,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "explanation": "Exploit signals contributed 13 points using: action_type:iam_root_access_key_absent.",
+      "provenance": []
+    },
+    {
+      "factor_name": "compensating_controls",
+      "weight": 15,
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json mitigating-control metadata",
+      "signals": [],
+      "explanation": "Compensating controls contributed 0 points using: no matched signals.",
+      "provenance": []
+    },
+    {
+      "factor_name": "toxic_combinations",
+      "weight": 15,
+      "contribution": 0,
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "provenance": []
+    }
+  ],
+  "business_impact": {
+    "technical_risk_score": 72,
+    "technical_risk_tier": "high",
+    "criticality": {
+      "status": "known",
+      "score": 15,
+      "tier": "medium",
+      "weight": 2,
+      "dimensions": [
+        {
+          "dimension": "customer_facing",
+          "label": "Customer-facing",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Customer-facing is explicit unknown for this action."
+        },
+        {
+          "dimension": "revenue_path",
+          "label": "Revenue-path",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Revenue-path is explicit unknown for this action."
+        },
+        {
+          "dimension": "regulated_data",
+          "label": "Regulated-data",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Regulated-data is explicit unknown for this action."
+        },
+        {
+          "dimension": "identity_boundary",
+          "label": "Identity-boundary",
+          "weight": 15,
+          "matched": true,
+          "contribution": 15,
+          "signals": [
+            "action_type:iam_root_access_key_absent",
+            "resource_type:AwsAccount",
+            "keyword:access key"
+          ],
+          "explanation": "Identity-boundary contributed 15 criticality points using: action_type:iam_root_access_key_absent, resource_type:AwsAccount, keyword:access key."
+        },
+        {
+          "dimension": "production_environment",
+          "label": "Production-environment",
+          "weight": 10,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Production-environment is explicit unknown for this action."
+        }
+      ],
+      "explanation": "Criticality scored 15 points from: Identity-boundary."
+    },
+    "matrix_position": {
+      "row": "high",
+      "column": "medium",
+      "cell": "high:medium",
+      "risk_weight": 3,
+      "criticality_weight": 2,
+      "rank": 30272,
+      "explanation": "Matrix row uses technical risk tier high from score 72; matrix column uses business criticality tier medium."
+    },
+    "summary": "High technical risk intersects with Medium business criticality."
+  },
+  "priority": 72,
+  "status": "open",
+  "title": "IAM root user access key should not exist",
+  "control_id": "IAM.4",
+  "resource_id": "AWS::::Account:696505809372",
+  "owner_type": "service",
+  "owner_key": "iam",
+  "owner_label": "AWS IAM",
+  "updated_at": "2026-03-18T03:10:08.544399+00:00",
+  "finding_count": 2,
+  "exception_id": null,
+  "exception_expires_at": null,
+  "exception_expired": null,
+  "sla": {
+    "risk_tier": "high",
+    "due_in_hours": 72,
+    "expiring_in_hours": 24,
+    "due_at": "2026-03-21T03:10:08.544399+00:00",
+    "expiring_at": "2026-03-20T03:10:08.544399+00:00",
+    "state": "on_track",
+    "is_expiring": false,
+    "is_overdue": false,
+    "hours_until_due": 72,
+    "hours_overdue": null,
+    "escalation_level": null,
+    "escalation_eligible": false,
+    "escalation_reason": null,
+    "has_active_exception": false
+  },
+  "is_batch": false,
+  "batch_action_count": null,
+  "batch_finding_count": null
+}
+{
+  "id": "51eb817d-bbd8-45f3-b78b-f13421121a20",
+  "action_type": "iam_root_access_key_absent",
+  "target_id": "696505809372|us-east-1|AWS::::Account:696505809372|IAM.4",
+  "account_id": "696505809372",
+  "region": "us-east-1",
+  "score": 72,
+  "score_components": {
+    "score": 72,
+    "version": 1,
+    "severity": {
+      "points": 35,
+      "signals": [
+        "severity:CRITICAL"
+      ],
+      "normalized": 1.0
+    },
+    "business_impact": {
+      "summary": "High technical risk intersects with Medium business criticality.",
+      "criticality": {
+        "tier": "medium",
+        "score": 15,
+        "status": "known",
+        "weight": 2,
+        "dimensions": [
+          {
+            "label": "Customer-facing",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "customer_facing",
+            "explanation": "Customer-facing is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Revenue-path",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "revenue_path",
+            "explanation": "Revenue-path is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Regulated-data",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "regulated_data",
+            "explanation": "Regulated-data is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Identity-boundary",
+            "weight": 15,
+            "matched": true,
+            "signals": [
+              "action_type:iam_root_access_key_absent",
+              "resource_type:AwsAccount",
+              "keyword:access key"
+            ],
+            "dimension": "identity_boundary",
+            "explanation": "Identity-boundary contributed 15 criticality points using: action_type:iam_root_access_key_absent, resource_type:AwsAccount, keyword:access key.",
+            "contribution": 15
+          },
+          {
+            "label": "Production-environment",
+            "weight": 10,
+            "matched": false,
+            "signals": [],
+            "dimension": "production_environment",
+            "explanation": "Production-environment is explicit unknown for this action.",
+            "contribution": 0
+          }
+        ],
+        "explanation": "Criticality scored 15 points from: Identity-boundary."
+      },
+      "matrix_position": {
+        "row": "high",
+        "cell": "high:medium",
+        "rank": 30272,
+        "column": "medium",
+        "explanation": "Matrix row uses technical risk tier high from score 72; matrix column uses business criticality tier medium.",
+        "risk_weight": 3,
+        "criticality_weight": 2
+      },
+      "technical_risk_tier": "high",
+      "technical_risk_score": 72
+    },
+    "exploit_signals": {
+      "points": 13,
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "normalized": 0.8667,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+      "heuristic_points": 13,
+      "factor_max_points": 15,
+      "applied_threat_signals": [],
+      "threat_intel_max_points": 10,
+      "threat_intel_points_applied": 0,
+      "threat_intel_points_requested": 0
+    },
+    "privilege_level": {
+      "points": 15,
+      "signals": [
+        "keyword:access key",
+        "keyword:root"
+      ],
+      "normalized": 1.0
+    },
+    "data_sensitivity": {
+      "points": 9,
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "normalized": 0.6
+    },
+    "internet_exposure": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "context_incomplete": true,
+    "toxic_combinations": {
+      "points": 0,
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "max_boost": 15,
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "missing_signals": [
+        "internet_exposure",
+        "privilege_weakness",
+        "sensitive_data"
+      ],
+      "matched_rule_ids": [],
+      "context_incomplete": true,
+      "context_incomplete_rule_ids": [
+        "public_exposure_privilege_sensitive_data"
+      ]
+    },
+    "compensating_controls": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "total_positive_points": 72,
+    "representative_finding_id": "arn:aws:securityhub:us-east-1:696505809372:security-control/IAM.4/finding/686f835a-50a7-4e05-845b-76b8d7c5894f",
+    "total_compensating_points": 0,
+    "representative_finding_db_id": "cf239098-991a-4651-bd68-b34e3db85cd4",
+    "score_before_toxic_combinations": 72
+  },
+  "score_factors": [
+    {
+      "factor_name": "severity",
+      "weight": 35,
+      "contribution": 35,
+      "evidence_source": "finding.severity_label + finding.severity_normalized",
+      "signals": [
+        "severity:CRITICAL"
+      ],
+      "explanation": "Severity contributed 35 points using: severity:CRITICAL.",
+      "provenance": []
+    },
+    {
+      "factor_name": "internet_exposure",
+      "weight": 20,
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json exposure metadata",
+      "signals": [],
+      "explanation": "Internet exposure contributed 0 points using: no matched signals.",
+      "provenance": []
+    },
+    {
+      "factor_name": "privilege_level",
+      "weight": 15,
+      "contribution": 15,
+      "evidence_source": "finding.title + finding.description + selected raw_json identity metadata",
+      "signals": [
+        "keyword:access key",
+        "keyword:root"
+      ],
+      "explanation": "Privilege level contributed 15 points using: keyword:access key, keyword:root.",
+      "provenance": []
+    },
+    {
+      "factor_name": "data_sensitivity",
+      "weight": 15,
+      "contribution": 9,
+      "evidence_source": "finding.title + finding.description + selected raw_json data-impact metadata",
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "explanation": "Data sensitivity contributed 9 points using: action_type:iam_root_access_key_absent.",
+      "provenance": []
+    },
+    {
+      "factor_name": "exploit_signals",
+      "weight": 15,
+      "contribution": 13,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+      "signals": [
+        "action_type:iam_root_access_key_absent"
+      ],
+      "explanation": "Exploit signals contributed 13 points using: action_type:iam_root_access_key_absent.",
+      "provenance": []
+    },
+    {
+      "factor_name": "compensating_controls",
+      "weight": 15,
+      "contribution": 0,
+      "evidence_source": "finding.title + finding.description + selected raw_json mitigating-control metadata",
+      "signals": [],
+      "explanation": "Compensating controls contributed 0 points using: no matched signals.",
+      "provenance": []
+    },
+    {
+      "factor_name": "toxic_combinations",
+      "weight": 15,
+      "contribution": 0,
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "signals": [
+        "status:context_incomplete",
+        "rule:public_exposure_privilege_sensitive_data"
+      ],
+      "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+      "provenance": []
+    }
+  ],
+  "business_impact": {
+    "technical_risk_score": 72,
+    "technical_risk_tier": "high",
+    "criticality": {
+      "status": "known",
+      "score": 15,
+      "tier": "medium",
+      "weight": 2,
+      "dimensions": [
+        {
+          "dimension": "customer_facing",
+          "label": "Customer-facing",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Customer-facing is explicit unknown for this action."
+        },
+        {
+          "dimension": "revenue_path",
+          "label": "Revenue-path",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Revenue-path is explicit unknown for this action."
+        },
+        {
+          "dimension": "regulated_data",
+          "label": "Regulated-data",
+          "weight": 25,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Regulated-data is explicit unknown for this action."
+        },
+        {
+          "dimension": "identity_boundary",
+          "label": "Identity-boundary",
+          "weight": 15,
+          "matched": true,
+          "contribution": 15,
+          "signals": [
+            "action_type:iam_root_access_key_absent",
+            "resource_type:AwsAccount",
+            "keyword:access key"
+          ],
+          "explanation": "Identity-boundary contributed 15 criticality points using: action_type:iam_root_access_key_absent, resource_type:AwsAccount, keyword:access key."
+        },
+        {
+          "dimension": "production_environment",
+          "label": "Production-environment",
+          "weight": 10,
+          "matched": false,
+          "contribution": 0,
+          "signals": [],
+          "explanation": "Production-environment is explicit unknown for this action."
+        }
+      ],
+      "explanation": "Criticality scored 15 points from: Identity-boundary."
+    },
+    "matrix_position": {
+      "row": "high",
+      "column": "medium",
+      "cell": "high:medium",
+      "risk_weight": 3,
+      "criticality_weight": 2,
+      "rank": 30272,
+      "explanation": "Matrix row uses technical risk tier high from score 72; matrix column uses business criticality tier medium."
+    },
+    "summary": "High technical risk intersects with Medium business criticality."
+  },
+  "priority": 72,
+  "status": "open",
+  "title": "IAM root user access key should not exist",
+  "control_id": "IAM.4",
+  "resource_id": "AWS::::Account:696505809372",
+  "owner_type": "service",
+  "owner_key": "iam",
+  "owner_label": "AWS IAM",
+  "updated_at": "2026-03-18T03:09:50.120592+00:00",
+  "finding_count": 1,
+  "exception_id": null,
+  "exception_expires_at": null,
+  "exception_expired": null,
+  "sla": {
+    "risk_tier": "high",
+    "due_in_hours": 72,
+    "expiring_in_hours": 24,
+    "due_at": "2026-03-21T03:09:50.120592+00:00",
+    "expiring_at": "2026-03-20T03:09:50.120592+00:00",
+    "state": "on_track",
+    "is_expiring": false,
+    "is_overdue": false,
+    "hours_until_due": 72,
+    "hours_overdue": null,
+    "escalation_level": null,
+    "escalation_eligible": false,
+    "escalation_reason": null,
+    "has_active_exception": false
+  },
+  "is_batch": false,
+  "batch_action_count": null,
+  "batch_finding_count": null
+}

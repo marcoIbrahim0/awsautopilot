@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the DescribeStacks operation: User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/rpw5-s39-cfn-check is not authorized to perform: cloudformation:ListStacks on resource: arn:aws:cloudformation:eu-north-1:696505809372:stack/*/* because no identity-based policy allows the cloudformation:ListStacks action

@@ -1,0 +1,58 @@
+[
+  {
+    "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "pre_hash": "b6aaf05affb9be7554353222406ebf89fc31617906022ba5b3d9d2ea58999afe",
+    "current_hash": "b6aaf05affb9be7554353222406ebf89fc31617906022ba5b3d9d2ea58999afe",
+    "pre_statements": 3,
+    "current_statements": 3,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s315-exec-696505809372",
+    "pre_hash": "f397d5748ac8c151bdec9881f5902ac3bb881ef94a4648852b40c060a914dd9a",
+    "current_hash": "f397d5748ac8c151bdec9881f5902ac3bb881ef94a4648852b40c060a914dd9a",
+    "pre_statements": 1,
+    "current_statements": 1,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "pre_hash": "bc51947019489ac0ae58f23a458994acc8236532484d7d81fa3be4e50c2cd95d",
+    "current_hash": "bc51947019489ac0ae58f23a458994acc8236532484d7d81fa3be4e50c2cd95d",
+    "pre_statements": 1,
+    "current_statements": 1,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-config-696505809372",
+    "pre_hash": "4f0e8b14bccbe949a32cad37ae85df2108e0bf79a5c212aec96e4b0e4c372c55",
+    "current_hash": "4f0e8b14bccbe949a32cad37ae85df2108e0bf79a5c212aec96e4b0e4c372c55",
+    "pre_statements": 3,
+    "current_statements": 3,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-exec-696505809372",
+    "pre_hash": "e43b4f569ab6cacaa975926ab6cafaaebcb7c9bdd4d97524efc4e7051881c356",
+    "current_hash": "e43b4f569ab6cacaa975926ab6cafaaebcb7c9bdd4d97524efc4e7051881c356",
+    "pre_statements": 1,
+    "current_statements": 1,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "pre_hash": "e204098e2934ee5670b0649a3775ea8906432cbca8128f7789321a4bbd2e6e06",
+    "current_hash": "e204098e2934ee5670b0649a3775ea8906432cbca8128f7789321a4bbd2e6e06",
+    "pre_statements": 1,
+    "current_statements": 1,
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-review-696505809372",
+    "pre_hash": "84651f93b391226b506feed1410b7a4a43975af362e73ab7f31726eee2e19460",
+    "current_hash": "84651f93b391226b506feed1410b7a4a43975af362e73ab7f31726eee2e19460",
+    "pre_statements": 1,
+    "current_statements": 1,
+    "exact_match": true
+  }
+]

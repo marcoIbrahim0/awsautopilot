@@ -1,0 +1,82 @@
+
+=== Running terraform in executable/actions/01-aws-account-696505809372-322fbb9e ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Finding latest version of hashicorp/null...
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/01-aws-account-696505809372-322fbb9e (attempt 1/5). Retrying in 3s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Finding latest version of hashicorp/null...
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/01-aws-account-696505809372-322fbb9e (attempt 2/5). Retrying in 6s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Finding latest version of hashicorp/null...
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/01-aws-account-696505809372-322fbb9e (attempt 3/5). Retrying in 12s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Finding latest version of hashicorp/null...
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/01-aws-account-696505809372-322fbb9e (attempt 4/5). Retrying in 24s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding latest version of hashicorp/null...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+ERROR: terraform init failed for executable/actions/01-aws-account-696505809372-322fbb9e after retries. Skipping this action folder.
+Bundle run completed.
+  Successful action folders: 0/1
+  Failed action folders: 1/1
+Failed folders summary:
+  - executable/actions/01-aws-account-696505809372-322fbb9e (init)

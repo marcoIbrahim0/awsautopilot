@@ -1,0 +1,30 @@
+[
+  {
+    "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-config-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-review-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s315-exec-696505809372",
+    "exact_match": true
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-exec-696505809372",
+    "exact_match": true
+  }
+]

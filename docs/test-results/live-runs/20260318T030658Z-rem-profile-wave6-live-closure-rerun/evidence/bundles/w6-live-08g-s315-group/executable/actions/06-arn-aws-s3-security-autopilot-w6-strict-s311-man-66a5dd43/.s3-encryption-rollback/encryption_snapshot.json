@@ -1,0 +1,16 @@
+{
+  "bucket_name": "security-autopilot-w6-strict-s311-manual-696505809372",
+  "encryption_configuration": {
+    "Rules": [
+      {
+        "ApplyServerSideEncryptionByDefault": {
+          "SSEAlgorithm": "AES256"
+        },
+        "BucketKeyEnabled": false
+      }
+    ]
+  },
+  "encryption_exists": true,
+  "region": "eu-north-1",
+  "version": 1
+}

@@ -1,0 +1,18 @@
+{
+  "run_id": "20260318T030658Z-rem-profile-wave6-live-closure-rerun",
+  "postgres_dir": "/tmp/rpw6-ec253-20260318T030658Z",
+  "postgres_port": 5432,
+  "database": "security_autopilot_20260318030658_w6live",
+  "database_user": "marcomaher",
+  "main_api_port": 18022,
+  "root_key_api_port": 18021,
+  "ingest_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-ingest",
+  "contract_quarantine_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-contract-quarantine",
+  "events_fast_lane_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-events-fastlane",
+  "inventory_reconcile_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-inventory-reconcile",
+  "export_report_queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-export-report",
+  "observer_profile": "default",
+  "mutation_profile": "test28-root",
+  "tenant_external_id": "ocypheris-p2-e2e-20260312",
+  "aws_region": "eu-north-1"
+}

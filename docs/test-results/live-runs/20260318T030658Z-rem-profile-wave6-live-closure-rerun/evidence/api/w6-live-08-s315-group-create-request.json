@@ -1,0 +1,14 @@
+{
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "risk_acknowledged": true,
+  "action_overrides": [
+    {
+      "action_id": "52947557-0b35-4c03-99d6-4fdf77c86a24",
+      "strategy_id": "s3_enable_sse_kms_guided",
+      "strategy_inputs": {
+        "kms_key_mode": "custom",
+        "kms_key_arn": "arn:aws:kms:eu-north-1:696505809372:key/ef0cca31-8328-41e6-ab28-64cbedc1a44c"
+      }
+    }
+  ]
+}

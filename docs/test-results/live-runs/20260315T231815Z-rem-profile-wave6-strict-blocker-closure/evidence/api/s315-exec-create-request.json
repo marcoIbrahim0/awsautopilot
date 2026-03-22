@@ -1,0 +1,6 @@
+{
+  "action_id": "a6585d13-e010-415e-823c-334a4c40bdf8",
+  "mode": "pr_only",
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "risk_acknowledged": true
+}

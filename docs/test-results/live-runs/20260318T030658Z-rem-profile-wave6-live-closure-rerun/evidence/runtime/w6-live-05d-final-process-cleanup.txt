@@ -1,0 +1,8 @@
+Stopping retained runtime on 2026-03-18T17:30:36Z
+Escalating kill for PID 99413
+waiting for server to shut down.... done
+server stopped
+
+Port listeners after shutdown:
+
+Process probes after shutdown:

@@ -1,0 +1,72 @@
+
+=== Running terraform in executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to install provider[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while installing hashicorp/aws v6.36.0: cannot install existing
+[31m│[0m [0mprovider directory
+[31m│[0m [0m/Users/marcomaher/.aws-security-autopilot/terraform/plugin-cache/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+[31m│[0m [0mto itself
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 (attempt 1/5). Retrying in 3s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to install provider[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while installing hashicorp/aws v6.36.0: cannot install existing
+[31m│[0m [0mprovider directory
+[31m│[0m [0m/Users/marcomaher/.aws-security-autopilot/terraform/plugin-cache/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+[31m│[0m [0mto itself
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 (attempt 2/5). Retrying in 6s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to install provider[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while installing hashicorp/aws v6.36.0: cannot install existing
+[31m│[0m [0mprovider directory
+[31m│[0m [0m/Users/marcomaher/.aws-security-autopilot/terraform/plugin-cache/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+[31m│[0m [0mto itself
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 (attempt 3/5). Retrying in 12s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to install provider[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while installing hashicorp/aws v6.36.0: cannot install existing
+[31m│[0m [0mprovider directory
+[31m│[0m [0m/Users/marcomaher/.aws-security-autopilot/terraform/plugin-cache/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+[31m│[0m [0mto itself
+[31m╵[0m[0m
+WARNING: terraform init failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 (attempt 4/5). Retrying in 24s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/aws versions matching ">= 4.0.0"...
+- Installing hashicorp/aws v6.36.0...
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to install provider[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while installing hashicorp/aws v6.36.0: cannot install existing
+[31m│[0m [0mprovider directory
+[31m│[0m [0m/Users/marcomaher/.aws-security-autopilot/terraform/plugin-cache/registry.terraform.io/hashicorp/aws/6.36.0/darwin_arm64
+[31m│[0m [0mto itself
+[31m╵[0m[0m
+ERROR: terraform init failed for executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 after retries. Skipping this action folder.
+Bundle run completed.
+  Successful action folders: 0/1
+  Failed action folders: 1/1
+Failed folders summary:
+  - executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-d3be1c75 (init)

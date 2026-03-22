@@ -1,0 +1,49 @@
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260321T205741Z
+Enable worker mappings: true
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260321T205741Z.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:a9c4511d-b354-4542-94d6-d3904e846dce
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 33e5fe46-482b-47da-bbd6-bdac64b8e5c0
+worker mapping already enabled: 990f0c7a-2153-404b-9ddd-e59664c205cf
+worker mapping already enabled: 3d876d16-4afa-4f1c-a892-d9387fda469e
+worker mapping already enabled: 53192e01-6578-4de4-935a-5777e0f8cf87
+reserved concurrency already clear: SecurityAutopilotReadRole-ReadRoleHelperFunction-nDM4XAHSGjeD
+reserved concurrency already clear: SecurityAutopilotWriteRole-WriteRoleHelperFunction-eSSlEZAQXgVD
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/sybw8x0716/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://sybw8x0716.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  sybw8x0716                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+

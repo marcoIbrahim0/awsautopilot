@@ -22,16 +22,18 @@ Use this section to run API, worker, frontend, and tests locally.
 
 ```bash
 # migrate DB
-alembic upgrade head
+./venv/bin/alembic current
+./venv/bin/alembic heads
+./venv/bin/alembic upgrade heads
 
 # run API
-uvicorn backend.main:app --reload
+./venv/bin/uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
 # run worker
-PYTHONPATH=. python -m backend.workers.main
+PYTHONPATH=. ./venv/bin/python -m backend.workers.main
 
 # run tests
-pytest
+PYTHONPATH=. ./venv/bin/pytest
 
 # recompute actions safely for one tenant/account (idempotent)
 PYTHONPATH=. ./venv/bin/python scripts/recompute_account_actions.py --tenant-id <TENANT_UUID> --account-id <ACCOUNT_ID> [--region <REGION>]

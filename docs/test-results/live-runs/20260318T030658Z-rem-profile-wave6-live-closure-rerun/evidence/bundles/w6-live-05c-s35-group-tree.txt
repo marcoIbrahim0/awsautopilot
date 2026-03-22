@@ -1,0 +1,9 @@
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/README_GROUP.txt
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/bundle_manifest.json
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/decision_log.md
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/finding_coverage.json
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/pr_automation/control_mapping_context.json
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/pr_automation/diff_summary.json
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/pr_automation/rollback_notes.md
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/run_actions.sh
+docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-05c-s35-group/run_all.sh

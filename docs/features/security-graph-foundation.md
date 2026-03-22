@@ -18,6 +18,17 @@ Graph-backed action detail payloads are now delivered by Phase 3 P1.2:
 
 - [Graph-backed action context](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/graph-backed-action-context.md)
 
+Attack Path Phase 1 now traverses these persisted graph tables directly for:
+
+- `GET /api/actions/{id}.attack_path_view`
+- `GET /api/actions/attack-paths`
+
+Attack Path Phase 2 extends that same graph-backed source for:
+
+- shared reusable path IDs exposed as `GET /api/actions/{id}.path_id`
+- `GET /api/actions/attack-paths/{id}`
+- explainable path-ranking factors on the bounded `/attack-paths` surface
+
 ## What it does
 
 - Persists a tenant-scoped graph of `resource`, `identity`, `exposure`, `finding`, and `action` nodes.
@@ -117,7 +128,7 @@ That keeps graph exposure nodes aligned with existing prioritization behavior in
 ## Limitations
 
 - The current graph is derived from persisted findings/actions only; it does not yet ingest independent inventory-only relationships or non-action-producing entity graphs.
-- The current action-detail graph context still derives from persisted finding/inventory neighborhoods instead of traversing the `security_graph_nodes` / `security_graph_edges` tables directly.
+- The separate `graph_context` action-detail payload still derives from persisted finding/inventory neighborhoods instead of traversing the `security_graph_nodes` / `security_graph_edges` tables directly.
 - Account-scoped identity nodes remain intentionally conservative and only surface when the linked finding payload contains explicit identity hints.
 
 ## Related docs

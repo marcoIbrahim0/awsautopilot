@@ -2,7 +2,11 @@
 
 > Scope date: 2026-03-14
 >
-> This document is the Wave 0 current-state contract lock for remediation profile resolution. Later waves must preserve this baseline unless a deliberate contract revision updates both the live code and this lock.
+> ⚠️ Status: Historical Wave 0 contract lock. This baseline was captured before the 2026-03-19 PR-only de-scope and is preserved for migration history, not as the live product contract.
+>
+> Current contract note (2026-03-19): current `master` rejects `direct_fix`, does not expose customer `WriteRole`, and uses PR-only remediation surfaces. Later waves preserve this March 14 baseline only where historical compatibility analysis still matters.
+
+This document is the Wave 0 current-state contract lock for remediation profile resolution. Later waves must preserve this baseline unless a deliberate contract revision updates both the live code and this lock.
 
 Source baselines:
 
@@ -112,7 +116,7 @@ Preservation rules:
 - Current windows:
   - `pr_only`: total `6` runs per `20 minutes` for the action
   - `pr_only`: identical signature `3` runs per `20 minutes`
-  - `direct_fix`: identical signature blocked for `30 seconds`
+  - historical `direct_fix` path: identical signature blocked for `30 seconds`
 - Current signature does not include `risk_acknowledged`
 
 ### Grouped `POST /api/remediation-runs/group-pr-bundle`

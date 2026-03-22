@@ -16,6 +16,11 @@ The deploy script now normalizes Lambda drift after each runtime deploy:
 - re-enables or disables worker event source mappings to match `EnableWorker`
 - clears reserved concurrency from ReadRole/WriteRole helper Lambdas
 
+Current API Lambda runtime posture:
+- API Lambda `MemorySize` is `1536` MB in the checked-in serverless template.
+- `/ready` queue-lag fields are backed by CloudWatch `GetMetricStatistics`, so the API execution role now includes that read permission.
+- The serverless API runtime no longer performs FastAPI bootstrap or the DB revision guard during Lambda module import. Both are memoized on first invoke in [`backend/lambda_handler.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/lambda_handler.py), which removes the March 20, 2026 init-time timeout burst class while preserving the schema/runtime guard.
+
 ## Prerequisites
 
 - ✅ [Prerequisites](prerequisites.md) completed
@@ -31,6 +36,7 @@ The deploy script now normalizes Lambda drift after each runtime deploy:
 # Set required variables
 export DATABASE_URL="postgresql+asyncpg://user:pass@host:5432/db"
 export JWT_SECRET="your-jwt-secret"
+export BUNDLE_REPORTING_TOKEN_SECRET="your-separate-reporting-secret"
 export CONTROL_PLANE_EVENTS_SECRET="your-secret"
 
 # Run deployment script
@@ -63,7 +69,7 @@ If a stop profile or manual AWS CLI action left the API/worker/helper Lambdas th
 
 This is required because out-of-band `put-function-concurrency 0` and event-source-mapping state changes are not always reconciled by a later CloudFormation deploy when the template properties themselves are unchanged.
 
-If `/health` or `/ready` starts failing immediately after a runtime deploy, check the API/worker logs for the migration guard message from [`backend/services/migration_guard.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/migration_guard.py). In this repo, the recovery command is:
+If `/health` or `/ready` starts failing immediately after a runtime deploy, check the API/worker logs for the first-invoke database guard message from [`backend/services/migration_guard.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/migration_guard.py). In this repo, the recovery command is:
 
 ```bash
 /bin/zsh -lc 'set -a; source config/.env.ops; set +a; alembic upgrade heads'
@@ -88,7 +94,7 @@ aws cloudformation deploy \
 
 ## Key Differences from ECS
 
-- **Cold starts** — Lambda may have cold start latency (~1-2s)
+- **Cold starts** — Lambda still has cold-start latency, but the current `1536` MB API config plus lazy first-invoke bootstrap removed the March 20, 2026 init-time timeout bursts. The retained post-fix live proof shows successful `Init Duration` lines at `595.09 ms`, `207.37 ms`, and `216.44 ms`; the first cold request can still pay several seconds of app bootstrap on invoke.
 - **Timeout limits** — 15 minutes max (API Gateway: 30s for HTTP API)
 - **Concurrency** — Limited by account quotas (default: 1,000)
 - **Cost** — Pay per request (cheaper at low traffic)

@@ -367,12 +367,34 @@ def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload(
 
     assert 'variable "overwrite_recording_group"' in content
     assert "default     = false" in content
-    assert 'ROLLBACK_DIR=".aws-config-rollback"' in content
+    assert 'export REGION="${var.remediation_region}"' in content
+    assert 'export ROLLBACK_DIR=".aws-config-rollback"' in content
     assert "python3 ./scripts/aws_config_apply.py" in content
+    assert "DEFAULT_REGION = 'eu-north-1'" in apply_script
+    assert "DEFAULT_BUCKET = 'security-autopilot-config-111122223333'" in apply_script
+    assert "DEFAULT_ROLE_ARN = 'arn:aws:iam::111122223333:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'" in apply_script
+    assert "DEFAULT_CREATE_LOCAL_BUCKET = True" in apply_script
+    assert "DEFAULT_OVERWRITE_RECORDING_GROUP = False" in apply_script
     assert "put-configuration-recorder" in apply_script
     assert '"allSupported": True' in apply_script
     assert '"includeGlobalResourceTypes": True' in apply_script
     assert 'put_structured_payload("put-configuration-recorder"' in apply_script
+
+
+def test_pr_bundle_aws_config_enabled_declares_null_provider_for_local_exec_bundle() -> None:
+    """Config.1 bundle should pin the null provider used by its local-exec wrapper."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(action, "terraform")
+    providers = _bundle_file_content(r, "providers.tf")
+
+    assert 'null = {' in providers
+    assert 'source  = "hashicorp/null"' in providers
+    assert 'version = "= 3.2.4"' in providers
 
 
 def test_pr_bundle_aws_config_enabled_preserves_selective_recorder_by_default() -> None:
@@ -522,6 +544,8 @@ def test_pr_bundle_aws_config_enabled_restore_script_restores_prior_state_instea
     r = generate_pr_bundle(action, "terraform")
     restore_script = _bundle_file_content(r, "rollback/aws_config_restore.py")
 
+    assert "DEFAULT_REGION = 'eu-north-1'" in restore_script
+    assert 'os.environ.get("REGION", "").strip() or DEFAULT_REGION.strip()' in restore_script
     assert "pre_configuration_recorders.json" in restore_script
     assert "pre_delivery_channels.json" in restore_script
     assert "pre_target_bucket_state.json" in restore_script
@@ -772,6 +796,7 @@ def test_pr_bundle_terraform_readme_includes_c2_c5_proof_fields() -> None:
                 "S3.5 post-fix access guidance",
                 "HTTPS requirement",
                 "curl -I http://<bucket-name>.s3.<region>.amazonaws.com/<object-key>",
+                "get-bucket-policy --bucket <bucket-name> --query Policy --output text > pre-remediation-policy.json",
                 "put-bucket-policy --bucket <bucket-name> --policy file://pre-remediation-policy.json",
             ],
         ),
@@ -1174,6 +1199,38 @@ def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
     assert "S3.15" in content or "Control:" in content
 
 
+def test_pr_bundle_s3_bucket_encryption_kms_includes_exact_capture_and_restore_helpers() -> None:
+    """S3.15 Terraform bundle should ship exact bucket-encryption capture/restore helpers."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(action, "terraform", strategy_inputs={"kms_key_mode": "aws_managed"})
+
+    capture_script = _bundle_file_content(r, "scripts/s3_encryption_capture.py")
+    restore_script = _bundle_file_content(r, "rollback/s3_encryption_restore.py")
+    readme = _bundle_file_content(r, "README.txt")
+
+    assert '"get-bucket-encryption"' in capture_script
+    assert ".s3-encryption-rollback/encryption_snapshot.json" in capture_script
+    assert "DEFAULT_BUCKET_NAME = 'kms-bucket'" in capture_script
+    assert "DEFAULT_REGION = 'us-east-1'" in capture_script
+    assert '"put-bucket-encryption"' in restore_script
+    assert '"delete-bucket-encryption"' in restore_script
+    assert ".s3-encryption-rollback/" in readme
+    assert "python3 scripts/s3_encryption_capture.py" in readme
+    assert "optional overrides only" in readme
+    assert "python3 rollback/s3_encryption_restore.py" in readme
+    assert any("python3 scripts/s3_encryption_capture.py" in step for step in r["steps"])
+    assert any("python3 rollback/s3_encryption_restore.py" in step for step in r["steps"])
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/s3_encryption_restore.py",
+        "runner": "python3",
+    }
+
+
 @pytest.mark.parametrize(
     ("action_type", "expected_path", "expected_snippet"),
     [
@@ -1333,6 +1390,41 @@ def test_pr_bundle_sg_restrict_remove_existing_true_only_for_close_and_revoke() 
     content = next(f for f in r["files"] if f["path"] == "sg_restrict_public_ports.tf")["content"]
     assert 'default     = "198.51.100.0/24"' in content
     assert "default     = false" in content
+
+
+def test_pr_bundle_sg_restrict_close_and_revoke_includes_exact_state_capture_and_restore() -> None:
+    """EC2.53 close_and_revoke bundles should ship exact-state capture/restore helpers."""
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"access_mode": "close_and_revoke"},
+    )
+
+    apply_script = _bundle_file_content(r, "scripts/sg_capture_state.py")
+    restore_script = _bundle_file_content(r, "rollback/sg_restore.py")
+    readme = _bundle_file_content(r, "README.txt")
+
+    assert "--filters\", f\"Name=group-id,Values={sg_id}\"" in apply_script
+    assert "Name=is-egress,Values=false" not in apply_script
+    assert 'if bool(rule.get("IsEgress")):' in apply_script
+    assert 'description = str(rule.get("Description") or "").strip()' in apply_script
+    assert 'entry["Description"] = description' in apply_script
+    assert '"IpRanges": [ip_range_entry(cidr_key="CidrIp", cidr_value=cidr_ipv4, description=description)]' in apply_script
+    assert '"Ipv6Ranges": [ip_range_entry(cidr_key="CidrIpv6", cidr_value=cidr_ipv6, description=description)]' in apply_script
+    assert 'permissions_json = json.dumps([rule])' in restore_script
+    assert "including rule descriptions" in readme
+    assert ".sg-rollback/sg_ingress_snapshot.json" in readme
+    assert "python3 rollback/sg_restore.py" in readme
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/sg_restore.py",
+        "runner": "python3",
+    }
 
 
 def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
@@ -2125,6 +2217,24 @@ def test_pr_bundle_s3_ssl_fails_closed_when_policy_count_present_without_policy_
     assert payload["code"] == "bucket_policy_preservation_evidence_missing"
 
 
+def test_pr_bundle_s3_ssl_fails_closed_when_policy_evidence_is_missing() -> None:
+    """S3.5 should fail closed when preservation evidence is entirely missing."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "terraform",
+            risk_snapshot={"evidence": {}},
+        )
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "bucket_policy_preservation_evidence_missing"
+
+
 def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
     """S3.5 Terraform should preload existing policy JSON for merge-safe policy generation."""
     action = _make_action(
@@ -2169,6 +2279,58 @@ def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
     assert "DenyInsecureTransport" in content
 
 
+def test_pr_bundle_s3_ssl_terraform_includes_exact_policy_capture_and_restore_helpers() -> None:
+    """S3.5 Terraform should ship exact policy capture/restore helpers when preserving a bucket policy."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    existing_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "KeepAppRead",
+                "Effect": "Allow",
+                "Principal": {"AWS": "arn:aws:iam::111122223333:role/app-role"},
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::my-bucket/*",
+            }
+        ],
+    }
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_policy_statement_count": 1,
+                "existing_bucket_policy_json": json.dumps(existing_policy),
+            }
+        },
+    )
+
+    apply_script = _bundle_file_content(r, "scripts/s3_policy_capture.py")
+    restore_script = _bundle_file_content(r, "rollback/s3_policy_restore.py")
+
+    assert '"get-bucket-policy"' in apply_script
+    assert ".s3-rollback/policy_snapshot.json" in apply_script
+    assert '"put-bucket-policy"' in restore_script
+    assert '"delete-bucket-policy"' in restore_script
+    assert any(
+        "python3 scripts/s3_policy_capture.py" in step
+        for step in r["steps"]
+    )
+    assert any(
+        "python3 rollback/s3_policy_restore.py" in step
+        for step in r["steps"]
+    )
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/s3_policy_restore.py",
+        "runner": "python3",
+    }
+
+
 def test_pr_bundle_s3_ssl_terraform_zero_policy_path_skips_tfvars_preload() -> None:
     """S3.5 Terraform should not emit tfvars preload file when no policy statements exist."""
     action = _make_action(
@@ -2181,6 +2343,25 @@ def test_pr_bundle_s3_ssl_terraform_zero_policy_path_skips_tfvars_preload() -> N
         action,
         "terraform",
         risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 0}},
+    )
+
+    paths = [f["path"] for f in r["files"]]
+    assert "s3_bucket_require_ssl.tf" in paths
+    assert "terraform.auto.tfvars.json" not in paths
+
+
+def test_pr_bundle_s3_ssl_accepts_explicit_preservation_evidence_inputs() -> None:
+    """Grouped S3 bundles can rely on persisted strategy inputs without a risk snapshot."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"existing_bucket_policy_statement_count": 0},
     )
 
     paths = [f["path"] for f in r["files"]]

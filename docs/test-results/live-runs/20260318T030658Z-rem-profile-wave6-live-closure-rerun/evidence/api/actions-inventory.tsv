@@ -1,0 +1,2 @@
+2a1c9d2f-b05d-48b3-bcec-d7645c5fd017	sg_restrict_public_ports	EC2.53	696505809372	eu-north-1	arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b	open
+ad9328e1-faf2-4fd4-9885-c7f8c50c7d14	sg_restrict_public_ports	EC2.53	696505809372	eu-north-1	arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d	open

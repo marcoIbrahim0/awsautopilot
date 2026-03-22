@@ -1,0 +1,5 @@
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorders
+aws --profile test28-root --region eu-north-1 configservice describe-configuration-recorder-status
+aws --profile test28-root --region eu-north-1 configservice describe-delivery-channels
+aws --profile test28-root --region eu-north-1 s3api get-bucket-policy --bucket security-autopilot-w6-envready-config-696505809372 --query Policy --output text
+(cd docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-10-config-group && AWS_PROFILE=test28-root AWS_REGION=eu-north-1 bash ./run_all.sh)

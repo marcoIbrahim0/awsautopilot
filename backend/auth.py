@@ -29,6 +29,7 @@ from backend.config import settings
 from backend.database import get_db
 from backend.models.user import User
 from backend.services.cloudformation_templates import (
+    build_role_template_parameter_values,
     generate_presigned_template_url,
     get_latest_template_version,
 )
@@ -55,6 +56,7 @@ class TokenData(BaseModel):
     sub: str  # user_id as string
     tenant_id: str
     token_version: int = 0
+    persistent_session: bool = True
     exp: datetime
 
 
@@ -211,7 +213,12 @@ def hash_password_reset_token(token: str) -> str:
 # JWT utilities
 # ============================================
 
-def create_access_token(user_id: uuid.UUID, tenant_id: uuid.UUID, token_version: int = 0) -> str:
+def create_access_token(
+    user_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    token_version: int = 0,
+    persistent_session: bool = True,
+) -> str:
     """
     Create a JWT access token for a user.
     
@@ -222,6 +229,7 @@ def create_access_token(user_id: uuid.UUID, tenant_id: uuid.UUID, token_version:
         "sub": str(user_id),
         "tenant_id": str(tenant_id),
         "token_version": int(token_version),
+        "persistent_session": bool(persistent_session),
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -239,6 +247,7 @@ def decode_access_token(token: str) -> TokenData | None:
             sub=payload["sub"],
             tenant_id=payload["tenant_id"],
             token_version=int(payload.get("token_version", 0)),
+            persistent_session=bool(payload.get("persistent_session", True)),
             exp=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
         )
     except jwt.ExpiredSignatureError:
@@ -261,11 +270,26 @@ def create_csrf_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def set_auth_cookies(response: Response, access_token: str, csrf_token: str | None = None) -> str:
-    csrf_value = csrf_token or create_csrf_token()
+def _cookie_lifetime_kwargs(persistent_session: bool) -> dict[str, int]:
+    if not persistent_session:
+        return {}
     max_age_seconds = int(settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    return {
+        "max_age": max_age_seconds,
+        "expires": max_age_seconds,
+    }
+
+
+def set_auth_cookies(
+    response: Response,
+    access_token: str,
+    csrf_token: str | None = None,
+    persistent_session: bool = True,
+) -> str:
+    csrf_value = csrf_token or create_csrf_token()
     secure = _cookie_secure()
     csrf_cookie_domain = _csrf_cookie_domain()
+    lifetime_kwargs = _cookie_lifetime_kwargs(persistent_session)
 
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
@@ -273,9 +297,8 @@ def set_auth_cookies(response: Response, access_token: str, csrf_token: str | No
         httponly=True,
         secure=secure,
         samesite="lax",
-        max_age=max_age_seconds,
-        expires=max_age_seconds,
         path="/",
+        **lifetime_kwargs,
     )
     response.set_cookie(
         key=CSRF_COOKIE_NAME,
@@ -283,10 +306,9 @@ def set_auth_cookies(response: Response, access_token: str, csrf_token: str | No
         httponly=False,
         secure=secure,
         samesite="lax",
-        max_age=max_age_seconds,
-        expires=max_age_seconds,
         path="/",
         domain=csrf_cookie_domain,
+        **lifetime_kwargs,
     )
     return csrf_value
 
@@ -524,6 +546,7 @@ def build_launch_stack_url(
     region: str,
     external_id: str,
     saas_account_id: str,
+    saas_execution_role_arns: str = "",
     stack_name: str | None = None,
     default_stack_name: str = DEFAULT_READ_ROLE_STACK_NAME,
 ) -> str:
@@ -532,7 +555,7 @@ def build_launch_stack_url(
 
     Console deep link: /stacks/create/template with templateURL, stackName, and param_*
     in the hash fragment so the user sees everything filled when they click Next.
-    Parameter keys must match the template (prefixed with param_): param_ExternalId, param_SaaSAccountId.
+    Parameter keys must match the template (prefixed with param_).
     stack_name: optional; if the default name is already in use, use e.g. SecurityAutopilotReadRole-2.
     """
     base = f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}"
@@ -540,9 +563,13 @@ def build_launch_stack_url(
     params = {
         "templateURL": template_url.strip(),
         "stackName": name,
-        "param_SaaSAccountId": saas_account_id.strip(),
-        "param_ExternalId": external_id,
     }
+    parameter_values = build_role_template_parameter_values(
+        external_id=external_id,
+        saas_account_id=saas_account_id,
+        saas_execution_role_arns=saas_execution_role_arns,
+    )
+    params.update({f"param_{key}": value for key, value in parameter_values.items()})
     return f"{base}#/stacks/create/template?{urlencode(params)}"
 
 
@@ -551,6 +578,7 @@ def build_read_role_launch_stack_url(
     region: str,
     external_id: str,
     saas_account_id: str,
+    saas_execution_role_arns: str = "",
     stack_name: str | None = None,
 ) -> str:
     return build_launch_stack_url(
@@ -558,6 +586,7 @@ def build_read_role_launch_stack_url(
         region=region,
         external_id=external_id,
         saas_account_id=saas_account_id,
+        saas_execution_role_arns=saas_execution_role_arns,
         stack_name=stack_name,
         default_stack_name=DEFAULT_READ_ROLE_STACK_NAME,
     )
@@ -568,6 +597,7 @@ def build_write_role_launch_stack_url(
     region: str,
     external_id: str,
     saas_account_id: str,
+    saas_execution_role_arns: str = "",
     stack_name: str | None = None,
 ) -> str:
     return build_launch_stack_url(
@@ -575,6 +605,7 @@ def build_write_role_launch_stack_url(
         region=region,
         external_id=external_id,
         saas_account_id=saas_account_id,
+        saas_execution_role_arns=saas_execution_role_arns,
         stack_name=stack_name,
         default_stack_name=DEFAULT_WRITE_ROLE_STACK_NAME,
     )
@@ -633,6 +664,7 @@ def get_saas_and_launch_url(
     Automatically detects the latest template version from S3 if the base URL is configured.
     """
     saas_account_id = (settings.SAAS_AWS_ACCOUNT_ID or "").strip() or None
+    saas_execution_role_arns = settings.saas_execution_role_arns_csv
     read_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
     write_template_url = (settings.CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL or "").strip()
     control_plane_template_url = (settings.CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL or "").strip()
@@ -686,6 +718,7 @@ def get_saas_and_launch_url(
             region=region,
             external_id=external_id,
             saas_account_id=saas_account_id,
+            saas_execution_role_arns=saas_execution_role_arns,
             stack_name=DEFAULT_READ_ROLE_STACK_NAME,
         )
 
@@ -710,6 +743,7 @@ def get_saas_and_launch_url(
             region=region,
             external_id=external_id,
             saas_account_id=saas_account_id,
+            saas_execution_role_arns=saas_execution_role_arns,
             stack_name=DEFAULT_WRITE_ROLE_STACK_NAME,
         )
 

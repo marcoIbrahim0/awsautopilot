@@ -1,0 +1,25 @@
+{
+  "timestamp_utc": "2026-03-22T13:28:20Z",
+  "source_endpoint": "https://api.ocypheris.com/api/actions?limit=30&offset=0",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "sample_size": 30,
+  "attack_path_status_counts": {
+    "available": 16,
+    "partial": 14
+  },
+  "representative_examples": {
+    "available": {
+      "action_id": "84a23bb8-d6f7-4c1b-87ff-87f9cc7c469c",
+      "path_id": "path:d9fe1bdfe359b424fa61",
+      "account_id": "696505809372",
+      "region": "eu-north-1"
+    },
+    "partial": {
+      "action_id": "0abc603d-b75a-4b49-9a5f-431a0aa82a4e",
+      "path_id": "path:96bdb7a6b4e43c63343c",
+      "account_id": "696505809372",
+      "region": "eu-north-1"
+    }
+  },
+  "missing_live_case": "No safe unavailable/context_incomplete example found in the first 30 live actions."
+}

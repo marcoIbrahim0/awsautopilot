@@ -1,0 +1,11 @@
+Deleting temporary SQS queues for 20260318T030658Z-rem-profile-wave6-live-closure-rerun
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-ingest
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-contract-quarantine
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-events-fastlane
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-inventory-reconcile
+DELETE https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-export-report
+security-autopilot-rpw6-ec253-20260318t030658z-ingest deleted
+security-autopilot-rpw6-ec253-20260318t030658z-contract-quarantine deleted
+security-autopilot-rpw6-ec253-20260318t030658z-events-fastlane deleted
+security-autopilot-rpw6-ec253-20260318t030658z-inventory-reconcile deleted
+security-autopilot-rpw6-ec253-20260318t030658z-export-report deleted

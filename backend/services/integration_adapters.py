@@ -164,23 +164,44 @@ def _jira_create_payload(*, config: dict, payload: dict) -> dict:
         "project": {"key": _require_text(config, "project_key", code="jira_project_key_required")},
         "issuetype": {"name": str(config.get("issue_type") or "Task")},
         "summary": str(payload.get("title") or "AWS Security Autopilot action"),
-        "description": str(payload.get("description") or payload.get("title") or ""),
+        "description": _jira_description_doc(payload=payload),
     }
-    assignee_key = str(payload.get("external_assignee_key") or "").strip()
-    if assignee_key:
-        fields["assignee"] = {"accountId": assignee_key}
+    assignee = _jira_assignee_field(payload=payload)
+    if assignee is not None:
+        fields["assignee"] = assignee
     return {"fields": fields}
 
 
 def _jira_update_payload(*, payload: dict) -> dict:
     fields = {
         "summary": str(payload.get("title") or "AWS Security Autopilot action"),
-        "description": str(payload.get("description") or payload.get("title") or ""),
+        "description": _jira_description_doc(payload=payload),
     }
-    assignee_key = str(payload.get("external_assignee_key") or "").strip()
-    if assignee_key:
-        fields["assignee"] = {"accountId": assignee_key}
+    assignee = _jira_assignee_field(payload=payload)
+    if assignee is not None:
+        fields["assignee"] = assignee
     return {"fields": fields}
+
+
+def _jira_description_doc(*, payload: dict) -> dict:
+    text = str(payload.get("description") or payload.get("title") or "").strip()
+    return {
+        "type": "doc",
+        "version": 1,
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": text or "AWS Security Autopilot action"}],
+            }
+        ],
+    }
+
+
+def _jira_assignee_field(*, payload: dict) -> dict[str, str] | None:
+    assignee_key = str(payload.get("external_assignee_key") or "").strip()
+    if not assignee_key or assignee_key.lower() == "unassigned":
+        return None
+    return {"accountId": assignee_key}
 
 
 def _jira_issue_url(base_url: str, issue_key: str) -> str:

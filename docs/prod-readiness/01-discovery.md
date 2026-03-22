@@ -1,5 +1,9 @@
 # 01 Discovery - Control and Action Input Contract
 
+> Scope date: 2026-02-25 historical discovery snapshot.
+>
+> Current contract note (2026-03-19): current `master` exposes PR-only remediation surfaces. Historical `direct_fix` and `both` labels below are preserved as extraction-time evidence from the pre-de-scope snapshot, not as current product behavior.
+
 ## Objective
 
 Define the canonical discovery contract for production-readiness validation tasks.
@@ -35,7 +39,7 @@ Discovery and consolidation were derived from the following production-readiness
 | `Control Name` | Required | Canonical control title from consolidated inventory. |
 | `AWS Service` | Required | Primary AWS service namespace associated with the control. |
 | `What it checks` | Required | Runtime posture/signal that determines open vs resolved state. |
-| `Action Type` | Required | One of `direct_fix`, `pr_bundle`, `both`, `pr_only`, `INFRA_METADATA_ONLY`. |
+| `Action Type` | Required | One of the historical extraction values `direct_fix`, `pr_bundle`, `both`, `pr_only`, or `INFRA_METADATA_ONLY`. Current product contract is PR-only. |
 
 ### Action schema
 
@@ -43,14 +47,14 @@ Discovery and consolidation were derived from the following production-readiness
 | --- | --- | --- |
 | `Action ID` | Required | Canonical action ID. |
 | `Action Name` | Required | Canonical action title from consolidated inventory. |
-| `Type` | Required | `direct-fix`, `pr-bundle`, or both. |
+| `Type` | Required | Historical extraction label: `direct-fix`, `pr-bundle`, or both. Current product contract is PR-only. |
 | `AWS API or IaC resource` | Required | Concrete API operation(s) and/or IaC resource(s); `UNKNOWN` when unresolved. |
 
 ## Classification Vocabulary
 
-- `direct_fix`: action executes through direct API mutation path.
+- `direct_fix`: historical extraction label for the pre-2026-03-19 direct API mutation path. Current product contract disables this path.
 - `pr_bundle`: action executes through IaC patch/PR bundle path.
-- `both`: control/action has both direct-fix and PR-bundle execution paths depending on mode.
+- `both`: historical extraction label for controls/actions that exposed both direct-fix and PR-bundle paths in the snapshot. Current product contract exposes only customer-run PR-bundle flow.
 - `pr_only`: explicit unsupported-remediation classification used for inventory-only visibility signals.
 - `INFRA_METADATA_ONLY`: architecture/audit metadata, not a runtime remediation control.
 - `UNCLASSIFIED`: missing or unresolved classification and always a validation failure.
@@ -60,7 +64,7 @@ Discovery and consolidation were derived from the following production-readiness
 
 For downstream validation and coverage counts:
 
-- Include controls with runtime `Action Type` values: `direct_fix`, `pr_bundle`, `both`, `pr_only`.
+- Include controls with snapshot `Action Type` values: `direct_fix`, `pr_bundle`, `both`, `pr_only`.
 - Exclude controls with `Action Type = INFRA_METADATA_ONLY` from runtime coverage totals.
 - Current excluded metadata-only row: `ARC-008` (`ArchitectureObjectiveId` traceability metadata).
 
@@ -69,11 +73,11 @@ For downstream validation and coverage counts:
 From the consolidated inventory:
 
 - Runtime controls to cover: `25`
-- Controls with direct-fix capability: `4`
+- Controls with historical direct-fix capability in the snapshot: `4`
 - Controls with PR-bundle capability: `25` (includes explicit `pr_only` unsupported controls)
 - Distinct AWS services represented in runtime controls: `11`
 - Action IDs inventoried: `19`
-- Action IDs with unresolved `AWS API or IaC resource`: `pr_only`, `direct_fix`, `pr_bundle`
+- Action IDs with unresolved `AWS API or IaC resource` in the snapshot: `pr_only`, `direct_fix`, `pr_bundle`
 
 ## Validation Gate Requirements
 

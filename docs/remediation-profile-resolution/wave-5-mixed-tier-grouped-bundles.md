@@ -5,6 +5,8 @@
 > Status: Implemented Wave 5 slice only
 >
 > This document records the exact mixed-tier grouped-bundle behavior landed on `master`.
+>
+> Current contract note (2026-03-19): Wave 5 defines the grouped PR-bundle execution model still used today. Active `direct_fix` entry points were later disabled globally and are not part of the live grouped-bundle contract.
 
 Related docs:
 
@@ -42,7 +44,7 @@ Wave 5 changes the landed mixed-tier grouped-bundle behavior in:
 
 Wave 5 does not change:
 
-- `direct_fix` behavior
+- the historical `direct_fix` behavior that existed when Wave 5 landed; current `master` later disabled that path entirely
 - customer-run `run_all.sh` / `run_actions.sh` bundle execution
 - grouped callback/reporting support at `/api/internal/group-runs/report`
 - the queue-`v2` contract introduced in Wave 4
@@ -240,6 +242,10 @@ Persistence semantics remain schema-compatible:
 - executable rows continue using the existing `ActionGroupExecutionStatus` enum
 - non-executable results are stored as `execution_status=unknown`
 - non-executable detail is preserved in `ActionGroupRunResult.raw_result` with `result_type="non_executable"`
+- public action-groups read APIs now surface the persisted per-action outcomes directly:
+  - `GET /api/action-groups/{group_id}/runs` returns `results[]` for each run list item
+  - `GET /api/action-groups/{group_id}/runs/{run_id}` returns the same persisted `results[]` shape for one specific run
+- the frontend action-group detail view at `/actions/group?group_id=...` now renders those persisted `results[]` rows under `Run Timeline`, including metadata-only `support_tier`, `reason`, `blocked_reasons`, and per-action timestamps
 
 For rollout compatibility, legacy internal executor result payloads still include the older `non_executable_actions` alias, but new consumers should prefer `non_executable_results`.
 

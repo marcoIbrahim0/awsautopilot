@@ -57,6 +57,7 @@ WORKER_DESIRED_COUNT="${SAAS_WORKER_DESIRED_COUNT:-0}"
 
 DATABASE_URL="${DATABASE_URL:-$(read_env_file_value DATABASE_URL || true)}"
 JWT_SECRET="${JWT_SECRET:-$(read_env_file_value JWT_SECRET || true)}"
+BUNDLE_REPORTING_TOKEN_SECRET="${BUNDLE_REPORTING_TOKEN_SECRET:-$(read_env_file_value BUNDLE_REPORTING_TOKEN_SECRET || true)}"
 CONTROL_PLANE_EVENTS_SECRET="${CONTROL_PLANE_EVENTS_SECRET:-$(read_env_file_value CONTROL_PLANE_EVENTS_SECRET || true)}"
 
 while [[ $# -gt 0 ]]; do
@@ -98,6 +99,10 @@ if [[ -z "$JWT_SECRET" ]]; then
   echo "Missing JWT_SECRET (set in env or ${ENV_FILE})." >&2
   exit 2
 fi
+if [[ -z "$BUNDLE_REPORTING_TOKEN_SECRET" ]]; then
+  echo "Missing BUNDLE_REPORTING_TOKEN_SECRET (set in env or ${ENV_FILE})." >&2
+  exit 2
+fi
 if [[ -z "$CONTROL_PLANE_EVENTS_SECRET" ]]; then
   echo "Missing CONTROL_PLANE_EVENTS_SECRET (set in env or ${ENV_FILE})." >&2
   exit 2
@@ -123,6 +128,7 @@ params=(
 
   "DatabaseUrl=${DATABASE_URL}"
   "JwtSecret=${JWT_SECRET}"
+  "BundleReportingTokenSecret=${BUNDLE_REPORTING_TOKEN_SECRET}"
   "ControlPlaneEventsSecret=${CONTROL_PLANE_EVENTS_SECRET}"
 
   "ApiDesiredCount=${API_DESIRED_COUNT}"

@@ -1,0 +1,1 @@
+{"action_id": "8f1b6cf5-9eca-45e5-be35-b5851d345a38", "bucket": "security-autopilot-w6-strict-s311-exec-696505809372", "captured": true, "policy_exists": true, "sha256": "e43b4f569ab6cacaa975926ab6cafaaebcb7c9bdd4d97524efc4e7051881c356", "source_folder": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s311-exe-8f1b6cf5", "statement_count": 1}

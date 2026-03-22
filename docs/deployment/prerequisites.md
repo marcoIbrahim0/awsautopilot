@@ -22,7 +22,8 @@ Your AWS Account ID is a 12-digit number. Find it:
 
 You'll need this for:
 - CloudFormation stack parameters (`SAAS_AWS_ACCOUNT_ID`)
-- IAM trust policies (customer ReadRole/WriteRole)
+- CloudFormation stack parameters (`SAAS_EXECUTION_ROLE_ARNS`) when narrowing customer trust to the exact SaaS runtime role set
+- IAM trust policies (customer ReadRole)
 - SQS queue URLs
 
 ---
@@ -274,17 +275,17 @@ Before deploying, understand the architecture:
 3. **Database** — PostgreSQL (RDS or external)
 4. **Queues** — SQS (4 main queues + 4 DLQs + 1 quarantine queue)
 5. **Storage** — S3 (exports, support files, templates)
-6. **Secrets** — Secrets Manager (DATABASE_URL, JWT_SECRET, etc.)
+6. **Secrets** — Secrets Manager (`DATABASE_URL`, `JWT_SECRET`, `BUNDLE_REPORTING_TOKEN_SECRET`, `CONTROL_PLANE_EVENTS_SECRET`, etc.)
 7. **Monitoring** — CloudWatch (logs, metrics, alarms)
 
 ### Customer AWS Resources
 
 Customers deploy in their AWS accounts:
 - **ReadRole** — IAM role for read-only access
-- **WriteRole** — IAM role for remediation access
+- **WriteRole** — out of scope for the current product contract; retained only as a deprecated template/reference artifact
 - **Control-Plane Forwarder** — EventBridge rule + API Destination (optional)
 
-See [Connecting Your AWS Account](../customer-guide/connecting-aws.md) and the [Connect WriteRole guide](../connect-write-role.md) for customer-side role setup details.
+See [Connecting Your AWS Account](../customer-guide/connecting-aws.md) and [WriteRole status](../connect-write-role.md) for the current customer-side role contract.
 
 ---
 
@@ -326,7 +327,7 @@ Before deploying, estimate costs:
 - **SQS**: ~$1/month (low traffic)
 - **S3**: ~$1/month (minimal storage)
 - **CloudWatch**: ~$5/month
-- **Secrets Manager**: ~$1/month (3 secrets)
+- **Secrets Manager**: ~$2/month (4 secrets)
 
 **Total**: ~$70-120/month
 
@@ -351,7 +352,7 @@ Before deploying, estimate costs:
 
 - **Never commit secrets** to Git
 - **Use Secrets Manager** for production secrets
-- **Rotate secrets** regularly (JWT_SECRET, database passwords)
+- **Rotate secrets** regularly (`JWT_SECRET`, `BUNDLE_REPORTING_TOKEN_SECRET`, database passwords)
 
 ### Network Security
 

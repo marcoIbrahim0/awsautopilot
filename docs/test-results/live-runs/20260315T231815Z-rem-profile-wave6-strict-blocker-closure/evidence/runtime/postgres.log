@@ -1,0 +1,25 @@
+2026-03-16 01:19:11.216 EET [36485] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-16 01:19:11.218 EET [36485] LOG:  listening on IPv6 address "::1", port 55439
+2026-03-16 01:19:11.218 EET [36485] LOG:  listening on IPv4 address "127.0.0.1", port 55439
+2026-03-16 01:19:11.218 EET [36485] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55439"
+2026-03-16 01:19:11.220 EET [36486] LOG:  database system was shut down at 2026-03-16 01:19:11 EET
+2026-03-16 01:19:11.222 EET [36485] LOG:  database system is ready to accept connections
+2026-03-16 01:19:41.373 EET [36732] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-16 01:19:41.373 EET [36732] HINT:  New enum values must be committed before they can be used.
+2026-03-16 01:19:41.373 EET [36732] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-16 01:20:17.070 EET [39852] ERROR:  relation "alembic_version" does not exist at character 25
+2026-03-16 01:20:17.070 EET [39852] STATEMENT:  select version_num from alembic_version;
+2026-03-16 01:21:53.920 EET [41994] FATAL:  database "marcomaher" does not exist
+2026-03-16 01:24:10.346 EET [49758] ERROR:  column "verification_required" does not exist at character 32
+2026-03-16 01:24:10.346 EET [49758] STATEMENT:  select id,email,email_verified,verification_required from users order by created_at desc limit 3;
+2026-03-16 01:45:50.737 EET [36485] LOG:  received fast shutdown request
+2026-03-16 01:45:50.738 EET [36485] LOG:  aborting any active transactions
+2026-03-16 01:45:50.738 EET [74736] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.739 EET [74737] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.739 EET [50391] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.740 EET [71245] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.740 EET [71336] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.739 EET [74738] FATAL:  terminating connection due to administrator command
+2026-03-16 01:45:50.744 EET [36485] LOG:  background worker "logical replication launcher" (PID 36492) exited with exit code 1
+2026-03-16 01:45:50.744 EET [36487] LOG:  shutting down
+2026-03-16 01:45:50.756 EET [36485] LOG:  database system is shut down

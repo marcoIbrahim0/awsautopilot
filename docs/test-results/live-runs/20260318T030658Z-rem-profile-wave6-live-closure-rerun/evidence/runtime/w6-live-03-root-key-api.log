@@ -1,0 +1,9 @@
+INFO:     Started server process [22586]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18021 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59355 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59384 - "GET /api/root-key-remediation-runs/01e495a2-291a-4b2d-b02b-6ec77a8c4145 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59385 - "POST /api/root-key-remediation-runs/01e495a2-291a-4b2d-b02b-6ec77a8c4145/disable HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59404 - "GET /api/root-key-remediation-runs/01e495a2-291a-4b2d-b02b-6ec77a8c4145 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59409 - "POST /api/root-key-remediation-runs/01e495a2-291a-4b2d-b02b-6ec77a8c4145/rollback HTTP/1.1" 200 OK

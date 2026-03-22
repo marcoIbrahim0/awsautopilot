@@ -1,0 +1,13 @@
+2026-03-15 03:51:14.091 EET [56522] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-15 03:51:14.093 EET [56522] LOG:  listening on IPv6 address "::1", port 55433
+2026-03-15 03:51:14.093 EET [56522] LOG:  listening on IPv4 address "127.0.0.1", port 55433
+2026-03-15 03:51:14.093 EET [56522] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55433"
+2026-03-15 03:51:14.095 EET [56523] LOG:  database system was shut down at 2026-03-15 03:51:14 EET
+2026-03-15 03:51:14.097 EET [56522] LOG:  database system is ready to accept connections
+2026-03-15 03:51:32.162 EET [56770] ERROR:  unsafe use of new value "awaiting_approval" of enum type remediation_run_status at character 135
+2026-03-15 03:51:32.162 EET [56770] HINT:  New enum values must be committed before they can be used.
+2026-03-15 03:51:32.162 EET [56770] STATEMENT:  CREATE UNIQUE INDEX uq_remediation_runs_action_active ON remediation_runs (tenant_id, action_id) WHERE status IN ('pending','running','awaiting_approval')
+2026-03-17 14:44:33.572 EET [56522] LOG:  received smart shutdown request
+2026-03-17 14:44:33.622 EET [56522] LOG:  background worker "logical replication launcher" (PID 56529) exited with exit code 1
+2026-03-17 14:44:33.625 EET [56524] LOG:  shutting down
+2026-03-17 14:44:33.708 EET [56522] LOG:  database system is shut down

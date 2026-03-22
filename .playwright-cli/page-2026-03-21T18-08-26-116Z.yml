@@ -1,0 +1,53 @@
+- generic [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e4]:
+    - button "Switch to light mode" [ref=e12]:
+      - img [ref=e13]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - heading "Sign up for an account" [level=2] [ref=e17]
+        - paragraph [ref=e18]: Get started with AWS Security Autopilot
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]: Company name
+            - textbox "Company name" [ref=e23]:
+              - /placeholder: Acme Inc.
+              - text: Codex Firebase E2E
+          - generic [ref=e24]:
+            - generic [ref=e25]: Full name
+            - textbox "Full name" [ref=e26]:
+              - /placeholder: Jane Doe
+              - text: Codex Live Test
+          - generic [ref=e27]:
+            - generic [ref=e28]: Email address
+            - textbox "Email address" [ref=e29]:
+              - /placeholder: jane@acme.com
+              - text: codex.firebase.e2e.20260321.1807@example.com
+          - generic [ref=e30]:
+            - generic [ref=e31]: Password
+            - textbox "Password" [ref=e32]:
+              - /placeholder: At least 8 characters
+              - text: Password123!
+          - generic [ref=e33]:
+            - generic [ref=e34]: Confirm password
+            - textbox "Confirm password" [active] [ref=e35]:
+              - /placeholder: Confirm your password
+              - text: Password123!
+          - button "Sign Up" [ref=e36] [cursor=pointer]
+        - paragraph [ref=e37]:
+          - text: Already have an account?
+          - link "Sign in" [ref=e38] [cursor=pointer]:
+            - /url: /login
+        - paragraph [ref=e39]:
+          - text: By clicking Sign Up, you agree to our
+          - link "Terms of Service" [ref=e40] [cursor=pointer]:
+            - /url: /legal/terms
+          - text: and
+          - link "Privacy Policy" [ref=e41] [cursor=pointer]:
+            - /url: /legal/privacy
+          - text: ", and acknowledge our"
+          - link "Cookie Policy" [ref=e42] [cursor=pointer]:
+            - /url: /legal/cookies
+          - text: .
+  - alert [ref=e10]

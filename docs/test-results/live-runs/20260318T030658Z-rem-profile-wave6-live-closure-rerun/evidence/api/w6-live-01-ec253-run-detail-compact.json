@@ -1,0 +1,44 @@
+{
+  "id": "5030879e-886e-4280-a7ea-53fa74f0f9e1",
+  "status": "success",
+  "outcome": "Group PR bundle generated (2 actions)",
+  "artifacts": {
+    "pr_bundle": {
+      "format": "terraform",
+      "metadata": {
+        "tier_counts": {
+          "executable": 1,
+          "manual_guidance": 1,
+          "review_required": 0
+        },
+        "execution_root": "executable/actions",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_actions": [],
+        "skipped_action_count": 0,
+        "automation_file_count": 3,
+        "runnable_action_count": 1,
+        "generated_action_count": 2,
+        "repo_target_configured": false,
+        "requested_action_count": 2,
+        "runner_template_source": "embedded_mixed_tier",
+        "bundle_rollback_entries": {
+          "ad9328e1-faf2-4fd4-9885-c7f8c50c7d14": {
+            "path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-ad9328e1/rollback/sg_restore.py",
+            "runner": "python3"
+          }
+        },
+        "diff_fingerprint_sha256": "b69e3a3c08401eb19d56c5cc85ac0f33836c94ebd2034a73aaa8987243d4b3b5",
+        "executable_action_count": 1,
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "represented_action_count": 2,
+        "manual_guidance_action_count": 1,
+        "review_required_action_count": 0
+      },
+      "steps": [
+        "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+        "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+        "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+      ]
+    }
+  }
+}

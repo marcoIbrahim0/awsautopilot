@@ -235,6 +235,66 @@ This reset link expires in 1 hour.
 
         return self._send_smtp(to_email, subject, html_body, text_body)
 
+    def _absolute_help_url(self, path_or_url: str) -> str:
+        value = (path_or_url or "").strip()
+        if value.startswith("http://") or value.startswith("https://"):
+            return value
+        return f"{self.frontend_url}{value}"
+
+    def send_help_case_admin_email(
+        self,
+        *,
+        subject: str,
+        summary: str,
+        case_id: str,
+        case_subject: str,
+        help_url: str,
+    ) -> tuple[int, int]:
+        recipients = sorted(settings.saas_admin_emails_list)
+        if not recipients:
+            return 0, 0
+        url = self._absolute_help_url(help_url)
+        html_body = (
+            f"<p>{summary}</p><p><strong>Case:</strong> {case_subject}</p>"
+            f"<p><strong>Case ID:</strong> {case_id}</p><p><a href=\"{url}\">Open support inbox</a></p>"
+        )
+        text_body = f"{summary}\n\nCase: {case_subject}\nCase ID: {case_id}\nOpen: {url}"
+        sent = 0
+        failed = 0
+        for recipient in recipients:
+            if self._log_only_local():
+                logger.info("[LOCAL MODE] Help admin email for %s -> %s", recipient, subject)
+                sent += 1
+                continue
+            if self._send_smtp(recipient, subject, html_body, text_body):
+                sent += 1
+            else:
+                failed += 1
+        return sent, failed
+
+    def send_help_case_requester_email(
+        self,
+        *,
+        to_email: str,
+        subject: str,
+        summary: str,
+        case_id: str,
+        case_subject: str,
+        help_url: str,
+        now: object | None = None,
+    ) -> bool:
+        del now
+        url = self._absolute_help_url(help_url)
+        html_body = (
+            f"<p>{summary}</p><p><strong>Case:</strong> {case_subject}</p>"
+            f"<p><strong>Case ID:</strong> {case_id}</p><p><a href=\"{url}\">Open your support case</a></p>"
+        )
+        text_body = f"{summary}\n\nCase: {case_subject}\nCase ID: {case_id}\nOpen: {url}"
+        if self._log_only_local():
+            logger.info("[LOCAL MODE] Help requester email for %s -> %s", to_email, subject)
+            return True
+        return self._send_smtp(to_email, subject, html_body, text_body)
+
     def send_verification_link_email(
         self,
         *,

@@ -28,7 +28,11 @@ from backend.services.tenant_reconciliation import (
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from backend.workers.config import settings
 from backend.workers.database import session_scope
-from backend.workers.services.aws import assume_role
+from backend.workers.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.workers.services.inventory_assets import upsert_inventory_asset
 from backend.workers.services.inventory_reconcile import (
     INVENTORY_SERVICES_DEFAULT,
@@ -126,7 +130,12 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
             if account is None:
                 raise ValueError(f"aws_account not found tenant_id={tenant_id} account_id={account_id}")
 
-            assumed = assume_role(role_arn=account.role_read_arn, external_id=account.external_id)
+            assumed = assume_role(
+                role_arn=account.role_read_arn,
+                external_id=account.external_id,
+                source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="worker", tenant_id=tenant_id),
+            )
 
             snapshots = collect_inventory_snapshots(
                 session_boto=assumed,

@@ -1,22 +1,31 @@
 # Remediation Safety Model
 
-This document defines the safety controls used by remediation run creation and execution.
+This document defines the active safety controls used by remediation option selection, remediation preview, and remediation run creation.
+
+## Current Scope
+
+> ⚠️ Status: Current execution scope is PR-only. Customer `WriteRole` and `direct_fix` execution are out of scope.
+
+- Active remediation surfaces expose `pr_only` strategies only.
+- `direct_fix` requests are rejected at API entry points.
+- Account onboarding and validation use `ReadRole`; `role_write_arn` is retained only for backward compatibility and does not activate remediation.
+- Customer-run PR bundles remain the supported execution path.
 
 ## Goals
 
 - Force explicit remediation strategy selection for high-impact controls.
 - Surface dependency impact before a run is created.
-- Block unsafe execution paths by default.
+- Block unsupported or unsafe execution paths by default.
 - Preserve immutable risk evidence on every run.
 
 ## Strategy Model
 
 Strategies are registered per `action_type` in `backend/services/remediation_strategy.py`.
 
-Each strategy defines:
+Each active strategy defines:
 
 - `strategy_id`
-- `mode` (`pr_only` or `direct_fix`)
+- `mode` (`pr_only`)
 - `risk_level` (`low|medium|high`)
 - optional `input_schema`
 - `supports_exception_flow`
@@ -25,6 +34,8 @@ Each strategy defines:
 Clients retrieve available strategies through:
 
 - `GET /api/actions/{action_id}/remediation-options`
+
+Historical `direct_fix` registry entries may remain on disk for future recovery, but active discovery filters them out so current UI and API surfaces stay PR-only.
 
 ## Dependency Checks
 
@@ -44,7 +55,7 @@ Enforcement:
 
 ## API Enforcement
 
-Run creation endpoints enforce the safety model:
+Run creation endpoints enforce the current safety model:
 
 - `POST /api/remediation-runs`
 - `POST /api/remediation-runs/group-pr-bundle`
@@ -55,10 +66,9 @@ Validation includes:
 - mode/strategy compatibility
 - strategy input schema validation
 - risk acknowledgement requirement for `warn|unknown`
-- direct-fix WriteRole requirement
-- direct-fix approval metadata stamped only by the approved API create path
+- explicit rejection of `direct_fix`
 
-Legacy clients can still send `pr_bundle_variant`; server-side mapping converts compatible variants to `strategy_id`.
+Legacy clients can still send `pr_bundle_variant`; server-side mapping converts compatible variants to `strategy_id` when possible.
 
 ## Immutable Run Evidence
 
@@ -68,30 +78,18 @@ Run-time safety evidence is stored in `remediation_runs.artifacts`:
 - `strategy_inputs`
 - `risk_snapshot`
 - `risk_acknowledged`
-- `direct_fix_approval` (direct-fix only; includes approver, timestamp, and allowlisted approval path)
 - `legacy_variant_mapped_from` (when applicable)
 
-This evidence is carried through queue payloads and worker processing.
-
-## Direct-Fix Scope
-
-Direct-fix is intentionally narrow:
-
-- supported for low-risk enablement actions plus `ebs_default_encryption`
-- risky controls remain strategy-gated PR flows
-- worker execution is fail-closed unless the stored run mode is `direct_fix` and `artifacts.direct_fix_approval.approval_path` is in the explicit allowlist
-- `pr_only` automation cannot escalate itself into direct-fix mutation by replaying or spoofing queue payloads
-- worker logs pre-check/apply/post-check phases for auditability
+Historical runs may still contain older `direct_fix_approval` metadata. New supported runs should not generate it.
 
 ## Audit Expectations
 
 - Every remediation run records strategy and risk context.
-- Every direct-fix run records explicit approval provenance before mutation is allowed.
-- No strategy path is treated as implicitly safe.
+- No unsupported execution mode is silently downgraded into mutation.
 - Exception-style strategies remain explicit user choices, not silent fallbacks.
-- Blocked unapproved mutation attempts emit an `audit_log` event with `event_type=remediation_mutation_blocked`.
+- Customer execution stays outside the SaaS write boundary through reviewed PR bundles.
 
-## Monitoring and Alerts
+## Monitoring And Alerts
 
 The remediation API and worker emit structured log events for metric filters and alerting.
 
@@ -114,12 +112,12 @@ Dimensions are included in the payload:
 
 `event=remediation_validation_failure` with:
 
-- `reason` (for example `strategy_mode_mismatch`, `risk_ack_missing`, `dependency_check_failed`)
+- `reason` (for example `strategy_mode_mismatch`, `risk_ack_missing`, `dependency_check_failed`, `direct_fix_out_of_scope`)
 - `action_type`
 - `strategy_id`
 - `mode`
 
-Use this event to alert on spikes in remediation run validation failures and strategy mismatch errors.
+Use this event to alert on spikes in remediation run validation failures and unsupported-mode requests.
 
 ### Worker dispatch/error events
 
@@ -131,10 +129,11 @@ Use this event to alert on spikes in remediation run validation failures and str
 - `strategy_id`
 - `mode`
 
-Use this event to alert on spikes in worker dispatch/execution failures.
+Use this event to alert on spikes in worker dispatch or PR-bundle generation failures.
 
 ### Recommended CloudWatch alarms
 
 - Validation failure rate spike (`event=remediation_validation_failure`).
 - Strategy mismatch spike (`reason=strategy_mode_mismatch` or `reason=strategy_conflict`).
+- Unsupported direct-fix request spike (`reason=direct_fix_out_of_scope`).
 - Worker dispatch error spike (`event=remediation_worker_dispatch_error`).

@@ -1,4 +1,7 @@
 # Complete Feature Inventory
+
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the inventory below reflects the February 2026 snapshot, not the current product direction.
+
 ## 1. Executive Summary
 
 PRODUCT CAPABILITY OVERVIEW

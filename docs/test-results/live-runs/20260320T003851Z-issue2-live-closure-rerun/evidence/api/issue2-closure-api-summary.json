@@ -1,0 +1,15 @@
+{
+  "run_id": "20260320T003851Z-issue2-live-closure-rerun",
+  "result": "PASS",
+  "account_id": "696505809372",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.8.yaml",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.6.yaml",
+  "validate_status": "validated",
+  "permissions_ok": true,
+  "authoritative_mode_allowed": true,
+  "authoritative_mode_block_reasons": [],
+  "accounts_list_status": "validated",
+  "auth_me_evidence": "auth-me-post-config-probe-fix-20260320T015139Z.json",
+  "validate_evidence": "validate-post-config-probe-fix-20260320T015139Z.json",
+  "accounts_evidence": "accounts-after-validated-20260320T015247Z.json"
+}

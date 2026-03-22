@@ -56,6 +56,7 @@ def _graph_payload(graph_context: dict[str, Any] | None) -> dict[str, Any]:
     return {
         "status": "unavailable",
         "availability_reason": "graph_context_unavailable",
+        "entry_points": [],
         "connected_assets": [],
         "identity_path": [],
         "blast_radius_neighborhood": [],
@@ -69,7 +70,7 @@ def _status(
     entry_points: list[dict[str, Any]],
     target_assets: list[dict[str, Any]],
 ) -> str:
-    if _context_incomplete(action):
+    if _relationship_context_incomplete(action):
         return "context_incomplete"
     if _string(graph.get("status")) != "available":
         return "unavailable"
@@ -83,6 +84,9 @@ def _entry_points(
     graph: dict[str, Any],
     score_factors: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    graph_items = _graph_entry_points(graph)
+    if graph_items:
+        return graph_items[:_ENTRY_POINT_LIMIT]
     candidates = _factor_entry_points(score_factors)
     if candidates:
         return candidates[:_ENTRY_POINT_LIMIT]
@@ -90,6 +94,13 @@ def _entry_points(
     if identity_node is None:
         return _action_entry_fallback(action)
     return [_item("entry-identity", "entry_point", identity_node["label"], identity_node["source"], [])]
+
+
+def _graph_entry_points(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    payload = graph.get("entry_points")
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
 
 
 def _factor_entry_points(score_factors: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -391,6 +402,10 @@ def _raw_relationship_context(raw: Any) -> dict[str, Any] | None:
     return None
 
 
+def _relationship_context_complete(payload: dict[str, Any]) -> bool:
+    return bool(payload.get("complete"))
+
+
 def _connected_assets(graph: dict[str, Any]) -> list[dict[str, Any]]:
     assets = graph.get("connected_assets")
     if not isinstance(assets, list):
@@ -443,15 +458,12 @@ def _edge_label(source_kind: str | None, target_kind: str | None) -> str:
     return mapping.get((source_kind, target_kind), "leads to")
 
 
-def _context_incomplete(action: Any) -> bool:
-    components = getattr(action, "score_components", None)
-    if not isinstance(components, dict):
-        return False
-    marker = components.get("context_incomplete")
-    if isinstance(marker, bool):
-        return marker
-    toxic = components.get("toxic_combinations")
-    return isinstance(toxic, dict) and bool(toxic.get("context_incomplete"))
+def _relationship_context_incomplete(action: Any) -> bool:
+    payload = _relationship_context_payload(action)
+    if payload is None:
+        return True
+    confidence = _float_value(payload.get("confidence"))
+    return not _relationship_context_complete(payload) or confidence < _MIN_RELATIONSHIP_CONFIDENCE
 
 
 def _is_truncated(graph: dict[str, Any]) -> bool:

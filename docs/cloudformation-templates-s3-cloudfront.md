@@ -32,9 +32,9 @@ This document describes how to host CloudFormation templates for the SaaS so cus
 ### 2. Generate a "Launch Stack" link in the UI
 
 - Store the **tenant external ID** (already in DB).
-- **Screen A — Connect AWS:** One screen with (1) Deploy Read Role: SaaS Account ID + External ID (copy), "Deploy Read Role" button. (2) Paste Role ARN & Validate: Role ARN input (account ID auto-parsed from ARN), AWS Account ID, Regions, Validate button. Backend validates via STS AssumeRole + GetCallerIdentity; status becomes validated.
-- **Screen B — Connected Accounts:** Table: Account ID, Role ARN, Regions, Status, Last Validated; per-row actions Validate + Refresh Findings.
-- Buttons: **Deploy Read Role** (and optionally **Deploy Queues** if you use customer-deployed SQS; many SaaS keep SQS in their account).
+- **Screen A — Onboarding:** Deploy Read Role with SaaS Account ID + External ID copy affordances, a Launch Stack button, `Integration Role ARN (required)`, AWS Account ID, monitored regions, and explicit validation feedback.
+- **Screen B — Connected Accounts:** Account ID, Role ARN, regions, status, and last validated timestamp; account/settings surfaces link users back to onboarding final checks instead of validating inline.
+- Buttons: **Deploy Read Role** in onboarding. Settings shows read-only tenant metadata and handoff links, not CloudFormation launch buttons.
 
 **CloudFormation console** supports prefilled parameters via URL. At minimum you can link to the console with the template URL; users fill parameters in the console. We pre-fill:
 
@@ -46,7 +46,7 @@ This document describes how to host CloudFormation templates for the SaaS so cus
 
 - **SaaS Account ID** (your account ID) — copy/paste if needed.
 - **External ID** (their external id) — copy/paste if needed.
-- **Deploy Read Role** — opens the CloudFormation console with template and params prefilled.
+- **Deploy Read Role** — opens the CloudFormation console with template and params prefilled from onboarding.
 
 ## Configuration
 
@@ -68,10 +68,10 @@ The same auth payload family also carries control-plane forwarder launch metadat
 - `control_plane_forwarder_template_url`
 - `control_plane_ingest_url`
 
-The frontend uses these to show SaaS Account ID, External ID, and the **Deploy Read Role** button on:
+The frontend uses these values to show SaaS Account ID and External ID in:
 
 - **Onboarding** (step 2: Deploy the Read Role)
-- **Settings → Organization**
+- **Settings → Organization** as a read-only metadata view with links back to Accounts and onboarding final checks
 
 For private template buckets, the frontend should treat the launch URL as the source of truth for the signed `templateURL` value and only use the raw template URL as a fallback. This keeps CloudFormation launch links working even when direct anonymous S3 fetch is blocked.
 

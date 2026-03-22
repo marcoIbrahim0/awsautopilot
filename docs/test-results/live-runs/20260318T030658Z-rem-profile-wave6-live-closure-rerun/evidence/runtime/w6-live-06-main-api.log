@@ -1,0 +1,70 @@
+INFO:     Started server process [41205]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18022 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64334 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64333 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64344 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64348 - "GET /api/actions/a105bf6a-bfd5-413e-9730-e9df4dc74285/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64351 - "GET /api/actions/a62cdfeb-9177-426f-a615-222c089b347e/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64354 - "GET /api/actions/d3be1c75-24ec-4462-b860-c5b2628ea18b/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64357 - "GET /api/actions/e755b2ce-bea6-4e48-8a13-d5978e01cd1d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64360 - "GET /api/actions/aba1694d-1c2a-42e8-92b7-6fbe34b7d310/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64395 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:64428 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-18T18:07:39Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64492 - "GET /api/actions/a105bf6a-bfd5-413e-9730-e9df4dc74285/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64495 - "GET /api/actions/a62cdfeb-9177-426f-a615-222c089b347e/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64498 - "GET /api/actions/d3be1c75-24ec-4462-b860-c5b2628ea18b/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64501 - "GET /api/actions/e755b2ce-bea6-4e48-8a13-d5978e01cd1d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64504 - "GET /api/actions/aba1694d-1c2a-42e8-92b7-6fbe34b7d310/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64510 - "GET /api/action-groups?account_id=696505809372&region=eu-north-1&action_type=s3_bucket_lifecycle_configuration HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64582 - "GET /api/actions/d3be1c75-24ec-4462-b860-c5b2628ea18b/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64581 - "GET /api/actions/e755b2ce-bea6-4e48-8a13-d5978e01cd1d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64633 - "GET /api/actions/e755b2ce-bea6-4e48-8a13-d5978e01cd1d/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64632 - "GET /api/actions/d3be1c75-24ec-4462-b860-c5b2628ea18b/remediation-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64653 - "POST /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64675 - "GET /api/remediation-runs/a1b32fc9-fd20-4925-9d64-5694e003daa7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64674 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64700 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64703 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64709 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64713 - "GET /api/remediation-runs/a1b32fc9-fd20-4925-9d64-5694e003daa7/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64721 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64744 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64832 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64870 - "POST /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/remediation-runs/group-pr-bundle HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64871 - "GET /api/remediation-runs/null HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64873 - "GET /api/remediation-runs/null HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64875 - "GET /api/remediation-runs/null HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64876 - "GET /api/remediation-runs/null HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64877 - "GET /api/remediation-runs/null HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64898 - "POST /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/remediation-runs/group-pr-bundle HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64899 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64909 - "POST /api/remediation-runs/group-pr-bundle HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64921 - "GET /api/remediation-runs/1c661161-e13f-4264-82f7-333b50bd5940 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64924 - "GET /api/remediation-runs/1c661161-e13f-4264-82f7-333b50bd5940 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64925 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64939 - "GET /api/remediation-runs/1c661161-e13f-4264-82f7-333b50bd5940/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64942 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64944 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64945 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64946 - "POST /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:64956 - "GET /api/remediation-runs/0f8bbe08-ef67-421d-b3ec-3143a65b96fe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64958 - "GET /api/remediation-runs/0f8bbe08-ef67-421d-b3ec-3143a65b96fe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64959 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64960 - "GET /api/remediation-runs/0f8bbe08-ef67-421d-b3ec-3143a65b96fe/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64963 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64973 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65080 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65093 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65094 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65120 - "POST /api/internal/group-runs/report HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:65131 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65162 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65209 - "POST /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:65221 - "GET /api/remediation-runs/14870ea9-3e0c-4d33-a6b8-fada6e821eef HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65224 - "GET /api/remediation-runs/14870ea9-3e0c-4d33-a6b8-fada6e821eef HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65225 - "GET /api/remediation-runs/14870ea9-3e0c-4d33-a6b8-fada6e821eef/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65229 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65269 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65272 - "GET /api/action-groups/e9941072-b1ce-4355-b710-c8412485d3b8/runs HTTP/1.1" 200 OK

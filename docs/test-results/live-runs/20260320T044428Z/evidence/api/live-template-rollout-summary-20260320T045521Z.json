@@ -1,0 +1,122 @@
+{
+  "timestamp_utc": "20260320T045521Z",
+  "health": {
+    "status": "ok",
+    "app": "AWS Security Autopilot"
+  },
+  "ready": {
+    "status": "ok",
+    "ready": true,
+    "checked_at": "2026-03-20T04:55:39.186215+00:00",
+    "simulation_mode": null,
+    "dependencies": {
+      "database": {
+        "ready": true,
+        "error": null
+      },
+      "sqs": {
+        "ready": true,
+        "required_queues": [
+          "ingest",
+          "events_fast_lane",
+          "inventory_reconcile",
+          "export_report"
+        ],
+        "missing_queues": [],
+        "errors": [],
+        "queues": {
+          "ingest": {
+            "ready": true,
+            "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-ingest-queue",
+            "region": "eu-north-1",
+            "queue_arn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-ingest-queue",
+            "visible_messages": 0,
+            "in_flight_messages": 0,
+            "oldest_message_age_seconds": null,
+            "oldest_message_age_error": "An error occurred (AccessDenied) when calling the GetMetricStatistics operation: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api is not authorized to perform: cloudwatch:GetMetricStatistics because no identity-based policy allows the cloudwatch:GetMetricStatistics action"
+          },
+          "events_fast_lane": {
+            "ready": true,
+            "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-events-fastlane-queue",
+            "region": "eu-north-1",
+            "queue_arn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-events-fastlane-queue",
+            "visible_messages": 0,
+            "in_flight_messages": 0,
+            "oldest_message_age_seconds": null,
+            "oldest_message_age_error": "An error occurred (AccessDenied) when calling the GetMetricStatistics operation: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api is not authorized to perform: cloudwatch:GetMetricStatistics because no identity-based policy allows the cloudwatch:GetMetricStatistics action"
+          },
+          "inventory_reconcile": {
+            "ready": true,
+            "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-inventory-reconcile-queue",
+            "region": "eu-north-1",
+            "queue_arn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-inventory-reconcile-queue",
+            "visible_messages": 0,
+            "in_flight_messages": 0,
+            "oldest_message_age_seconds": null,
+            "oldest_message_age_error": "An error occurred (AccessDenied) when calling the GetMetricStatistics operation: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api is not authorized to perform: cloudwatch:GetMetricStatistics because no identity-based policy allows the cloudwatch:GetMetricStatistics action"
+          },
+          "export_report": {
+            "ready": true,
+            "queue_url": "https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-export-report-queue",
+            "region": "eu-north-1",
+            "queue_arn": "arn:aws:sqs:eu-north-1:029037611564:security-autopilot-export-report-queue",
+            "visible_messages": 0,
+            "in_flight_messages": 0,
+            "oldest_message_age_seconds": null,
+            "oldest_message_age_error": "An error occurred (AccessDenied) when calling the GetMetricStatistics operation: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api is not authorized to perform: cloudwatch:GetMetricStatistics because no identity-based policy allows the cloudwatch:GetMetricStatistics action"
+          }
+        }
+      }
+    },
+    "slo": {
+      "queue_lag_seconds_p95": null,
+      "queue_lag_seconds_max": null
+    }
+  },
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml",
+  "read_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fread-role%2Fv1.5.9.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DASIAQNQWGZIWIB3RWBPY%252F20260320%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260320T045541Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Security-Token%3DIQoJb3JpZ2luX2VjEGUaCmV1LW5vcnRoLTEiRjBEAiA%252FHN2dbLATKqGMCIkZmcdHsaxtlcXeoMh8LcSmHg80FwIgcdK373clqa71sW614%252B43%252Fobhs9UovzDJ5o2ivtGL8m0qiQQILhAAGgwwMjkwMzc2MTE1NjQiDBItn0SBqNYeKGMVpirmA9pduGqLZn8R458XtIRUIraUu%252BrwoVeQJpXHJJDqDL89vN%252Fd1wxJdo06t50lWNzkgmlrQqYZdupgfcHzE%252BHYjn9IHf7qM8yxds%252Frk8b6EydTgzQIYc6FWrSvgsh2b0KQCeRk36uUpjYKKBZI4ptfHAlN8qIft76ZLC7aaYkJiF1beVhhsHl5aILXRRYbIpEb9RTi53Xo2L4bl9rlpI%252Fh0LwhQz6WnASLc13T2cG%252FukpFm%252FvGlEeps3xGhT03RPWRjXEYoFt%252BW%252FGdjvIoRFCMouwxQLyf8UCGuKeX9c5sKlUg4epyM69sTx6Ns%252FVdPydQpKqmu%252FTWp2DRo5A1jIRzIxAYTdca4GIToNB67ecMExWOo3RvsEWSpnt4Q6P1MEcpi%252Bc0GtAVLdDN3B4%252BmxUfANHcJ9zQ%252FpXDOyVq5bGxWTR9NYbgQeMFiuwAEQOXHn7uLBRqupbycgS60CBPnVP9IOBqH6pDd7AO7ZBxL%252BnniP72j3aoojyXX1GMF5kwUYl2DBU7uJWFwoPOkKT2U9DlTX%252F1%252FDRCZHVIchicAlmogkT5syYf2%252B5OYw3kizRQ%252BRNnezocqd4fKYnBITZ8RIwKgaxjxcb1c80oIWbZuV9KwWyWpUaOpSbP%252FnWSvzRK9JmK9GxmdgjzqTC7pvPNBjqjAdZOYd%252BDKidAZmxu4V8dgFkv2hO2yvn2Lvpqb6u3LiGgWQVMMsrT4xlPvixzmcSIMZmd2tCuJJjftgNKDr2On6u0cWdmdGNMBxLs%252BPhF4%252B%252BD5pwBCcHUupQzOZacLz9w6CcBXEMBZz6LSQMM5RCQac6%252BI6CERT2j9%252BEMtDzXKoYKeyd2QW8pU5CZPXDxekT6%252BdKybwkUolGvnt9mwAgbHXyGEa4%253D%26X-Amz-Signature%3Dde264b724317d17f4a25a8209d0b8ffb91baa739c86046e89669d4122d2c0894&stackName=SecurityAutopilotReadRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b7c363e9430a4f60",
+  "write_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fwrite-role%2Fv1.4.7.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DASIAQNQWGZIWIB3RWBPY%252F20260320%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260320T045541Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Security-Token%3DIQoJb3JpZ2luX2VjEGUaCmV1LW5vcnRoLTEiRjBEAiA%252FHN2dbLATKqGMCIkZmcdHsaxtlcXeoMh8LcSmHg80FwIgcdK373clqa71sW614%252B43%252Fobhs9UovzDJ5o2ivtGL8m0qiQQILhAAGgwwMjkwMzc2MTE1NjQiDBItn0SBqNYeKGMVpirmA9pduGqLZn8R458XtIRUIraUu%252BrwoVeQJpXHJJDqDL89vN%252Fd1wxJdo06t50lWNzkgmlrQqYZdupgfcHzE%252BHYjn9IHf7qM8yxds%252Frk8b6EydTgzQIYc6FWrSvgsh2b0KQCeRk36uUpjYKKBZI4ptfHAlN8qIft76ZLC7aaYkJiF1beVhhsHl5aILXRRYbIpEb9RTi53Xo2L4bl9rlpI%252Fh0LwhQz6WnASLc13T2cG%252FukpFm%252FvGlEeps3xGhT03RPWRjXEYoFt%252BW%252FGdjvIoRFCMouwxQLyf8UCGuKeX9c5sKlUg4epyM69sTx6Ns%252FVdPydQpKqmu%252FTWp2DRo5A1jIRzIxAYTdca4GIToNB67ecMExWOo3RvsEWSpnt4Q6P1MEcpi%252Bc0GtAVLdDN3B4%252BmxUfANHcJ9zQ%252FpXDOyVq5bGxWTR9NYbgQeMFiuwAEQOXHn7uLBRqupbycgS60CBPnVP9IOBqH6pDd7AO7ZBxL%252BnniP72j3aoojyXX1GMF5kwUYl2DBU7uJWFwoPOkKT2U9DlTX%252F1%252FDRCZHVIchicAlmogkT5syYf2%252B5OYw3kizRQ%252BRNnezocqd4fKYnBITZ8RIwKgaxjxcb1c80oIWbZuV9KwWyWpUaOpSbP%252FnWSvzRK9JmK9GxmdgjzqTC7pvPNBjqjAdZOYd%252BDKidAZmxu4V8dgFkv2hO2yvn2Lvpqb6u3LiGgWQVMMsrT4xlPvixzmcSIMZmd2tCuJJjftgNKDr2On6u0cWdmdGNMBxLs%252BPhF4%252B%252BD5pwBCcHUupQzOZacLz9w6CcBXEMBZz6LSQMM5RCQac6%252BI6CERT2j9%252BEMtDzXKoYKeyd2QW8pU5CZPXDxekT6%252BdKybwkUolGvnt9mwAgbHXyGEa4%253D%26X-Amz-Signature%3D3baa51381058f95491b341e400d6456413d3b5f484aaf339c34881313086631a&stackName=SecurityAutopilotWriteRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b7c363e9430a4f60",
+  "account_status": {
+    "id": "537fee33-429d-4b06-9080-7ee490293355",
+    "account_id": "696505809372",
+    "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+    "role_write_arn": null,
+    "regions": [
+      "eu-north-1",
+      "us-east-1"
+    ],
+    "status": "error",
+    "last_validated_at": "2026-03-20T04:50:24.476191Z",
+    "last_synced_at": "2026-03-12T16:36:04.511036Z",
+    "created_at": "2026-03-11T14:18:44.163725Z",
+    "updated_at": "2026-03-20T04:50:24.334067Z"
+  },
+  "validate": {
+    "status": "validated",
+    "account_id": "696505809372",
+    "last_validated_at": "2026-03-20T04:55:43.647929Z",
+    "permissions_ok": true,
+    "missing_permissions": [],
+    "warnings": [],
+    "required_permissions": [
+      "securityhub:GetFindings",
+      "ec2:DescribeSecurityGroups",
+      "config:DescribeConfigurationRecorders",
+      "config:DescribeDeliveryChannels",
+      "config:DescribeConfigRules",
+      "config:DescribeComplianceByConfigRule",
+      "config:GetComplianceDetailsByConfigRule",
+      "s3:ListAllMyBuckets",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:GetBucketPolicyStatus",
+      "s3:GetBucketPolicy",
+      "s3:GetBucketLocation",
+      "s3:GetEncryptionConfiguration",
+      "s3:GetBucketLogging",
+      "s3:GetLifecycleConfiguration"
+    ],
+    "authoritative_mode_allowed": true,
+    "authoritative_mode_block_reasons": []
+  }
+}

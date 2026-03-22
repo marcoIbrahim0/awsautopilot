@@ -1,0 +1,9 @@
+{
+  "action_id": "ab24939a-ffe5-41ba-b92f-8d46ed80b1f7",
+  "strategy_id": "iam_root_key_disable",
+  "mode": "manual",
+  "actor_metadata": {
+    "wave": "wave-6-live-closure-rerun",
+    "probe": "w6-live-03"
+  }
+}

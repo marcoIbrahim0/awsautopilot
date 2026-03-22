@@ -1,0 +1,46 @@
+{
+  "action_id": "52947557-0b35-4c03-99d6-4fdf77c86a24",
+  "action_type": "s3_bucket_encryption_kms",
+  "blocked_reasons": [
+    "AccessDeniedException"
+  ],
+  "control_id": "S3.15",
+  "decision_rationale": "Family resolver downgraded S3.15 branch 's3_enable_sse_kms_customer_managed' because KMS safety is under-proven. AccessDeniedException Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.15 branch 's3_enable_sse_kms_customer_managed' because KMS safety is under-proven. AccessDeniedException Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/05-arn-aws-s3-security-autopilot-w6-strict-s315-man-52947557",
+  "has_runnable_terraform": false,
+  "index": 5,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "customer_managed_dependency_proven": false,
+    "customer_managed_grants_captured": false,
+    "customer_managed_key_valid": false,
+    "customer_managed_policy_json_captured": false,
+    "executable_kms_change_allowed": false,
+    "family": "s3_bucket_encryption_kms",
+    "family_strategy": "s3_enable_sse_kms_guided",
+    "kms_key_arn_present": true,
+    "kms_key_mode": "custom",
+    "selected_branch": "s3_enable_sse_kms_customer_managed",
+    "single_profile_compatible": false,
+    "strategy_only_supported": true,
+    "target_bucket_name": "security-autopilot-w6-strict-s315-manual-696505809372",
+    "target_bucket_scope_proven": true
+  },
+  "profile_id": "s3_enable_sse_kms_customer_managed",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "strategy_inputs": {
+    "kms_key_arn": "arn:aws:kms:eu-north-1:696505809372:key/ef0cca31-8328-41e6-ab28-64cbedc1a44c",
+    "kms_key_mode": "custom"
+  },
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.15",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+}

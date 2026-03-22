@@ -1,0 +1,58 @@
+{
+  "captured_at_utc": "2026-03-22T14:18:22Z",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "tenant_label": "Valens",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "action_available": {
+    "id": "84a23bb8-d6f7-4c1b-87ff-87f9cc7c469c",
+    "http": 200,
+    "elapsed_ms": 2192,
+    "path_id": "path:d9fe1bdfe359b424fa61",
+    "attack_path_status": "available",
+    "attack_path_summary": "Actively exploited path can reach AWS::::Account:696505809372. High technical risk intersects with Medium business criticality. The action is already overdue. Safest next step: Disable root access key via PR only."
+  },
+  "action_partial": {
+    "id": "0abc603d-b75a-4b49-9a5f-431a0aa82a4e",
+    "http": 200,
+    "path_id": "path:96bdb7a6b4e43c63343c",
+    "expected_action_detail_state": "partial"
+  },
+  "shared_list": {
+    "http": 200,
+    "elapsed_ms": 9311,
+    "limit": 10,
+    "total": 10,
+    "first_path_id": "path:96bdb7a6b4e43c63343c",
+    "available_views": [
+      "highest_blast_radius",
+      "business_critical",
+      "actively_exploited",
+      "owned_by_my_team"
+    ]
+  },
+  "shared_detail": {
+    "id": "path:d9fe1bdfe359b424fa61",
+    "http": 200,
+    "elapsed_ms": 22065,
+    "status": "available",
+    "rank": 44,
+    "linked_actions": 1,
+    "runtime_signals_present": true,
+    "exposure_validation_present": true,
+    "code_context_present": true,
+    "closure_targets_present": true,
+    "external_workflow_summary_present": true,
+    "exception_summary_present": true,
+    "evidence_exports_present": true,
+    "access_scope_present": true,
+    "rank_factor_count": 9,
+    "risk_reason_count": 3,
+    "linked_repository_count": 0,
+    "implementation_artifact_count": 0
+  },
+  "preset_route_check": {
+    "view": "actively_exploited",
+    "route": "/attack-paths?action_id=84a23bb8-d6f7-4c1b-87ff-87f9cc7c469c&view=actively_exploited&path_id=path:d9fe1bdfe359b424fa61"
+  }
+}

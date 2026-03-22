@@ -27,6 +27,27 @@ from backend.services.aws_config_bundle_support import (
     aws_config_bundle_rollback_metadata,
     aws_config_restore_script_content,
 )
+from backend.services.aws_sg_bundle_support import (
+    AWS_SG_APPLY_SCRIPT_PATH,
+    AWS_SG_ROLLBACK_SCRIPT_PATH,
+    aws_sg_bundle_rollback_metadata,
+    aws_sg_capture_script_content,
+    aws_sg_restore_script_content,
+)
+from backend.services.aws_s3_bundle_support import (
+    AWS_S3_POLICY_CAPTURE_SCRIPT_PATH,
+    AWS_S3_POLICY_RESTORE_SCRIPT_PATH,
+    aws_s3_bundle_rollback_metadata,
+    aws_s3_policy_capture_script_content,
+    aws_s3_policy_restore_script_content,
+)
+from backend.services.aws_s3_encryption_bundle_support import (
+    AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH,
+    AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH,
+    aws_s3_encryption_bundle_rollback_metadata,
+    aws_s3_encryption_capture_script_content,
+    aws_s3_encryption_restore_script_content,
+)
 from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_MESSAGE,
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
@@ -41,6 +62,8 @@ PRBundleFormat = Literal["terraform", "cloudformation"]
 
 TERRAFORM_FORMAT: PRBundleFormat = "terraform"
 CLOUDFORMATION_FORMAT: PRBundleFormat = "cloudformation"
+TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT = "= 5.100.0"
+TERRAFORM_NULL_PROVIDER_VERSION_CONSTRAINT = "= 3.2.4"
 
 
 class PRBundleFile(TypedDict):
@@ -380,7 +403,7 @@ def _resolve_s3_migrate_policy_preservation(
     Resolve policy-preservation input for CloudFront+OAC migration bundles.
 
     Priority:
-      1) explicit strategy_inputs.existing_bucket_policy_json
+      1) explicit strategy preservation inputs
       2) runtime risk evidence capture
       3) fail closed when policy statements exist or evidence is missing
     """
@@ -388,6 +411,23 @@ def _resolve_s3_migrate_policy_preservation(
     explicit_policy = _normalize_policy_json_document(inputs.get(_S3_MIGRATE_POLICY_JSON_KEY))
     if explicit_policy is not None:
         return explicit_policy
+    explicit_statement_count = _coerce_non_negative_int(inputs.get(_S3_MIGRATE_POLICY_STATEMENT_COUNT_KEY))
+    if isinstance(explicit_statement_count, int):
+        if explicit_statement_count == 0:
+            return None
+        _raise_pr_bundle_error(
+            code=missing_policy_error_code,
+            detail=missing_policy_error_detail
+            or (
+                "Existing bucket policy contains non-empty statements, but no preservation input "
+                "was provided. Provide strategy_inputs.existing_bucket_policy_json or recreate the "
+                "run after refreshing remediation options so policy preservation evidence is captured."
+            ),
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+            variant=variant,
+        )
 
     evidence = _strategy_risk_evidence(risk_snapshot)
     evidence_policy = _normalize_policy_json_document(evidence.get(_S3_MIGRATE_POLICY_JSON_KEY))
@@ -870,7 +910,9 @@ def _terraform_ec2_53_access_guidance_content() -> str:
 EC2.53 post-fix access guidance
 -------------------------------
 What changes
-- Public SSH/RDP ingress on 22/3389 is restricted; optional preflight may revoke broad rules before adding restricted rules.
+- Public SSH/RDP ingress on 22/3389 is restricted.
+- For `close_and_revoke`, run `scripts/sg_capture_state.py` before apply to snapshot exact public ingress pre-state under `.sg-rollback/sg_ingress_snapshot.json`.
+- For `close_and_revoke`, `rollback/sg_restore.py` restores the captured ingress rules, including rule descriptions, after `terraform destroy`.
 
 How to access now
 - Use SSM Session Manager for operator access instead of public SSH/RDP:
@@ -879,10 +921,11 @@ How to access now
 
 Verify
 - Confirm no 0.0.0.0/0 or ::/0 remains for 22/3389:
-  aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query "SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]" --output json
+  aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> --query "SecurityGroupRules[?(IsEgress==`false`) && ((FromPort==`22` || FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]" --output json
 
 Rollback
-- Re-authorize only temporary, scoped admin ingress if lockout occurs:
+- Standard rollback for `close_and_revoke`: run `terraform destroy`, then `python3 rollback/sg_restore.py`.
+- Emergency-only fallback if no snapshot exists:
   aws ec2 authorize-security-group-ingress --region <region> --group-id <security-group-id> --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=<admin-cidr>}]'
 """
 
@@ -907,6 +950,8 @@ Verify
   curl -I http://<bucket-name>.s3.<region>.amazonaws.com/<object-key>
 
 Rollback
+- Before apply, if the bucket already has a policy, capture it:
+  aws s3api get-bucket-policy --bucket <bucket-name> --query Policy --output text > pre-remediation-policy.json
 - Restore prior bucket policy JSON backup if needed:
   aws s3api put-bucket-policy --bucket <bucket-name> --policy file://pre-remediation-policy.json
 """
@@ -953,6 +998,19 @@ Config.1 preflight safeguards
 """
 
 
+def _terraform_s3_15_guardrails_content() -> str:
+    """README guidance for S3.15 exact rollback behavior."""
+    return """
+
+S3.15 rollback safeguards
+-------------------------
+- This executable Terraform path snapshots the exact pre-remediation bucket encryption state under `.s3-encryption-rollback/`.
+- Run `python3 scripts/s3_encryption_capture.py` before `terraform apply`. The generated helper already targets this bundle's bucket and region; `BUCKET_NAME` and `REGION` are optional overrides only.
+- After `terraform destroy`, run `python3 rollback/s3_encryption_restore.py` to restore the captured encryption exactly.
+- If the bucket originally had no default encryption configuration, the restore helper deletes the post-remediation config instead of forcing a fallback encryption mode.
+"""
+
+
 def _maybe_append_terraform_readme(
     result: PRBundleResult,
     risk_snapshot: dict[str, Any] | None = None,
@@ -983,6 +1041,8 @@ def _maybe_append_terraform_readme(
         readme += _terraform_ec2_53_access_guidance_content()
     if any(f.get("path") == "s3_bucket_require_ssl.tf" for f in files):
         readme += _terraform_s3_5_access_guidance_content()
+    if any(f.get("path") == "s3_bucket_encryption_kms.tf" for f in files):
+        readme += _terraform_s3_15_guardrails_content()
     if any(f.get("path") == "ssm_block_public_sharing.tf" for f in files):
         readme += _terraform_ssm_7_access_guidance_content()
     if any(f.get("path") == "aws_config_enabled.tf" for f in files):
@@ -1220,7 +1280,7 @@ terraform {{
   required_providers {{
     aws = {{
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = "{TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT}"
     }}
   }}
 }}
@@ -1411,7 +1471,7 @@ terraform {{
   required_providers {{
     aws = {{
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = "{TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT}"
     }}
   }}
 }}
@@ -1505,7 +1565,7 @@ terraform {{
   required_providers {{
     aws = {{
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = "{TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT}"
     }}
   }}
 }}
@@ -2434,15 +2494,38 @@ def _generate_for_s3_bucket_encryption_kms(
                     kms_key_arn=kms_key_arn,
                 ),
             ),
+            PRBundleFile(
+                path=AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH,
+                content=aws_s3_encryption_capture_script_content(
+                    bucket_name=bucket_name,
+                    region=region,
+                ),
+            ),
+            PRBundleFile(
+                path=AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH,
+                content=aws_s3_encryption_restore_script_content(),
+            ),
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             f"Bucket defaults to target ({bucket_name}); generated key mode is {kms_key_mode}.",
+            (
+                f"Run `BUCKET_NAME={bucket_name} REGION={region} python3 {AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH}` "
+                "BEFORE terraform apply to snapshot exact bucket encryption pre-state "
+                "to .s3-encryption-rollback/encryption_snapshot.json."
+            ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enforce SSE-KMS default encryption.",
+            (
+                f"Rollback: run `terraform destroy` then `python3 {AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH}` "
+                "to restore the captured bucket encryption exactly."
+            ),
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
-    return PRBundleResult(format=format, files=files, steps=steps)
+    result = PRBundleResult(format=format, files=files, steps=steps)
+    if format == TERRAFORM_FORMAT:
+        result["metadata"] = aws_s3_encryption_bundle_rollback_metadata(str(action.id))
+    return result
 
 
 def _terraform_s3_bucket_encryption_kms_content(
@@ -2572,7 +2655,7 @@ def _generate_for_sg_restrict_public_ports(
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
-        files = [
+        terraform_files: list[PRBundleFile] = [
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
                 path="sg_restrict_public_ports.tf",
@@ -2585,6 +2668,19 @@ def _generate_for_sg_restrict_public_ports(
                 ),
             ),
         ]
+        rollback_metadata: dict | None = None
+        if remove_existing_public_rules:
+            terraform_files += [
+                PRBundleFile(
+                    path=AWS_SG_APPLY_SCRIPT_PATH,
+                    content=aws_sg_capture_script_content(),
+                ),
+                PRBundleFile(
+                    path=AWS_SG_ROLLBACK_SCRIPT_PATH,
+                    content=aws_sg_restore_script_content(),
+                ),
+            ]
+            rollback_metadata = aws_sg_bundle_rollback_metadata(str(action.id))
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
@@ -2595,13 +2691,24 @@ def _generate_for_sg_restrict_public_ports(
             f"Set security_group_id and allowed_cidr in the Terraform file (target SG: {sg_id}).",
             "Optionally set allowed_cidr_ipv6 (e.g. fd00::/8) to add IPv6-restricted ingress.",
             "By default, remove_existing_public_rules = false (no automatic revoke). Set remove_existing_public_rules = true only after validating alternative access paths.",
-            "When remove_existing_public_rules = true, bundle preflight revokes conflicting public/duplicate 22/3389 CIDR rules before creating restricted rules.",
+            *([
+                f"When remove_existing_public_rules = true, run `SECURITY_GROUP_ID={sg_id} REGION={region} python3 {AWS_SG_APPLY_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact public ingress pre-state to .sg-rollback/sg_ingress_snapshot.json.",
+            ] if remove_existing_public_rules else [
+                "When remove_existing_public_rules = true, bundle preflight revokes conflicting public/duplicate 22/3389 CIDR rules before creating restricted rules.",
+            ]),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to add restricted SSH/RDP ingress. Keep public 80/443 only where explicitly required.",
             "Test connectivity after each change and tighten in small steps.",
+            *([
+                f"Rollback: run `terraform destroy` then `python3 {AWS_SG_ROLLBACK_SCRIPT_PATH}` to restore the captured public ingress rules exactly, including descriptions.",
+            ] if remove_existing_public_rules else []),
             "Avoid blind auto-remediation in production. If automation is enabled, prefer restrict-over-remove and use dev/test first.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
+        result = PRBundleResult(format=format, files=terraform_files, steps=steps)
+        if rollback_metadata:
+            result["metadata"] = rollback_metadata
+        return result
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
@@ -2991,10 +3098,21 @@ def _generate_for_cloudtrail_enabled(
     return PRBundleResult(format=format, files=files, steps=steps)
 
 
-def _terraform_regional_providers_content(meta: dict[str, str]) -> str:
+def _terraform_regional_providers_content(
+    meta: dict[str, str],
+    *,
+    include_null_provider: bool = False,
+) -> str:
     """Shared provider block with region for regional resources (9.9–9.12). Uses default credential chain (no profile)."""
     region = meta["region"]
     account_id = meta["account_id"]
+    null_provider_block = ""
+    if include_null_provider:
+        null_provider_block = f"""
+    null = {{
+      source  = "hashicorp/null"
+      version = "{TERRAFORM_NULL_PROVIDER_VERSION_CONSTRAINT}"
+    }}"""
     return f"""# Configure AWS provider for account {account_id} and region {region}.
 # Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).
 # If you use a named profile, add: profile = "your-profile-name" (do not use account ID as profile name).
@@ -3005,8 +3123,8 @@ terraform {{
   required_providers {{
     aws = {{
       source  = "hashicorp/aws"
-      version = ">= 4.0"
-    }}
+      version = "{TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT}"
+    }}{null_provider_block}
   }}
 }}
 
@@ -3348,6 +3466,11 @@ def _generate_for_aws_config_enabled(
             steps=steps,
         )
 
+    bucket, kms_key_arn, create_local_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
+        account_id=meta["account_id"],
+        strategy=strategy,
+        strategy_inputs=inputs,
+    )
     content = _terraform_aws_config_enabled_content(meta, strategy=strategy, strategy_inputs=inputs)
     steps = [
         f"Configure AWS provider for account {meta['account_id']} and region {meta['region']}.",
@@ -3359,10 +3482,30 @@ def _generate_for_aws_config_enabled(
     return PRBundleResult(
         format=format,
         files=[
-            PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+            PRBundleFile(
+                path="providers.tf",
+                content=_terraform_regional_providers_content(meta, include_null_provider=True),
+            ),
             PRBundleFile(path="aws_config_enabled.tf", content=content),
-            PRBundleFile(path=AWS_CONFIG_APPLY_SCRIPT_PATH, content=aws_config_apply_script_content()),
-            PRBundleFile(path=AWS_CONFIG_ROLLBACK_SCRIPT_PATH, content=aws_config_restore_script_content()),
+            PRBundleFile(
+                path=AWS_CONFIG_APPLY_SCRIPT_PATH,
+                content=aws_config_apply_script_content(
+                    region=meta["region"],
+                    bucket=bucket,
+                    role_arn=(
+                        f"arn:aws:iam::{meta['account_id']}:role/"
+                        "aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+                    ),
+                    account_id=meta["account_id"],
+                    kms_key_arn=kms_key_arn,
+                    create_local_bucket=create_local_bucket,
+                    overwrite_recording_group=overwrite_recording_group,
+                ),
+            ),
+            PRBundleFile(
+                path=AWS_CONFIG_ROLLBACK_SCRIPT_PATH,
+                content=aws_config_restore_script_content(region=meta["region"]),
+            ),
         ],
         steps=steps,
         metadata=aws_config_bundle_rollback_metadata(str(action.id)),
@@ -3546,7 +3689,7 @@ def _generate_for_s3_bucket_require_ssl(
                 "Regenerate after refreshing remediation options or provide "
                 "strategy_inputs.existing_bucket_policy_json before generating this bundle."
             ),
-            fail_when_evidence_missing=False,
+            fail_when_evidence_missing=True,
         )
 
     exempt_principals = inputs.get("exempt_principals")
@@ -3618,27 +3761,57 @@ def _generate_for_s3_bucket_require_ssl(
             )
         )
 
-    return PRBundleResult(
-        format=format,
-        files=files,
-        steps=[
-            f"Configure AWS provider for account {meta['account_id']} and region {meta['region']}.",
-            (
-                "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
-                "for merge-safe preservation."
-                if preservation_policy is not None and preserve_existing_policy
-                else (
-                    "No existing bucket policy statements were detected; "
-                    "existing_bucket_policy_json remains empty."
-                    if preserve_existing_policy
-                    else "preserve_existing_policy=false selected; existing bucket policy statements "
-                    "are not preloaded."
-                )
-            ),
-            "Run `terraform init`, `terraform plan`, and `terraform apply`.",
-            "Validate impacted clients and recompute actions.",
-        ],
-    )
+    rollback_metadata: dict[str, Any] | None = None
+    if preservation_policy is not None:
+        files.extend(
+            [
+                PRBundleFile(
+                    path=AWS_S3_POLICY_CAPTURE_SCRIPT_PATH,
+                    content=aws_s3_policy_capture_script_content(),
+                ),
+                PRBundleFile(
+                    path=AWS_S3_POLICY_RESTORE_SCRIPT_PATH,
+                    content=aws_s3_policy_restore_script_content(),
+                ),
+            ]
+        )
+        rollback_metadata = aws_s3_bundle_rollback_metadata(str(action.id))
+
+    steps = [
+        f"Configure AWS provider for account {meta['account_id']} and region {meta['region']}.",
+        (
+            "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
+            "for merge-safe preservation."
+            if preservation_policy is not None and preserve_existing_policy
+            else (
+                "No existing bucket policy statements were detected; "
+                "existing_bucket_policy_json remains empty."
+                if preserve_existing_policy
+                else "preserve_existing_policy=false selected; existing bucket policy statements "
+                "are not preloaded."
+            )
+        ),
+        *(
+            [
+                f"Run `BUCKET_NAME={bucket_name} REGION={meta['region']} python3 {AWS_S3_POLICY_CAPTURE_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact bucket policy pre-state to .s3-rollback/policy_snapshot.json.",
+            ]
+            if preservation_policy is not None
+            else []
+        ),
+        "Run `terraform init`, `terraform plan`, and `terraform apply`.",
+        *(
+            [
+                f"Rollback: run `terraform destroy` then `python3 {AWS_S3_POLICY_RESTORE_SCRIPT_PATH}` to restore the captured bucket policy exactly.",
+            ]
+            if preservation_policy is not None
+            else []
+        ),
+        "Validate impacted clients and recompute actions.",
+    ]
+    result = PRBundleResult(format=format, files=files, steps=steps)
+    if rollback_metadata:
+        result["metadata"] = rollback_metadata
+    return result
 
 
 def _generate_for_iam_root_access_key_absent(
@@ -3773,14 +3946,14 @@ resource "null_resource" "aws_config_enablement" {{
     interpreter = ["/bin/bash", "-c"]
     command     = <<-EOT
 set -euo pipefail
-REGION="${{var.remediation_region}}"
-BUCKET="${{var.delivery_bucket_name}}"
-ROLE_ARN="${{var.config_role_arn}}"
-KMS_ARN="${{var.kms_key_arn}}"
-CREATE_LOCAL_BUCKET="${{var.create_local_bucket}}"
-OVERWRITE_RECORDING_GROUP="${{var.overwrite_recording_group}}"
-ACCOUNT_ID="{meta["account_id"]}"
-ROLLBACK_DIR="{AWS_CONFIG_ROLLBACK_DIR}"
+export REGION="${{var.remediation_region}}"
+export BUCKET="${{var.delivery_bucket_name}}"
+export ROLE_ARN="${{var.config_role_arn}}"
+export KMS_ARN="${{var.kms_key_arn}}"
+export CREATE_LOCAL_BUCKET="${{var.create_local_bucket}}"
+export OVERWRITE_RECORDING_GROUP="${{var.overwrite_recording_group}}"
+export ACCOUNT_ID="{meta["account_id"]}"
+export ROLLBACK_DIR="{AWS_CONFIG_ROLLBACK_DIR}"
 
 python3 ./{AWS_CONFIG_APPLY_SCRIPT_PATH}
 EOT

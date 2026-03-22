@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import uuid
 
+from backend.services.attack_path_materialized import maybe_schedule_attack_path_refresh
 from backend.services.action_remediation_sync import reconcile_drifted_sync_states
 from backend.services.integration_sync import dispatch_sync_tasks
 from backend.workers.database import session_scope
@@ -27,6 +28,8 @@ def execute_reconcile_action_remediation_sync_job(job: dict) -> None:
     dispatched = 0
     for dispatch_tenant_id, task_ids in result.task_ids_by_tenant.items():
         dispatched += int(dispatch_sync_tasks(task_ids, tenant_id=dispatch_tenant_id).get("enqueued") or 0)
+    if tenant_id is not None:
+        maybe_schedule_attack_path_refresh(tenant_id=tenant_id)
     logger.info(
         "reconcile_action_remediation_sync complete tenant_id=%s provider=%s scanned=%s planned=%s dispatched=%s skipped=%s",
         tenant_id,

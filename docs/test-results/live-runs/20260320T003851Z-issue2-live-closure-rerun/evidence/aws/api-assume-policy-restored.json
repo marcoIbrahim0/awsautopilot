@@ -1,0 +1,28 @@
+{
+    "RoleName": "security-autopilot-dev-lambda-api",
+    "PolicyName": "AssumeTenantRoles",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AssumeTenantAndSelfRoles",
+                "Effect": "Allow",
+                "Action": "sts:AssumeRole",
+                "Resource": [
+                    "arn:aws:iam::*:role/SecurityAutopilotReadRole",
+                    "arn:aws:iam::*:role/SecurityAutopilotWriteRole",
+                    "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                ]
+            },
+            {
+                "Sid": "PassStsAuditContext",
+                "Effect": "Allow",
+                "Action": [
+                    "sts:SetSourceIdentity",
+                    "sts:TagSession"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+}

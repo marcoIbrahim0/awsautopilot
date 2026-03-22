@@ -1,0 +1,8 @@
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "SecurityAutopilotReadRolePolicy",
+            "PolicyArn": "arn:aws:iam::696505809372:policy/SecurityAutopilotReadRolePolicy"
+        }
+    ]
+}

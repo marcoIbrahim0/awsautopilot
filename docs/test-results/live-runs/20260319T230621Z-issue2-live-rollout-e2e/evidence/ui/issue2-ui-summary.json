@@ -1,0 +1,18 @@
+{
+  "tenant_name": "Valens",
+  "frontend_url": "https://ocypheris.com/accounts?live=issue2",
+  "accounts_page_rendered": true,
+  "connected_account_id": "696505809372",
+  "connected_account_status": "error",
+  "read_role_template_version": "v1.5.6",
+  "write_role_template_version": "v1.4.4",
+  "custom_read_launch_has_execution_role_param": true,
+  "custom_read_launch_has_custom_stack_name": true,
+  "custom_write_launch_has_execution_role_param": true,
+  "custom_write_launch_has_custom_stack_name": true,
+  "cloudflare_frontend_version_id": "1babbd85-ef34-413a-bea0-bc3b5e0427ed",
+  "screenshots": [
+    "docs/test-results/live-runs/20260319T230621Z-issue2-live-rollout-e2e/evidence/screenshots/issue2-live-account-detail.png",
+    "docs/test-results/live-runs/20260319T230621Z-issue2-live-rollout-e2e/evidence/screenshots/issue2-live-reconnect-modal.png"
+  ]
+}

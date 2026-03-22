@@ -1,0 +1,12 @@
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mRequired plugins are not installed[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mThe installed provider plugins are not consistent with the packages
+[31m│[0m [0mselected in the dependency lock file:
+[31m│[0m [0m  - registry.terraform.io/hashicorp/aws: the cached package for registry.terraform.io/hashicorp/aws 6.36.0 (in .terraform/providers) does not match any of the checksums recorded in the dependency lock file
+[31m│[0m [0m
+[31m│[0m [0mTerraform uses external plugins to integrate with a variety of different
+[31m│[0m [0minfrastructure services. To download the plugins required for this
+[31m│[0m [0mconfiguration, run:
+[31m│[0m [0m  terraform init
+[31m╵[0m[0m

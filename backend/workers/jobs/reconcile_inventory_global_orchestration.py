@@ -26,7 +26,11 @@ from backend.services.reconciliation_prereqs import (
 from backend.utils.sqs import build_reconcile_inventory_shard_job_payload, parse_queue_region
 from backend.workers.config import settings
 from backend.workers.database import session_scope
-from backend.workers.services.aws import assume_role
+from backend.workers.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 
 logger = logging.getLogger("worker.jobs.reconcile_inventory_global_orchestration")
 
@@ -160,7 +164,12 @@ def _advance_to_next_service(
 
 def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
     try:
-        session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+        session = assume_role(
+            role_arn=account.role_read_arn,
+            external_id=tenant_external_id,
+            source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="worker", tenant_id=account.tenant_id),
+        )
         sts = session.client("sts")
         identity = sts.get_caller_identity()
         caller = str(identity.get("Account") or "")
@@ -178,7 +187,12 @@ def _authoritative_permissions_precheck(
 ) -> tuple[bool, list[str]]:
     missing: list[str] = []
     try:
-        session = assume_role(role_arn=account.role_read_arn, external_id=tenant_external_id)
+        session = assume_role(
+            role_arn=account.role_read_arn,
+            external_id=tenant_external_id,
+            source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="worker", tenant_id=account.tenant_id),
+        )
     except Exception as exc:
         return False, [f"assume_role:{_extract_error_code(exc)}"]
 

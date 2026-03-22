@@ -1,0 +1,1 @@
+{"action_id": "eabfe19e-7403-49db-a944-a0b236107554", "bucket": "security-autopilot-w6-envready-accesslogs-696505809372", "captured": true, "policy_exists": true, "sha256": "e204098e2934ee5670b0649a3775ea8906432cbca8128f7789321a4bbd2e6e06", "source_folder": "executable/actions/10-arn-aws-s3-security-autopilot-w6-envready-access-eabfe19e", "statement_count": 1}

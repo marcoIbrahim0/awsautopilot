@@ -1,0 +1,6 @@
+[GET] http://127.0.0.1:18002/api/actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc => [401] Unauthorized
+[GET] http://127.0.0.1:18002/api/aws/accounts => [401] Unauthorized
+[GET] http://127.0.0.1:18002/api/auth/me => [401] Unauthorized
+[GET] http://localhost:3000/session-expired => [FAILED] net::ERR_ABORTED
+[GET] http://localhost:3000/session-expired => [FAILED] net::ERR_ABORTED
+[GET] http://127.0.0.1:18002/api/auth/me => [401] Unauthorized

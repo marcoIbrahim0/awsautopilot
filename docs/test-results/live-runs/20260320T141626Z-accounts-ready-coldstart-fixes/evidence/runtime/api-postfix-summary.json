@@ -1,0 +1,12 @@
+{
+  "postfix_timeout_events": 0,
+  "postfix_init_reports": [
+    "2026-03-20T14:49:30.033000+00:00 2026/03/20/[$LATEST]afdc88fafcb545b6baea67d4c8899405 REPORT RequestId: dfd6f0f4-33a6-430e-bddb-faf3f0eb0d67\tDuration: 12260.88 ms\tBilled Duration: 12856 ms\tMemory Size: 1536 MB\tMax Memory Used: 211 MB\tInit Duration: 595.09 ms",
+    "2026-03-20T14:50:24.061000+00:00 2026/03/20/[$LATEST]e081889157554fbeb9ae27b05ef32182 REPORT RequestId: fa637ec7-c2dd-441e-a2ec-40ea0ed3f7b6\tDuration: 5634.35 ms\tBilled Duration: 5842 ms\tMemory Size: 1536 MB\tMax Memory Used: 218 MB\tInit Duration: 207.37 ms",
+    "2026-03-20T14:50:44.963000+00:00 2026/03/20/[$LATEST]876b8d0a112741a29e92ac109a2899d1 REPORT RequestId: b44fd301-2156-4e70-87b7-2855aabb5e1b\tDuration: 6147.47 ms\tBilled Duration: 6364 ms\tMemory Size: 1536 MB\tMax Memory Used: 218 MB\tInit Duration: 216.44 ms"
+  ],
+  "health_path": "evidence/api/health-postfix-20260320T144924Z.json",
+  "ready_path": "evidence/api/ready-postfix-20260320T144924Z.json",
+  "accounts_console_errors": 0,
+  "accounts_console_warnings": 0
+}

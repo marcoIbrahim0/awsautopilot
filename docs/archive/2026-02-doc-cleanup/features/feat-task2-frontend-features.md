@@ -1,3 +1,5 @@
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the inventory below reflects the February 2026 snapshot, not the current product direction.
+
 USER-FACING FEATURE INVENTORY
 | Feature ID | Feature Name | Page/Route | Component File | Description | User action that triggers it | What the user sees on success | What the user sees on failure | Backend endpoint(s) called | Data displayed to user | Access level required (any user / admin only) | Implementation status (fully implemented / partial / stub / unknown) |
 |---|---|---|---|---|---|---|---|---|---|---|---|

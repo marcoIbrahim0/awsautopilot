@@ -8,18 +8,16 @@ if run already success or failed.
 from __future__ import annotations
 
 import copy
-import logging
 import json
+import logging
+import hashlib
 import shlex
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
-from urllib.parse import urlparse
 
-import boto3
 from botocore.exceptions import ClientError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -62,7 +60,8 @@ logger = logging.getLogger("worker.jobs.remediation_run")
 # ---------------------------------------------------------------------------
 
 REMEDIATION_RUN_REQUIRED_FIELDS = {"job_type", "run_id", "tenant_id", "action_id", "mode", "created_at"}
-_RUNNER_TEMPLATE_CACHE: dict[str, object] = {}
+GROUP_RUNNER_TEMPLATE_SOURCE = "repo:infrastructure/templates/run_all.sh"
+GROUP_RUNNER_TEMPLATE_FALLBACK_SOURCE = "embedded_fallback"
 
 
 def _download_bundle_group_run_uses_callback(row: ActionGroupRun, run: RemediationRun) -> bool:
@@ -138,83 +137,25 @@ def _sync_download_bundle_group_runs(session: Session, run: RemediationRun) -> N
         row.finished_at = finished_at
 
 
-def _parse_s3_uri(uri: str) -> tuple[str, str] | None:
-    parsed = urlparse(uri)
-    if parsed.scheme != "s3" or not parsed.netloc:
-        return None
-    key = parsed.path.lstrip("/")
-    if not key:
-        return None
-    return parsed.netloc, key
+def _runner_template_version(script: str) -> str:
+    digest = hashlib.sha256(script.encode("utf-8")).hexdigest()[:16]
+    return f"sha256:{digest}"
 
 
-def _resolve_group_runner_template(default_script: str) -> tuple[str, str, str]:
-    configured_uri = (settings.SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI or "").strip()
-    configured_version = (settings.SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION or "").strip() or "v1"
-    cache_ttl = max(1, int(settings.SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS or 300))
-
-    if not configured_uri:
-        return default_script, "embedded", configured_version
-
-    parsed = _parse_s3_uri(configured_uri)
-    if not parsed:
-        logger.warning(
-            "Invalid SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI '%s'; using embedded run_all.sh template.",
-            configured_uri,
-        )
-        return default_script, "embedded_invalid_s3_uri", configured_version
-
-    cached_uri = _RUNNER_TEMPLATE_CACHE.get("uri")
-    cached_at = _RUNNER_TEMPLATE_CACHE.get("fetched_at")
-    cached_content = _RUNNER_TEMPLATE_CACHE.get("content")
-    cached_source = _RUNNER_TEMPLATE_CACHE.get("source")
-    cached_version = _RUNNER_TEMPLATE_CACHE.get("version")
-    if (
-        isinstance(cached_uri, str)
-        and cached_uri == configured_uri
-        and isinstance(cached_at, (int, float))
-        and (time.time() - float(cached_at)) < cache_ttl
-        and isinstance(cached_content, str)
-        and isinstance(cached_source, str)
-        and isinstance(cached_version, str)
-    ):
-        return cached_content, cached_source, cached_version
-
-    bucket, key = parsed
+def _load_default_runner_script(fallback_script: str) -> tuple[str, str, str]:
+    """Load run_all.sh from the checked-in repo template, fallback to the embedded script."""
+    script = fallback_script
+    source = GROUP_RUNNER_TEMPLATE_FALLBACK_SOURCE
     try:
-        s3 = boto3.client("s3")
-        obj = s3.get_object(Bucket=bucket, Key=key)
-        body = obj.get("Body")
-        if body is None:
-            raise ValueError("S3 object body was empty.")
-        content = body.read().decode("utf-8")
-        source = f"s3://{bucket}/{key}"
-        _RUNNER_TEMPLATE_CACHE["uri"] = configured_uri
-        _RUNNER_TEMPLATE_CACHE["fetched_at"] = time.time()
-        _RUNNER_TEMPLATE_CACHE["content"] = content
-        _RUNNER_TEMPLATE_CACHE["source"] = source
-        _RUNNER_TEMPLATE_CACHE["version"] = configured_version
-        return content, source, configured_version
-    except Exception as exc:
-        logger.warning(
-            "Failed to fetch centralized run_all.sh template from %s (%s). Using embedded fallback.",
-            configured_uri,
-            exc,
-        )
-        return default_script, "embedded_s3_fallback", configured_version
-
-
-def _load_default_runner_script(fallback_script: str) -> str:
-    """Load default run_all.sh from repo template file, fallback to embedded script."""
-    try:
-        template_path = Path(__file__).resolve().parents[2] / "infrastructure" / "templates" / "run_all.sh"
+        template_path = Path(__file__).resolve().parents[3] / "infrastructure" / "templates" / "run_all.sh"
         if template_path.is_file():
             content = template_path.read_text(encoding="utf-8")
             if content.strip():
-                return content
+                script = content
+                source = GROUP_RUNNER_TEMPLATE_SOURCE
     except Exception as exc:
         logger.warning("Failed to load infrastructure/templates/run_all.sh; using embedded fallback (%s).", exc)
-    return fallback_script
+    return script, source, _runner_template_version(script)
 
 
 def _parse_group_action_ids(raw_ids: object) -> list[uuid.UUID]:
@@ -589,45 +530,140 @@ if ! command -v terraform >/dev/null 2>&1; then
 fi
 
 CACHE_ROOT="${{HOME}}/.aws-security-autopilot/terraform"
-mkdir -p "${{CACHE_ROOT}}/plugin-cache"
+mkdir -p "${{CACHE_ROOT}}/plugin-cache" "${{CACHE_ROOT}}/provider-mirror"
 export TF_PLUGIN_CACHE_DIR="${{CACHE_ROOT}}/plugin-cache"
+export TF_PROVIDER_MIRROR_DIR="${{CACHE_ROOT}}/provider-mirror"
+PREFERRED_TF_PROVIDER_MIRROR_DIR="${{HOME}}/.terraform.d/plugin-cache"
+ACTIVE_TF_PROVIDER_MIRROR_DIR="${{TF_PROVIDER_MIRROR_DIR}}"
 export TF_REGISTRY_CLIENT_TIMEOUT="${{TF_REGISTRY_CLIENT_TIMEOUT:-30}}"
 export TF_REGISTRY_DISCOVERY_RETRY="${{TF_REGISTRY_DISCOVERY_RETRY:-3}}"
 
 TFRC_PATH="${{CACHE_ROOT}}/terraformrc"
-if [ ! -f "${{TFRC_PATH}}" ]; then
+write_tfrc_with_cache_only() {{
   cat > "${{TFRC_PATH}}" <<EOF
 plugin_cache_dir = "${{TF_PLUGIN_CACHE_DIR}}"
 EOF
-fi
+}}
+
+write_tfrc_with_mirror() {{
+  local mirror_dir="$1"
+  cat > "${{TFRC_PATH}}" <<EOF
+provider_installation {{
+  filesystem_mirror {{
+    path    = "${{mirror_dir}}"
+    include = ["registry.terraform.io/hashicorp/aws"]
+  }}
+  direct {{
+    exclude = ["registry.terraform.io/hashicorp/aws"]
+  }}
+}}
+EOF
+}}
+
 export TF_CLI_CONFIG_FILE="${{TFRC_PATH}}"
 
-bootstrap_provider_cache() {{
-  local marker bootstrap_dir
-  marker="${{CACHE_ROOT}}/.aws-provider-6.31.0.ready"
+AWS_PROVIDER_VERSION="5.100.0"
+AWS_PROVIDER_LOCKFILE="${{CACHE_ROOT}}/.aws-provider-${{AWS_PROVIDER_VERSION}}.lock.hcl"
+TERRAFORM_PROVIDER_OS="$(uname | tr '[:upper:]' '[:lower:]')"
+TERRAFORM_PROVIDER_ARCH="$(uname -m)"
+case "${{TERRAFORM_PROVIDER_ARCH}}" in
+  x86_64)
+    TERRAFORM_PROVIDER_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    TERRAFORM_PROVIDER_ARCH="arm64"
+    ;;
+esac
+TERRAFORM_PROVIDER_PLATFORM="${{TERRAFORM_PROVIDER_OS}}_${{TERRAFORM_PROVIDER_ARCH}}"
 
-  if [ -f "${{marker}}" ] && find "${{TF_PLUGIN_CACHE_DIR}}" -type f -path '*registry.terraform.io/hashicorp/aws/6.31.0/*' -print -quit 2>/dev/null | grep -q .; then
+has_cached_aws_provider() {{
+  find -L "${{TF_PLUGIN_CACHE_DIR}}/registry.terraform.io/hashicorp/aws/${{AWS_PROVIDER_VERSION}}" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .
+}}
+
+has_mirrored_aws_provider() {{
+  local mirror_dir="${{1:-${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}}}"
+  find -L "${{mirror_dir}}/registry.terraform.io/hashicorp/aws/${{AWS_PROVIDER_VERSION}}" -type f -print -quit 2>/dev/null | grep -q .
+}}
+
+has_preferred_mirrored_aws_provider() {{
+  has_mirrored_aws_provider "${{PREFERRED_TF_PROVIDER_MIRROR_DIR}}"
+}}
+
+bootstrap_provider_cache() {{
+  local bootstrap_dir marker
+  marker="${{CACHE_ROOT}}/.aws-provider-${{AWS_PROVIDER_VERSION}}.ready"
+  ACTIVE_TF_PROVIDER_MIRROR_DIR="${{TF_PROVIDER_MIRROR_DIR}}"
+  if has_preferred_mirrored_aws_provider; then
+    ACTIVE_TF_PROVIDER_MIRROR_DIR="${{PREFERRED_TF_PROVIDER_MIRROR_DIR}}"
+  fi
+  if [ -f "${{marker}}" ] && has_mirrored_aws_provider "${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}" && [ -s "${{AWS_PROVIDER_LOCKFILE}}" ]; then
     return 0
   fi
-
   bootstrap_dir=$(mktemp -d)
   cat > "${{bootstrap_dir}}/versions.tf" <<'EOF'
 terraform {{
   required_providers {{
     aws = {{
       source  = "hashicorp/aws"
-      version = "= 6.31.0"
+      version = "= 5.100.0"
     }}
   }}
 }}
 EOF
 
-  (
-    cd "${{bootstrap_dir}}"
-    terraform init -backend=false -input=false >/dev/null
-  )
+  if [ "${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}" = "${{PREFERRED_TF_PROVIDER_MIRROR_DIR}}" ]; then
+    (
+      cd "${{bootstrap_dir}}"
+      terraform providers lock -fs-mirror="${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}" -platform="${{TERRAFORM_PROVIDER_PLATFORM}}" >/dev/null
+      cp .terraform.lock.hcl "${{AWS_PROVIDER_LOCKFILE}}"
+    )
+  else
+    (
+      cd "${{bootstrap_dir}}"
+      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror "${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}" >/dev/null
+      terraform providers lock -fs-mirror="${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}" -platform="${{TERRAFORM_PROVIDER_PLATFORM}}" >/dev/null
+      cp .terraform.lock.hcl "${{AWS_PROVIDER_LOCKFILE}}"
+    )
+  fi
   rm -rf "${{bootstrap_dir}}"
   touch "${{marker}}"
+}}
+
+seed_canonical_aws_lockfile() {{
+  local dir="$1"
+  if [ ! -s "${{AWS_PROVIDER_LOCKFILE}}" ]; then
+    echo "ERROR: canonical AWS provider lockfile is missing at ${{AWS_PROVIDER_LOCKFILE}}."
+    return 1
+  fi
+  rm -rf "$dir/.terraform"
+  cp "${{AWS_PROVIDER_LOCKFILE}}" "$dir/.terraform.lock.hcl"
+}}
+
+terraform_init_with_lockfile_fallback() {{
+  local dir="$1"
+  local log_file rc
+  log_file=$(mktemp)
+  set +e
+  (
+    cd "$dir"
+    terraform init -input=false -lockfile=readonly
+  ) 2>&1 | tee "$log_file"
+  rc=${{PIPESTATUS[0]}}
+  set -e
+  if [ "$rc" -eq 0 ]; then
+    rm -f "$log_file"
+    return 0
+  fi
+  if ! grep -q "Provider dependency changes detected" "$log_file"; then
+    rm -f "$log_file"
+    return "$rc"
+  fi
+  echo "WARNING: terraform init detected additional providers for $dir; refreshing lockfile."
+  rm -f "$log_file"
+  (
+    cd "$dir"
+    terraform init -input=false
+  )
 }}
 
 collect_action_dirs() {{
@@ -703,11 +739,11 @@ run_terraform_init_with_retry() {{
   local rc=0
 
   while [ "$attempt" -le "$attempts" ]; do
+    if ! seed_canonical_aws_lockfile "$dir"; then
+      return 1
+    fi
     set +e
-    (
-      cd "$dir"
-      terraform init -input=false
-    )
+    terraform_init_with_lockfile_fallback "$dir"
     rc=$?
     set -e
     if [ "$rc" -eq 0 ]; then
@@ -740,6 +776,7 @@ has_unresolved_placeholders() {{
 }}
 
 bootstrap_provider_cache
+write_tfrc_with_mirror "${{ACTIVE_TF_PROVIDER_MIRROR_DIR}}"
 
 ACTION_DIRS=()
 collect_action_dirs
@@ -1323,49 +1360,145 @@ fi
 
 # Shared Terraform provider cache across bundles (persists under user HOME).
 CACHE_ROOT="${HOME}/.aws-security-autopilot/terraform"
-mkdir -p "${CACHE_ROOT}/plugin-cache"
+mkdir -p "${CACHE_ROOT}/plugin-cache" "${CACHE_ROOT}/provider-mirror"
 export TF_PLUGIN_CACHE_DIR="${CACHE_ROOT}/plugin-cache"
+export TF_PROVIDER_MIRROR_DIR="${CACHE_ROOT}/provider-mirror"
+PREFERRED_TF_PROVIDER_MIRROR_DIR="${HOME}/.terraform.d/plugin-cache"
+ACTIVE_TF_PROVIDER_MIRROR_DIR="${TF_PROVIDER_MIRROR_DIR}"
 export TF_REGISTRY_CLIENT_TIMEOUT="${TF_REGISTRY_CLIENT_TIMEOUT:-30}"
 export TF_REGISTRY_DISCOVERY_RETRY="${TF_REGISTRY_DISCOVERY_RETRY:-3}"
 
 # Use a dedicated CLI config so cache settings are applied consistently.
 TFRC_PATH="${CACHE_ROOT}/terraformrc"
-if [ ! -f "${TFRC_PATH}" ]; then
+write_tfrc_with_cache_only() {
   cat > "${TFRC_PATH}" <<EOF
 plugin_cache_dir = "${TF_PLUGIN_CACHE_DIR}"
 EOF
-fi
+}
+
+write_tfrc_with_mirror() {
+  local mirror_dir="$1"
+  cat > "${TFRC_PATH}" <<EOF
+provider_installation {
+  filesystem_mirror {
+    path    = "${mirror_dir}"
+    include = ["registry.terraform.io/hashicorp/aws"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/hashicorp/aws"]
+  }
+}
+EOF
+}
+
 export TF_CLI_CONFIG_FILE="${TFRC_PATH}"
 
-bootstrap_provider_cache() {
-  local marker bootstrap_dir
-  marker="${CACHE_ROOT}/.aws-provider-6.31.0.ready"
+AWS_PROVIDER_VERSION="5.100.0"
+AWS_PROVIDER_LOCKFILE="${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl"
+TERRAFORM_PROVIDER_OS="$(uname | tr '[:upper:]' '[:lower:]')"
+TERRAFORM_PROVIDER_ARCH="$(uname -m)"
+case "${TERRAFORM_PROVIDER_ARCH}" in
+  x86_64)
+    TERRAFORM_PROVIDER_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    TERRAFORM_PROVIDER_ARCH="arm64"
+    ;;
+esac
+TERRAFORM_PROVIDER_PLATFORM="${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}"
 
-  if [ -f "${marker}" ] && find "${TF_PLUGIN_CACHE_DIR}" -type f -path '*registry.terraform.io/hashicorp/aws/6.31.0/*' -print -quit 2>/dev/null | grep -q .; then
+has_cached_aws_provider() {
+  find -L "${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .
+}
+
+has_mirrored_aws_provider() {
+  local mirror_dir="${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}"
+  find -L "${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}" -type f -print -quit 2>/dev/null | grep -q .
+}
+
+has_preferred_mirrored_aws_provider() {
+  has_mirrored_aws_provider "${PREFERRED_TF_PROVIDER_MIRROR_DIR}"
+}
+
+bootstrap_provider_cache() {
+  local bootstrap_dir marker
+  marker="${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready"
+  ACTIVE_TF_PROVIDER_MIRROR_DIR="${TF_PROVIDER_MIRROR_DIR}"
+  if has_preferred_mirrored_aws_provider; then
+    ACTIVE_TF_PROVIDER_MIRROR_DIR="${PREFERRED_TF_PROVIDER_MIRROR_DIR}"
+  fi
+  if [ -f "${marker}" ] && has_mirrored_aws_provider "${ACTIVE_TF_PROVIDER_MIRROR_DIR}" && [ -s "${AWS_PROVIDER_LOCKFILE}" ]; then
     return 0
   fi
-
   bootstrap_dir=$(mktemp -d)
   cat > "${bootstrap_dir}/versions.tf" <<'EOF'
 terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "= 6.31.0"
+      version = "= 5.100.0"
     }
   }
 }
 EOF
 
-  (
-    cd "${bootstrap_dir}"
-    terraform init -backend=false -input=false >/dev/null
-  )
+  if [ "${ACTIVE_TF_PROVIDER_MIRROR_DIR}" = "${PREFERRED_TF_PROVIDER_MIRROR_DIR}" ]; then
+    (
+      cd "${bootstrap_dir}"
+      terraform providers lock -fs-mirror="${ACTIVE_TF_PROVIDER_MIRROR_DIR}" -platform="${TERRAFORM_PROVIDER_PLATFORM}" >/dev/null
+      cp .terraform.lock.hcl "${AWS_PROVIDER_LOCKFILE}"
+    )
+  else
+    (
+      cd "${bootstrap_dir}"
+      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror "${ACTIVE_TF_PROVIDER_MIRROR_DIR}" >/dev/null
+      terraform providers lock -fs-mirror="${ACTIVE_TF_PROVIDER_MIRROR_DIR}" -platform="${TERRAFORM_PROVIDER_PLATFORM}" >/dev/null
+      cp .terraform.lock.hcl "${AWS_PROVIDER_LOCKFILE}"
+    )
+  fi
   rm -rf "${bootstrap_dir}"
   touch "${marker}"
 }
 
+seed_canonical_aws_lockfile() {
+  local dir="$1"
+  if [ ! -s "${AWS_PROVIDER_LOCKFILE}" ]; then
+    echo "ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}."
+    return 1
+  fi
+  rm -rf "$dir/.terraform"
+  cp "${AWS_PROVIDER_LOCKFILE}" "$dir/.terraform.lock.hcl"
+}
+
+terraform_init_with_lockfile_fallback() {
+  local dir="$1"
+  local log_file rc
+  log_file=$(mktemp)
+  set +e
+  (
+    cd "$dir"
+    terraform init -input=false -lockfile=readonly
+  ) 2>&1 | tee "$log_file"
+  rc=${PIPESTATUS[0]}
+  set -e
+  if [ "$rc" -eq 0 ]; then
+    rm -f "$log_file"
+    return 0
+  fi
+  if ! grep -q "Provider dependency changes detected" "$log_file"; then
+    rm -f "$log_file"
+    return "$rc"
+  fi
+  echo "WARNING: terraform init detected additional providers for $dir; refreshing lockfile."
+  rm -f "$log_file"
+  (
+    cd "$dir"
+    terraform init -input=false
+  )
+}
+
 bootstrap_provider_cache
+write_tfrc_with_mirror "${ACTIVE_TF_PROVIDER_MIRROR_DIR}"
 
 TOTAL=$(find actions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 if [ "${TOTAL:-0}" -eq 0 ]; then
@@ -1463,11 +1596,11 @@ run_terraform_init_with_retry() {
   local rc=0
 
   while [ "$attempt" -le "$attempts" ]; do
+    if ! seed_canonical_aws_lockfile "$dir"; then
+      return 1
+    fi
     set +e
-    (
-      cd "$dir"
-      terraform init -input=false
-    )
+    terraform_init_with_lockfile_fallback "$dir"
     rc=$?
     set -e
     if [ "$rc" -eq 0 ]; then
@@ -1605,8 +1738,7 @@ if [ "$FAILED_COUNT" -gt 0 ]; then
 fi
 echo "All action folders completed successfully."
     """
-    run_all_script = _load_default_runner_script(run_all_script)
-    run_all_script, template_source, template_version = _resolve_group_runner_template(run_all_script)
+    run_all_script, template_source, template_version = _load_default_runner_script(run_all_script)
     manifest_lines = [
         "AWS Security Autopilot — Group PR bundle",
         "",
@@ -1614,7 +1746,7 @@ echo "All action folders completed successfully."
         "",
         "Each action is generated in its own Terraform subfolder under actions/.",
         "Use run_all.sh to apply all action folders, or apply folders independently.",
-        "run_all.sh preloads hashicorp/aws v6.31.0 once and reuses provider cache at ~/.aws-security-autopilot/terraform/plugin-cache for future bundles.",
+        "run_all.sh warms the hashicorp/aws provider cache once and then reuses ~/.aws-security-autopilot/terraform/plugin-cache as a local mirror for future bundles.",
         "Run from terminal:",
         "  chmod +x ./run_all.sh",
         "  ./run_all.sh",

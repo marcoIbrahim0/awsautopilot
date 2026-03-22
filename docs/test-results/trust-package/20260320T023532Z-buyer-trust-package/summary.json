@@ -1,0 +1,11 @@
+{
+  "authoritative_run_dir": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260320T003851Z-issue2-live-closure-rerun",
+  "cloudtrail_event_count": 2,
+  "deprecated_write_role_identity_policy_finding_count": 0,
+  "deprecated_write_role_template_version": "v1.4.7",
+  "deprecated_write_role_trust_policy_finding_count": 0,
+  "generated_at_utc": "2026-03-20T02:37:08.872753+00:00",
+  "identity_policy_finding_count": 0,
+  "repo_template_version": "v1.5.9",
+  "trust_policy_finding_count": 0
+}

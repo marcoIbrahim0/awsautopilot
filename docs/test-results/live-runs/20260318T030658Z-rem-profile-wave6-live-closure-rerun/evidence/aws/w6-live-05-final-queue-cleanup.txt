@@ -1,0 +1,5 @@
+delete security-autopilot-rpw6-ec253-20260318t030658z-ingest https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-ingest
+delete security-autopilot-rpw6-ec253-20260318t030658z-contract-quarantine https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-contract-quarantine
+delete security-autopilot-rpw6-ec253-20260318t030658z-events-fastlane https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-events-fastlane
+delete security-autopilot-rpw6-ec253-20260318t030658z-inventory-reconcile https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-inventory-reconcile
+delete security-autopilot-rpw6-ec253-20260318t030658z-export-report https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-rpw6-ec253-20260318t030658z-export-report

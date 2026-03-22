@@ -1,0 +1,7 @@
+ps:
+49539 /bin/zsh -c set -euo pipefail\012OUT='docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/runtime/w6-live-10-final-process-cleanup.txt'\012{\012  echo 'ps:'\012  ps -axww -o pid=,command= | rg 'backend.main:app|backend.workers.main|/tmp/rpw6-ec253-20260318T030658Z|18022' -S || true\012  echo\012  echo 'lsof_18022:'\012  lsof -i tcp:18022 || true\012  echo\012  echo 'lsof_55442:'\012  lsof -i tcp:55442 || true\012} > "$OUT"\012sed -n '1,120p' "$OUT"
+49541 rg backend.main:app|backend.workers.main|/tmp/rpw6-ec253-20260318T030658Z|18022 -S
+
+lsof_18022:
+
+lsof_55442:

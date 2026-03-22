@@ -60,9 +60,30 @@ class Settings(BaseSettings):
         default="",
         description="Your SaaS AWS account ID (12 digits); used in ReadRole trust and validation",
     )
+    SAAS_EXECUTION_ROLE_ARN: str = Field(
+        default="",
+        description=(
+            "Backward-compatible single runtime role ARN. Prefer SAAS_EXECUTION_ROLE_ARNS when the "
+            "runtime uses more than one execution role."
+        ),
+    )
+    SAAS_EXECUTION_ROLE_ARNS: str = Field(
+        default="",
+        description=(
+            "Optional comma-separated runtime role ARNs used in customer ReadRole/WriteRole trust "
+            "policies. Preferred over SAAS_EXECUTION_ROLE_ARN when API and worker use distinct roles."
+        ),
+    )
     ROLE_SESSION_NAME: str = Field(
         default="security-autopilot-session",
         description="Session name used when calling STS AssumeRole",
+    )
+    ALLOW_RUNTIME_IAM_CLEANUP: bool = Field(
+        default=False,
+        description=(
+            "Enables admin-triggered runtime IAM teardown during DELETE /api/aws/accounts/{account_id}. "
+            "Defaults to false; prefer customer-initiated CloudFormation stack deletion."
+        ),
     )
     SQS_INGEST_QUEUE_URL: str = Field(
         default="",
@@ -114,11 +135,11 @@ class Settings(BaseSettings):
 
     # CloudFormation templates (S3; versioned paths)
     CLOUDFORMATION_READ_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.4.yaml",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml",
         description="Full HTTPS S3 URL to the Read Role template (must be an S3-hosted URL for pre-signed URL generation). Override per environment.",
     )
     CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL: str = Field(
-        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.2.yaml",
+        default="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml",
         description="Full HTTPS S3 URL to the Write Role template (must be an S3-hosted URL for pre-signed URL generation). Override per environment.",
     )
     CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: str = Field(
@@ -166,23 +187,11 @@ class Settings(BaseSettings):
         default=True,
         description="Default fail-fast behavior for SaaS bundle execution. If false, continue all folders and aggregate failures.",
     )
-    SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: str = Field(
-        default="",
-        description="Optional s3://bucket/key URI for centralized run_all.sh template used in generated group PR bundles.",
-    )
-    SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: str = Field(
-        default="v1",
-        description="Version label for centralized run_all.sh template (stored in bundle metadata).",
-    )
-    SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: int = Field(
-        default=300,
-        description="In-process cache TTL for centralized run_all.sh template fetches from S3.",
-    )
     BUNDLE_REPORTING_TOKEN_SECRET: str = Field(
         default="",
         description=(
-            "Secret for signing downloaded-bundle run reporting tokens. "
-            "Falls back to JWT_SECRET when unset."
+            "Dedicated secret for signing downloaded-bundle run reporting tokens. "
+            "Required anywhere bundle reporting tokens are issued or verified; no JWT_SECRET fallback."
         ),
     )
     BUNDLE_REPORTING_TOKEN_TTL_SECONDS: int = Field(
@@ -211,6 +220,25 @@ class Settings(BaseSettings):
         default="",
         description="Firebase project ID enabling email-verification-backed signup when set.",
     )
+
+    @property
+    def saas_execution_role_arns_list(self) -> list[str]:
+        raw = (self.SAAS_EXECUTION_ROLE_ARNS or "").strip() or (self.SAAS_EXECUTION_ROLE_ARN or "").strip()
+        if not raw:
+            return []
+        seen: set[str] = set()
+        values: list[str] = []
+        for token in raw.split(","):
+            arn = token.strip()
+            if not arn or arn in seen:
+                continue
+            seen.add(arn)
+            values.append(arn)
+        return values
+
+    @property
+    def saas_execution_role_arns_csv(self) -> str:
+        return ",".join(self.saas_execution_role_arns_list)
     FIREBASE_SERVICE_ACCOUNT_JSON: str = Field(
         default="",
         description="Inline Firebase service account JSON for environments without local files.",
@@ -230,6 +258,26 @@ class Settings(BaseSettings):
     EMAIL_SMTP_HOST: str = Field(
         default="",
         description="SMTP host for transactional email delivery. If empty, SMTP delivery is disabled.",
+    )
+    OPENAI_API_KEY: str = Field(
+        default="",
+        description="OpenAI API key for Help Hub LLM responses.",
+    )
+    OPENAI_HELP_ENABLED: bool = Field(
+        default=False,
+        description="Enable the OpenAI-backed Help Hub assistant when true.",
+    )
+    OPENAI_HELP_MODEL: str = Field(
+        default="gpt-5-mini",
+        description="OpenAI model id used for Help Hub answers.",
+    )
+    OPENAI_HELP_REASONING_EFFORT: str = Field(
+        default="low",
+        description="Reasoning effort passed to the OpenAI Responses API for Help Hub answers.",
+    )
+    OPENAI_HELP_TIMEOUT_SECONDS: float = Field(
+        default=30.0,
+        description="Timeout in seconds for Help Hub OpenAI Responses API calls.",
     )
     EMAIL_SMTP_PORT: int = Field(
         default=587,

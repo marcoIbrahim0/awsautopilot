@@ -1,0 +1,13 @@
+2026-03-18 04:43:58.627 EET [66140] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-18 04:43:58.629 EET [66140] LOG:  listening on IPv4 address "127.0.0.1", port 55441
+2026-03-18 04:43:58.629 EET [66140] LOG:  listening on IPv6 address "::1", port 55441
+2026-03-18 04:43:58.629 EET [66140] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55441"
+2026-03-18 04:43:58.631 EET [66141] LOG:  database system was shut down at 2026-03-18 04:43:58 EET
+2026-03-18 04:43:58.633 EET [66140] LOG:  database system is ready to accept connections
+2026-03-18 04:44:53.286 EET [71814] ERROR:  invalid input syntax for type uuid: "null" at character 54
+2026-03-18 04:44:53.286 EET [71814] STATEMENT:  select id, name, external_id from tenants where id = 'null';
+2026-03-18 04:56:36.076 EET [66140] LOG:  received fast shutdown request
+2026-03-18 04:56:36.077 EET [66140] LOG:  aborting any active transactions
+2026-03-18 04:56:36.077 EET [66140] LOG:  background worker "logical replication launcher" (PID 66147) exited with exit code 1
+2026-03-18 04:56:36.077 EET [66142] LOG:  shutting down
+2026-03-18 04:56:36.090 EET [66140] LOG:  database system is shut down

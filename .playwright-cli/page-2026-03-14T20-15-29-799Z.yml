@@ -1,0 +1,274 @@
+- generic [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+        - link "Audit Log" [ref=e95] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e97]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e38]:
+        - img [ref=e39]
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - heading "Action Detail" [level=1] [ref=e44]
+        - generic [ref=e45]:
+          - button "Switch to light mode" [ref=e46]:
+            - img [ref=e47]
+          - button "Notifications" [ref=e49]:
+            - img [ref=e50]
+          - button "Profile menu" [ref=e52]:
+            - generic [ref=e53]: M
+      - main [ref=e54]:
+        - link "Back to Findings" [ref=e57] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e58]
+          - text: Back to Findings
+  - button "Open Next.js Dev Tools" [ref=e65] [cursor=pointer]:
+    - img [ref=e66]
+  - alert [ref=e69]
+  - dialog "Action Detail" [ref=e72]:
+    - generic [ref=e73]:
+      - generic [ref=e75]:
+        - heading "Action Detail" [level=2] [ref=e77]
+        - paragraph [ref=e100]: EBS default encryption should be enabled
+      - button "Close modal" [active] [ref=e78]:
+        - img [ref=e79]
+    - generic [ref=e101]:
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - paragraph [ref=e106]: Action detail
+            - heading "EBS default encryption should be enabled" [level=1] [ref=e107]
+            - generic [ref=e108]:
+              - generic [ref=e109]: open
+              - generic [ref=e110]:
+                - generic [ref=e111]: Risk 44
+                - text: "?"
+              - generic [ref=e112]:
+                - generic [ref=e113]: Medium risk x Medium criticality
+                - text: "?"
+          - button "Refresh State" [ref=e114]:
+            - generic [ref=e115]: Refresh State
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - generic [ref=e118]: Control ID
+            - generic [ref=e119]: EC2.7
+          - generic [ref=e120]:
+            - generic [ref=e121]: Account
+            - generic [ref=e122]: "696505809372"
+          - generic [ref=e123]:
+            - generic [ref=e124]: Region
+            - generic [ref=e125]: us-east-1
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - button "Run fix" [disabled] [ref=e129]:
+              - generic [ref=e130]: Run fix
+            - link "Configure Write Role" [ref=e131] [cursor=pointer]:
+              - /url: /settings
+          - button "Generate PR bundle" [ref=e132]:
+            - generic [ref=e133]: Generate PR bundle
+          - button "Suppress" [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e138]: Suppress
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - heading "What is wrong" [level=3] [ref=e141]
+          - paragraph [ref=e142]: This control checks whether Amazon Elastic Block Store (EBS) encryption is enabled by default. The control fails if EBS default encryption is not enabled.
+        - generic [ref=e143]:
+          - heading "What the fix does" [level=3] [ref=e144]
+          - paragraph [ref=e145]: Enables EBS default encryption for newly created volumes.
+      - generic [ref=e148]:
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - img [ref=e152]
+            - generic [ref=e154]:
+              - heading "Attack Path" [level=3] [ref=e155]
+              - generic [ref=e156]:
+                - paragraph [ref=e157]: Bounded decision view
+                - text: "?"
+          - generic [ref=e159]: context incomplete
+        - generic [ref=e160]:
+          - paragraph [ref=e161]: Relationship context is incomplete, so the attack story stays fail-closed and bounded to directly observed evidence.
+          - paragraph [ref=e162]:
+            - generic [ref=e163]: "Take care:"
+            - generic [ref=e164]: Relationship context is incomplete, so treat this as directly observed evidence only.
+            - generic [ref=e165]: •
+            - generic [ref=e166]: "Next:"
+            - generic [ref=e167]: Enable default EBS encryption (AWS managed key) via Direct fix.
+            - generic [ref=e168]: •
+            - generic [ref=e169]: Impact
+            - generic [ref=e170]: Medium technical risk intersects with Medium business criticality.
+        - generic [ref=e171]: Relationship context is incomplete, so this story stays fail-closed and bounded.
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - img [ref=e175]
+          - heading "Why this is prioritized" [level=3] [ref=e177]
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - paragraph [ref=e180]: Priority storyboard
+            - paragraph [ref=e181]: This medium-risk issue affects your sensitive or regulated data and shared access boundary.
+            - generic [ref=e182]:
+              - paragraph [ref=e183]: "Focus dimension: Sensitive or regulated data"
+              - text: "?"
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - generic [ref=e186]:
+                - generic [ref=e187]:
+                  - generic [ref=e188]:
+                    - paragraph [ref=e189]: Score waterfall
+                    - text: "?"
+                  - paragraph [ref=e190]: Strongest score drivers stay on the rail. Neutral or dampening inputs stay visible but muted.
+                - generic [ref=e191]:
+                  - generic [ref=e192]: Visible lift +44
+                  - text: "?"
+              - generic [ref=e193]:
+                - generic [ref=e195]:
+                  - generic [ref=e196]:
+                    - paragraph [ref=e197]: Severity
+                    - text: "?"
+                  - generic [ref=e198]: "+18"
+                - generic [ref=e203]:
+                  - generic [ref=e204]:
+                    - paragraph [ref=e205]: Privilege Level
+                    - text: "?"
+                  - generic [ref=e206]: "+15"
+                - generic [ref=e211]:
+                  - generic [ref=e212]:
+                    - paragraph [ref=e213]: Data Sensitivity
+                    - text: "?"
+                  - generic [ref=e214]: "+11"
+                - generic [ref=e219]:
+                  - generic [ref=e220]:
+                    - paragraph [ref=e221]: Internet Exposure
+                    - text: "?"
+                  - generic [ref=e222]: "0"
+            - generic [ref=e226]:
+              - generic [ref=e227]:
+                - generic [ref=e228]:
+                  - paragraph [ref=e229]: Impact constellation
+                  - text: "?"
+                - paragraph [ref=e230]: The strongest business context signal is anchored on the right. Any additional matched signals stay grouped beside it as supporting evidence.
+              - generic [ref=e231]:
+                - generic [ref=e233]:
+                  - paragraph [ref=e234]: Shared access boundary
+                  - paragraph [ref=e235]: This control affects IAM trust boundaries — a compromise could impact multiple identities.
+                - generic [ref=e236]:
+                  - paragraph [ref=e237]: Primary dimension
+                  - paragraph [ref=e238]: Sensitive or regulated data
+                  - generic [ref=e239]:
+                    - paragraph [ref=e240]: Why it matters
+                    - paragraph [ref=e241]: This resource is connected to regulated or sensitive data classes (PII, Financial, etc.).
+          - generic [ref=e244]:
+            - img [ref=e246]
+            - generic [ref=e248]:
+              - paragraph [ref=e249]: Recommended check
+              - paragraph [ref=e250]: Confirm that all existing deployment scripts and CMK policies in this region support KMS encryption as the new default.
+      - generic [ref=e251]:
+        - generic [ref=e252]:
+          - heading "Remediation History" [level=3] [ref=e253]
+          - generic [ref=e254]: 5 runs found
+        - generic [ref=e255]:
+          - generic [ref=e257]:
+            - generic [ref=e258]:
+              - paragraph [ref=e259]: Action
+              - link "EBS default encryption should be enabled" [ref=e260] [cursor=pointer]:
+                - /url: /actions/0ca64b94-9dcb-4a97-91b0-27b0341865bc
+              - paragraph [ref=e261]: 696505809372 · us-east-1
+              - paragraph [ref=e262]: "Action status: open"
+            - generic [ref=e263]:
+              - generic [ref=e264]:
+                - paragraph [ref=e265]: Generating PR bundle
+                - generic [ref=e266]:
+                  - generic [ref=e268]:
+                    - img [ref=e270]
+                    - generic [ref=e273]: Queued
+                  - generic [ref=e276]:
+                    - generic [ref=e278]: "2"
+                    - generic [ref=e279]: Generating
+                  - generic [ref=e282]:
+                    - generic [ref=e284]: "3"
+                    - generic [ref=e285]: Complete
+              - generic [ref=e287]:
+                - generic [ref=e288]: Progress
+                - generic [ref=e289]: 15%
+              - generic [ref=e292]:
+                - paragraph [ref=e293]: Run is still queued.
+                - paragraph [ref=e294]: If this persists, resend the job to retry processing.
+                - button "Resend to queue" [ref=e295]:
+                  - generic [ref=e296]: Resend to queue
+              - generic [ref=e297]:
+                - heading "Activity" [level=4] [ref=e298]
+                - generic [ref=e300]:
+                  - generic [ref=e301]: ›
+                  - generic [ref=e302]: Run queued, waiting for worker…
+              - generic [ref=e304]:
+                - generic [ref=e306]:
+                  - generic [ref=e308]: "1"
+                  - generic [ref=e309]: Pending
+                - generic [ref=e312]:
+                  - generic [ref=e314]: "2"
+                  - generic [ref=e315]: Running
+                - generic [ref=e318]:
+                  - generic [ref=e320]: "3"
+                  - generic [ref=e321]: Complete
+              - generic [ref=e323]:
+                - generic [ref=e324]: pending
+                - button "Cancel run" [ref=e325]:
+                  - generic [ref=e326]: Cancel run
+          - link "success pr only Fix PR bundle generated 3/14/2026, 9:44:13 PM" [ref=e328] [cursor=pointer]:
+            - /url: /remediation-runs/c6468c94-e809-460d-b288-bdfb9303f377
+            - generic [ref=e329]: success
+            - generic [ref=e330]:
+              - paragraph [ref=e331]: pr only Fix
+              - paragraph [ref=e332]: PR bundle generated
+            - generic [ref=e333]: 3/14/2026, 9:44:13 PM
+            - img [ref=e334]
+          - link "success pr only Fix PR bundle generated 3/12/2026, 4:15:18 AM" [ref=e337] [cursor=pointer]:
+            - /url: /remediation-runs/2378802b-0704-4a5e-8509-927fcb905a74
+            - generic [ref=e338]: success
+            - generic [ref=e339]:
+              - paragraph [ref=e340]: pr only Fix
+              - paragraph [ref=e341]: PR bundle generated
+            - generic [ref=e342]: 3/12/2026, 4:15:18 AM
+            - img [ref=e343]
+          - link "success pr only Fix PR bundle generated 3/12/2026, 3:43:51 AM" [ref=e346] [cursor=pointer]:
+            - /url: /remediation-runs/9e193ab2-7e08-457a-9db4-b90969a33ec8
+            - generic [ref=e347]: success
+            - generic [ref=e348]:
+              - paragraph [ref=e349]: pr only Fix
+              - paragraph [ref=e350]: PR bundle generated
+            - generic [ref=e351]: 3/12/2026, 3:43:51 AM
+            - img [ref=e352]
+          - link "success pr only Fix PR bundle generated 3/12/2026, 1:21:30 AM" [ref=e355] [cursor=pointer]:
+            - /url: /remediation-runs/88e08e11-0b86-4f7d-bf4e-fd24a5870ad1
+            - generic [ref=e356]: success
+            - generic [ref=e357]:
+              - paragraph [ref=e358]: pr only Fix
+              - paragraph [ref=e359]: PR bundle generated
+            - generic [ref=e360]: 3/12/2026, 1:21:30 AM
+            - img [ref=e361]

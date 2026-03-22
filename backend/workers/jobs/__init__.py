@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Callable
 
 from backend.utils.sqs import (
+    ATTACK_PATH_MATERIALIZATION_JOB_TYPE,
     BACKFILL_ACTION_GROUPS_JOB_TYPE,
     BACKFILL_FINDING_KEYS_JOB_TYPE,
     COMPUTE_ACTIONS_JOB_TYPE,
@@ -25,6 +26,7 @@ from backend.utils.sqs import (
     REMEDIATION_RUN_JOB_TYPE,
     WEEKLY_DIGEST_JOB_TYPE,
 )
+from backend.workers.jobs.attack_path_materialization import execute_attack_path_materialization_job
 from backend.workers.jobs.backfill_action_groups import execute_backfill_action_groups_job
 from backend.workers.jobs.backfill_finding_keys import execute_backfill_finding_keys_job
 from backend.workers.jobs.compute_actions import execute_compute_actions_job
@@ -49,6 +51,7 @@ from backend.workers.jobs.weekly_digest import execute_weekly_digest_job
 
 # Registry: job_type → handler(job: dict) -> None
 _HANDLERS: dict[str, Callable[[dict], None]] = {
+    ATTACK_PATH_MATERIALIZATION_JOB_TYPE: execute_attack_path_materialization_job,
     BACKFILL_ACTION_GROUPS_JOB_TYPE: execute_backfill_action_groups_job,
     BACKFILL_FINDING_KEYS_JOB_TYPE: execute_backfill_finding_keys_job,
     INGEST_JOB_TYPE: execute_ingest_job,

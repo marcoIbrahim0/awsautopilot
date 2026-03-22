@@ -24,7 +24,11 @@ from backend.services.canonicalization import build_resource_key, canonicalize_c
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from backend.workers.config import settings
 from backend.workers.database import session_scope
-from backend.workers.services.aws import assume_role
+from backend.workers.services.aws import (
+    WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 from backend.workers.services.control_plane_events import (
     SHADOW_STATUS_RESOLVED,
     derive_control_evaluations,
@@ -175,7 +179,12 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
         if account is None:
             raise ValueError(f"aws_account not found tenant_id={tenant_id} account_id={account_id}")
 
-        assumed = assume_role(role_arn=account.role_read_arn, external_id=account.external_id)
+        assumed = assume_role(
+            role_arn=account.role_read_arn,
+            external_id=account.external_id,
+            source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
+            tags=build_assume_role_tags(service_component="worker", tenant_id=tenant_id),
+        )
         evaluations = derive_control_evaluations(
             session_boto=assumed,
             account_id=account_id,

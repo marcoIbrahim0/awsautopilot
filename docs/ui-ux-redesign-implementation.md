@@ -19,6 +19,50 @@
 4. Action-oriented findings UX with explicit button outcomes and unavailable states.
 5. Consistent page anatomy (title, status, primary action zone, guidance, empty/error states).
 
+### 1.3 Dashboard Visual System Status (Implemented 2026-03-22)
+1. Dashboard surfaces now converge on one brand-led operator style instead of mixing generic bordered cards, older `nm-neu-*` treatments, and newer remediation panels.
+2. Shared theme tokens are now logo-driven in both light and dark mode:
+   - shell, card, inset, overlay, badge, and control surfaces use explicit token roles
+   - primary actions now center on the logo azure/navy pair instead of page-local colors
+3. Shared action/status primitives are now stricter:
+   - buttons and badges no longer share the same visual weight
+   - settings/help/workflow forms use the same input and control surface language
+4. The shell and weaker product areas were refit onto the shared system:
+   - sidebar and top bar
+   - settings
+   - help hub
+   - PR bundle create flow
+   - action detail entry chrome and suppress workflow
+5. Findings, Accounts, and Top Risks remain the structural reference surfaces, with lighter alignment changes only where they needed to match the final shared tokens.
+
+### 1.4 Responsiveness Follow-Up Status (Implemented 2026-03-22)
+1. Action Detail no longer blocks the whole modal on non-critical follow-up work:
+   - core `getAction(...)` detail renders first
+   - remediation history, direct-fix capability checks, and write-role account lookups now hydrate after the shell is visible
+   - short-lived in-memory caches now reuse action detail and run history across subview switches
+2. Suppress now stays inside the Action Detail dialog without losing draft context on simple back/return transitions:
+   - the suppress workflow stays mounted after first open
+   - successful exception creation updates visible exception state immediately and then reconciles with a background action refresh
+3. Remediation workflow fetches are narrower:
+   - remediation options are reused per action/mode session instead of reloading on every reopen
+   - preview generation is debounced and keeps the previous preview visible while refresh is in flight
+   - public-IP lookup is reused as a best-effort session helper instead of repeating for every modal open
+4. PR Bundle create and summary no longer crawl the entire open-action universe client-side:
+   - `GET /api/actions` now supports additive `q` text search and explicit `ids` loading
+   - create page filtering is server-backed with local selection persistence and explicit paging
+   - summary loads only the chosen action IDs before running preflight/generation
+
+### 1.5 Action Detail Visual Consistency Follow-Up (Implemented 2026-03-22)
+1. Action Detail now uses a stronger dashboard-native hero layout instead of isolated title text plus loose chips:
+   - title, supporting description, badge cluster, refresh control, and action workflow now read as one system
+   - badge treatment now matches the shared premium surface language in light and dark mode
+2. Attack Path entry is now promoted near the top of the detail surface:
+   - `Open Attack Paths` is no longer buried in the section header
+   - the CTA now sits in a dedicated high-visibility danger-toned navigation card so users can identify the next triage surface quickly
+3. The priority-storyboard command rail was rebuilt:
+   - `Recommended check` now reads as a branded `Recommended next step` surface
+   - command text is presented in a stronger inset panel aligned with the remediation/dashboard card system
+
 ## 2) New Information Architecture + Navigation Model
 
 ### 2.1 Primary Navigation
@@ -44,6 +88,33 @@
    - Authenticated + incomplete onboarding -> `/onboarding`
    - Authenticated + complete onboarding -> `/findings`
    - Unauthenticated -> `/landing`
+5. `/settings` is the canonical admin and reporting surface. Deep links use `/settings?tab=<tab-id>`.
+6. `/exports` remains a navigation entry point only; export/report state lives in Settings.
+7. `/baseline-report` redirects to `/settings?tab=baseline-report` for compatibility.
+
+### 2.3 Settings Information Architecture
+1. `Account`
+   - Uses the existing profile/security/delete-account surface.
+2. `Team`
+   - Keeps tenant invite/remove management.
+3. `Organization`
+   - Read-only tenant metadata and connected-account summary.
+   - Routes users to `Accounts` and onboarding final checks instead of running validation inline.
+4. `Notifications`
+   - Weekly digest email plus Slack digest webhook only.
+5. `Integrations`
+   - Canonical provider settings surface for Jira, ServiceNow, and Slack.
+   - See [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md).
+6. `Governance`
+   - Tenant governance notifications and webhook controls.
+   - See [Communication + Governance layer](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/communication-governance-layer.md).
+7. `Remediation Defaults`
+   - Tenant remediation-profile defaults and approved-input policy.
+   - See [Wave 1 foundation contracts](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-1-foundation-contracts.md).
+8. `Exports & Compliance`
+   - Combines evidence/compliance export requests and control mappings.
+9. `Baseline Report`
+   - Reuses the shared baseline report panel from Settings.
 
 ## 3) Onboarding Redesign
 
@@ -74,7 +145,6 @@ Login
      - Integration Role ARN (required)
      - Account ID (required)
      - Regions (required, min 1)
-     - Optional Write Role ARN
    - Validation rules + success criteria shown inline.
 3. Inspector (required)
    - Cost-aware defaults:
@@ -115,8 +185,7 @@ Login
 1. Where to find role ARN:
    - AWS Console -> IAM -> Roles -> select deployed role -> copy `Role ARN`.
 2. Where to paste in app:
-   - Onboarding -> `Connect Core Integration Role` -> `Integration Role ARN`.
-   - Optional role: Onboarding -> `Read Role` -> `Read Role ARN`.
+   - Onboarding -> `Connect Core Integration Role` -> `Integration Role ARN (required)`.
 3. Validation rules:
    - ARN regex format enforced.
    - Account ID must be exactly 12 digits.
@@ -307,6 +376,14 @@ Login
    - no connected accounts
    - mixed-status multi-account tenants
 
+### 6.6 Settings and Reporting
+1. Every supported `?tab=` deep link opens the correct Settings screen.
+2. Legacy Settings aliases (`profile`, `evidence-export`, `control-mappings`) normalize to canonical Settings tabs.
+3. `Organization` never runs account validation, ReadRole checks, control-plane checks, or WriteRole flows inline.
+4. Admin-only settings remain editable only for admins; members see read-only rendering where applicable.
+5. `/exports` links users into the canonical Settings tabs instead of owning duplicate export/report state.
+6. `/baseline-report` lands on the Settings baseline-report tab through a redirect.
+
 ## 7) Implementation Notes
 
 ### 7.1 Frontend State Approach
@@ -326,7 +403,16 @@ Login
    - `job.succeeded`, `job.failed`, `job.timed_out`, `job.canceled`.
 4. Rendering:
    - banner rail reads `bannerVisible`.
-   - notification center reads full timeline list.
+   - notification center reads the merged timeline from `/api/notifications`.
+5. Notification-center contract:
+   - `GET /api/notifications` is the canonical bell feed for the authenticated dashboard shell.
+   - `PUT /api/notifications/jobs/{client_key}` persists user-triggered async jobs while preserving immediate local banner feedback.
+   - `PATCH /api/notifications/state` owns per-user `read`, `unread`, `archive`, and `mark_all_read`.
+6. Surface behavior:
+   - desktop uses an anchored bell dropdown.
+   - mobile/tablet uses a bottom sheet from the same notification source.
+   - active jobs are shown separately from recent alerts.
+   - unread/archive state is per user, not per tenant.
 
 ### 7.3 Analytics Events (Funnel + Time-To-Value)
 1. Funnel instrumentation:
@@ -351,13 +437,15 @@ Login
 | Requirement | UI location | UX behavior | Backend dependency | Acceptance criteria |
 |---|---|---|---|---|
 | A. Findings actions: Fix + PR bundle group | `/frontend/src/app/findings/FindingCard.tsx`, `/frontend/src/app/findings/[id]/page.tsx` | Two buttons per finding; disabled with reason when unavailable | `/backend/routers/findings.py` returns remediation hints | Both controls always present; routes resolve when mapping exists |
-| B. Onboarding-only account-read checks; Inspector required; Access Analyzer deferred from onboarding | `/frontend/src/app/onboarding/page.tsx`, `/frontend/src/app/accounts/AccountServiceStatusCheck.tsx`, `/frontend/src/app/settings/page.tsx` | Required checks executed only in onboarding final checks; Access Analyzer setup is intentionally deferred to non-onboarding surfaces | `checkAccountServiceReadiness`, `checkAccountControlPlaneReadiness` | Onboarding cannot complete without Inspector/SecurityHub/Config/control-plane |
+| B. Onboarding-only account-read checks; Inspector required; Access Analyzer deferred from onboarding | `/frontend/src/app/onboarding/page.tsx`, `/frontend/src/app/accounts/page.tsx`, `/frontend/src/app/settings/OrganizationSettingsTab.tsx` | Required checks execute only in onboarding final checks; Accounts and Settings route users there instead of running validation inline | `checkAccountServiceReadiness`, `checkAccountControlPlaneReadiness` | Onboarding cannot complete without Inspector/SecurityHub/Config/control-plane |
 | C. Explicit deployment steps and ARN handling | `/frontend/src/app/onboarding/page.tsx` | Numbered steps, ARN source locations, app paste targets, validation rules and success confirmation | account register/validate/readiness APIs | New user can complete role setup without undocumented steps |
 | D. Cost-efficient enablement guidance (Inspector, Security Hub, Config, standards) | `/frontend/src/app/onboarding/page.tsx` | Prescriptive defaults and scoped recommendations for required services only | service-readiness endpoint | Guidance shown before each required verify action |
 | E. Onboarding persistence + stale handling | `/frontend/src/app/onboarding/page.tsx` | Restore step/inputs/check state; revalidate stale checks | local storage + readiness APIs | Reload/close returns to same onboarding progress |
 | F. First login loading with dual progress + timeout/partial/notify | `/frontend/src/app/findings/page.tsx` | `Loading findings` + `Computing actions` tracks; retry + notify option | findings/actions list APIs + trigger APIs | User remains on findings with transparent progress until ready |
-| G. Global async banner + notification center lifecycle | `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`, `/frontend/src/components/layout/TopBar.tsx`, `/frontend/src/contexts/BackgroundJobsContext.tsx` | Start banner immediate; notification item lifecycle updates; dedupe + retention | frontend job event model | Every tracked action emits banner + notification item |
+| G. Global async banner + notification center lifecycle | `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`, `/frontend/src/components/layout/TopBar.tsx`, `/frontend/src/contexts/BackgroundJobsContext.tsx`, `/frontend/src/contexts/NotificationCenterContext.tsx` | Start banner immediate; bell shows merged persisted jobs + governance alerts; desktop dropdown and mobile sheet share one source | `/api/notifications`, frontend job event model | Every tracked action emits banner + persisted notification item and the bell preserves unread/archive state per user |
 | H. Account area redesign with health/roles/integrations/lifecycle | `/frontend/src/app/accounts/page.tsx` | Sectioned account hub with summary KPIs and actionable views | accounts API | User can locate connection health and account management paths in one place |
+| I. Canonical settings admin surface | `/frontend/src/app/settings/page.tsx`, `/frontend/src/app/settings/settings-tabs.ts`, `/frontend/src/app/settings/IntegrationsSettingsTab.tsx`, `/frontend/src/app/settings/GovernanceSettingsTab.tsx`, `/frontend/src/app/settings/RemediationDefaultsTab.tsx` | Settings is the single deep-linked configuration surface for integrations, governance, and remediation defaults | `/api/integrations/settings`, `/api/users/me/governance-settings`, `/api/users/me/remediation-settings` | Admin users can manage backend-backed settings from Settings without separate hidden surfaces |
+| J. Export/report route consolidation | `/frontend/src/app/settings/ExportsComplianceTab.tsx`, `/frontend/src/app/exports/page.tsx`, `/frontend/src/app/baseline-report/page.tsx` | Reporting state lives in Settings; `/exports` is a handoff page and `/baseline-report` redirects | `/api/exports`, `/api/control-mappings`, `/api/baseline-report` | Export, control-mapping, and baseline-report flows no longer drift across duplicate route implementations |
 
 ## 9) Key Microcopy Examples
 
@@ -403,9 +491,19 @@ Login
 8. `/frontend/src/app/accounts/AccountCard.tsx`
 9. `/frontend/src/app/accounts/AccountRowActions.tsx`
 10. `/frontend/src/app/settings/page.tsx`
-11. `/frontend/src/components/layout/AppShell.tsx`
-12. `/frontend/src/components/layout/TopBar.tsx`
-13. `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`
-14. `/frontend/src/contexts/BackgroundJobsContext.tsx`
-15. `/frontend/src/lib/api.ts`
-16. `/backend/routers/findings.py`
+11. `/frontend/src/app/settings/settings-tabs.ts`
+12. `/frontend/src/app/settings/TeamSettingsTab.tsx`
+13. `/frontend/src/app/settings/OrganizationSettingsTab.tsx`
+14. `/frontend/src/app/settings/NotificationsSettingsTab.tsx`
+15. `/frontend/src/app/settings/IntegrationsSettingsTab.tsx`
+16. `/frontend/src/app/settings/GovernanceSettingsTab.tsx`
+17. `/frontend/src/app/settings/RemediationDefaultsTab.tsx`
+18. `/frontend/src/app/settings/ExportsComplianceTab.tsx`
+19. `/frontend/src/app/exports/page.tsx`
+20. `/frontend/src/app/baseline-report/page.tsx`
+21. `/frontend/src/components/layout/AppShell.tsx`
+22. `/frontend/src/components/layout/TopBar.tsx`
+23. `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`
+24. `/frontend/src/contexts/BackgroundJobsContext.tsx`
+25. `/frontend/src/lib/api.ts`
+26. `/backend/routers/findings.py`

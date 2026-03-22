@@ -26,6 +26,8 @@ The goal is to make the platform answer three questions quickly:
 
 `P3.5.1` already addressed the action-detail attack-story surface. The remaining roadmap is intentionally deferred until resumed explicitly.
 
+Phase 1 of the enterprise Attack Path implementation intentionally pulled forward a minimal visible `/attack-paths` page plus action-detail deep links. Phase 2 then added reusable shared path records, `path_id` deep links, and explainable path-ranking factors on that bounded surface. Those shipped slices still do not replace the broader Phase 3.5 roadmap below.
+
 ## Planned slices
 
 ### `P3.5.2` Risk Control Tower v1
@@ -191,6 +193,7 @@ When Phase 3.5 resumes:
 ## Related docs
 
 - [Attack Path view](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/attack-path-view.md)
+- [Attack Path enterprise implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/attack-path-enterprise-implementation-plan.md)
 - [Graph-backed action context](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/graph-backed-action-context.md)
 - [Business impact matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/business-impact-matrix.md)
 - [Recommendation mode matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/recommendation-mode-matrix.md)

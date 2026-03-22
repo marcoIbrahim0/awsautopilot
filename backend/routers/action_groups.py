@@ -25,7 +25,10 @@ from backend.models.remediation_run import RemediationRun
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
 from backend.services.action_groups import get_group_detail, list_groups_with_counters
-from backend.services.bundle_reporting_tokens import issue_group_run_reporting_token
+from backend.services.bundle_reporting_tokens import (
+    BundleReportingTokenSecretNotConfiguredError,
+    issue_group_run_reporting_token,
+)
 from backend.services.grouped_remediation_runs import (
     GroupedActionScope,
     GroupedRemediationRunValidationError,
@@ -118,6 +121,20 @@ class ActionGroupRunListItemResponse(BaseModel):
     reporting_source: str
     created_at: str
     updated_at: str
+    results: list["ActionGroupRunResultResponse"] = Field(default_factory=list)
+
+
+class ActionGroupRunResultResponse(BaseModel):
+    action_id: str
+    execution_status: str
+    execution_error_code: str | None
+    execution_error_message: str | None
+    result_type: str | None
+    support_tier: str | None
+    reason: str | None
+    blocked_reasons: list[str] = Field(default_factory=list)
+    execution_started_at: str | None
+    execution_finished_at: str | None
 
 
 class ActionGroupRunsResponse(BaseModel):
@@ -169,6 +186,59 @@ def _as_iso(value: object | None) -> str | None:
         return str(value)
     except Exception:
         return None
+
+
+def _as_action_group_execution_status(value: object) -> str:
+    return value.value if hasattr(value, "value") else str(value)
+
+
+def _group_run_result_type(raw_result: Mapping[str, Any]) -> str:
+    result_type = raw_result.get("result_type")
+    if isinstance(result_type, str) and result_type:
+        return result_type
+    return "executable"
+
+
+def _blocked_reasons_from_raw_result(raw_result: Mapping[str, Any], *, result_type: str) -> list[str]:
+    if result_type != "non_executable":
+        return []
+    blocked_reasons = raw_result.get("blocked_reasons")
+    if not isinstance(blocked_reasons, list):
+        return []
+    return [item for item in blocked_reasons if isinstance(item, str)]
+
+
+def _serialize_action_group_run_result(row: object) -> ActionGroupRunResultResponse:
+    raw_result = row.raw_result if isinstance(getattr(row, "raw_result", None), Mapping) else {}
+    result_type = _group_run_result_type(raw_result)
+    return ActionGroupRunResultResponse(
+        action_id=str(row.action_id),
+        execution_status=_as_action_group_execution_status(row.execution_status),
+        execution_error_code=row.execution_error_code,
+        execution_error_message=row.execution_error_message,
+        result_type=result_type,
+        support_tier=raw_result.get("support_tier") if result_type == "non_executable" else None,
+        reason=raw_result.get("reason") if result_type == "non_executable" else None,
+        blocked_reasons=_blocked_reasons_from_raw_result(raw_result, result_type=result_type),
+        execution_started_at=_as_iso(row.execution_started_at),
+        execution_finished_at=_as_iso(row.execution_finished_at),
+    )
+
+
+def _serialize_action_group_run(row: ActionGroupRun) -> ActionGroupRunListItemResponse:
+    return ActionGroupRunListItemResponse(
+        id=str(row.id),
+        remediation_run_id=str(row.remediation_run_id) if row.remediation_run_id else None,
+        initiated_by_user_id=str(row.initiated_by_user_id) if row.initiated_by_user_id else None,
+        mode=row.mode,
+        status=row.status.value if hasattr(row.status, "value") else str(row.status),
+        started_at=_as_iso(row.started_at),
+        finished_at=_as_iso(row.finished_at),
+        reporting_source=row.reporting_source,
+        created_at=_as_iso(row.created_at) or "",
+        updated_at=_as_iso(row.updated_at) or "",
+        results=[_serialize_action_group_run_result(result) for result in row.results],
+    )
 
 
 def _parse_group_uuid_or_400(group_id: str) -> uuid.UUID:
@@ -314,12 +384,18 @@ def _create_group_run_with_token(
         reporting_source="system",
     )
     callback_url = _reporting_callback_url()
-    token, token_jti, _ = issue_group_run_reporting_token(
-        tenant_id=tenant_id,
-        group_run_id=group_run.id,
-        group_id=group.id,
-        allowed_action_ids=action_ids,
-    )
+    try:
+        token, token_jti, _ = issue_group_run_reporting_token(
+            tenant_id=tenant_id,
+            group_run_id=group_run.id,
+            group_id=group.id,
+            allowed_action_ids=action_ids,
+        )
+    except BundleReportingTokenSecretNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     group_run.report_token_jti = token_jti
     return group_run, token, callback_url
 
@@ -588,22 +664,38 @@ async def get_action_group_runs(
         )
     ).scalars().all()
 
-    items = [
-        ActionGroupRunListItemResponse(
-            id=str(row.id),
-            remediation_run_id=str(row.remediation_run_id) if row.remediation_run_id else None,
-            initiated_by_user_id=str(row.initiated_by_user_id) if row.initiated_by_user_id else None,
-            mode=row.mode,
-            status=row.status.value if hasattr(row.status, "value") else str(row.status),
-            started_at=_as_iso(row.started_at),
-            finished_at=_as_iso(row.finished_at),
-            reporting_source=row.reporting_source,
-            created_at=_as_iso(row.created_at) or "",
-            updated_at=_as_iso(row.updated_at) or "",
-        )
-        for row in rows
-    ]
+    items = [_serialize_action_group_run(row) for row in rows]
     return ActionGroupRunsResponse(items=items, total=total)
+
+
+@router.get("/{group_id}/runs/{run_id}", response_model=ActionGroupRunListItemResponse)
+async def get_action_group_run(
+    group_id: Annotated[str, Path(description="Action group UUID")],
+    run_id: Annotated[str, Path(description="Action group run UUID")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
+    tenant_id: Annotated[Optional[str], Query(description="Tenant UUID for non-auth mode")] = None,
+) -> ActionGroupRunListItemResponse:
+    tenant_uuid = resolve_tenant_id(current_user, tenant_id)
+    await get_tenant(tenant_uuid, db)
+    try:
+        group_uuid = uuid.UUID(group_id)
+        run_uuid = uuid.UUID(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid group_id or run_id") from exc
+
+    row = (
+        await db.execute(
+            select(ActionGroupRun).where(
+                ActionGroupRun.tenant_id == tenant_uuid,
+                ActionGroupRun.group_id == group_uuid,
+                ActionGroupRun.id == run_uuid,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action group run not found")
+    return _serialize_action_group_run(row)
 
 
 @router.post(

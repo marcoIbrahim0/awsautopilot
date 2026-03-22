@@ -1,0 +1,84 @@
+{
+  "action_count": 2,
+  "actions": [
+    {
+      "action_id": "2a1c9d2f-b05d-48b3-bcec-d7645c5fd017",
+      "action_type": "sg_restrict_public_ports",
+      "blocked_reasons": [
+        "Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."
+      ],
+      "control_id": "EC2.53",
+      "decision_rationale": "Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver preserved the explicit profile 'ssm_only' for strategy 'sg_restrict_public_ports_guided'. Downgrade reasons: Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "manual_guidance/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-2a1c9d2f",
+      "has_runnable_terraform": false,
+      "index": 1,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "manual_guidance_metadata_only",
+      "preservation_summary": {
+        "single_profile_compatible": false,
+        "strategy_only_supported": true
+      },
+      "profile_id": "ssm_only",
+      "rejected_profiles": [],
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "strategy_inputs": {},
+      "support_tier": "manual_guidance_only",
+      "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b|EC2.53",
+      "tier": "manual_guidance",
+      "tier_root": "manual_guidance/actions",
+      "title": "Security groups should not allow unrestricted access to ports with high risk"
+    },
+    {
+      "action_id": "ad9328e1-faf2-4fd4-9885-c7f8c50c7d14",
+      "action_type": "sg_restrict_public_ports",
+      "blocked_reasons": [],
+      "bundle_rollback_command": "python3 ./executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-ad9328e1/rollback/sg_restore.py",
+      "bundle_rollback_path": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-ad9328e1/rollback/sg_restore.py",
+      "bundle_rollback_runner": "python3",
+      "control_id": "EC2.53",
+      "decision_rationale": "Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver preserved the explicit profile 'close_and_revoke' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "executable/actions/02-arn-aws-ec2-eu-north-1-696505809372-security-gro-ad9328e1",
+      "has_runnable_terraform": true,
+      "index": 2,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "executable_bundle_generated",
+      "preservation_summary": {
+        "single_profile_compatible": false,
+        "strategy_only_supported": true
+      },
+      "profile_id": "close_and_revoke",
+      "rejected_profiles": [],
+      "strategy_id": "sg_restrict_public_ports_guided",
+      "strategy_inputs": {
+        "access_mode": "close_and_revoke"
+      },
+      "support_tier": "deterministic_bundle",
+      "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53",
+      "tier": "executable",
+      "tier_root": "executable/actions",
+      "title": "Security groups should not allow unrestricted access to ports with high risk"
+    }
+  ],
+  "execution_root": "executable/actions",
+  "grouped_actions": [
+    "2a1c9d2f-b05d-48b3-bcec-d7645c5fd017",
+    "ad9328e1-faf2-4fd4-9885-c7f8c50c7d14"
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 1,
+  "runner_template_source": "embedded_mixed_tier",
+  "runner_template_version": "grouped_bundle_mixed_tier/v1",
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 1,
+    "review_required": 0
+  }
+}

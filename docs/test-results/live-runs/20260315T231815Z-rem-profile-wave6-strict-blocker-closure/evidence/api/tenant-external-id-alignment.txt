@@ -1,0 +1,5 @@
+                  id                  |        name         |        external_id        
+--------------------------------------+---------------------+---------------------------
+ 89fa1ba7-bb60-4a0d-ba2f-5b4f19da82fd | RPW6 Strict Closure | ocypheris-p2-e2e-20260312
+(1 row)
+

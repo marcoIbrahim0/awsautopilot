@@ -1,0 +1,11 @@
+01	config-bucket-696505809372	match
+02	security-autopilot-w6-envready-cloudtrail-696505809372	match
+03	security-autopilot-w6-strict-s315-exec-696505809372	match
+04	security-autopilot-w6-envready-accesslogs-696505809372	match
+05	security-autopilot-w6-strict-s315-manual-696505809372	match
+06	security-autopilot-w6-strict-s311-manual-696505809372	match
+07	security-autopilot-w6-strict-s311-exec-696505809372	match
+08	security-autopilot-w6-envready-s315-exec-696505809372	match
+09	security-autopilot-w6-envready-s311-exec-696505809372	match
+10	security-autopilot-w6-envready-s311-review-696505809372	match
+11	security-autopilot-w6-envready-config-696505809372	match

@@ -1,5 +1,5 @@
 """
-AWS account resource teardown utilities for account disconnect flow.
+AWS account resource teardown utilities for explicit admin-only disconnect flows.
 
 Best-effort cleanup targets resources created by onboarding templates:
 - IAM roles: SecurityAutopilotReadRole / SecurityAutopilotWriteRole
@@ -14,7 +14,11 @@ from typing import Iterable
 from botocore.exceptions import ClientError
 
 from backend.models.aws_account import AwsAccount
-from backend.services.aws import assume_role
+from backend.services.aws import (
+    API_ASSUME_ROLE_SOURCE_IDENTITY,
+    assume_role,
+    build_assume_role_tags,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +66,15 @@ def _candidate_role_names(account: AwsAccount) -> set[str]:
 
 def _candidate_policy_names() -> set[str]:
     return set(DEFAULT_POLICY_NAMES)
+
+
+def _ensure_runtime_cleanup_authorized(authorized: bool) -> None:
+    if authorized:
+        return
+    raise AwsCleanupError(
+        "Runtime IAM cleanup is not authorized. "
+        "Use customer-initiated CloudFormation stack deletion instead."
+    )
 
 
 def _is_no_such_entity(err: ClientError) -> bool:
@@ -126,7 +139,12 @@ def _assume_first_available_role(role_arns: Iterable[str | None], external_id: s
         if not role_arn:
             continue
         try:
-            return assume_role(role_arn=role_arn, external_id=external_id)
+            return assume_role(
+                role_arn=role_arn,
+                external_id=external_id,
+                source_identity=API_ASSUME_ROLE_SOURCE_IDENTITY,
+                tags=build_assume_role_tags(service_component="api", tenant_id=None),
+            )
         except ClientError as err:
             code = err.response.get("Error", {}).get("Code", "Unknown")
             message = err.response.get("Error", {}).get("Message", str(err))
@@ -136,40 +154,30 @@ def _assume_first_available_role(role_arns: Iterable[str | None], external_id: s
     raise AwsCleanupError("Unable to assume cleanup role. " + " | ".join(assume_errors))
 
 
-def cleanup_account_resources(account: AwsAccount, external_id: str) -> CleanupSummary:
-    """
-    Delete Autopilot IAM resources in the customer account before disconnect.
-
-    This function intentionally fails hard on AWS permission errors so callers can
-    block account removal when cleanup cannot complete.
-    """
-    session = _assume_first_available_role(
-        role_arns=[account.role_write_arn, account.role_read_arn],
-        external_id=external_id,
-    )
-    iam = session.client("iam")
-
-    candidate_policy_names = _candidate_policy_names()
+def _delete_candidate_roles(iam, account: AwsAccount) -> tuple[set[str], set[str], set[str]]:
     roles_deleted: set[str] = set()
     roles_missing: set[str] = set()
-    policies_deleted: set[str] = set()
-    policies_missing: set[str] = set()
-
     detached_policy_arns: set[str] = set()
     for role_name in _candidate_role_names(account):
         deleted, detached, _inline_deleted = _delete_role_and_attachments(iam, role_name)
         detached_policy_arns.update(detached)
-        if deleted:
-            roles_deleted.add(role_name)
-        else:
-            roles_missing.add(role_name)
+        target = roles_deleted if deleted else roles_missing
+        target.add(role_name)
+    return roles_deleted, roles_missing, detached_policy_arns
 
-    for policy_arn in detached_policy_arns:
+
+def _delete_candidate_policies(
+    iam,
+    candidate_policy_names: set[str],
+    detached_policy_arns: set[str],
+) -> tuple[set[str], set[str]]:
+    policies_deleted: set[str] = set()
+    policies_missing: set[str] = set()
+    for policy_arn in sorted(detached_policy_arns):
         policy_name = policy_arn.rsplit("/", 1)[-1]
         if policy_name in candidate_policy_names and _delete_managed_policy(iam, policy_arn):
             policies_deleted.add(policy_name)
-
-    for policy_name in candidate_policy_names:
+    for policy_name in sorted(candidate_policy_names):
         if policy_name in policies_deleted:
             continue
         policy_arn = _find_customer_policy_arn(iam, policy_name)
@@ -178,6 +186,33 @@ def cleanup_account_resources(account: AwsAccount, external_id: str) -> CleanupS
             continue
         if _delete_managed_policy(iam, policy_arn):
             policies_deleted.add(policy_name)
+    return policies_deleted, policies_missing
+
+
+def _log_cleanup_summary(account_id: str, summary: CleanupSummary) -> None:
+    logger.info(
+        "AWS account cleanup summary account_id=%s roles_deleted=%s policies_deleted=%s roles_missing=%s policies_missing=%s",
+        account_id,
+        sorted(summary.roles_deleted),
+        sorted(summary.policies_deleted),
+        sorted(summary.roles_missing),
+        sorted(summary.policies_missing),
+    )
+
+
+def cleanup_account_resources(
+    account: AwsAccount,
+    external_id: str,
+    *,
+    _authorized: bool = False,
+) -> CleanupSummary:
+    """Delete Autopilot IAM resources in the customer account when explicitly authorized."""
+    _ensure_runtime_cleanup_authorized(_authorized)
+    session = _assume_first_available_role(role_arns=[account.role_read_arn], external_id=external_id)
+    iam = session.client("iam")
+    candidate_policy_names = _candidate_policy_names()
+    roles_deleted, roles_missing, detached_policy_arns = _delete_candidate_roles(iam, account)
+    policies_deleted, policies_missing = _delete_candidate_policies(iam, candidate_policy_names, detached_policy_arns)
 
     summary = CleanupSummary(
         roles_deleted=roles_deleted,
@@ -185,12 +220,5 @@ def cleanup_account_resources(account: AwsAccount, external_id: str) -> CleanupS
         roles_missing=roles_missing,
         policies_missing=policies_missing,
     )
-    logger.info(
-        "AWS account cleanup summary account_id=%s roles_deleted=%s policies_deleted=%s roles_missing=%s policies_missing=%s",
-        account.account_id,
-        sorted(summary.roles_deleted),
-        sorted(summary.policies_deleted),
-        sorted(summary.roles_missing),
-        sorted(summary.policies_missing),
-    )
+    _log_cleanup_summary(account.account_id, summary)
     return summary

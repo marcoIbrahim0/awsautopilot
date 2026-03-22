@@ -1,0 +1,6 @@
+{
+  "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+  "policy_exists": true,
+  "statement_count": 3,
+  "sha256": "672d3501e18245c8a219cb5debf642901231f4981ce4f234507421ed9b5c2cc7"
+}

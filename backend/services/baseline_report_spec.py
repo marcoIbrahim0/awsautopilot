@@ -56,7 +56,7 @@ TOP_RISKS_FIELDS: tuple[str, ...] = (
 )
 
 SeverityLiteral = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]
-RecommendedModeLiteral = Literal["direct_fix", "pr_only"]
+RecommendedModeLiteral = Literal["pr_only", "exception_review"]
 ConfidenceGapCategoryLiteral = Literal["access_denied", "partial_data", "api_error", "telemetry_gap"]
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,23 @@ Delivery contract:
 - Secret-safe persistence/logging: payload redaction and masked webhook logging.
 - Remediation-run Slack and webhook payloads now include additive `escalation` context when the linked action is high-impact and already `expiring` or `overdue`.
   - Fields: `risk_tier`, `sla_state`, `owner_label`, `due_at`, `escalation_reason`.
+- Every successful `in_app` governance notification now mirrors into the dashboard notification center so the navbar bell can render the same alert timeline with per-user unread/archive state.
+
+### Dashboard notification center mirror
+
+The authenticated dashboard bell now uses the additive notification-center API:
+
+- `GET /api/notifications`
+- `PUT /api/notifications/jobs/{client_key}`
+- `PATCH /api/notifications/state`
+
+Current behavior:
+
+- governance `in_app` rows remain persisted in `governance_notifications` as the audit/history source of truth
+- mirrored bell items live in `app_notifications`
+- per-user unread/archive state lives in `app_notification_user_states`
+- recent `in_app` governance rows are backfilled into the notification center for the last `30` days
+- user-triggered async jobs are persisted for the initiating user only, while governance alerts remain tenant-visible
 
 ### Exception governance
 
@@ -79,6 +96,9 @@ Endpoints:
 - `POST /api/governance/exceptions/reminders/dispatch`
 - `GET /api/governance/notifications`
 - `GET /api/governance/dashboard`
+- `GET /api/notifications`
+- `PUT /api/notifications/jobs/{client_key}`
+- `PATCH /api/notifications/state`
 
 Contract headers:
 - `Idempotency-Key` required for mutating governance endpoints.
@@ -107,9 +127,12 @@ User settings endpoints:
 
 Additive migration:
 - `alembic/versions/0037_communication_governance_layer.py`
+- `alembic/versions/0043_notification_center.py`
 
 New table:
 - `governance_notifications`
+- `app_notifications`
+- `app_notification_user_states`
 
 Updated tables:
 - `exceptions`
@@ -124,6 +147,9 @@ flowchart TD
     C --> F["email channel"]
     C --> G["slack channel (optional, escalation-aware)"]
     C --> H["webhook channel (optional, escalation-aware)"]
+    E --> O["app_notifications mirror"]
+    O --> P["app_notification_user_states"]
+    P --> Q["dashboard bell: dropdown or mobile sheet"]
     B --> I["exceptions governance fields"]
     B --> J["dashboard aggregation (actions/runs/exceptions)"]
     K["weekly_digest job"] --> L["email digest"]

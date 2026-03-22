@@ -1,5 +1,7 @@
 # Task 7 Implementation Status Classification
 
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the tables below reflect the February 2026 snapshot, not the current product direction.
+
 Audit source preflight result: `docs/prod-readiness/02-audit-security-backend.md`, `03-audit-reliability-observability.md`, and `04-audit-deployment-frontend-compliance.md` are missing. Audit-dependent broken-state judgments are treated as `unknown (audit source missing)`.
 
 FEATURE IMPLEMENTATION STATUS MASTER TABLE

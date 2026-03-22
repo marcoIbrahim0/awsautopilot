@@ -1,0 +1,19 @@
+{
+  "run_id": "20260320T003851Z-issue2-live-closure-rerun",
+  "result": "PASS",
+  "accounts_page_status": "validated",
+  "account_detail_status": "validated",
+  "template_version": "v1.5.8",
+  "read_role_custom_stack_preserves_execution_roles": true,
+  "write_role_custom_stack_preserves_execution_roles": true,
+  "launch_link_surface": "Connect AWS account modal plus validated account detail workflow",
+  "notes": [
+    "The healthy-state Accounts surface currently does not expose a separate reconnect button.",
+    "The same Launch Stack builder was re-validated through the shared account-connect modal."
+  ],
+  "screenshots": [
+    "issue2-live-accounts-validated.png",
+    "issue2-live-account-detail-validated.png",
+    "issue2-live-connect-modal-custom-stack-links.png"
+  ]
+}

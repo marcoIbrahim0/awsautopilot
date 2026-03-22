@@ -6,6 +6,8 @@ This feature adds an auditable recommendation engine that derives a default reme
 
 Implemented in Phase 3 P1.8.
 
+> ⚠️ Current scope: recommendation output no longer emits `direct_fix_candidate`. Active values are `pr_only` and `exception_review`.
+
 ## Implemented source files
 
 - `backend/services/action_recommendation.py`
@@ -21,7 +23,7 @@ The payload shape is:
 
 - `mode`
   - effective recommendation mode after any explicit policy override
-  - values: `direct_fix_candidate`, `pr_only`, `exception_review`
+  - values: `pr_only`, `exception_review`
 - `default_mode`
   - matrix-derived default before policy override
 - `advisory`
@@ -45,7 +47,7 @@ The payload shape is:
   - `exploit_signals`
   - `matched_signals[]`
 
-The contract is additive. Existing `mode_options`, remediation preview, remediation-run creation, and direct-fix approval enforcement remain unchanged.
+The contract is additive. Existing `mode_options`, remediation preview, and remediation-run creation remain unchanged; current execution scope stays PR-only.
 
 ## Matrix mapping
 
@@ -53,10 +55,10 @@ The current implementation uses a 3x3 matrix:
 
 ```mermaid
 flowchart TD
-    A["Risk: low<br/>Criticality: low"] --> A1["direct_fix_candidate"]
-    B["Risk: medium<br/>Criticality: low"] --> B1["direct_fix_candidate"]
-    C["Risk: high<br/>Criticality: low"] --> C1["direct_fix_candidate"]
-    D["Risk: low<br/>Criticality: medium"] --> D1["direct_fix_candidate"]
+    A["Risk: low<br/>Criticality: low"] --> A1["pr_only"]
+    B["Risk: medium<br/>Criticality: low"] --> B1["pr_only"]
+    C["Risk: high<br/>Criticality: low"] --> C1["pr_only"]
+    D["Risk: low<br/>Criticality: medium"] --> D1["pr_only"]
     E["Risk: medium<br/>Criticality: medium"] --> E1["pr_only"]
     F["Risk: high<br/>Criticality: medium"] --> F1["pr_only"]
     G["Risk: low<br/>Criticality: high"] --> G1["pr_only"]
@@ -98,8 +100,6 @@ The implementation only forces an override when an explicit policy already exist
 - root-credential/manual-high-risk actions force `exception_review`
 - unmapped `pr_only` actions force `exception_review`
 
-If the matrix recommends `direct_fix_candidate` but the current action only exposes `mode_options=["pr_only"]`, the recommendation stays advisory and does not change execution behavior.
-
 ## Data flow
 
 ```mermaid
@@ -119,7 +119,6 @@ flowchart TD
 `tests/test_phase3_p1_8_recommendation_mode.py` covers:
 
 - all nine matrix cells
-- advisory direct-fix-candidate behavior when no direct-fix mode is exposed
 - explicit policy overrides for manual-high-risk and unmapped `pr_only` actions
 - API exposure on both `GET /api/actions/{id}` and `GET /api/actions/{id}/remediation-options`
 

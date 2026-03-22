@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - heading "Session expired" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Your session has ended. Please sign in again to continue.
+    - button "Go to sign in" [ref=e8]:
+      - generic [ref=e9]: Go to sign in
+  - alert [ref=e10]

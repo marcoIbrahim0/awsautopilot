@@ -1,5 +1,11 @@
 # PR Bundle Artifact Readiness
 
+> Scope note: This folder mixes active PR-bundle readiness docs with historical February-March 2026 discovery and deployment snapshots.
+>
+> Current contract note (2026-03-19): onboarding is ReadRole-only, customer-run PR bundles are the only supported remediation path, and customer `WriteRole` / `direct_fix` are out of scope.
+>
+> Treat this README, [docs/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/README.md), and [project_status.md](/Users/marcomaher/AWS%20Security%20Autopilot/.cursor/notes/project_status.md) as the current contract. Treat the `01-*`, `06-*`, `07-*`, and `08-*` raw extraction or deployment snapshot files as historical evidence unless they explicitly say otherwise.
+
 This document defines the production-readiness contract for PR bundle generation in [`backend/services/pr_bundle.py`](../../backend/services/pr_bundle.py) and worker execution in [`backend/workers/jobs/remediation_run.py`](../../backend/workers/jobs/remediation_run.py).
 
 ## Contract

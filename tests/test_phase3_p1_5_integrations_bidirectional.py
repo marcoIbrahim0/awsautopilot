@@ -228,7 +228,91 @@ def test_plan_action_sync_tasks_create_update_and_reopen_operations() -> None:
     assert created_tasks[2].payload_json["external_status"] == "To Do"
 
 
-def test_process_inbound_event_updates_platform_state_from_jira_webhook() -> None:
+def test_plan_action_sync_tasks_requeues_failed_task_for_same_signature() -> None:
+    tenant_id = uuid.uuid4()
+    action = _action(
+        tenant_id=tenant_id,
+        action_id=uuid.uuid4(),
+        status=ACTION_STATUS_OPEN,
+        owner_key="unassigned",
+        owner_label="Unassigned",
+    )
+    failed_task = IntegrationSyncTask(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        action_id=action.id,
+        provider="jira",
+        operation=SYNC_OPERATION_CREATE,
+        status="failed",
+        trigger="api.manual_sync",
+        request_signature="sig-existing",
+        payload_json={"operation": "create"},
+        result_json={"old": "result"},
+        attempt_count=1,
+        last_error="boom",
+        started_at=datetime(2026, 3, 21, 20, 0, tzinfo=timezone.utc),
+        completed_at=datetime(2026, 3, 21, 20, 1, tzinfo=timezone.utc),
+    )
+    session = _session_with_identity_flush()
+    session.execute.side_effect = [
+        _scalars_result([action]),
+        _scalars_result([]),
+        _scalars_result([_setting(tenant_id=tenant_id, provider="jira")]),
+        _scalar_result(failed_task),
+    ]
+
+    task_ids = plan_action_sync_tasks(
+        session,
+        tenant_id=tenant_id,
+        action_ids=[action.id],
+        reopened_action_ids=set(),
+        trigger="worker.compute_actions",
+    )
+
+    assert task_ids == [failed_task.id]
+    assert failed_task.status == "queued"
+    assert failed_task.operation == SYNC_OPERATION_CREATE
+    assert failed_task.trigger == "worker.compute_actions"
+    assert failed_task.last_error is None
+    assert failed_task.result_json is None
+    assert failed_task.started_at is None
+    assert failed_task.completed_at is None
+    session.add.assert_not_called()
+
+
+def test_plan_action_sync_tasks_omits_non_user_owner_from_outbound_payload() -> None:
+    tenant_id = uuid.uuid4()
+    action = _action(
+        tenant_id=tenant_id,
+        action_id=uuid.uuid4(),
+        status=ACTION_STATUS_OPEN,
+        owner_key="ebs",
+        owner_label="Amazon EBS",
+    )
+    action.owner_type = "service"
+    session = _session_with_identity_flush()
+    session.execute.side_effect = [
+        _scalars_result([action]),
+        _scalars_result([]),
+        _scalars_result([_setting(tenant_id=tenant_id, provider="jira")]),
+        _scalar_result(None),
+    ]
+
+    task_ids = plan_action_sync_tasks(
+        session,
+        tenant_id=tenant_id,
+        action_ids=[action.id],
+        reopened_action_ids=set(),
+        trigger="worker.compute_actions",
+    )
+
+    assert len(task_ids) == 1
+    created_task = session.add.call_args.args[0]
+    assert created_task.payload_json["external_assignee_key"] is None
+    assert created_task.payload_json["external_assignee_label"] is None
+
+
+def test_process_inbound_event_preserves_canonical_platform_state_from_jira_webhook() -> None:
     tenant_id = uuid.uuid4()
     action = _action(
         tenant_id=tenant_id,
@@ -253,40 +337,35 @@ def test_process_inbound_event_updates_platform_state_from_jira_webhook() -> Non
         _scalar_result(action),
     ]
 
-    def _apply_status(*args, **kwargs) -> SimpleNamespace:
-        kwargs["action"].status = kwargs["target_status"]
-        return SimpleNamespace(status_after=kwargs["target_status"])
-
-    with patch("backend.services.integration_sync.apply_canonical_action_status", side_effect=_apply_status) as mock_apply:
+    with patch("backend.services.integration_sync.record_reconciled_external_status") as mock_reconcile:
         with patch(
-            "backend.services.integration_sync.record_reconciled_external_status",
-            return_value=SimpleNamespace(sync_status="in_sync", mapped_internal_status="in_progress"),
-        ) as mock_reconcile:
-            with patch("backend.services.integration_sync.record_external_status_observation") as mock_observe:
-                result = process_inbound_event(
-                    session,
-                    provider="jira",
-                    webhook_token="secret-token",
-                    event={
-                        "webhookEvent": "jira:issue_updated",
-                        "issue": {
-                            "key": "SEC-1",
-                            "fields": {
-                                "status": {"name": "In Progress"},
-                                "assignee": {"accountId": "acct-42", "displayName": "On Call"},
-                                "updated": "2026-03-12T10:15:00Z",
-                            },
+            "backend.services.integration_sync.record_external_status_observation",
+            return_value=SimpleNamespace(sync_status="drifted", mapped_internal_status="in_progress"),
+        ) as mock_observe:
+            result = process_inbound_event(
+                session,
+                provider="jira",
+                webhook_token="secret-token",
+                event={
+                    "webhookEvent": "jira:issue_updated",
+                    "issue": {
+                        "key": "SEC-1",
+                        "fields": {
+                            "status": {"name": "In Progress"},
+                            "assignee": {"accountId": "acct-42", "displayName": "On Call"},
+                            "updated": "2026-03-12T10:15:00Z",
                         },
                     },
-                    event_id="jira-evt-1",
-                )
+                },
+                event_id="jira-evt-1",
+            )
 
     assert result.replayed is False
     assert result.applied is True
     assert result.action_id == action.id
-    assert result.action_status == "in_progress"
+    assert result.action_status == "resolved"
     assert result.owner_key == "acct-42"
-    assert action.status == "in_progress"
+    assert action.status == "resolved"
     assert action.owner_key == "acct-42"
     assert action.owner_label == "On Call"
     assert link.external_status == "In Progress"
@@ -297,10 +376,10 @@ def test_process_inbound_event_updates_platform_state_from_jira_webhook() -> Non
     assert isinstance(receipt, IntegrationEventReceipt)
     assert receipt.status == "processed"
     assert receipt.action_id == action.id
-    assert receipt.result_json["result"]["action_status"] == "in_progress"
-    mock_apply.assert_called_once()
-    mock_reconcile.assert_called_once()
-    mock_observe.assert_not_called()
+    assert receipt.result_json["result"]["action_status"] == "resolved"
+    assert receipt.result_json["result"]["sync_status"] == "drifted"
+    mock_reconcile.assert_not_called()
+    mock_observe.assert_called_once()
 
 
 def test_process_inbound_event_replays_duplicate_receipt_after_integrity_error() -> None:

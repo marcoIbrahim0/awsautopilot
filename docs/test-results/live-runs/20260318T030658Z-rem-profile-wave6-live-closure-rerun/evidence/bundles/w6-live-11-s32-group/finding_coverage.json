@@ -1,0 +1,20 @@
+{
+  "actions": [
+    {
+      "action_id": "a5bbba51-b5a8-4176-8f93-e9d0c376ade5",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "b32b4a18-4da2-4f94-acf3-0ec4f2e555db",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "0d206e57-2a9a-4d7e-abda-da73a5e93695",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

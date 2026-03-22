@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "bucket_name": "config-bucket-696505809372",
+  "region": "eu-north-1",
+  "encryption_exists": true,
+  "encryption_configuration": {
+    "Rules": [
+      {
+        "ApplyServerSideEncryptionByDefault": {
+          "SSEAlgorithm": "AES256"
+        },
+        "BucketKeyEnabled": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+INFO:     Started server process [68989]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53862 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53877 - "POST /api/auth/signup HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:53908 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53912 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53915 - "GET /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53916 - "PATCH /api/users/me/remediation-settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53917 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:53968 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-18T02:45:41Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53977 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-18T02:45:41Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53984 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-18T02:45:41Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54033 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54034 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54047 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54048 - "GET /api/action-groups?action_type=sg_restrict_public_ports&account_id=696505809372&region=eu-north-1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54051 - "GET /api/action-groups/f29f469e-710a-4f4a-8db1-c4a3ae21705a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54052 - "GET /api/actions/d740b079-2fe0-40ec-baa0-efe3e0e01a2b/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=close_and_revoke HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54055 - "GET /api/actions/0d5b9a29-bd79-4454-a9c4-c0a5c62479e0/remediation-preview?mode=pr_only&strategy_id=sg_restrict_public_ports_guided&profile_id=ssm_only HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54058 - "POST /api/action-groups/f29f469e-710a-4f4a-8db1-c4a3ae21705a/bundle-run HTTP/1.1" 201 Created
+INFO:     127.0.0.1:54064 - "GET /api/remediation-runs/21f55c01-de18-4ef5-bc75-29fc6be3ee48 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54066 - "GET /api/remediation-runs/21f55c01-de18-4ef5-bc75-29fc6be3ee48 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54067 - "GET /api/action-groups/f29f469e-710a-4f4a-8db1-c4a3ae21705a/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54068 - "GET /api/remediation-runs/21f55c01-de18-4ef5-bc75-29fc6be3ee48/pr-bundle.zip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54076 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54224 - "POST /api/internal/group-runs/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54241 - "GET /api/remediation-runs/21f55c01-de18-4ef5-bc75-29fc6be3ee48 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54242 - "GET /api/action-groups/f29f469e-710a-4f4a-8db1-c4a3ae21705a/runs HTTP/1.1" 200 OK

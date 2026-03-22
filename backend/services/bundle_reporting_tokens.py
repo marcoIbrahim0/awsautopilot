@@ -11,9 +11,17 @@ from backend.config import settings
 ALGORITHM = "HS256"
 
 
+class BundleReportingTokenSecretNotConfiguredError(RuntimeError):
+    """Raised when bundle reporting token signing is attempted without a dedicated secret."""
+
+
 def _secret() -> str:
     configured = (getattr(settings, "BUNDLE_REPORTING_TOKEN_SECRET", "") or "").strip()
-    return configured or settings.JWT_SECRET
+    if configured:
+        return configured
+    raise BundleReportingTokenSecretNotConfiguredError(
+        "BUNDLE_REPORTING_TOKEN_SECRET is not configured. Bundle reporting tokens require a dedicated signing secret."
+    )
 
 
 def issue_group_run_reporting_token(

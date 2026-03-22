@@ -1,4 +1,6 @@
 ---
+Historical deployment note (2026-03-19): this report captures a February 27, 2026 test environment snapshot. The `WRITE_ROLE_ARN` value below is historical environment evidence only and is not part of the current onboarding contract.
+
 Deployed AWS security test environment to account 029037611564 
 in region eu-north-1 on 2026-02-27 18:50:55 UTC.
 

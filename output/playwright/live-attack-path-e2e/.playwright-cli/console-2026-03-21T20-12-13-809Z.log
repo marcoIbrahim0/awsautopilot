@@ -1,0 +1,11 @@
+[     121ms] [WARNING] {msg: An error has occurred checking the feature gate. Only the first occurrence of this error is logged., gateName: platform_ufo_self_timings, error: Error: Client must be initialized before using this method
+    at e.value (https://id-frontend.prod…} @ https://id-frontend.prod-east.frontend.public.atl-paas.net/assets/index.0951b5ba.js:39
+[     176ms] [WARNING] Multiple versions of FeatureGateClients found on the current page.
+      The currently bound version is 5.5.4 when module version 4.26.5 was loading. @ https://id-frontend.prod-east.frontend.public.atl-paas.net/assets/index.0951b5ba.js:39
+[    4897ms] [WARNING] Multiple versions of FeatureGateClients found on the current page.
+      The currently bound version is 5.5.4 when module version 4.26.5 was loading. @ https://manage-profile-ui.prod-east.frontend.public.atl-paas.net/assets/index.1153b995.js:82
+[    4920ms] [WARNING] Deprecation warning: Moment Timezone has been loaded from a file containing data from 2012 to 2022 only. This file is out of date and may be removed in a future release. Dates and times for the current year might be incorrect. @ https://manage-profile-ui.prod-east.frontend.public.atl-paas.net/assets/index.1153b995.js:158
+[    5022ms] [WARNING] Multiple versions of FeatureGateClients found on the current page.
+      The currently bound version is 5.5.4 when module version undefined was loading. @ https://manage-profile-ui.prod-east.frontend.public.atl-paas.net/assets/index.1153b995.js:429
+[    6099ms] [WARNING] WidthDetector will be deprecated, please use WidthObserver from @atlaskit/width-detector instead. @ https://manage-profile-ui.prod-east.frontend.public.atl-paas.net/assets/esm.648395e5.js:0
+[    6102ms] [WARNING] WidthDetector will be deprecated, please use WidthObserver from @atlaskit/width-detector instead. @ https://manage-profile-ui.prod-east.frontend.public.atl-paas.net/assets/esm.648395e5.js:0

@@ -1,0 +1,8 @@
+{
+    "DeliveryChannels": [
+        {
+            "name": "default",
+            "s3BucketName": "security-autopilot-w6-envready-config-696505809372"
+        }
+    ]
+}

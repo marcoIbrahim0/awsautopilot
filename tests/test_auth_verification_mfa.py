@@ -194,34 +194,35 @@ def test_resend_email_verification_generates_magic_link(client: TestClient) -> N
     async def override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
 
-    async def fake_build_link(target_user: SimpleNamespace) -> str:
+    async def fake_build_delivery(target_user: SimpleNamespace) -> auth_router.FirebaseDeliveryResponse:
         target_user.firebase_uid = "fb-user-123"
         target_user.email_verification_sync_token_hash = "hash"
         target_user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
+        return auth_router.FirebaseDeliveryResponse(
+            custom_token="firebase-custom-token",
+            continue_url="https://app.example.com/verify-email/callback?vt=sync-token",
+        )
 
     app.dependency_overrides[get_db] = override_get_db
 
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
-        patch("backend.routers.auth.email_service.send_verification_link_email", return_value=True) as mocked_send,
+        patch("backend.routers.auth._build_firebase_delivery", side_effect=fake_build_delivery),
+        patch("backend.routers.auth._decode_verification_resend_ticket", return_value={"sub": str(user.id), "email": user.email}),
+        patch("backend.routers.auth._issue_verification_resend_ticket", return_value="fresh-resend-ticket"),
     ):
         response = client.post(
             "/api/auth/verify/resend",
-            json={"email": "verify-resend@example.com"},
+            json={"resend_ticket": "valid-ticket"},
         )
 
     assert response.status_code == 200
     assert response.json()["message"] == auth_router.VERIFICATION_RESEND_GENERIC_MESSAGE
+    assert response.json()["resend_ticket"] == "fresh-resend-ticket"
+    assert response.json()["firebase_delivery"]["custom_token"] == "firebase-custom-token"
     session.commit.assert_awaited_once()
-    mocked_send.assert_called_once_with(
-        to_email="verify-resend@example.com",
-        verification_link="https://verify.example.com/link",
-    )
 
-
-def test_resend_email_verification_rejects_when_delivery_is_unavailable(client: TestClient) -> None:
+def test_resend_email_verification_rejects_invalid_ticket(client: TestClient) -> None:
     session = MagicMock()
     session.execute = AsyncMock()
     session.commit = AsyncMock()
@@ -234,26 +235,27 @@ def test_resend_email_verification_rejects_when_delivery_is_unavailable(client: 
 
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch.object(auth_router.settings, "ENV", "prod"),
-        patch.object(auth_router.email_service, "smtp_host", None),
-        patch.object(auth_router.email_service, "from_address", ""),
+        patch(
+            "backend.routers.auth._decode_verification_resend_ticket",
+            side_effect=auth_router.HTTPException(status_code=400, detail="invalid_or_expired_resend_ticket"),
+        ),
     ):
         response = client.post(
             "/api/auth/verify/resend",
-            json={"email": "verify-unavailable@example.com"},
+            json={"resend_ticket": "bad-ticket"},
         )
 
-    assert response.status_code == 503
-    assert response.json()["detail"] == auth_router.VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid_or_expired_resend_ticket"
     session.execute.assert_not_awaited()
     session.commit.assert_not_awaited()
 
 
-def test_resend_email_verification_fails_closed_when_send_fails(client: TestClient) -> None:
+def test_resend_email_verification_rejects_missing_or_verified_user(client: TestClient) -> None:
     user = SimpleNamespace(
         id=uuid.uuid4(),
         email="verify-send-fail@example.com",
-        email_verified=False,
+        email_verified=True,
         firebase_uid=None,
         email_verification_sync_token_hash=None,
         email_verification_sync_expires_at=None,
@@ -266,33 +268,23 @@ def test_resend_email_verification_fails_closed_when_send_fails(client: TestClie
     async def override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
 
-    async def fake_build_link(target_user: SimpleNamespace) -> str:
-        target_user.firebase_uid = "fb-user-123"
-        target_user.email_verification_sync_token_hash = "hash"
-        target_user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
-
     app.dependency_overrides[get_db] = override_get_db
 
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch.object(auth_router.settings, "ENV", "prod"),
-        patch.object(auth_router.email_service, "smtp_host", "smtp.example.com"),
-        patch.object(auth_router.email_service, "from_address", "verify@ocypheris.com"),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
-        patch("backend.routers.auth.email_service.send_verification_link_email", return_value=False),
+        patch("backend.routers.auth._decode_verification_resend_ticket", return_value={"sub": str(user.id), "email": user.email}),
     ):
         response = client.post(
             "/api/auth/verify/resend",
-            json={"email": "verify-send-fail@example.com"},
+            json={"resend_ticket": "valid-ticket"},
         )
 
-    assert response.status_code == 503
-    assert response.json()["detail"] == auth_router.VERIFICATION_EMAIL_DELIVERY_UNAVAILABLE
-    session.commit.assert_awaited_once()
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid_or_expired_resend_ticket"
+    session.commit.assert_not_awaited()
 
 
-def test_resend_email_verification_keeps_local_log_only_behavior(client: TestClient) -> None:
+def test_resend_email_verification_ignores_smtp(client: TestClient) -> None:
     user = SimpleNamespace(
         id=uuid.uuid4(),
         email="verify-local@example.com",
@@ -309,28 +301,34 @@ def test_resend_email_verification_keeps_local_log_only_behavior(client: TestCli
     async def override_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
 
-    async def fake_build_link(target_user: SimpleNamespace) -> str:
+    async def fake_build_delivery(target_user: SimpleNamespace) -> auth_router.FirebaseDeliveryResponse:
         target_user.firebase_uid = "fb-user-123"
         target_user.email_verification_sync_token_hash = "hash"
         target_user.email_verification_sync_expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        return "https://verify.example.com/link"
+        return auth_router.FirebaseDeliveryResponse(
+            custom_token="firebase-custom-token",
+            continue_url="https://app.example.com/verify-email/callback?vt=sync-token",
+        )
 
     app.dependency_overrides[get_db] = override_get_db
 
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
-        patch.object(auth_router.settings, "ENV", "local"),
+        patch.object(auth_router.settings, "ENV", "prod"),
         patch.object(auth_router.email_service, "smtp_host", None),
         patch.object(auth_router.email_service, "from_address", ""),
-        patch("backend.routers.auth._build_firebase_verification_link", side_effect=fake_build_link),
+        patch("backend.routers.auth._build_firebase_delivery", side_effect=fake_build_delivery),
+        patch("backend.routers.auth._decode_verification_resend_ticket", return_value={"sub": str(user.id), "email": user.email}),
+        patch("backend.routers.auth._issue_verification_resend_ticket", return_value="fresh-resend-ticket"),
     ):
         response = client.post(
             "/api/auth/verify/resend",
-            json={"email": "verify-local@example.com"},
+            json={"resend_ticket": "valid-ticket"},
         )
 
     assert response.status_code == 200
     assert response.json()["message"] == auth_router.VERIFICATION_RESEND_GENERIC_MESSAGE
+    assert response.json()["resend_ticket"] == "fresh-resend-ticket"
     session.commit.assert_awaited_once()
 
 
@@ -359,7 +357,7 @@ def test_firebase_sync_marks_email_verified(client: TestClient) -> None:
     ):
         response = client.post(
             "/api/auth/verify/firebase-sync",
-            json={"email": "verify-sync@example.com", "sync_token": "sync-token"},
+            json={"sync_token": "sync-token"},
         )
 
     assert response.status_code == 200
@@ -368,6 +366,35 @@ def test_firebase_sync_marks_email_verified(client: TestClient) -> None:
     assert user.email_verified_at is not None
     assert user.email_verification_sync_token_hash is None
     assert user.email_verification_sync_expires_at is None
+
+
+def test_firebase_sync_rejects_mismatched_optional_email(client: TestClient) -> None:
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="verify-sync@example.com",
+        email_verified=False,
+        email_verified_at=None,
+        firebase_uid="fb-sync-123",
+        email_verification_sync_token_hash=hashlib.sha256(b"sync-token").hexdigest(),
+        email_verification_sync_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=_result(user))
+    session.commit = AsyncMock()
+
+    async def override_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"):
+        response = client.post(
+            "/api/auth/verify/firebase-sync",
+            json={"email": "wrong@example.com", "sync_token": "sync-token"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid_or_expired_sync_token"
 
 
 def test_login_requires_email_verification_when_firebase_enabled(client: TestClient) -> None:
@@ -410,6 +437,7 @@ def test_login_requires_email_verification_when_firebase_enabled(client: TestCli
     with (
         patch.object(auth_router.settings, "FIREBASE_PROJECT_ID", "firebase-project"),
         patch("backend.routers.auth.firebase_auth.is_firebase_email_verified", return_value=False),
+        patch("backend.routers.auth._issue_verification_resend_ticket", return_value="resend-ticket-123"),
     ):
         response = client.post(
             "/api/auth/login",
@@ -418,6 +446,8 @@ def test_login_requires_email_verification_when_firebase_enabled(client: TestCli
 
     assert response.status_code == 403
     assert response.json()["detail"] == "email_verification_required"
+    assert response.json()["email"] == "pending@example.com"
+    assert response.json()["resend_ticket"] == "resend-ticket-123"
 
 
 def test_login_syncs_verified_email_when_firebase_enabled(client: TestClient) -> None:

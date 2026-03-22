@@ -83,10 +83,23 @@ def test_patch_422_invalid_role_read_arn_format(client: TestClient) -> None:
     assert "role" in r.text.lower() or "arn" in r.text.lower()
 
 
-def test_patch_422_invalid_role_write_arn_format(client: TestClient) -> None:
-    r = client.patch(_patch_url("123456789012"), json={"role_write_arn": "invalid-arn"})
-    assert r.status_code == 422
-    assert "role" in r.text.lower() or "arn" in r.text.lower()
+def test_patch_200_invalid_role_write_arn_is_ignored(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    acc = _mock_account("123456789012")
+    _override_db(tenant, acc)
+    try:
+        r = client.patch(
+            _patch_url("123456789012"),
+            json={"role_write_arn": "invalid-arn"},
+            params=_params(),
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["role_write_arn"] is None
+    assert acc.role_write_arn is None
 
 
 def test_patch_404_account_not_found(client: TestClient) -> None:
@@ -123,7 +136,7 @@ def test_patch_400_role_read_arn_account_mismatch(client: TestClient) -> None:
     assert acc.role_read_arn == "arn:aws:iam::123456789012:role/ReadRole"
 
 
-def test_patch_400_role_write_arn_account_mismatch(client: TestClient) -> None:
+def test_patch_200_role_write_arn_account_mismatch_is_ignored(client: TestClient) -> None:
     tenant = _mock_tenant()
     acc = _mock_account("123456789012")
     _override_db(tenant, acc)
@@ -136,8 +149,10 @@ def test_patch_400_role_write_arn_account_mismatch(client: TestClient) -> None:
     finally:
         app.dependency_overrides.pop(get_db, None)
 
-    assert r.status_code == 400
-    assert "mismatch" in r.json()["detail"].lower() or "match" in r.json()["detail"].lower()
+    assert r.status_code == 200
+    data = r.json()
+    assert data["role_write_arn"] is None
+    assert acc.role_write_arn is None
 
 
 def test_patch_200_updates_read_role_and_regions(client: TestClient) -> None:
@@ -171,7 +186,7 @@ def test_patch_200_updates_read_role_and_regions(client: TestClient) -> None:
     assert mock_assume.call_count == 1
 
 
-def test_patch_200_set_role_write_arn_revalidates_both_roles(client: TestClient) -> None:
+def test_patch_200_set_role_write_arn_is_ignored(client: TestClient) -> None:
     tenant = _mock_tenant()
     acc = _mock_account("123456789012")
     _override_db(tenant, acc)
@@ -188,10 +203,10 @@ def test_patch_200_set_role_write_arn_revalidates_both_roles(client: TestClient)
 
     assert r.status_code == 200
     data = r.json()
-    assert data["role_write_arn"] == "arn:aws:iam::123456789012:role/SecurityAutopilotWriteRole"
-    assert acc.role_write_arn == "arn:aws:iam::123456789012:role/SecurityAutopilotWriteRole"
+    assert data["role_write_arn"] is None
+    assert acc.role_write_arn is None
     assert acc.status == AwsAccountStatus.validated
-    assert mock_assume.call_count == 2
+    assert mock_assume.call_count == 0
 
 
 def test_patch_200_clear_role_write_arn(client: TestClient) -> None:

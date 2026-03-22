@@ -1,0 +1,6 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "policy_type": "RESOURCE_POLICY",
+  "resource_type": "AWS::IAM::AssumeRolePolicyDocument"
+}

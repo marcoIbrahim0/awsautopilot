@@ -1,0 +1,2 @@
+[GET] http://localhost:8000/api/auth/me => [FAILED] net::ERR_FAILED
+[GET] http://localhost:8000/api/auth/me => [FAILED] net::ERR_FAILED

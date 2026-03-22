@@ -1,0 +1,12 @@
+{
+  "customer_account_id": "696505809372",
+  "customer_read_role_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+  "external_id": "<REDACTED_EXTERNAL_ID>",
+  "saas_account_id": "029037611564",
+  "saas_execution_role_arns": [
+    "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+    "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+  ],
+  "stack_last_updated_at": "2026-03-20T01:01:20.535000+00:00",
+  "stack_name": "SecurityAutopilotReadRole"
+}

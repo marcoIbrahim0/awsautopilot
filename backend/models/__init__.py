@@ -3,6 +3,9 @@
 from backend.models.action import Action
 from backend.models.action_external_link import ActionExternalLink
 from backend.models.action_finding import ActionFinding
+from backend.models.attack_path_materialized_detail import AttackPathMaterializedDetail
+from backend.models.attack_path_materialized_membership import AttackPathMaterializedMembership
+from backend.models.attack_path_materialized_summary import AttackPathMaterializedSummary
 from backend.models.action_remediation_sync_event import ActionRemediationSyncEvent
 from backend.models.action_remediation_sync_state import ActionRemediationSyncState
 from backend.models.action_group import ActionGroup
@@ -10,6 +13,8 @@ from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.action_group_run_result import ActionGroupRunResult
+from backend.models.app_notification import AppNotification
+from backend.models.app_notification_user_state import AppNotificationUserState
 from backend.models.audit_log import AuditLog
 from backend.models.aws_account_reconcile_settings import AwsAccountReconcileSettings
 from backend.models.aws_account import AwsAccount
@@ -19,6 +24,11 @@ from backend.models.control_plane_event import ControlPlaneEvent
 from backend.models.control_plane_event_ingest_status import ControlPlaneEventIngestStatus
 from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
 from backend.models.governance_notification import GovernanceNotification
+from backend.models.help_article import HelpArticle
+from backend.models.help_assistant_interaction import HelpAssistantInteraction
+from backend.models.help_case import HelpCase
+from backend.models.help_case_attachment import HelpCaseAttachment
+from backend.models.help_case_message import HelpCaseMessage
 from backend.models.inventory_asset import InventoryAsset
 from backend.models.baseline_report import BaselineReport
 from backend.models.enums import (
@@ -74,6 +84,9 @@ __all__ = [
     "Action",
     "ActionExternalLink",
     "ActionFinding",
+    "AttackPathMaterializedDetail",
+    "AttackPathMaterializedMembership",
+    "AttackPathMaterializedSummary",
     "ActionRemediationSyncEvent",
     "ActionRemediationSyncState",
     "ActionGroup",
@@ -86,6 +99,8 @@ __all__ = [
     "ActionGroupRunStatus",
     "ActionGroupStatusBucket",
     "ActionStatus",
+    "AppNotification",
+    "AppNotificationUserState",
     "AuditLog",
     "AwsAccountReconcileSettings",
     "AwsAccount",
@@ -96,6 +111,11 @@ __all__ = [
     "ControlPlaneEventIngestStatus",
     "ControlPlaneReconcileJob",
     "GovernanceNotification",
+    "HelpArticle",
+    "HelpAssistantInteraction",
+    "HelpCase",
+    "HelpCaseAttachment",
+    "HelpCaseMessage",
     "IntegrationEventReceipt",
     "IntegrationSyncTask",
     "InventoryAsset",

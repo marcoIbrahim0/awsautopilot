@@ -2,6 +2,8 @@
 
 This checklist tracks the top follow-up actions after enforcing explicit PR-bundle generation errors and removing placeholder-only outputs.
 
+Current contract note (2026-03-19): customer-run PR bundles are the only supported remediation path. Historical `direct_fix` / `WriteRole` references in this folder should be treated as snapshot evidence unless this checklist says otherwise.
+
 ## Priority Actions
 
 ### 3) Monitor unsupported-action error volume after rollout
@@ -28,17 +30,18 @@ This checklist tracks the top follow-up actions after enforcing explicit PR-bund
   - [`tests/test_step7_components.py`](../../tests/test_step7_components.py)
   - [`tests/test_remediation_run_worker.py`](../../tests/test_remediation_run_worker.py)
 
-### 5) Clarify mode-only vs executable action semantics (`pr_only`, `direct_fix`, `pr_bundle`)
+### 5) Keep historical mode/action extraction docs labeled as snapshots
 - **Severity:** Medium
-- **Why this is important:** These IDs appear in extracted inventories as execution-mode markers, but not as concrete action implementations. Ambiguity can cause incorrect remediation expectations.
+- **Why this is important:** The prod-readiness discovery package intentionally preserves pre-de-scope extraction output. Without explicit snapshot labeling, reviewers can mistake historical `direct_fix` / `WriteRole` references for the current PR-only product contract.
 - **What to do now:**
-  1. Define and document whether each value is a mode flag, an action ID, or both.
-  2. Align API response documentation with runtime behavior for each value.
-  3. Add a validation check so unsupported values fail with explicit, stable error text.
+  1. Keep the current-contract note in the folder README and the historical extraction banners in the raw snapshot files.
+  2. Point reviewer-facing summary docs back to `docs/README.md` and `.cursor/notes/project_status.md` for the live contract.
+  3. If new extraction snapshots are added later, label them as historical on day one instead of letting them read as active capability docs.
 - **References:**
+  - [`docs/prod-readiness/README.md`](README.md)
+  - [`docs/prod-readiness/01-discovery.md`](01-discovery.md)
   - [`docs/prod-readiness/06-control-action-inventory.md`](06-control-action-inventory.md)
-  - [`backend/services/action_engine.py`](../../backend/services/action_engine.py)
-  - [`backend/routers/actions.py`](../../backend/routers/actions.py)
+  - [`.cursor/notes/project_status.md`](../../.cursor/notes/project_status.md)
 
 ### 6) Replace `iam_root_access_key_absent` placeholder-style PR output with concrete change logic
 - **Severity:** Medium
@@ -50,7 +53,7 @@ This checklist tracks the top follow-up actions after enforcing explicit PR-bund
 - **References:**
   - [`docs/prod-readiness/06-control-action-inventory.md`](06-control-action-inventory.md)
   - [`backend/services/pr_bundle.py`](../../backend/services/pr_bundle.py)
-  - [`backend/workers/services/direct_fix.py`](../../backend/workers/services/direct_fix.py)
+  - [`docs/remediation-safety-model.md`](../remediation-safety-model.md)
 
 ### 7) Prevent control-ID casing drift across extracted sources
 - **Severity:** Low

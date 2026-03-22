@@ -18,8 +18,6 @@ from backend.auth import get_current_user, get_optional_user
 from backend.database import get_db
 from backend.main import app
 from backend.models.enums import (
-    RemediationRunExecutionPhase,
-    RemediationRunExecutionStatus,
     RemediationRunMode,
     RemediationRunStatus,
 )
@@ -203,7 +201,7 @@ def stub_remediation_run_tenant_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_create_direct_fix_action_not_fixable_400(client: TestClient) -> None:
-    """direct_fix with action_type=pr_only returns 400 Action not fixable."""
+    """direct_fix is rejected as out of scope before action-type-specific validation."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="pr_only")
@@ -228,15 +226,13 @@ def test_create_direct_fix_action_not_fixable_400(client: TestClient) -> None:
         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 400
-    data = r.json()
-    err = data.get("detail", {})
-    if isinstance(err, dict):
-        err = err.get("error", "")
-    assert "not fixable" in str(err).lower() or "fixable" in str(err).lower()
+    detail = r.json()["detail"]
+    assert detail["error"] == "Direct-fix out of scope"
+    assert "out of scope" in detail["detail"].lower()
 
 
 def test_create_direct_fix_no_write_role_400(client: TestClient) -> None:
-    """direct_fix with account lacking WriteRole returns 400."""
+    """direct_fix is rejected before WriteRole-specific validation."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -266,15 +262,13 @@ def test_create_direct_fix_no_write_role_400(client: TestClient) -> None:
         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 400
-    data = r.json()
-    err = data.get("detail", {})
-    if isinstance(err, dict):
-        err = err.get("error", "")
-    assert str(err) == "Dependency check failed"
+    detail = r.json()["detail"]
+    assert detail["error"] == "Direct-fix out of scope"
+    assert "out of scope" in detail["detail"].lower()
 
 
 def test_create_direct_fix_with_pr_bundle_variant_400(client: TestClient) -> None:
-    """direct_fix request cannot include pr_bundle_variant."""
+    """direct_fix is rejected before legacy variant validation."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -304,14 +298,13 @@ def test_create_direct_fix_with_pr_bundle_variant_400(client: TestClient) -> Non
         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 400
-    data = r.json()
-    detail = data.get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "Invalid pr_bundle_variant"
+    detail = r.json()["detail"]
+    assert detail["error"] == "Direct-fix out of scope"
+    assert "out of scope" in detail["detail"].lower()
 
 
 def test_create_direct_fix_permission_probe_failed_400(client: TestClient) -> None:
-    """direct_fix should fail fast when WriteRole probe indicates denied API permissions."""
+    """direct_fix is rejected before permission probing runs."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -332,7 +325,7 @@ def test_create_direct_fix_permission_probe_failed_400(client: TestClient) -> No
         with patch(
             "backend.routers.remediation_runs.probe_direct_fix_permissions",
             return_value=(False, "WriteRole probe denied by AWS API (AccessDenied)."),
-        ):
+        ) as mock_probe:
             try:
                 r = client.post(
                     "/api/remediation-runs",
@@ -348,10 +341,10 @@ def test_create_direct_fix_permission_probe_failed_400(client: TestClient) -> No
                 app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 400
-    detail = r.json().get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "Direct-fix permission probe failed"
-        assert detail.get("check_id") == "direct_fix_permission_probe_failed"
+    detail = r.json()["detail"]
+    assert detail["error"] == "Direct-fix out of scope"
+    assert "out of scope" in detail["detail"].lower()
+    assert mock_probe.call_count == 0
 
 
 def test_create_pr_only_variant_not_applicable_400(client: TestClient) -> None:
@@ -1819,7 +1812,7 @@ def test_create_run_exception_only_strategy_rejected_400_no_run_created(client: 
 
 
 def test_create_run_strategy_mode_mismatch_400(client: TestClient) -> None:
-    """Selected strategy mode must match request mode."""
+    """Deprecated direct_fix requests are rejected before strategy-mode mismatch handling."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_bucket_block_public_access")
@@ -1850,8 +1843,8 @@ def test_create_run_strategy_mode_mismatch_400(client: TestClient) -> None:
     assert r.status_code == 400
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
-        assert detail.get("error") == "Invalid strategy selection"
-        assert "requires mode" in str(detail.get("detail", "")).lower()
+        assert detail.get("error") == "Direct-fix out of scope"
+        assert "out of scope" in str(detail.get("detail", "")).lower()
 
 
 def test_create_run_strategy_input_validation_400(client: TestClient) -> None:
@@ -2536,7 +2529,7 @@ def test_remediation_options_simple_controls_expose_non_empty_impact_text(
     )
 
     if action_type in {"enable_security_hub", "enable_guardduty"}:
-        assert set(body.get("mode_options", [])) == {"pr_only", "direct_fix"}
+        assert set(body.get("mode_options", [])) == {"pr_only"}
 
 
 @pytest.mark.parametrize(
@@ -2666,8 +2659,8 @@ def test_remediation_options_include_blast_radius_metadata_for_all_controls(
         ("ebs_default_encryption", "disable-ebs-encryption-by-default"),
         ("s3_bucket_access_logging", "put-bucket-logging --bucket <SOURCE_BUCKET>"),
         ("s3_bucket_lifecycle_configuration", "delete-bucket-lifecycle --bucket <BUCKET_NAME>"),
-        ("s3_bucket_encryption_kms", "put-bucket-encryption --bucket <BUCKET_NAME>"),
-        ("s3_bucket_require_ssl", "delete-bucket-policy --bucket <BUCKET_NAME>"),
+        ("s3_bucket_encryption_kms", "file://pre-remediation-encryption.json"),
+        ("s3_bucket_require_ssl", "put-bucket-policy --bucket <BUCKET_NAME>"),
         (
             "sg_restrict_public_ports",
             "authorize-security-group-ingress --group-id <SECURITY_GROUP_ID>",
@@ -2713,6 +2706,72 @@ def test_remediation_options_include_rollback_command_for_all_controls(
     assert any(
         expected_rollback_fragment in str(strategy.get("rollback_command") or "")
         for strategy in strategies
+    )
+
+
+def test_remediation_options_s3_ssl_warns_to_capture_existing_policy_before_apply(client: TestClient) -> None:
+    """S3.5 options should warn operators to capture the current bucket policy before apply."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_require_ssl")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        response = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategies = response.json().get("strategies", [])
+    assert any(
+        any("get-bucket-policy --bucket <BUCKET_NAME>" in str(warning) for warning in strategy.get("warnings") or [])
+        for strategy in strategies
+        if strategy.get("strategy_id") == "s3_enforce_ssl_strict_deny"
+    )
+
+
+def test_remediation_options_s3_kms_warns_to_capture_existing_encryption_before_apply(
+    client: TestClient,
+) -> None:
+    """S3.15 options should warn operators to capture the current bucket encryption before apply."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        response = client.get(f"/api/actions/{action.id}/remediation-options")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategies = response.json().get("strategies", [])
+    assert any(
+        any("Capture the current bucket encryption configuration before apply" in str(warning) for warning in strategy.get("warnings") or [])
+        for strategy in strategies
+        if strategy.get("strategy_id") == "s3_enable_sse_kms_guided"
     )
 
 
@@ -2796,7 +2855,7 @@ def test_trigger_reeval_enqueues_reconcile_jobs(client: TestClient) -> None:
 
 
 def test_trigger_reeval_rejects_unsupported_strategy(client: TestClient) -> None:
-    """Task 14: immediate re-evaluation endpoint rejects unsupported control families."""
+    """Task 14: immediate re-evaluation rejects direct-fix strategy IDs that are no longer exposed."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="enable_security_hub")
@@ -2824,7 +2883,7 @@ def test_trigger_reeval_rejects_unsupported_strategy(client: TestClient) -> None
     assert r.status_code == 400
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
-        assert detail.get("error") == "Immediate re-evaluation not supported"
+        assert detail.get("error") == "Invalid strategy_id"
 
 
 def test_remediation_options_s3_dependency_pass_when_runtime_indicates_no_public_dependency(client: TestClient) -> None:
@@ -2874,7 +2933,7 @@ def test_remediation_options_s3_dependency_pass_when_runtime_indicates_no_public
 
 
 def test_remediation_preview_action_not_fixable(client: TestClient) -> None:
-    """Preview for pr_only action returns compliant=False, will_apply=False."""
+    """Preview for direct_fix now returns the out-of-scope message."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="pr_only")
@@ -2892,8 +2951,8 @@ def test_remediation_preview_action_not_fixable(client: TestClient) -> None:
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
     try:
         r = client.get(
-            f"/api/actions/{action.id}/remediation-preview?mode=direct_fix",
-            params={"tenant_id": str(tenant.id)},
+            f"/api/actions/{action.id}/remediation-preview",
+            params={"mode": "direct_fix", "tenant_id": str(tenant.id)},
         )
     finally:
         app.dependency_overrides.pop(get_db, None)
@@ -2903,14 +2962,14 @@ def test_remediation_preview_action_not_fixable(client: TestClient) -> None:
     data = r.json()
     assert data["compliant"] is False
     assert data["will_apply"] is False
-    assert "does not support direct fix" in data["message"]
+    assert "out of scope" in data["message"].lower()
     assert data["before_state"] == {}
     assert data["after_state"] == {}
     assert data["diff_lines"] == []
 
 
 def test_remediation_preview_no_write_role(client: TestClient) -> None:
-    """Preview with no WriteRole returns compliant=False without assuming."""
+    """Preview returns out-of-scope before any WriteRole handling."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -2927,21 +2986,19 @@ def test_remediation_preview_no_write_role(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    with patch("backend.routers.actions.assume_role") as mock_assume:
-        try:
-            r = client.get(
-                f"/api/actions/{action.id}/remediation-preview?mode=direct_fix",
-                params={"tenant_id": str(tenant.id)},
-            )
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_optional_user, None)
+    try:
+        r = client.get(
+            f"/api/actions/{action.id}/remediation-preview",
+            params={"mode": "direct_fix", "tenant_id": str(tenant.id)},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
 
     assert r.status_code == 200
-    assert mock_assume.call_count == 0
     data = r.json()
     assert data["compliant"] is False
-    assert "WriteRole" in data["message"]
+    assert "out of scope" in data["message"].lower()
 
 
 def test_remediation_preview_pr_only_includes_choice_impact_summary(client: TestClient) -> None:
@@ -3117,8 +3174,8 @@ def test_remediation_preview_pr_only_config_1_includes_before_after_simulation(c
     )
 
 
-def test_remediation_preview_success(client: TestClient) -> None:
-    """Preview with WriteRole assumes and returns preview result."""
+def test_remediation_preview_direct_fix_returns_out_of_scope_message(client: TestClient) -> None:
+    """direct_fix preview returns the out-of-scope message instead of assuming WriteRole."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -3132,39 +3189,27 @@ def test_remediation_preview_success(client: TestClient) -> None:
         return user
 
     from backend.auth import get_optional_user
-    from backend.workers.services.direct_fix import RemediationPreviewResult
-
-    preview_result = RemediationPreviewResult(
-        compliant=False,
-        message="S3 Block Public Access not configured; will enable.",
-        will_apply=True,
-    )
 
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    with patch("backend.routers.actions.assume_role", return_value=MagicMock()):
-        with patch(
-            "backend.workers.services.direct_fix.run_remediation_preview",
-            return_value=preview_result,
-        ):
-            try:
-                r = client.get(
-                    f"/api/actions/{action.id}/remediation-preview?mode=direct_fix",
-                    params={"tenant_id": str(tenant.id)},
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_optional_user, None)
+    try:
+        r = client.get(
+            f"/api/actions/{action.id}/remediation-preview",
+            params={"mode": "direct_fix", "tenant_id": str(tenant.id)},
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
 
     assert r.status_code == 200
     data = r.json()
     assert data["compliant"] is False
-    assert data["will_apply"] is True
-    assert "S3 Block Public Access" in data["message"]
+    assert data["will_apply"] is False
+    assert "out of scope" in data["message"].lower()
 
 
 def test_remediation_preview_direct_fix_includes_strategy_impact_summary(client: TestClient) -> None:
-    """direct_fix preview includes strategy-level impact summary when strategy is provided."""
+    """direct_fix preview stays out of scope even when a direct-fix strategy_id is sent."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="s3_block_public_access")
@@ -3178,43 +3223,28 @@ def test_remediation_preview_direct_fix_includes_strategy_impact_summary(client:
         return user
 
     from backend.auth import get_optional_user
-    from backend.workers.services.direct_fix import RemediationPreviewResult
-
-    preview_result = RemediationPreviewResult(
-        compliant=False,
-        message="S3 Block Public Access not configured; will enable.",
-        will_apply=True,
-    )
 
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    with patch("backend.routers.actions.assume_role", return_value=MagicMock()):
-        with patch(
-            "backend.workers.services.direct_fix.run_remediation_preview",
-            return_value=preview_result,
-        ):
-            try:
-                r = client.get(
-                    f"/api/actions/{action.id}/remediation-preview",
-                    params={
-                        "mode": "direct_fix",
-                        "tenant_id": str(tenant.id),
-                        "strategy_id": "s3_account_block_public_access_direct_fix",
-                    },
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_optional_user, None)
+    try:
+        r = client.get(
+            f"/api/actions/{action.id}/remediation-preview",
+            params={
+                "mode": "direct_fix",
+                "tenant_id": str(tenant.id),
+                "strategy_id": "s3_account_block_public_access_direct_fix",
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
 
     assert r.status_code == 200
     data = r.json()
     assert data["compliant"] is False
-    assert data["will_apply"] is True
-    assert "S3 Block Public Access" in data["message"]
-    assert (
-        data.get("impact_summary")
-        == "All four account-level public access block settings will be enabled."
-    )
+    assert data["will_apply"] is False
+    assert "out of scope" in data["message"].lower()
+    assert data.get("impact_summary") == "All four account-level public access block settings will be enabled."
 
 
 # ---------------------------------------------------------------------------
@@ -3499,513 +3529,64 @@ def test_get_pr_bundle_zip_404_no_artifacts(client: TestClient) -> None:
     assert r.status_code == 404
 
 
-def test_execute_pr_bundle_plan_queues_execution(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    action = _mock_action(action_type="s3_bucket_block_public_access")
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-    run.status = RemediationRunStatus.success
-    run.outcome = "PR bundle generated"
-    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run.action = action
-
-    run_result = MagicMock()
-    run_result.scalar_one_or_none.return_value = run
-    active_result = MagicMock()
-    active_result.scalars.return_value.first.return_value = None
-    count_result = MagicMock()
-    count_result.scalar.return_value = 0
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[run_result, active_result, count_result])
-    session.add = MagicMock()
-    session.commit = AsyncMock()
-
-    async def _refresh(exec_obj: MagicMock) -> None:
-        from datetime import datetime, timezone
-        exec_obj.created_at = datetime.now(timezone.utc)
-        exec_obj.updated_at = datetime.now(timezone.utc)
-
-    session.refresh = AsyncMock(side_effect=_refresh)
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    mock_sqs = MagicMock()
-    mock_sqs.send_message.return_value = {"MessageId": "msg-exec"}
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 2
-        mock_settings.SAAS_BUNDLE_EXECUTOR_FAIL_FAST = True
-        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
-            try:
-                r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 200
-    data = r.json()
-    assert "execution_id" in data
-    assert data["status"] == "queued"
-    assert mock_sqs.send_message.call_count == 1
-
-
-def test_execute_pr_bundle_plan_rejects_zero_executable_mixed_tier_bundle(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    action = _mock_action(action_type="s3_bucket_block_public_access")
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-    run.status = RemediationRunStatus.success
-    run.outcome = "PR bundle generated"
-    run.artifacts = {
-        "pr_bundle": {
-            "files": [
-                {
-                    "path": "bundle_manifest.json",
-                    "content": json.dumps(
-                        {
-                            "layout_version": "grouped_bundle_mixed_tier/v1",
-                            "execution_root": "executable/actions",
-                        }
-                    ),
-                },
-                {"path": "review_required/actions/a/decision.json", "content": "{}"},
-            ]
-        }
+def _assert_archived_saas_bundle_execution_response(response) -> None:
+    assert response.status_code == 410
+    detail = response.json().get("detail", {})
+    assert detail == {
+        "error": "SaaS bundle execution archived",
+        "reason": "saas_bundle_execution_archived",
+        "detail": (
+            "PR bundles remain supported. Download the bundle, review the generated artifacts, "
+            "and run it with your own credentials or pipeline outside the SaaS. "
+            "Optional grouped reporting callbacks remain supported for customer-run bundles."
+        ),
     }
-    run.action = action
-
-    run_result = MagicMock()
-    run_result.scalar_one_or_none.return_value = run
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[run_result])
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        try:
-            r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 400
-    detail = r.json().get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "No executable bundle actions"
-        assert detail.get("reason") == "no_executable_bundle"
-        assert detail.get("layout_version") == "grouped_bundle_mixed_tier/v1"
-        assert detail.get("execution_root") == "executable/actions"
 
 
-def test_execute_pr_bundle_plan_root_credentials_required_400(client: TestClient) -> None:
-    """SaaS executor must fail fast for root-key runs with explicit root-credentials-required error."""
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/api/remediation-runs/run-archived/execute-pr-bundle", {}),
+        ("/api/remediation-runs/run-archived/approve-apply", None),
+        ("/api/remediation-runs/bulk-execute-pr-bundle", {"run_ids": ["run-1"]}),
+        ("/api/remediation-runs/bulk-approve-apply", {"run_ids": ["run-1"]}),
+    ],
+)
+def test_saas_bundle_execution_routes_return_archived_410_and_do_not_enqueue(
+    client: TestClient,
+    path: str,
+    payload: dict[str, object] | None,
+) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
-    action = _mock_action(action_type="iam_root_access_key_absent")
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-    run.status = RemediationRunStatus.success
-    run.outcome = "PR bundle generated"
-    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run.action = action
-
-    run_result = MagicMock()
-    run_result.scalar_one_or_none.return_value = run
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=run_result)
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
 
     async def mock_get_current_user() -> MagicMock:
         return user
 
-    app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        try:
-            r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_current_user, None)
+    with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+        with patch(
+            "backend.routers.remediation_runs.build_pr_bundle_execution_job_payload"
+        ) as mock_build_payload:
+            with patch(
+                "backend.routers.remediation_runs._tenant_active_execution_count",
+                new_callable=AsyncMock,
+                return_value=0,
+            ) as mock_active_count:
+                with patch(
+                    "backend.routers.remediation_runs._assert_tenant_execution_capacity",
+                    new_callable=AsyncMock,
+                ) as mock_capacity_check:
+                    try:
+                        if payload is None:
+                            response = client.post(path)
+                        else:
+                            response = client.post(path, json=payload)
+                    finally:
+                        app.dependency_overrides.pop(get_current_user, None)
 
-    assert r.status_code == 400
-    detail = r.json().get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "Root credentials required"
-        assert "Root credentials required" in str(detail.get("detail", ""))
-        assert detail.get("runbook_url") == "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md"
-
-
-def test_execute_pr_bundle_plan_throttled_429(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    action = _mock_action(action_type="s3_bucket_block_public_access")
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-    run.status = RemediationRunStatus.success
-    run.outcome = "PR bundle generated"
-    run.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run.action = action
-
-    run_result = MagicMock()
-    run_result.scalar_one_or_none.return_value = run
-    active_result = MagicMock()
-    active_result.scalars.return_value.first.return_value = None
-    count_result = MagicMock()
-    count_result.scalar.return_value = 2
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[run_result, active_result, count_result])
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 2
-        try:
-            r = client.post(f"/api/remediation-runs/{run.id}/execute-pr-bundle")
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 429
-    detail = r.json().get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "Execution capacity reached"
-
-
-def test_approve_apply_requires_awaiting_approval(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-
-    run_result = MagicMock()
-    run_result.scalar_one_or_none.return_value = run
-    latest_exec = MagicMock()
-    latest_exec.phase = RemediationRunExecutionPhase.plan
-    latest_exec.status = RemediationRunExecutionStatus.running
-    latest_result = MagicMock()
-    latest_result.scalars.return_value.first.return_value = latest_exec
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[run_result, latest_result])
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        try:
-            r = client.post(f"/api/remediation-runs/{run.id}/approve-apply")
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 400
-    detail = r.json().get("detail", {})
-    if isinstance(detail, dict):
-        assert detail.get("error") == "Run not awaiting approval"
-
-
-def test_bulk_execute_pr_bundle_plan_queues_multiple(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    run1 = MagicMock()
-    run1.id = uuid.uuid4()
-    run1.tenant_id = tenant.id
-    run1.mode = RemediationRunMode.pr_only
-    run1.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run1.status = RemediationRunStatus.success
-    run1.outcome = "PR bundle generated"
-    run1.action = _mock_action(action_type="s3_bucket_block_public_access")
-
-    run2 = MagicMock()
-    run2.id = uuid.uuid4()
-    run2.tenant_id = tenant.id
-    run2.mode = RemediationRunMode.pr_only
-    run2.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run2.status = RemediationRunStatus.success
-    run2.outcome = "PR bundle generated"
-    run2.action = _mock_action(action_type="cloudtrail_enabled")
-
-    count_result = MagicMock()
-    count_result.scalar.return_value = 0
-    runs_result = MagicMock()
-    runs_result.scalars.return_value.all.return_value = [run1, run2]
-    active_one = MagicMock()
-    active_one.scalars.return_value.first.return_value = None
-    active_two = MagicMock()
-    active_two.scalars.return_value.first.return_value = None
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, runs_result, active_one, active_two])
-    session.add = MagicMock()
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    mock_sqs = MagicMock()
-    mock_sqs.send_message.return_value = {"MessageId": "msg-exec"}
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 6
-        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
-            try:
-                r = client.post(
-                    "/api/remediation-runs/bulk-execute-pr-bundle",
-                    json={
-                        "run_ids": [str(run1.id), str(run2.id)],
-                        "max_parallel": 3,
-                        "fail_fast": True,
-                    },
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body.get("accepted", [])) == 2
-    assert len(body.get("rejected", [])) == 0
-    assert mock_sqs.send_message.call_count == 2
-
-
-def test_bulk_execute_pr_bundle_plan_rejects_capacity(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    run1 = MagicMock()
-    run1.id = uuid.uuid4()
-    run1.tenant_id = tenant.id
-    run1.mode = RemediationRunMode.pr_only
-    run1.artifacts = {"pr_bundle": {"files": [{"path": "main.tf", "content": "x"}]}}
-    run1.status = RemediationRunStatus.success
-    run1.outcome = "PR bundle generated"
-    run1.action = _mock_action(action_type="s3_bucket_block_public_access")
-
-    count_result = MagicMock()
-    count_result.scalar.return_value = 6
-    runs_result = MagicMock()
-    runs_result.scalars.return_value.all.return_value = [run1]
-    active_one = MagicMock()
-    active_one.scalars.return_value.first.return_value = None
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, runs_result, active_one])
-    session.add = MagicMock()
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 6
-        with patch("backend.routers.remediation_runs.boto3.client", return_value=MagicMock()):
-            try:
-                r = client.post(
-                    "/api/remediation-runs/bulk-execute-pr-bundle",
-                    json={
-                        "run_ids": [str(run1.id)],
-                        "max_parallel": 3,
-                        "fail_fast": True,
-                    },
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body.get("accepted", [])) == 0
-    assert len(body.get("rejected", [])) == 1
-    assert body["rejected"][0]["reason"] == "capacity_exceeded"
-
-
-def test_bulk_execute_pr_bundle_plan_rejects_zero_executable_mixed_tier_bundle(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    run = MagicMock()
-    run.id = uuid.uuid4()
-    run.tenant_id = tenant.id
-    run.mode = RemediationRunMode.pr_only
-    run.status = RemediationRunStatus.success
-    run.outcome = "PR bundle generated"
-    run.artifacts = {
-        "pr_bundle": {
-            "files": [
-                {
-                    "path": "bundle_manifest.json",
-                    "content": json.dumps(
-                        {
-                            "layout_version": "grouped_bundle_mixed_tier/v1",
-                            "execution_root": "executable/actions",
-                        }
-                    ),
-                },
-                {"path": "manual_guidance/actions/a/decision.json", "content": "{}"},
-            ]
-        }
-    }
-    run.action = _mock_action(action_type="s3_bucket_block_public_access")
-
-    count_result = MagicMock()
-    count_result.scalar.return_value = 0
-    runs_result = MagicMock()
-    runs_result.scalars.return_value.all.return_value = [run]
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, runs_result])
-    session.add = MagicMock()
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 6
-        try:
-            r = client.post(
-                "/api/remediation-runs/bulk-execute-pr-bundle",
-                json={
-                    "run_ids": [str(run.id)],
-                    "max_parallel": 3,
-                    "fail_fast": True,
-                },
-            )
-        finally:
-            app.dependency_overrides.pop(get_db, None)
-            app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body.get("accepted", [])) == 0
-    assert len(body.get("rejected", [])) == 1
-    assert body["rejected"][0]["reason"] == "no_executable_bundle"
-
-
-def test_bulk_approve_apply_queues_multiple(client: TestClient) -> None:
-    tenant = _mock_tenant()
-    user = _mock_user(tenant.id)
-    run1 = MagicMock()
-    run1.id = uuid.uuid4()
-    run1.tenant_id = tenant.id
-    run1.mode = RemediationRunMode.pr_only
-    run1.status = RemediationRunStatus.awaiting_approval
-    run1.outcome = "Plan complete. Awaiting approval for apply."
-
-    count_result = MagicMock()
-    count_result.scalar.return_value = 0
-    runs_result = MagicMock()
-    runs_result.scalars.return_value.all.return_value = [run1]
-    latest_plan = MagicMock()
-    latest_plan.phase = RemediationRunExecutionPhase.plan
-    latest_plan.status = RemediationRunExecutionStatus.awaiting_approval
-    latest_plan.workspace_manifest = {"bundle_hash": "abc"}
-    latest_result = MagicMock()
-    latest_result.scalars.return_value.first.return_value = latest_plan
-    active_apply_result = MagicMock()
-    active_apply_result.scalars.return_value.first.return_value = None
-
-    session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, runs_result, latest_result, active_apply_result])
-    session.add = MagicMock()
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-
-    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        yield session
-
-    async def mock_get_current_user() -> MagicMock:
-        return user
-
-    app.dependency_overrides[get_db] = mock_get_db
-    app.dependency_overrides[get_current_user] = mock_get_current_user
-    mock_sqs = MagicMock()
-    mock_sqs.send_message.return_value = {"MessageId": "msg-apply"}
-    with patch("backend.routers.remediation_runs.settings") as mock_settings:
-        mock_settings.SAAS_BUNDLE_EXECUTOR_ENABLED = True
-        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
-        mock_settings.SAAS_BUNDLE_EXECUTOR_MAX_CONCURRENT_PER_TENANT = 6
-        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
-            try:
-                r = client.post(
-                    "/api/remediation-runs/bulk-approve-apply",
-                    json={"run_ids": [str(run1.id)], "max_parallel": 3},
-                )
-            finally:
-                app.dependency_overrides.pop(get_db, None)
-                app.dependency_overrides.pop(get_current_user, None)
-
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body.get("accepted", [])) == 1
-    assert len(body.get("rejected", [])) == 0
-    assert mock_sqs.send_message.call_count == 1
+    _assert_archived_saas_bundle_execution_response(response)
+    assert mock_boto_client.call_count == 0
+    assert mock_build_payload.call_count == 0
+    assert mock_active_count.await_count == 0
+    assert mock_capacity_check.await_count == 0

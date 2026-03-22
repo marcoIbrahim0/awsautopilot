@@ -1,0 +1,1 @@
+{"action_id": "332a7d6f-cdad-47e4-ab8b-6d8459248940", "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372", "captured": true, "policy_exists": true, "sha256": "b6aaf05affb9be7554353222406ebf89fc31617906022ba5b3d9d2ea58999afe", "source_folder": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-cloudt-332a7d6f", "statement_count": 3}

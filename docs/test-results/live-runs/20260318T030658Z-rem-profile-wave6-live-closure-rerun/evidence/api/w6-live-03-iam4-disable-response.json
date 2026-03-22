@@ -1,0 +1,1 @@
+{"correlation_id":"w6-live-03-disable-20260318","contract_version":"2026-03-02","error":{"code":"illegal_transition","message":"Illegal transition from 'migration' to 'disable_window'.","retryable":false,"details":null}}

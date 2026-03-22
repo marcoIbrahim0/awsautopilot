@@ -209,9 +209,8 @@ def _recommended_mode_for_action_type(
     action_type: str | None,
     *,
     direct_fix_supported: frozenset[str],
-) -> Literal["direct_fix", "pr_only"]:
-    if action_type and action_type in direct_fix_supported:
-        return "direct_fix"
+) -> Literal["pr_only", "exception_review"]:
+    _ = action_type, direct_fix_supported
     return "pr_only"
 
 
@@ -256,7 +255,7 @@ def _readiness_for_action(
 
 def _fix_path_for_action(
     *,
-    mode: Literal["direct_fix", "pr_only"],
+    mode: Literal["pr_only", "exception_review"],
     readiness: str,
     action_exception: FindingActionException | None,
 ) -> str:
@@ -267,8 +266,8 @@ def _fix_path_for_action(
         return "Exception is active; review exception before remediation."
     if readiness == "needs_attention":
         return "Latest remediation run failed; inspect run logs and re-run with corrected permissions/inputs."
-    if mode == "direct_fix":
-        return "Open action and execute approved direct fix flow."
+    if mode == "exception_review":
+        return "Open action and complete exception-style review before remediation proceeds."
     return "Open action, generate PR bundle, and merge through your IaC change process."
 
 

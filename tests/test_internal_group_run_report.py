@@ -11,6 +11,7 @@ from backend.database import get_db
 from backend.main import app
 from backend.models.action_group_run_result import ActionGroupRunResult
 from backend.models.enums import ActionGroupExecutionStatus, ActionGroupRunStatus
+from backend.services.bundle_reporting_tokens import BundleReportingTokenSecretNotConfiguredError
 
 
 def _mock_scalar_result(value: object) -> MagicMock:
@@ -551,6 +552,34 @@ def test_group_runs_report_invalid_token_returns_401(client: TestClient) -> None
 
     assert response.status_code == 401
     assert "Invalid reporting token" in response.json()["detail"]
+    assert session.execute.await_count == 0
+
+
+def test_group_runs_report_missing_reporting_secret_returns_503(client: TestClient) -> None:
+    session = MagicMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+
+    _install_db_override(session)
+    with patch(
+        "backend.routers.internal.verify_group_run_reporting_token",
+        side_effect=BundleReportingTokenSecretNotConfiguredError(
+            "BUNDLE_REPORTING_TOKEN_SECRET is not configured. Bundle reporting tokens require a dedicated signing secret."
+        ),
+    ):
+        response = client.post(
+            "/api/internal/group-runs/report",
+            json={
+                "token": "signed-token",
+                "event": "finished",
+                "finished_at": "2026-02-11T12:05:00Z",
+                "action_results": [],
+            },
+        )
+    _clear_db_override()
+
+    assert response.status_code == 503
+    assert "BUNDLE_REPORTING_TOKEN_SECRET" in response.json()["detail"]
     assert session.execute.await_count == 0
 
 

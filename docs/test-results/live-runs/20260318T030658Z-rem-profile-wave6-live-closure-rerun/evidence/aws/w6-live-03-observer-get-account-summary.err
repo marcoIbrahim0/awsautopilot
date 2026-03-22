@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the GetAccountSummary operation: User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/w6-live-03-observer-preflight is not authorized to perform: iam:GetAccountSummary on resource: * because no identity-based policy allows the iam:GetAccountSummary action

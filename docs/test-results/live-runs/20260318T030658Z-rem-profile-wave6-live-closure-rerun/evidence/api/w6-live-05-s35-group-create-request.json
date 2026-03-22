@@ -1,0 +1,4 @@
+{
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "risk_acknowledged": true
+}

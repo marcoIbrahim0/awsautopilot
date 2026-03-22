@@ -1,0 +1,165 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+        - link "Audit Log" [ref=e36] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e38]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e43]:
+        - img [ref=e44]
+    - generic [ref=e46]:
+      - banner [ref=e47]:
+        - heading "Accounts" [level=1] [ref=e49]
+        - generic [ref=e50]:
+          - button "Switch to light mode" [ref=e51]:
+            - img [ref=e52]
+          - button "Notifications" [ref=e54]:
+            - img [ref=e55]
+          - button "Profile menu" [ref=e57]:
+            - generic [ref=e58]: M
+      - main [ref=e59]:
+        - generic [ref=e60]:
+          - status [ref=e186]:
+            - generic [ref=e187]:
+              - generic [ref=e188]:
+                - paragraph [ref=e189]: Refreshing Security Hub (696505809372) · Failed
+                - paragraph [ref=e190]: Refresh failed.
+                - paragraph [ref=e191]: CSRF validation failed.
+              - button "Dismiss banner" [ref=e194]:
+                - img [ref=e196]
+          - generic [ref=e61]:
+            - generic [ref=e63]:
+              - generic [ref=e64]:
+                - generic [ref=e65]:
+                  - paragraph [ref=e66]: Account hub
+                  - heading "Connected AWS accounts" [level=3] [ref=e67]
+                  - paragraph [ref=e68]: Operate onboarding handoff, refresh findings, and manage connected-account lifecycle from the same dashboard surface language used by the rest of the product.
+                - generic [ref=e70]:
+                  - link "Run onboarding checks" [ref=e71] [cursor=pointer]:
+                    - /url: /onboarding
+                    - generic [ref=e72]: Run onboarding checks
+                  - button "Connect AWS account" [ref=e73]:
+                    - generic [ref=e74]: Connect AWS account
+              - generic [ref=e76]:
+                - generic [ref=e77]:
+                  - generic [ref=e78]:
+                    - paragraph [ref=e79]: Operator flow
+                    - heading "Validate once in onboarding, operate continuously from Accounts." [level=3] [ref=e80]
+                    - paragraph [ref=e81]: "This surface is optimized for live account operations: confirm connection state, refresh data sources, inspect role posture, and hand operators back to onboarding whenever a required verification must be rerun."
+                  - generic [ref=e82]:
+                    - generic [ref=e83]:
+                      - paragraph [ref=e84]: Quick action
+                      - paragraph [ref=e85]: Open details for refresh, reconciliation, and lifecycle actions.
+                    - generic [ref=e86]:
+                      - paragraph [ref=e87]: Required checks
+                      - paragraph [ref=e88]: Inspector, Security Hub, AWS Config, and forwarder validation stay in onboarding.
+                    - generic [ref=e89]:
+                      - paragraph [ref=e90]: Connection contract
+                      - paragraph [ref=e91]: Accounts stores ReadRole scope and regions; onboarding final checks confirm readiness.
+                - generic [ref=e92]:
+                  - generic [ref=e93]:
+                    - paragraph [ref=e94]: Total accounts
+                    - paragraph [ref=e95]: "1"
+                    - paragraph [ref=e96]: Accounts currently registered to this tenant.
+                  - generic [ref=e97]:
+                    - paragraph [ref=e98]: Healthy
+                    - paragraph [ref=e99]: "1"
+                    - paragraph [ref=e100]: Validated accounts ready for ingest and reconciliation.
+                  - generic [ref=e101]:
+                    - paragraph [ref=e102]: Needs attention
+                    - paragraph [ref=e103]: "0"
+                    - paragraph [ref=e104]: Accounts pending validation, paused, or requiring follow-up.
+                  - generic [ref=e105]:
+                    - paragraph [ref=e106]: Monitored regions
+                    - paragraph [ref=e107]: "2"
+                    - paragraph [ref=e108]: Distinct AWS regions currently in scope across all accounts.
+            - tablist "Account sections" [ref=e111]:
+              - tab "Connection health Live validation state, regions, and quick operator actions." [selected] [ref=e112]:
+                - paragraph [ref=e113]: Connection health
+                - paragraph [ref=e114]: Live validation state, regions, and quick operator actions.
+              - tab "Roles & permissions ReadRole posture and monitored-region scope across connected accounts." [ref=e115]:
+                - paragraph [ref=e116]: Roles & permissions
+                - paragraph [ref=e117]: ReadRole posture and monitored-region scope across connected accounts.
+              - tab "Integrations Required service checks and onboarding handoff for each account." [ref=e118]:
+                - paragraph [ref=e119]: Integrations
+                - paragraph [ref=e120]: Required service checks and onboarding handoff for each account.
+              - tab "Usage & lifecycle Lifecycle timestamps and monitoring posture over time." [ref=e121]:
+                - paragraph [ref=e122]: Usage & lifecycle
+                - paragraph [ref=e123]: Lifecycle timestamps and monitoring posture over time.
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - paragraph [ref=e128]: Connection health
+                  - heading "Connection state and quick account actions" [level=3] [ref=e129]
+                  - paragraph [ref=e130]: Open the account detail workflow, rerun onboarding-only checks, or queue source refreshes directly from the health grid.
+                - generic [ref=e132]: 1 account
+              - table [ref=e136]:
+                - rowgroup [ref=e137]:
+                  - row "Account Coverage Status Connection health Last validated Actions" [ref=e138]:
+                    - columnheader "Account" [ref=e139]
+                    - columnheader "Coverage" [ref=e140]
+                    - columnheader "Status" [ref=e141]
+                    - columnheader "Connection health" [ref=e142]
+                    - columnheader "Last validated" [ref=e143]
+                    - columnheader "Actions" [ref=e144]
+                - rowgroup [ref=e145]:
+                  - row "696505809372 Open detail workflow 2 regions eu-north-1, us-east-1 validated Healthy 3/20/26, 5:14 AM UTC Open details Onboarding checks Finding source to refresh Refresh All sources CSRF validation failed. Account-read checks run during onboarding only." [ref=e198]:
+                    - cell "696505809372 Open detail workflow" [ref=e147]:
+                      - button "696505809372 Open detail workflow" [ref=e148]:
+                        - text: "696505809372"
+                        - generic [ref=e149]: Open detail workflow
+                    - cell "2 regions eu-north-1, us-east-1" [ref=e150]:
+                      - paragraph [ref=e151]: 2 regions
+                      - paragraph [ref=e152]: eu-north-1, us-east-1
+                    - cell "validated" [ref=e153]:
+                      - generic [ref=e154]: validated
+                    - cell "Healthy" [ref=e155]:
+                      - generic [ref=e156]: Healthy
+                    - cell "3/20/26, 5:14 AM UTC" [ref=e157]
+                    - cell "Open details Onboarding checks Finding source to refresh Refresh All sources CSRF validation failed. Account-read checks run during onboarding only." [ref=e199]:
+                      - generic [ref=e159]:
+                        - generic [ref=e160]:
+                          - button "Open details" [ref=e161]:
+                            - generic [ref=e162]: Open details
+                          - link "Onboarding checks" [ref=e163] [cursor=pointer]:
+                            - /url: /onboarding
+                            - generic [ref=e164]: Onboarding checks
+                          - generic [ref=e166]:
+                            - generic [ref=e167]:
+                              - button "Finding source to refresh" [ref=e168]:
+                                - generic [ref=e169]:
+                                  - generic [ref=e170]: Security Hub
+                                  - img [ref=e171]
+                              - button "Refresh" [ref=e173]:
+                                - generic [ref=e174]: Refresh
+                              - button "All sources" [ref=e175]:
+                                - generic [ref=e176]: All sources
+                            - generic [ref=e200]: CSRF validation failed.
+                        - generic [ref=e177]: Account-read checks run during onboarding only.
+  - alert [ref=e178]

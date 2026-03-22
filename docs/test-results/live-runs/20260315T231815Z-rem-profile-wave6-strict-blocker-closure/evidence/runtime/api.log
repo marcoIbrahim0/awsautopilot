@@ -1,0 +1,33 @@
+INFO:     Started server process [50232]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18019 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62724 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62735 - "POST /api/aws/accounts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62743 - "GET /api/remediation-settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62744 - "GET /api/aws/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62847 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:62862 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T23:32:52Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62902 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T23:32:52Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62953 - "GET /api/actions?limit=500 HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:62988 - "POST /api/aws/accounts/696505809372/ingest HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63067 - "GET /api/aws/accounts/696505809372/ingest-progress?started_after=2026-03-15T23:36:15Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63085 - "GET /api/actions?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63088 - "GET /api/actions?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63090 - "GET /api/actions/4f550979-f521-471a-8246-1a24ca7c48d7/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63092 - "GET /api/actions/a769c380-0bfb-45b7-b358-c41b176521e1/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63093 - "GET /api/actions/a6585d13-e010-415e-823c-334a4c40bdf8/remediation-preview?mode=pr_only&strategy_id=s3_enable_sse_kms_guided HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63091 - "GET /api/actions/9405f465-5b90-4fee-b4f7-030660683e52/remediation-preview?mode=pr_only&strategy_id=s3_enable_sse_kms_guided&strategy_inputs=%7b%22kms_key_mode%22%3a%22custom%22%2c%22kms_key_arn%22%3a%22arn%3aaws%3akms%3aeu-north-1%3a696505809372%3akey%2fef0cca31-8328-41e6-ab28-64cbedc1a44c%22%7d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63124 - "GET /api/actions/a769c380-0bfb-45b7-b358-c41b176521e1/remediation-preview?mode=pr_only&strategy_id=s3_enable_abort_incomplete_uploads HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63129 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63135 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63142 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63148 - "POST /api/remediation-runs HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63156 - "GET /api/remediation-runs/8f441c77-9eca-49a1-af8f-853b17f429c6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63159 - "GET /api/remediation-runs/53eaa411-1407-4966-948a-b8880075ce08 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63158 - "GET /api/remediation-runs/38ed8b33-1737-4601-a491-e9d428eafc5e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63157 - "GET /api/remediation-runs/7848b5a3-b91a-46b4-b8d7-349dc401c05d HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [50232]

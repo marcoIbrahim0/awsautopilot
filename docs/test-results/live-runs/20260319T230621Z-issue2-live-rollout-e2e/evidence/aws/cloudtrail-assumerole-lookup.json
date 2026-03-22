@@ -1,0 +1,465 @@
+{
+    "Events": [
+        {
+            "EventId": "8b0e50a0-4a6f-4b57-add7-eb1daffe495b",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "AccessKeyId": "ASIAQNQWGZIWLMDMZEB6",
+            "EventTime": "2026-03-20T01:07:13+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Username": "security-autopilot-dev-api",
+            "Resources": [],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AssumedRole\",\"principalId\":\"AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api\",\"accountId\":\"029037611564\",\"accessKeyId\":\"ASIAQNQWGZIWLMDMZEB6\",\"sessionContext\":{\"sessionIssuer\":{\"type\":\"Role\",\"principalId\":\"AROAQNQWGZIWM5F6ILH2I\",\"arn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"accountId\":\"029037611564\",\"userName\":\"security-autopilot-dev-lambda-api\"},\"attributes\":{\"creationDate\":\"2026-03-19T23:04:33Z\",\"mfaAuthenticated\":\"false\"}},\"inScopeOf\":{\"issuerType\":\"AWS::Lambda::Function\",\"credentialsIssuedTo\":\"arn:aws:lambda:eu-north-1:029037611564:function:security-autopilot-dev-api\"}},\"eventTime\":\"2026-03-19T23:07:13Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"13.60.52.222\",\"userAgent\":\"Boto3/1.42.72 md/Botocore#1.42.72 ua/2.1 os/linux#5.10.251-282.983.amzn2.x86_64 md/arch#x86_64 lang/python#3.12.12 md/pyimpl#CPython exec-env/AWS_Lambda_python3.12 m/Z,D,b cfg/retry-mode#legacy Botocore/1.42.72\",\"errorCode\":\"AccessDenied\",\"errorMessage\":\"User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api is not authorized to perform: sts:SetSourceIdentity on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole\",\"requestParameters\":null,\"responseElements\":null,\"requestID\":\"22a651e4-dd6e-4920-bd35-d0bc497268fa\",\"eventID\":\"8b0e50a0-4a6f-4b57-add7-eb1daffe495b\",\"readOnly\":true,\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"eventCategory\":\"Management\",\"tlsDetails\":{\"tlsVersion\":\"TLSv1.3\",\"cipherSuite\":\"TLS_AES_128_GCM_SHA256\",\"clientProvidedHostHeader\":\"sts.eu-north-1.amazonaws.com\"}}"
+        },
+        {
+            "EventId": "142a248e-a25e-33d8-b73e-6a618da5acb1",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:04:40+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWAIFQ4RJT"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "resource-explorer-2"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWHVAWS5XYF:resource-explorer-2"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/AWSServiceRoleForResourceExplorer/resource-explorer-2"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/aws-service-role/resource-explorer-2.amazonaws.com/AWSServiceRoleForResourceExplorer"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"resource-explorer-2.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:04:40Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"resource-explorer-2.amazonaws.com\",\"userAgent\":\"resource-explorer-2.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/aws-service-role/resource-explorer-2.amazonaws.com/AWSServiceRoleForResourceExplorer\",\"roleSessionName\":\"resource-explorer-2\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWAIFQ4RJT\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiSDBGAiEA219MRP3ZngxcxLmMI8DcYW/f73jSSIZeCw7fdJmQ8AECIQCpD7D+q2+/W79Dt71W8XGjMvHkQm6TkXumSMdarJHBLyryAggoEAAaDDAyOTAzNzYxMTU2NCIMOZjs1fG5iByRMEQyKs8C8BVMs+6GZC5mLzvhdg+RvWRYodA3Lvz3yFcycvnuykO7H9FqkDzTW12uQ4gLrwrS7P2iEJsDyR4KBbubFVu17VrfAtvrK8Sq5yxcuLNPnht1UlxwdKwT25EQBBBKs6jRB7WCiUIhp7XNIscSYJg6i+Gm5m2SVUI1SFKymylTWGjyz0bxMxNr8OM4HvB+8aB/s+7zkcTFTQ7NbL/v8/rCmTP3QTJCgefDbaT0jndFCeS5XRewbycHQcEe30iWryXZQiwRzU8IVOGUYXaI7d0KQtZ4TVgf5KFhECZa7axaoOwN/+55TWEoItb4dC1RLE13Qhxra/TkBjIlM1e+23y7pIJiX+9z8aDJ3F2VaKxDdzkRrp2/peepxrsGiWyO/FfOCnQmF0y/B2cqP4Ra0gJau+cJaE8lfx67satOg3KopdSNEZ/KbImcd1s1Rk38H5owiILyzQY6vAGw3nzm/8wlilFFiH0u4/xPcarX1b4Nb1Y2JRVK11CcE/sB/cnKVNlxH3bwoEaNXTHzn7qomURtR1G4YnennlFxPI7HnEaCniyEpa1iT5r+RvWxMa7gpaLC0rV9CXYpPEXGlDvgsXV+q58LOv3q0oKJiqbrSJ+I+2lSdN3OrJ2OBHoBroDtCSDpWeNBvKOhdnywOzLSNtsX+Ml/vwaCaOTI70h2rwMvg2HgUcBATogHXacB3zK2g68AYWoBtw==\",\"expiration\":\"Mar 20, 2026, 12:04:40 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWHVAWS5XYF:resource-explorer-2\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/AWSServiceRoleForResourceExplorer/resource-explorer-2\"}},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MTQ4MDkyOTpSOjNYNno4ZW1I\"},\"requestID\":\"413c62b8-4f6d-441d-89c3-81e19fc386c6\",\"eventID\":\"142a248e-a25e-33d8-b73e-6a618da5acb1\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/aws-service-role/resource-explorer-2.amazonaws.com/AWSServiceRoleForResourceExplorer\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"0d2d1217-4196-4ebe-8ff4-f89a444ed4fe\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "086a8a9b-ccd6-3de4-9ec1-91ea9ff9a24e",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:04:33+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWLMDMZEB6"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:04:33Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"roleSessionName\":\"security-autopilot-dev-api\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWLMDMZEB6\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRzBFAiEAoBL0n5O0LUOVWSfS+eHz9nNDwR9ge+nNf3pPouW5swkCIGuqe9kYYDTOq34x/17GxAe91xPuo3r/t5c8CWv9vksqKokECCgQABoMMDI5MDM3NjExNTY0Igx6qxvewOoMer1sPuUq5gO1sryh38K9NH+xMdls6V03S98b4jwq++rUGAok53EWrBqFobxtEm5/ZwWqhrJWdk3451+TFQY+pMrz4uuqdSaI0nfTtpo+exE/1GLH1QKdYsSur9Cc1F936rqYs4lC961x5fN4LIf4tA0vlJqvnFWbdo98FcAn+L2V3w6suARHbZG/KwdGADoH1Q6EglUnGbDzsspRIRy8O5/IbVB9eZDUwrjMWTnqSH3eWM54aBEHepE3bqSEkAWRtE3V2WYJ7MfuZGaz6FdKesgChxLqSxbSUHHvr69Q0ltnhe3jCYrds2VKBwik0Kr4hHL0FEOZLZljX7uhNjS3VAWcrxTIpkWcbohLRPdm3E/hV8ruuFk4m8FDjXgzKIu/PHI03vqiD3k9bS6oNk7VKLaWGQsmDwKOBZ4cg6lDOBKecky8EoFRk9g9maIcsHThh2jglRTfqeF4jBgJlCQwkset+45pzfkzL9P3fINOpjOK3sRgKVQQ5f/p1Zz+N7Wsryaf/C442IPRzWhJtpSD7e5TCzmE1peadCshefb70h7Xp+9MIoEmMlNhxKn2Dwit37f/n7UQH/E3eATIdQnoMBqUDSaP+GqTqE0xbag30guRAfoZlAekZK4A0Mjeeaf/iGS9OOmdyuge8oaCykYwgYLyzQY6ogFOax11EzBc2Udx4OKrOCJuaWzvpxasFeMlVupsLADZhaWXmsfAQBwcWr32jHZvuOQKGKWYfONqkT1x+t5IHL6keLJtBSZAc0XULG6xvkY/ey4riwb7BDzuMM1U18eDF3z8MxO2USw7tY4JuxU2uiRMykgjiUtmrWcH6KAc/re0Tea8LL0B7RuMKrH+8fepLvmU/DV7ZFe6aNEP30kiahMiZtc=\",\"expiration\":\"Mar 20, 2026, 11:04:33 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxNDczMDcxOjBrdW9iNDRG\"},\"requestID\":\"19704b51-f5e3-4670-ac72-831b62d71b4b\",\"eventID\":\"086a8a9b-ccd6-3de4-9ec1-91ea9ff9a24e\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"41c1dd56-ea5c-4032-ba53-d6e42ce8dc54\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "37eb9d60-a60a-341e-aa30-431dfca13b75",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:04:33+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWCRRFN7M5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:04:33Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"roleSessionName\":\"security-autopilot-dev-api\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWCRRFN7M5\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiSDBGAiEAwizv7bd3y8d+31abBGjrW92rIrfAM9L6Dah4k3g29QUCIQDVDIrJ3dZuFohIZSekBIciqx42ACML0ISZfNFjMGc7UyqfAggoEAAaDDAyOTAzNzYxMTU2NCIMsUDsv6DCy2UDCQ/HKvwBYJkHse/a2rYtJLXoOr80B13WR8aub4x6Sgzvx31QDdcX9edxCycSRRNrjLJBDAi6s19JUGCO2giSboGG6kfulfY0glkAxeFWiF5QHw+QLSaFk7xhJuf7PW+dFmRgC9RlXISKAXbV4V14RJjOyHxl2n+e3KzRDwzck62V6UCpP03YqozN0bt4G5vFEJOTSA+0Fyy/SFlf9hPM0da4jUu5gGG1QN1JhiTa6j+yxnJHiLwIWnjsK7Y5Z77sWXreu3rl2sHvPqd5fMw1IQnrDGQRwSGJzhH6PxeA7kKTAbqEajzXQWsT/mUYwr4/SE1xVdQ3M16ubeVPf6+XdypLMIGC8s0GOpkBdRBvwDhEKIghSxSwNi440BU62vU/YO2pONlgbTnMAEzJzB4frK3/ZVwE9OQZTgfY1xszF3wY6avdlHvlQU6aqbzrARFgQ1ZpNoQbfZ+TQ5lvt47joKyF/KxllMl9hqQZ0BQT9Ix26mujag/A6Hjl/9VBEDWnHgL4L92BxgiwwZv5OQchFT2GO3cBL2ka5Yg3gEArvyF6tIar\",\"expiration\":\"Mar 20, 2026, 11:04:33 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxNDczMDY3Om9wbkhCU2F0\"},\"requestID\":\"19704b51-f5e3-4670-ac72-831b62d71b4b\",\"eventID\":\"37eb9d60-a60a-341e-aa30-431dfca13b75\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"9ee69915-9ef9-45e5-87dd-e0915a7b8229\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "5606047f-994e-395d-95bd-89321cfb2818",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:04:33+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWORYGQVUL"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:04:33Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"roleSessionName\":\"security-autopilot-dev-api\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWORYGQVUL\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiSDBGAiEA0qzIVWIKFe+Y/OwIG6RBrDjWHtxVOb/leZNuhwcE3w4CIQDAlIleoHuIY7LhozOoxbeBDZEyTI57CF2zBTKboMky1SqfAggoEAAaDDAyOTAzNzYxMTU2NCIMeBLWLGHvDLqId1NSKvwBDcQhDKrkYpQTLQfsN7Rqee3pcw0e7nTn2nOxNqq5rh1l0hdd99oDc1dRrvK2XhXmm50l1jcheKVEeIULr6XuoHN6PsbJBh0/qE1mAKc+UKkb3Vh7+BCivhZHgmsnyehP0n5MgxJvdGNIMSgUpbqu27bWlHNo4cGQZVBCYX7mXPgQmN2txtb14mTQt3IdSScn3Km5WMwCDzGqCJACeepzNwL77MUbBgIfeCHpuWH4loYP/D5978qe5qivR1k5EAtmWUOt+X+4ekTIs3UCBH0QA2olnftnYypo+UXN4n4cXgLC331HYYWoWfFobNX73V4X7AwzucxFjFIeI9EfMIGC8s0GOpkBlWdQVfSYs+5B7wLSLBPkELiVDlMJDvAWz7l2PCv5JKSqTaGVZ6nkNcB7bx3QfaIatyn3t/eqL+WNaXKWGZNAIEnV1ymsPl5aW01Mk15yNHBuz3vk0NcTw+xAyyvvb1JiUvM5XDR0BtuP65W3ViuqFuqkETzlcpvvFg88u4umrfTb8EsfWH8Xwz/zBgb+JK7uBLDH+pXmb5EJ\",\"expiration\":\"Mar 20, 2026, 11:04:33 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxNDczMzQ0OmpsbEtCZlQ1\"},\"requestID\":\"ea325f32-f2de-4322-a830-a3f84d5c4d03\",\"eventID\":\"5606047f-994e-395d-95bd-89321cfb2818\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"4b9b50f7-e8c5-4f0e-9a2b-5b749fee6703\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "b601c0aa-bd39-35df-9bb6-04c4ff9473b4",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:04:33+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWNOCQQPIL"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:04:33Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"roleSessionName\":\"security-autopilot-dev-api\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWNOCQQPIL\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRjBEAiAOU6mAFHp4dT55bfsU0l2ZOxzcp/EHwKb21frFjzGpZwIgBDUKUJrukL1NG3qOMds9UMxoBJ9ZGcS1kKKX03iwLs0qiQQIKBAAGgwwMjkwMzc2MTE1NjQiDOM/FOdCUEzR7v0ztCrmA5VlTOGFxAthk3U4Lb5dU03Gj0ql4m0JLKXp3BFLH0rvznDDMgKOMx5nunntZtO/Uze0DOG3ZhoVR8K7AvLWbuoulpOR0tmGPQFtmDTks34WupEdP9Ece96a4KtyRzx3EWZi584E0Zx5H/s8I6SMlHhm4uM3T2Sk96NDjXxa4FnPxMHW53/zEM5sTFGVRjJbTVlzTrjTOc/Ae3ViOLbKbip/MVdse0PjRNyguV0poPflVc8YdBmW6A7jYGJSv8IiM1NbqMgFEce9CzUQa1v3rP2rEs8CSO0XuAni3INXRH8WQKJdUOL7CMnkqTPMYOSvkiq5/Zvaf3fZWT+EHi11iqRpTYbFrjUlopdzz6/H1KzoA+iblwgVD5vbVssvNSRv7TdiAGO8muJimryTr4Aurd517CgMH/rHeXpb+2Dd0gAFFt5QQ0teuWKu/2P/L5u4HyKRWgnPPjk6Ay8RXii1yWjk5MeBTSVLjSjUaFPKOZ56kOSbY2+PNhivGcmqCqCaKgDJwx+3g7ZiH3/LlM1b9o+tJyrh7gFNwON/wLA7U0uOuLN4wuqnfwf7Qa0zvl+NBuseCpVepqmWvv2s+q0q0vj4jpFy+aooOOQgefvC4vZDKQQm3ach9zT6u50pkPdMO/2gHW+sdzCBgvLNBjqjAXLWPWTJtFhxn7+1WcHmJcSIMwR10qoPFiVZ6Av9fvj6U7gnDHVF1qcBHCPabuNiWYJ+5Almo2a0856fCeL0AsfC7LOF2mGPpaAoXkCV3su5WqRwMlL2Y/Nl/e32xuOza3A6nqCPFx6xFssBhYl7StZRS/5Dd+Kl9vWIaLgrRXP3BgrOob/pzgo66sgq9+GQjMQv3AqnwhU/29bOwijKUI38toM=\",\"expiration\":\"Mar 20, 2026, 11:04:33 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWM5F6ILH2I:security-autopilot-dev-api\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/security-autopilot-dev-api\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxNDczMzM4OmtOV05kdTBv\"},\"requestID\":\"ea325f32-f2de-4322-a830-a3f84d5c4d03\",\"eventID\":\"b601c0aa-bd39-35df-9bb6-04c4ff9473b4\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"1329a0e0-849f-49bd-ba7e-709b3c007aea\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "72522458-f6f5-3962-ad0a-b1b0639ca251",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:02:48+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWDVE654S6"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "awslambda_796_20260319230248752"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/awslambda_796_20260319230248752"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWFED5FMCLK:awslambda_796_20260319230248752"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:02:48Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker\",\"roleSessionName\":\"awslambda_796_20260319230248752\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWDVE654S6\",\"sessionToken\":\"FwoGZXIvYXdzEHAaDBTEbUKLrRFHh7XbXSK6AeGcCizogb1uykkg/hJI/KzOcBcMKvcayZF5CZK9dmwN2DoULENaWpkkHE7zqXFwFz9e8K7GrYI4Fi18WN1LxcCW/6jxOi42jUwUROzK4inkqOzFLjkcmPMzpjuxcJOf41KO8rkxkWsaZeECOoAqgz+7Xqi26ai2eTPybQOJlEkPyLXrfmcze1Ht7Y2sl5A72BzCpy+/6/C7xviB4b/2r3h3DQlKiKutgiwJKTKsZR5WIUOPwvAucf5XVCiYgfLNBjIqPUbXnoM+feh2qxSdq8CMRg076GkJJjIqe9prM3ZmiSXA9rtRiLzU4cJe\",\"expiration\":\"Mar 20, 2026, 1:02:48 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWFED5FMCLK:awslambda_796_20260319230248752\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/awslambda_796_20260319230248752\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxMzY4NzY4OlBhUERBTzBJ\"},\"requestID\":\"5165abcc-9430-4ec4-95a5-ab13402f77db\",\"eventID\":\"72522458-f6f5-3962-ad0a-b1b0639ca251\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"965d28fb-4448-4b60-b3a2-46c1f64271f5\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "e8923bf6-9b7d-34af-81fb-d017ece16831",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:02:47+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWJL32XBUT"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWM5F6ILH2I:awslambda_620_20260319230247967"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/awslambda_620_20260319230247967"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "awslambda_620_20260319230247967"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.08\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"lambda.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:02:47Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"lambda.amazonaws.com\",\"userAgent\":\"lambda.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\",\"roleSessionName\":\"awslambda_620_20260319230247967\"},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWJL32XBUT\",\"sessionToken\":\"FwoGZXIvYXdzEHAaDAHr0biKD2elXQzzBCK6AV1bs0qPvgXMisg6w7K4cX8Pd6m/IBvqBGSBrV8IE5wEUilxocwj4wSY8jfny5s0Z6BS8WKvEUytcOmK+y+lPSaDvRSchnHP8RFMulwBJiHe+HWdnVlL92jvMC2ZyF+4rBxmWeRCtp9O7Gp4x7W0r4dKiDd9o7CxXQBtVUFl3hBm0izsKxta04app1lEiMxGiCP/u0kfvtCQuVMCw74uKjeCuYc1r409fKelRwyyn8XyPt4hohRt0gM0biiXgfLNBjIqDXFjI5KcQu07A5lVQ/UHuA2VSjqT2wZfw7UExrAvVvVHAebuM3duQ66B\",\"expiration\":\"Mar 20, 2026, 1:02:47 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWM5F6ILH2I:awslambda_620_20260319230247967\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-api/awslambda_620_20260319230247967\"},\"packedPolicySize\":1},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpBUk46QToxNzczOTYxMzY3OTgyOkVLcWcxSkpW\"},\"requestID\":\"2e2fa940-79fb-4050-b300-8f12df2691b3\",\"eventID\":\"e8923bf6-9b7d-34af-81fb-d017ece16831\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"c7bed490-1aae-48ff-b6ca-edac3354aa7e\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "f644625a-edd1-357e-afb6-4f7a8d821b80",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:00:08+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWNOOG2QMU"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:00:08Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Id\\\":\\\"build-container\\\",\\\"Statement\\\":[{\\\"Sid\\\":\\\"AllowAllFromRole\\\",\\\"Effect\\\":\\\"Allow\\\",\\\"Action\\\":[\\\"*\\\"],\\\"Resource\\\":[\\\"*\\\"]}]}\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWNOOG2QMU\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRzBFAiEAi1M2n5dmf60QdQCZ3o2PZqyaUWUndlF2OHyKFuxwbMsCIBbhXIlI5QTSO52DKCo73szBQRA+uJEJmnHjNSVUzsnFKuMCCCgQABoMMDI5MDM3NjExNTY0IgwCMiKwiEwB1OOFRGYqwAJadqfglnChGi1arPyokfMvot57EKwxfq6zhMKauKF1CXTwpGp7Nk21aiJN0zvCQSF5j7cRKZD+q3MzJbBptO9pep0evAiobY1mhbCPsoN56cun9cJx33ywTvAmfTclIOZR/EhKjdmmTuw3vAm8r3sjsanp9TjW3VA6xzZCO/thVxDyh4ecWLCYPYyBVHuizQTAp/q8dTrr5QBN87I7SIpFk+odJ0qiJzILG6ts1+wbhKzMZvqXbtIa+cdmBPli04qhe6xXGBa2f2aF9NJBKESx/RVmidQEbuGYYdxWBmcDMMV8eEKDRR3mGu+I1q0i9zoheHA5OHHMrYK7s8U2L4/PMC0ASdC6MhLMi01O+KE9Ao6bFOe99IZuvhVCHJWCS+NAXMEc2jM4Vgkapzuxwq5F2gWYr3FirmFmsQhk5ll3CTD4//HNBjqNAQJJwG9t+ba/bOiiH3ornq5ngVYowjKqS7xUYPltYaszx3Kwrw2VublBcTMfx/IILABULzyfGxI0lOFKyzfyYIOPFW4YSZ1Zu+iz1z/rPLRkw+96XaxA8OLqXyCYhqTrz+hvoBIufN+bMyZzeC6P4FL4cUvg7GE3FBmu23P+fGxGllsb3STzWrB66kD3GA==\",\"expiration\":\"Mar 20, 2026, 12:00:08 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\"},\"packedPolicySize\":11},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MTIwODg2NTpSOlJCa3VrT3lX\"},\"requestID\":\"7b1c2ec6-a53f-4946-8524-c151a34359f6\",\"eventID\":\"f644625a-edd1-357e-afb6-4f7a8d821b80\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"7df41321-6ad4-4bff-9ab4-81bd9766471d\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "159cec64-f5a8-332a-92d4-fbe9aacd2378",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:00:06+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWIMOU6LAY"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:00:06Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Id\\\":\\\"build-container\\\",\\\"Statement\\\":[{\\\"Sid\\\":\\\"AllowAllFromRole\\\",\\\"Effect\\\":\\\"Allow\\\",\\\"Action\\\":[\\\"*\\\"],\\\"Resource\\\":[\\\"*\\\"]}]}\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWIMOU6LAY\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiSDBGAiEAujT45M2pE9JgClUg3VP8KGT0uirciIWuyRRTUCobbeACIQCCuXBSoNJGmkZzeNsBrZZ6qpNCkYEpO2mOudA2xBAZlCrjAggoEAAaDDAyOTAzNzYxMTU2NCIMIGCjVmADfu/RuBe4KsAC0GWcZ8H+avTO/VG4ub4g4T0Qr83GGmzPNeW+aJcuqlDfpB4JM04uhFk8UsWuG3Kch1VayM4pcVrT7ysktjwi+4qYMZJ+dTchrMfgS3z/swDRD0UwwAXSCI/8PVUahfMbvPwh723gHtK6At8/Q89pE3Nn/H3Jba4zGeDM+puErvaXwVzssot9jPtTX3h48TacRZbO4i2ZhLcnFUA7tupm8ILnshKUrt6XYDLxN+iGnMWMewsIrLNN2n/YloaAXEt5luF/YXYZfUcxKQ2Tt0SYu6VKaLUdLwayMX4ZGwKNT8vfs758D0gRHtzj0wQt399ouHguxyntStHrKbuj0YH631RjOE4XX5OrwCVtUgGvhdos2ENUSf9WIbAOLxnefNTE5AmX2ESTkcHMHJgmszZpcSmEQfgbT0DGIXA/MrMleSww9v/xzQY6jAGIKO1heTVmtDpMSvPf+nVHGkZrYCuv9hbt6CBmNsRQ2yeSClb29V4XbXRCw2rQpC0nrqGRZnsHhp/C/XIRn7xrw/JV+Z9+ZnajiBOvmh4r98llyH55lYrttnfGvbZ0niYwe0m7jIuFsJMz9gxRUh+N9yTVlAQ5f7gS+pJ0eArOKbqGX7Kl7H6E2sFNrw==\",\"expiration\":\"Mar 20, 2026, 12:00:06 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\"},\"packedPolicySize\":11},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MTIwNjQ0NTpSOjUzS2xORlJ6\"},\"requestID\":\"43b5809b-61a8-45a6-b947-bedac097ad3a\",\"eventID\":\"159cec64-f5a8-332a-92d4-fbe9aacd2378\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"18bf10d2-dbe9-4527-9b75-c719da6c0b1f\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "bffc146f-3b63-35a5-9dda-604f37d29b95",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:00:06+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWETHYDHKZ"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:00:06Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWETHYDHKZ\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRjBEAiArN4/+CFwE9Dw2ECpXD4Ma3Fqo5Wctj2Qw7FSWtFEiMgIgN3C5nDzFZcRNC3TV6rWyjoGfuZX3PD68pnqPZ6QprVYqrQIIKBAAGgwwMjkwMzc2MTE1NjQiDEjjrhnnSUs1Msap4iqKAiAz4kxMiv2Y6ax4ZPdYqBl/qCXP0ViK+5Zr9sN5umhZggc099aUvrvUnMmIc0s2w8KKd7cSiRQNQbCgX9i62bs7qRpqWZWQpNYVXy8IhFGHeX5gxM3ju+jTTpLuxY6y2BcYNUGBf182s/Rbi9h7fX18qhS9tHUo0gOCCXk37Yv0SJj3sox+MfPBIspB1q1SAsd7woJEYoF4M3tIJDFYzZF5mMpBN6do2BEWacxwMvZCDqZzFnon0XJoRDZMYgyyDGjJBbx1nOtqMHKb+9bMeNpJJzIe1rNUwxRZJvo+rcuOGbcQ4J2tRcJs8vEiRk8O7fDxikIhQiFOtbZcr2+NRR6UTefuSKe21b1gMPb/8c0GOo4BN91xIzHx9J6z/RAXxiXUd4HmwVeBKu5a7vDaSM7EniXHcC4a3dGv48F4SGTezlleDVl1+KCMEMxf8Ljqkv2kI6QhH0rlR/+Aw2FBJpHaPo4FHYi8xiiz0cPMWBfDk+8bwiBx7UX5E4l9NfjiR5/62R9t6u8gxuLKHmeRisrVGaEj/3PMDm5DMaDxqK00GA==\",\"expiration\":\"Mar 20, 2026, 12:00:06 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-7de264d2-2d42-442f-b0b3-91a9080957c3\"}},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MTIwNjExMzpSOkFwU2Y0M29p\"},\"requestID\":\"21acc337-bce0-4ee3-92a0-0e0ba22a2ce7\",\"eventID\":\"bffc146f-3b63-35a5-9dda-604f37d29b95\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"5bae6ce0-3b00-498e-bf76-13602bf41759\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "b0f322b4-bab4-328b-aadf-4d7310d5b3f3",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T01:00:05+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWIIUVQEYB"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T23:00:05Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWIIUVQEYB\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRjBEAiBMit3uyt4dNe97Pls0LK3FsvC71K86zqy5TZgYmfEGiQIgFfxL+xH2EjPxpKBy/UYzM02oZaYFXTdSDVeX6PaMEYEqiAIIKBAAGgwwMjkwMzc2MTE1NjQiDBpuN7aSm4CE3KKZNSrlAZaTbi0czR7xeaT16+nrIDE8DYivt7Fsrfbjb50ZVAzUd16K6enXYCJV+lEnCSZgkxr0UVswKF6kssG0YkDD0jXJuSjroM1PkmGShPMeyF1HV3q54ALi1BfNPVU2XiKg+Kl9ffiHts7tDMe1U+/GC9tPLRSxIff0j8SVxmPAqENVMbcACXmiB6I6vx+asGfAvQVIEZ22OdAhc+cpc4VPuT9lhnwzOcbFrv0Vi2AFPZQOn5RRrDhjUZFG5nRZQsthdCyVicS806+i0Xh33KIMs30qO6+tFE1wxVSOAIiBu/3hfg1V3B0w9f/xzQY6jgE/bc07bzyb0R/mpC/osYvqm8BTLp6y34xXFzvtxM93e+dI3lpLpnqXu+vBcmxflKeoWF9pRDFYL1OH8QOBvaRSoJS1M3hpDbUuMrm2tI2ABR65+Oqkr1SV4LZAIJQl1vwRzsgJLjGyfl5BEu+rFM+o2aBSvPnqrFSEdVXj8aGbmHWo7Mc3b3fG4J48U/M1\",\"expiration\":\"Mar 20, 2026, 12:00:05 AM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild\"}},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MTIwNTM2NTpSOllzalNMdnJR\"},\"requestID\":\"9878795b-f45e-471e-aea2-a86c6dc9948a\",\"eventID\":\"b0f322b4-bab4-328b-aadf-4d7310d5b3f3\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"7d9855cb-d96f-4d09-b6e5-dde88787312e\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "fef3d099-38dc-3653-ac11-fec4c2735424",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T00:54:13+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWCEWJBP56"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T22:54:13Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Id\\\":\\\"build-container\\\",\\\"Statement\\\":[{\\\"Sid\\\":\\\"AllowAllFromRole\\\",\\\"Effect\\\":\\\"Allow\\\",\\\"Action\\\":[\\\"*\\\"],\\\"Resource\\\":[\\\"*\\\"]}]}\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWCEWJBP56\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRjBEAiA0jVuWNmD485Ehv5ukOnEQPB+poAyyMvKu86D1V1dUGAIgFVRfXhMAaMXRBg6zJ6/dLYPf+H06Ml7/3oym8pzU/1Uq4wIIKBAAGgwwMjkwMzc2MTE1NjQiDAscptRgyVs5BQTIyyrAAhqNV/Bf5RjswrZQ9U0JqqEbTk4Nk++hdf42c/Fh9enNKihuHOxJWWh3MBWFbHCjp8u1rHx0crP9tw9EneEpQoxP/hzM1jO9pC7flhIgqFutgGC5a02a4Q/etsoANtuzT/09Et4gz9Qao6Yhbh2NNeJz1rKyBT+HUAdbhKTxL8siTPvyTXceH38FG7St7JUcAODve1UTTZadQInI9DOB21K7M+NNN2n9YiGrS2pkCGzCnfvzddhKKPBGKm3fXvHLxqgIE1DvUmb2RQA2bYga6kLzSYwuStpvSahLxJv2V5LSVxw8P16C8RwtKE8sUSMSzIma+nYbBZmO5YLm2Ou4Um7UwN1kqIjMKJahgSQhBQaATyz8X4tBXHu/24s5iXoBdHfpY4d87Kivvd/f+A1FHIDDrJFkJrgdX8jh49IqxdjKMJX98c0GOo4B8osnviPnCMjetvespytWELpwzrc6iEcGNVeQwQlPQcJbtYlB0smIZ2TqT9aV/+SHKeqlaOJejUnvqKChmCWJGZUThmmvQDzzTwST4nrMD4HsIZ2UfyuUW35niDyHZFXsgyNLKsxy+QlZxvZz0i9w6xxFBp2krqAivm1a+YvqYmS9GfLzYAxBdVM7TRr8+Q==\",\"expiration\":\"Mar 19, 2026, 11:54:13 PM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\"},\"packedPolicySize\":11},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MDg1MzcwNDpSOnZPR0ZXRVM0\"},\"requestID\":\"2f0da879-5450-4bcf-869f-ce6c93b29fc1\",\"eventID\":\"fef3d099-38dc-3653-ac11-fec4c2735424\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"9bf5a457-4ccf-4990-8f88-aaef7774a21a\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "2901fafa-65b2-35c4-9ee3-0927a24d931c",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T00:54:12+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWNAJ7STZP"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T22:54:12Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Id\\\":\\\"build-container\\\",\\\"Statement\\\":[{\\\"Sid\\\":\\\"AllowAllFromRole\\\",\\\"Effect\\\":\\\"Allow\\\",\\\"Action\\\":[\\\"*\\\"],\\\"Resource\\\":[\\\"*\\\"]}]}\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWNAJ7STZP\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiSDBGAiEAkKF3fA4r1mOFK1ng3sa5ww0Y/amelHBq4vwP1IlUcGsCIQDsSdj0kWdxncW/UrJH4IbNLSv/k4mrzA4caLRCiKkkDCrjAggoEAAaDDAyOTAzNzYxMTU2NCIMGR/z2TUwQpQwISeWKsACStrWbPzitLzfJy/Okvlmy38BaybbKZ5Po8MNKkTN2/U/ir5aCJr0iZawnlulrOvidgnbyLkaNzJTdmiZ1Fly108mWZSlk5pxrFLJ+xkHZIAFreNVPcoZREfHkhnn+7uERBJT3Zif35UNiquTCTOee11HHyVULDJz2PMYpoWTEq6+t3bnDiDwN3+WpFlcuMBrpC+6hnlgf7275K//tiYWCavBPlb7HLZEkeXk9HEKlq0r9XcOeRvWrQ7lb2P2aubOGLmv/is4REREE6oyCy2Bt0cQqhow0lkpbbZQn5ivR22eLIXwptg9CaNxiq34FPNvb/xt0oZ42fvWEq3tEjfWe5yvukydlHxE9lD3CxmuQR4XX26vqDgm8KJ5J7Z4D0jEYy1xQZtqfDi/kYNTANk4CJtTnvM4vGiObmwIHKJjCHEwlP3xzQY6jAGPRbNKCQsIOw6EU7xi1eOC/06B2OqcosrmvwiEdVWLtMKdbDGCY/S9xUcMhsUzh2XmvgcdpCzN9Mh5oOxE35GkgRSt1iYyO7vIffoGQxrL5CUjibGy1yce7j9vmgBaUNFiSW4BDS1/wb2SVo3Bcp8bx2o9Avx7zV3WiOKV0K6cMz0aJCY5eiA8M7IHFA==\",\"expiration\":\"Mar 19, 2026, 11:54:12 PM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\"},\"packedPolicySize\":11},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MDg1Mjg3MzpSOmpJREJlRzlS\"},\"requestID\":\"7e6caa7a-1377-4f78-91ba-5d87c15c1ad6\",\"eventID\":\"2901fafa-65b2-35c4-9ee3-0927a24d931c\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"513bf7cc-be54-4f87-b87e-d9f27f8b6930\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "9202a90f-8930-31e9-bce7-5e4d43d8e969",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T00:54:12+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWI5C4VYWY"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T22:54:12Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWI5C4VYWY\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRzBFAiEA0r2oOzG/zcQF0t2wzqS1G5PQAr28FAO61NHHh8GD+zQCICS6ZsdMAG4ds64qOBc4ne+ECJ7K0hTnsrnr8/UBhSExKq0CCCgQABoMMDI5MDM3NjExNTY0IgwNLn0QweQZq9xQoJ8qigLeP50u87fXqUTBaEimttffNBqeY39rr+JOh7azbYRpZxlS7Zq+8yzz63BpN600AI+0FqvSzIxXklVSxdQ8pI5pl+xY6D33ObrIFZKhRGzqk1hZb3CFpJhNHHgchW6Q2QBawXkH4ERrwnOF4ZThHOEdDosnaxzot5WL2a6qOuZQdv0sITuqBhxC1xkyYYRH5mB1NST7y4RfZ5RQFw3iJH/0cjui+btVBH4sb+F5n6PlgvZQMUQ5oc4z2LZ1dWGDxSybUPhr4iyPBNXlhXxC3BaK60Ji8H36Pmvhvm/QWCY29R+UD59rkV7aiuQYQDCZZA3YbEl+taDpMPip7bjd/9tIpwNUtNLQpmnP/TCU/fHNBjqNAbFoYm7ZXAGATbnuj7UBMA60c0qW3A3mixGjCz0OyGIK8o+Bc7N1+8REvW9XUzY4FMDi9zrI3Yyxbw5H/fgO1/N2ggBpJWvyyirJY4cu8f1FTC9lL7vPwEN42xH1J1W3ihqF0SLe2B2Y7+kypfNlS0Uj8Iz2Xb620GyzyM65YlbKZikHfHkcCtupmqY0cg==\",\"expiration\":\"Mar 19, 2026, 11:54:12 PM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild-ca68ffd1-bec9-498b-8321-f8e91ce85ab5\"}},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MDg1MjUzOTpSOmtMc2diVGhV\"},\"requestID\":\"2d7b0985-f018-4540-9890-254d32fefff5\",\"eventID\":\"9202a90f-8930-31e9-bce7-5e4d43d8e969\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"bb75a5b6-4dec-41bf-b213-d4a9419dbb5e\",\"eventCategory\":\"Management\"}"
+        },
+        {
+            "EventId": "6408f660-80fc-3056-88e0-04b3a50b05b7",
+            "EventName": "AssumeRole",
+            "ReadOnly": "true",
+            "EventTime": "2026-03-20T00:54:11+02:00",
+            "EventSource": "sts.amazonaws.com",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::IAM::AccessKey",
+                    "ResourceName": "ASIAQNQWGZIWILINOMTV"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::STS::AssumedRole",
+                    "ResourceName": "arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild"
+                },
+                {
+                    "ResourceType": "AWS::IAM::Role",
+                    "ResourceName": "arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"AWSService\",\"invokedBy\":\"codebuild.amazonaws.com\"},\"eventTime\":\"2026-03-19T22:54:11Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"AssumeRole\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"codebuild.amazonaws.com\",\"userAgent\":\"codebuild.amazonaws.com\",\"requestParameters\":{\"roleArn\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\",\"roleSessionName\":\"AWSCodeBuild\",\"durationSeconds\":3600},\"responseElements\":{\"credentials\":{\"accessKeyId\":\"ASIAQNQWGZIWILINOMTV\",\"sessionToken\":\"IQoJb3JpZ2luX2VjEF8aCmV1LW5vcnRoLTEiRzBFAiEAjgs7INzHnpzd+FlB4Hv9zlgRFYmiOdBWJw84jRfEM70CICVpWqLxIVxBUELFyYzb7YsWdnOOaLTfcrWhCATBhfShKogCCCgQABoMMDI5MDM3NjExNTY0Igw26CwNiJ5l6Gq/a3sq5QFIjyk3AhPaDlulrt9Wn7XiE9/SlsDI6+HMzdDKAhj829ilvto/c79wVdrAjZXqWnqjEvwGytu+jI7G/jReRhmjoHwVb74mJJow2dqq2VtPAH0hTrr0G9+Ux/B8xSZtHv9EMzMDqb4bAcoeqf8Dr5+cKinJ53oEb+EJKfbEMOHbvBmSq6mDD/0j8TtvSQu7N8hwg1xIeQjhpwK6mu5wP4P2FeDJeBjA80njXUO7ZRiLVPylYNz6i3sPnN/sfXiIxt6vSPD8VvemGgxInC5s9kc3VCY+2WO2y2k6mg3u7XbYsxrPkokjMJP98c0GOo0BBaXxNc7/Ux4wZlRgutridZcq/ulYglNNDzH3JxLszvfuHHb8h51gDgsB5tq6i0iHfUmIxOZE6ICjbBTZe1BxnVfr9moR7AH3F+dAzeJjgGiwuR5yR+/FSQEB/cunnSWF+zB1fN9cXfCW49pAFoUtrfVwYmfnq2fhJi/ySjbNjlgsZUJRpFNCpg182k97\",\"expiration\":\"Mar 19, 2026, 11:54:11 PM\"},\"assumedRoleUser\":{\"assumedRoleId\":\"AROAQNQWGZIWJYFBTAFAC:AWSCodeBuild\",\"arn\":\"arn:aws:sts::029037611564:assumed-role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq/AWSCodeBuild\"}},\"additionalEventData\":{\"ExtendedRequestId\":\"MTpldS1ub3J0aC0xOlM6MTc3Mzk2MDg1MTc2MTpSOmdrYktOQkx4\"},\"requestID\":\"e5f7ab18-e1f1-49a1-b1be-4b382e152fea\",\"eventID\":\"6408f660-80fc-3056-88e0-04b3a50b05b7\",\"readOnly\":true,\"resources\":[{\"accountId\":\"029037611564\",\"type\":\"AWS::IAM::Role\",\"ARN\":\"arn:aws:iam::029037611564:role/security-autopilot-saas-s-ServerlessImageBuilderRol-M1VrPxvP2pWq\"}],\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"029037611564\",\"sharedEventID\":\"127f275c-cf14-4308-84a2-ecc5d5e1064a\",\"eventCategory\":\"Management\"}"
+        }
+    ]
+}

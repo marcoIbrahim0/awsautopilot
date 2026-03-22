@@ -93,18 +93,14 @@ def test_supported_action_types_return_complete_execution_guidance(action_type: 
         _assert_guidance_complete(item)
 
 
-def test_execution_guidance_differs_between_direct_fix_and_pr_modes() -> None:
+def test_execution_guidance_currently_returns_pr_only_entries() -> None:
     action = _make_action("s3_block_public_access")
 
     guidance = build_action_execution_guidance(action, account=_make_account())
     by_mode = {item["mode"]: item for item in guidance}
 
-    assert set(by_mode) == {"direct_fix", "pr_only"}
-    assert by_mode["direct_fix"]["expected_outcome"] != by_mode["pr_only"]["expected_outcome"]
-    assert by_mode["direct_fix"]["rollback"]["summary"] != by_mode["pr_only"]["rollback"]["summary"]
-    assert by_mode["direct_fix"]["pre_checks"][1]["code"] == "direct_fix_change_window"
+    assert set(by_mode) == {"pr_only"}
     assert by_mode["pr_only"]["pre_checks"][1]["code"] == "pr_bundle_owner_confirmed"
-    assert by_mode["direct_fix"]["post_checks"][0]["code"] == "direct_fix_run_success"
     assert by_mode["pr_only"]["post_checks"][0]["code"] == "pr_bundle_review_and_apply"
 
 
@@ -166,4 +162,4 @@ def test_get_action_contract_includes_execution_guidance(client: TestClient) -> 
     assert body["implementation_artifacts"] == []
     for item in body["execution_guidance"]:
         _assert_guidance_complete(item)
-        assert item["mode"] in {"direct_fix", "pr_only"}
+        assert item["mode"] == "pr_only"

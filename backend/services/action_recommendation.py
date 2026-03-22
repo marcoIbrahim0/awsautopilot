@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 from backend.services.action_sla import risk_tier_from_score
 from backend.services.root_credentials_workflow import is_root_credentials_required_action
 
-RecommendationMode = Literal["direct_fix_candidate", "pr_only", "exception_review"]
+RecommendationMode = Literal["pr_only", "exception_review"]
 MatrixRiskTier = Literal["low", "medium", "high"]
 BusinessCriticalityTier = Literal["low", "medium", "high"]
 
@@ -51,10 +51,10 @@ _MEDIUM_CRITICALITY_KEYWORDS = (
     "shared",
 )
 _MATRIX_MODE_MAP: dict[tuple[MatrixRiskTier, BusinessCriticalityTier], RecommendationMode] = {
-    ("low", "low"): "direct_fix_candidate",
-    ("medium", "low"): "direct_fix_candidate",
-    ("high", "low"): "direct_fix_candidate",
-    ("low", "medium"): "direct_fix_candidate",
+    ("low", "low"): "pr_only",
+    ("medium", "low"): "pr_only",
+    ("high", "low"): "pr_only",
+    ("low", "medium"): "pr_only",
     ("medium", "medium"): "pr_only",
     ("high", "medium"): "pr_only",
     ("low", "high"): "pr_only",
@@ -254,9 +254,9 @@ def _capability_summary(
     advisory: bool,
     mode_options: list[str],
 ) -> str:
-    if not advisory or mode != "direct_fix_candidate" or "direct_fix" in mode_options:
+    if not advisory or mode != "pr_only" or not mode_options:
         return ""
-    return "Direct fix is not currently exposed in mode_options, so this stays an advisory candidate rather than an execution gate."
+    return "Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
 
 
 def _policy_summary(action: Any, enforced_by_policy: str | None) -> str:

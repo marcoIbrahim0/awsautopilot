@@ -37,6 +37,7 @@ from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
 )
+from backend.workers.jobs import remediation_run
 from backend.workers.jobs.remediation_run import (
     _build_reporting_wrapper_script as build_reporting_wrapper_script,
     _sync_download_bundle_group_runs as sync_download_bundle_group_runs,
@@ -835,6 +836,30 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert "if [ -t 1 ] && [ -z \"${CI:-}\" ]" in content
     assert "apply_with_duplicate_tolerance" in content
     assert "run_terraform_init_with_retry" in content
+    assert "write_tfrc_with_cache_only" in content
+    assert "write_tfrc_with_mirror" in content
+    assert "has_cached_aws_provider" in content
+    assert "has_mirrored_aws_provider" in content
+    assert "has_preferred_mirrored_aws_provider" in content
+    assert "AWS_PROVIDER_LOCKFILE" in content
+    assert "seed_canonical_aws_lockfile" in content
+    assert 'find -L "${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}" -type f' in content
+    assert "terraform-provider-aws_v*_x5" in content
+    assert 'find -L "${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}" -type f' in content
+    assert "filesystem_mirror" in content
+    assert 'export TF_PROVIDER_MIRROR_DIR="${CACHE_ROOT}/provider-mirror"' in content
+    assert 'PREFERRED_TF_PROVIDER_MIRROR_DIR="${HOME}/.terraform.d/plugin-cache"' in content
+    assert 'path    = "${mirror_dir}"' in content
+    assert 'terraform providers mirror "${ACTIVE_TF_PROVIDER_MIRROR_DIR}"' in content
+    assert 'terraform providers lock -fs-mirror="${ACTIVE_TF_PROVIDER_MIRROR_DIR}"' in content
+    assert 'cp .terraform.lock.hcl "${AWS_PROVIDER_LOCKFILE}"' in content
+    assert "terraform_init_with_lockfile_fallback" in content
+    assert 'terraform init -input=false -lockfile=readonly' in content
+    assert 'grep -q "Provider dependency changes detected" "$log_file"' in content
+    assert "refreshing lockfile." in content
+    assert 'include = ["registry.terraform.io/hashicorp/aws"]' in content
+    assert 'version = "= 5.100.0"' in content
+    assert "5.100.0" in content
     assert "${!ACTION_DIRS[@]}" not in content
     assert ("while IFS= read -r dir; do" in content) or ("for dir in \"${ACTION_DIRS[@]}\"; do" in content)
     assert "InvalidPermission" in content
@@ -845,9 +870,9 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     metadata = pr_bundle.get("metadata")
     assert isinstance(metadata, dict)
     runner_template_source = str(metadata.get("runner_template_source") or "")
-    assert runner_template_source.startswith(("embedded", "s3://"))
+    assert runner_template_source == "repo:infrastructure/templates/run_all.sh"
     runner_template_version = str(metadata.get("runner_template_version") or "")
-    assert runner_template_version
+    assert runner_template_version.startswith("sha256:")
     assert metadata.get("requested_action_count") == 2
     assert metadata.get("generated_action_count") == 2
     assert metadata.get("skipped_action_count") == 0
@@ -855,7 +880,7 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     group_bundle = run.artifacts.get("group_bundle")
     assert isinstance(group_bundle, dict)
     group_runner_template_source = str(group_bundle.get("runner_template_source") or "")
-    assert group_runner_template_source.startswith(("embedded", "s3://"))
+    assert group_runner_template_source == "repo:infrastructure/templates/run_all.sh"
     assert group_bundle.get("runner_template_version") == runner_template_version
     assert group_bundle.get("generated_action_count") == 2
     assert group_bundle.get("skipped_action_count") == 0
@@ -865,6 +890,7 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     readme_content = str(readme_group.get("content") or "")
     assert "chmod +x ./run_all.sh" in readme_content
     assert "./run_all.sh" in readme_content
+    assert "local mirror" in readme_content
 
 
 def test_pr_only_group_bundle_skips_generation_errors_and_keeps_valid_actions() -> None:
@@ -952,61 +978,16 @@ def test_pr_only_group_bundle_skips_generation_errors_and_keeps_valid_actions() 
     assert "errors/*.txt" in readme
 
 
-def test_group_bundle_runner_template_uses_s3_when_configured() -> None:
-    job = _make_job(mode="pr_only")
-    run = _mock_run_with_action("s3_bucket_block_public_access")
-    run.action.resource_id = "arn:aws:s3:::bucket-one"
-    run.action.target_id = "arn:aws:s3:::bucket-one"
-    second_action = MagicMock()
-    second_action.id = uuid.uuid4()
-    second_action.action_type = "s3_bucket_block_public_access"
-    second_action.account_id = "123456789012"
-    second_action.region = "us-east-1"
-    second_action.title = "Bucket two hardening"
-    second_action.control_id = "S3.2"
-    second_action.target_id = "arn:aws:s3:::bucket-two"
-    second_action.resource_id = "arn:aws:s3:::bucket-two"
-    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+def test_load_default_runner_script_reads_repo_template_file() -> None:
+    fallback = "#!/usr/bin/env bash\necho embedded-fallback\n"
 
-    result_run = MagicMock()
-    result_run.scalar_one_or_none.return_value = run
-    result_actions = MagicMock()
-    result_actions.scalars.return_value.all.return_value = [run.action, second_action]
-    mock_session = MagicMock()
-    mock_session.execute.side_effect = [result_run, result_actions]
-    mock_session.flush = MagicMock()
+    with patch("backend.workers.jobs.remediation_run.Path.is_file", return_value=True):
+        with patch("backend.workers.jobs.remediation_run.Path.read_text", return_value="#!/usr/bin/env bash\necho repo-template\n"):
+            script, source, version = remediation_run._load_default_runner_script(fallback)
 
-    bundle_one = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# one"}], "steps": ["step one"]}
-    bundle_two = {"format": "terraform", "files": [{"path": "providers.tf", "content": "# two"}], "steps": ["step two"]}
-
-    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
-        ctx = MagicMock()
-        ctx.__enter__.return_value = mock_session
-        ctx.__exit__.return_value = False
-        mock_scope.return_value = ctx
-        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", side_effect=[bundle_one, bundle_two]):
-            with patch("backend.workers.jobs.remediation_run.settings") as mock_settings:
-                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI = "s3://central-templates/run-all/latest.sh"
-                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION = "v9.9.9"
-                mock_settings.SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS = 300
-                with patch("backend.workers.jobs.remediation_run.boto3.client") as mock_boto_client:
-                    mock_s3 = MagicMock()
-                    body = MagicMock()
-                    body.read.return_value = b"#!/usr/bin/env bash\necho central-template\n"
-                    mock_s3.get_object.return_value = {"Body": body, "ETag": '"abc123"'}
-                    mock_boto_client.return_value = mock_s3
-                    execute_remediation_run_job(job)
-
-    pr_bundle = run.artifacts.get("pr_bundle")
-    assert isinstance(pr_bundle, dict)
-    metadata = pr_bundle.get("metadata")
-    assert isinstance(metadata, dict)
-    assert metadata.get("runner_template_source") == "s3://central-templates/run-all/latest.sh"
-    assert metadata.get("runner_template_version") == "v9.9.9"
-    files = pr_bundle.get("files")
-    assert isinstance(files, list)
-    run_all = next(f for f in files if isinstance(f, dict) and f.get("path") == "run_all.sh")
-    assert "central-template" in str(run_all.get("content") or "")
+    assert "repo-template" in script
+    assert source == "repo:infrastructure/templates/run_all.sh"
+    assert version.startswith("sha256:")
 
 
 def test_pr_only_strategy_fields_forwarded_to_generator_and_artifacts() -> None:

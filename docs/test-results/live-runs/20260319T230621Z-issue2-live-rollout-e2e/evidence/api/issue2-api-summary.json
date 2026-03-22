@@ -1,0 +1,15 @@
+{
+  "tenant_name": "Valens",
+  "user_email": "marco.ibrahim@ocypheris.com",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.6.yaml",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.4.yaml",
+  "read_launch_has_presigned_template": true,
+  "read_launch_has_execution_role_param": true,
+  "read_launch_execution_role_param": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api,arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker",
+  "accounts_count": 1,
+  "target_account_present": true,
+  "validate_status": "error",
+  "validate_permissions_ok": false,
+  "validate_missing_permissions": [],
+  "validate_warnings": []
+}

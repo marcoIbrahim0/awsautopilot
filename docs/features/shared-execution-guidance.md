@@ -6,6 +6,8 @@ This feature adds implementation-ready execution guidance to action detail respo
 
 Implemented in Phase 3 P0.7.
 
+> ⚠️ Current scope: active guidance is PR-only. Historical direct-fix strategy records may remain on disk, but current API surfaces do not expose them.
+
 ## Implemented source files
 
 - `backend/services/action_execution_guidance.py`
@@ -22,7 +24,7 @@ Each item represents one actionable, non-exception remediation strategy and incl
 
 - `strategy_id`
 - `label`
-- `mode` (`direct_fix` or `pr_only`)
+- `mode` (`pr_only`)
 - `recommended`
 - `blast_radius`
 - `blast_radius_summary`
@@ -56,23 +58,16 @@ Runtime probes remain best-effort and fail closed in the guidance:
 - dependency checks still appear with `fail`, `warn`, or `unknown` statuses,
 - rollback guidance still remains non-empty even when runtime evidence is limited.
 
-## Mode-specific behavior
+## Current behavior
 
-`execution_guidance[]` is mode-aware by design.
-
-### `direct_fix`
-
-- `pre_checks[]` includes a live-change warning because AWS state mutates immediately after approval.
-- `expected_outcome` describes immediate AWS-side mutation and the expected Security Hub resolution window.
-- `post_checks[]` emphasizes remediation-run success, scoped verification, and immediate re-evaluation when supported.
-- `rollback.summary` assumes an operator may need to back out a live change.
-
-### `pr_only`
+`execution_guidance[]` currently reflects PR-only actionable strategies.
 
 - `pre_checks[]` includes repository/deployment ownership confirmation before generating the bundle.
 - `expected_outcome` describes a reviewable infrastructure change that must be merged and applied through the normal IaC path.
 - `post_checks[]` emphasizes diff review, plan/apply evidence, and later control closure confirmation.
 - `rollback.summary` assumes rollback happens through version control and the same deployment workflow.
+
+Historical direct-fix guidance remains out of scope for current API/UI behavior.
 
 Exception-only strategies are intentionally omitted from `execution_guidance[]` because this contract is focused on executable remediation paths.
 

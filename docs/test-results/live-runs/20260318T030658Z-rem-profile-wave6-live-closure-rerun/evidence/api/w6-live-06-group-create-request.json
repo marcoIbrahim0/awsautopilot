@@ -1,0 +1,4 @@
+{
+  "strategy_id": "s3_enable_abort_incomplete_uploads",
+  "risk_acknowledged": true
+}

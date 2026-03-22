@@ -5,6 +5,8 @@
 > Status: Implemented Wave 2 slice only
 >
 > This document records the exact Wave 2 remediation-profile-resolution behavior integrated on top of the Wave 1 foundations.
+>
+> Current contract note (2026-03-19): Wave 2 remains relevant for the PR-only resolution surfaces it introduced, but active `direct_fix` entry points were later disabled globally. Any direct-fix wording below describes the landing-time boundary, not the current live contract.
 
 ## Scope Boundary
 
@@ -23,7 +25,7 @@ Wave 2 does **not** change:
 - `backend/utils/sqs.py`
 - worker code
 - root-key routes
-- `direct_fix` runtime semantics
+- the landing-time `direct_fix` runtime semantics, which were later disabled globally on 2026-03-19
 
 ```mermaid
 flowchart LR
@@ -91,7 +93,7 @@ Create-time behavior:
 - `profile_id` requires a compatible `strategy_id`
 - invalid `profile_id` returns HTTP `400`
 - omitted `profile_id` defaults to the compatible single-profile family value
-- `direct_fix` remains unchanged and does not persist `artifacts.resolution`
+- when Wave 2 landed, `direct_fix` remained outside this slice and did not persist `artifacts.resolution`; current `master` now rejects `direct_fix` entirely
 
 Canonical persistence added in this wave:
 

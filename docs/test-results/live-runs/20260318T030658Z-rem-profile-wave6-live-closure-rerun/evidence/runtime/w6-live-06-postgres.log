@@ -1,0 +1,21 @@
+2026-03-18 20:05:26.741 EET [41036] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-18 20:05:26.742 EET [41036] LOG:  listening on IPv4 address "127.0.0.1", port 55442
+2026-03-18 20:05:26.742 EET [41036] LOG:  listening on IPv6 address "::1", port 55442
+2026-03-18 20:05:26.743 EET [41036] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55442"
+2026-03-18 20:05:26.749 EET [41038] LOG:  database system was shut down at 2026-03-18 19:30:38 EET
+2026-03-18 20:05:26.757 EET [41036] LOG:  database system is ready to accept connections
+2026-03-18 20:07:31.497 EET [42165] ERROR:  column "metadata" does not exist at character 50
+2026-03-18 20:07:31.497 EET [42165] STATEMENT:  select id, control_id, action_type, resource_id, metadata::text from actions where action_type = 's3_bucket_lifecycle_configuration' and account_id='696505809372' and region='eu-north-1' order by resource_id;
+2026-03-18 20:07:42.780 EET [42242] ERROR:  column "risk_metadata" does not exist at character 50
+2026-03-18 20:07:42.780 EET [42242] STATEMENT:  select id, control_id, action_type, resource_id, risk_metadata::text from actions where action_type = 's3_bucket_lifecycle_configuration' and account_id='696505809372' and region='eu-north-1' order by resource_id;
+2026-03-18 20:07:53.139 EET [42311] ERROR:  column "context_json" does not exist at character 50
+2026-03-18 20:07:53.139 EET [42311] STATEMENT:  select id, control_id, action_type, resource_id, context_json::text from actions where action_type = 's3_bucket_lifecycle_configuration' and account_id='696505809372' and region='eu-north-1' order by resource_id;
+2026-03-18 20:18:09.252 EET [82301] FATAL:  database "marcomaher" does not exist
+2026-03-18 20:44:51.307 EET [41036] LOG:  received fast shutdown request
+2026-03-18 20:44:51.308 EET [41036] LOG:  aborting any active transactions
+2026-03-18 20:44:51.309 EET [4342] FATAL:  terminating connection due to administrator command
+2026-03-18 20:44:51.309 EET [41760] FATAL:  terminating connection due to administrator command
+2026-03-18 20:44:51.310 EET [41762] FATAL:  terminating connection due to administrator command
+2026-03-18 20:44:51.312 EET [41036] LOG:  background worker "logical replication launcher" (PID 41044) exited with exit code 1
+2026-03-18 20:44:51.315 EET [41039] LOG:  shutting down
+2026-03-18 20:44:51.324 EET [41036] LOG:  database system is shut down

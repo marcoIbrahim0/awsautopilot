@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Shared Files" [ref=e32] [cursor=pointer]:
+          - /url: /support-files
+          - img [ref=e34]
+          - generic: Shared Files
+      - button "Pin sidebar open" [ref=e38]:
+        - img [ref=e39]
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - heading "Settings" [level=1] [ref=e44]
+        - generic [ref=e45]:
+          - button "Switch to light mode" [ref=e46]:
+            - img [ref=e47]
+          - button "Notifications" [ref=e49]:
+            - img [ref=e50]
+          - button "Profile menu" [ref=e52]:
+            - generic [ref=e53]: U
+      - main [ref=e54]:
+        - generic [ref=e56]:
+          - tablist [ref=e57]:
+            - tab "Account" [selected] [ref=e58]
+            - tab "Team" [ref=e59]
+            - tab "Organization" [ref=e60]
+            - tab "Notifications" [ref=e61]
+            - tab "Integrations" [ref=e62]
+            - tab "Governance" [ref=e63]
+            - tab "Remediation Defaults" [ref=e64]
+            - tab "Exports & Compliance" [ref=e65]
+            - tab "Baseline Report" [ref=e66]
+          - tabpanel [ref=e67]:
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - generic [ref=e70]:
+                  - heading "Profile Info" [level=2] [ref=e71]
+                  - paragraph [ref=e72]: Update your personal details and contact info.
+                - generic [ref=e73]:
+                  - generic [ref=e74]:
+                    - generic [ref=e75]:
+                      - generic [ref=e76]: Full Name
+                      - textbox "e.g. Jane Doe" [ref=e78]
+                    - generic [ref=e79]:
+                      - generic [ref=e80]: Role
+                      - textbox [disabled] [ref=e82]
+                  - generic [ref=e83]:
+                    - generic [ref=e84]:
+                      - generic [ref=e85]:
+                        - generic [ref=e86]: Email Address
+                        - button "Resend Link" [ref=e87]
+                      - textbox [disabled] [ref=e89]
+                      - paragraph [ref=e90]: Your email address is managed by your organization and cannot be changed here. Email verification is handled by the secure link sent to your inbox.
+                    - generic [ref=e91]:
+                      - generic [ref=e93]: Phone Number (optional)
+                      - textbox "+1234567890" [ref=e95]
+                      - paragraph [ref=e96]: Include country code (e.g., +1 for US). Keep this verified to receive OTPs via SMS.
+                  - button "Save Profile" [ref=e98]:
+                    - generic [ref=e99]: Save Profile
+              - generic [ref=e100]:
+                - heading "Security" [level=2] [ref=e101]
+                - paragraph [ref=e102]: Update your password to keep your account secure.
+                - generic [ref=e103]:
+                  - generic [ref=e104]:
+                    - heading "Password" [level=3] [ref=e105]
+                    - paragraph [ref=e106]: A secure password helps protect your AWS environments.
+                  - button "Change Password" [ref=e107]:
+                    - generic [ref=e108]: Change Password
+                - generic [ref=e109]:
+                  - generic [ref=e110]:
+                    - generic [ref=e111]:
+                      - heading "Multi-factor authentication" [level=3] [ref=e112]
+                      - paragraph [ref=e113]: Require a one-time code after password sign-in.
+                    - generic [ref=e114]: Disabled
+                  - generic [ref=e115]:
+                    - generic [ref=e116]:
+                      - text: Preferred factor
+                      - combobox "Preferred factor" [ref=e117]:
+                        - option "Email code" [selected]
+                        - option "Phone code"
+                    - generic [ref=e118]: Email must be verified for email MFA. Phone MFA additionally requires a verified phone number.
+                  - button "Enable MFA" [ref=e120]:
+                    - generic [ref=e121]: Enable MFA
+              - generic [ref=e122]:
+                - heading "Danger Zone" [level=2] [ref=e123]
+                - paragraph [ref=e124]: Irreversible actions for your account.
+                - generic [ref=e125]:
+                  - generic [ref=e126]:
+                    - heading "Delete Account" [level=3] [ref=e127]
+                    - paragraph [ref=e128]: Permanently delete your account and remove your access. Accounts are soft-deleted and can be recovered within a 30-day grace period.
+                  - button "Delete Account" [ref=e129]:
+                    - generic [ref=e130]: Delete Account
+  - alert [ref=e131]

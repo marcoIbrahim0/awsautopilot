@@ -1,0 +1,14 @@
+{
+  "timestamp_utc": "20260320T051409Z",
+  "api_base": "https://api.ocypheris.com",
+  "frontend_base": "https://ocypheris.com",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml",
+  "read_role_launch_has_execution_roles": true,
+  "write_role_launch_has_execution_roles": true,
+  "validate_status": "validated",
+  "permissions_ok": true,
+  "authoritative_mode_allowed": true,
+  "account_status": "validated",
+  "account_id": "696505809372"
+}

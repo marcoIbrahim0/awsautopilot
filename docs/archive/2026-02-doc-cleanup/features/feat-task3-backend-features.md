@@ -1,3 +1,5 @@
+> Historical note (2026-03-15): Public SaaS-managed PR-bundle plan/apply is archived. Customer-run PR bundles remain supported; the inventory below reflects the February 2026 snapshot, not the current product direction.
+
 BACKEND API FEATURE INVENTORY
 
 | Feature ID | Method | Path | Router File | What it does (one sentence) | Request body / params (field names and types) | Response shape (key fields returned) | Auth required (yes / no / admin only) | Tenant scoped (yes / no) | Side effects (DB writes / job enqueued / AWS call / email sent) | Rate limited (yes / no / unknown) | Calls background job (job name or none) | Implementation status (fully implemented / partial / stub / unknown) | Known issues from audit files (finding ID or none) |

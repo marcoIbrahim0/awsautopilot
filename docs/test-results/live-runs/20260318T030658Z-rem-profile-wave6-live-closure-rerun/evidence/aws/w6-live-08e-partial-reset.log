@@ -1,0 +1,110 @@
+
+=== docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08e-s315-group/executable/actions/01-arn-aws-s3-config-bucket-696505809372-33bd3255 ===
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=config-bucket-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "config-bucket-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "config-bucket-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m region                = "eu-north-1" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m blocked_encryption_types = [] [90m-> null[0m[0m
+          [31m-[0m[0m bucket_key_enabled       = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=config-bucket-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for config-bucket-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08e-s315-group/executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f ===
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-cloudtrail-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-cloudtrail-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-cloudtrail-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m region                = "eu-north-1" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m blocked_encryption_types = [] [90m-> null[0m[0m
+          [31m-[0m[0m bucket_key_enabled       = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-cloudtrail-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-cloudtrail-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08e-s315-group/executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a ===
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-strict-s315-exec-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-strict-s315-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-strict-s315-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m region                = "eu-north-1" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m blocked_encryption_types = [] [90m-> null[0m[0m
+          [31m-[0m[0m bucket_key_enabled       = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-strict-s315-exec-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-strict-s315-exec-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08e-s315-group/executable/actions/04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f ===
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-accesslogs-696505809372][0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mfork/exec .terraform/providers/registry.terraform.io/hashicorp/aws/6.31.0/darwin_arm64/terraform-provider-aws_v6.31.0_x5: exec format error[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m

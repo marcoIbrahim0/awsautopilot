@@ -1,0 +1,41 @@
+{
+  "action_id": "f90e7d9d-8944-4f39-bce8-0659a3635e8d",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [],
+  "control_id": "S3.9",
+  "decision_rationale": "Family resolver kept S3.9 executable because bucket scope and destination safety are proven. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver kept S3.9 executable because bucket scope and destination safety are proven. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s311-e-f90e7d9d",
+  "has_runnable_terraform": false,
+  "index": 11,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "ambiguous_source_destination_relationship": false,
+    "destination_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "destination_bucket_reachable": true,
+    "destination_safety_proven": true,
+    "executable_destination_allowed": true,
+    "family": "s3_bucket_access_logging",
+    "family_strategy": "s3_enable_access_logging_guided",
+    "selected_branch": "s3_enable_access_logging_review_destination_safety",
+    "single_profile_compatible": false,
+    "source_bucket_name": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "source_bucket_scope_proven": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_enable_access_logging_review_destination_safety",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809372"
+  },
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.9",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

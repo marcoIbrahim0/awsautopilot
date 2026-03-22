@@ -6,8 +6,10 @@ Core function: assume_role() - securely assumes customer IAM roles using STS wit
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import boto3
 from botocore.exceptions import ClientError
@@ -22,12 +24,68 @@ logger = logging.getLogger(__name__)
 # Retry configuration for transient errors
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 1
+API_ASSUME_ROLE_SOURCE_IDENTITY = "security-autopilot-api"
+WORKER_ASSUME_ROLE_SOURCE_IDENTITY = "security-autopilot-worker"
+
+
+def build_assume_role_tags(
+    *,
+    service_component: str,
+    tenant_id: str | UUID | None,
+) -> list[dict[str, str]]:
+    tags = [{"Key": "ServiceComponent", "Value": service_component}]
+    if tenant_id is not None:
+        tags.append({"Key": "TenantId", "Value": str(tenant_id)})
+    return tags
+
+
+def _assume_role_request(
+    *,
+    role_arn: str,
+    external_id: str,
+    session_name: str,
+    source_identity: str | None,
+    tags: list[dict[str, str]] | None,
+) -> dict[str, object]:
+    request: dict[str, object] = {
+        "RoleArn": role_arn,
+        "RoleSessionName": session_name,
+        "ExternalId": external_id,
+    }
+    if source_identity:
+        request["SourceIdentity"] = source_identity
+    if tags:
+        request["Tags"] = tags
+    return request
+
+
+def _role_arn_from_assumed_role_arn(arn: str) -> str | None:
+    match = re.match(r"^arn:(aws|aws-cn|aws-us-gov):sts::([0-9]{12}):assumed-role/(.+)/[^/]+$", arn)
+    if not match:
+        return None
+    partition, account_id, role_path = match.groups()
+    return f"arn:{partition}:iam::{account_id}:role/{role_path}"
+
+
+def _caller_is_saas_execution_role_session(sts_client: STSClient) -> bool:
+    execution_role_arns = set(settings.saas_execution_role_arns_list)
+    if not execution_role_arns:
+        return False
+    try:
+        caller_arn = sts_client.get_caller_identity()["Arn"]
+    except Exception:
+        logger.exception("Failed to resolve current caller identity before source-identity compatibility check")
+        return False
+    current_role_arn = _role_arn_from_assumed_role_arn(caller_arn)
+    return current_role_arn in execution_role_arns
 
 
 def assume_role(
     role_arn: str,
     external_id: str,
     session_name: str | None = None,
+    source_identity: str | None = None,
+    tags: list[dict[str, str]] | None = None,
 ) -> boto3.Session:
     """
     Assumes an IAM role using STS and returns a boto3 session.
@@ -36,6 +94,8 @@ def assume_role(
         role_arn: The ARN of the role to assume (e.g., "arn:aws:iam::123456789012:role/ReadRole")
         external_id: The ExternalId value (from tenant) - must match the role's trust policy
         session_name: Identifier for this assume-role session. Defaults to settings.ROLE_SESSION_NAME.
+        source_identity: Optional STS SourceIdentity used for CloudTrail attribution.
+        tags: Optional STS session tags for audit attribution.
 
     Returns:
         boto3.Session with temporary credentials from the assumed role.
@@ -61,6 +121,21 @@ def assume_role(
 
     # Create STS client using default credentials (from env, IAM role, etc.)
     sts_client: STSClient = boto3.client("sts", region_name=settings.AWS_REGION)
+    if source_identity and _caller_is_saas_execution_role_session(sts_client):
+        logger.info(
+            "Skipping STS SourceIdentity and session tags for SaaS execution-role session; using role session name %s instead",
+            source_identity,
+        )
+        session_name = source_identity[:64]
+        source_identity = None
+        tags = None
+    assume_request = _assume_role_request(
+        role_arn=role_arn,
+        external_id=external_id,
+        session_name=session_name,
+        source_identity=source_identity,
+        tags=tags,
+    )
 
     # Retry logic for transient errors (throttling, network issues)
     last_exception = None
@@ -71,11 +146,7 @@ def assume_role(
                 time.sleep(RETRY_DELAY_SECONDS * attempt)  # Exponential backoff
 
             logger.info(f"Assuming role {role_arn} with session name {session_name}")
-            response = sts_client.assume_role(
-                RoleArn=role_arn,
-                RoleSessionName=session_name,
-                ExternalId=external_id,
-            )
+            response = sts_client.assume_role(**assume_request)
 
             credentials = response["Credentials"]
 

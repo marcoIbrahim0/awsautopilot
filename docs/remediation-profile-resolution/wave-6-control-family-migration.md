@@ -1,10 +1,12 @@
 # Wave 6 Control-Family Migration
 
-> Scope date: 2026-03-15
+> Scope date: 2026-03-18
 >
 > Status: Implemented on `master`
 >
 > This document records the landed Wave 6 control-family migration behavior only. It does not widen product claims beyond what current `master` code and task history prove.
+>
+> Current contract note (2026-03-19): current `master` keeps the Wave 6 resolver-backed customer-run PR-bundle model, but active `direct_fix` entry points and customer `WriteRole` are now out of scope.
 
 Related docs:
 
@@ -20,7 +22,7 @@ The landed boundaries remain:
 
 - `artifacts.resolution` is the safety authority for single-run executability.
 - `artifacts.group_bundle.action_resolutions[]` is the grouped equivalent, and Wave 5 mixed-tier bundle layout still decides `executable/actions`, `review_required/actions`, and `manual_guidance/actions`.
-- Customer-run PR bundles remain the supported execution model. Direct-fix boundaries are unchanged.
+- Customer-run PR bundles remain the supported execution model. Active `direct_fix` entry points are disabled and customer `WriteRole` is out of scope.
 - IAM.4 generic surfaces are additive metadata only. `/api/root-key-remediation-runs` remains the only execution authority.
 - Legacy CloudFront OAC compatibility remains intact for S3.2.
 - Legacy artifact mirrors such as `selected_strategy`, `strategy_inputs`, and `pr_bundle_variant` are still written for compatibility and have not been retired.
@@ -137,7 +139,7 @@ flowchart LR
 - CloudTrail.1 keeps one public compatibility branch but now has explicit executable versus review boundaries driven by log-bucket reachability, external bucket-policy management, multi-region selection, and KMS proof.
 - Config.1 keeps local, centralized, and exception public branches. The supported executable Terraform boundary now includes exact pre-state snapshot and bundle-local restore proof for the local branch, while centralized delivery, existing-bucket reuse, and KMS-backed delivery still require proof before they remain executable.
 
-## Live AWS readiness notes from March 15, 2026
+## Live AWS closure notes through March 18, 2026
 
 - The first readiness package under [`docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T201821Z-rem-profile-wave6-environment-readiness/notes/final-summary.md) established the March 15 baseline and isolated the remaining blockers to `S3.2`, `S3.5`, `S3.11`, and `S3.15`.
 - The follow-up blocker-closure rerun under [`docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260315T213821Z-rem-profile-wave6-readiness-rerun/notes/final-summary.md) refined the live-control truth in the same isolated account:
@@ -155,12 +157,17 @@ flowchart LR
   - `S3.5` is closed from truthful live executable and downgrade/manual evidence
   - `S3.11` is closed from truthful live executable and downgrade/manual evidence
   - `S3.15` is closed from truthful live executable and downgrade/manual evidence
-- Those live-control observations do not change the landed Wave 6 product behavior described above, but they do update the strict final-gate boundary precisely: `9/9` families are now ready for the final strict live gate.
+- The retained closure package under [`docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/`](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/notes/final-summary.md) then closed the remaining March 16 blockers without changing the customer-run execution model:
+  - `EC2.53` now has truthful grouped executable apply plus exact rollback restoration
+  - `IAM.4` now has truthful authoritative disable plus rollback on `/api/root-key-remediation-runs`
+  - `S3.5`, `S3.11`, `S3.15`, and `Config.1` now carry retained March 18 closure notes with exact rollback evidence
+  - grouped callback finalization now proves `S3.2`, `S3.9`, and `CloudTrail.1` finish via `bundle_callback` on current `master`
+- Those live-control observations do not change the landed Wave 6 product behavior described above, but they now close the strict final-gate boundary precisely: `9/9` families are closed, and the retained March 18 package records `Wave 6 complete = YES`.
 
 ## Post-Wave-6 Boundary
 
-- Wave 6 control-family migration is implemented on `master`, and all nine families are now ready for the final strict live gate under the current live-validation standard.
-- The full nine-family E2E gate rerun itself still remains outstanding. This doc records readiness and landed behavior, not a claim that the final rerun already passed.
+- Wave 6 control-family migration is implemented on `master`, and the full nine-family live closure gate is now closed under the retained March 18 package.
+- The March 15 readiness and failed-gate packages remain valuable historical evidence, but they are superseded as the current closure status by the retained March 18 summary.
 - Legacy artifact mirrors are still present during rollout. `selected_strategy`, `strategy_inputs`, and `pr_bundle_variant` remain compatibility artifacts, not the safety authority.
 - Wave 5 mixed-tier grouped behavior remains the grouped execution/output boundary for downgraded review/manual actions.
-- Customer-run PR bundles remain the supported model, and direct-fix boundaries are unchanged.
+- Customer-run PR bundles remain the supported model, and active `direct_fix` entry points remain disabled.

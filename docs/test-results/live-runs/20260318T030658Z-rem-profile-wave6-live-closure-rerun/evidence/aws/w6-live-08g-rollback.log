@@ -1,0 +1,390 @@
+
+=== 01-arn-aws-s3-config-bucket-696505809372-33bd3255 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/01-arn-aws-s3-config-bucket-696505809372-33bd3255/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=config-bucket-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "config-bucket-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "config-bucket-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=config-bucket-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for config-bucket-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/02-arn-aws-s3-security-autopilot-w6-envready-cloudt-3575f46f/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-cloudtrail-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-cloudtrail-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-cloudtrail-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-cloudtrail-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-cloudtrail-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-44f6df0a/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-strict-s315-exec-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-strict-s315-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-strict-s315-exec-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-strict-s315-exec-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-strict-s315-exec-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/04-arn-aws-s3-security-autopilot-w6-envready-access-478ebc2f/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-accesslogs-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-accesslogs-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-accesslogs-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-accesslogs-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-accesslogs-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 06-arn-aws-s3-security-autopilot-w6-strict-s311-man-66a5dd43 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/06-arn-aws-s3-security-autopilot-w6-strict-s311-man-66a5dd43/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-strict-s311-manual-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-strict-s311-manual-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-strict-s311-manual-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-strict-s311-manual-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-strict-s311-manual-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 07-arn-aws-s3-security-autopilot-w6-strict-s311-exe-7a0e2c57 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/07-arn-aws-s3-security-autopilot-w6-strict-s311-exe-7a0e2c57/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-strict-s311-exec-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-strict-s311-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-strict-s311-exec-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-strict-s311-exec-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-strict-s311-exec-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 08-arn-aws-s3-security-autopilot-w6-envready-s315-e-7b9ca8b1 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s315-e-7b9ca8b1/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-s315-exec-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-s315-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-s315-exec-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-s315-exec-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-s315-exec-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 09-arn-aws-s3-security-autopilot-w6-envready-s311-e-7bf8c034 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-s311-e-7bf8c034/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-s311-exec-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-s311-exec-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-s311-exec-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-s311-exec-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-s311-exec-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 10-arn-aws-s3-security-autopilot-w6-envready-s311-r-7f85a353 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/10-arn-aws-s3-security-autopilot-w6-envready-s311-r-7f85a353/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-s311-review-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-s311-review-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-s311-review-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-s311-review-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-s311-review-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.
+
+=== 11-arn-aws-s3-security-autopilot-w6-envready-config-d5646c71 ===
+Wrote rollback snapshot: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/evidence/bundles/w6-live-08g-s315-group/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-config-d5646c71/.s3-encryption-rollback/encryption_snapshot.json
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-config-696505809372][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      [31m-[0m[0m bucket                = "security-autopilot-w6-envready-config-696505809372" [90m-> null[0m[0m
+      [31m-[0m[0m id                    = "security-autopilot-w6-envready-config-696505809372" [90m-> null[0m[0m
+        [90m# (1 unchanged attribute hidden)[0m[0m
+
+      [31m-[0m[0m rule {
+          [31m-[0m[0m bucket_key_enabled = true [90m-> null[0m[0m
+
+          [31m-[0m[0m apply_server_side_encryption_by_default {
+              [31m-[0m[0m kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" [90m-> null[0m[0m
+              [31m-[0m[0m sse_algorithm     = "aws:kms" [90m-> null[0m[0m
+            }
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 0 to change, 1 to destroy.
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=security-autopilot-w6-envready-config-696505809372][0m[0m
+[0m[1maws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 1 destroyed.[0m
+Restored bucket encryption for security-autopilot-w6-envready-config-696505809372 from .s3-encryption-rollback/encryption_snapshot.json.

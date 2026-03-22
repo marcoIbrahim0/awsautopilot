@@ -81,6 +81,38 @@ Parameters:
     Default: ""
     Description: Optional Secrets Manager secret id or ARN whose JSON contains user and password.
 
+  OpenAiHelpEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Enable the OpenAI-backed Help Hub assistant.
+
+  OpenAiApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: OpenAI API key used by the Help Hub assistant.
+
+  OpenAiApiKeySecretId:
+    Type: String
+    Default: ""
+    Description: Optional Secrets Manager secret id or ARN whose SecretString is the OpenAI API key.
+
+  OpenAiHelpModel:
+    Type: String
+    Default: "gpt-5-mini"
+    Description: OpenAI model id used by the Help Hub assistant.
+
+  OpenAiHelpReasoningEffort:
+    Type: String
+    Default: "low"
+    Description: Optional reasoning effort for GPT-5-family Help Hub models.
+
+  OpenAiHelpTimeoutSeconds:
+    Type: String
+    Default: "30"
+    Description: Timeout in seconds for Help Hub OpenAI requests.
+
   # --- Optional feature/config flags (non-secret) ---
   CloudFormationControlPlaneForwarderTemplateUrl:
     Type: String
@@ -115,20 +147,6 @@ Parameters:
     Default: "false"
     AllowedValues: ["true", "false"]
     Description: "Enable SaaS-managed bundle executor endpoints."
-  SaasBundleRunnerTemplateS3Uri:
-    Type: String
-    Default: ""
-    Description: "Optional s3://... URI to the centralized bundle runner template."
-  SaasBundleRunnerTemplateVersion:
-    Type: String
-    Default: ""
-    Description: "Bundle runner template version label."
-  SaasBundleRunnerTemplateCacheSeconds:
-    Type: Number
-    Default: 300
-    MinValue: 0
-    MaxValue: 86400
-    Description: "In-process cache TTL (seconds) for centralized runner template."
 
   TenantReconciliationEnabled:
     Type: String
@@ -180,6 +198,10 @@ Parameters:
     Type: String
     NoEcho: true
     Description: "JWT signing secret."
+  BundleReportingTokenSecret:
+    Type: String
+    NoEcho: true
+    Description: "Dedicated grouped bundle reporting signing secret."
   ControlPlaneEventsSecret:
     Type: String
     NoEcho: true
@@ -265,6 +287,7 @@ Conditions:
     - !Not [!Equals [!Ref ApiCertificateArn, ""]]
   HasApiPublicUrlOverride: !Not [!Equals [!Ref ApiPublicUrlOverride, ""]]
   HasEmailSmtpCredentialsSecretId: !Not [!Equals [!Ref EmailSmtpCredentialsSecretId, ""]]
+  HasOpenAiApiKeySecretId: !Not [!Equals [!Ref OpenAiApiKeySecretId, ""]]
   WorkerEnabled: !Equals [!Ref EnableWorker, "true"]
   WorkerDisabled: !Equals [!Ref EnableWorker, "false"]
   WorkerHasReservedConcurrency: !Not [!Equals [!Ref WorkerReservedConcurrency, 0]]
@@ -289,6 +312,13 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-api"
+            Action:
+              - sts:AssumeRole
+              - sts:SetSourceIdentity
+              - sts:TagSession
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - !ImportValue
@@ -299,10 +329,14 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: sts:AssumeRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:SetSourceIdentity
+                  - sts:TagSession
                 Resource:
                   - arn:aws:iam::*:role/SecurityAutopilotReadRole
                   - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+                  - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-api"
 
   WorkerLambdaRole:
     Type: AWS::IAM::Role
@@ -315,6 +349,13 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-worker"
+            Action:
+              - sts:AssumeRole
+              - sts:SetSourceIdentity
+              - sts:TagSession
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - !ImportValue
@@ -328,10 +369,14 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: sts:AssumeRole
+                Action:
+                  - sts:AssumeRole
+                  - sts:SetSourceIdentity
+                  - sts:TagSession
                 Resource:
                   - arn:aws:iam::*:role/SecurityAutopilotReadRole
                   - arn:aws:iam::*:role/SecurityAutopilotWriteRole
+                  - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-worker"
 
   ApiExportBucketAccess:
     Type: AWS::IAM::Policy
@@ -400,6 +445,21 @@ Resources:
             Resource:
               - arn:aws:s3:::security-autopilot-templates
               - arn:aws:s3:::security-autopilot-templates/cloudformation/*
+
+  ApiCloudWatchMetricsAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${NamePrefix}-api-cloudwatch-metrics-access"
+      Roles:
+        - !Ref ApiLambdaRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ReadQueueLagMetrics
+            Effect: Allow
+            Action:
+              - cloudwatch:GetMetricStatistics
+            Resource: "*"
 
   WorkerExportBucketAccess:
     Type: AWS::IAM::Policy
@@ -496,7 +556,7 @@ Resources:
       Code:
         ImageUri: !Ref ApiImageUri
       Role: !GetAtt ApiLambdaRole.Arn
-      MemorySize: 1024
+      MemorySize: 1536
       Timeout: 30
       Environment:
         Variables:
@@ -504,6 +564,7 @@ Resources:
           ENV: !Ref AppEnv
           LOG_LEVEL: !Ref LogLevel
           SAAS_AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          SAAS_EXECUTION_ROLE_ARNS: !Join [",", [!GetAtt ApiLambdaRole.Arn, !GetAtt WorkerLambdaRole.Arn]]
           ROLE_SESSION_NAME: security-autopilot-session
           FRONTEND_URL: !Ref FrontendUrl
           CORS_ORIGINS: !Ref CorsOrigins
@@ -526,6 +587,14 @@ Resources:
             - HasEmailSmtpCredentialsSecretId
             - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:password}}"
             - ""
+          OPENAI_HELP_ENABLED: !Ref OpenAiHelpEnabled
+          OPENAI_API_KEY: !If
+            - HasOpenAiApiKeySecretId
+            - !Sub "{{resolve:secretsmanager:${OpenAiApiKeySecretId}:SecretString}}"
+            - !Ref OpenAiApiKey
+          OPENAI_HELP_MODEL: !Ref OpenAiHelpModel
+          OPENAI_HELP_REASONING_EFFORT: !Ref OpenAiHelpReasoningEffort
+          OPENAI_HELP_TIMEOUT_SECONDS: !Ref OpenAiHelpTimeoutSeconds
           FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
           FIREBASE_SERVICE_ACCOUNT_JSON: ""
           FIREBASE_SERVICE_ACCOUNT_PATH: /var/task/backend/.firebase/firebase-service-account.json
@@ -537,9 +606,6 @@ Resources:
           S3_SUPPORT_BUCKET: !Ref S3SupportBucket
           S3_SUPPORT_BUCKET_REGION: !Ref S3SupportBucketRegion
           SAAS_BUNDLE_EXECUTOR_ENABLED: !Ref SaasBundleExecutorEnabled
-          SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: !Ref SaasBundleRunnerTemplateS3Uri
-          SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: !Ref SaasBundleRunnerTemplateVersion
-          SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: !Ref SaasBundleRunnerTemplateCacheSeconds
           TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
@@ -550,6 +616,7 @@ Resources:
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
           DATABASE_URL: !Ref DatabaseUrl
           JWT_SECRET: !Ref JwtSecret
+          BUNDLE_REPORTING_TOKEN_SECRET: !Ref BundleReportingTokenSecret
           CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
           SQS_INGEST_QUEUE_URL: !ImportValue
             "Fn::Sub": "${SqsStackName}-IngestQueueURL"
@@ -647,6 +714,7 @@ Resources:
           ENV: !Ref AppEnv
           LOG_LEVEL: !Ref LogLevel
           SAAS_AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          SAAS_EXECUTION_ROLE_ARNS: !Join [",", [!GetAtt ApiLambdaRole.Arn, !GetAtt WorkerLambdaRole.Arn]]
           ROLE_SESSION_NAME: security-autopilot-session
           FRONTEND_URL: !Ref FrontendUrl
           CORS_ORIGINS: !Ref CorsOrigins
@@ -669,6 +737,14 @@ Resources:
             - HasEmailSmtpCredentialsSecretId
             - !Sub "{{resolve:secretsmanager:${EmailSmtpCredentialsSecretId}:SecretString:password}}"
             - ""
+          OPENAI_HELP_ENABLED: !Ref OpenAiHelpEnabled
+          OPENAI_API_KEY: !If
+            - HasOpenAiApiKeySecretId
+            - !Sub "{{resolve:secretsmanager:${OpenAiApiKeySecretId}:SecretString}}"
+            - !Ref OpenAiApiKey
+          OPENAI_HELP_MODEL: !Ref OpenAiHelpModel
+          OPENAI_HELP_REASONING_EFFORT: !Ref OpenAiHelpReasoningEffort
+          OPENAI_HELP_TIMEOUT_SECONDS: !Ref OpenAiHelpTimeoutSeconds
           CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL: !Ref CloudFormationControlPlaneForwarderTemplateUrl
           SAAS_ADMIN_EMAILS: !Ref SaasAdminEmails
           S3_EXPORT_BUCKET: !Ref S3ExportBucket
@@ -676,9 +752,6 @@ Resources:
           S3_SUPPORT_BUCKET: !Ref S3SupportBucket
           S3_SUPPORT_BUCKET_REGION: !Ref S3SupportBucketRegion
           SAAS_BUNDLE_EXECUTOR_ENABLED: !Ref SaasBundleExecutorEnabled
-          SAAS_BUNDLE_RUNNER_TEMPLATE_S3_URI: !Ref SaasBundleRunnerTemplateS3Uri
-          SAAS_BUNDLE_RUNNER_TEMPLATE_VERSION: !Ref SaasBundleRunnerTemplateVersion
-          SAAS_BUNDLE_RUNNER_TEMPLATE_CACHE_SECONDS: !Ref SaasBundleRunnerTemplateCacheSeconds
           TENANT_RECONCILIATION_ENABLED: !Ref TenantReconciliationEnabled
           TENANT_RECONCILIATION_PILOT_TENANTS: !Ref TenantReconciliationPilotTenants
           CONTROL_PLANE_SHADOW_MODE: !Ref ControlPlaneShadowMode
@@ -689,6 +762,7 @@ Resources:
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
           DATABASE_URL: !Ref DatabaseUrl
           JWT_SECRET: !Ref JwtSecret
+          BUNDLE_REPORTING_TOKEN_SECRET: !Ref BundleReportingTokenSecret
           CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
           SQS_INGEST_QUEUE_URL: !ImportValue
             "Fn::Sub": "${SqsStackName}-IngestQueueURL"

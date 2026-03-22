@@ -2,7 +2,9 @@
 
 > Scope date: 2026-03-14
 >
-> Status: Current runtime baseline captured from shipped code paths. This is the Wave 0 compatibility lock for later remediation-profile-resolution work.
+> ⚠️ Status: Historical runtime baseline captured from shipped code paths on 2026-03-14. This is the Wave 0 compatibility lock for later remediation-profile-resolution work, not the live 2026-03-19 contract.
+>
+> Current contract note (2026-03-19): current `master` rejects `direct_fix`, does not expose customer `WriteRole`, and keeps these references only as compatibility-history context.
 
 This document records the current legacy behavior that still matters for remediation run artifacts, duplicate detection, resend behavior, and grouped-run identity. It is intentionally descriptive, not prescriptive.
 
@@ -103,7 +105,7 @@ All three legacy mirror fields above are traced to at least one current writer a
   - `strategy_inputs`
   - `pr_bundle_variant`
   - `repo_target`
-- `direct_fix` runs use a 30-second recent-identical window. A matching signature returns `409 duplicate_recent_request` (`backend/routers/remediation_runs.py:1241-1332`).
+- Historical baseline only: `direct_fix` runs used a 30-second recent-identical window. A matching signature returned `409 duplicate_recent_request` (`backend/routers/remediation_runs.py:1241-1332`).
 - The race-path integrity check after insert only re-checks for another active run, not for another recent identical completed request (`backend/routers/remediation_runs.py:1372-1403`).
 
 ### Grouped requests: `POST /api/remediation-runs/group-pr-bundle`

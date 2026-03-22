@@ -1,0 +1,20 @@
+{
+  "Statement": [
+    {
+      "Action": "s3:*",
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      },
+      "Effect": "Deny",
+      "Principal": "*",
+      "Resource": [
+        "arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372/*",
+        "arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372"
+      ],
+      "Sid": "DenyInsecureTransport"
+    }
+  ],
+  "Version": "2012-10-17"
+}

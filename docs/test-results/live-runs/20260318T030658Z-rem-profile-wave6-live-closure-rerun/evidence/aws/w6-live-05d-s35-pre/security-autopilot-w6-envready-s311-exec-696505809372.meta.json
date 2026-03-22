@@ -1,0 +1,1 @@
+{"action_id": "64650bcf-00f3-47d2-be39-3cf770e4e26b", "bucket": "security-autopilot-w6-envready-s311-exec-696505809372", "captured": true, "policy_exists": true, "sha256": "bc51947019489ac0ae58f23a458994acc8236532484d7d81fa3be4e50c2cd95d", "source_folder": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-s311-e-64650bcf", "statement_count": 1}

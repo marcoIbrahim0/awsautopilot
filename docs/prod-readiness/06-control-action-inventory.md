@@ -1,5 +1,9 @@
 # 06 Control/Action Inventory (Consolidated from Task1-Task6 Raw Extractions)
 
+> Scope date: 2026-02-25 historical consolidation snapshot.
+>
+> Current contract note (2026-03-19): current `master` exposes ReadRole-only onboarding plus customer-run PR bundles only. Historical `direct_fix` / `both` rows below preserve the extraction snapshot and should not be read as current live capability.
+
 ## Scope and constraints used
 - Source files used: `06-task1-file-map.md`, `06-task2-raw-controls.md`, `06-task3-raw-action-types.md`, `06-task4-raw-id-registries.md`, `06-task5-raw-direct-fix.md`, `06-task6-raw-pr-bundle.md`
 - No other project files were used for this consolidation.
@@ -22,9 +26,9 @@
 
 | Control ID | Control Name | AWS Service | What it checks | Action Type |
 |------------|-------------|-------------|----------------|-------------|
-| S3.1 | S3 account public access hardening | s3control | Account-level S3 public access block posture | both (direct_fix preview mode; pr_bundle mode) |
-| SecurityHub.1 | Enable Security Hub | securityhub | Security Hub account enablement state | both (direct_fix preview mode; pr_bundle mode) |
-| GuardDuty.1 | Enable GuardDuty | guardduty | GuardDuty detector enabled state | both (direct_fix preview mode; pr_bundle mode) |
+| S3.1 | S3 account public access hardening | s3control | Account-level S3 public access block posture | historical both (pre-2026-03-19 snapshot: `direct_fix` preview mode; `pr_bundle` mode) |
+| SecurityHub.1 | Enable Security Hub | securityhub | Security Hub account enablement state | historical both (pre-2026-03-19 snapshot: `direct_fix` preview mode; `pr_bundle` mode) |
+| GuardDuty.1 | Enable GuardDuty | guardduty | GuardDuty detector enabled state | historical both (pre-2026-03-19 snapshot: `direct_fix` preview mode; `pr_bundle` mode) |
 | S3.2 | Enforce S3 bucket public access hardening | s3 | Bucket-level public access hardening | pr-bundle |
 | S3.4 | Enforce S3 bucket encryption | s3 | Bucket encryption configuration is enforced | pr-bundle |
 | EC2.53 | Restrict security-group public ports | ec2 | Ingress rules restricted from public exposure | pr-bundle |
@@ -32,7 +36,7 @@
 | Config.1 | Enable AWS Config recording | config | AWS Config recorder and delivery state | pr-bundle |
 | SSM.7 | Block public SSM document sharing | ssm | SSM document public-sharing block setting | pr-bundle |
 | EC2.182 | Restrict EBS snapshot public sharing | ec2 | EBS snapshot block-public-access state | pr-bundle |
-| EC2.7 | Enable EBS default encryption | ec2 | EBS default encryption (and KMS default key path) | both (direct_fix preview mode; pr_bundle mode) |
+| EC2.7 | Enable EBS default encryption | ec2 | EBS default encryption (and KMS default key path) | historical both (pre-2026-03-19 snapshot: `direct_fix` preview mode; `pr_bundle` mode) |
 | S3.5 | Enforce SSL-only S3 access | s3 | Bucket policy requires TLS/SSL transport | pr-bundle |
 | IAM.4 | Remove IAM root access keys | iam | Root account access keys should be absent | pr-bundle |
 | S3.9 | Enable S3 bucket access logging | s3 | Bucket server access logging configuration | pr-bundle |
@@ -51,18 +55,18 @@
 
 Notes:
 - `ARC-008` is treated as architecture/audit metadata in DR IaC (`ArchitectureObjectiveId`) and is intentionally excluded from runtime control/action registries.
-- For controls marked `both`, path selection is mode-driven in task3/task4 context: direct-fix when execution mode is `direct_fix`; PR/IaC path when mode is `pr_bundle` (or `pr_only` where applicable).
+- For controls marked `historical both`, the extraction snapshot recorded mode-driven branching: direct-fix when execution mode was `direct_fix`; PR/IaC path when mode was `pr_bundle` (or `pr_only` where applicable). Current product contract exposes only the PR-bundle path.
 
 ## STEP 3 - STEP 4: CONFIRMED ACTION TYPE INVENTORY
 
-| Action ID | Action Name | Type (direct-fix / pr-bundle) | AWS API or IaC change required |
+| Action ID | Action Name | Type (historical direct-fix / pr-bundle snapshot) | AWS API or IaC change required |
 |-----------|-------------|-------------------------------|-------------------------------|
 | pr_only | PR-only action (unmapped/default) | pr-bundle | UNKNOWN (execution-mode/default marker only in extracted data) |
-| direct_fix | direct_fix (preview mode) | direct-fix | UNKNOWN (execution-mode marker only in extracted data) |
+| direct_fix | historical `direct_fix` mode marker (preview path) | direct-fix | UNKNOWN (execution-mode marker only in extracted data) |
 | pr_bundle | PR bundle mode | pr-bundle | UNKNOWN (execution-mode marker only in extracted data) |
-| s3_block_public_access | S3 account public access hardening | both | API: `s3control.put_public_access_block`; IaC: `aws_s3_account_public_access_block`, `AWS::CloudFormation::WaitConditionHandle` |
-| enable_security_hub | Enable Security Hub | both | API: `securityhub.enable_security_hub`; IaC: `aws_securityhub_account`, `AWS::SecurityHub::Hub` |
-| enable_guardduty | Enable GuardDuty | both | API: `guardduty.create_detector`, `guardduty.update_detector`; IaC: `aws_guardduty_detector`, `AWS::GuardDuty::Detector` |
+| s3_block_public_access | S3 account public access hardening | historical both | API: `s3control.put_public_access_block`; IaC: `aws_s3_account_public_access_block`, `AWS::CloudFormation::WaitConditionHandle` |
+| enable_security_hub | Enable Security Hub | historical both | API: `securityhub.enable_security_hub`; IaC: `aws_securityhub_account`, `AWS::SecurityHub::Hub` |
+| enable_guardduty | Enable GuardDuty | historical both | API: `guardduty.create_detector`, `guardduty.update_detector`; IaC: `aws_guardduty_detector`, `AWS::GuardDuty::Detector` |
 | s3_bucket_block_public_access | Enforce S3 bucket public access hardening | pr-bundle | IaC: `aws_s3_bucket_public_access_block`, `AWS::S3::Bucket` (strategy `s3_migrate_cloudfront_oac_private` adds `aws_cloudfront_origin_access_control`, `aws_cloudfront_distribution`, `aws_s3_bucket_policy`) |
 | s3_bucket_encryption | Enforce S3 bucket encryption | pr-bundle | IaC: `aws_s3_bucket_server_side_encryption_configuration`, `AWS::S3::Bucket` |
 | s3_bucket_access_logging | Enable S3 bucket access logging | pr-bundle | IaC: `aws_s3_bucket_logging`, `AWS::S3::Bucket` |
@@ -73,7 +77,7 @@ Notes:
 | aws_config_enabled | Enable AWS Config recording | pr-bundle | IaC: `AWS::Config::ConfigurationRecorder`, `AWS::Config::DeliveryChannel` (strategy `config_enable_account_local_delivery` includes `AWS::S3::Bucket`; Terraform output includes `null_resource`) |
 | ssm_block_public_sharing | Block public SSM document sharing | pr-bundle | IaC: `aws_ssm_service_setting`, `Custom::SSMServiceSetting` (+ `AWS::IAM::Role`, `AWS::Lambda::Function`) |
 | ebs_snapshot_block_public_access | Restrict EBS snapshot public sharing | pr-bundle | IaC: `aws_ebs_snapshot_block_public_access`, `AWS::EC2::SnapshotBlockPublicAccess` |
-| ebs_default_encryption | Enable EBS default encryption | both | API: `ec2.enable_ebs_encryption_by_default`, `ec2.modify_ebs_default_kms_key_id`; IaC: `aws_ebs_encryption_by_default`, `aws_ebs_default_kms_key`, `Custom::EbsDefaultEncryption` (+ `AWS::IAM::Role`, `AWS::Lambda::Function`) |
+| ebs_default_encryption | Enable EBS default encryption | historical both | API: `ec2.enable_ebs_encryption_by_default`, `ec2.modify_ebs_default_kms_key_id`; IaC: `aws_ebs_encryption_by_default`, `aws_ebs_default_kms_key`, `Custom::EbsDefaultEncryption` (+ `AWS::IAM::Role`, `AWS::Lambda::Function`) |
 | s3_bucket_require_ssl | Enforce SSL-only S3 access | pr-bundle | IaC: `aws_s3_bucket_policy`, `AWS::S3::BucketPolicy` |
 | iam_root_access_key_absent | Remove IAM root access keys | pr-bundle | IaC: Terraform `null_resource` only in extracted PR-bundle data; no direct AWS API call extracted |
 
@@ -93,7 +97,7 @@ Notes:
 | EC2.182 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
 | EC2.7 | control | HIGH | Found in task2, task4 mapping, and both task5 API + task6 IaC action output. | None in extracted set. |
 | S3.5 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
-| IAM.4 | control | HIGH | Found in task2, task4 mapping, and task6 action output. | Concrete direct-fix API path not extracted. |
+| IAM.4 | control | HIGH | Found in task2, task4 mapping, and task6 action output. | Concrete historical direct-fix API path not extracted. |
 | S3.9 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
 | S3.11 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
 | S3.15 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
@@ -108,7 +112,7 @@ Notes:
 | EKS.PUBLIC_ENDPOINT | control | HIGH | Explicit unsupported decision is encoded in `backend/services/control_scope.py` and propagated in `backend/workers/services/inventory_reconcile.py` evidence metadata. | No executable remediation path by design; inventory-only visibility. |
 | ARC-008 | architecture_objective | HIGH | Present as DR IaC metadata key (`ArchitectureObjectiveId`) and intentionally outside runtime control mapping paths. | None. |
 | pr_only | action | LOW | Appears as mode/default in task3/task4 but without concrete task5 API or task6 IaC entry for this action ID itself. | Concrete executable change model for this ID. |
-| direct_fix | action | LOW | Appears as execution mode marker in task3; not a concrete API action ID in task5 extraction. | Concrete API mapping for this ID (if intended as action). |
+| direct_fix | action | LOW | Appears as a historical execution-mode marker in task3; not a concrete API action ID in task5 extraction. | Concrete API mapping for this ID (if intended as action). |
 | pr_bundle | action | LOW | Appears as execution mode marker in task3; not a concrete IaC resource action ID in task6 extraction. | Concrete IaC mapping for this ID (if intended as action). |
 | s3_block_public_access | action | HIGH | Found in task3 name, task4 control mapping, task5 API call, and task6 IaC resources. | None in extracted set. |
 | enable_security_hub | action | HIGH | Found in task3 name, task4 control mapping, task5 API call, and task6 IaC resources. | None in extracted set. |
@@ -132,7 +136,7 @@ Notes:
 | Item | Missing information | File to read next to resolve | Gap type |
 |------|---------------------|------------------------------|----------|
 | pr_only | Ambiguous whether this is a UI/execution mode only or an executable action type with its own change implementation | `backend/services/action_engine.py` and `backend/routers/actions.py` | Documentation gap |
-| direct_fix | Captured as mode label; no concrete action-ID-level API mapping extracted under this ID | `backend/services/action_engine.py`, `backend/routers/actions.py`, `backend/workers/services/direct_fix.py` | Documentation gap |
+| direct_fix | Captured as a historical mode label; no concrete action-ID-level API mapping extracted under this ID | `backend/services/action_engine.py`, `backend/routers/actions.py`, `backend/workers/services/direct_fix.py` | Documentation gap |
 | pr_bundle | Captured as mode label; no concrete action-ID-level IaC mapping extracted under this ID | `backend/services/action_engine.py`, `backend/routers/actions.py`, `backend/services/pr_bundle.py` | Documentation gap |
 | iam_root_access_key_absent | Only Terraform `null_resource` captured in PR-bundle extract; concrete operation details absent in extracted set | `backend/services/pr_bundle.py` and `backend/workers/services/direct_fix.py` | Code gap |
 

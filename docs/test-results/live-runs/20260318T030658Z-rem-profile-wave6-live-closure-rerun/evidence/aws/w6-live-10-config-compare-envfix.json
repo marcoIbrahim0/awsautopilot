@@ -1,0 +1,299 @@
+{
+  "pre": {
+    "recorders": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "delivery_channels": [
+      {
+        "name": "default",
+        "s3BucketName": "config-bucket-696505809372"
+      }
+    ],
+    "recorder_status": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "lastStartTime": "2026-03-16T14:55:06.004000+02:00",
+        "recording": true,
+        "lastStatus": "SUCCESS",
+        "lastStatusChangeTime": "2026-03-18T22:12:16.400000+02:00"
+      }
+    ],
+    "bucket_policy": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowImportRoleBucketReadinessChecks",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+          },
+          "Action": [
+            "s3:ListBucket",
+            "s3:GetBucketAcl",
+            "s3:GetBucketLocation",
+            "s3:GetBucketLogging",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPolicyStatus",
+            "s3:GetBucketWebsite",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetEncryptionConfiguration"
+          ],
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketPermissionsCheck",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:GetBucketAcl",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketDelivery",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:PutObject",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372/AWSLogs/696505809372/Config/*",
+          "Condition": {
+            "StringEquals": {
+              "s3:x-amz-acl": "bucket-owner-full-control"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "post_apply": {
+    "recorders": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "delivery_channels": [
+      {
+        "name": "default",
+        "s3BucketName": "security-autopilot-w6-envready-config-696505809372"
+      }
+    ],
+    "recorder_status": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "lastStartTime": "2026-03-16T14:55:06.004000+02:00",
+        "recording": true,
+        "lastStatus": "SUCCESS",
+        "lastStatusChangeTime": "2026-03-18T22:12:16.400000+02:00"
+      }
+    ],
+    "bucket_policy": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowImportRoleBucketReadinessChecks",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+          },
+          "Action": [
+            "s3:ListBucket",
+            "s3:GetBucketAcl",
+            "s3:GetBucketLocation",
+            "s3:GetBucketLogging",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPolicyStatus",
+            "s3:GetBucketWebsite",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetEncryptionConfiguration"
+          ],
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketPermissionsCheck",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:GetBucketAcl",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketDelivery",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:PutObject",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372/AWSLogs/696505809372/Config/*",
+          "Condition": {
+            "StringEquals": {
+              "s3:x-amz-acl": "bucket-owner-full-control"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "post_rollback": {
+    "recorders": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+        "recordingGroup": {
+          "allSupported": false,
+          "includeGlobalResourceTypes": false,
+          "resourceTypes": [],
+          "exclusionByResourceTypes": {
+            "resourceTypes": [
+              "AWS::IAM::Policy",
+              "AWS::IAM::User",
+              "AWS::IAM::Role",
+              "AWS::IAM::Group"
+            ]
+          },
+          "recordingStrategy": {
+            "useOnly": "EXCLUSION_BY_RESOURCE_TYPES"
+          }
+        },
+        "recordingMode": {
+          "recordingFrequency": "CONTINUOUS",
+          "recordingModeOverrides": []
+        },
+        "recordingScope": "PAID"
+      }
+    ],
+    "delivery_channels": [
+      {
+        "name": "default",
+        "s3BucketName": "config-bucket-696505809372"
+      }
+    ],
+    "recorder_status": [
+      {
+        "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+        "name": "default",
+        "lastStartTime": "2026-03-18T23:24:57.954000+02:00",
+        "lastStopTime": "2026-03-18T23:24:54.913000+02:00",
+        "recording": true,
+        "lastStatus": "SUCCESS",
+        "lastStatusChangeTime": "2026-03-18T23:25:08.358000+02:00"
+      }
+    ],
+    "bucket_policy": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowImportRoleBucketReadinessChecks",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+          },
+          "Action": [
+            "s3:ListBucket",
+            "s3:GetBucketAcl",
+            "s3:GetBucketLocation",
+            "s3:GetBucketLogging",
+            "s3:GetBucketPolicy",
+            "s3:GetBucketPolicyStatus",
+            "s3:GetBucketWebsite",
+            "s3:GetLifecycleConfiguration",
+            "s3:GetEncryptionConfiguration"
+          ],
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketPermissionsCheck",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:GetBucketAcl",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372"
+        },
+        {
+          "Sid": "AWSConfigBucketDelivery",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "config.amazonaws.com"
+          },
+          "Action": "s3:PutObject",
+          "Resource": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372/AWSLogs/696505809372/Config/*",
+          "Condition": {
+            "StringEquals": {
+              "s3:x-amz-acl": "bucket-owner-full-control"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "assertions": {
+    "apply_preserved_recorder_exactly": true,
+    "apply_redirected_delivery_bucket": true,
+    "apply_target_bucket": [
+      "security-autopilot-w6-envready-config-696505809372"
+    ],
+    "rollback_restored_recorders_exactly": true,
+    "rollback_restored_delivery_channels_exactly": true,
+    "rollback_restored_bucket_policy_exactly": true,
+    "rollback_restored_recorder_status_normalized": true,
+    "rollback_restored_recorder_status_exact": false,
+    "rollback_status_metadata_changed_fields": [
+      "lastStartTime",
+      "lastStatusChangeTime",
+      "lastStopTime"
+    ]
+  }
+}

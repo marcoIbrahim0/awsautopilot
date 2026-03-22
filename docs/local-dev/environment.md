@@ -71,6 +71,10 @@ CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
 # Your SaaS AWS account ID (12 digits)
 SAAS_AWS_ACCOUNT_ID="029037611564"
 
+# Optional exact runtime role ARN set to prefill customer trust narrowing during rollout.
+# Use one ARN for a single-role runtime or a comma-separated list when API and worker differ.
+SAAS_EXECUTION_ROLE_ARNS="arn:aws:iam::029037611564:role/<YOUR_VALUE_HERE>"
+
 # Default AWS region
 AWS_REGION="eu-north-1"
 
@@ -108,6 +112,16 @@ SQS_CONTRACT_QUARANTINE_QUEUE_URL="https://sqs.eu-north-1.amazonaws.com/ACCOUNT_
 ```bash
 # JWT secret (MUST be changed in production)
 JWT_SECRET="change-me-in-production-do-not-use-in-prod"
+
+# Dedicated grouped bundle reporting secret.
+# Required if you use customer-run grouped bundle downloads/reporting callbacks.
+# Do not reuse JWT_SECRET.
+BUNDLE_REPORTING_TOKEN_SECRET="change-me-separately-from-jwt-secret"
+
+# Dangerous admin-only escape hatch for runtime IAM teardown.
+# Keep false in normal operation and ask customers to delete the
+# SecurityAutopilotReadRole CloudFormation stack themselves instead.
+ALLOW_RUNTIME_IAM_CLEANUP="false"
 
 # JWT access token expiry in minutes (default: 7 days + 1 hour = 10080)
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
@@ -173,10 +187,10 @@ S3_SUPPORT_BUCKET_REGION="eu-north-1"
 
 ```bash
 # Read role template URL (default: project S3 bucket)
-CLOUDFORMATION_READ_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.4.yaml"
+CLOUDFORMATION_READ_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml"
 
 # Write role template URL
-CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.2.yaml"
+CLOUDFORMATION_WRITE_ROLE_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml"
 
 # Control-plane forwarder template URL (optional)
 CLOUDFORMATION_CONTROL_PLANE_FORWARDER_TEMPLATE_URL="https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml"
@@ -282,7 +296,7 @@ TENANT_RECONCILIATION_ENABLED="true"
 These have defaults and can be omitted for local development:
 
 - `DB_REVISION_GUARD_ENABLED` — Fail-fast if DB revision != Alembic head (default: `true`)
-- `SAAS_BUNDLE_EXECUTOR_ENABLED` — Enable SaaS-managed Terraform runner (default: `false`)
+- `SAAS_BUNDLE_EXECUTOR_ENABLED` — Archived legacy flag for deprecated SaaS-managed PR-bundle execution. Keep `false` for the supported customer-run bundle workflow. (default: `false`)
 - `CONTROL_PLANE_POST_APPLY_RECONCILE_ENABLED` — Post-apply reconciliation (default: `true`)
 - `CONTROL_PLANE_AUTO_DISABLE_ASSUME_ROLE_FAILURES` — Auto-disable accounts on AssumeRole failures (default: `true`)
 
@@ -380,14 +394,17 @@ After setting up the database:
 
 ```bash
 # Check current revision
-alembic current
+./venv/bin/alembic current
+
+# Show repo heads
+./venv/bin/alembic heads
 
 # Apply all migrations
-alembic upgrade head
+./venv/bin/alembic upgrade heads
 
 # Create new migration (after model changes)
-alembic revision --autogenerate -m "description"
-alembic upgrade head
+./venv/bin/alembic revision --autogenerate -m "description"
+./venv/bin/alembic upgrade heads
 ```
 
 ---
@@ -444,7 +461,7 @@ aws sqs get-queue-attributes --queue-url $SQS_INGEST_QUEUE_URL --attribute-names
 
 - **SSL errors**: Ensure `sslmode=require` is in `DATABASE_URL` for cloud-hosted databases
 - **Connection refused**: Verify PostgreSQL is running and `DATABASE_URL` host/port are correct
-- **Host not found / `could not translate host name`**: The hostname in `backend/.env` no longer resolves. This usually means the referenced RDS/Neon target was deleted or renamed. Update `DATABASE_URL` and `DATABASE_URL_SYNC` to a live PostgreSQL target before running `alembic current` or `alembic upgrade head`.
+- **Host not found / `could not translate host name`**: The hostname in `backend/.env` no longer resolves. This usually means the referenced RDS/Neon target was deleted or renamed. Update `DATABASE_URL` and `DATABASE_URL_SYNC` to a live PostgreSQL target before running `./venv/bin/alembic current` or `./venv/bin/alembic upgrade heads`.
 - **Authentication failed**: Check username/password in `DATABASE_URL`
 
 ### AWS Credential Errors

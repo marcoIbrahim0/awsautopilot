@@ -208,6 +208,7 @@ class RootKeyRemediationExecutorWorker:
             db=db,
             run=disable_result.run,
             observer_session=sessions.observer_session,
+            mutation_session=sessions.mutation_session,
         )
         await self._record_disable_evidence(
             db=db,
@@ -219,6 +220,20 @@ class RootKeyRemediationExecutorWorker:
         )
         if signals.breakage_signals:
             reason = f"disable_breakage_signals:{','.join(signals.breakage_signals)}"
+            try:
+                rollback_summary = self._rollback_summary(
+                    session_boto=sessions.mutation_session,
+                    region=run.region,
+                )
+            except Exception as exc:
+                reason = f"{reason},rollback_execution_error:{type(exc).__name__}"
+                rollback_summary = {
+                    "reactivated_count": 0,
+                    "skipped_count": 0,
+                    "reactivated_keys": [],
+                    "skipped_keys": [],
+                    "rollback_execution_error": type(exc).__name__,
+                }
             return await self._rollback_with_alert(
                 db=db,
                 run=disable_result.run,
@@ -227,6 +242,7 @@ class RootKeyRemediationExecutorWorker:
                 rollback_reason=reason,
                 actor_metadata=actor_metadata,
                 evidence_payload={
+                    **rollback_summary,
                     "disable_summary": disable_summary,
                     "signals": self._signals_payload(signals),
                 },
@@ -247,10 +263,9 @@ class RootKeyRemediationExecutorWorker:
         run = await self._require_run(db=db, tenant_id=tenant_id, run_id=run_id)
         sessions = self._build_execution_sessions(run)
         try:
-            rollback_summary = self._reactivate_inactive_root_keys(
+            rollback_summary = self._rollback_summary(
                 session_boto=sessions.mutation_session,
                 region=run.region,
-                key_states=self._list_root_key_states(sessions.mutation_session, run.region),
             )
         except RootKeyStateMachineError:
             raise
@@ -495,19 +510,41 @@ class RootKeyRemediationExecutorWorker:
         )
         disabled: list[str] = []
         skipped: list[str] = []
+        caller_key_preserved: str | None = None
         for item in ordered_states:
             key_id = item["access_key_id"]
+            # Never disable the key we are currently using to make the IAM call.
+            # Disabling our own key would invalidate the session before rollback
+            # can run and leave the account in a permanently locked state.
+            if mutation_access_key_id and key_id == mutation_access_key_id:
+                caller_key_preserved = _mask_access_key_id(key_id)
+                continue
             if item["status"] == "inactive":
                 skipped.append(_mask_access_key_id(key_id))
                 continue
             client.update_access_key(AccessKeyId=key_id, Status="Inactive")
             disabled.append(_mask_access_key_id(key_id))
-        return {
+        result: dict[str, Any] = {
             "disabled_count": len(disabled),
             "skipped_count": len(skipped),
             "disabled_keys": disabled,
             "skipped_keys": skipped,
         }
+        if caller_key_preserved is not None:
+            result["caller_key_preserved"] = caller_key_preserved
+        return result
+
+    def _rollback_summary(
+        self,
+        *,
+        session_boto: Any,
+        region: str | None,
+    ) -> dict[str, Any]:
+        return self._reactivate_inactive_root_keys(
+            session_boto=session_boto,
+            region=region,
+            key_states=self._list_root_key_states(session_boto, region),
+        )
 
     def _reactivate_inactive_root_keys(
         self,
@@ -562,12 +599,58 @@ class RootKeyRemediationExecutorWorker:
             "skipped_keys": skipped,
         }
 
+    async def _discover_usage_result(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        session_boto: Any,
+    ) -> Any:
+        usage_service = self._usage_discovery_factory()
+        return await usage_service.discover_and_classify(
+            db=db,
+            session_boto=session_boto,
+            tenant_id=run.tenant_id,
+            run_id=run.id,
+            lookback_minutes=self._monitor_lookback_minutes,
+            now=self._now(),
+        )
+
+    def _root_keys_present_signal(
+        self,
+        *,
+        session_boto: Any,
+        region: str | None,
+    ) -> tuple[int | None, bool]:
+        try:
+            client = session_boto.client("iam", region_name=region or settings.AWS_REGION)
+            account_summary = client.get_account_summary()
+        except Exception:
+            return None, True
+        summary_map = account_summary.get("SummaryMap") if isinstance(account_summary, dict) else {}
+        if not isinstance(summary_map, dict):
+            return None, False
+        return _safe_int(summary_map.get("AccountAccessKeysPresent")), False
+
+    def _should_retry_with_mutation(
+        self,
+        *,
+        primary_session: Any,
+        fallback_session: Any | None,
+        primary_failed: bool,
+        primary_partial: bool,
+    ) -> bool:
+        if fallback_session is None or fallback_session is primary_session:
+            return False
+        return primary_failed or primary_partial
+
     async def _collect_disable_signals(
         self,
         *,
         db: AsyncSession,
         run: Any,
         observer_session: Any,
+        mutation_session: Any | None = None,
     ) -> _DisableSignals:
         breakage_signals: list[str] = []
         usage = SimpleNamespace(
@@ -576,17 +659,31 @@ class RootKeyRemediationExecutorWorker:
             partial_data=True,
             retries_used=0,
         )
+        usage_failed = False
         try:
-            usage_service = self._usage_discovery_factory()
-            usage = await usage_service.discover_and_classify(
+            usage = await self._discover_usage_result(
                 db=db,
+                run=run,
                 session_boto=observer_session,
-                tenant_id=run.tenant_id,
-                run_id=run.id,
-                lookback_minutes=self._monitor_lookback_minutes,
-                now=self._now(),
             )
         except Exception:
+            usage_failed = True
+        if self._should_retry_with_mutation(
+            primary_session=observer_session,
+            fallback_session=mutation_session,
+            primary_failed=usage_failed,
+            primary_partial=bool(usage.partial_data),
+        ):
+            try:
+                usage = await self._discover_usage_result(
+                    db=db,
+                    run=run,
+                    session_boto=mutation_session,
+                )
+                usage_failed = False
+            except Exception:
+                pass
+        if usage_failed:
             breakage_signals.append("usage_signal_collection_failed")
 
         if usage.partial_data:
@@ -594,12 +691,24 @@ class RootKeyRemediationExecutorWorker:
         if usage.unknown_count > 0:
             breakage_signals.append("unknown_root_usage_after_disable")
 
-        root_keys_present: int | None = None
-        try:
-            account_summary = observer_session.client("iam", region_name=run.region or settings.AWS_REGION).get_account_summary()
-            summary_map = account_summary.get("SummaryMap") if isinstance(account_summary, dict) else {}
-            root_keys_present = _safe_int(summary_map.get("AccountAccessKeysPresent")) if isinstance(summary_map, dict) else None
-        except Exception:
+        root_keys_present, health_failed = self._root_keys_present_signal(
+            session_boto=observer_session,
+            region=run.region,
+        )
+        if self._should_retry_with_mutation(
+            primary_session=observer_session,
+            fallback_session=mutation_session,
+            primary_failed=health_failed,
+            primary_partial=root_keys_present is None,
+        ):
+            fallback_root_keys_present, fallback_health_failed = self._root_keys_present_signal(
+                session_boto=mutation_session,
+                region=run.region,
+            )
+            if not fallback_health_failed or fallback_root_keys_present is not None:
+                root_keys_present = fallback_root_keys_present
+                health_failed = fallback_health_failed
+        if health_failed:
             breakage_signals.append("health_signal_collection_failed")
         if root_keys_present is None:
             breakage_signals.append("health_signal_unreadable")
