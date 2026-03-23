@@ -1,0 +1,141 @@
+{
+  "id": "eefe66d1-91e6-49cd-a27a-5c1afa72557d",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|s3_bucket_lifecycle_configuration|696505809372|eu-north-1",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "created_at": "2026-03-20T17:38:10.647220+00:00",
+  "updated_at": "2026-03-20T17:38:10.647220+00:00",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "counters": {
+    "run_successful": 0,
+    "run_not_successful": 5,
+    "not_run_yet": 0,
+    "total_actions": 5
+  },
+  "members": [
+    {
+      "action_id": "82ed26b1-d9ac-469b-8008-a2acdc89bd38",
+      "title": "S3 general purpose buckets should have Lifecycle configurations",
+      "control_id": "S3.11",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+      "action_status": "open",
+      "priority": 27,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:23:11.467865+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:27:56+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:27:56+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "6c27a974-4232-4467-99d2-c98865e248f3",
+        "status": "finished",
+        "started_at": "2026-03-22T19:23:11.467865+00:00",
+        "finished_at": "2026-03-22T19:27:56+00:00"
+      }
+    },
+    {
+      "action_id": "a1d8f3bf-e381-47d6-9818-1a3096292381",
+      "title": "S3 general purpose buckets should have Lifecycle configurations",
+      "control_id": "S3.11",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+      "action_status": "open",
+      "priority": 27,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:23:11.467865+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:27:56+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:27:56+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "6c27a974-4232-4467-99d2-c98865e248f3",
+        "status": "finished",
+        "started_at": "2026-03-22T19:23:11.467865+00:00",
+        "finished_at": "2026-03-22T19:27:56+00:00"
+      }
+    },
+    {
+      "action_id": "c533dff3-a0f0-4d76-8dd3-19315fb3e47d",
+      "title": "S3 general purpose buckets should have Lifecycle configurations",
+      "control_id": "S3.11",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+      "action_status": "open",
+      "priority": 27,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:23:11.467865+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:27:56+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:27:56+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "6c27a974-4232-4467-99d2-c98865e248f3",
+        "status": "finished",
+        "started_at": "2026-03-22T19:23:11.467865+00:00",
+        "finished_at": "2026-03-22T19:27:56+00:00"
+      }
+    },
+    {
+      "action_id": "e55dca93-6467-4dce-ba6c-16444f259760",
+      "title": "S3 general purpose buckets should have Lifecycle configurations",
+      "control_id": "S3.11",
+      "resource_id": "arn:aws:s3:::config-bucket-696505809372",
+      "action_status": "open",
+      "priority": 27,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:23:11.467865+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:27:56+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:27:56+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "6c27a974-4232-4467-99d2-c98865e248f3",
+        "status": "finished",
+        "started_at": "2026-03-22T19:23:11.467865+00:00",
+        "finished_at": "2026-03-22T19:27:56+00:00"
+      }
+    },
+    {
+      "action_id": "4a5a765e-cf7d-40bf-91c2-19a361d242ae",
+      "title": "S3 general purpose buckets should have Lifecycle configurations",
+      "control_id": "S3.11",
+      "resource_id": "AWS::::Account:696505809372",
+      "action_status": "open",
+      "priority": 24,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:23:11.467865+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:27:56+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:27:56+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "6c27a974-4232-4467-99d2-c98865e248f3",
+        "status": "finished",
+        "started_at": "2026-03-22T19:23:11.467865+00:00",
+        "finished_at": "2026-03-22T19:27:56+00:00"
+      }
+    }
+  ]
+}

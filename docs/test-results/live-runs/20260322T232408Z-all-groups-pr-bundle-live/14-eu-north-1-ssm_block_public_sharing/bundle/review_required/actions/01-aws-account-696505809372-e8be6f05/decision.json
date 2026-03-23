@@ -1,0 +1,29 @@
+{
+  "action_id": "e8be6f05-0e5e-4bdc-818e-f551cd62ccb5",
+  "action_type": "ssm_block_public_sharing",
+  "blocked_reasons": [],
+  "control_id": "SSM.7",
+  "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ssm_disable_public_document_sharing' for strategy 'ssm_disable_public_document_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+  "decision_summary": "Compatibility resolver defaulted to the compatible profile 'ssm_disable_public_document_sharing' for strategy 'ssm_disable_public_document_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/01-aws-account-696505809372-e8be6f05",
+  "has_runnable_terraform": false,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "ssm_disable_public_document_sharing",
+  "rejected_profiles": [],
+  "strategy_id": "ssm_disable_public_document_sharing",
+  "strategy_inputs": {},
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|SSM.7",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "SSM documents should have the block public sharing setting enabled"
+}

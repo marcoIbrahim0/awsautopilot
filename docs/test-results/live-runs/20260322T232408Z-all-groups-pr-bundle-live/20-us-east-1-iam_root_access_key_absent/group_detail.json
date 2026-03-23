@@ -1,0 +1,93 @@
+{
+  "id": "1ed866cc-7359-4a56-b8f8-400652339181",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|iam_root_access_key_absent|696505809372|us-east-1",
+  "action_type": "iam_root_access_key_absent",
+  "account_id": "696505809372",
+  "region": "us-east-1",
+  "created_at": "2026-03-12T15:46:56.445894+00:00",
+  "updated_at": "2026-03-12T15:46:56.445894+00:00",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "counters": {
+    "run_successful": 0,
+    "run_not_successful": 0,
+    "not_run_yet": 3,
+    "total_actions": 3
+  },
+  "members": [
+    {
+      "action_id": "8b83340f-c2b6-4eaa-9af2-812a4550b58d",
+      "title": "IAM root user access key should not exist",
+      "control_id": "IAM.4",
+      "resource_id": "AWS::::Account:696505809372",
+      "action_status": "open",
+      "priority": 72,
+      "assigned_at": "2026-03-20T17:37:31.496957+00:00",
+      "status_bucket": "not_run_yet",
+      "last_attempt_at": null,
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": false,
+      "pending_confirmation_started_at": null,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "latest_run": {
+        "id": null,
+        "status": null,
+        "started_at": null,
+        "finished_at": null
+      }
+    },
+    {
+      "action_id": "e7764c6c-1c56-426b-8373-deacb9277c30",
+      "title": "Synthetic IAM finding with capped trusted threat intel",
+      "control_id": "IAM.4",
+      "resource_id": "arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2HEADROOM",
+      "action_status": "resolved",
+      "priority": 48,
+      "assigned_at": "2026-03-12T15:46:56.445894+00:00",
+      "status_bucket": "not_run_yet",
+      "last_attempt_at": null,
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": false,
+      "pending_confirmation_started_at": null,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "latest_run": {
+        "id": null,
+        "status": null,
+        "started_at": null,
+        "finished_at": null
+      }
+    },
+    {
+      "action_id": "8d5a0c7d-92d8-4a35-bcbf-07a49fbe8f13",
+      "title": "Synthetic IAM finding without trusted threat intel",
+      "control_id": "IAM.4",
+      "resource_id": "arn:aws:iam::696505809372:access-key/AKIAOCYPHERISP2BASELINE",
+      "action_status": "resolved",
+      "priority": 46,
+      "assigned_at": "2026-03-12T15:46:56.445894+00:00",
+      "status_bucket": "not_run_yet",
+      "last_attempt_at": null,
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": false,
+      "pending_confirmation_started_at": null,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "latest_run": {
+        "id": null,
+        "status": null,
+        "started_at": null,
+        "finished_at": null
+      }
+    }
+  ]
+}

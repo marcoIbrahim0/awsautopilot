@@ -1,0 +1,32 @@
+[
+  {
+    "ts": "2026-03-22T23:25:13.149483+00:00",
+    "status_code": 200,
+    "body": {
+      "id": "0d2db884-8c2a-4177-ae5c-8ceb3bec0c8e",
+      "remediation_run_id": "1ecf8713-a356-4cf3-b386-cb7fd7f2fa06",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "failed",
+      "started_at": "2026-03-22T23:24:54.992793+00:00",
+      "finished_at": "2026-03-22T23:25:08+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:24:53.178931+00:00",
+      "updated_at": "2026-03-22T23:25:08.558370+00:00",
+      "results": [
+        {
+          "action_id": "d8da3698-230f-44e3-9c11-cc9e4099b7f6",
+          "execution_status": "failed",
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "result_type": "executable",
+          "support_tier": null,
+          "reason": null,
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T23:24:54.992793+00:00",
+          "execution_finished_at": "2026-03-22T23:25:08+00:00"
+        }
+      ]
+    }
+  }
+]

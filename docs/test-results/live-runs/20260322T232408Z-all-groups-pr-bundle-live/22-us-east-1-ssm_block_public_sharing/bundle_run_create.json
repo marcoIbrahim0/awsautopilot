@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "ssm_disable_public_document_sharing"
+  },
+  "body": {
+    "group_run_id": "83c33246-3eeb-4566-b31c-368b2e8c4175",
+    "remediation_run_id": "caf63a90-d51e-48aa-98d3-66c186631fc0",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

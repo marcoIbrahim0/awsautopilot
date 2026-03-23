@@ -39,6 +39,7 @@ from backend.services.root_credentials_workflow import (
 )
 from backend.workers.jobs import remediation_run
 from backend.workers.jobs.remediation_run import (
+    _build_reporting_replay_script as build_reporting_replay_script,
     _build_reporting_wrapper_script as build_reporting_wrapper_script,
     _sync_download_bundle_group_runs as sync_download_bundle_group_runs,
     execute_remediation_run_job,
@@ -1452,6 +1453,7 @@ def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> 
 
     files_by_path = _bundle_files_by_path(run)
     assert "run_all.sh" in files_by_path
+    assert "replay_group_run_reports.sh" in files_by_path
     assert "run_actions.sh" in files_by_path
     assert "non_executable_results" in files_by_path["run_all.sh"]
     assert str(second_action.id) in files_by_path["run_all.sh"]
@@ -1460,8 +1462,12 @@ def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> 
     assert 'STARTED_TEMPLATE={"token":' not in files_by_path["run_all.sh"]
     assert "STARTED_TEMPLATE='" in files_by_path["run_all.sh"]
     assert 'RUNNER="./run_actions.sh"' in files_by_path["run_all.sh"]
+    assert "--retry-all-errors" in files_by_path["run_all.sh"]
+    assert "--connect-timeout 5" in files_by_path["run_all.sh"]
+    assert "group_run_report_replay" in files_by_path["replay_group_run_reports.sh"]
     assert 'EXECUTION_ROOT="executable/actions"' in files_by_path["run_actions.sh"]
     assert "prepare_action_workspace" in files_by_path["run_actions.sh"]
+    assert 'export TF_DATA_DIR="${dir}/.terraform-data"' in files_by_path["run_actions.sh"]
 
 
 def test_reporting_wrapper_script_posts_shell_safe_json_payloads(tmp_path: Path) -> None:
@@ -1548,6 +1554,183 @@ def test_reporting_wrapper_script_posts_shell_safe_json_payloads(tmp_path: Path)
         }
     ]
     assert "finished_at" in payloads[1]
+
+
+def test_reporting_wrapper_script_posts_finished_failed_on_runner_error(tmp_path: Path) -> None:
+    executable_action_id = uuid.uuid4()
+    payload_log = tmp_path / "payloads.jsonl"
+    run_all_path = tmp_path / "run_all.sh"
+    run_actions_path = tmp_path / "run_actions.sh"
+    bin_dir = tmp_path / "bin"
+    curl_path = bin_dir / "curl"
+
+    bin_dir.mkdir()
+    run_all_path.write_text(
+        build_reporting_wrapper_script(
+            callback_url="https://api.example.com/api/internal/group-runs/report",
+            report_token="signed-token",
+            action_ids=[executable_action_id],
+        ),
+        encoding="utf-8",
+    )
+    run_all_path.chmod(0o755)
+    run_actions_path.write_text("#!/usr/bin/env bash\nexit 143\n", encoding="utf-8")
+    run_actions_path.chmod(0o755)
+    curl_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "payload=\"\"\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  case \"$1\" in\n"
+        "    -d)\n"
+        "      shift\n"
+        "      payload=\"$1\"\n"
+        "      ;;\n"
+        "  esac\n"
+        "  shift || true\n"
+        "done\n"
+        "printf '%s\\n' \"$payload\" >> \"$BUNDLE_TEST_PAYLOADS\"\n"
+        "printf '200'\n",
+        encoding="utf-8",
+    )
+    curl_path.chmod(0o755)
+
+    env = os.environ.copy()
+    env["BUNDLE_TEST_PAYLOADS"] = str(payload_log)
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+
+    completed = subprocess.run(
+        [str(run_all_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 143
+    payloads = [json.loads(line) for line in payload_log.read_text(encoding="utf-8").splitlines()]
+    assert [payload["event"] for payload in payloads] == ["started", "finished"]
+    assert payloads[1]["action_results"] == [
+        {
+            "action_id": str(executable_action_id),
+            "execution_status": "failed",
+            "execution_error_code": "bundle_runner_failed",
+            "execution_error_message": "run_actions.sh exited non-zero",
+        }
+    ]
+    assert "finished_at" in payloads[1]
+
+
+def test_reporting_replay_script_replays_and_deletes_payloads(tmp_path: Path) -> None:
+    replay_path = tmp_path / "replay_group_run_reports.sh"
+    replay_dir = tmp_path / ".bundle-callback-replay"
+    replay_dir.mkdir()
+    payload = replay_dir / "finished-1.json"
+    payload.write_text('{"token":"signed-token","event":"finished"}\n', encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    curl_path = bin_dir / "curl"
+    bin_dir.mkdir()
+    curl_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "outfile=\"\"\n"
+        "payload_file=\"\"\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  case \"$1\" in\n"
+        "    -o)\n"
+        "      shift\n"
+        "      outfile=\"$1\"\n"
+        "      ;;\n"
+        "    -w)\n"
+        "      shift\n"
+        "      ;;\n"
+        "    --data-binary)\n"
+        "      shift\n"
+        "      payload_file=\"$1\"\n"
+        "      ;;\n"
+        "  esac\n"
+        "  shift || true\n"
+        "done\n"
+        "cat \"${payload_file#@}\" >/dev/null\n"
+        "printf '{}' > \"$outfile\"\n"
+        "printf '200'\n",
+        encoding="utf-8",
+    )
+    curl_path.chmod(0o755)
+    replay_path.write_text(
+        build_reporting_replay_script(callback_url="https://api.example.com/api/internal/group-runs/report"),
+        encoding="utf-8",
+    )
+    replay_path.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+    completed = subprocess.run(
+        [str(replay_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    assert not payload.exists()
+
+
+def test_group_pr_bundle_run_actions_script_includes_timeout_guards() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_block_public_access")
+    second_action = _mock_group_action(
+        action_type="s3_bucket_block_public_access",
+        target_id="arn:aws:s3:::bucket-2",
+        title="Second action",
+    )
+    job["group_action_ids"] = [str(run.action.id), str(second_action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_block_public_access_full",
+            support_tier="deterministic_bundle",
+        ),
+        _group_action_resolution_payload(
+            action_id=second_action.id,
+            strategy_id="s3_migrate_cloudfront_oac_private",
+            support_tier="review_required_bundle",
+            blocked_reasons=["needs approval"],
+        ),
+    ]
+    run.artifacts = {
+        "group_bundle": {
+            "reporting": {
+                "callback_url": "https://api.example.com/api/internal/group-runs/report",
+                "token": "signed-token",
+            }
+        }
+    }
+    mock_session = _mock_group_session(run, [run.action, second_action])
+    bundle = {
+        "format": "terraform",
+        "files": [
+            {"path": "providers.tf", "content": "# provider"},
+            {"path": "main.tf", "content": "resource \"aws_s3_bucket_public_access_block\" \"this\" {}"},
+        ],
+        "steps": ["step one"],
+    }
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        with patch("backend.workers.jobs.remediation_run.generate_pr_bundle", return_value=bundle):
+                execute_remediation_run_job(job)
+
+    files_by_path = _bundle_files_by_path(run)
+    content = files_by_path["run_actions.sh"]
+    assert 'ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"' in content
+    assert "run_with_timeout()" in content
+    assert 'run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false' in content
+    assert 'apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"' in content
 
 
 def test_group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success() -> None:

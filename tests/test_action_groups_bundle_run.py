@@ -523,6 +523,42 @@ def test_create_action_group_bundle_run_missing_required_inherited_inputs_return
     assert mock_boto_client.call_count == 0
 
 
+def test_create_action_group_bundle_run_cloudtrail_unresolved_bucket_returns_400(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="cloudtrail_enabled")
+    action = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    session, _ = _mock_group_session(group=group, actions=[action])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client") as mock_boto_client:
+            try:
+                response = client.post(
+                    f"/api/action-groups/{group.id}/bundle-run",
+                    json={
+                        "strategy_id": "cloudtrail_enable_guided",
+                        "risk_acknowledged": True,
+                    },
+                )
+            finally:
+                _clear_action_group_dependencies()
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["error"] == "Invalid grouped remediation request"
+    assert detail["reason"] == "invalid_strategy_inputs"
+    assert "CloudTrail log bucket name is unresolved" in detail["detail"]
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
 @pytest.mark.parametrize(
     ("action_overrides", "expected_error"),
     [

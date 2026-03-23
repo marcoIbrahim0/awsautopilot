@@ -1,0 +1,247 @@
+{
+  "group_id": "d6d3ec05-fbaa-4ad6-872f-be0b16e42c16",
+  "action_type": "ebs_default_encryption",
+  "region": "us-east-1",
+  "account_id": "696505809372",
+  "pre_counters": {
+    "run_successful": 0,
+    "run_not_successful": 0,
+    "not_run_yet": 1,
+    "total_actions": 1
+  },
+  "pre_detail_status": 200,
+  "pre_detail": {
+    "id": "d6d3ec05-fbaa-4ad6-872f-be0b16e42c16",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|ebs_default_encryption|696505809372|us-east-1",
+    "action_type": "ebs_default_encryption",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "created_at": "2026-03-11T17:50:35.462883+00:00",
+    "updated_at": "2026-03-11T17:50:35.462883+00:00",
+    "metadata": {
+      "source": "auto_assign"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    },
+    "members": [
+      {
+        "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+        "title": "EBS default encryption should be enabled",
+        "control_id": "EC2.7",
+        "resource_id": "AWS::::Account:696505809372",
+        "action_status": "open",
+        "priority": 44,
+        "assigned_at": "2026-03-11T17:50:35.462883+00:00",
+        "status_bucket": "not_run_yet",
+        "last_attempt_at": null,
+        "last_confirmed_at": null,
+        "last_confirmation_source": null,
+        "pending_confirmation": false,
+        "pending_confirmation_started_at": null,
+        "pending_confirmation_deadline_at": null,
+        "pending_confirmation_message": null,
+        "pending_confirmation_severity": null,
+        "latest_run": {
+          "id": null,
+          "status": null,
+          "started_at": null,
+          "finished_at": null
+        }
+      }
+    ]
+  },
+  "selected_action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+  "options_status": 200,
+  "options": {
+    "action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+    "action_type": "ebs_default_encryption",
+    "mode_options": [
+      "pr_only"
+    ],
+    "strategies": [
+      {
+        "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "label": "Generate PR bundle for default EBS encryption (AWS managed key)",
+        "mode": "pr_only",
+        "risk_level": "low",
+        "recommended": false,
+        "requires_inputs": false,
+        "input_schema": {
+          "fields": []
+        },
+        "dependency_checks": [
+          {
+            "code": "ebs_new_volume_scope",
+            "status": "pass",
+            "message": "Default encryption applies to newly created volumes; existing volumes are unchanged."
+          }
+        ],
+        "warnings": [
+          "Apply the bundle before creating new volumes to enforce encryption by default."
+        ],
+        "supports_exception_flow": false,
+        "exception_only": false,
+        "impact_text": "All new EBS volumes in this region will be encrypted by default.",
+        "rollback_command": "aws ec2 disable-ebs-encryption-by-default",
+        "estimated_resolution_time": "12-24 hours",
+        "supports_immediate_reeval": true,
+        "blast_radius": "account",
+        "context": {},
+        "profiles": [
+          {
+            "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+            "support_tier": "deterministic_bundle",
+            "recommended": true,
+            "requires_inputs": false,
+            "supports_exception_flow": false,
+            "exception_only": false
+          }
+        ],
+        "recommended_profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "missing_defaults": [],
+        "blocked_reasons": [],
+        "preservation_summary": {
+          "single_profile_compatible": true,
+          "strategy_only_supported": true
+        },
+        "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle' for strategy 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'."
+      },
+      {
+        "strategy_id": "ebs_enable_default_encryption_customer_kms_pr_bundle",
+        "label": "Generate PR bundle for default EBS encryption (customer KMS key)",
+        "mode": "pr_only",
+        "risk_level": "medium",
+        "recommended": false,
+        "requires_inputs": true,
+        "input_schema": {
+          "fields": [
+            {
+              "key": "kms_key_arn",
+              "type": "string",
+              "required": true,
+              "description": "Customer-managed KMS key ARN to set as EBS default key."
+            }
+          ]
+        },
+        "dependency_checks": [
+          {
+            "code": "ebs_customer_kms_policy",
+            "status": "warn",
+            "message": "Validate KMS key policy/grants for all required service and compute principals."
+          }
+        ],
+        "warnings": [
+          "Validate key policy access and regional key alignment before apply."
+        ],
+        "supports_exception_flow": false,
+        "exception_only": false,
+        "impact_text": "All new EBS volumes in this region will be encrypted by default using the specified customer-managed KMS key.",
+        "rollback_command": "aws ec2 disable-ebs-encryption-by-default",
+        "estimated_resolution_time": "12-24 hours",
+        "supports_immediate_reeval": true,
+        "blast_radius": "account",
+        "context": {},
+        "profiles": [
+          {
+            "profile_id": "ebs_enable_default_encryption_customer_kms_pr_bundle",
+            "support_tier": "deterministic_bundle",
+            "recommended": true,
+            "requires_inputs": true,
+            "supports_exception_flow": false,
+            "exception_only": false
+          }
+        ],
+        "recommended_profile_id": "ebs_enable_default_encryption_customer_kms_pr_bundle",
+        "missing_defaults": [],
+        "blocked_reasons": [],
+        "preservation_summary": {
+          "single_profile_compatible": true,
+          "strategy_only_supported": true
+        },
+        "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ebs_enable_default_encryption_customer_kms_pr_bundle' for strategy 'ebs_enable_default_encryption_customer_kms_pr_bundle'."
+      }
+    ],
+    "recommendation": {
+      "mode": "pr_only",
+      "default_mode": "pr_only",
+      "advisory": true,
+      "enforced_by_policy": null,
+      "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=0.70, privilege_level=1.00, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied.",
+      "matrix_position": {
+        "risk_tier": "medium",
+        "business_criticality": "high",
+        "cell": "risk_medium__criticality_high"
+      },
+      "evidence": {
+        "score": 44,
+        "context_incomplete": true,
+        "data_sensitivity": 0.7,
+        "internet_exposure": 0.0,
+        "privilege_level": 1.0,
+        "exploit_signals": 0.0,
+        "matched_signals": []
+      }
+    },
+    "manual_high_risk": false,
+    "pre_execution_notice": null,
+    "runbook_url": null
+  },
+  "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+  "strategy_inputs": {},
+  "chosen_strategy": {
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+    "label": "Generate PR bundle for default EBS encryption (AWS managed key)",
+    "mode": "pr_only",
+    "risk_level": "low",
+    "recommended": false,
+    "requires_inputs": false,
+    "input_schema": {
+      "fields": []
+    },
+    "dependency_checks": [
+      {
+        "code": "ebs_new_volume_scope",
+        "status": "pass",
+        "message": "Default encryption applies to newly created volumes; existing volumes are unchanged."
+      }
+    ],
+    "warnings": [
+      "Apply the bundle before creating new volumes to enforce encryption by default."
+    ],
+    "supports_exception_flow": false,
+    "exception_only": false,
+    "impact_text": "All new EBS volumes in this region will be encrypted by default.",
+    "rollback_command": "aws ec2 disable-ebs-encryption-by-default",
+    "estimated_resolution_time": "12-24 hours",
+    "supports_immediate_reeval": true,
+    "blast_radius": "account",
+    "context": {},
+    "profiles": [
+      {
+        "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "support_tier": "deterministic_bundle",
+        "recommended": true,
+        "requires_inputs": false,
+        "supports_exception_flow": false,
+        "exception_only": false
+      }
+    ],
+    "recommended_profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+    "missing_defaults": [],
+    "blocked_reasons": [],
+    "preservation_summary": {
+      "single_profile_compatible": true,
+      "strategy_only_supported": true
+    },
+    "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle' for strategy 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'."
+  },
+  "bundle_run_create_status": 500,
+  "bundle_run_create_body": {
+    "raw": "Internal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server Error"
+  }
+}

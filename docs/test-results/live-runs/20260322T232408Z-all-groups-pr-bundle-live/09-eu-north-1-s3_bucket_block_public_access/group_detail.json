@@ -1,0 +1,93 @@
+{
+  "id": "9200b6d5-b209-443f-9d78-28a4e60f6fb1",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|s3_bucket_block_public_access|696505809372|eu-north-1",
+  "action_type": "s3_bucket_block_public_access",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "created_at": "2026-03-12T16:37:00.364615+00:00",
+  "updated_at": "2026-03-12T16:37:00.364615+00:00",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "counters": {
+    "run_successful": 0,
+    "run_not_successful": 3,
+    "not_run_yet": 0,
+    "total_actions": 3
+  },
+  "members": [
+    {
+      "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+      "title": "S3 general purpose buckets should block public access",
+      "control_id": "S3.2",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+      "action_status": "open",
+      "priority": 91,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:20:04.517402+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:20:15+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:20:15+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "9e6aa025-59ec-48cd-ad8b-a0ff83a46685",
+        "status": "finished",
+        "started_at": "2026-03-22T19:20:04.517402+00:00",
+        "finished_at": "2026-03-22T19:20:15+00:00"
+      }
+    },
+    {
+      "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+      "title": "S3 general purpose buckets should block public access",
+      "control_id": "S3.2",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+      "action_status": "open",
+      "priority": 91,
+      "assigned_at": "2026-03-20T17:38:10.647220+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:20:04.517402+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:20:15+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:20:15+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "9e6aa025-59ec-48cd-ad8b-a0ff83a46685",
+        "status": "finished",
+        "started_at": "2026-03-22T19:20:04.517402+00:00",
+        "finished_at": "2026-03-22T19:20:15+00:00"
+      }
+    },
+    {
+      "action_id": "19337c80-843c-40fb-b35c-fd561406009f",
+      "title": "S3 general purpose buckets should block public write access",
+      "control_id": "S3.2",
+      "resource_id": "AWS::::Account:696505809372",
+      "action_status": "open",
+      "priority": 56,
+      "assigned_at": "2026-03-12T16:37:00.364615+00:00",
+      "status_bucket": "run_not_successful",
+      "last_attempt_at": "2026-03-22T19:20:04.517402+00:00",
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": true,
+      "pending_confirmation_started_at": "2026-03-22T19:20:15+00:00",
+      "pending_confirmation_deadline_at": "2026-03-23T07:20:15+00:00",
+      "pending_confirmation_message": "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours to confirm the finding is resolved.",
+      "pending_confirmation_severity": "info",
+      "latest_run": {
+        "id": "9e6aa025-59ec-48cd-ad8b-a0ff83a46685",
+        "status": "finished",
+        "started_at": "2026-03-22T19:20:04.517402+00:00",
+        "finished_at": "2026-03-22T19:20:15+00:00"
+      }
+    }
+  ]
+}

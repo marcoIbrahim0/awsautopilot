@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "s3_account_block_public_access_pr_bundle"
+  },
+  "body": {
+    "group_run_id": "5770ddb3-8dd3-49f8-852a-fd23cb6300b5",
+    "remediation_run_id": "d826bc1c-0839-4a74-bc52-9546360aaeee",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

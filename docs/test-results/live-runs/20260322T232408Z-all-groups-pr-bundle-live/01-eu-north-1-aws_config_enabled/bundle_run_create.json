@@ -1,0 +1,20 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_account_local_delivery",
+    "strategy_inputs": {
+      "recording_scope": "keep_existing",
+      "delivery_bucket": "config-bucket-696505809372",
+      "existing_bucket_name": "config-bucket-696505809372",
+      "delivery_bucket_mode": "use_existing"
+    }
+  },
+  "body": {
+    "group_run_id": "79bada1d-24c3-456e-92b2-5d2868f3dd75",
+    "remediation_run_id": "062c7370-2e50-4736-8716-8f139b527a34",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

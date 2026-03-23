@@ -1,0 +1,65 @@
+{
+  "run_id": "20260323T020030Z-grouped-pr-bundle-local-rerun",
+  "run_mode": "local-current-head-against-live-data",
+  "api_base": "http://127.0.0.1:8000",
+  "live_account_id": "696505809372",
+  "retained_source_run_id": "20260322T232408Z-all-groups-pr-bundle-live",
+  "notes": [
+    "Local current-head code was exercised against the shared live tenant data on the Neon database to avoid a runtime redeploy.",
+    "Fresh runtime probing from a purely local backend is still constrained by customer ReadRole trust and sts:SetSourceIdentity, so executable-path validation used retained March 22 group_bundle.action_resolutions when needed.",
+    "Several cases were additionally constrained by pre-existing active remediation runs on the shared DB."
+  ],
+  "cases": [
+    {
+      "name": "02-eu-north-1-cloudtrail_enabled",
+      "status": "validation_error",
+      "code": "invalid_strategy_inputs"
+    },
+    {
+      "name": "03-eu-north-1-ebs_default_encryption",
+      "mode": "retained_execute",
+      "group_run_status": "finished",
+      "remediation_run_status": "success",
+      "exec_returncode": 0
+    },
+    {
+      "name": "08-eu-north-1-s3_bucket_access_logging",
+      "mode": "environment_blocked_active_run",
+      "status": "blocked",
+      "active_remediation_run_status": "pending"
+    },
+    {
+      "name": "10-eu-north-1-s3_bucket_encryption_kms",
+      "mode": "retained_execute",
+      "group_run_status": "finished",
+      "remediation_run_status": "success",
+      "exec_returncode": null
+    },
+    {
+      "name": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+      "mode": "retained_execute_partial",
+      "group_run_status": "started",
+      "remediation_run_status": "success",
+      "exec_returncode": null
+    },
+    {
+      "name": "13-eu-north-1-sg_restrict_public_ports",
+      "mode": "retained_execute_partial",
+      "group_run_status": "started",
+      "remediation_run_status": "success",
+      "exec_returncode": null
+    },
+    {
+      "name": "16-us-east-1-cloudtrail_enabled",
+      "status": "validation_error",
+      "code": "invalid_strategy_inputs"
+    },
+    {
+      "name": "17-us-east-1-ebs_default_encryption",
+      "mode": "create_validated_environment_blocked_active_run",
+      "status": "blocked",
+      "fresh_create_validation_status": "ok",
+      "active_remediation_run_status": "pending"
+    }
+  ]
+}

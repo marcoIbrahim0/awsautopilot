@@ -12,7 +12,6 @@ from fastapi.testclient import TestClient
 from backend.auth import get_current_user
 from backend.database import get_db
 from backend.main import app
-from backend.services.direct_fix_approval import DIRECT_FIX_APPROVAL_ARTIFACT_KEY
 from backend.services.remediation_profile_resolver import RESOLVER_DECISION_VERSION_V1
 from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
 
@@ -176,7 +175,9 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["decision_version"] == RESOLVER_DECISION_VERSION_V1
     assert run.artifacts["selected_strategy"] == "s3_migrate_cloudfront_oac_private"
-    assert run.artifacts["strategy_inputs"] == {}
+    assert run.artifacts["strategy_inputs"] == {
+        "existing_bucket_policy_statement_count": 0,
+    }
     assert run.artifacts["pr_bundle_variant"] == "cloudfront_oac_private_s3"
     payload = _queued_payload(mock_sqs)
     assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
@@ -1022,7 +1023,7 @@ def test_ec2_53_create_downgrades_unsupported_profiles_explicitly(client: TestCl
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "manual_guidance_only"
 
 
-def test_direct_fix_create_remains_without_resolution_artifact(client: TestClient) -> None:
+def test_direct_fix_create_is_rejected_as_out_of_scope(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()
     tenant.id = tenant_id
@@ -1046,9 +1047,7 @@ def test_direct_fix_create_remains_without_resolution_artifact(client: TestClien
         direct_fix_types={"s3_block_public_access"},
     )
 
-    run = _added_run(session)
-    assert response.status_code == 201
-    assert "resolution" not in run.artifacts
-    assert DIRECT_FIX_APPROVAL_ARTIFACT_KEY in run.artifacts
-    assert _queued_payload(mock_sqs)["schema_version"] == 1
-    assert "profile_id" not in _queued_payload(mock_sqs)
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "Direct-fix out of scope"
+    assert session.add.call_count == 0
+    assert mock_sqs.send_message.call_count == 0

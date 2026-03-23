@@ -652,12 +652,44 @@ def _build_action_resolution(
         risk_acknowledged=risk_acknowledged,
         requested_profile_id=selection.requested_profile_id,
     )
+    _validate_grouped_resolution_executability(
+        action_type=_action_field(action, "action_type"),
+        strategy_id=selection.strategy_id,
+        resolution=resolution,
+    )
     return GroupedActionResolutionEntry(
         action_id=_action_id(action),
         strategy_id=selection.strategy_id,
         profile_id=profile_selection.profile.profile_id,
         strategy_inputs=copy.deepcopy(profile_selection.persisted_strategy_inputs),
         resolution=copy.deepcopy(dict(resolution)),
+    )
+
+
+def _validate_grouped_resolution_executability(
+    *,
+    action_type: str | None,
+    strategy_id: str,
+    resolution: Mapping[str, Any],
+) -> None:
+    support_tier = str(resolution.get("support_tier") or "").strip()
+    if support_tier == "deterministic_bundle":
+        return
+    if action_type not in {"cloudtrail_enabled", "ebs_default_encryption"}:
+        return
+    blocked_reasons = list(resolution.get("blocked_reasons") or [])
+    detail = blocked_reasons[0] if blocked_reasons else (
+        f"Grouped strategy '{strategy_id}' is not executable for action_type '{action_type}'."
+    )
+    raise GroupedRemediationRunValidationError(
+        "invalid_strategy_inputs",
+        detail,
+        details={
+            "action_type": action_type,
+            "strategy_id": strategy_id,
+            "support_tier": support_tier,
+            "blocked_reasons": blocked_reasons,
+        },
     )
 
 

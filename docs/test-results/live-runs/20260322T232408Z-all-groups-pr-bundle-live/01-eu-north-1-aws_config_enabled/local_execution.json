@@ -1,0 +1,13 @@
+{
+  "command": [
+    "bash",
+    "./run_all.sh"
+  ],
+  "started_at": "2026-03-22T23:24:39.463463+00:00",
+  "finished_at": "2026-03-22T23:24:46.318508+00:00",
+  "returncode": 0,
+  "stdout": "No executable Terraform action folders found under executable/actions/.\n",
+  "stderr": "",
+  "aws_profile": "test28-root",
+  "region": "eu-north-1"
+}

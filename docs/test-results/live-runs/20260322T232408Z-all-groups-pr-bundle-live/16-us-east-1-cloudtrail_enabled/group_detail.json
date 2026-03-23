@@ -1,0 +1,45 @@
+{
+  "id": "c799cd55-1b6c-4c70-a003-bde891a1c27d",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|cloudtrail_enabled|696505809372|us-east-1",
+  "action_type": "cloudtrail_enabled",
+  "account_id": "696505809372",
+  "region": "us-east-1",
+  "created_at": "2026-03-11T17:50:35.462883+00:00",
+  "updated_at": "2026-03-11T17:50:35.462883+00:00",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "counters": {
+    "run_successful": 0,
+    "run_not_successful": 0,
+    "not_run_yet": 1,
+    "total_actions": 1
+  },
+  "members": [
+    {
+      "action_id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+      "title": "CloudTrail should be enabled and configured with at least one multi-Region trail that includes read and write management events",
+      "control_id": "CloudTrail.1",
+      "resource_id": "AWS::::Account:696505809372",
+      "action_status": "open",
+      "priority": 49,
+      "assigned_at": "2026-03-11T17:50:35.462883+00:00",
+      "status_bucket": "not_run_yet",
+      "last_attempt_at": null,
+      "last_confirmed_at": null,
+      "last_confirmation_source": null,
+      "pending_confirmation": false,
+      "pending_confirmation_started_at": null,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "latest_run": {
+        "id": null,
+        "status": null,
+        "started_at": null,
+        "finished_at": null
+      }
+    }
+  ]
+}

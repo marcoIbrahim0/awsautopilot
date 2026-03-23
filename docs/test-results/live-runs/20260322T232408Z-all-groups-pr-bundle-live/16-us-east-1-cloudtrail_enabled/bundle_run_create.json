@@ -1,0 +1,15 @@
+{
+  "status_code": 500,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "cloudtrail_enable_guided",
+    "strategy_inputs": {
+      "trail_name": "security-autopilot-trail",
+      "create_bucket_policy": true,
+      "multi_region": true
+    }
+  },
+  "body": {
+    "raw": "Internal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server Error"
+  }
+}

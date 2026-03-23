@@ -1,0 +1,10 @@
+{
+  "actions": [
+    {
+      "action_id": "e6b1eac2-041c-4fb3-9a47-2525a3afa908",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

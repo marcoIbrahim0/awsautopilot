@@ -1317,6 +1317,88 @@ def test_create_group_pr_bundle_different_repo_target_not_duplicate(client: Test
     assert payload["action_id"] == str(action2.id)
 
 
+def test_create_group_pr_bundle_ignores_stale_pending_pr_only_run(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    stale_pending_run = MagicMock()
+    stale_pending_run.id = uuid.uuid4()
+    stale_pending_run.action_id = action1.id
+    stale_pending_run.mode = RemediationRunMode.pr_only
+    stale_pending_run.status = RemediationRunStatus.pending
+    stale_pending_run.created_at = datetime.now(timezone.utc) - timedelta(minutes=30)
+    stale_pending_run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(action1.id), str(action2.id)],
+            "action_resolutions": [
+                {
+                    "action_id": str(action1.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                },
+                {
+                    "action_id": str(action2.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                },
+            ],
+        },
+    }
+    session = _mock_group_session(
+        [action1, action2],
+        pending_runs=[stale_pending_run],
+        active_runs=[stale_pending_run],
+    )
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-stale-pending-group"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert session.commit.await_count == 1
+    assert mock_sqs.send_message.call_count == 1
+
+
 def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: TestClient) -> None:
     """Identical grouped effective decisions should still hit the pending duplicate guard."""
     tenant = _mock_tenant()

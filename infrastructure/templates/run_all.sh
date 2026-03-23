@@ -208,6 +208,11 @@ if ! [[ "${DEFAULT_ACTION_SECS}" =~ ^[0-9]+$ ]] || [ "${DEFAULT_ACTION_SECS}" -l
   DEFAULT_ACTION_SECS=90
 fi
 
+ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"
+if ! [[ "${ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${ACTION_TIMEOUT_SECS}" -le 0 ]; then
+  ACTION_TIMEOUT_SECS=300
+fi
+
 START_TS=$(date +%s)
 SUCCESS_COUNT=0
 FAILED_COUNT=0
@@ -243,13 +248,16 @@ is_known_duplicate_only() {
 
 apply_with_duplicate_tolerance() {
   local dir="$1"
+  local timeout_secs="${2:-${ACTION_TIMEOUT_SECS}}"
   local log_file rc resource existing_id duplicate_line
+  export TF_DATA_DIR="${dir}/.terraform-data"
+  mkdir -p "${TF_DATA_DIR}"
 
   log_file=$(mktemp)
   set +e
   (
     cd "$dir"
-    terraform apply -auto-approve
+    run_with_timeout "$timeout_secs" terraform apply -auto-approve
   ) >"$log_file" 2>&1
   rc=$?
   set -e
@@ -297,6 +305,8 @@ run_terraform_init_with_retry() {
   local attempt=1
   local sleep_seconds=3
   local rc=0
+  export TF_DATA_DIR="${dir}/.terraform-data"
+  mkdir -p "${TF_DATA_DIR}"
 
   while [ "$attempt" -le "$attempts" ]; do
     if ! seed_canonical_aws_lockfile "$dir"; then
@@ -321,6 +331,24 @@ run_terraform_init_with_retry() {
   done
 
   return "$rc"
+}
+
+run_with_timeout() {
+  local timeout_secs="$1"
+  shift
+  python3 - "$timeout_secs" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_secs = int(sys.argv[1])
+command = sys.argv[2:]
+try:
+    completed = subprocess.run(command, check=False, timeout=timeout_secs)
+except subprocess.TimeoutExpired:
+    print(f"ERROR: command timed out after {timeout_secs}s: {' '.join(command)}")
+    sys.exit(124)
+sys.exit(int(completed.returncode))
+PY
 }
 
 has_unresolved_placeholders() {
@@ -408,8 +436,7 @@ run_one_bundle() {
   set +e
   (
     cd "$workspace_dir"
-    export TF_DATA_DIR="${workspace_dir}/.terraform-data"
-    terraform plan -input=false
+    run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false
   )
   plan_rc=$?
   set -e
@@ -420,7 +447,7 @@ run_one_bundle() {
     return 0
   fi
 
-  if ! apply_with_duplicate_tolerance "$workspace_dir"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
     cleanup_action_workspace "$workspace_dir"
     printf "failed|%s (apply)\n" "$dir" > "$status_file"

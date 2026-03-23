@@ -1,0 +1,16 @@
+{
+  "name": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+  "create_result": {
+    "status": "ok",
+    "representative_action_id": "82ed26b1-d9ac-469b-8008-a2acdc89bd38",
+    "support_tiers": [
+      "manual_guidance_only"
+    ]
+  },
+  "group_run_status": "finished",
+  "group_run_started_at": "2026-03-23T02:55:45.669618+00:00",
+  "group_run_finished_at": "2026-03-23T02:57:37+00:00",
+  "remediation_run_status": "success",
+  "exec_returncode": 124,
+  "timed_out": true
+}

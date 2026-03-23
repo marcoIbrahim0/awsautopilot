@@ -1,0 +1,224 @@
+{
+  "run_id": "20260322T232408Z-all-groups-pr-bundle-live",
+  "date_utc": "2026-03-22",
+  "tenant": "Valens",
+  "account_id": "696505809372",
+  "regions": [
+    "eu-north-1",
+    "us-east-1"
+  ],
+  "local_execution_identity": "AWS_PROFILE=test28-root",
+  "totals": {
+    "action_groups": 22,
+    "finished": 11,
+    "failed_after_execution": 6,
+    "bundle_generation_failed": 5
+  },
+  "notable_findings": [
+    "s3_bucket_access_logging in eu-north-1 now generates and runs locally when safe-default strategy inputs are supplied, but the grouped run remained started.",
+    "s3_bucket_encryption_kms and s3_bucket_require_ssl in eu-north-1 also remained started after successful bundle generation and local execution.",
+    "sg_restrict_public_ports in eu-north-1 still generated successfully but the grouped run finished failed after local execution.",
+    "cloudtrail_enabled still fails bundle creation with live 500 responses in both regions.",
+    "iam_root_access_key_absent still returns live 400 from the grouped generic route because the dedicated root-key remediation authority is required."
+  ],
+  "groups": [
+    {
+      "directory": "01-eu-north-1-aws_config_enabled",
+      "action_type": "aws_config_enabled",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "02-eu-north-1-cloudtrail_enabled",
+      "action_type": "cloudtrail_enabled",
+      "region": "eu-north-1",
+      "classification": "bundle_generation_failed",
+      "bundle_run_create_status": 500,
+      "remediation_run_status": null,
+      "group_run_status": null
+    },
+    {
+      "directory": "03-eu-north-1-ebs_default_encryption",
+      "action_type": "ebs_default_encryption",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "failed"
+    },
+    {
+      "directory": "04-eu-north-1-ebs_snapshot_block_public_access",
+      "action_type": "ebs_snapshot_block_public_access",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "05-eu-north-1-enable_guardduty",
+      "action_type": "enable_guardduty",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "06-eu-north-1-iam_root_access_key_absent",
+      "action_type": "iam_root_access_key_absent",
+      "region": "eu-north-1",
+      "classification": "bundle_generation_failed",
+      "bundle_run_create_status": 400,
+      "remediation_run_status": null,
+      "group_run_status": null
+    },
+    {
+      "directory": "07-eu-north-1-s3_block_public_access",
+      "action_type": "s3_block_public_access",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "08-eu-north-1-s3_bucket_access_logging",
+      "action_type": "s3_bucket_access_logging",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "started"
+    },
+    {
+      "directory": "09-eu-north-1-s3_bucket_block_public_access",
+      "action_type": "s3_bucket_block_public_access",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "10-eu-north-1-s3_bucket_encryption_kms",
+      "action_type": "s3_bucket_encryption_kms",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "started"
+    },
+    {
+      "directory": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "failed"
+    },
+    {
+      "directory": "12-eu-north-1-s3_bucket_require_ssl",
+      "action_type": "s3_bucket_require_ssl",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "started"
+    },
+    {
+      "directory": "13-eu-north-1-sg_restrict_public_ports",
+      "action_type": "sg_restrict_public_ports",
+      "region": "eu-north-1",
+      "classification": "failed_after_execution",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "failed"
+    },
+    {
+      "directory": "14-eu-north-1-ssm_block_public_sharing",
+      "action_type": "ssm_block_public_sharing",
+      "region": "eu-north-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "15-us-east-1-aws_config_enabled",
+      "action_type": "aws_config_enabled",
+      "region": "us-east-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "16-us-east-1-cloudtrail_enabled",
+      "action_type": "cloudtrail_enabled",
+      "region": "us-east-1",
+      "classification": "bundle_generation_failed",
+      "bundle_run_create_status": 500,
+      "remediation_run_status": null,
+      "group_run_status": null
+    },
+    {
+      "directory": "17-us-east-1-ebs_default_encryption",
+      "action_type": "ebs_default_encryption",
+      "region": "us-east-1",
+      "classification": "bundle_generation_failed",
+      "bundle_run_create_status": 500,
+      "remediation_run_status": null,
+      "group_run_status": null
+    },
+    {
+      "directory": "18-us-east-1-ebs_snapshot_block_public_access",
+      "action_type": "ebs_snapshot_block_public_access",
+      "region": "us-east-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "19-us-east-1-enable_guardduty",
+      "action_type": "enable_guardduty",
+      "region": "us-east-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "20-us-east-1-iam_root_access_key_absent",
+      "action_type": "iam_root_access_key_absent",
+      "region": "us-east-1",
+      "classification": "bundle_generation_failed",
+      "bundle_run_create_status": 400,
+      "remediation_run_status": null,
+      "group_run_status": null
+    },
+    {
+      "directory": "21-us-east-1-s3_block_public_access",
+      "action_type": "s3_block_public_access",
+      "region": "us-east-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    },
+    {
+      "directory": "22-us-east-1-ssm_block_public_sharing",
+      "action_type": "ssm_block_public_sharing",
+      "region": "us-east-1",
+      "classification": "finished",
+      "bundle_run_create_status": 201,
+      "remediation_run_status": "success",
+      "group_run_status": "finished"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+  "mode": "retained_execute_partial",
+  "group_run_status": "started",
+  "group_run_started_at": "2026-03-23T02:12:26.513896+00:00",
+  "group_run_finished_at": null,
+  "remediation_run_id": "0382d929-ca33-453f-8b45-2d88bb05bc4c",
+  "remediation_run_status": "success",
+  "exec_returncode": null,
+  "notes": [
+    "Current-head retained bundle generation succeeded.",
+    "The local execution path advanced far enough for remediation_run=success, but grouped finalization did not complete and the group run remained started."
+  ]
+}

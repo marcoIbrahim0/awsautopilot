@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "snapshot_block_all_sharing"
+  },
+  "body": {
+    "group_run_id": "dfbd08fc-cef7-48e9-acef-60596272ef37",
+    "remediation_run_id": "595f6b0e-c593-41e4-aea8-742439dad87f",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

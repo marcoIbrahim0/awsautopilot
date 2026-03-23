@@ -1,0 +1,20 @@
+{
+  "status_code": 400,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "iam_root_key_disable",
+    "strategy_inputs": {
+      "action_mode": "disable_key"
+    }
+  },
+  "body": {
+    "detail": {
+      "error": "Dedicated root-key route required",
+      "reason": "root_key_execution_authority",
+      "detail": "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs. Generic remediation-run routes expose IAM.4 guidance only.",
+      "execution_authority": "/api/root-key-remediation-runs",
+      "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+      "strategy_id": "iam_root_key_disable"
+    }
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "action_id": "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+  "action_type": "ebs_snapshot_block_public_access",
+  "mode_options": [
+    "pr_only"
+  ],
+  "strategies": [
+    {
+      "strategy_id": "snapshot_block_all_sharing",
+      "label": "Block all public snapshot sharing",
+      "mode": "pr_only",
+      "risk_level": "medium",
+      "recommended": true,
+      "requires_inputs": false,
+      "input_schema": {
+        "fields": []
+      },
+      "dependency_checks": [
+        {
+          "code": "snapshot_sharing_dependency",
+          "status": "warn",
+          "message": "Confirm no workflows depend on public snapshot sharing before enforcement."
+        }
+      ],
+      "warnings": [
+        "Existing workflows that rely on public snapshot sharing may fail."
+      ],
+      "supports_exception_flow": false,
+      "exception_only": false,
+      "impact_text": "Public access to EBS snapshots will be blocked at the account level.",
+      "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": true,
+      "blast_radius": "account",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "snapshot_block_all_sharing",
+          "support_tier": "deterministic_bundle",
+          "recommended": true,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        }
+      ],
+      "recommended_profile_id": "snapshot_block_all_sharing",
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'."
+    },
+    {
+      "strategy_id": "snapshot_block_new_sharing_only",
+      "label": "Block new public sharing only",
+      "mode": "pr_only",
+      "risk_level": "medium",
+      "recommended": false,
+      "requires_inputs": false,
+      "input_schema": {
+        "fields": []
+      },
+      "dependency_checks": [
+        {
+          "code": "snapshot_sharing_dependency",
+          "status": "warn",
+          "message": "Confirm no workflows depend on public snapshot sharing before enforcement."
+        },
+        {
+          "code": "snapshot_existing_public_shares",
+          "status": "unknown",
+          "message": "Existing public snapshot shares may remain and need separate cleanup."
+        }
+      ],
+      "warnings": [
+        "Previously shared public snapshots may remain exposed."
+      ],
+      "supports_exception_flow": false,
+      "exception_only": false,
+      "impact_text": "New public sharing for EBS snapshots will be blocked while previously public snapshots remain unchanged.",
+      "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": true,
+      "blast_radius": "account",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "snapshot_block_new_sharing_only",
+          "support_tier": "deterministic_bundle",
+          "recommended": true,
+          "requires_inputs": false,
+          "supports_exception_flow": false,
+          "exception_only": false
+        }
+      ],
+      "recommended_profile_id": "snapshot_block_new_sharing_only",
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_new_sharing_only' for strategy 'snapshot_block_new_sharing_only'."
+    },
+    {
+      "strategy_id": "snapshot_keep_sharing_exception",
+      "label": "Keep public sharing (exception path)",
+      "mode": "pr_only",
+      "risk_level": "high",
+      "recommended": false,
+      "requires_inputs": true,
+      "input_schema": {
+        "fields": [
+          {
+            "key": "exception_duration_days",
+            "type": "select",
+            "required": false,
+            "description": "How long should this exception remain active?",
+            "default_value": "30",
+            "group": "Exception",
+            "options": [
+              {
+                "value": "7",
+                "label": "7 days"
+              },
+              {
+                "value": "14",
+                "label": "14 days"
+              },
+              {
+                "value": "30",
+                "label": "30 days"
+              },
+              {
+                "value": "90",
+                "label": "90 days"
+              }
+            ]
+          },
+          {
+            "key": "exception_reason",
+            "type": "string",
+            "required": false,
+            "description": "Why can't you apply this fix right now?",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "group": "Exception"
+          }
+        ]
+      },
+      "dependency_checks": [
+        {
+          "code": "snapshot_public_exposure",
+          "status": "warn",
+          "message": "Public snapshot sharing can expose sensitive data and AMI lineage."
+        }
+      ],
+      "warnings": [
+        "Public snapshots can leak data and AMI lineage."
+      ],
+      "supports_exception_flow": true,
+      "exception_only": true,
+      "impact_text": "Public EBS snapshot sharing posture will remain unchanged while the exception path is active.",
+      "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+      "estimated_resolution_time": "12-24 hours",
+      "supports_immediate_reeval": false,
+      "blast_radius": "account",
+      "context": {},
+      "profiles": [
+        {
+          "profile_id": "snapshot_keep_sharing_exception",
+          "support_tier": "manual_guidance_only",
+          "recommended": true,
+          "requires_inputs": true,
+          "supports_exception_flow": true,
+          "exception_only": true
+        }
+      ],
+      "recommended_profile_id": "snapshot_keep_sharing_exception",
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_keep_sharing_exception' for strategy 'snapshot_keep_sharing_exception'."
+    }
+  ],
+  "recommendation": {
+    "mode": "exception_review",
+    "default_mode": "exception_review",
+    "advisory": true,
+    "enforced_by_policy": null,
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=0.80, privilege_level=0.00, internet_exposure=1.00, matched_signals=none. Relationship context is complete enough for advisory matrix placement.",
+    "matrix_position": {
+      "risk_tier": "high",
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high"
+    },
+    "evidence": {
+      "score": 84,
+      "context_incomplete": false,
+      "data_sensitivity": 0.8,
+      "internet_exposure": 1.0,
+      "privilege_level": 0.0,
+      "exploit_signals": 0.7333,
+      "matched_signals": []
+    }
+  },
+  "manual_high_risk": false,
+  "pre_execution_notice": null,
+  "runbook_url": null
+}

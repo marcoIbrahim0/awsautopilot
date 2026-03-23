@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "error": "GroupedRemediationRunValidationError",
+  "message": "Action '0abc603d-b75a-4b49-9a5f-431a0aa82a4e' requires risk_acknowledged=true for strategy 'sg_restrict_public_ports_guided'."
+}

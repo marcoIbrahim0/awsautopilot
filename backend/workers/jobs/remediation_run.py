@@ -731,13 +731,16 @@ is_known_duplicate_only() {{
 
 apply_with_duplicate_tolerance() {{
   local dir="$1"
+  local timeout_secs="${{2:-${{ACTION_TIMEOUT_SECS}}}}"
   local log_file rc resource existing_id duplicate_line
+  export TF_DATA_DIR="${{dir}}/.terraform-data"
+  mkdir -p "${{TF_DATA_DIR}}"
 
   log_file=$(mktemp)
   set +e
   (
     cd "$dir"
-    terraform apply -auto-approve
+    run_with_timeout "$timeout_secs" terraform apply -auto-approve
   ) >"$log_file" 2>&1
   rc=$?
   set -e
@@ -771,12 +774,32 @@ apply_with_duplicate_tolerance() {{
   return "$rc"
 }}
 
+run_with_timeout() {{
+  local timeout_secs="$1"
+  shift
+  python3 - "$timeout_secs" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_secs = int(sys.argv[1])
+command = sys.argv[2:]
+try:
+    completed = subprocess.run(command, check=False, timeout=timeout_secs)
+except subprocess.TimeoutExpired:
+    print("ERROR: command timed out after %ss: %s" % (timeout_secs, " ".join(command)))
+    sys.exit(124)
+sys.exit(int(completed.returncode))
+PY
+}}
+
 run_terraform_init_with_retry() {{
   local dir="$1"
   local attempts=5
   local attempt=1
   local sleep_seconds=3
   local rc=0
+  export TF_DATA_DIR="${{dir}}/.terraform-data"
+  mkdir -p "${{TF_DATA_DIR}}"
 
   while [ "$attempt" -le "$attempts" ]; do
     if ! seed_canonical_aws_lockfile "$dir"; then
@@ -830,6 +853,11 @@ SUCCESS_COUNT=0
 FAILED_COUNT=0
 FAILED_ACTIONS=()
 
+ACTION_TIMEOUT_SECS="${{ACTION_TIMEOUT_SECS:-300}}"
+if ! [[ "${{ACTION_TIMEOUT_SECS}}" =~ ^[0-9]+$ ]] || [ "${{ACTION_TIMEOUT_SECS}}" -le 0 ]; then
+  ACTION_TIMEOUT_SECS=300
+fi
+
 for dir in "${{ACTION_DIRS[@]}}"; do
   workspace_dir=""
   echo ""
@@ -860,8 +888,7 @@ for dir in "${{ACTION_DIRS[@]}}"; do
   set +e
   (
     cd "$workspace_dir"
-    export TF_DATA_DIR="${{workspace_dir}}/.terraform-data"
-    terraform plan -input=false
+    run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false
   )
   plan_rc=$?
   set -e
@@ -873,7 +900,7 @@ for dir in "${{ACTION_DIRS[@]}}"; do
     continue
   fi
 
-  if ! apply_with_duplicate_tolerance "$workspace_dir"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
     cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
@@ -1319,6 +1346,8 @@ FINISHED_SUCCESS_TEMPLATE={shell_finished_success_template}
 FINISHED_FAILED_TEMPLATE={shell_finished_failed_template}
 REPLAY_DIR="./.bundle-callback-replay"
 RUNNER="./run_actions.sh"
+RUN_RC=1
+FINISH_SENT=0
 
 mkdir -p "$REPLAY_DIR"
 
@@ -1346,8 +1375,31 @@ post_payload() {{
     return 1
   fi
   if command -v curl >/dev/null 2>&1; then
-    curl -sS -X POST "$REPORT_URL" -H "Content-Type: application/json" -d "$payload" >/dev/null 2>&1
-    return $?
+    local response_file http_code rc
+    response_file=$(mktemp)
+    http_code=$(curl -sS \
+      --connect-timeout 5 \
+      --max-time 20 \
+      --retry 4 \
+      --retry-delay 2 \
+      --retry-all-errors \
+      -o "$response_file" \
+      -w "%{{http_code}}" \
+      -X POST "$REPORT_URL" \
+      -H "Content-Type: application/json" \
+      -d "$payload")
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+      rm -f "$response_file"
+      return "$rc"
+    fi
+    rm -f "$response_file"
+    case "$http_code" in
+      2??)
+        return 0
+        ;;
+    esac
+    return 1
   fi
   return 1
 }}
@@ -1359,28 +1411,113 @@ persist_replay() {{
   printf '%s\\n' "$payload" > "$file"
 }}
 
+emit_finished_callback() {{
+  local exit_code="$1"
+  local finished_at payload
+  if [ "$FINISH_SENT" -eq 1 ]; then
+    return 0
+  fi
+  FINISH_SENT=1
+  finished_at="$(iso_now)"
+  if [ "$exit_code" -eq 0 ]; then
+    payload="$(inject_timestamp "$FINISHED_SUCCESS_TEMPLATE" "finished_at" "$finished_at")"
+  else
+    payload="$(inject_timestamp "$FINISHED_FAILED_TEMPLATE" "finished_at" "$finished_at")"
+  fi
+  if ! post_payload "$payload"; then
+    persist_replay "finished" "$payload"
+  fi
+}}
+
+handle_exit() {{
+  local exit_code="$1"
+  emit_finished_callback "$exit_code"
+  exit "$exit_code"
+}}
+
 STARTED_AT="$(iso_now)"
 START_PAYLOAD="$(inject_timestamp "$STARTED_TEMPLATE" "started_at" "$STARTED_AT")"
 if ! post_payload "$START_PAYLOAD"; then
   persist_replay "started" "$START_PAYLOAD"
 fi
 
+trap 'handle_exit $?' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 chmod +x "$RUNNER"
 "$RUNNER"
 RUN_RC=$?
-
-FINISHED_AT="$(iso_now)"
-if [ "$RUN_RC" -eq 0 ]; then
-  FINISH_PAYLOAD="$(inject_timestamp "$FINISHED_SUCCESS_TEMPLATE" "finished_at" "$FINISHED_AT")"
-else
-  FINISH_PAYLOAD="$(inject_timestamp "$FINISHED_FAILED_TEMPLATE" "finished_at" "$FINISHED_AT")"
-fi
-
-if ! post_payload "$FINISH_PAYLOAD"; then
-  persist_replay "finished" "$FINISH_PAYLOAD"
-fi
-
 exit "$RUN_RC"
+"""
+
+
+def _build_reporting_replay_script(*, callback_url: str) -> str:
+    shell_callback_url = shlex.quote(callback_url)
+    return f"""#!/usr/bin/env bash
+set -euo pipefail
+
+REPORT_URL={shell_callback_url}
+REPLAY_DIR="./.bundle-callback-replay"
+
+if [ ! -d "$REPLAY_DIR" ]; then
+  echo "Replay directory not found: $REPLAY_DIR"
+  exit 1
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required for replay."
+  exit 1
+fi
+
+shopt -s nullglob
+files=("$REPLAY_DIR"/*.json)
+if [ "${{#files[@]}}" -eq 0 ]; then
+  echo "No replay payloads found under $REPLAY_DIR."
+  exit 0
+fi
+
+for payload_file in "${{files[@]}}"; do
+  response_file=$(mktemp)
+  http_code=$(curl -sS \
+    --connect-timeout 5 \
+    --max-time 20 \
+    --retry 4 \
+    --retry-delay 2 \
+    --retry-all-errors \
+    -o "$response_file" \
+    -w "%{{http_code}}" \
+    -X POST "$REPORT_URL" \
+    -H "Content-Type: application/json" \
+    --data-binary "@$payload_file")
+  rc=$?
+  response_body="$(cat "$response_file" 2>/dev/null || true)"
+  rm -f "$response_file"
+  if [ "$rc" -ne 0 ]; then
+    echo "Replay failed for $payload_file"
+    exit "$rc"
+  fi
+  case "$http_code" in
+    2??)
+      echo "Replayed $payload_file"
+      rm -f "$payload_file"
+      ;;
+    409)
+      if printf '%s' "$response_body" | grep -q 'group_run_report_replay'; then
+        echo "Replay already consumed for $payload_file"
+        rm -f "$payload_file"
+      else
+        echo "Replay conflict for $payload_file"
+        exit 1
+      fi
+      ;;
+    *)
+      echo "Replay rejected for $payload_file with HTTP $http_code"
+      printf '%s\\n' "$response_body"
+      exit 1
+      ;;
+  esac
+done
 """
 
 
@@ -1610,6 +1747,11 @@ if ! [[ "${DEFAULT_ACTION_SECS}" =~ ^[0-9]+$ ]] || [ "${DEFAULT_ACTION_SECS}" -l
   DEFAULT_ACTION_SECS=90
 fi
 
+ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"
+if ! [[ "${ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${ACTION_TIMEOUT_SECS}" -le 0 ]; then
+  ACTION_TIMEOUT_SECS=300
+fi
+
 START_TS=$(date +%s)
 CURRENT_ACTION=""
 CURRENT_INDEX=0
@@ -1633,13 +1775,14 @@ is_known_duplicate_only() {
 
 apply_with_duplicate_tolerance() {
   local dir="$1"
+  local timeout_secs="${2:-${ACTION_TIMEOUT_SECS}}"
   local log_file rc resource existing_id duplicate_line
 
   log_file=$(mktemp)
   set +e
   (
     cd "$dir"
-    terraform apply -auto-approve
+    run_with_timeout "$timeout_secs" terraform apply -auto-approve
   ) >"$log_file" 2>&1
   rc=$?
   set -e
@@ -1711,6 +1854,24 @@ run_terraform_init_with_retry() {
   done
 
   return "$rc"
+}
+
+run_with_timeout() {
+  local timeout_secs="$1"
+  shift
+  python3 - "$timeout_secs" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_secs = int(sys.argv[1])
+command = sys.argv[2:]
+try:
+    completed = subprocess.run(command, check=False, timeout=timeout_secs)
+except subprocess.TimeoutExpired:
+    print(f"ERROR: command timed out after {timeout_secs}s: {' '.join(command)}")
+    sys.exit(124)
+sys.exit(int(completed.returncode))
+PY
 }
 
 has_unresolved_placeholders() {
@@ -1803,7 +1964,7 @@ while IFS= read -r dir; do
   (
     cd "$workspace_dir"
     export TF_DATA_DIR="${workspace_dir}/.terraform-data"
-    terraform plan -input=false
+    run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false
   )
   plan_rc=$?
   set -e
@@ -1817,7 +1978,7 @@ while IFS= read -r dir; do
   fi
   render_progress "$((i - 1))" "(${CURRENT_INDEX}/${TOTAL}) ${dir}"
 
-  if ! apply_with_duplicate_tolerance "$workspace_dir"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
     cleanup_action_workspace "$workspace_dir"
     FAILED_COUNT=$((FAILED_COUNT + 1))
@@ -1959,6 +2120,13 @@ echo "All action folders completed successfully."
                     report_token=report_token,
                     action_ids=generated_action_ids,
                 ),
+            },
+        )
+        files.insert(
+            1,
+            {
+                "path": "replay_group_run_reports.sh",
+                "content": _build_reporting_replay_script(callback_url=callback_url),
             },
         )
     else:
@@ -2147,6 +2315,13 @@ def _generate_mixed_tier_group_pr_bundle(
                     action_ids=runnable_action_ids,
                     non_executable_results=non_executable_results,
                 ),
+            },
+        )
+        files.insert(
+            1,
+            {
+                "path": "replay_group_run_reports.sh",
+                "content": _build_reporting_replay_script(callback_url=callback_url),
             },
         )
     else:

@@ -1,5 +1,128 @@
 # Task Log
 
+## Harden grouped finalization fallback and stale pending grouped-run conflicts (2026-03-23)
+
+**Task:** Implement the follow-up fixes for the March 23 unresolved grouped PR-bundle buckets: stop abandoned `pending` grouped runs from blocking fresh reruns, and harden callback-enabled bundle execution so interrupted or hung runs still produce a terminal grouped event instead of remaining `started` forever.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/infrastructure/templates/run_all.sh`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a stale-pending grouped-run filter in `POST /api/remediation-runs/group-pr-bundle`: `pr_only` runs that are still `pending` more than `10` minutes after creation are no longer treated as active duplicate blockers.
+- Hardened the callback-enabled `run_all.sh` wrapper so it now emits a terminal failed `finished` callback on shell exit or signal when `run_actions.sh` does not complete cleanly, instead of only attempting the terminal callback on the happy-path return.
+- Added bounded `ACTION_TIMEOUT_SECS` handling to the grouped Terraform runners so both `terraform plan` and `terraform apply` fail closed on hangs; duplicate-tolerant apply still preserves the EC2.53 duplicate-rule handling after the timeout guard.
+- Synced the checked-in `infrastructure/templates/run_all.sh` runner template with the worker-generated runner contract so real downloaded bundles inherit the same timeout behavior as the embedded fallback.
+- Added focused regression coverage for:
+  - terminal failed callback emission from the reporting wrapper
+  - timeout guard presence in generated grouped mixed-tier runner scripts
+  - stale pending grouped-run conflict bypass on grouped PR-bundle create
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -q -k 'reporting_wrapper_script_posts_finished_failed_on_runner_error or group_pr_bundle_run_actions_script_includes_timeout_guards or reporting_wrapper_script_posts_shell_safe_json_payloads or group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success'`
+  - `4 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runs_api.py -q -k 'create_group_pr_bundle_ignores_stale_pending_pr_only_run'`
+  - `1 passed`
+
+**Open questions / TODOs:**
+- The stale-pending filter only applies to `pending` grouped `pr_only` runs older than `10` minutes; truly running or awaiting-approval runs still block reruns by design.
+- `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` still need a fresh targeted local/live rerun to confirm whether the new terminal-callback-on-exit plus action timeout closes their `group_run started` behavior in practice.
+
+## Grouped PR-bundle local current-head rerun against live data without redeploy (2026-03-23)
+
+**Task:** Re-run the March 22 grouped PR-bundle failure buckets against current local code without redeploying the SaaS runtime by pointing a local API at the shared Neon database and exercising live tenant/account data where possible.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/08-eu-north-1-s3_bucket_access_logging/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/10-eu-north-1-s3_bucket_encryption_kms/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/11-eu-north-1-s3_bucket_lifecycle_configuration/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/13-eu-north-1-sg_restrict_public_ports/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/17-us-east-1-ebs_default_encryption/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Started a local API on `http://127.0.0.1:8000` against the shared Neon DB so current-head code could exercise live tenant/account data without a runtime redeploy.
+- Confirmed the March 23 create-time hardening directly against live group data:
+  - `cloudtrail_enabled` in both `eu-north-1` and `us-east-1` now returns structured `invalid_strategy_inputs` because `trail_bucket_name` is unresolved, instead of live `500`.
+  - `us-east-1 ebs_default_encryption` fresh grouped create planning now succeeds at the validation/build layer instead of crashing, but a full execute rerun was blocked by an older active remediation row already present on the shared DB.
+- Because pure local runtime probing still hits customer ReadRole `sts:SetSourceIdentity` trust constraints, reused retained March 22 `group_bundle.action_resolutions` for executable-path reruns while still generating fresh current-head bundles and executing them locally with `AWS_PROFILE=test28-root`.
+- Confirmed `eu-north-1 ebs_default_encryption` now regenerates and executes cleanly end to end on current-head with grouped status `finished`.
+- Confirmed `s3_bucket_encryption_kms` now reaches `remediation_run=success` and grouped status `finished` on the retained current-head rerun path.
+- Reproduced remaining grouped finalization gaps on current-head:
+  - `s3_bucket_lifecycle_configuration` reached `remediation_run=success` but grouped status remained `started`
+  - `sg_restrict_public_ports` reached `remediation_run=success` but grouped status remained `started`
+- Recorded environment blockers that prevented full reruns for two families:
+  - `s3_bucket_access_logging` was blocked by a new active pending remediation row created during an earlier local smoke attempt
+  - `us-east-1 ebs_default_encryption` was blocked by an older pending remediation row already present on the shared DB
+- Wrote a retained summary package under `docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/` and linked it from the live E2E index.
+
+**Validation:**
+- Local run root: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun`
+- Confirmed outcomes:
+  - `02-eu-north-1-cloudtrail_enabled` -> `validation_error` / `invalid_strategy_inputs`
+  - `16-us-east-1-cloudtrail_enabled` -> `validation_error` / `invalid_strategy_inputs`
+  - `03-eu-north-1-ebs_default_encryption` -> grouped `finished`, remediation run `success`, local `run_all.sh` return code `0`
+  - `10-eu-north-1-s3_bucket_encryption_kms` -> remediation run `success`, grouped `finished`
+  - `11-eu-north-1-s3_bucket_lifecycle_configuration` -> remediation run `success`, grouped `started`
+  - `13-eu-north-1-sg_restrict_public_ports` -> remediation run `success`, grouped `started`
+  - `08-eu-north-1-s3_bucket_access_logging` -> rerun blocked by active remediation run `e0d62069-0431-4987-b38f-de12163585ec`
+  - `17-us-east-1-ebs_default_encryption` -> fresh create planning OK, execute rerun blocked by active remediation run `3c47f1bb-2d8f-4489-b498-22b72405b315`
+
+**Open questions / TODOs:**
+- Root-cause why `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` can still leave grouped runs in `started` even when the remediation run itself reaches `success` on current-head.
+- Clear or retire stale active remediation rows before attempting another full rerun of `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`.
+- A pure local-runtime reproduction of fresh executable grouped resolution is still constrained by customer ReadRole trust on `sts:SetSourceIdentity`; retained bundle-action resolutions remain the practical workaround until local trust parity exists.
+
+## Execute all current live grouped PR bundles for account `696505809372` with safe-default inputs and retained evidence (2026-03-22)
+
+**Task:** Run a second live end-to-end exercise against the current production deployment that generates, downloads, and executes every currently available grouped PR bundle for tenant `Valens` account `696505809372`, then retain the full artifact package and summarize what still fails after the runner hardening changes.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reconfirmed the live target account as tenant `Valens` account `696505809372` and verified local mutation authority with `AWS_PROFILE=test28-root`.
+- Enumerated all current grouped action families from the live SaaS API and created a new retained evidence package under `docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live/`.
+- For each live group, resolved strategy options, generated the grouped PR bundle when allowed, downloaded the bundle, extracted it locally, and executed `bash ./run_all.sh` with the target AWS profile and region.
+- Persisted per-group evidence including group detail, resolved options, bundle-creation responses, remediation-run polling, downloaded bundle contents, local execution status, grouped-run polling, and a retained `result.json`.
+- Completed the run despite intermittent live edge resets on authenticated reads by resuming from the retained artifacts and switching later grouped-run polling to the grouped-runs list route when the direct-by-id route was unreliable.
+- Wrote the retained run summary files and linked the rerun from the live E2E docs index.
+
+**Validation:**
+- Live run root: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live`
+- Final outcome across `22` groups:
+  - `11` grouped runs finished successfully
+  - `6` groups generated successfully and executed locally, but grouped status remained `started` or ended `failed`
+  - `5` groups failed at bundle creation
+- Representative outcome details captured live:
+  - `s3_bucket_access_logging` in `eu-north-1` now generated successfully after safe-default input resolution, but the grouped run remained `started`
+  - `s3_bucket_encryption_kms` and `s3_bucket_require_ssl` in `eu-north-1` also remained `started` after successful bundle generation and local execution
+  - `ebs_default_encryption`, `s3_bucket_lifecycle_configuration`, and `sg_restrict_public_ports` in `eu-north-1` all generated successfully but recorded grouped status `failed`
+  - `cloudtrail_enabled` still returned `500 Internal Server Error` in both `eu-north-1` and `us-east-1`
+  - `ebs_default_encryption` still returned `500 Internal Server Error` in `us-east-1`
+  - `iam_root_access_key_absent` still returned `400` in both regions because grouped creation is denied in favor of the dedicated `/api/root-key-remediation-runs` route
+
+**Open questions / TODOs:**
+- Investigate why successful local bundle executions can still leave grouped runs stuck in `started` for `s3_bucket_access_logging`, `s3_bucket_encryption_kms`, and `s3_bucket_require_ssl`.
+- Investigate why `ebs_default_encryption` in `eu-north-1`, `s3_bucket_lifecycle_configuration`, and `sg_restrict_public_ports` still reach grouped `failed` after successful bundle generation.
+- Investigate the remaining live `500` bundle-generation failures for `cloudtrail_enabled` in both regions and `ebs_default_encryption` in `us-east-1`.
+- Grouped `iam_root_access_key_absent` remains intentionally denied by the generic route; any future live E2E for that family must use the dedicated root-key remediation authority instead of treating the current `400` as an unexpected platform defect.
+
 ## Restore the actual March 22 frontend build with `Remember me` after the wrong rollback target (2026-03-22)
 
 **Task:** Correct the mistaken rollback target by restoring the real March 22 frontend build from the current workspace state so the live site includes the newer login/session and Help Hub/chat surfaces again.
@@ -27765,3 +27888,67 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - I did not run a live browser pass on `/remediation-runs/[id]` or the in-modal Run progress view in both themes, so any remaining spacing-only polish would need visual verification in-browser.
+
+## Fix the five grouped PR-bundle live failure buckets from the March 22 rerun (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/infrastructure/templates/run_all.sh`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Hardened grouped PR-bundle create/generation for the two live create-time failure families: `cloudtrail_enabled` now refuses executable bundle generation when `trail_bucket_name` is unresolved, and customer-managed `ebs_default_encryption` now refuses bundle generation when `kms_key_arn` is missing. Both paths now fail closed as structured `invalid_strategy_inputs` instead of falling through to live `500` errors.
+- Added grouped-resolution executability validation so grouped runs stop before bundle generation when `cloudtrail_enabled` or `ebs_default_encryption` resolve to non-executable support tiers.
+- Hardened grouped callback reporting in the generated wrapper with bounded `curl` retry/timeout behavior plus explicit HTTP-success checks, and added `replay_group_run_reports.sh` so saved `.bundle-callback-replay/*.json` payloads can be replayed deterministically without manual editing.
+- Fixed the generated and checked-in Terraform runners to keep `TF_DATA_DIR` stable across `terraform init`, `plan`, and `apply`, closing the retained March 22 `Required plugins are not installed` failure mode that was affecting `sg_restrict_public_ports`, `ebs_default_encryption`, and `s3_bucket_lifecycle_configuration` style grouped bundles after successful init.
+- Updated focused tests to cover the new `400` CloudTrail grouped-create behavior, callback replay helper generation, retry-enabled reporting wrapper content, and the current remediation-runs route contract around persisted S3 policy evidence and direct-fix rejection.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_groups_bundle_run.py tests/test_remediation_run_worker.py tests/test_remediation_run_resolution_create.py -q`
+  - `77 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_internal_group_run_report.py tests/test_grouped_remediation_run_routes.py tests/test_grouped_remediation_run_service.py -q`
+  - `30 passed`
+
+**Open questions / TODOs:**
+- I did not rerun the retained live all-groups E2E in this task, so live confirmation that only grouped `iam_root_access_key_absent` remains non-executable by design is still pending.
+- `s3_bucket_lifecycle_configuration` still needs a product decision on whether existing lifecycle-rule merge safety should stay executable when evidence is complete or downgrade to review-required more aggressively; this patch fixes the runner-side plugin failure but does not change that family’s higher-level merge policy.
+
+## Grouped PR-bundle local follow-up rerun on unresolved families (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/11-eu-north-1-s3_bucket_lifecycle_configuration/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/13-eu-north-1-sg_restrict_public_ports/result.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Ran a local current-head follow-up E2E against the shared live tenant/account data for the four unresolved grouped PR-bundle families: `s3_bucket_access_logging`, `s3_bucket_lifecycle_configuration`, `sg_restrict_public_ports`, and `us-east-1 ebs_default_encryption`.
+- Confirmed `s3_bucket_lifecycle_configuration` now reaches grouped `finished` when rerun with the correct grouped request including `risk_acknowledged=true`, despite the local wrapper itself timing out before returning.
+- Confirmed `sg_restrict_public_ports` also now reaches grouped `finished`; the retained execution log shows duplicate ingress-rule `InvalidPermission.Duplicate` errors were tolerated intentionally, and the group finalized after the local wrapper timeout.
+- Confirmed the two remaining unresolved items are no longer create/runtime code failures on current-head: `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption` are still blocked only by stale active remediation rows in the shared Neon dataset (`uq_remediation_runs_action_active`).
+- Wrote the retained follow-up evidence package and updated the live E2E index docs to point at the new run summary.
+
+**Validation:**
+- Local API rerun at `http://127.0.0.1:8000` against the shared live database with evidence retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup`
+- `08-eu-north-1-s3_bucket_access_logging`
+  - blocked: `uq_remediation_runs_action_active`
+- `11-eu-north-1-s3_bucket_lifecycle_configuration`
+  - grouped `finished`, remediation run `success`, `exec_returncode=124`
+- `13-eu-north-1-sg_restrict_public_ports`
+  - grouped `finished`, remediation run `success`, `exec_returncode=124`
+- `17-us-east-1-ebs_default_encryption`
+  - fresh current-group create planning OK, execute rerun blocked: `uq_remediation_runs_action_active`
+
+**Open questions / TODOs:**
+- The shared Neon dataset still contains stale active remediation rows for `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`; those rows need to be cleared or retired before a clean full follow-up rerun can prove the remaining two families end to end.
+- The local runtime still cannot reproduce fresh SaaS role-assumption resolution because the tenant read role denies `sts:SetSourceIdentity`, so executable-path validation continues to rely on retained March 22 action-resolution artifacts where local-only proof is insufficient.

@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_cloudfront_oac_private"
+  },
+  "body": {
+    "group_run_id": "abbd384a-65de-4a71-906c-5d22ca5eab6c",
+    "remediation_run_id": "52f9faf3-ba99-4964-8ca5-c91f2023c832",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

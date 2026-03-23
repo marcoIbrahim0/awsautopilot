@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "error": "GroupedRemediationRunValidationError",
+  "message": "Action '257bc11e-c522-4419-8af5-be24ae406691' requires risk_acknowledged=true for strategy 's3_enable_access_logging_guided'."
+}

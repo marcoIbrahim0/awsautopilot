@@ -1,0 +1,13 @@
+{
+  "command": [
+    "bash",
+    "./run_all.sh"
+  ],
+  "started_at": "2026-03-22T23:25:03.134205+00:00",
+  "finished_at": "2026-03-22T23:25:12.028259+00:00",
+  "returncode": 1,
+  "stdout": "\n=== Running terraform in executable/actions/01-aws-account-696505809372-d8da3698 ===\n\u001b[0m\u001b[1mInitializing the backend...\u001b[0m\n\u001b[0m\u001b[1mInitializing provider plugins...\u001b[0m\n- Reusing previous version of hashicorp/aws from the dependency lock file\n- Using hashicorp/aws v5.100.0 from the shared cache directory\n\n\u001b[0m\u001b[1m\u001b[32mTerraform has been successfully initialized!\u001b[0m\u001b[32m\u001b[0m\n\u001b[0m\u001b[32m\nYou may now begin working with Terraform. Try running \"terraform plan\" to see\nany changes that are required for your infrastructure. All Terraform commands\nshould now work.\n\nIf you ever set or change modules or backend configuration for Terraform,\nrerun this command to reinitialize your working directory. If you forget, other\ncommands will detect it and remind you to do so if necessary.\u001b[0m\nERROR: terraform plan failed for executable/actions/01-aws-account-696505809372-d8da3698. Skipping apply for this action folder.\nBundle run completed.\n  Successful action folders: 0/1\n  Failed action folders: 1/1\nFailed folders summary:\n  - executable/actions/01-aws-account-696505809372-d8da3698 (plan)\n",
+  "stderr": "\u001b[31m\u2577\u001b[0m\u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mRequired plugins are not installed\u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\u001b[0mThe installed provider plugins are not consistent with the packages\n\u001b[31m\u2502\u001b[0m \u001b[0mselected in the dependency lock file:\n\u001b[31m\u2502\u001b[0m \u001b[0m  - registry.terraform.io/hashicorp/aws: there is no package for registry.terraform.io/hashicorp/aws 5.100.0 cached in /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T/aws-security-autopilot-tf-PcoXqU/action/.terraform-data/providers\n\u001b[31m\u2502\u001b[0m \u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0mTerraform uses external plugins to integrate with a variety of different\n\u001b[31m\u2502\u001b[0m \u001b[0minfrastructure services. To download the plugins required for this\n\u001b[31m\u2502\u001b[0m \u001b[0mconfiguration, run:\n\u001b[31m\u2502\u001b[0m \u001b[0m  terraform init\n\u001b[31m\u2575\u001b[0m\u001b[0m\n",
+  "aws_profile": "test28-root",
+  "region": "eu-north-1"
+}

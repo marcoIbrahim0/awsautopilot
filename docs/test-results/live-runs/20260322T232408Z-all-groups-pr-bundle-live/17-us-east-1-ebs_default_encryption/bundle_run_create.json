@@ -1,0 +1,10 @@
+{
+  "status_code": 500,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+  },
+  "body": {
+    "raw": "Internal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server ErrorInternal Server Error"
+  }
+}

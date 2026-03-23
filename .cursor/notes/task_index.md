@@ -4,6 +4,18 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Grouped PR-bundle local current-head rerun against live data without redeploy (2026-03-23)](task_log.md#grouped-pr-bundle-local-current-head-rerun-against-live-data-without-redeploy-2026-03-23)
+  - Confirmed the March 23 create-time fixes live against shared tenant data: grouped `cloudtrail_enabled` now returns structured `invalid_strategy_inputs` in both regions and `us-east-1 ebs_default_encryption` fresh create planning no longer crashes.
+  - Confirmed current-head retained execute success for `eu-north-1 ebs_default_encryption` and `s3_bucket_encryption_kms`, while `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` still reproduced grouped-run finalization gaps and two families were blocked by pre-existing active remediation rows on the shared DB.
+- [Harden grouped finalization fallback and stale pending grouped-run conflicts (2026-03-23)](task_log.md#harden-grouped-finalization-fallback-and-stale-pending-grouped-run-conflicts-2026-03-23)
+  - Callback-enabled grouped wrappers now emit a terminal failed `finished` event on shell exit or signal, and grouped Terraform runners now enforce `ACTION_TIMEOUT_SECS` on both `plan` and `apply`.
+  - Grouped PR-bundle create now ignores stale `pending` `pr_only` runs older than `10` minutes, so abandoned queue rows stop blocking reruns of families like `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`.
+- [Fix the five grouped PR-bundle live failure buckets from the March 22 rerun (2026-03-23)](task_log.md#fix-the-five-grouped-pr-bundle-live-failure-buckets-from-the-march-22-rerun-2026-03-23)
+  - Hardened grouped PR-bundle create so unresolved `cloudtrail_enabled` and customer-managed `ebs_default_encryption` cases fail closed as structured `400 invalid_strategy_inputs` instead of surfacing live `500`s.
+  - Added callback retry/replay support and fixed the generated Terraform runner’s `TF_DATA_DIR` handling so retained post-execution grouped bundle failures stop getting stuck in `started` or failing with missing-plugin errors.
+- [Execute all current live grouped PR bundles for account `696505809372` with safe-default inputs and retained evidence (2026-03-22)](task_log.md#execute-all-current-live-grouped-pr-bundles-for-account-696505809372-with-safe-default-inputs-and-retained-evidence-2026-03-22)
+  - Ran a second retained live all-groups PR-bundle E2E against the same connected account and captured `22` grouped-family outcomes under `docs/test-results/live-runs/20260322T232408Z-all-groups-pr-bundle-live/`.
+  - Final live outcome: `11` grouped runs finished, `6` groups generated and executed locally but stayed `started` or ended `failed`, and `5` groups failed earlier at bundle creation with live `400/500` responses.
 - [Restore the actual March 22 frontend build with `Remember me` after the wrong rollback target (2026-03-22)](task_log.md#restore-the-actual-march-22-frontend-build-with-remember-me-after-the-wrong-rollback-target-2026-03-22)
   - Corrected the bad rollback by redeploying the frontend from the real current workspace instead of the March 14-based worktree that lacked `Remember me` and later Help Hub/chatbot work.
   - Verified the live login page snapshot now shows `Remember me`, `Forgot password?`, and `Sign in`, and confirmed the live API health endpoint still returns `200`.
@@ -1986,3 +1998,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Reworked `RemediationRunProgress` onto the shared dashboard card/inset/control palette instead of the older mixed neumorphic and `bg-bg` surfaces.
   - Cleaned up light-mode card colors and removed near-black dark-mode card fills across the full-page and compact run-progress layouts.
   - Verified the pass with frontend typecheck and the focused `RemediationRunProgress` UI test.
+- [Grouped PR-bundle local follow-up rerun on unresolved families (2026-03-23)](task_log.md#grouped-pr-bundle-local-follow-up-rerun-on-unresolved-families-2026-03-23)
+  - Reran the four remaining grouped PR-bundle families against shared live tenant/account data on a local current-head API.
+  - Confirmed `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` now reach grouped `finished` on follow-up reruns.
+  - Narrowed the remaining unresolved cases to stale active remediation rows blocking `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`.

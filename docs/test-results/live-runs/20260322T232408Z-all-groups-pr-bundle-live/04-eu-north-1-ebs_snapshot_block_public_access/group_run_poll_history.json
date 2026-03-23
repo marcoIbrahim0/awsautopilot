@@ -1,0 +1,44 @@
+[
+  {
+    "ts": "2026-03-22T23:25:36.609464+00:00",
+    "status_code": 200,
+    "body": {
+      "id": "948a2b4f-62b3-4de7-837f-d767d881828f",
+      "remediation_run_id": "5c59e058-5f8c-4bc3-a4a6-15789cb0eea6",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "finished",
+      "started_at": "2026-03-22T23:25:17.697547+00:00",
+      "finished_at": "2026-03-22T23:25:28+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:25:15.625803+00:00",
+      "updated_at": "2026-03-22T23:25:29.343296+00:00",
+      "results": [
+        {
+          "action_id": "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle",
+          "reason": "review_required_metadata_only",
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T23:25:17.697547+00:00",
+          "execution_finished_at": "2026-03-22T23:25:28+00:00"
+        },
+        {
+          "action_id": "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle",
+          "reason": "review_required_metadata_only",
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T23:25:17.697547+00:00",
+          "execution_finished_at": "2026-03-22T23:25:28+00:00"
+        }
+      ]
+    }
+  }
+]

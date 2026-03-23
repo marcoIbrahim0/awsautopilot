@@ -1,0 +1,212 @@
+[
+  {
+    "ts": "2026-03-22T23:32:28.464044+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  },
+  {
+    "ts": "2026-03-22T23:32:43.299585+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  },
+  {
+    "ts": "2026-03-22T23:32:50.664730+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  },
+  {
+    "ts": "2026-03-22T23:33:09.043565+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  },
+  {
+    "ts": "2026-03-22T23:33:18.313232+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  },
+  {
+    "ts": "2026-03-22T23:33:28.717625+00:00",
+    "status_code": 200,
+    "body": {
+      "items": [
+        {
+          "id": "f0553277-e441-449f-981d-90a59b5c2900",
+          "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "started",
+          "started_at": "2026-03-22T23:26:22.847433+00:00",
+          "finished_at": null,
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:26:18.836553+00:00",
+          "updated_at": "2026-03-22T23:26:30.817476+00:00",
+          "results": []
+        }
+      ],
+      "total": 1
+    },
+    "matched": {
+      "id": "f0553277-e441-449f-981d-90a59b5c2900",
+      "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "started",
+      "started_at": "2026-03-22T23:26:22.847433+00:00",
+      "finished_at": null,
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:26:18.836553+00:00",
+      "updated_at": "2026-03-22T23:26:30.817476+00:00",
+      "results": []
+    }
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "name": "17-us-east-1-ebs_default_encryption",
+  "mode": "create_validated_environment_blocked_active_run",
+  "status": "blocked",
+  "message": "Fresh current-head grouped create planning no longer crashes for us-east-1 ebs_default_encryption, but a full local execute rerun was blocked by an older active remediation run already present on the shared Neon DB.",
+  "active_remediation_run_id": "3c47f1bb-2d8f-4489-b498-22b72405b315",
+  "active_remediation_run_status": "pending",
+  "active_remediation_run_created_at": "2026-03-14T19:59:51.164847+00:00",
+  "fresh_create_validation": {
+    "status": "ok",
+    "support_tiers": [
+      "deterministic_bundle"
+    ]
+  }
+}

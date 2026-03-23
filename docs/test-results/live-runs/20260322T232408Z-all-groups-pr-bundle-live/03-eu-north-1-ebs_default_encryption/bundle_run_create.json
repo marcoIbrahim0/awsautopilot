@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+  },
+  "body": {
+    "group_run_id": "0d2db884-8c2a-4177-ae5c-8ceb3bec0c8e",
+    "remediation_run_id": "1ecf8713-a356-4cf3-b386-cb7fd7f2fa06",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

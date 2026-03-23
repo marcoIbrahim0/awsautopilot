@@ -1,0 +1,14 @@
+{
+  "name": "10-eu-north-1-s3_bucket_encryption_kms",
+  "mode": "retained_execute",
+  "group_run_status": "finished",
+  "group_run_started_at": "2026-03-23T02:06:48.113636+00:00",
+  "group_run_finished_at": "2026-03-23T02:10:23+00:00",
+  "remediation_run_id": "16aa6deb-a024-4e9a-8939-5c266b622b7e",
+  "remediation_run_status": "success",
+  "exec_returncode": null,
+  "notes": [
+    "Current-head retained bundle generation succeeded.",
+    "The local harness was interrupted before it persisted local_execution.json, but the shared DB recorded remediation_run=success and group_run=finished."
+  ]
+}

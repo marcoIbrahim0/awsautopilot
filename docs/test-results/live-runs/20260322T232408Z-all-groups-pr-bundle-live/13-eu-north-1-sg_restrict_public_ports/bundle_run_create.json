@@ -1,0 +1,17 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "sg_restrict_public_ports_guided",
+    "strategy_inputs": {
+      "access_mode": "close_public"
+    }
+  },
+  "body": {
+    "group_run_id": "6a1f062c-6657-47f2-9514-1a943da0d9da",
+    "remediation_run_id": "1cea5d43-2f4d-4f2d-b70a-0c16884c787b",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

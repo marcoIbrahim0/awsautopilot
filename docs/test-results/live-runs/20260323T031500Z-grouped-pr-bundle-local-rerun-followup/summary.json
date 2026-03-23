@@ -1,0 +1,38 @@
+{
+  "run_id": "20260323T031500Z-grouped-pr-bundle-local-rerun-followup",
+  "run_root": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup",
+  "api_base": "http://127.0.0.1:8000",
+  "account_id": "696505809372",
+  "mode": "local_current_head_against_shared_live_data",
+  "headline": {
+    "finished": 2,
+    "blocked": 2,
+    "still_started": 0
+  },
+  "cases": [
+    {
+      "name": "08-eu-north-1-s3_bucket_access_logging",
+      "status": "blocked",
+      "reason": "active remediation row still collides with uq_remediation_runs_action_active",
+      "evidence": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/08-eu-north-1-s3_bucket_access_logging/result.json"
+    },
+    {
+      "name": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+      "status": "finished",
+      "reason": "corrected rerun with risk_acknowledged=true reached grouped finished after local timeout",
+      "evidence": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/11-eu-north-1-s3_bucket_lifecycle_configuration/result.json"
+    },
+    {
+      "name": "13-eu-north-1-sg_restrict_public_ports",
+      "status": "finished",
+      "reason": "retained bundle execution timed out locally but the grouped run finalized to finished after duplicate-rule tolerance and delayed callback completion",
+      "evidence": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/13-eu-north-1-sg_restrict_public_ports/result.json"
+    },
+    {
+      "name": "17-us-east-1-ebs_default_encryption",
+      "status": "blocked",
+      "reason": "fresh create planning is OK on the current group row, but a pre-existing active remediation row still collides with uq_remediation_runs_action_active",
+      "evidence": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/17-us-east-1-ebs_default_encryption/result.json"
+    }
+  ]
+}

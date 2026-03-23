@@ -1,0 +1,17 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_sse_kms_guided",
+    "strategy_inputs": {
+      "kms_key_mode": "aws_managed"
+    }
+  },
+  "body": {
+    "group_run_id": "05b9a66b-9ff4-474d-946a-9b4a6cbd81a2",
+    "remediation_run_id": "7fe2ec4b-2097-4516-9a6a-ed7cd22e95e5",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

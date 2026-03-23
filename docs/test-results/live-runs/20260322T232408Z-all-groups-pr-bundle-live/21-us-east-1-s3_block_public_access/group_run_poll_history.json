@@ -1,0 +1,115 @@
+[
+  {
+    "ts": "2026-03-22T23:44:47.844213+00:00",
+    "status_code": 200,
+    "matched": {
+      "id": "5770ddb3-8dd3-49f8-852a-fd23cb6300b5",
+      "remediation_run_id": "d826bc1c-0839-4a74-bc52-9546360aaeee",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "finished",
+      "started_at": "2026-03-22T23:44:33.572188+00:00",
+      "finished_at": "2026-03-22T23:44:43+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:44:32.119868+00:00",
+      "updated_at": "2026-03-22T23:44:43.614279+00:00",
+      "results": [
+        {
+          "action_id": "caf5dc54-aef7-4df2-9480-1fdbfcfc507a",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle",
+          "reason": "review_required_metadata_only",
+          "blocked_reasons": [],
+          "execution_started_at": "2026-03-22T23:44:33.572188+00:00",
+          "execution_finished_at": "2026-03-22T23:44:43+00:00"
+        }
+      ]
+    },
+    "body": {
+      "items": [
+        {
+          "id": "5770ddb3-8dd3-49f8-852a-fd23cb6300b5",
+          "remediation_run_id": "d826bc1c-0839-4a74-bc52-9546360aaeee",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "finished",
+          "started_at": "2026-03-22T23:44:33.572188+00:00",
+          "finished_at": "2026-03-22T23:44:43+00:00",
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:44:32.119868+00:00",
+          "updated_at": "2026-03-22T23:44:43.614279+00:00",
+          "results": [
+            {
+              "action_id": "caf5dc54-aef7-4df2-9480-1fdbfcfc507a",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "review_required_bundle",
+              "reason": "review_required_metadata_only",
+              "blocked_reasons": [],
+              "execution_started_at": "2026-03-22T23:44:33.572188+00:00",
+              "execution_finished_at": "2026-03-22T23:44:43+00:00"
+            }
+          ]
+        },
+        {
+          "id": "18bc64fe-e9e3-45c0-8055-d06b507e20d7",
+          "remediation_run_id": "d70aadeb-36fa-4adb-a914-cb4d2f23264e",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "finished",
+          "started_at": "2026-03-22T19:34:17.112848+00:00",
+          "finished_at": "2026-03-22T19:34:27+00:00",
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T19:34:15.946972+00:00",
+          "updated_at": "2026-03-22T19:34:28.213627+00:00",
+          "results": [
+            {
+              "action_id": "caf5dc54-aef7-4df2-9480-1fdbfcfc507a",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "review_required_bundle",
+              "reason": "review_required_metadata_only",
+              "blocked_reasons": [],
+              "execution_started_at": "2026-03-22T19:34:17.112848+00:00",
+              "execution_finished_at": "2026-03-22T19:34:27+00:00"
+            }
+          ]
+        },
+        {
+          "id": "48ec5f50-ac7f-4ba3-a6f7-12452cbe657b",
+          "remediation_run_id": "c0b0f184-24b5-4f56-868c-2708e0f3c3ab",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "finished",
+          "started_at": "2026-03-22T19:34:11.326578+00:00",
+          "finished_at": "2026-03-22T19:34:20+00:00",
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T19:34:10.341726+00:00",
+          "updated_at": "2026-03-22T19:34:20.867163+00:00",
+          "results": [
+            {
+              "action_id": "caf5dc54-aef7-4df2-9480-1fdbfcfc507a",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "review_required_bundle",
+              "reason": "review_required_metadata_only",
+              "blocked_reasons": [],
+              "execution_started_at": "2026-03-22T19:34:11.326578+00:00",
+              "execution_finished_at": "2026-03-22T19:34:20+00:00"
+            }
+          ]
+        }
+      ],
+      "total": 3
+    }
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "name": "13-eu-north-1-sg_restrict_public_ports",
+  "mode": "retained_execute_partial",
+  "group_run_status": "started",
+  "group_run_started_at": "2026-03-23T02:17:40.364407+00:00",
+  "group_run_finished_at": null,
+  "remediation_run_id": "ace46aa6-7aff-4ec3-9dab-6b12740676c2",
+  "remediation_run_status": "success",
+  "exec_returncode": null,
+  "notes": [
+    "Current-head retained bundle generation succeeded.",
+    "The local execution path advanced far enough for remediation_run=success, but grouped finalization did not complete and the group run remained started."
+  ]
+}

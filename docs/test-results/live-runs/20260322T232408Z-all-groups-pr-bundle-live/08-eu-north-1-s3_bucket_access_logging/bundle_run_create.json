@@ -1,0 +1,17 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_access_logging_guided",
+    "strategy_inputs": {
+      "log_bucket_name": "security-autopilot-access-logs-696505809372"
+    }
+  },
+  "body": {
+    "group_run_id": "f0553277-e441-449f-981d-90a59b5c2900",
+    "remediation_run_id": "e658815f-b6a6-4d65-a25e-805050a968b9",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

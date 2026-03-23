@@ -1,0 +1,45 @@
+{
+  "id": "633ae2bf-647f-451f-b21b-67cdc571c321",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|ssm_block_public_sharing|696505809372|eu-north-1",
+  "action_type": "ssm_block_public_sharing",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "created_at": "2026-03-12T16:37:00.364615+00:00",
+  "updated_at": "2026-03-12T16:37:00.364615+00:00",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "counters": {
+    "run_successful": 1,
+    "run_not_successful": 0,
+    "not_run_yet": 0,
+    "total_actions": 1
+  },
+  "members": [
+    {
+      "action_id": "e8be6f05-0e5e-4bdc-818e-f551cd62ccb5",
+      "title": "SSM documents should have the block public sharing setting enabled",
+      "control_id": "SSM.7",
+      "resource_id": "AWS::::Account:696505809372",
+      "action_status": "resolved",
+      "priority": 76,
+      "assigned_at": "2026-03-12T16:37:00.364615+00:00",
+      "status_bucket": "run_successful_confirmed",
+      "last_attempt_at": "2026-03-22T19:32:35.598820+00:00",
+      "last_confirmed_at": "2026-03-22T19:36:56.702315+00:00",
+      "last_confirmation_source": "control_plane_reconcile",
+      "pending_confirmation": false,
+      "pending_confirmation_started_at": null,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "latest_run": {
+        "id": "3cd6a01d-31f6-4efe-b681-b1be2c2fb10c",
+        "status": "finished",
+        "started_at": "2026-03-22T19:32:35.598820+00:00",
+        "finished_at": "2026-03-22T19:32:45+00:00"
+      }
+    }
+  ]
+}

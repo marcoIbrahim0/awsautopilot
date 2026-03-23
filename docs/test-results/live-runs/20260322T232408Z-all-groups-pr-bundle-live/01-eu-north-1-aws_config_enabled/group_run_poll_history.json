@@ -1,0 +1,35 @@
+[
+  {
+    "ts": "2026-03-22T23:24:47.349518+00:00",
+    "status_code": 200,
+    "body": {
+      "id": "79bada1d-24c3-456e-92b2-5d2868f3dd75",
+      "remediation_run_id": "062c7370-2e50-4736-8716-8f139b527a34",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "finished",
+      "started_at": "2026-03-22T23:24:33.910493+00:00",
+      "finished_at": "2026-03-22T23:24:42+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:24:18.399070+00:00",
+      "updated_at": "2026-03-22T23:24:42.823064+00:00",
+      "results": [
+        {
+          "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle",
+          "reason": "review_required_metadata_only",
+          "blocked_reasons": [
+            "AWS Config delivery bucket reachability has not been proven from this account context.",
+            "AWS Config delivery bucket policy compatibility has not been proven from this account context."
+          ],
+          "execution_started_at": "2026-03-22T23:24:33.910493+00:00",
+          "execution_finished_at": "2026-03-22T23:24:42+00:00"
+        }
+      ]
+    }
+  }
+]

@@ -495,6 +495,7 @@ def _is_non_executable_resolution(
     resolution: Mapping[str, Any] | None,
 ) -> bool:
     if action_type not in {
+        ACTION_TYPE_CLOUDTRAIL_ENABLED,
         ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
         ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
         ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
@@ -3044,6 +3045,17 @@ def _generate_for_cloudtrail_enabled(
     trail_name, trail_bucket_name, kms_key_arn, create_bucket_policy, multi_region = _resolve_cloudtrail_defaults(
         strategy_inputs,
     )
+    if not trail_bucket_name:
+        _raise_pr_bundle_error(
+            code="invalid_strategy_inputs",
+            detail=(
+                "strategy_inputs.trail_bucket_name is required for executable CloudTrail PR bundles. "
+                "Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
+            ),
+            action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+            format=format,
+            strategy_id="cloudtrail_enable_guided",
+        )
     region = meta["region"]
     if format == CLOUDFORMATION_FORMAT:
         files = [
@@ -3614,6 +3626,16 @@ def _generate_for_ebs_default_encryption(
     inputs = strategy_inputs or {}
     kms_key_arn = str(inputs.get("kms_key_arn", "")).strip()
     uses_customer_kms = "customer_kms" in strategy
+    if uses_customer_kms and not kms_key_arn:
+        _raise_pr_bundle_error(
+            code="invalid_strategy_inputs",
+            detail=(
+                "strategy_inputs.kms_key_arn is required for customer-managed EBS default encryption bundles."
+            ),
+            action_type=ACTION_TYPE_EBS_DEFAULT_ENCRYPTION,
+            format=format,
+            strategy_id=strategy,
+        )
 
     if format == CLOUDFORMATION_FORMAT:
         return PRBundleResult(

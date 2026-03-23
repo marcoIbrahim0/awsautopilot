@@ -1,0 +1,164 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 17,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 9713,
+      "change_type": "create_or_update",
+      "content_sha256": "460482a42e59ef19725160729411b7f7aecda02c20b0135db1708628cfaed402",
+      "line_count": 103,
+      "repo_path": "run_all.sh"
+    },
+    {
+      "bundle_path": "replay_group_run_reports.sh",
+      "byte_count": 1517,
+      "change_type": "create_or_update",
+      "content_sha256": "18b8e4542481ab81bb235b37a0f6c0b0bce760330a4b4ff7aa30eeaa6c19b389",
+      "line_count": 54,
+      "repo_path": "replay_group_run_reports.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 11538,
+      "change_type": "create_or_update",
+      "content_sha256": "e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5",
+      "line_count": 404,
+      "repo_path": "run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 1451,
+      "change_type": "create_or_update",
+      "content_sha256": "4c8d01251a3fb1c7b61f797ba883e695ec73e5418254c7956a7ae6ff006b49f4",
+      "line_count": 25,
+      "repo_path": "README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 13213,
+      "change_type": "create_or_update",
+      "content_sha256": "67078c1f40c12637c7b3d40f09a9170183309deef3eb260a50e904e427bd94ca",
+      "line_count": 221,
+      "repo_path": "bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 3321,
+      "change_type": "create_or_update",
+      "content_sha256": "b7018c5c30fd4fe5ab19d014d4969df3e9b5d6d9079c388481622e39601dbab6",
+      "line_count": 37,
+      "repo_path": "decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 809,
+      "change_type": "create_or_update",
+      "content_sha256": "4c4428a38811b5401b9dffede40f71d6ea6e449e11a50dd6adffcdde9130023a",
+      "line_count": 30,
+      "repo_path": "finding_coverage.json"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt",
+      "byte_count": 832,
+      "change_type": "create_or_update",
+      "content_sha256": "1a51fd2a828875e30a394ad8af6b89fc3470fdadeba9f9a53fcd4d0eda83b14d",
+      "line_count": 12,
+      "repo_path": "manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json",
+      "byte_count": 2452,
+      "change_type": "create_or_update",
+      "content_sha256": "20613d3ef2b9878fe196ca0d8e59d0f8f3d146babe4ef9234744f534fe6b8fb8",
+      "line_count": 40,
+      "repo_path": "manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt",
+      "byte_count": 832,
+      "change_type": "create_or_update",
+      "content_sha256": "30321c0165a495f6ccc2f792c17a132b344b0afcb921cf760b2329bdfdc53924",
+      "line_count": 12,
+      "repo_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json",
+      "byte_count": 2452,
+      "change_type": "create_or_update",
+      "content_sha256": "d96e32c95bacc8a92a84ff5abc04d35600c2ec193b5c6cf02d866d0eee839729",
+      "line_count": 40,
+      "repo_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt",
+      "byte_count": 832,
+      "change_type": "create_or_update",
+      "content_sha256": "3455ff0ed416fd2abb5f605fab2b878a7ce2629771d7bf0a8de0c626e317aaf2",
+      "line_count": 12,
+      "repo_path": "manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json",
+      "byte_count": 2450,
+      "change_type": "create_or_update",
+      "content_sha256": "c2b1eec75bab273e8e531b7b1604900a5d9a6ae2a6e524f8e93059e0263d6839",
+      "line_count": 40,
+      "repo_path": "manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt",
+      "byte_count": 832,
+      "change_type": "create_or_update",
+      "content_sha256": "891bec37201f36785dcd193d61a0eb00f369183da73879a91edf214d2e268d26",
+      "line_count": 12,
+      "repo_path": "manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json",
+      "byte_count": 2414,
+      "change_type": "create_or_update",
+      "content_sha256": "b205a7f0516aa64de997fd229d6a7028b2c441d1593d70ac24cb262317236d4f",
+      "line_count": 40,
+      "repo_path": "manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/05-aws-account-696505809372-4a5a765e/README_ACTION.txt",
+      "byte_count": 712,
+      "change_type": "create_or_update",
+      "content_sha256": "4b40f67be0e22d70bbad3e52417e2bdfa9b688db15fd87a45ee30d0900a1f061",
+      "line_count": 12,
+      "repo_path": "manual_guidance/actions/05-aws-account-696505809372-4a5a765e/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "manual_guidance/actions/05-aws-account-696505809372-4a5a765e/decision.json",
+      "byte_count": 2022,
+      "change_type": "create_or_update",
+      "content_sha256": "9c61a8d95b322b2558a2b2b3f5cbd005505579f860b2b34d1c64520d6db299eb",
+      "line_count": 39,
+      "repo_path": "manual_guidance/actions/05-aws-account-696505809372-4a5a765e/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "3c95261475c137bd1fc6993a8fb606519d5c6832d9f306a2928d7c11233b07de",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`run_all.sh` <- `run_all.sh` (103 lines, sha256:460482a42e59)",
+    "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:18b8e4542481)",
+    "`run_actions.sh` <- `run_actions.sh` (404 lines, sha256:e50db38f5499)",
+    "`README_GROUP.txt` <- `README_GROUP.txt` (25 lines, sha256:4c8d01251a3f)",
+    "`bundle_manifest.json` <- `bundle_manifest.json` (221 lines, sha256:67078c1f40c1)",
+    "`decision_log.md` <- `decision_log.md` (37 lines, sha256:b7018c5c30fd)",
+    "`finding_coverage.json` <- `finding_coverage.json` (30 lines, sha256:4c4428a38811)",
+    "`manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt` (12 lines, sha256:1a51fd2a8288)",
+    "`manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json` <- `manual_guidance/actions/01-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json` (40 lines, sha256:20613d3ef2b9)",
+    "`manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt` (12 lines, sha256:30321c0165a4)",
+    "`manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json` (40 lines, sha256:d96e32c95bac)",
+    "`manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt` <- `manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt` (12 lines, sha256:3455ff0ed416)",
+    "`manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json` <- `manual_guidance/actions/03-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json` (40 lines, sha256:c2b1eec75bab)",
+    "`manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt` <- `manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt` (12 lines, sha256:891bec37201f)",
+    "`manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json` <- `manual_guidance/actions/04-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json` (40 lines, sha256:b205a7f0516a)",
+    "`manual_guidance/actions/05-aws-account-696505809372-4a5a765e/README_ACTION.txt` <- `manual_guidance/actions/05-aws-account-696505809372-4a5a765e/README_ACTION.txt` (12 lines, sha256:4b40f67be0e2)",
+    "`manual_guidance/actions/05-aws-account-696505809372-4a5a765e/decision.json` <- `manual_guidance/actions/05-aws-account-696505809372-4a5a765e/decision.json` (39 lines, sha256:9c61a8d95b32)"
+  ],
+  "version": 1
+}

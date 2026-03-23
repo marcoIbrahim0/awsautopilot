@@ -120,6 +120,7 @@ ACTIVE_RUN_DUPLICATE_STATUSES = (
     RemediationRunStatus.awaiting_approval,
 )
 ACTIVE_RUN_DUPLICATE_STATUS_VALUES = {status.value for status in ACTIVE_RUN_DUPLICATE_STATUSES}
+STALE_PENDING_PR_BUNDLE_RUN_MINUTES = 10
 RECENT_DUPLICATE_WINDOW_SECONDS = 30
 PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES = 20
 PR_BUNDLE_RATE_LIMIT_TOTAL_PER_WINDOW = 6
@@ -246,6 +247,24 @@ def _grouped_representative_candidate_ids(
     action_ids: tuple[str, ...],
 ) -> tuple[str, ...]:
     return (preferred_action_id, *tuple(action_id for action_id in action_ids if action_id != preferred_action_id))
+
+
+def _is_stale_pending_pr_bundle_run(run: RemediationRun, *, now: datetime) -> bool:
+    if _as_mode_value(run.mode) != RemediationRunMode.pr_only.value:
+        return False
+    if run.status != RemediationRunStatus.pending:
+        return False
+    created_at = getattr(run, "created_at", None)
+    if not isinstance(created_at, datetime):
+        return False
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    age = now - created_at.astimezone(timezone.utc)
+    return age >= timedelta(minutes=STALE_PENDING_PR_BUNDLE_RUN_MINUTES)
+
+
+def _filter_active_group_duplicate_runs(active_runs: list[RemediationRun], *, now: datetime) -> list[RemediationRun]:
+    return [run for run in active_runs if not _is_stale_pending_pr_bundle_run(run, now=now)]
 
 
 def _select_grouped_representative_action_id(
@@ -2153,7 +2172,10 @@ async def create_group_pr_bundle_run(
             RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES),
         )
     )
-    active_runs = active_run_result.scalars().unique().all()
+    active_runs = _filter_active_group_duplicate_runs(
+        active_run_result.scalars().unique().all(),
+        now=datetime.now(timezone.utc),
+    )
     for pending in active_runs:
         if _as_mode_value(pending.mode) != RemediationRunMode.pr_only.value:
             continue

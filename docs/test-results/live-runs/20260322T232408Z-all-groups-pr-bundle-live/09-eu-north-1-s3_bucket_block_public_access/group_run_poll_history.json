@@ -1,0 +1,182 @@
+[
+  {
+    "ts": "2026-03-22T23:35:40.428093+00:00",
+    "status_code": 200,
+    "matched": {
+      "id": "abbd384a-65de-4a71-906c-5d22ca5eab6c",
+      "remediation_run_id": "52f9faf3-ba99-4964-8ca5-c91f2023c832",
+      "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "mode": "download_bundle",
+      "status": "finished",
+      "started_at": "2026-03-22T23:35:20.397005+00:00",
+      "finished_at": "2026-03-22T23:35:30+00:00",
+      "reporting_source": "bundle_callback",
+      "created_at": "2026-03-22T23:35:13.943907+00:00",
+      "updated_at": "2026-03-22T23:35:30.457260+00:00",
+      "results": [
+        {
+          "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "manual_guidance_only",
+          "reason": "manual_guidance_metadata_only",
+          "blocked_reasons": [
+            "Unable to inspect bucket website configuration (AccessDenied)."
+          ],
+          "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+          "execution_finished_at": "2026-03-22T23:35:30+00:00"
+        },
+        {
+          "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "manual_guidance_only",
+          "reason": "manual_guidance_metadata_only",
+          "blocked_reasons": [
+            "Unable to inspect bucket website configuration (AccessDenied)."
+          ],
+          "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+          "execution_finished_at": "2026-03-22T23:35:30+00:00"
+        },
+        {
+          "action_id": "19337c80-843c-40fb-b35c-fd561406009f",
+          "execution_status": "unknown",
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "result_type": "non_executable",
+          "support_tier": "manual_guidance_only",
+          "reason": "manual_guidance_metadata_only",
+          "blocked_reasons": [
+            "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+            "Missing bucket identifier for access-path validation."
+          ],
+          "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+          "execution_finished_at": "2026-03-22T23:35:30+00:00"
+        }
+      ]
+    },
+    "body": {
+      "items": [
+        {
+          "id": "abbd384a-65de-4a71-906c-5d22ca5eab6c",
+          "remediation_run_id": "52f9faf3-ba99-4964-8ca5-c91f2023c832",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "finished",
+          "started_at": "2026-03-22T23:35:20.397005+00:00",
+          "finished_at": "2026-03-22T23:35:30+00:00",
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T23:35:13.943907+00:00",
+          "updated_at": "2026-03-22T23:35:30.457260+00:00",
+          "results": [
+            {
+              "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Unable to inspect bucket website configuration (AccessDenied)."
+              ],
+              "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+              "execution_finished_at": "2026-03-22T23:35:30+00:00"
+            },
+            {
+              "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Unable to inspect bucket website configuration (AccessDenied)."
+              ],
+              "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+              "execution_finished_at": "2026-03-22T23:35:30+00:00"
+            },
+            {
+              "action_id": "19337c80-843c-40fb-b35c-fd561406009f",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+                "Missing bucket identifier for access-path validation."
+              ],
+              "execution_started_at": "2026-03-22T23:35:20.397005+00:00",
+              "execution_finished_at": "2026-03-22T23:35:30+00:00"
+            }
+          ]
+        },
+        {
+          "id": "9e6aa025-59ec-48cd-ad8b-a0ff83a46685",
+          "remediation_run_id": "0691fc9c-42ee-467d-9d25-697d232bba45",
+          "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+          "mode": "download_bundle",
+          "status": "finished",
+          "started_at": "2026-03-22T19:20:04.517402+00:00",
+          "finished_at": "2026-03-22T19:20:15+00:00",
+          "reporting_source": "bundle_callback",
+          "created_at": "2026-03-22T19:20:02.920203+00:00",
+          "updated_at": "2026-03-22T19:20:15.989452+00:00",
+          "results": [
+            {
+              "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Unable to inspect bucket website configuration (AccessDenied)."
+              ],
+              "execution_started_at": "2026-03-22T19:20:04.517402+00:00",
+              "execution_finished_at": "2026-03-22T19:20:15+00:00"
+            },
+            {
+              "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Unable to inspect bucket website configuration (AccessDenied)."
+              ],
+              "execution_started_at": "2026-03-22T19:20:04.517402+00:00",
+              "execution_finished_at": "2026-03-22T19:20:15+00:00"
+            },
+            {
+              "action_id": "19337c80-843c-40fb-b35c-fd561406009f",
+              "execution_status": "unknown",
+              "execution_error_code": null,
+              "execution_error_message": null,
+              "result_type": "non_executable",
+              "support_tier": "manual_guidance_only",
+              "reason": "manual_guidance_metadata_only",
+              "blocked_reasons": [
+                "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+                "Missing bucket identifier for access-path validation."
+              ],
+              "execution_started_at": "2026-03-22T19:20:04.517402+00:00",
+              "execution_finished_at": "2026-03-22T19:20:15+00:00"
+            }
+          ]
+        }
+      ],
+      "total": 2
+    }
+  }
+]

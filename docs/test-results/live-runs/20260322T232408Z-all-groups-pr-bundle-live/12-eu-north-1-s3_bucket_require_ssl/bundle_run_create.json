@@ -1,0 +1,17 @@
+{
+  "status_code": 201,
+  "request_body": {
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_strict_deny",
+    "strategy_inputs": {
+      "preserve_existing_policy": true
+    }
+  },
+  "body": {
+    "group_run_id": "7d1574d8-ff23-4d98-bf21-e3d749ad7127",
+    "remediation_run_id": "fcb585f1-362a-428a-990e-92278b5898f8",
+    "reporting_token": "<redacted>",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}
