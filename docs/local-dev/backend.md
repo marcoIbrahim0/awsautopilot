@@ -35,10 +35,17 @@ Actions owner queues:
 - `GET /api/remediation-runs/{id}` now also includes additive `artifact_metadata` with normalized `implementation_artifacts[]`, `evidence_pointers[]`, and `closure_checklist[]` while preserving the raw `artifacts` payload.
 - Remediation-run deep links now rely on stable anchors in the UI contract: `#run-activity`, `#run-generated-files`, and `#run-closure`.
 - `POST /api/remediation-runs` and `POST /api/remediation-runs/group-pr-bundle` now accept additive optional `repo_target` metadata with `provider`, `repository`, `base_branch`, optional `head_branch`, and optional `root_path` for provider-agnostic PR payload generation.
+- `POST /api/remediation-runs/group-pr-bundle` and `POST /api/action-groups/{group_id}/bundle-run` now fail with `409` and a distinct `reason` when a matching grouped PR bundle is already active or when the latest successful grouped bundle for that exact canonical group/request still matches and no material changes have occurred since generation.
 - Strategy-backed `pr_only` run creation is now an observed client contract: frontend callers preflight `GET /api/actions/{id}/remediation-options`, choose a valid non-exception `pr_only` strategy from that payload, and send `strategy_id` plus any safely derivable `strategy_inputs` on `POST /api/remediation-runs` or `POST /api/remediation-runs/group-pr-bundle`.
+- Some Security Hub controls map to the same remediation family:
+  - `GET /api/findings` can keep source alias `control_id` values.
+  - Actions, grouped remediation, and action-group member state can expose the canonical remediation control/action family instead.
+  - Current aliases: `S3.3 -> S3.2`, `S3.8 -> S3.2`, `S3.13 -> S3.11`, `S3.17 -> S3.15`, `EC2.13 -> EC2.53`, `EC2.18 -> EC2.53`, `EC2.19 -> EC2.53`.
+  - Pending-confirmation, grouped member status buckets, run history, and bundle-generation gating follow the canonical family; this is expected behavior, not a data mismatch.
 - CloudTrail guided remediation options now expose specialized dependency checks instead of the unspecialized hard-fail fallback: `cloudtrail_cost_impact`, `cloudtrail_log_bucket_prereq`, and optional `cloudtrail_existing_trail_present`, plus runtime default trail context when `DescribeTrails` succeeds.
 - Summary/grouped PR-bundle flows now fail closed on the client side when dependency checks require manual review, required inputs cannot be derived safely, or grouped actions do not converge on the same derived strategy payload.
 - Successful PR-bundle runs now attach additive `diff_summary`, `rollback_notes`, and `control_mapping_context` artifacts; when `repo_target` is configured they also attach `pr_payload`.
+- `GET /api/action-groups/{group_id}` now includes additive grouped bundle CTA gating fields: `can_generate_bundle`, `blocked_reason`, `blocked_detail`, and `blocked_by_run_id`.
 - Downloaded PR bundle zips now include `pr_automation/diff_summary.json`, `pr_automation/rollback_notes.md`, `pr_automation/control_mapping_context.json`, and `pr_automation/pr_payload.json` when repository metadata is present.
 - Historical direct-fix runs may still carry additive `artifacts.direct_fix_approval` metadata, but current `POST /api/remediation-runs` rejects new `direct_fix` requests and stays PR-only.
 - Blocked unapproved direct-mutation attempts write `audit_log.event_type=remediation_mutation_blocked` before the run is finalized as failed.

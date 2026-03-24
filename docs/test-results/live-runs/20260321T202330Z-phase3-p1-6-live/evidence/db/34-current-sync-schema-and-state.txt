@@ -1,0 +1,135 @@
+Output format is aligned.
+Pager usage is off.
+                        Table "public.action_external_links"
+         Column          |           Type           | Collation | Nullable | Default 
+-------------------------+--------------------------+-----------+----------+---------
+ id                      | uuid                     |           | not null | 
+ tenant_id               | uuid                     |           | not null | 
+ action_id               | uuid                     |           | not null | 
+ provider                | character varying(32)    |           | not null | 
+ external_id             | character varying(255)   |           |          | 
+ external_key            | character varying(255)   |           |          | 
+ external_url            | text                     |           |          | 
+ external_status         | character varying(128)   |           |          | 
+ external_assignee_key   | character varying(255)   |           |          | 
+ external_assignee_label | character varying(255)   |           |          | 
+ last_outbound_signature | character varying(64)    |           |          | 
+ last_outbound_at        | timestamp with time zone |           |          | 
+ last_inbound_at         | timestamp with time zone |           |          | 
+ last_inbound_event_at   | timestamp with time zone |           |          | 
+ metadata_json           | jsonb                    |           | not null | 
+ created_at              | timestamp with time zone |           | not null | now()
+ updated_at              | timestamp with time zone |           | not null | now()
+Indexes:
+    "action_external_links_pkey" PRIMARY KEY, btree (id)
+    "ix_action_external_links_tenant_action" btree (tenant_id, action_id)
+    "ix_action_external_links_tenant_provider" btree (tenant_id, provider)
+    "uq_action_external_links_tenant_action_provider" UNIQUE CONSTRAINT, btree (tenant_id, action_id, provider)
+    "uq_action_external_links_tenant_provider_external" UNIQUE CONSTRAINT, btree (tenant_id, provider, external_id)
+Foreign-key constraints:
+    "action_external_links_action_id_fkey" FOREIGN KEY (action_id) REFERENCES actions(id) ON DELETE CASCADE
+    "action_external_links_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "integration_sync_tasks" CONSTRAINT "integration_sync_tasks_link_id_fkey" FOREIGN KEY (link_id) REFERENCES action_external_links(id) ON DELETE SET NULL
+
+                     Table "public.action_remediation_sync_states"
+          Column           |           Type           | Collation | Nullable | Default 
+---------------------------+--------------------------+-----------+----------+---------
+ id                        | uuid                     |           | not null | 
+ tenant_id                 | uuid                     |           | not null | 
+ action_id                 | uuid                     |           | not null | 
+ provider                  | character varying(32)    |           | not null | 
+ external_ref              | character varying(255)   |           |          | 
+ external_status           | character varying(128)   |           |          | 
+ mapped_internal_status    | character varying(32)    |           |          | 
+ canonical_internal_status | character varying(32)    |           | not null | 
+ preferred_external_status | character varying(128)   |           |          | 
+ sync_status               | character varying(32)    |           | not null | 
+ last_source               | character varying(32)    |           | not null | 
+ resolution_decision       | character varying(64)    |           |          | 
+ conflict_reason           | text                     |           |          | 
+ sync_metadata             | jsonb                    |           |          | 
+ last_event_at             | timestamp with time zone |           |          | 
+ last_reconciled_at        | timestamp with time zone |           |          | 
+ created_at                | timestamp with time zone |           | not null | now()
+ updated_at                | timestamp with time zone |           | not null | now()
+Indexes:
+    "action_remediation_sync_states_pkey" PRIMARY KEY, btree (id)
+    "ix_action_remediation_sync_states_tenant_action" btree (tenant_id, action_id)
+    "ix_action_remediation_sync_states_tenant_provider" btree (tenant_id, provider)
+    "ix_action_remediation_sync_states_tenant_sync_status" btree (tenant_id, sync_status)
+    "uq_action_remediation_sync_states_tenant_action_provider" UNIQUE CONSTRAINT, btree (tenant_id, action_id, provider)
+Foreign-key constraints:
+    "action_remediation_sync_states_action_id_fkey" FOREIGN KEY (action_id) REFERENCES actions(id) ON DELETE CASCADE
+    "action_remediation_sync_states_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "action_remediation_sync_events" CONSTRAINT "action_remediation_sync_events_sync_state_id_fkey" FOREIGN KEY (sync_state_id) REFERENCES action_remediation_sync_states(id) ON DELETE SET NULL
+
+                     Table "public.action_remediation_sync_events"
+          Column           |           Type           | Collation | Nullable | Default 
+---------------------------+--------------------------+-----------+----------+---------
+ id                        | uuid                     |           | not null | 
+ tenant_id                 | uuid                     |           | not null | 
+ action_id                 | uuid                     |           | not null | 
+ sync_state_id             | uuid                     |           |          | 
+ source                    | character varying(32)    |           | not null | 
+ event_type                | character varying(64)    |           | not null | 
+ provider                  | character varying(32)    |           |          | 
+ external_ref              | character varying(255)   |           |          | 
+ idempotency_key           | character varying(160)   |           |          | 
+ internal_status_before    | character varying(32)    |           |          | 
+ internal_status_after     | character varying(32)    |           |          | 
+ external_status           | character varying(128)   |           |          | 
+ mapped_internal_status    | character varying(32)    |           |          | 
+ preferred_external_status | character varying(128)   |           |          | 
+ resolution_decision       | character varying(64)    |           |          | 
+ decision_detail           | text                     |           |          | 
+ event_payload             | jsonb                    |           |          | 
+ actor_user_id             | uuid                     |           |          | 
+ created_at                | timestamp with time zone |           | not null | now()
+Indexes:
+    "action_remediation_sync_events_pkey" PRIMARY KEY, btree (id)
+    "ix_action_remediation_sync_events_tenant_action" btree (tenant_id, action_id)
+    "ix_action_remediation_sync_events_tenant_created" btree (tenant_id, created_at)
+    "ix_action_remediation_sync_events_tenant_provider" btree (tenant_id, provider)
+    "uq_action_remediation_sync_events_tenant_action_idempotency" UNIQUE CONSTRAINT, btree (tenant_id, action_id, idempotency_key)
+Foreign-key constraints:
+    "action_remediation_sync_events_action_id_fkey" FOREIGN KEY (action_id) REFERENCES actions(id) ON DELETE CASCADE
+    "action_remediation_sync_events_actor_user_id_fkey" FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+    "action_remediation_sync_events_sync_state_id_fkey" FOREIGN KEY (sync_state_id) REFERENCES action_remediation_sync_states(id) ON DELETE SET NULL
+    "action_remediation_sync_events_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+
+                            Table "public.integration_event_receipts"
+    Column    |           Type           | Collation | Nullable |            Default             
+--------------+--------------------------+-----------+----------+--------------------------------
+ id           | uuid                     |           | not null | 
+ tenant_id    | uuid                     |           | not null | 
+ provider     | character varying(32)    |           | not null | 
+ receipt_key  | character varying(255)   |           | not null | 
+ external_id  | character varying(255)   |           |          | 
+ action_id    | uuid                     |           |          | 
+ payload_hash | character varying(64)    |           | not null | 
+ status       | character varying(32)    |           | not null | 'processed'::character varying
+ occurred_at  | timestamp with time zone |           |          | 
+ result_json  | jsonb                    |           |          | 
+ created_at   | timestamp with time zone |           | not null | now()
+ updated_at   | timestamp with time zone |           | not null | now()
+Indexes:
+    "integration_event_receipts_pkey" PRIMARY KEY, btree (id)
+    "ix_integration_event_receipts_tenant_provider" btree (tenant_id, provider)
+    "uq_integration_event_receipts_tenant_provider_key" UNIQUE CONSTRAINT, btree (tenant_id, provider, receipt_key)
+Foreign-key constraints:
+    "integration_event_receipts_action_id_fkey" FOREIGN KEY (action_id) REFERENCES actions(id) ON DELETE SET NULL
+    "integration_event_receipts_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+
+ provider | external_ref | external_status | mapped_internal_status | canonical_internal_status | preferred_external_status | sync_status |       resolution_decision        | conflict_reason |  last_source   |          updated_at           
+----------+--------------+-----------------+------------------------+---------------------------+---------------------------+-------------+----------------------------------+-----------------+----------------+-------------------------------
+ jira     | 10049        | To Do           | open                   | open                      | To Do                     | in_sync     | reconciled_to_internal_canonical |                 | reconciliation | 2026-03-22 19:35:12.125633+00
+(1 row)
+
+       event_type       |     source     | external_ref | external_status | internal_status_before | internal_status_after | mapped_internal_status | preferred_external_status |       resolution_decision        |                     decision_detail                      |          created_at           
+------------------------+----------------+--------------+-----------------+------------------------+-----------------------+------------------------+---------------------------+----------------------------------+----------------------------------------------------------+-------------------------------
+ reconciliation_applied | reconciliation | 10049        | To Do           | open                   | open                  | open                   | To Do                     | reconciled_to_internal_canonical | External jira status reconciled to canonical state open. | 2026-03-22 19:35:12.125633+00
+ reconciliation_applied | reconciliation | 10049        | To Do           | open                   | open                  | open                   | To Do                     | reconciled_to_internal_canonical | External jira status reconciled to canonical state open. | 2026-03-22 19:35:07.498714+00
+(2 rows)
+

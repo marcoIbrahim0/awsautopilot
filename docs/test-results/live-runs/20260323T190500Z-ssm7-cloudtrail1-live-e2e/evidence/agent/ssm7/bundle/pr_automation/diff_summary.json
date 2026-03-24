@@ -1,0 +1,38 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 3,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 477,
+      "change_type": "create_or_update",
+      "content_sha256": "b050571dea6a621e99ec2dc055f351ebdd8d0e3a17652be21cd50898d5cb9140",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "ssm_block_public_sharing.tf",
+      "byte_count": 289,
+      "change_type": "create_or_update",
+      "content_sha256": "bec297512a5cff13d3cd02a83ca0b377665c7ba18441b458fd339225109d9931",
+      "line_count": 5,
+      "repo_path": "ssm_block_public_sharing.tf"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2114,
+      "change_type": "create_or_update",
+      "content_sha256": "6b95a3afde8ba788053f459e0e1bf21e666f25a364b9fc2b7297d7d4ce2c6dcb",
+      "line_count": 51,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "b4c5a5a07e8c68d6ac3a0361d43e8ee55282079b5d11b960f9d0666ec34b13a9",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:b050571dea6a)",
+    "`ssm_block_public_sharing.tf` <- `ssm_block_public_sharing.tf` (5 lines, sha256:bec297512a5c)",
+    "`README.txt` <- `README.txt` (51 lines, sha256:6b95a3afde8b)"
+  ],
+  "version": 1
+}

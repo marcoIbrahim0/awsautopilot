@@ -43,6 +43,41 @@ read_secret_string_value() {
   printf '%s' "$secret_value"
 }
 
+wait_for_lambda_image() {
+  local function_name="$1"
+  local expected_image_uri="$2"
+  local max_attempts="${3:-60}"
+  local attempt=1
+
+  while (( attempt <= max_attempts )); do
+    local image_uri
+    local update_status
+    image_uri="$(
+      aws lambda get-function \
+        --region "$AWS_REGION_EFFECTIVE" \
+        --function-name "$function_name" \
+        --query "Code.ImageUri" \
+        --output text 2>/dev/null || true
+    )"
+    update_status="$(
+      aws lambda get-function-configuration \
+        --region "$AWS_REGION_EFFECTIVE" \
+        --function-name "$function_name" \
+        --query "LastUpdateStatus" \
+        --output text 2>/dev/null || true
+    )"
+    if [[ "$image_uri" == "$expected_image_uri" && "$update_status" == "Successful" ]]; then
+      echo "lambda image active: ${function_name} -> ${expected_image_uri}"
+      return 0
+    fi
+    sleep 5
+    ((attempt+=1))
+  done
+
+  echo "Timed out waiting for Lambda image rollout: function=${function_name} expected_image=${expected_image_uri}" >&2
+  return 1
+}
+
 AWS_REGION_EFFECTIVE="${AWS_REGION:-$(read_env_file_value AWS_REGION || true)}"
 AWS_REGION_EFFECTIVE="${AWS_REGION_EFFECTIVE:-eu-north-1}"
 
@@ -198,6 +233,10 @@ echo "Runtime stack: ${RUNTIME_STACK_NAME}"
 echo "Name prefix: ${NAME_PREFIX}"
 echo "Image tag: ${IMAGE_TAG}"
 echo "Enable worker mappings: ${ENABLE_WORKER}"
+
+echo ""
+echo "0) Verifying runtime/DB alignment before build..."
+PYTHONPATH=. ./venv/bin/python scripts/check_runtime_db_alignment.py
 
 echo ""
 echo "1) Deploying build stack (ECR + S3 + CodeBuild)..."
@@ -461,3 +500,20 @@ aws cloudformation describe-stacks \
   --stack-name "$RUNTIME_STACK_NAME" \
   --query "Stacks[0].Outputs" \
   --output table
+
+echo ""
+echo "6) Waiting for Lambda image rollout..."
+wait_for_lambda_image "${NAME_PREFIX}-api" "${API_IMAGE_URI}"
+wait_for_lambda_image "${NAME_PREFIX}-worker" "${WORKER_IMAGE_URI}"
+
+echo ""
+echo "7) Verifying runtime/DB alignment before database upgrade..."
+PYTHONPATH=. ./venv/bin/python scripts/check_runtime_db_alignment.py
+
+echo ""
+echo "8) Applying database migrations..."
+./venv/bin/alembic upgrade heads
+
+echo ""
+echo "9) Verifying runtime/DB alignment after database upgrade..."
+PYTHONPATH=. ./venv/bin/python scripts/check_runtime_db_alignment.py --require-at-head

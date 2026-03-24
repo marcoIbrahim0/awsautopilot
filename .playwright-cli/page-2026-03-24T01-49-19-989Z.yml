@@ -1,0 +1,179 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+        - link "Audit Log" [ref=e78] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e80]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Action Detail" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: M
+      - main [ref=e56]:
+        - generic [ref=e59]:
+          - link "Back to Findings" [ref=e60] [cursor=pointer]:
+            - /url: /findings
+            - img [ref=e61]
+            - text: Back to Findings
+          - link "Need help with this action?" [ref=e63] [cursor=pointer]:
+            - /url: /help?tab=assistant&from=%2Factions%2F0abc603d-b75a-4b49-9a5f-431a0aa82a4e&action_id=0abc603d-b75a-4b49-9a5f-431a0aa82a4e
+            - generic [ref=e64]: Need help with this action?
+  - alert [ref=e65]
+  - dialog "Generate PR Bundle" [ref=e329]:
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - button "Back to action detail" [ref=e330]:
+          - img [ref=e331]
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - heading "Generate PR Bundle" [level=2] [ref=e333]
+            - generic "Can change access paths or remove existing permissions. Verify operational access before apply." [ref=e334]: Access-changing · Review first
+          - paragraph [ref=e83]: Security groups should not allow unrestricted access to ports with high risk
+      - button "Close modal" [ref=e74]:
+        - img [ref=e75]
+    - generic [ref=e336]:
+      - generic [ref=e339]:
+        - generic [ref=e340]:
+          - paragraph [ref=e341]: PR BUNDLE CONTEXT
+          - heading "Security groups should not allow unrestricted access to ports with high risk" [level=3] [ref=e342]
+          - paragraph [ref=e343]: Review the strategy, safety gates, and generated guidance before creating the remediation bundle.
+        - generic [ref=e344]:
+          - generic [ref=e345]:
+            - generic [ref=e346]: "Account:"
+            - text: "696505809372"
+          - generic [ref=e347]:
+            - generic [ref=e348]: "Region:"
+            - text: eu-north-1
+          - generic [ref=e349]:
+            - generic [ref=e350]: "Mode:"
+            - text: PR bundle
+      - generic [ref=e352]:
+        - generic [ref=e354]:
+          - paragraph [ref=e355]: Workflow
+          - generic [ref=e356]:
+            - heading "Choose remediation strategy" [level=3] [ref=e357]
+            - button "Show contextual help" [ref=e359]:
+              - generic [ref=e360]: i
+          - paragraph [ref=e362]: Select how this action should be handled in the remediation workflow.
+        - generic [ref=e366] [cursor=pointer]:
+          - radio "Secure remote admin access (guided choices) Risk low Recommended This keeps the current remediation-run creation behavior intact." [checked] [ref=e367]
+          - generic [ref=e368]:
+            - generic [ref=e369]:
+              - paragraph [ref=e370]: Secure remote admin access (guided choices)
+              - generic [ref=e371]: Risk low
+              - generic [ref=e372]: Recommended
+            - paragraph [ref=e373]: This keeps the current remediation-run creation behavior intact.
+      - generic [ref=e375]:
+        - generic [ref=e377]:
+          - paragraph [ref=e378]: Configuration
+          - generic [ref=e379]:
+            - heading "Strategy inputs" [level=3] [ref=e380]
+            - button "Show contextual help" [ref=e382]:
+              - generic [ref=e383]: i
+          - paragraph [ref=e385]: Provide any strategy-specific inputs before the remediation run is created.
+        - generic [ref=e388]:
+          - heading "Access Control" [level=4] [ref=e389]
+          - generic [ref=e390]:
+            - generic [ref=e391]:
+              - generic [ref=e392]: How would you like to secure remote access? *
+              - button "Show contextual help" [ref=e394]:
+                - generic [ref=e395]: i
+            - combobox "How would you like to secure remote access? *" [ref=e396]:
+              - option "Add restricted access without removing old public rules" [selected]
+              - option "Close public and auto-remove old rules"
+              - option "Restrict to my IP"
+              - option "Restrict to custom CIDR"
+          - generic [ref=e397]:
+            - paragraph [ref=e398]: Impact preview
+            - paragraph [ref=e400]: Public SSH/RDP access on ports 22 and 3389 will remain until you manually remove the 0.0.0.0/0 rules. New restricted rules will be added.
+      - group [ref=e401]:
+        - generic "How to undo this" [ref=e402] [cursor=pointer]
+      - generic [ref=e404]:
+        - generic [ref=e406]:
+          - paragraph [ref=e407]: Safety
+          - generic [ref=e408]:
+            - heading "Dependency checks" [level=3] [ref=e409]
+            - button "Show contextual help" [ref=e411]:
+              - generic [ref=e412]: i
+          - paragraph [ref=e414]: Review dependency checks and warnings before creating the remediation run.
+        - generic [ref=e416]:
+          - generic [ref=e417]:
+            - paragraph [ref=e418]: "[unknown] risk_evaluation_not_specialized"
+            - paragraph [ref=e419]: No specialized dependency checks are available for this strategy yet.
+          - paragraph [ref=e420]: Restricting or revoking public admin ingress can lock out operators. Confirm SSM, VPN, or bastion access before apply.
+      - generic [ref=e422]:
+        - generic [ref=e424]:
+          - paragraph [ref=e425]: Preview
+          - generic [ref=e426]:
+            - heading "Before / After simulation" [level=3] [ref=e427]
+            - button "Show contextual help" [ref=e429]:
+              - generic [ref=e430]: i
+          - paragraph [ref=e432]: Preview the expected state transition before the run is created.
+        - generic [ref=e434]:
+          - generic [ref=e435]:
+            - paragraph [ref=e436]: Change
+            - paragraph [ref=e437]: Before
+            - paragraph [ref=e438]: After
+          - generic [ref=e439]:
+            - paragraph [ref=e440]: Public admin ingress (IPv4)
+            - paragraph [ref=e441]: 0.0.0.0/0 on tcp/22, tcp/3389
+            - paragraph [ref=e442]: 0.0.0.0/0 on tcp/22, tcp/3389
+          - generic [ref=e443]:
+            - paragraph [ref=e444]: Public admin ingress (IPv6)
+            - paragraph [ref=e445]: none detected
+            - paragraph [ref=e446]: none detected
+          - generic [ref=e447]:
+            - paragraph [ref=e448]: Restricted admin ingress (IPv4)
+            - paragraph [ref=e449]: —
+            - paragraph [ref=e450]: 10.0.0.0/8 on tcp/22, tcp/3389
+      - generic [ref=e451] [cursor=pointer]:
+        - checkbox "I reviewed dependency warnings/unknowns and accept remediation risk for this strategy." [ref=e452]
+        - generic [ref=e453]: I reviewed dependency warnings/unknowns and accept remediation risk for this strategy.
+      - generic [ref=e454]:
+        - paragraph [ref=e455]: Execution timing
+        - generic [ref=e457]:
+          - button "Show contextual help" [ref=e460]:
+            - generic [ref=e461]: i
+          - generic [ref=e462]: "Estimated time to Security Hub PASSED:"
+          - generic [ref=e463]: 12-24 hours
+      - generic [ref=e464]:
+        - button "Cancel" [ref=e465]:
+          - generic [ref=e466]: Cancel
+        - button "Generate PR bundle" [disabled] [ref=e467]:
+          - generic [ref=e468]: Generate PR bundle
+  - button "Open Ask AI Chat" [ref=e326]:
+    - img [ref=e327]

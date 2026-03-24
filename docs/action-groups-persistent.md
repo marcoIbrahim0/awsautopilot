@@ -46,6 +46,9 @@ Token service: `backend/services/bundle_reporting_tokens.py`
   - `POST /api/internal/group-runs/report`
   - events: `started`, `finished`.
 - Downloaded bundles emit callback events from wrapper runner script and persist replay payloads locally when callback delivery fails.
+- Group bundle creation now fails closed for unchanged reruns:
+  - active identical grouped requests still return `409`
+  - latest successful identical grouped requests also return `409` with a no-changes reason until the canonical group membership or bundle-resolution inputs change
 
 ## Public APIs
 
@@ -55,6 +58,37 @@ Router: `backend/routers/action_groups.py`
 - `GET /api/action-groups/{group_id}`
 - `GET /api/action-groups/{group_id}/runs`
 - `POST /api/action-groups/{group_id}/bundle-run`
+
+`GET /api/action-groups/{group_id}` also returns additive bundle-generation gating fields so the UI can disable unchanged reruns before submit:
+
+- `can_generate_bundle`
+- `blocked_reason`
+- `blocked_detail`
+- `blocked_by_run_id`
+
+## Control ID Canonicalization
+
+Findings can arrive under alias control IDs while action grouping and grouped remediation use the canonical remediation family for dedupe, run history, and bundle state.
+
+Current canonicalization cases:
+
+- `S3.3 -> S3.2` / `s3_bucket_block_public_access`
+- `S3.8 -> S3.2` / `s3_bucket_block_public_access`
+- `S3.13 -> S3.11` / `s3_bucket_lifecycle_configuration`
+- `S3.17 -> S3.15` / `s3_bucket_encryption_kms`
+- `EC2.13 -> EC2.53` / `sg_restrict_public_ports`
+- `EC2.18 -> EC2.53` / `sg_restrict_public_ports`
+- `EC2.19 -> EC2.53` / `sg_restrict_public_ports`
+
+Practical effect:
+
+- `GET /api/findings` can still show the source alias `control_id`.
+- `GET /api/action-groups/{group_id}` member rows can show the canonical control ID instead.
+- Pending-confirmation, grouped member status buckets, run history, and bundle-generation gating follow the canonical remediation family/member.
+
+Example:
+
+- `S3.8` findings can materialize into canonical grouped remediation family `S3.2` / `s3_bucket_block_public_access`, so the grouped view may show `S3.2` while the finding detail still shows `S3.8`.
 
 ## Backfill Job
 

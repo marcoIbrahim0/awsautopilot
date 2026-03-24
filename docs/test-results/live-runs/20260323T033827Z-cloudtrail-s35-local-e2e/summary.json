@@ -1,0 +1,32 @@
+{
+  "run_id": "20260323T033827Z-cloudtrail-s35-local-e2e",
+  "api_base": "http://127.0.0.1:8000",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "migration_applied": "0048_action_group_pending_confirmation_bucket",
+  "targets": {
+    "CloudTrail.1": {
+      "action_type": "cloudtrail_enabled",
+      "group_id": "d0ea8837-bb23-48d4-82cd-eb64d697f42f",
+      "create_status_code": 400,
+      "reason": "invalid_strategy_inputs",
+      "detail": "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name.",
+      "pending_confirmation_count": 0,
+      "verdict": "truthful_non_executable"
+    },
+    "S3.5": {
+      "action_type": "s3_bucket_require_ssl",
+      "group_id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+      "group_run_id": "fd8e6c29-2ddf-4f0f-bac8-e0e92d2013d6",
+      "remediation_run_id": "7d5e9342-a5e7-4391-a727-3ac50ecb024b",
+      "bundle_create_status_code": 201,
+      "worker_status": "success",
+      "bundle_action_count": 12,
+      "bundle_all_non_executable": true,
+      "non_executable_reason": "Bucket policy preservation evidence is missing for merge-safe SSL enforcement.",
+      "group_run_status_after_local_execution": "started",
+      "pending_confirmation_count": 0,
+      "verdict": "review_required_bundle_plus_finalization_gap"
+    }
+  }
+}

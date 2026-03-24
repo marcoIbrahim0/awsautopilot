@@ -177,7 +177,15 @@ async def list_groups_with_counters(
     run_successful_expr = func.coalesce(
         func.sum(
             case(
-                (ActionGroupActionState.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_confirmed, 1),
+                (
+                    ActionGroupActionState.latest_run_status_bucket.in_(
+                        [
+                            ActionGroupStatusBucket.run_successful_pending_confirmation,
+                            ActionGroupStatusBucket.run_successful_confirmed,
+                        ]
+                    ),
+                    1,
+                ),
                 else_=0,
             )
         ),
@@ -187,6 +195,18 @@ async def list_groups_with_counters(
         func.sum(
             case(
                 (ActionGroupActionState.latest_run_status_bucket == ActionGroupStatusBucket.run_not_successful, 1),
+                else_=0,
+            )
+        ),
+        0,
+    )
+    metadata_only_expr = func.coalesce(
+        func.sum(
+            case(
+                (
+                    ActionGroupActionState.latest_run_status_bucket == ActionGroupStatusBucket.run_finished_metadata_only,
+                    1,
+                ),
                 else_=0,
             )
         ),
@@ -215,6 +235,7 @@ async def list_groups_with_counters(
             ActionGroup.metadata_json.label("metadata"),
             run_successful_expr.label("run_successful"),
             run_not_successful_expr.label("run_not_successful"),
+            metadata_only_expr.label("metadata_only"),
             not_run_yet_expr.label("not_run_yet"),
             total_actions_expr.label("total_actions"),
         )
@@ -255,6 +276,7 @@ async def list_groups_with_counters(
                 "metadata": row.metadata or {},
                 "run_successful": int(row.run_successful or 0),
                 "run_not_successful": int(row.run_not_successful or 0),
+                "metadata_only": int(row.metadata_only or 0),
                 "not_run_yet": int(row.not_run_yet or 0),
                 "total_actions": int(row.total_actions or 0),
             }
@@ -324,6 +346,7 @@ async def get_group_detail(
     counters = {
         "run_successful": 0,
         "run_not_successful": 0,
+        "metadata_only": 0,
         "not_run_yet": 0,
         "total_actions": 0,
     }
@@ -333,8 +356,13 @@ async def get_group_detail(
             if row.status_bucket is not None and hasattr(row.status_bucket, "value")
             else str(row.status_bucket or ActionGroupStatusBucket.not_run_yet.value)
         )
-        if bucket == ActionGroupStatusBucket.run_successful_confirmed.value:
+        if bucket in {
+            ActionGroupStatusBucket.run_successful_pending_confirmation.value,
+            ActionGroupStatusBucket.run_successful_confirmed.value,
+        }:
             counters["run_successful"] += 1
+        elif bucket == ActionGroupStatusBucket.run_finished_metadata_only.value:
+            counters["metadata_only"] += 1
         elif bucket == ActionGroupStatusBucket.run_not_successful.value:
             counters["run_not_successful"] += 1
         else:

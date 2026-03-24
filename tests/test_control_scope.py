@@ -18,6 +18,7 @@ from backend.services.control_scope import (
     UNSUPPORTED_CONTROL_DECISIONS,
     action_type_from_control,
     canonical_control_id_for_action_type,
+    equivalent_control_ids_for_control,
     unsupported_control_decision,
 )
 from backend.services.action_engine import _action_type_from_control
@@ -153,6 +154,15 @@ def test_canonical_control_id_for_action_type_uses_primary_control() -> None:
         "S3.17",
     ) == "S3.15"
     assert canonical_control_id_for_action_type("pr_only", "S3.8") == "S3.8"
+
+
+def test_equivalent_control_ids_for_control_returns_canonical_and_aliases() -> None:
+    assert equivalent_control_ids_for_control("S3.11") == ("S3.11", "S3.13")
+    assert equivalent_control_ids_for_control("S3.13") == ("S3.11", "S3.13")
+    assert equivalent_control_ids_for_control("EC2.53") == ("EC2.53", "EC2.13", "EC2.18", "EC2.19")
+    assert equivalent_control_ids_for_control("ec2.19") == ("EC2.53", "EC2.13", "EC2.18", "EC2.19")
+    assert equivalent_control_ids_for_control("CloudTrail.1") == ("CloudTrail.1",)
+    assert equivalent_control_ids_for_control("Unknown.Control.99") == ("CONTROL.99",)
 
 
 def test_pr_bundle_coverage_all_in_scope_types() -> None:

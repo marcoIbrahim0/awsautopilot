@@ -7,6 +7,7 @@ The canonical remediation status for an action lives in [`Action.status`](/Users
 Related docs:
 - [Local backend development](/Users/marcomaher/AWS%20Security%20Autopilot/docs/local-dev/backend.md)
 - [Handoff-free closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/handoff-free-closure.md)
+- [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md)
 
 ## Canonical state model
 
@@ -44,6 +45,8 @@ Inbound provider statuses are normalized and mapped back into canonical states w
 | `servicenow` | `Resolved`, `Closed Complete` | `resolved` |
 
 If an inbound external status maps to a different canonical state than the current `Action.status`, the platform preserves the internal state and records the conflict as drift.
+
+The default table above is the provider baseline, not a forced per-tenant workflow. For Jira projects whose workflow does not truthfully support those defaults, configure tenant-level `status_mapping` and `transition_map` as documented in [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md).
 
 ## Persistence model
 
@@ -166,6 +169,7 @@ The worker loads `drifted` sync-state rows, calls manual outbound planning throu
 - Internal action updates from [`backend/routers/actions.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/routers/actions.py) and [`backend/services/action_engine.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/action_engine.py) now go through the canonical state service instead of assigning `Action.status` directly.
 - Inbound provider events processed by [`process_inbound_event()`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/integration_sync.py) update external-link metadata and sync-state audit rows, but keep the internal canonical action status unchanged.
 - Successful outbound provider sync completion records `reconciliation_applied` and moves the provider snapshot back to `in_sync`.
+- For a practical Jira-specific configuration, drift test, and reconciliation checklist, use [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md).
 
 Environment-specific example:
 

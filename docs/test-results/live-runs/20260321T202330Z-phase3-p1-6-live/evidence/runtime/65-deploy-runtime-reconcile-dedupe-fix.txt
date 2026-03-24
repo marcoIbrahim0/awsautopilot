@@ -1,0 +1,66 @@
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260324T020950Z
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment passed: relation=at_head current=['0049_action_group_metadata_only_bucket'] expected=['0049_action_group_metadata_only_bucket']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260324T020950Z.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:bff76380-b3f7-4568-baeb-3104d92e5753
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 33e5fe46-482b-47da-bbd6-bdac64b8e5c0
+worker mapping already enabled: 990f0c7a-2153-404b-9ddd-e59664c205cf
+worker mapping already enabled: 3d876d16-4afa-4f1c-a892-d9387fda469e
+worker mapping already enabled: 53192e01-6578-4de4-935a-5777e0f8cf87
+reserved concurrency already clear: SecurityAutopilotReadRole-ReadRoleHelperFunction-nDM4XAHSGjeD
+reserved concurrency already clear: SecurityAutopilotWriteRole-WriteRoleHelperFunction-eSSlEZAQXgVD
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/sybw8x0716/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://sybw8x0716.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  sybw8x0716                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260324T020950Z
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260324T020950Z
+
+7) Verifying runtime/DB alignment before database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0049_action_group_metadata_only_bucket'] expected=['0049_action_group_metadata_only_bucket']
+
+8) Applying database migrations...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+9) Verifying runtime/DB alignment after database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0049_action_group_metadata_only_bucket'] expected=['0049_action_group_metadata_only_bucket']

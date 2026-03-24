@@ -375,6 +375,7 @@ def _collect_ec2_security_groups(
                 groups.extend(_as_list(response.get("SecurityGroups")))
             except ClientError as exc:
                 if _extract_error_code(exc) == "InvalidGroup.NotFound":
+                    groups.append({"GroupId": group_id, "_deleted_marker": True})
                     continue
                 raise
     else:
@@ -394,6 +395,33 @@ def _collect_ec2_security_groups(
         group_id = str(group.get("GroupId") or "").strip()
         if not group_id:
             continue
+            
+        if group.get("_deleted_marker"):
+            evals = [
+                _control_eval(
+                    control_id="EC2.53",
+                    resource_id=group_id,
+                    resource_type="AwsEc2SecurityGroup",
+                    status=SHADOW_STATUS_RESOLVED,
+                    title="Security group allows public SSH/RDP access",
+                    description="Inventory reconciliation check for public admin ports.",
+                    status_reason="inventory_resource_deleted",
+                    evidence_ref={"source": "inventory", "resource_deleted": True},
+                )
+            ]
+            snapshots.append(
+                InventorySnapshot(
+                    service="ec2",
+                    resource_id=group_id,
+                    resource_type="AwsEc2SecurityGroup",
+                    key_fields={"group_id": group_id, "deleted": True},
+                    state_for_hash={"group_id": group_id, "deleted": True},
+                    metadata_json={"group_name": "DELETED"},
+                    evaluations=evals,
+                )
+            )
+            continue
+
         non_compliant, violations = evaluate_security_group_public_admin_ports(group)
         status = SHADOW_STATUS_OPEN if non_compliant else SHADOW_STATUS_RESOLVED
         reason = "inventory_confirmed_non_compliant" if non_compliant else "inventory_confirmed_compliant"
@@ -1370,6 +1398,7 @@ def _collect_rds_instances(
                 instances.extend(_as_list(resp.get("DBInstances")))
             except ClientError as exc:
                 if _extract_error_code(exc) == "DBInstanceNotFound":
+                    instances.append({"DBInstanceArn": f"arn:aws:rds:{region}:account:db:{rid}", "_deleted_marker": True})
                     continue
                 raise
     else:
@@ -1475,8 +1504,35 @@ def _collect_eks_clusters(
             cluster = (eks.describe_cluster(name=cluster_name) or {}).get("cluster") or {}
         except ClientError as exc:
             if _extract_error_code(exc) == "ResourceNotFoundException":
-                continue
-            raise
+                cluster = {"_deleted_marker": True}
+            else:
+                raise
+        if cluster.get("_deleted_marker"):
+            evals = [
+                _control_eval(
+                    control_id=_EKS_PUBLIC_ENDPOINT_CONTROL_ID,
+                    resource_id=cluster_name,
+                    resource_type="AwsEksCluster",
+                    status=SHADOW_STATUS_RESOLVED,
+                    title="EKS API endpoint publicly reachable",
+                    description="Inventory-only signal for EKS control-plane exposure.",
+                    status_reason="inventory_resource_deleted",
+                    evidence_ref={"source": "inventory", "resource_deleted": True, **unsupported_evidence},
+                )
+            ]
+            snapshots.append(
+                InventorySnapshot(
+                    service="eks",
+                    resource_id=cluster_name,
+                    resource_type="AwsEksCluster",
+                    key_fields={"cluster_name": cluster_name, "deleted": True},
+                    state_for_hash={"cluster_name": cluster_name, "deleted": True},
+                    metadata_json={"cluster_name": "DELETED"},
+                    evaluations=evals,
+                )
+            )
+            continue
+            
         vpc_cfg = cluster.get("resourcesVpcConfig") if isinstance(cluster, dict) else {}
         if not isinstance(vpc_cfg, dict):
             vpc_cfg = {}

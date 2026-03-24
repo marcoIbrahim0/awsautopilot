@@ -108,6 +108,7 @@ def record_external_status_observation(
     provider: str,
     external_status: str,
     external_ref: str | None = None,
+    preferred_external_status_override: str | None = None,
     actor_user_id: uuid.UUID | None = None,
     detail: str | None = None,
     payload: dict[str, Any] | None = None,
@@ -119,6 +120,9 @@ def record_external_status_observation(
         return _observation_from_state(provider_name, state, action.status)
     state = _get_or_create_sync_state(session, action, provider_name, external_ref)
     resolution = resolve_external_status_conflict(action.status, provider_name, external_status)
+    resolution["preferred_external_status"] = (
+        preferred_external_status_override or resolution["preferred_external_status"]
+    )
     _update_state_from_resolution(state, external_status, external_ref, resolution, SOURCE_EXTERNAL, payload)
     _record_event(
         session,
@@ -177,6 +181,7 @@ def record_reconciled_external_status(
     provider: str,
     external_status: str | None,
     external_ref: str | None = None,
+    preferred_external_status_override: str | None = None,
     actor_user_id: uuid.UUID | None = None,
     detail: str | None = None,
     payload: dict[str, Any] | None = None,
@@ -187,7 +192,7 @@ def record_reconciled_external_status(
         state = _load_sync_state(session, action.tenant_id, action.id, provider_name)
         return _observation_from_state(provider_name, state, action.status)
     state = _get_or_create_sync_state(session, action, provider_name, external_ref)
-    preferred = preferred_external_status(provider_name, action.status)
+    preferred = preferred_external_status_override or preferred_external_status(provider_name, action.status)
     state.external_ref = external_ref or state.external_ref
     state.external_status = _string_or_none(external_status) or preferred
     state.mapped_internal_status = normalize_canonical_action_status(action.status)

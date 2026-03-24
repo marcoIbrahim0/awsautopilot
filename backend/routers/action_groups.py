@@ -29,6 +29,11 @@ from backend.services.bundle_reporting_tokens import (
     BundleReportingTokenSecretNotConfiguredError,
     issue_group_run_reporting_token,
 )
+from backend.services.grouped_bundle_conflicts import (
+    GroupedBundleRunRecord,
+    find_active_grouped_duplicate,
+    find_latest_successful_grouped_duplicate,
+)
 from backend.services.grouped_remediation_runs import (
     GroupedActionScope,
     GroupedRemediationRunValidationError,
@@ -53,6 +58,7 @@ logger = logging.getLogger("backend.routers.action_groups")
 class ActionGroupCountersResponse(BaseModel):
     run_successful: int
     run_not_successful: int
+    metadata_only: int
     not_run_yet: int
     total_actions: int
 
@@ -113,6 +119,10 @@ class ActionGroupDetailResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     counters: ActionGroupCountersResponse
     members: list[ActionGroupMemberResponse]
+    can_generate_bundle: bool = True
+    blocked_reason: str | None = None
+    blocked_detail: str | None = None
+    blocked_by_run_id: str | None = None
 
 
 class ActionGroupRunListItemResponse(BaseModel):
@@ -170,6 +180,7 @@ class CreateActionGroupBundleRunRequest(BaseModel):
     strategy_inputs: dict[str, Any] | None = None
     action_overrides: list[ActionGroupActionOverrideRequest] = Field(default_factory=list)
     risk_acknowledged: bool = False
+    bucket_creation_acknowledged: bool = False
     pr_bundle_variant: str | None = None
     repo_target: ActionGroupRepoTargetRequest | None = None
 
@@ -405,6 +416,115 @@ def _create_group_run_with_token(
     return group_run, token, callback_url
 
 
+def _grouped_request_signature(plan: Any, *, group_key: str) -> dict[str, Any]:
+    from backend.services.remediation_run_queue_contract import normalize_grouped_run_request_signature
+
+    return normalize_grouped_run_request_signature(
+        group_key=group_key,
+        strategy_id=plan.request.strategy_id,
+        strategy_inputs=plan.request.strategy_inputs,
+        pr_bundle_variant=plan.request.pr_bundle_variant,
+        repo_target=plan.request.repo_target,
+        action_resolutions=plan.action_resolutions,
+    )
+
+
+def _grouped_conflict_detail(conflict: Any) -> dict[str, Any]:
+    detail = {
+        "error": (
+            "PR bundle already created"
+            if conflict.reason == "grouped_bundle_already_created_no_changes"
+            else "Duplicate pending run"
+        ),
+        "detail": conflict.detail,
+        "reason": conflict.reason,
+        "existing_run_id": conflict.run_id,
+        "existing_run_status": conflict.run_status,
+    }
+    if conflict.group_run_id:
+        detail["existing_group_run_id"] = conflict.group_run_id
+    return detail
+
+
+def _build_grouped_run_record(group_run: ActionGroupRun, remediation_run: RemediationRun) -> GroupedBundleRunRecord:
+    return GroupedBundleRunRecord(
+        run_id=str(remediation_run.id),
+        action_id=str(remediation_run.action_id),
+        mode=remediation_run.mode.value if hasattr(remediation_run.mode, "value") else str(remediation_run.mode),
+        status=remediation_run.status.value if hasattr(remediation_run.status, "value") else str(remediation_run.status),
+        created_at=remediation_run.created_at,
+        artifacts=remediation_run.artifacts if isinstance(remediation_run.artifacts, dict) else None,
+        group_run_id=str(group_run.id),
+    )
+
+
+async def _load_grouped_run_records(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_id: uuid.UUID,
+) -> list[GroupedBundleRunRecord]:
+    rows = (
+        await db.execute(
+            select(ActionGroupRun, RemediationRun)
+            .join(RemediationRun, RemediationRun.id == ActionGroupRun.remediation_run_id)
+            .where(ActionGroupRun.tenant_id == tenant_id, ActionGroupRun.group_id == group_id)
+        )
+    ).all()
+    return [_build_grouped_run_record(group_run, remediation_run) for group_run, remediation_run in rows]
+
+
+def _grouped_bundle_conflict(
+    records: list[GroupedBundleRunRecord],
+    *,
+    request_signature: Mapping[str, Any],
+) -> Any | None:
+    now = datetime.now(timezone.utc)
+    active = find_active_grouped_duplicate(records, request_signature=request_signature, now=now)
+    if active is not None:
+        return active
+    return find_latest_successful_grouped_duplicate(records, request_signature=request_signature)
+
+
+async def _group_bundle_generation_state(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group: ActionGroup,
+    actions: list[Action],
+    account: AwsAccount | None,
+    tenant_settings: Mapping[str, Any] | None,
+) -> tuple[bool, str | None, str | None, str | None]:
+    try:
+        request = _normalize_group_request_or_400(CreateActionGroupBundleRunRequest(), action_type=group.action_type)
+        plan = _build_action_group_plan_or_400(
+            group=group,
+            request=request,
+            actions=actions,
+            group_run=ActionGroupRun(
+                id=uuid.uuid4(),
+                tenant_id=tenant_id,
+                group_id=group.id,
+                mode="download_bundle",
+                status=ActionGroupRunStatus.queued,
+                reporting_source="system",
+            ),
+            token="availability-only",
+            callback_url="availability-only",
+            account=account,
+            tenant_settings=tenant_settings,
+        )
+    except HTTPException:
+        return True, None, None, None
+    conflict = _grouped_bundle_conflict(
+        await _load_grouped_run_records(db, tenant_id=tenant_id, group_id=group.id),
+        request_signature=_grouped_request_signature(plan, group_key=group.group_key),
+    )
+    if conflict is None:
+        return True, None, None, None
+    return False, conflict.reason, conflict.detail, conflict.group_run_id
+
+
 def _group_bundle_seed(group: ActionGroup, *, group_run: ActionGroupRun, token: str, callback_url: str) -> dict[str, Any]:
     return {
         "group_id": str(group.id),
@@ -562,6 +682,7 @@ async def list_action_groups(
             counters=ActionGroupCountersResponse(
                 run_successful=int(item.get("run_successful") or 0),
                 run_not_successful=int(item.get("run_not_successful") or 0),
+                metadata_only=int(item.get("metadata_only") or 0),
                 not_run_yet=int(item.get("not_run_yet") or 0),
                 total_actions=int(item.get("total_actions") or 0),
             ),
@@ -579,7 +700,7 @@ async def get_action_group_detail(
     tenant_id: Annotated[Optional[str], Query(description="Tenant UUID for non-auth mode")] = None,
 ) -> ActionGroupDetailResponse:
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
-    await get_tenant(tenant_uuid, db)
+    tenant = await get_tenant(tenant_uuid, db)
     try:
         group_uuid = uuid.UUID(group_id)
     except ValueError as exc:
@@ -620,6 +741,18 @@ async def get_action_group_detail(
             )
         )
 
+    group_model = await _load_action_group_or_404(db, group_id=group_uuid, tenant_id=tenant_uuid)
+    group_actions = await _load_group_actions_or_404(db, tenant_id=tenant_uuid, group_id=group_uuid)
+    account = await _load_group_account(db, tenant_id=tenant_uuid, account_id=group_model.account_id)
+    can_generate_bundle, blocked_reason, blocked_detail, blocked_by_run_id = await _group_bundle_generation_state(
+        db,
+        tenant_id=tenant_uuid,
+        group=group_model,
+        actions=group_actions,
+        account=account,
+        tenant_settings=getattr(tenant, "remediation_settings", None),
+    )
+
     return ActionGroupDetailResponse(
         id=str(group["id"]),
         tenant_id=str(group["tenant_id"]),
@@ -633,10 +766,15 @@ async def get_action_group_detail(
         counters=ActionGroupCountersResponse(
             run_successful=int(counters.get("run_successful") or 0),
             run_not_successful=int(counters.get("run_not_successful") or 0),
+            metadata_only=int(counters.get("metadata_only") or 0),
             not_run_yet=int(counters.get("not_run_yet") or 0),
             total_actions=int(counters.get("total_actions") or 0),
         ),
         members=members,
+        can_generate_bundle=can_generate_bundle,
+        blocked_reason=blocked_reason,
+        blocked_detail=blocked_detail,
+        blocked_by_run_id=blocked_by_run_id,
     )
 
 
@@ -749,6 +887,12 @@ async def create_action_group_bundle_run(
         account=account,
         tenant_settings=getattr(tenant, "remediation_settings", None),
     )
+    conflict = _grouped_bundle_conflict(
+        await _load_grouped_run_records(db, tenant_id=current_user.tenant_id, group_id=group.id),
+        request_signature=_grouped_request_signature(plan, group_key=group.group_key),
+    )
+    if conflict is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_grouped_conflict_detail(conflict))
     remediation_run = await _persist_group_bundle_run(
         db,
         group_run=group_run,

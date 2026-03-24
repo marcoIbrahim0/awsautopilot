@@ -167,9 +167,10 @@ class _FakeConfigClient:
 
 
 class _FakeCloudTrailClient:
-    def __init__(self, *, trail_name: str, multi_region: bool) -> None:
+    def __init__(self, *, trail_name: str, multi_region: bool, bucket_name: str | None = None) -> None:
         self._trail_name = trail_name
         self._multi_region = multi_region
+        self._bucket_name = bucket_name
 
     def describe_trails(self, **kwargs) -> dict[str, Any]:
         return {
@@ -177,6 +178,7 @@ class _FakeCloudTrailClient:
                 {
                     "Name": self._trail_name,
                     "IsMultiRegionTrail": self._multi_region,
+                    "S3BucketName": self._bucket_name,
                 }
             ]
         }
@@ -199,6 +201,7 @@ def _make_action(
 
 def _make_account() -> SimpleNamespace:
     return SimpleNamespace(
+        tenant_id="tenant-1",
         role_read_arn="arn:aws:iam::123456789012:role/ReadRole",
         external_id="tenant-ext-id",
         account_id="123456789012",
@@ -217,8 +220,8 @@ def _s3_kms_strategy() -> dict[str, Any]:
     return {"strategy_id": "s3_enable_sse_kms_guided"}
 
 
-def _config_strategy() -> dict[str, Any]:
-    return {"strategy_id": "config_enable_centralized_delivery"}
+def _config_strategy(strategy_id: str = "config_enable_centralized_delivery") -> dict[str, Any]:
+    return {"strategy_id": strategy_id}
 
 
 def _cloudtrail_strategy() -> dict[str, Any]:
@@ -512,6 +515,7 @@ def test_collect_runtime_risk_signals_config_sets_contextual_default_inputs(monk
     session = _FakeSession(
         {
             "config": _FakeConfigClient(recorder_exists=True, delivery_bucket="existing-config-bucket"),
+            "s3": _FakeS3Client(),
         }
     )
     monkeypatch.setattr(
@@ -521,7 +525,34 @@ def test_collect_runtime_risk_signals_config_sets_contextual_default_inputs(monk
 
     signals = collect_runtime_risk_signals(
         action=_make_action(action_type="aws_config_enabled"),
-        strategy=_config_strategy(),
+        strategy=_config_strategy("config_enable_account_local_delivery"),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    default_inputs = signals["context"]["default_inputs"]
+    assert default_inputs["recording_scope"] == "keep_existing"
+    assert default_inputs["delivery_bucket"] == "security-autopilot-config-123456789012-us-east-1"
+    assert default_inputs["delivery_bucket_mode"] == "create_new"
+    assert "existing_bucket_name" not in default_inputs
+    assert signals["config_delivery_bucket_reachable"] is True
+
+
+def test_collect_runtime_risk_signals_config_centralized_prefers_reachable_existing_bucket(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "config": _FakeConfigClient(recorder_exists=True, delivery_bucket="existing-config-bucket"),
+            "s3": _FakeS3Client(),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="aws_config_enabled"),
+        strategy=_config_strategy(strategy_id="config_enable_centralized_delivery"),
         strategy_inputs={},
         account=_make_account(),
     )
@@ -536,7 +567,12 @@ def test_collect_runtime_risk_signals_config_sets_contextual_default_inputs(monk
 def test_collect_runtime_risk_signals_cloudtrail_sets_contextual_default_inputs(monkeypatch) -> None:
     session = _FakeSession(
         {
-            "cloudtrail": _FakeCloudTrailClient(trail_name="existing-trail", multi_region=False),
+            "cloudtrail": _FakeCloudTrailClient(
+                trail_name="existing-trail",
+                multi_region=False,
+                bucket_name="existing-cloudtrail-logs",
+            ),
+            "s3": _FakeS3Client(),
         }
     )
     monkeypatch.setattr(
@@ -553,12 +589,16 @@ def test_collect_runtime_risk_signals_cloudtrail_sets_contextual_default_inputs(
 
     default_inputs = signals["context"]["default_inputs"]
     assert default_inputs["trail_name"] == "existing-trail"
+    assert default_inputs["trail_bucket_name"] == "existing-cloudtrail-logs"
+    assert default_inputs["create_bucket_if_missing"] is False
     assert default_inputs["create_bucket_policy"] is True
     assert default_inputs["multi_region"] is False
     assert signals["cloudtrail_existing_trail_present"] is True
     assert signals["cloudtrail_existing_trail_name"] == "existing-trail"
     assert signals["cloudtrail_existing_trail_multi_region"] is False
+    assert signals["cloudtrail_resolved_bucket_source"] == "existing_trail"
     assert signals["evidence"]["cloudtrail_existing_trail_name"] == "existing-trail"
+    assert signals["evidence"]["cloudtrail_existing_trail_bucket_name"] == "existing-cloudtrail-logs"
 
 
 def test_collect_runtime_risk_signals_cloudtrail_marks_absent_trail_when_none_exist(monkeypatch) -> None:
@@ -581,6 +621,7 @@ def test_collect_runtime_risk_signals_cloudtrail_marks_absent_trail_when_none_ex
 
     default_inputs = signals["context"]["default_inputs"]
     assert default_inputs["trail_name"] == "security-autopilot-trail"
+    assert default_inputs["create_bucket_if_missing"] is False
     assert default_inputs["create_bucket_policy"] is True
     assert default_inputs["multi_region"] is True
     assert signals["cloudtrail_existing_trail_present"] is False
@@ -607,6 +648,59 @@ def test_collect_runtime_risk_signals_cloudtrail_validates_log_bucket_reachabili
 
     assert signals["cloudtrail_log_bucket_reachable"] is True
     assert signals["evidence"]["trail_bucket_name"] == "tenant-cloudtrail-logs"
+
+
+def test_collect_runtime_risk_signals_cloudtrail_create_if_missing_marks_bucket_available(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "cloudtrail": _FakeCloudTrailClient(trail_name="existing-trail", multi_region=True),
+            "s3": _FakeS3Client(head_bucket_error_code="404"),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="cloudtrail_enabled"),
+        strategy=_cloudtrail_strategy(),
+        strategy_inputs={
+            "trail_bucket_name": "new-cloudtrail-logs",
+            "create_bucket_if_missing": True,
+        },
+        account=_make_account(),
+    )
+
+    assert signals["cloudtrail_log_bucket_reachable"] is False
+    assert signals["cloudtrail_bucket_available_for_creation"] is True
+    assert signals.get("cloudtrail_bucket_creation_conflict") is not True
+
+
+def test_collect_runtime_risk_signals_cloudtrail_create_if_missing_rejects_existing_bucket(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "cloudtrail": _FakeCloudTrailClient(trail_name="existing-trail", multi_region=True),
+            "s3": _FakeS3Client(),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="cloudtrail_enabled"),
+        strategy=_cloudtrail_strategy(),
+        strategy_inputs={
+            "trail_bucket_name": "existing-cloudtrail-logs",
+            "create_bucket_if_missing": True,
+        },
+        account=_make_account(),
+    )
+
+    assert signals["cloudtrail_bucket_creation_conflict"] is True
+    assert "already exists" in signals["cloudtrail_bucket_creation_error"]
 
 
 def test_collect_runtime_risk_signals_cloudtrail_surfaces_log_bucket_probe_failure(monkeypatch) -> None:

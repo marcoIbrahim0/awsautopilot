@@ -685,12 +685,14 @@ def test_cloudtrail_create_uses_tenant_bucket_default_when_runtime_proves_bucket
     assert resolution["resolved_inputs"] == {
         "trail_name": "security-autopilot-trail",
         "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_if_missing": False,
         "create_bucket_policy": True,
         "multi_region": True,
     }
     assert run.artifacts["strategy_inputs"] == {
         "trail_name": "security-autopilot-trail",
         "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_if_missing": False,
         "create_bucket_policy": True,
         "multi_region": True,
     }
@@ -857,6 +859,7 @@ def test_strategy_only_pr_only_client_still_succeeds_with_defaulted_inputs(clien
     assert resolution["support_tier"] == "review_required_bundle"
     assert resolution["resolved_inputs"] == {
         "trail_name": "security-autopilot-trail",
+        "create_bucket_if_missing": False,
         "create_bucket_policy": True,
         "multi_region": True,
     }
@@ -902,10 +905,84 @@ def test_cloudtrail_create_downgrades_under_proven_multi_region_override(client:
     assert run.artifacts["strategy_inputs"] == {
         "trail_name": "security-autopilot-trail",
         "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_if_missing": False,
         "create_bucket_policy": True,
         "multi_region": False,
     }
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
+def test_cloudtrail_create_if_missing_requires_bucket_creation_acknowledgement(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "strategy_inputs": {
+                "trail_bucket_name": "new-cloudtrail-logs",
+                "create_bucket_if_missing": True,
+            },
+            "risk_acknowledged": True,
+        },
+        runtime_signals={"cloudtrail_bucket_available_for_creation": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "Bucket creation acknowledgement required"
+    assert session.add.call_count == 0
+    assert mock_sqs.send_message.call_count == 0
+
+
+def test_cloudtrail_create_if_missing_stays_executable_with_approval(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "strategy_inputs": {
+                "trail_bucket_name": "new-cloudtrail-logs",
+                "create_bucket_if_missing": True,
+            },
+            "risk_acknowledged": True,
+            "bucket_creation_acknowledged": True,
+        },
+        runtime_signals={"cloudtrail_bucket_available_for_creation": True},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"] == {
+        "trail_name": "security-autopilot-trail",
+        "trail_bucket_name": "new-cloudtrail-logs",
+        "create_bucket_if_missing": True,
+        "create_bucket_policy": True,
+        "multi_region": True,
+    }
+    assert run.artifacts["cloudtrail_bucket_creation_approval"]["approved"] is True
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_ec2_53_strategy_only_create_persists_safe_resolved_profile(client: TestClient) -> None:

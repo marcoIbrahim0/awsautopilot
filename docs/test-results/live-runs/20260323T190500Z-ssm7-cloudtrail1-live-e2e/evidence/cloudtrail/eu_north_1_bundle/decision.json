@@ -1,0 +1,30 @@
+{
+  "blocked_reasons": [
+    "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
+  ],
+  "decision_rationale": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' for strategy 'cloudtrail_enable_guided' but downgraded executability. CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "missing_defaults": [
+    "cloudtrail.default_bucket_name"
+  ],
+  "missing_inputs": [],
+  "preservation_summary": {
+    "external_bucket_policy_management": false,
+    "kms_delivery_requested": false,
+    "log_bucket_reachable": false,
+    "multi_region_requested": true,
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "trail_bucket_name_resolved": false
+  },
+  "profile_id": "cloudtrail_enable_guided",
+  "rejected_profiles": [],
+  "resolved_inputs": {
+    "create_bucket_policy": true,
+    "multi_region": true,
+    "trail_name": "security-autopilot-trail"
+  },
+  "strategy_id": "cloudtrail_enable_guided",
+  "support_tier": "review_required_bundle"
+}

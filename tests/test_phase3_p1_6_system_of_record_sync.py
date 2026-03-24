@@ -155,6 +155,30 @@ def test_record_external_status_observation_preserves_canonical_state_and_audits
     assert kwargs["resolution_decision"] == DECISION_PRESERVE_INTERNAL
 
 
+def test_record_external_status_observation_honors_preferred_status_override() -> None:
+    action = _action(status="open")
+    state = _sync_state(action, external_status="Done")
+    session = MagicMock()
+
+    with patch("backend.services.action_remediation_sync._find_existing_event", return_value=None):
+        with patch("backend.services.action_remediation_sync._get_or_create_sync_state", return_value=state):
+            with patch("backend.services.action_remediation_sync._record_event") as record_event:
+                result = record_external_status_observation(
+                    session,
+                    action=action,
+                    provider="jira",
+                    external_status="Done",
+                    external_ref="JIRA-42",
+                    preferred_external_status_override="In Progress",
+                    idempotency_key="webhook-override-1",
+                )
+
+    assert result.preferred_external_status == "In Progress"
+    assert state.preferred_external_status == "In Progress"
+    kwargs = record_event.call_args.kwargs
+    assert kwargs["preferred_external_status"] == "In Progress"
+
+
 def test_record_external_status_observation_is_idempotent_on_replay() -> None:
     action = _action(status="resolved")
     state = _sync_state(action, external_status="Done")
@@ -300,6 +324,30 @@ def test_record_reconciled_external_status_marks_provider_back_in_sync() -> None
     assert kwargs["event_type"] == EVENT_RECONCILIATION_APPLIED
     assert kwargs["source"] == SOURCE_RECONCILIATION
     assert kwargs["resolution_decision"] == DECISION_RECONCILED
+
+
+def test_record_reconciled_external_status_honors_preferred_status_override() -> None:
+    action = _action(status="open")
+    state = _sync_state(action, external_status="Done", sync_status=SYNC_STATUS_DRIFTED)
+    session = MagicMock()
+
+    with patch("backend.services.action_remediation_sync._find_existing_event", return_value=None):
+        with patch("backend.services.action_remediation_sync._get_or_create_sync_state", return_value=state):
+            with patch("backend.services.action_remediation_sync._record_event") as record_event:
+                result = record_reconciled_external_status(
+                    session,
+                    action=action,
+                    provider="jira",
+                    external_status="In Progress",
+                    external_ref="JIRA-42",
+                    preferred_external_status_override="In Progress",
+                    idempotency_key="sync-task-override-1",
+                )
+
+    assert result.preferred_external_status == "In Progress"
+    assert state.preferred_external_status == "In Progress"
+    kwargs = record_event.call_args.kwargs
+    assert kwargs["preferred_external_status"] == "In Progress"
 
 
 def test_record_reconciled_external_status_is_idempotent_on_replay() -> None:

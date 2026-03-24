@@ -259,6 +259,23 @@ def _apply_helpers() -> str:
                         "Principal": {"Service": "config.amazonaws.com"},
                         "Action": "s3:GetBucketAcl",
                         "Resource": f"arn:aws:s3:::{bucket}",
+                        "Condition": {
+                            "StringEquals": {
+                                "AWS:SourceAccount": account_id,
+                            }
+                        },
+                    },
+                    {
+                        "Sid": "AWSConfigBucketExistenceCheck",
+                        "Effect": "Allow",
+                        "Principal": {"Service": "config.amazonaws.com"},
+                        "Action": "s3:ListBucket",
+                        "Resource": f"arn:aws:s3:::{bucket}",
+                        "Condition": {
+                            "StringEquals": {
+                                "AWS:SourceAccount": account_id,
+                            }
+                        },
                     },
                     {
                         "Sid": "AWSConfigBucketDelivery",
@@ -269,6 +286,7 @@ def _apply_helpers() -> str:
                         "Condition": {
                             "StringEquals": {
                                 "s3:x-amz-acl": "bucket-owner-full-control",
+                                "AWS:SourceAccount": account_id,
                             }
                         },
                     },

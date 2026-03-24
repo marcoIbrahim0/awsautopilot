@@ -83,6 +83,12 @@
    - compact-mode action/evidence/artifact cards
 4. The change stays frontend-only and keeps the same run states, evidence links, and workflow actions while aligning the run detail view with the shared dashboard system in both themes.
 
+### 1.8 Bundle Progress Terminology + Layout Cleanup (Implemented 2026-03-24)
+1. The dedicated PR-bundle progress experience now presents itself as bundle generation rather than a generic "run" so the UI does not imply Autopilot is executing the downloaded bundle for the customer.
+2. The dedicated full-width page now shows one primary progress bar only; the secondary duplicate percentage bar was removed from the deeper details section.
+3. The modal/success path now keeps `Download bundle` in the first visible status/actions block so users do not need to scroll down to the generated-files section to retrieve the artifact.
+4. The grouped bundle page now uses generation-oriented wording (`Generate bundle`, `Generation timeline`, `Generated and successful`, `Not generated yet`) while keeping backend routes and internal remediation-run contracts unchanged.
+
 ## 2) New Information Architecture + Navigation Model
 
 ### 2.1 Primary Navigation

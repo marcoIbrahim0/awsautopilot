@@ -346,6 +346,10 @@ def test_pr_bundle_supported_action_type_generates_executable_terraform_artifact
     strategy_inputs = None
     if action_type == ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING:
         strategy_inputs = {"log_bucket_name": "security-autopilot-log-bucket"}
+    elif action_type == ACTION_TYPE_CLOUDTRAIL_ENABLED:
+        strategy_inputs = {"trail_bucket_name": "security-autopilot-cloudtrail-logs"}
+    elif action_type == ACTION_TYPE_S3_BUCKET_REQUIRE_SSL:
+        strategy_inputs = {"existing_bucket_policy_json": '{"Version":"2012-10-17","Statement":[]}'}
     r = generate_pr_bundle(action, "terraform", strategy_inputs=strategy_inputs)
     paths = [f["path"] for f in r["files"]]
     assert expected_path in paths
@@ -361,7 +365,7 @@ def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload(
         region="eu-north-1",
         control_id="Config.1",
     )
-    r = generate_pr_bundle(action, "terraform")
+    r = generate_pr_bundle(action, "terraform", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     content = _bundle_file_content(r, "aws_config_enabled.tf")
     apply_script = _bundle_file_content(r, "scripts/aws_config_apply.py")
 
@@ -371,7 +375,7 @@ def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload(
     assert 'export ROLLBACK_DIR=".aws-config-rollback"' in content
     assert "python3 ./scripts/aws_config_apply.py" in content
     assert "DEFAULT_REGION = 'eu-north-1'" in apply_script
-    assert "DEFAULT_BUCKET = 'security-autopilot-config-111122223333'" in apply_script
+    assert "DEFAULT_BUCKET = 'security-autopilot-config-111122223333-eu-north-1'" in apply_script
     assert "DEFAULT_ROLE_ARN = 'arn:aws:iam::111122223333:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'" in apply_script
     assert "DEFAULT_CREATE_LOCAL_BUCKET = True" in apply_script
     assert "DEFAULT_OVERWRITE_RECORDING_GROUP = False" in apply_script
@@ -389,7 +393,7 @@ def test_pr_bundle_aws_config_enabled_declares_null_provider_for_local_exec_bund
         region="eu-north-1",
         control_id="Config.1",
     )
-    r = generate_pr_bundle(action, "terraform")
+    r = generate_pr_bundle(action, "terraform", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     providers = _bundle_file_content(r, "providers.tf")
 
     assert 'null = {' in providers
@@ -509,7 +513,9 @@ def test_pr_bundle_aws_config_enabled_merges_bucket_policy_before_put() -> None:
     assert "build_required_bucket_policy" in content
     assert "merge_bucket_policies" in content
     assert '"Sid": "AWSConfigBucketPermissionsCheck"' in content
+    assert '"Sid": "AWSConfigBucketExistenceCheck"' in content
     assert '"Sid": "AWSConfigBucketDelivery"' in content
+    assert '"AWS:SourceAccount": account_id' in content
     assert "put_bucket_policy(bucket, region, merged_policy)" in content
 
 
@@ -565,7 +571,7 @@ def test_pr_bundle_aws_config_enabled_cloudformation_overwrite_toggle_defaults_s
         region="eu-north-1",
         control_id="Config.1",
     )
-    r = generate_pr_bundle(action, "cloudformation")
+    r = generate_pr_bundle(action, "cloudformation", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     content = next(f for f in r["files"] if f["path"] == "aws_config_enabled.yaml")["content"]
 
     assert "OverwriteRecordingGroup:" in content
@@ -1647,6 +1653,13 @@ def test_cloudtrail_1_strategy_schema_guided_choice_fields() -> None:
     assert trail_name["type"] == "string"
     assert trail_name["default_value"] == "security-autopilot-trail"
 
+    trail_bucket_name = fields["trail_bucket_name"]
+    assert trail_bucket_name["type"] == "string"
+
+    create_bucket_if_missing = fields["create_bucket_if_missing"]
+    assert create_bucket_if_missing["type"] == "boolean"
+    assert create_bucket_if_missing["default_value"] is False
+
     create_bucket_policy = fields["create_bucket_policy"]
     assert create_bucket_policy["type"] == "boolean"
     assert create_bucket_policy["default_value"] is True
@@ -1662,7 +1675,7 @@ def test_pr_bundle_dispatch_cloudtrail_terraform_step_9_12() -> None:
         action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
         region="us-east-1",
     )
-    r = generate_pr_bundle(action, "terraform")
+    r = generate_pr_bundle(action, "terraform", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     assert r["format"] == "terraform"
     resource_file = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")
     assert "aws_cloudtrail" in resource_file["content"]
@@ -1676,26 +1689,30 @@ def test_pr_bundle_cloudtrail_terraform_step_9_12_exact_structure() -> None:
         region="us-east-1",
         control_id="CloudTrail.1",
     )
-    r = generate_pr_bundle(action, "terraform")
+    r = generate_pr_bundle(action, "terraform", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
     assert 'variable "trail_bucket_name"' in content
     assert 'variable "trail_name"' in content
     assert 'default     = "security-autopilot-trail"' in content
+    assert 'variable "create_bucket_if_missing"' in content
+    assert "default     = false" in content
     assert 'variable "multi_region"' in content
     assert "default     = true" in content
     assert 'variable "create_bucket_policy"' in content
     assert 'resource "aws_cloudtrail" "security_autopilot"' in content
     assert "name                          = var.trail_name" in content
-    assert "s3_bucket_name" in content
+    assert "s3_bucket_name                = local.cloudtrail_bucket_name" in content
     assert "is_multi_region_trail          = var.multi_region" in content
     assert "include_global_service_events" in content
     assert "enable_logging" in content
     assert 'resource "null_resource" "cloudtrail_bucket_policy"' in content
+    assert 'resource "aws_s3_bucket" "cloudtrail_logs"' in content
+    assert 'resource "aws_s3_bucket_policy" "cloudtrail_managed"' in content
     assert "python3 - <<'PY'" in content
     assert "get-bucket-policy" in content
     assert "put-bucket-policy" in content
     assert "NoSuchBucketPolicy" in content
-    assert "depends_on                    = [null_resource.cloudtrail_bucket_policy]" in content
+    assert "depends_on                    = [aws_s3_bucket_policy.cloudtrail_managed, null_resource.cloudtrail_bucket_policy]" in content
     assert "cloudtrail.amazonaws.com" in content
     assert "s3:GetBucketAcl" in content
     assert "s3:PutObject" in content
@@ -1712,7 +1729,7 @@ def test_pr_bundle_cloudtrail_cloudformation_step_9_12() -> None:
         region="us-east-1",
         control_id="CloudTrail.1",
     )
-    r = generate_pr_bundle(action, "cloudformation")
+    r = generate_pr_bundle(action, "cloudformation", strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs"})
     assert r["format"] == "cloudformation"
     assert r["files"][0]["path"] == "cloudtrail_enabled.yaml"
     content = r["files"][0]["content"]
@@ -1720,11 +1737,13 @@ def test_pr_bundle_cloudtrail_cloudformation_step_9_12() -> None:
     assert "TrailName:" in content
     assert 'Default: "security-autopilot-trail"' in content
     assert "TrailBucketName:" in content or "TrailBucketName" in content
+    assert "CreateBucketIfMissing:" in content
     assert "MultiRegion:" in content
     assert 'Default: "true"' in content
     assert "CreateBucketPolicy:" in content
     assert 'IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]' in content
     assert "IncludeGlobalServiceEvents" in content or "S3BucketName:" in content
+    assert "AWS::S3::Bucket" in content
     assert "AWS::S3::BucketPolicy" in content
     assert "cloudtrail.amazonaws.com" in content
     assert "s3:GetBucketAcl" in content
@@ -1741,13 +1760,17 @@ def test_pr_bundle_cloudtrail_terraform_opt_out_bucket_policy() -> None:
         region="us-east-1",
         control_id="CloudTrail.1",
     )
-    r = generate_pr_bundle(action, "terraform", strategy_inputs={"create_bucket_policy": False})
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs", "create_bucket_policy": False},
+    )
     content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
 
     assert 'variable "create_bucket_policy"' in content
     assert "default     = false" in content
-    assert 'resource "null_resource" "cloudtrail_bucket_policy"' not in content
-    assert "depends_on                    = [null_resource.cloudtrail_bucket_policy]" not in content
+    assert 'resource "null_resource" "cloudtrail_bucket_policy"' in content
+    assert "count  = var.create_bucket_policy && !var.create_bucket_if_missing ? 1 : 0" in content
 
 
 def test_pr_bundle_cloudtrail_cloudformation_opt_out_bucket_policy() -> None:
@@ -1757,12 +1780,16 @@ def test_pr_bundle_cloudtrail_cloudformation_opt_out_bucket_policy() -> None:
         region="us-east-1",
         control_id="CloudTrail.1",
     )
-    r = generate_pr_bundle(action, "cloudformation", strategy_inputs={"create_bucket_policy": False})
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={"trail_bucket_name": "security-autopilot-cloudtrail-logs", "create_bucket_policy": False},
+    )
     content = r["files"][0]["content"]
 
     assert "CreateBucketPolicy:" in content
     assert 'Default: "false"' in content
-    assert "AWS::S3::BucketPolicy" not in content
+    assert "CreateBucketPolicy:" in content
 
 
 def test_pr_bundle_cloudtrail_terraform_strategy_inputs_map_defaults() -> None:
@@ -1789,6 +1816,8 @@ def test_pr_bundle_cloudtrail_terraform_strategy_inputs_map_defaults() -> None:
     assert 'default     = "org-cloudtrail-logs"' in content
     assert 'variable "trail_name"' in content
     assert 'default     = "org-audit-trail"' in content
+    assert 'variable "create_bucket_if_missing"' in content
+    assert "default     = false" in content
     assert 'variable "kms_key_arn"' in content
     assert 'default     = "arn:aws:kms:us-east-1:123456789012:key/cloudtrail"' in content
     assert 'variable "multi_region"' in content
@@ -1796,7 +1825,7 @@ def test_pr_bundle_cloudtrail_terraform_strategy_inputs_map_defaults() -> None:
     assert "name                          = var.trail_name" in content
     assert 'kms_key_id                    = var.kms_key_arn != "" ? var.kms_key_arn : null' in content
     assert "is_multi_region_trail          = var.multi_region" in content
-    assert 'resource "null_resource" "cloudtrail_bucket_policy"' not in content
+    assert 'resource "null_resource" "cloudtrail_bucket_policy"' in content
 
 
 def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> None:
@@ -1813,6 +1842,7 @@ def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> N
             "trail_name": "org-audit-trail",
             "trail_bucket_name": "org-cloudtrail-logs",
             "kms_key_arn": "arn:aws:kms:us-east-1:123456789012:key/cloudtrail",
+            "create_bucket_if_missing": True,
             "multi_region": False,
             "create_bucket_policy": False,
         },
@@ -1823,6 +1853,8 @@ def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> N
     assert 'Default: "org-audit-trail"' in content
     assert "TrailBucketName:" in content
     assert 'Default: "org-cloudtrail-logs"' in content
+    assert "CreateBucketIfMissing:" in content
+    assert 'Default: "true"' in content
     assert "KmsKeyArn:" in content
     assert 'Default: "arn:aws:kms:us-east-1:123456789012:key/cloudtrail"' in content
     assert "HasKmsKeyArn" in content
@@ -1830,7 +1862,30 @@ def test_pr_bundle_cloudtrail_cloudformation_strategy_inputs_map_defaults() -> N
     assert "MultiRegion:" in content
     assert 'Default: "false"' in content
     assert 'IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]' in content
-    assert "AWS::S3::BucketPolicy" not in content
+    assert "AWS::S3::BucketPolicy" in content
+
+
+def test_pr_bundle_cloudtrail_terraform_create_if_missing_includes_bucket_resources() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_CLOUDTRAIL_ENABLED,
+        region="us-east-1",
+        control_id="CloudTrail.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "trail_bucket_name": "new-cloudtrail-logs",
+            "create_bucket_if_missing": True,
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
+
+    assert 'resource "aws_s3_bucket" "cloudtrail_logs"' in content
+    assert 'resource "aws_s3_bucket_public_access_block" "cloudtrail_logs"' in content
+    assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs"' in content
+    assert 'resource "aws_s3_bucket_policy" "cloudtrail_managed"' in content
+    assert 'default     = true' in content
 
 
 def test_task_6_s3_impact_text_present_for_s3_1_s3_2_s3_4() -> None:
@@ -2421,10 +2476,13 @@ def test_pr_bundle_dispatch_all_seven_cloudformation() -> None:
     ]
     for action_type, expected_path in types_and_paths:
         target_id = "test-target"
+        strategy_inputs = None
         if action_type == ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS:
             target_id = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0"
+        if action_type == ACTION_TYPE_CLOUDTRAIL_ENABLED:
+            strategy_inputs = {"trail_bucket_name": "security-autopilot-cloudtrail-logs"}
         action = _make_action(action_type=action_type, target_id=target_id, region="us-east-1")
-        r = generate_pr_bundle(action, "cloudformation")
+        r = generate_pr_bundle(action, "cloudformation", strategy_inputs=strategy_inputs)
         assert r["format"] == "cloudformation"
         assert len(r["files"]) == 1
         assert r["files"][0]["path"] == expected_path

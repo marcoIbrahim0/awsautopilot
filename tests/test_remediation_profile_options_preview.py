@@ -900,6 +900,7 @@ def test_cloudtrail_options_use_tenant_defaults_and_downgrade_kms_branch(client:
     ]
     assert strategy["preservation_summary"]["trail_bucket_name_resolved"] is True
     assert strategy["preservation_summary"]["log_bucket_reachable"] is True
+    assert strategy["preservation_summary"]["trail_bucket_mode"] == "existing"
     assert strategy["preservation_summary"]["kms_delivery_requested"] is True
 
 
@@ -940,6 +941,7 @@ def test_cloudtrail_preview_uses_tenant_bucket_default_when_bucket_is_proven(cli
     assert resolution["resolved_inputs"] == {
         "trail_name": "security-autopilot-trail",
         "trail_bucket_name": "tenant-cloudtrail-logs",
+        "create_bucket_if_missing": False,
         "create_bucket_policy": True,
         "multi_region": True,
     }

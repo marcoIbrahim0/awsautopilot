@@ -1,0 +1,24 @@
+HTTP/2 204 
+date: Mon, 23 Mar 2026 17:06:33 GMT
+server: AtlassianEdge
+timing-allow-origin: *
+x-arequestid: 4b183e54dde716a8a34b2cbd0d520ce5
+set-cookie: atlassian.xsrf.token=a58231036a0be73b9346e8fe08217c7b885e0749_lin; Path=/; SameSite=None; Secure
+x-aaccountid: 70121%3A8adc128e-145d-4b13-85cc-a833777436aa
+cache-control: no-cache, no-store, no-transform
+x-ratelimit-limit: 200
+x-ratelimit-remaining: 198
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+atl-traceid: f86337fe084e4bceb9d4552ed5ed8133
+atl-request-id: f86337fe-084e-4bce-b9d4-552ed5ed8133
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+report-to: {"endpoints": [{"url": "https://dz8aopenkvv6s.cloudfront.net"}], "group": "endpoint-1", "include_subdomains": true, "max_age": 600}
+nel: {"failure_fraction": 0.01, "include_subdomains": true, "max_age": 600, "report_to": "endpoint-1"}
+x-cache: Miss from cloudfront
+via: 1.1 d0e73200a5f06b721aad34392afd7354.cloudfront.net (CloudFront)
+x-amz-cf-pop: CAI50-P2
+x-amz-cf-id: f8uVD5_OT0XTWlrDGFq8GEACElYQNVuOqTSQaYt2_agdHHa2ESYGjg==
+server-timing: cdn-upstream-layer;desc="EDGE",cdn-upstream-dns;dur=0,cdn-upstream-connect;dur=130,cdn-upstream-fbl;dur=1443,atl-edge;dur=1268,atl-edge-internal;dur=41,atl-edge-upstream;dur=1219,atl-edge-pop;desc="aws-eu-central-2",cdn-cache-miss,cdn-pop;desc="CAI50-P2",cdn-rid;desc="f8uVD5_OT0XTWlrDGFq8GEACElYQNVuOqTSQaYt2_agdHHa2ESYGjg==",cdn-downstream-fbl;dur=1454
+

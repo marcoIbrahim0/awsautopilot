@@ -1,0 +1,10 @@
+{
+  "remediation_run_id": "7d5e9342-a5e7-4391-a727-3ac50ecb024b",
+  "remediation_status": "success",
+  "remediation_outcome": "Group PR bundle generated (12 actions)",
+  "completed_at": "2026-03-23T03:42:46.572717+00:00",
+  "group_run_id": "fd8e6c29-2ddf-4f0f-bac8-e0e92d2013d6",
+  "group_run_status": "started",
+  "group_run_started_at": "2026-03-23T03:42:44.785697+00:00",
+  "group_run_finished_at": null
+}

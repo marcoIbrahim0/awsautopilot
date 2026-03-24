@@ -117,6 +117,8 @@ class FindingResponse(BaseModel):
     remediation_action_account_id: str | None = None
     remediation_action_region: str | None = None
     remediation_action_group_id: str | None = None
+    remediation_action_group_status_bucket: str | None = None
+    remediation_action_group_latest_run_status: str | None = None
     latest_pr_bundle_run_id: str | None = None
     pending_confirmation: bool = False
     pending_confirmation_started_at: str | None = None
@@ -136,6 +138,7 @@ class FindingGroupItem(BaseModel):
     """A single group in the grouped findings response."""
 
     group_key: str
+    control_id: str | None = None
     rule_title: str
     resource_type: str | None
     finding_count: int
@@ -146,6 +149,8 @@ class FindingGroupItem(BaseModel):
     remediation_action_type: str | None = None
     remediation_action_status: str | None = None
     remediation_action_group_id: str | None = None
+    remediation_action_group_status_bucket: str | None = None
+    remediation_action_group_latest_run_status: str | None = None
     pending_confirmation: bool = False
     pending_confirmation_started_at: str | None = None
     pending_confirmation_deadline_at: str | None = None
@@ -238,6 +243,8 @@ def finding_to_response(
         remediation_action_account_id=hints.get("remediation_action_account_id"),
         remediation_action_region=hints.get("remediation_action_region"),
         remediation_action_group_id=hints.get("remediation_action_group_id"),
+        remediation_action_group_status_bucket=hints.get("remediation_action_group_status_bucket"),
+        remediation_action_group_latest_run_status=hints.get("remediation_action_group_latest_run_status"),
         latest_pr_bundle_run_id=hints.get("latest_pr_bundle_run_id"),
         pending_confirmation=bool(hints.get("pending_confirmation")),
         pending_confirmation_started_at=hints.get("pending_confirmation_started_at"),
@@ -326,6 +333,12 @@ async def get_remediation_hints_for_findings(
             "remediation_action_account_id": row[4],
             "remediation_action_region": row[5],
             "remediation_action_group_id": str(row[6]) if row[6] else None,
+            "remediation_action_group_status_bucket": (
+                row[7].value if row[7] is not None and hasattr(row[7], "value") else str(row[7]) if row[7] else None
+            ),
+            "remediation_action_group_latest_run_status": (
+                row[9].value if row[9] is not None and hasattr(row[9], "value") else str(row[9]) if row[9] else None
+            ),
             "latest_pr_bundle_run_id": None,
             "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
             "pending_confirmation_started_at": (
@@ -525,22 +538,53 @@ def _build_severity_distribution(row: object) -> dict[str, int]:
     }
 
 
-def _group_hint_key(control_id: str | None, resource_type: str | None) -> tuple[str, str]:
-    return (str(control_id or ""), str(resource_type or ""))
+def _group_hint_key(
+    control_id: str | None,
+    resource_type: str | None,
+    account_id: str | None,
+    region: str | None,
+) -> tuple[str, str, str, str]:
+    return (
+        str(control_id or ""),
+        str(resource_type or ""),
+        str(account_id or ""),
+        str(region or ""),
+    )
+
+
+def _build_group_key(
+    control_id: str | None,
+    resource_type: str | None,
+    account_id: str | None,
+    region: str | None,
+) -> str:
+    return "|".join(
+        [
+            str(control_id or ""),
+            str(resource_type or ""),
+            str(account_id or ""),
+            str(region or ""),
+        ]
+    )
 
 
 async def _fetch_action_hints_for_group_rows(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     rows: list[object],
-) -> dict[tuple[str, str], dict]:
+) -> dict[tuple[str, str, str, str], dict]:
     """Return one executable remediation action hint per grouped findings row."""
     if not rows:
         return {}
 
-    finding_to_group: dict[uuid.UUID, tuple[str, str]] = {}
+    finding_to_group: dict[uuid.UUID, tuple[str, str, str, str]] = {}
     for row in rows:
-        group_key = _group_hint_key(getattr(row, "control_id", None), getattr(row, "resource_type", None))
+        group_key = _group_hint_key(
+            getattr(row, "control_id", None),
+            getattr(row, "resource_type", None),
+            getattr(row, "account_id", None),
+            getattr(row, "region", None),
+        )
         for finding_id in getattr(row, "finding_ids", []) or []:
             if finding_id is None:
                 continue
@@ -589,7 +633,7 @@ async def _fetch_action_hints_for_group_rows(
         .order_by(Action.updated_at.desc().nullslast(), Action.created_at.desc().nullslast())
     )
 
-    hints: dict[tuple[str, str], dict] = {}
+    hints: dict[tuple[str, str, str, str], dict] = {}
     for row in rows_result.all():
         finding_id = row[0]
         action_id = row[1]
@@ -619,6 +663,12 @@ async def _fetch_action_hints_for_group_rows(
             "remediation_action_account_id": account_id,
             "remediation_action_region": region,
             "remediation_action_group_id": str(row[6]) if row[6] else None,
+            "remediation_action_group_status_bucket": (
+                row[7].value if row[7] is not None and hasattr(row[7], "value") else str(row[7]) if row[7] else None
+            ),
+            "remediation_action_group_latest_run_status": (
+                row[9].value if row[9] is not None and hasattr(row[9], "value") else str(row[9]) if row[9] else None
+            ),
             "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
             "pending_confirmation_started_at": (
                 pending_confirmation["pending_confirmation_started_at"].isoformat()
@@ -638,11 +688,9 @@ async def _fetch_action_hints_for_group_rows(
 
 def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
     """Map one SQLAlchemy grouped row + action hint → FindingGroupItem."""
-    control = row.control_id or ""
-    rtype = row.resource_type or ""
-    group_key = f"{control}::{rtype}" if rtype else control
     return FindingGroupItem(
-        group_key=group_key,
+        group_key=_build_group_key(row.control_id, row.resource_type, row.account_id, row.region),
+        control_id=row.control_id or None,
         rule_title=row.rule_title or "",
         resource_type=row.resource_type or None,
         finding_count=int(row.finding_count),
@@ -653,6 +701,8 @@ def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
         remediation_action_type=hint.get("remediation_action_type"),
         remediation_action_status=hint.get("remediation_action_status"),
         remediation_action_group_id=hint.get("remediation_action_group_id"),
+        remediation_action_group_status_bucket=hint.get("remediation_action_group_status_bucket"),
+        remediation_action_group_latest_run_status=hint.get("remediation_action_group_latest_run_status"),
         pending_confirmation=bool(hint.get("pending_confirmation")),
         pending_confirmation_started_at=hint.get("pending_confirmation_started_at"),
         pending_confirmation_deadline_at=hint.get("pending_confirmation_deadline_at"),
@@ -684,10 +734,10 @@ async def list_findings_grouped(
     offset: Annotated[int, Query(ge=0, description="Groups to skip")] = 0,
 ) -> FindingsGroupedResponse:
     """
-    List findings grouped by (control_id, resource_type).
+    List findings grouped by (control_id, resource_type, account_id, region).
 
     Applies the same tenant isolation, in-scope filter, and column filters as
-    GET /findings. Returns one item per unique (control_id, resource_type) pair,
+    GET /findings. Returns one item per unique scoped group,
     sorted by max severity then by finding count descending.
     """
     tenant_uuid = resolve_tenant_id(current_user, tenant_id)
@@ -707,7 +757,7 @@ async def list_findings_grouped(
 
     # Total distinct groups for pagination metadata.
     count_subq = (
-        select(Finding.control_id, Finding.resource_type)
+        select(Finding.control_id, Finding.resource_type, Finding.account_id, Finding.region)
         .where(Finding.tenant_id == tenant.id)
     )
     if settings.ONLY_IN_SCOPE_CONTROLS:
@@ -717,7 +767,12 @@ async def list_findings_grouped(
     if resource_id:
         count_subq = count_subq.where(Finding.resource_id == resource_id.strip())
     count_subq = _apply_finding_filters(count_subq, account_id, region, severity, source, status_filter)
-    count_subq = count_subq.group_by(Finding.control_id, Finding.resource_type).subquery()
+    count_subq = count_subq.group_by(
+        Finding.control_id,
+        Finding.resource_type,
+        Finding.account_id,
+        Finding.region,
+    ).subquery()
     total_result = await db.execute(select(func.count()).select_from(count_subq))
     total = total_result.scalar() or 0
 
@@ -728,7 +783,13 @@ async def list_findings_grouped(
     hints_by_group = await _fetch_action_hints_for_group_rows(db, tenant_uuid, rows)
 
     items = [
-        _row_to_group_item(row, hints_by_group.get(_group_hint_key(row.control_id, row.resource_type), {}))
+        _row_to_group_item(
+            row,
+            hints_by_group.get(
+                _group_hint_key(row.control_id, row.resource_type, row.account_id, row.region),
+                {},
+            ),
+        )
         for row in rows
     ]
     logger.info(
@@ -746,6 +807,8 @@ def _build_grouped_select(base_query: object) -> object:
         select(
             f.control_id,
             f.resource_type,
+            f.account_id,
+            f.region,
             func.min(f.title).label("rule_title"),
             func.count(f.id).label("finding_count"),
             func.max(f.severity_normalized).label("max_severity_normalized"),
@@ -758,7 +821,7 @@ def _build_grouped_select(base_query: object) -> object:
             func.count(case((f.severity_label == "LOW", 1))).label("cnt_low"),
             func.count(case((f.severity_label == "INFORMATIONAL", 1))).label("cnt_informational"),
         )
-        .group_by(f.control_id, f.resource_type)
+        .group_by(f.control_id, f.resource_type, f.account_id, f.region)
         .order_by(
             func.max(f.severity_normalized).desc(),
             func.count(f.id).desc(),
@@ -777,6 +840,7 @@ async def list_findings(
     account_id: Annotated[str | None, Query(description="Filter by AWS account ID")] = None,
     region: Annotated[str | None, Query(description="Filter by AWS region")] = None,
     control_id: Annotated[str | None, Query(description="Filter by control ID (e.g., S3.1)")] = None,
+    resource_type: Annotated[str | None, Query(description="Filter by resource type")] = None,
     resource_id: Annotated[str | None, Query(description="Filter by resource ID")] = None,
     severity: Annotated[str | None, Query(description="Filter by severity (CRITICAL, HIGH, MEDIUM, LOW, INFORMATIONAL)")] = None,
     status_filter: Annotated[str | None, Query(alias="status", description="Filter by status (NEW, NOTIFIED, RESOLVED, SUPPRESSED)")] = None,
@@ -834,6 +898,8 @@ async def list_findings(
         query = query.where(Finding.region == region)
     if control_id:
         query = query.where(Finding.control_id == control_id.strip())
+    if resource_type:
+        query = query.where(Finding.resource_type == resource_type.strip())
     if resource_id:
         query = query.where(Finding.resource_id == resource_id.strip())
     if severity:

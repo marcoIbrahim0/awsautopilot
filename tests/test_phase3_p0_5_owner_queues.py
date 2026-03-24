@@ -110,7 +110,7 @@ def test_actions_list_filters_by_owner_scope(client: TestClient) -> None:
     executed_sql: list[str] = []
 
     async def _execute(statement, *args, **kwargs):  # noqa: ANN001
-        executed_sql.append(str(statement))
+        executed_sql.append(str(statement.compile(compile_kwargs={"literal_binds": True})))
         result = MagicMock()
         if len(executed_sql) == 1:
             result.scalar.return_value = 1
@@ -255,3 +255,100 @@ def test_actions_list_expiring_exception_queue_uses_exception_window(client: Tes
     assert body["items"][0]["owner_key"] == "platform-team"
     assert any("exception_expires_at" in sql for sql in executed_sql)
     assert all("actions.tenant_id" in sql for sql in executed_sql)
+
+
+def test_actions_list_control_filter_matches_canonical_and_alias_family(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    action = _mock_action(
+        tenant_id=tenant_id,
+        owner_type="service",
+        owner_key="storage",
+        owner_label="Storage",
+        suffix="4",
+    )
+    action.control_id = "S3.11"
+    executed_sql: list[str] = []
+
+    async def _execute(statement, *args, **kwargs):  # noqa: ANN001
+        executed_sql.append(str(statement.compile(compile_kwargs={"literal_binds": True})))
+        result = MagicMock()
+        if len(executed_sql) == 1:
+            result.scalar.return_value = 1
+            return result
+        result.all.return_value = [(action, 1)]
+        return result
+
+    db_session = MagicMock()
+    db_session.execute = AsyncMock(side_effect=_execute)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield db_session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch.object(actions_router.settings, "ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED", False):
+        with patch("backend.routers.actions.get_tenant", new=AsyncMock(return_value=MagicMock())):
+            with patch("backend.routers.actions.get_exception_states_for_entities", new=AsyncMock(return_value={})):
+                response = client.get(
+                    "/api/actions",
+                    params={"control_id": "S3.13"},
+                )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["control_id"] == "S3.11"
+    assert any("IN" in sql and "S3.11" in sql and "S3.13" in sql for sql in executed_sql)
+
+
+def test_actions_list_text_search_matches_control_alias_family(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    action = _mock_action(
+        tenant_id=tenant_id,
+        owner_type="service",
+        owner_key="ec2",
+        owner_label="Amazon EC2",
+        suffix="5",
+    )
+    action.control_id = "EC2.53"
+    action.action_type = "sg_restrict_public_ports"
+    executed_sql: list[str] = []
+
+    async def _execute(statement, *args, **kwargs):  # noqa: ANN001
+        executed_sql.append(str(statement.compile(compile_kwargs={"literal_binds": True})))
+        result = MagicMock()
+        if len(executed_sql) == 1:
+            result.scalar.return_value = 1
+            return result
+        result.all.return_value = [(action, 1)]
+        return result
+
+    db_session = MagicMock()
+    db_session.execute = AsyncMock(side_effect=_execute)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield db_session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch.object(actions_router.settings, "ACTIONS_EFFECTIVE_OPEN_VISIBILITY_ENABLED", False):
+        with patch("backend.routers.actions.get_tenant", new=AsyncMock(return_value=MagicMock())):
+            with patch("backend.routers.actions.get_exception_states_for_entities", new=AsyncMock(return_value={})):
+                response = client.get(
+                    "/api/actions",
+                    params={"q": "EC2.19"},
+                )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["control_id"] == "EC2.53"
+    assert any("EC2.53" in sql and "EC2.19" in sql for sql in executed_sql)

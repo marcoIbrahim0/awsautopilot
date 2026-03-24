@@ -42,12 +42,13 @@
 | S3.9 | Enable S3 bucket access logging | s3 | Bucket server access logging configuration | pr-bundle |
 | S3.11 | Configure S3 bucket lifecycle | s3 | Bucket lifecycle rules present | pr-bundle |
 | S3.15 | Enforce S3 bucket SSE-KMS encryption | s3 | Bucket encryption uses SSE-KMS | pr-bundle |
-| S3.3 | Alias of S3.2 | s3 | Alias path mapped to same bucket public access hardening action as S3.2 | pr-bundle |
-| S3.8 | Alias of S3.2 | s3 | Alias path mapped to same bucket public access hardening action as S3.2 | pr-bundle |
-| S3.17 | Alias of S3.2 | s3 | Alias path mapped to same bucket public access hardening action as S3.2 | pr-bundle |
-| EC2.13 | Alias of EC2.53 | ec2 | Alias path mapped to same SG public-port restriction action as EC2.53 | pr-bundle |
-| EC2.18 | Alias of EC2.53 | ec2 | Alias path mapped to same SG public-port restriction action as EC2.53 | pr-bundle |
-| EC2.19 | Alias of EC2.53 | ec2 | Alias path mapped to same SG public-port restriction action as EC2.53 | pr-bundle |
+| S3.3 | Alias of canonical S3.2 | s3 | This control maps to remediation family `S3.2` / `s3_bucket_block_public_access`; the finding can stay `S3.3` while grouped remediation displays canonical `S3.2` | pr-bundle |
+| S3.8 | Alias of canonical S3.2 | s3 | This control maps to remediation family `S3.2` / `s3_bucket_block_public_access`; the finding can stay `S3.8` while grouped remediation displays canonical `S3.2` | pr-bundle |
+| S3.13 | Alias of canonical S3.11 | s3 | This control maps to remediation family `S3.11` / `s3_bucket_lifecycle_configuration`; the finding can stay `S3.13` while grouped remediation displays canonical `S3.11` | pr-bundle |
+| S3.17 | Alias of canonical S3.15 | s3 | This control maps to remediation family `S3.15` / `s3_bucket_encryption_kms`; the finding can stay `S3.17` while grouped remediation displays canonical `S3.15` | pr-bundle |
+| EC2.13 | Alias of canonical EC2.53 | ec2 | This control maps to remediation family `EC2.53` / `sg_restrict_public_ports`; the finding can stay `EC2.13` while grouped remediation displays canonical `EC2.53` | pr-bundle |
+| EC2.18 | Alias of canonical EC2.53 | ec2 | This control maps to remediation family `EC2.53` / `sg_restrict_public_ports`; the finding can stay `EC2.18` while grouped remediation displays canonical `EC2.53` | pr-bundle |
+| EC2.19 | Alias of canonical EC2.53 | ec2 | This control maps to remediation family `EC2.53` / `sg_restrict_public_ports`; the finding can stay `EC2.19` while grouped remediation displays canonical `EC2.53` | pr-bundle |
 | RDS.PUBLIC_ACCESS | RDS instance public network exposure (inventory-only signal) | rds | RDS DB instance `PubliclyAccessible` should be `false`; `true` means non-compliant public exposure | `pr_only` (explicitly UNSUPPORTED remediation) |
 | RDS.ENCRYPTION | RDS storage encryption at rest (inventory-only signal) | rds | RDS DB instance `StorageEncrypted` should be `true`; `false` means non-compliant encryption posture | `pr_only` (explicitly UNSUPPORTED remediation) |
 | EKS.PUBLIC_ENDPOINT | EKS API public endpoint exposure (inventory-only signal) | eks | EKS cluster control-plane endpoint is publicly reachable from `0.0.0.0/0` or an empty public CIDR allowlist | `pr_only` (explicitly UNSUPPORTED remediation) |
@@ -103,13 +104,13 @@ Notes:
 | S3.15 | control | HIGH | Found in task2, task4 mapping, and task6 IaC action output. | None in extracted set. |
 | S3.3 | control | HIGH | Found in task2 and task4 alias mapping to S3.2 action with task6 IaC output. | Alias-specific semantics not separately described. |
 | S3.8 | control | HIGH | Found in task2 and task4 alias mapping to S3.2 action with task6 IaC output. | Alias-specific semantics not separately described. |
-| S3.17 | control | HIGH | Found in task2 and task4 alias mapping to S3.2 action with task6 IaC output. | Alias-specific semantics not separately described. |
+| S3.17 | control | HIGH | Found in task2 and task4 alias mapping to S3.15 action with task6 IaC output. | Alias-specific semantics not separately described. |
 | EC2.13 | control | HIGH | Found in task2 and task4 alias mapping to EC2.53 action with task6 IaC output. | Alias-specific semantics not separately described. |
 | EC2.18 | control | HIGH | Found in task2 and task4 alias mapping to EC2.53 action with task6 IaC output. | Alias-specific semantics not separately described. |
 | EC2.19 | control | HIGH | Found in task2 and task4 alias mapping to EC2.53 action with task6 IaC output. | Alias-specific semantics not separately described. |
-| RDS.PUBLIC_ACCESS | control | HIGH | Explicit unsupported decision is encoded in `backend/services/control_scope.py` and propagated in `backend/workers/services/inventory_reconcile.py` evidence metadata. | No executable remediation path by design; inventory-only visibility. |
-| RDS.ENCRYPTION | control | HIGH | Explicit unsupported decision is encoded in `backend/services/control_scope.py` and propagated in `backend/workers/services/inventory_reconcile.py` evidence metadata. | No executable remediation path by design; inventory-only visibility. |
-| EKS.PUBLIC_ENDPOINT | control | HIGH | Explicit unsupported decision is encoded in `backend/services/control_scope.py` and propagated in `backend/workers/services/inventory_reconcile.py` evidence metadata. | No executable remediation path by design; inventory-only visibility. |
+| RDS.PUBLIC_ACCESS | control | HIGH | Explicit unsupported decision is part of the shipped inventory contract and remains visible in evidence metadata. | No executable remediation path by design; inventory-only visibility. |
+| RDS.ENCRYPTION | control | HIGH | Explicit unsupported decision is part of the shipped inventory contract and remains visible in evidence metadata. | No executable remediation path by design; inventory-only visibility. |
+| EKS.PUBLIC_ENDPOINT | control | HIGH | Explicit unsupported decision is part of the shipped inventory contract and remains visible in evidence metadata. | No executable remediation path by design; inventory-only visibility. |
 | ARC-008 | architecture_objective | HIGH | Present as DR IaC metadata key (`ArchitectureObjectiveId`) and intentionally outside runtime control mapping paths. | None. |
 | pr_only | action | LOW | Appears as mode/default in task3/task4 but without concrete task5 API or task6 IaC entry for this action ID itself. | Concrete executable change model for this ID. |
 | direct_fix | action | LOW | Appears as a historical execution-mode marker in task3; not a concrete API action ID in task5 extraction. | Concrete API mapping for this ID (if intended as action). |

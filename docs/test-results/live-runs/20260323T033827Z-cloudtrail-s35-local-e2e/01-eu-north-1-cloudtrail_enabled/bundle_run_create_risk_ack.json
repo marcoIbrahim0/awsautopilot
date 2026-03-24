@@ -1,0 +1,10 @@
+{
+  "status_code": 400,
+  "response": {
+    "detail": {
+      "error": "Invalid grouped remediation request",
+      "detail": "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name.",
+      "reason": "invalid_strategy_inputs"
+    }
+  }
+}

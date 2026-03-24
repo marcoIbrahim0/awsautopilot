@@ -111,7 +111,7 @@ def _ec2_53_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
             action_type=action_type,
             strategy_id=strategy_id,
             profile_id="close_public",
-            label="Close all public access",
+            label="Add restricted access without removing old public rules",
             default_support_tier="deterministic_bundle",
             recommended=True,
             requires_inputs=False,

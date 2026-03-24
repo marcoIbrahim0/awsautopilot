@@ -27,6 +27,25 @@ Related docs:
 - [Root-key remediation lifecycle UI](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/root-key-remediation-lifecycle-ui.md)
 - [Implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/implementation-plan.md)
 
+## Current CloudTrail.1 Bucket Contract
+
+Current landed behavior for the `cloudtrail_enabled` / `cloudtrail_enable_guided` family:
+
+- `trail_bucket_name` always means the actual CloudTrail log-destination bucket. It is never treated as a search hint.
+- Resolution precedence is:
+  - a single safe bucket discovered from an existing CloudTrail trail
+  - tenant remediation default `cloudtrail.default_bucket_name`
+  - explicit user input
+- `create_bucket_if_missing` is additive and defaults to `false`.
+- When `create_bucket_if_missing=false`, the resolved `trail_bucket_name` must already exist and remain reachable from the current account context or the resolver fails closed with `invalid_strategy_inputs`.
+- When `create_bucket_if_missing=true`, the same `trail_bucket_name` becomes the exact bucket name to create and use for CloudTrail log delivery.
+- Bucket creation remains approval-gated. Create-time requests must include `bucket_creation_acknowledged=true` in addition to the existing generic `risk_acknowledged=true`.
+- Preview and create flows now expose bucket provenance and mode through `preservation_summary`:
+  - `trail_bucket_source = existing_trail | tenant_default | user_input`
+  - `trail_bucket_mode = existing | create_if_missing`
+
+This keeps the default CloudTrail flow fail-closed and non-creating while still allowing an explicit opt-in bundle path that creates the S3 log bucket plus baseline policy controls.
+
 ## Wave 0 Baselines
 
 - [Wave 0 contract lock](/Users/marcomaher/AWS%20Security%20Autopilot/docs/remediation-profile-resolution/wave-0-contract-lock.md)
@@ -67,6 +86,16 @@ Related docs:
 - All nine Wave 6 families now have truthful live executable plus downgrade/manual proof, and the retained March 18 closure package records `Wave 6 complete = YES` on exact HEAD `e9a362b3f543154838a72665dcd2866919b5089b`.
 - The March 15 strict gate and blocker-closure packages remain historical evidence of the blocked and pre-closure states they preceded; the March 18 retained closure package is the authoritative final gate outcome.
 - `artifacts.resolution` and grouped `action_resolutions[]` remain the safety authority for executability, while legacy mirror fields remain compatibility-only rollout artifacts.
+- Current canonicalization summary for active remediation families:
+  - `S3.3` and `S3.8` canonicalize to family `S3.2` / `s3_bucket_block_public_access`
+  - `S3.13` canonicalizes to family `S3.11` / `s3_bucket_lifecycle_configuration`
+  - `S3.17` canonicalizes to family `S3.15` / `s3_bucket_encryption_kms`
+  - `EC2.13`, `EC2.18`, and `EC2.19` canonicalize to family `EC2.53` / `sg_restrict_public_ports`
+- Practical effect:
+  - findings can retain the source alias `control_id`
+  - actions and grouped remediation can show the canonical control ID and remediation family instead
+  - grouped member state, pending-confirmation, and grouped run history follow the canonical remediation family
+  - this is expected behavior, not a data mismatch
 
 ## Scope and Non-Goals
 
@@ -301,6 +330,9 @@ Phase-1 migration rules captured in the source plan:
   - `close_and_revoke`
   - `restrict_to_ip`
   - `restrict_to_cidr`
+- EC2.53 semantics:
+  - `close_public` is additive only. It adds restricted SSH/RDP ingress but does not revoke existing public `0.0.0.0/0` or `::/0` admin rules.
+  - `close_and_revoke` is the only executable EC2.53 profile that automatically removes the existing public admin rules.
 - When those executable EC2.53 branches resolve deterministically with sufficient inputs, preview, single-run create, and grouped customer-run bundle resolution all preserve the same executable tier.
 - `ssm_only` and `bastion_sg_reference` are review/manual profiles until runtime support exists.
 - IAM.4 keeps `iam_root_key_disable` and `iam_root_key_delete`, each starting with `profile_id == strategy_id`.
@@ -323,6 +355,7 @@ Phase-1 migration rules captured in the source plan:
   - `config_enable_centralized_delivery`
   - `config_keep_exception`
   - `config.delivery_mode`, `config.default_bucket_name`, and `config.default_kms_key_arn` can drive resolver-backed defaults without changing the public strategy IDs.
+  - `config_enable_account_local_delivery` now prefers a globally unique creatable local bucket name (`security-autopilot-config-<account_id>-<region>`) with `delivery_bucket_mode=create_new` instead of inheriting an unproven existing delivery bucket.
   - Centralized or existing-bucket paths downgrade explicitly when bucket or KMS dependencies cannot be proven, while the supported Terraform customer-run executable path now snapshots exact pre-state and carries a bundle-local restore command that fails closed if exact rollback is no longer guaranteed.
 
 ## Tenant Remediation Settings
@@ -344,7 +377,7 @@ PATCH semantics:
 Planned settings fields called out in the source plan:
 
 - `sg_access_path_preference`
-  - `close_public`
+  - `close_public` (add restricted access without removing old public rules)
   - `restrict_to_detected_public_ip`
   - `restrict_to_approved_admin_cidr`
   - `bastion_sg_reference`

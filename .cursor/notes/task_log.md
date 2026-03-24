@@ -1,5 +1,1001 @@
 # Task Log
 
+## Conditionally hide Tenant ID Configuration UI (2026-03-24)
+
+**Task:** Conditionally hide the `TenantIdForm` component across all dashboard pages to prevent UI flicker and remove the dev-fallback form for unauthenticated users.
+
+**Files modified:**
+- `frontend/src/app/findings/page.tsx`
+- `frontend/src/app/accounts/page.tsx`
+- `frontend/src/app/top-risks/page.tsx`
+- `frontend/src/app/actions/group/page.tsx`
+- `frontend/src/app/findings/[id]/page.tsx`
+- `frontend/src/app/exceptions/page.tsx`
+- `frontend/src/app/pr-bundles/page.tsx`
+- `frontend/src/app/pr-bundles/create/page.tsx`
+- `frontend/src/app/pr-bundles/create/summary/page.tsx`
+
+**What was done:**
+- Identifed all dashboard pages that were rendering `TenantIdForm` as a fallback when `showContent` was false.
+- Refined the rendering logic for `TenantIdForm` to `!showContent && !authLoading && isAuthenticated`.
+- Extracted `isLoading` as `authLoading` from `useAuth()` in all affected pages.
+- Established a consistent pattern that effectively hides the form from the standard user experience, as `isAuthenticated` being true already satisfies `showContent`.
+
+**Validation:**
+- Verified that the logic correctly handles the loading state of authentication.
+- Confirmed that for authenticated users with a tenant, the form remains hidden while the main content is displayed.
+- Removed the dev-only "Tenant ID" entry form from the standard navigation paths for unauthenticated users.
+
+## Fix PR bundle pending-confirmation stall for deleted inventory resources (2026-03-24)
+
+**Task:** Investigate and fix why successful PR bundles for resources like EC2 security groups remain in a "pending_confirmation" state indefinitely when the target resource is deleted from AWS before or after the remediation run.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_reconcile_inventory_shard_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Diagnosed the stall root cause: when tools like Terraform dynamically delete a resource entirely (e.g. SGs or RDS), the backend targeted `post_apply_reconcile` sweeps would throw AWS `NotFound` exceptions (`InvalidGroup.NotFound`, `DBInstanceNotFound`, etc.).
+- Identified that `inventory_reconcile.py`'s collector loops were catching these exceptions and `continue`-ing silently, which meant no new snapshot/evaluations were generated. As a result, the existing shadow state remained `OPEN`, preventing the pending-confirmation logic from clearing the finding.
+- Patched `_collect_ec2_security_groups`, `_collect_rds_instances`, and `_collect_eks_clusters` to detect `NotFound` codes and inject a synthetic `_deleted_marker` record.
+- Added logic inside those loops to yield `SHADOW_STATUS_RESOLVED` evaluations globally for deleted markers, allowing the system to correctly acknowledge resource removal.
+- Fixed a broken mock test for `aws.assume_role` in `test_reconcile_inventory_shard_worker.py` caused by a recent `source_identity` kwargs feature introduced earlier today.
+- Confirmed the fix works locally using targeted AWS test scripts with real deleted SG identifiers.
+- Triggered serverless lambda deployment `/scripts/deploy_saas_serverless.sh` to push the worker fixes to the production backend.
+- Flushed existing stalled runs in the customer account by running the `recompute_account_actions.py` global sweep script so the new evaluations run over existing resources instantly.
+
+**Validation:**
+- Local execution of patched `_collect_ec2_security_groups` correctly returned `SHADOW_STATUS_RESOLVED` and `reason="inventory_resource_deleted"` for a known deleted SG `sg-06f6252fa8a95b61d`.
+- Local `pytest backend/tests` tests successfully passed after the fix (`test_reconcile_inventory_shard_worker.py`).
+- Runtime configuration deployment to `security-autopilot-dev-saas-worker` successfully activated.
+
+**Open questions / TODOs:**
+- The S3 `NoSuchBucket` pathway explicitly skips based on bucket location filters. A sweeping check for missing S3 targeted buckets would be helpful, but the immediate bug related to EC2, RDS, and EKS was covered. S3 PR bundles do not normally delete the bucket.
+
+## Split grouped findings by account/region scope so EC2.182 pending-confirmation badges stay accurate (2026-03-24)
+
+**Task:** Implement the grouped-findings scope split for `/api/findings/grouped` so cards are keyed by `(control_id, resource_type, account_id, region)`, stop the frontend from parsing `group_key`, and ensure grouped pending-confirmation badges like `EC2.182` stay attached to the exact region/account that generated the successful bundle.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/GroupedFindingsView.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Changed the grouped findings backend contract so pagination count, grouped rows, remediation-hint matching, and returned `group_key` all use the scoped tuple `(control_id, resource_type, account_id, region)` instead of collapsing all regions/accounts for the same control/resource type into one card.
+- Added explicit `control_id` to grouped findings items and changed the frontend grouped findings surfaces to treat `group_key` as opaque instead of parsing it for labels.
+- Updated grouped-card expansion so it reloads findings with the card’s scoped `control_id`, `resource_type`, `account_id`, and `region`, which prevents one card from pulling sibling findings from other regions or resource types.
+- Added focused backend regression coverage proving:
+  - the grouped findings API now returns separate `EC2.182` rows for `eu-north-1` and `us-east-1`
+  - only the scoped `us-east-1` row receives `pending_confirmation=true` when that region’s latest run is `run_successful_pending_confirmation`
+- Added frontend regression coverage proving:
+  - grouped findings cards still show the pending-confirmation note
+  - expanding a scoped grouped card requests only that scope’s findings, including `resource_type`
+- Updated the active live-testing doc to record the new grouped-findings scope contract and the opaque `group_key` expectation.
+- Deployed the backend/runtime with image tag `20260324T042908Z` and published the frontend as Cloudflare version `b8d6b016-78e2-4aff-bae6-60bd8eab9d3f`.
+- Logged into the live UI as `marco.ibrahim@ocypheris.com`, filtered `EC2.182`, and verified production now shows separate grouped cards for `eu-north-1` and `us-east-1`; expanding the `eu-north-1` snapshot-block-public-access card now issues `/api/findings?...&resource_type=AwsEc2SnapshotBlockPublicAccess...` and renders only the matching finding instead of mixing in the sibling `AwsAccount` row.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_findings_grouped_action_hints.py -q`
+  - result: `3 passed`
+- `cd frontend && npm run test:ui -- src/app/findings/FindingGroupCard.test.tsx src/app/findings/page.test.tsx`
+  - result: `7 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+- Live production verification:
+  - `POST https://api.ocypheris.com/api/auth/login` with `marco.ibrahim@ocypheris.com / Maher730@`
+  - `GET /api/findings/grouped?control_id=EC2.182` returned separate scoped rows for `eu-north-1` and `us-east-1`
+  - `GET /api/findings?account_id=696505809372&region=eu-north-1&control_id=EC2.182&resource_type=AwsEc2SnapshotBlockPublicAccess&limit=100` returned exactly `1` item
+  - Playwright browser flow on `https://ocypheris.com/findings` showed the same two grouped cards and an expanded `eu-north-1` card with a single matching finding
+
+**Technical debt / gotchas:**
+- The grouped findings API contract is now intentionally narrower per row, so any consumer outside the current frontend that assumed one row could span multiple regions/accounts for the same control must be updated to treat `group_key` as opaque and use explicit fields instead.
+- Group-level mutation flows still accept `group_key` plus current filters; if a future surface needs server-side parsing of findings grouped keys, it should use explicit scoped fields instead of trying to decode the opaque string format.
+- Current live `EC2.182` data does not have a `pending_confirmation=true` row, so the production rerun proved card splitting and scoped expansion but did not reproduce the waiting-for-AWS badge itself after the redeploy.
+
+## Fix Config.1 global S3 bucket collision, deploy, and prove local live apply succeeds (2026-03-24)
+
+**Task:** Continue the live `Config.1` debug loop after the `InsufficientDeliveryPolicyException`, identify the remaining root cause, ship the final backend/frontend fixes, deploy them, generate a fresh production bundle, and run that bundle locally against AWS account `696505809372` until the apply succeeds.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationAutoSelection.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/pr-bundles/create/summary/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed the earlier bucket-policy fix was present in the downloaded bundle, then reproduced the remaining live failure locally and traced it to S3 global bucket-name collision rather than missing Config policy statements.
+- Verified with target-account credentials (`AWS_PROFILE=test28-root`) that:
+  - the old generated bucket `security-autopilot-config-696505809372` returned `BucketAlreadyExists`
+  - the bucket was not owned by account `696505809372`
+  - AWS Config was therefore failing against a name that could never be created in the customer account
+- Changed the Config account-local default bucket contract to be region-suffixed everywhere:
+  - `security-autopilot-config-<account_id>-<region>`
+  - updated backend runtime/default resolution, Terraform/CloudFormation bundle generation, and the guided strategy safe-default token in the remediation schema
+- Threaded `region` through the frontend safe-default resolver and auto-PR-bundle derivation path so the modal and grouped summary page generate the same Config bucket name as the backend.
+- Fixed the remaining backend CloudFormation call site so `_resolve_aws_config_defaults(...)` always receives `region`.
+- Updated the focused Config tests and frontend UI regressions to the new region-aware bucket contract.
+- Deployed the backend/runtime with `./scripts/deploy_saas_serverless.sh` and published the frontend with `cd frontend && npm run deploy`.
+- Logged into production as `marco.ibrahim@ocypheris.com`, verified the post-deploy live remediation options for action `7d51a23a-9af2-4a82-ae75-67561c01cf8e`, and confirmed the recommended account-local branch now resolves to:
+  - `delivery_bucket=security-autopilot-config-696505809372-eu-north-1`
+  - `delivery_bucket_mode=create_new`
+- Created fresh production remediation run `45bdd196-20a2-4be0-8659-fa3a05a356a1`, downloaded its bundle, and verified the generated Terraform now uses:
+  - `delivery_bucket_name = "security-autopilot-config-696505809372-eu-north-1"`
+  - `create_local_bucket = true`
+- Ran the fresh bundle locally from `/tmp/config1-live-run/bundle` with:
+  - `terraform init`
+  - `AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform apply -auto-approve`
+- Confirmed the local live apply completed successfully and redirected AWS Config to the new bucket.
+
+**Validation:**
+- Backend focused tests:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py tests/test_remediation_runs_api.py tests/test_step7_components.py -q -k "config or aws_config_enabled"`
+  - result: `30 passed`
+- Frontend focused tests:
+  - `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx src/app/pr-bundles/create/summary/page.test.tsx`
+  - result: `22 passed`
+- Deploy proof:
+  - backend runtime image tag `20260324T033906Z`
+  - frontend Cloudflare version `da778dae-193b-4890-830b-a8ed3c9c13d2`
+- Production API proof:
+  - `GET /api/actions/7d51a23a-9af2-4a82-ae75-67561c01cf8e/remediation-options`
+    - recommended Config.1 path now resolves to `security-autopilot-config-696505809372-eu-north-1`
+  - `POST /api/remediation-runs`
+    - created run `45bdd196-20a2-4be0-8659-fa3a05a356a1`
+  - `GET /api/remediation-runs/45bdd196-20a2-4be0-8659-fa3a05a356a1`
+    - reached `success` with outcome `PR bundle generated`
+- Local live AWS proof:
+  - `AWS_PROFILE=test28-root aws s3api head-bucket --bucket security-autopilot-config-696505809372-eu-north-1 --region eu-north-1`
+    - pre-apply result: `404 Not Found` (bucket name available to create in target account)
+  - `AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform apply -auto-approve`
+    - result: `Apply complete! Resources: 1 added, 0 changed, 0 destroyed.`
+  - `AWS_PROFILE=test28-root aws configservice describe-delivery-channels --region eu-north-1`
+    - delivery channel now points to `security-autopilot-config-696505809372-eu-north-1`
+  - `AWS_PROFILE=test28-root aws configservice describe-configuration-recorder-status --region eu-north-1`
+    - recorder status shows `recording: true` and `lastStatus: SUCCESS`
+  - `AWS_PROFILE=test28-root aws s3api get-bucket-policy --bucket security-autopilot-config-696505809372-eu-north-1 --region eu-north-1`
+    - confirmed `AWSConfigBucketPermissionsCheck`, `AWSConfigBucketExistenceCheck`, and `AWSConfigBucketDelivery` statements with `AWS:SourceAccount=696505809372`
+
+**Open questions / TODOs:**
+- The old run artifacts and retained evidence bundles still contain the pre-fix bucket name; they are historical evidence and were not rewritten.
+- The centralized Config strategy still intentionally requires operator review when it depends on an existing bucket path that is not proven reachable/policy-compatible.
+
+## Deploy bundle progress UI wording + layout cleanup to Cloudflare frontend (2026-03-24)
+
+**Task:** Publish the frontend updates for the bundle-progress terminology/layout cleanup to the live Cloudflare deployment and verify the updated chunk assets are serving from `https://ocypheris.com`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-checked the repo’s guarded frontend deploy path and confirmed `frontend/package.json` still routes production publishes through `node ./scripts/run-opennext-production.mjs deploy`.
+- Verified Cloudflare auth from `frontend/` with `npx wrangler whoami` under account `def7cbe05f3cd790ad1f743bb66408d9`.
+- Published the current frontend from `/Users/marcomaher/AWS Security Autopilot/frontend` with `npm run deploy`.
+- Confirmed Cloudflare registered a new frontend deployment created at `2026-03-24T03:07:40.452Z` with version `acdc7ce5-4259-4349-8ac7-edfe7c94b093`.
+- Verified live asset availability for the updated pages by requesting the newly built chunk URLs:
+  - `/_next/static/chunks/app/remediation-runs/[id]/page-bca7a23529343b00.js`
+  - `/_next/static/chunks/app/actions/group/page-c812822cab05ee8b.js`
+- Confirmed the live site root still serves `200` from `https://ocypheris.com`.
+
+**Validation:**
+- `cd frontend && npx wrangler whoami`
+  - authenticated as `maromaher54@gmail.com`
+- `cd frontend && npm run deploy`
+  - publish completed through the guarded OpenNext wrapper; Cloudflare recorded deployment version `acdc7ce5-4259-4349-8ac7-edfe7c94b093`
+- `cd frontend && npx wrangler deployments list --name frontend | tail -n 20`
+  - latest deployment created `2026-03-24T03:07:40.452Z`
+- `curl -I -sS https://ocypheris.com`
+  - `HTTP/2 200`
+- `curl -I -sS https://ocypheris.com/_next/static/chunks/app/remediation-runs/%5Bid%5D/page-bca7a23529343b00.js`
+  - `HTTP/2 200`
+- `curl -I -sS https://ocypheris.com/_next/static/chunks/app/actions/group/page-c812822cab05ee8b.js`
+  - `HTTP/2 200`
+
+**Technical debt / gotchas:**
+- As with earlier frontend publishes in this repo, the local Wrangler/OpenNext CLI stopped printing a clean final footer after asset upload even though Cloudflare completed the deployment. `wrangler deployments list` remains the reliable publish confirmation path in this environment.
+
+## Fix Config.1 stale existing-bucket defaults and prove live bundle generation (2026-03-24)
+
+**Task:** Debug the live `Config.1` local-exec failure for account `696505809372` in `eu-north-1`, fix the resolver/runtime path so account-local delivery no longer inherits the unreachable `config-bucket-696505809372` branch, deploy the backend, and prove the corrected production bundle generation path.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task history, and docs index before changing the Config.1 flow.
+- Reproduced the live fault on production API action `7d51a23a-9af2-4a82-ae75-67561c01cf8e`:
+  - before the fix, `config_enable_account_local_delivery` exposed runtime defaults `delivery_bucket=config-bucket-696505809372`, `existing_bucket_name=config-bucket-696505809372`, `delivery_bucket_mode=use_existing`
+  - the same branch was downgraded to `review_required_bundle` yet still produced bundles that later failed locally with `create_local_bucket=false and delivery bucket 'config-bucket-696505809372' is unreachable`
+- Changed `backend/services/remediation_runtime_checks.py` so Config runtime defaults are strategy-aware:
+  - `config_enable_account_local_delivery` now defaults to `security-autopilot-config-<account_id>` with `delivery_bucket_mode=create_new`
+  - `config_enable_centralized_delivery` still prefers an existing bucket only when that path is actually the selected branch
+  - runtime bucket reachability now probes the discovered existing delivery bucket when present instead of leaving the signal permanently under-specified
+- Changed `backend/services/remediation_profile_selection.py` so:
+  - account-local delivery always normalizes to `delivery_bucket_mode=create_new` and drops `existing_bucket_name`
+  - centralized delivery only applies existing-bucket blocked reasons when the selected branch is actually `use_existing`
+- Added focused regression coverage:
+  - `tests/test_remediation_runtime_checks.py` now asserts account-local defaults resolve to the canonical creatable bucket while centralized defaults keep a proven existing bucket path
+  - `tests/test_remediation_runs_api.py` now asserts Config account-local resolution downgrades away from stale `use_existing` runtime defaults
+- Updated the active remediation-profile doc so Config.1 documents the new account-local default behavior.
+- Deployed the backend with `./scripts/deploy_saas_serverless.sh`.
+- Live production verification after deploy:
+  - `GET /api/actions/7d51a23a-9af2-4a82-ae75-67561c01cf8e/remediation-options` now returns `config_enable_account_local_delivery` with `delivery_bucket=security-autopilot-config-696505809372-eu-north-1`, `delivery_bucket_mode=create_new`, and `support_tier=deterministic_bundle`
+  - a fresh production remediation run `d74a5c66-9e4c-4e53-b1a8-2579853ef7ea` reached `success` with outcome `PR bundle generated`
+  - the generated `aws_config_enabled.tf` now uses `delivery_bucket_name = "security-autopilot-config-696505809372-eu-north-1"` and `create_local_bucket = true`
+  - the old stale bucket name `config-bucket-696505809372` no longer appears in the generated Terraform bundle for the recommended account-local path
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -q`
+  - result: `19 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runs_api.py -q -k "config_account_local_resolution_prefers_create_new_over_unproven_existing_bucket or remediation_preview_pr_only_config_1_includes_before_after_simulation or create_run_strategy_input_validation_400"`
+  - result: `3 passed`
+- Local resolver/runtime spot-check:
+  - `collect_runtime_risk_signals(...)` for `config_enable_account_local_delivery` now returns `delivery_bucket=security-autopilot-config-696505809372-eu-north-1` and `delivery_bucket_mode=create_new`
+- Live production API proof:
+  - `POST /api/remediation-runs` for action `7d51a23a-9af2-4a82-ae75-67561c01cf8e` with strategy `config_enable_account_local_delivery` and `risk_acknowledged=true` created run `d74a5c66-9e4c-4e53-b1a8-2579853ef7ea`
+  - polling `GET /api/remediation-runs/d74a5c66-9e4c-4e53-b1a8-2579853ef7ea` confirmed the generated bundle now uses the creatable canonical bucket and `create_local_bucket=true`
+
+**Open questions / TODOs:**
+- This task proved bundle generation is fixed on production. It did not execute the generated Terraform bundle against the live AWS account, because that would actually enable AWS Config in production rather than only proving the fixed generation path.
+
+## Redo bundle progress UI and remove misleading "run" terminology (2026-03-24)
+
+**Task:** Redesign the PR-bundle progress/detail experience so it reads as bundle generation rather than execution, remove the duplicate progress bar from the dedicated page, keep bundle download above the fold, and align grouped bundle wording with the same generation-oriented language.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/remediation-runs/[id]/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ActionDetailModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, current project status, task index, relevant remediation-run history, and the active docs index before editing the frontend.
+- Updated `frontend/src/components/RemediationRunProgress.tsx` so the dedicated full-width PR-bundle surface:
+  - uses bundle-generation wording for `pr_only` states
+  - keeps the primary progress bar only in the hero area
+  - removes the duplicate percentage bar from `Generation details`
+  - keeps `Download bundle` above the fold in both the dedicated page and the non-full-width success card
+- Updated `frontend/src/components/RemediationModal.tsx` so the progress-phase modal title is now `Bundle progress` and the follow-through CTA reads `Open bundle details`.
+- Updated `frontend/src/app/remediation-runs/[id]/page.tsx` to use `Generation details` in the shell title and the unauthenticated empty state.
+- Updated `frontend/src/app/actions/group/page.tsx` so grouped bundle UI now uses generation-oriented labels such as `Generate bundle`, `Generation timeline`, `Generated and successful`, `Generation not successful`, and `Not generated yet`.
+- Added focused regression coverage:
+  - `frontend/src/components/RemediationRunProgress.test.tsx` now verifies the full-width bundle page exposes only one `Bundle progress` heading
+  - `frontend/src/components/ActionDetailModal.test.tsx` now expects the renamed `Bundle progress` modal
+  - `frontend/src/app/actions/group/page.test.tsx` now expects the renamed grouped bundle CTA
+- Updated the active UI/UX redesign doc to record the March 24 bundle-progress terminology and layout cleanup.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/components/RemediationRunProgress.test.tsx src/components/ActionDetailModal.test.tsx src/app/actions/group/page.test.tsx`
+  - result: `11 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+
+**Technical debt / gotchas:**
+- Internal route names, API models, and database contracts still use `remediation_runs` / `run_*` semantics by design; this pass changes only the visible frontend wording and layout.
+
+**Open questions / TODOs:**
+- The dedicated route `/remediation-runs/[id]` still carries the old path name for compatibility. If product language needs to be fully generation-oriented end to end later, that should be handled as a separate routing/redirect contract change.
+
+## Add Jira operator runbook for remediation sync and live proof follow-through (2026-03-24)
+
+**Task:** Add the missing operator-facing Jira documentation so the repo covers credential setup, tenant configuration, webhook/reconciliation execution, and troubleshooting for the now-complete Phase 3 `P1.6` live proof.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/jira-remediation-sync-runbook.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/integration-first-remediation-operations.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-system-of-record-sync.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, current project status, task index, active task-log history, docs index, runbook index, and the active integration/remediation feature docs before editing documentation.
+- Added a dedicated Jira operator runbook that captures:
+  - required Jira config and secret fields
+  - how to obtain each field
+  - the proven March 24, 2026 live tenant config shape for Jira on `KAN`
+  - exact outbound sync, webhook, and reconciliation commands
+  - the DB assertions operators should use to verify drift and recovery
+  - the real live failure modes discovered during the retained P1.6 production proof
+- Updated the active feature docs to point readers at the Jira runbook for the practical setup and validation workflow.
+- Updated the docs indexes so the Jira runbook is discoverable from both the top-level docs README and the runbooks index.
+
+**Open questions / TODOs:**
+- The runbook documents the proven Jira-specific path only. Equivalent operator runbooks for ServiceNow and Slack do not exist yet and should be added if those providers become part of the live validation surface.
+
+## Close Phase 3 P1.6 live Jira proof on production (2026-03-24)
+
+**Task:** Finish the retained Phase 3 P1.6 live proof on Ocypheris production by clearing the worker queue blocker, fixing reconciliation requeue behavior for repeat drift, and rerunning the Jira drift/reconciliation slice to a strict PASS.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/database.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/attack_path_materialization.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/integration_sync.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_attack_path_materialization_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_5_integrations_bidirectional.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant March 21 P1.6 task-log history, docs index, the Phase 3 integration/remediation feature docs, and the retained March 21/23 live evidence before editing code or touching production.
+- Confirmed the live attack-path blocker from the retained evidence was real: `backend/workers/jobs/attack_path_materialization.py` still used the shared async engine inside `asyncio.run()`, which poisoned the ingest queue on Lambda/Python 3.12 with `RuntimeError: Event loop is closed` during connection teardown.
+- Added `build_async_session_factory(..., isolated=True)` in `backend/database.py` and switched the worker job to an isolated per-invocation async engine/session so the loop that opens the connection also disposes it.
+- Added `tests/test_attack_path_materialization_worker.py` to pin the isolated-engine behavior.
+- Re-ran focused regressions after the worker fix:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_attack_path_materialization_worker.py tests/test_phase3_p1_6_system_of_record_sync.py tests/test_phase3_p1_5_integrations_bidirectional.py`
+  - result: `20 passed`
+- Deployed the worker/runtime fix live with image tag `20260324T020113Z`, verified both Lambdas picked up that tag, and confirmed queue health plus fresh worker logs no longer showed the old event-loop teardown failure.
+- Re-ran the retained Jira reconciliation slice and found a second live blocker: reconciliation jobs now drained, but no fresh outbound Jira task was created because `backend/services/integration_sync.py` still deduped against the old successful `request_signature` whenever the desired canonical payload matched a prior success.
+- Fixed reconciliation dedupe by including drift-version metadata in the outbound payload signature when the provider's observed external status diverges from the desired canonical status.
+- Added focused regression coverage in `tests/test_phase3_p1_5_integrations_bidirectional.py` for the drift-version payload metadata and re-ran the same targeted suite:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_phase3_p1_5_integrations_bidirectional.py tests/test_phase3_p1_6_system_of_record_sync.py tests/test_attack_path_materialization_worker.py`
+  - result: `21 passed`
+- Deployed the final live runtime fix with image tag `20260324T020950Z`, then reran the retained Jira proof end to end on production against action `0ca64b94-9dcb-4a97-91b0-27b0341865bc` and issue `KAN-7`.
+- Proven final live sequence:
+  - restored the previously drifted `KAN-7` back to `In Progress` through live reconciliation using task row `06b1a4e8-c0b8-4d30-93b1-39b3610b0b5c`
+  - transitioned `KAN-7` to `Done` through Jira REST
+  - posted live webhook `jira-live-drift-final-20260324T0214Z`
+  - verified `Action.status` stayed `open`
+  - verified `action_remediation_sync_states` moved to `drifted` with `preferred_external_status=In Progress`
+  - called final reconciliation
+  - verified fresh task row `c3225686-ba7d-4293-be35-244bddda143a` succeeded
+  - verified Jira returned to `In Progress`
+  - verified `action_external_links.external_status=In Progress`
+  - verified `action_remediation_sync_states.sync_status=in_sync`
+  - verified `action_remediation_sync_events` contains `reconciliation_queued` and `reconciliation_applied`
+- Updated the retained run summary to `PASS` and added the closure run to `docs/live-e2e-testing/README.md`.
+
+**Open questions / TODOs:**
+- No remaining blocker for Phase 3 P1.6. The live Jira system-of-record slice is closed as PASS on production.
+- Historical March 21/23 event rows still show the old default Jira preferred status `To Do`; use the March 24 rows as the authoritative evidence after the tenant-mapping fix.
+
+## Deploy EC2.53 semantics fix and run live browser E2E on production (2026-03-24)
+
+**Task:** Deploy the EC2.53 public-access semantics fix to production, repair the stale grouped pending-confirmation rows for the live `sg_restrict_public_ports` group, and validate the live browser flow on `https://ocypheris.com` with the real tenant admin account.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed the stale live grouped state for account `696505809372` and group `825acfd7-d0ec-4dd0-806d-b1628ab3e35e`: all 4 EC2.53 members were still bucketed as `run_not_successful` even though their latest grouped run `6f116e84-ba7b-4faf-9e40-c38576fbe48a` had per-action `execution_status=success`.
+- Applied a narrow live DB repair for that one group by updating only the matching `action_group_action_state` rows for `latest_run_id=6f116e84-ba7b-4faf-9e40-c38576fbe48a` to `run_successful_pending_confirmation`.
+- Deployed the current backend/serverless runtime with `config/.env.ops` using `scripts/deploy_saas_serverless.sh`.
+- Verified post-deploy that the live remediation-options API for action `0abc603d-b75a-4b49-9a5f-431a0aa82a4e` now serves the corrected EC2.53 additive wording for `close_public`.
+- Published the current frontend from `frontend/` using the guarded OpenNext Cloudflare deploy path `npm run deploy`.
+- Ran a live browser E2E on `https://ocypheris.com` as tenant admin `marco.ibrahim@ocypheris.com`:
+  - logged in successfully
+  - opened action `0abc603d-b75a-4b49-9a5f-431a0aa82a4e`
+  - opened the EC2.53 remediation modal
+  - verified the default branch label reads `Add restricted access without removing old public rules`
+  - switched to `Restrict to my IP`
+  - changed the CIDR, clicked `Not sure? Use safe default`, and verified `access_mode` stayed `restrict_to_ip` while the CIDR reset to the detected public IP
+  - acknowledged remediation risk and created a fresh PR-bundle run
+- Verified the new live remediation run `8445a29f-a6d6-48cd-ace7-2a2a66cfef3e` reached terminal `success` with outcome `PR bundle generated`.
+
+**Validation:**
+- Focused local regression checks before deploy:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_wave4_contract_fixes.py tests/test_action_groups_api.py tests/test_remediation_profile_options_preview.py -q`
+  - result: `45 passed`
+  - `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx`
+  - result: `18 passed`
+- Backend deploy:
+  - `./scripts/deploy_saas_serverless.sh`
+  - image tag: `20260324T014152Z`
+  - runtime/DB alignment passed before and after rollout
+- Frontend deploy:
+  - `cd frontend && npm run deploy`
+  - Cloudflare version: `d463c17d-61c6-46af-9c19-a879927dc7fd`
+- Live API checks after deploy:
+  - `GET /api/actions/0abc603d-b75a-4b49-9a5f-431a0aa82a4e/remediation-options`
+    - confirmed `close_public` label now reads `Add restricted access without removing old public rules`
+  - `GET /api/action-groups/825acfd7-d0ec-4dd0-806d-b1628ab3e35e`
+    - counters now resolve to `run_successful=4`, `run_not_successful=0`, `metadata_only=0`, `not_run_yet=0`
+  - `GET /api/remediation-runs/8445a29f-a6d6-48cd-ace7-2a2a66cfef3e`
+    - terminal `success`
+    - generated bundle preserves `access_mode=restrict_to_ip`
+    - generated Terraform keeps `remove_existing_public_rules = false`
+    - generated `allowed_cidr = 154.176.33.194/32`
+
+**Open questions / TODOs:**
+- The live grouped-row repair was done as a narrow one-off SQL update because the generic reprojection script did not complete promptly in this environment; if more historical groups are affected, use a broader scoped repair path rather than repeating ad hoc SQL.
+- The frontend deploy emitted existing OpenNext duplicate-key warnings from generated bundle output; the deploy succeeded, but those warnings remain background technical debt unrelated to the EC2.53 fix.
+
+## Fix EC2.53 public-access wording and grouped pending-confirmation repair (2026-03-23)
+
+**Task:** Implement the approved fix plan for the EC2.53 guided-flow mismatch so the product no longer implies that `close_public` revokes public admin ingress, preserve the user’s selected SG access mode in the modal safe-default path, and repair grouped pending-confirmation projection so successful executions are not re-bucketed as failures during later reevaluation.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/RemediationDefaultsTab.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Renamed the backend EC2.53 `close_public` guided choice and profile label to make its additive semantics explicit: it now says it adds restricted access without removing old public rules.
+- Updated the tenant remediation-defaults settings UI to use the same wording so the default policy selector no longer teaches the wrong behavior.
+- Removed the EC2.53 modal branch that silently reset `access_mode` back to `close_public` when the CIDR safe-default resolver returned nothing.
+- Hardened grouped confirmation reevaluation so it reloads the latest persisted group-run result before deriving the member bucket; this preserves successful executions as `run_successful_pending_confirmation` when later reevaluation is called without explicit execution payload context.
+- Tightened `derive_pending_confirmation_state(...)` so the banner only appears for `run_successful_pending_confirmation`, not for `run_not_successful` or metadata-only buckets.
+- Added focused regression coverage for the persisted-run repair path, the failed-bucket suppression case, and the EC2.53 modal “do not reset access mode when no safe default exists” flow.
+- Updated the active remediation-profile README so EC2.53 documents that `close_public` is additive and `close_and_revoke` is the only executable branch that auto-removes public admin rules.
+
+**Validation:**
+- Backend:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_wave4_contract_fixes.py tests/test_action_groups_api.py tests/test_remediation_profile_options_preview.py -q`
+  - result: `45 passed`
+- Frontend:
+  - `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx`
+  - result: `18 passed`
+
+**Open questions / TODOs:**
+- Existing live rows already stuck in `run_not_successful` for successful EC2.53 members still need a scoped repair/reprojection run if we want the previously generated March 23, 2026 rows to reflect the corrected bucket semantics immediately.
+- The action-group detail page wording is now truthful for new data, but already-generated historical artifacts and retained test-result bundles will still contain legacy `close_public` labels until regenerated.
+
+## Document remediation control-ID canonicalization mismatches in active docs (2026-03-23)
+
+**Task:** Update active documentation so every current alias control ID that canonicalizes into a different remediation family is documented clearly enough for operators and users to understand grouped-remediation, run-history, and pending-confirmation behavior.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/action-groups-persistent.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/06-control-action-inventory.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/manual-test-use-cases.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added an explicit “Control ID Canonicalization” section to the persistent action-groups doc so grouped remediation readers can understand why findings, grouped members, run history, and pending-confirmation messages may use different IDs.
+- Updated the active control/action inventory to document every current alias from `CONTROL_ALIAS_TO_ACTION_TYPE`, including the correct canonical target for `S3.17 -> S3.15`.
+- Added a backend contract note documenting that findings can keep alias `control_id` values while actions and grouped remediation use the canonical family.
+- Expanded the manual-test quick reference to include the alias controls that route into canonical remediation families.
+- Added a short current-state canonicalization summary to the remediation-profile README so readers do not need to infer the active alias set from deeper Wave 6 docs or source code.
+
+**Validation:**
+- Verified active docs now mention every alias currently present in `backend/services/control_scope.py`:
+  - `S3.3 -> S3.2`
+  - `S3.8 -> S3.2`
+  - `S3.13 -> S3.11`
+  - `S3.17 -> S3.15`
+  - `EC2.13 -> EC2.53`
+  - `EC2.18 -> EC2.53`
+  - `EC2.19 -> EC2.53`
+- Re-checked the live `Valens` tenant example already observed:
+  - `S3.8` findings exist under source alias `S3.8`
+  - grouped remediation members for that family are canonicalized under `S3.2`
+
+**Open questions / TODOs:**
+- The docs now explain the current behavior, but the UI still does not surface alias provenance inline on grouped members; users can still encounter the same confusion unless the product displays both source and canonical IDs.
+
+## Deploy grouped PR-bundle no-change guard and re-run live production E2E (2026-03-23)
+
+**Task:** Deploy the grouped PR-bundle no-change guard changes to production from an isolated workspace, publish the frontend from the current workspace, and re-run the live grouped PR-bundle E2E against `https://api.ocypheris.com` and `https://ocypheris.com`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Built a minimal isolated deploy workspace under `/tmp/aws-saas-minideploy-5E9xG6/root` containing only the serverless build/runtime inputs plus the grouped-bundle backend files:
+  - `backend/services/grouped_bundle_conflicts.py`
+  - `backend/routers/action_groups.py`
+  - `backend/routers/remediation_runs.py`
+  - `alembic/versions/0048_action_group_pending_confirmation_bucket.py`
+  - `alembic/versions/0049_action_group_metadata_only_bucket.py`
+  - `scripts/check_runtime_db_alignment.py`
+- Added the two frontend files required for the grouped bundle page plus the missing shared dependency to the isolated frontend test workspace:
+  - `frontend/src/lib/api.ts`
+  - `frontend/src/app/actions/group/page.tsx`
+  - `frontend/src/components/ui/PendingConfirmationNote.tsx`
+- Validated the isolated deploy snapshot before publish:
+  - backend changed files compiled with `python -m py_compile`
+  - isolated frontend focused test `src/app/actions/group/page.test.tsx` passed
+- Deployed the serverless backend from the isolated workspace on March 23, 2026:
+  - `scripts/deploy_saas_serverless.sh` succeeded with image tag `20260323T204848Z`
+  - runtime stack `security-autopilot-saas-serverless-runtime` updated successfully
+  - post-deploy DB alignment check passed at head `0049_action_group_metadata_only_bucket`
+- Published the frontend from the current `frontend/` workspace after the isolated clean-base publish path proved incompatible with newer shared UI/API files.
+- Re-ran the live grouped-bundle checks against the same production tenant/account:
+  - `POST /api/action-groups/a5630610-ad33-49b3-aef7-369047651e3d/bundle-run` with `{"strategy_id":"guardduty_enable_pr_bundle","risk_acknowledged":true}` now returns `409 grouped_bundle_already_created_no_changes`
+  - `POST /api/remediation-runs/group-pr-bundle` with `{"action_type":"enable_guardduty","account_id":"696505809372","status":"resolved","region":"eu-north-1","strategy_id":"guardduty_enable_pr_bundle","risk_acknowledged":true}` now also returns `409 grouped_bundle_already_created_no_changes`
+- Re-scanned live action-group detail responses after deploy and found no current tenant groups with `can_generate_bundle=false` for the default `{}` request shape, so the new disabled-CTA browser state could not be proven on a naturally qualifying group in this tenant after deploy.
+
+**Validation:**
+- Isolated frontend test:
+  - `cd /tmp/aws-saas-minideploy-5E9xG6/root/frontend && npm run test:ui -- src/app/actions/group/page.test.tsx`
+  - `1 passed file, 2 passed tests`
+- Backend deploy:
+  - `cd /tmp/aws-saas-minideploy-5E9xG6/root && /bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./scripts/deploy_saas_serverless.sh'`
+  - succeeded; runtime/DB alignment passed before and after migration
+- Live API verification after deploy:
+  - `POST https://api.ocypheris.com/api/action-groups/a5630610-ad33-49b3-aef7-369047651e3d/bundle-run` -> `409 grouped_bundle_already_created_no_changes`
+  - `POST https://api.ocypheris.com/api/remediation-runs/group-pr-bundle` -> `409 grouped_bundle_already_created_no_changes`
+  - `GET https://api.ocypheris.com/api/action-groups?limit=100` plus per-group detail scan -> no current groups with `can_generate_bundle=false` in tenant `Valens`
+- Frontend health:
+  - `curl -I https://ocypheris.com` -> `HTTP/2 200`
+
+**Open questions / TODOs:**
+- The browser-side disabled CTA remains unproven live in this tenant because no current action-group detail response is returning `can_generate_bundle=false` for the page’s default request shape; strategy-required families still surface `can_generate_bundle=true` by design.
+- Publishing the frontend from a clean historical checkout is still blocked by broader current-workspace frontend API/UI contract drift; the current live deploy came from the dirty workspace because that was the only coherent buildable source.
+
+## Live grouped PR-bundle rerun verification on production (2026-03-23)
+
+**Task:** Use the live SaaS tenant credentials to validate the newly shipped grouped PR-bundle no-change behavior end to end on production, including both grouped create APIs and the currently deployed browser UI.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Authenticated successfully to live production as tenant admin `marco.ibrahim@ocypheris.com` for tenant `Valens` (`tenant_id=9f7616d8-af04-43ca-99cd-713625357b70`); MFA is currently disabled on that account.
+- Enumerated all `22` live action groups for account `696505809372` and verified that every current `GET /api/action-groups/{group_id}` response still reports `can_generate_bundle=true` for the default `{}` request shape.
+- Validated the action-group grouped-create guard live against existing successful `enable_guardduty` group `a5630610-ad33-49b3-aef7-369047651e3d` in `eu-north-1`:
+  - `POST /api/action-groups/{group_id}/bundle-run` with `{"strategy_id":"guardduty_enable_pr_bundle","risk_acknowledged":true}` returned `409`
+  - response reason was `grouped_bundle_already_created_no_changes`
+  - response pointed at existing remediation run `c9cff7c0-d75b-40c1-a63a-51f55cf22218` and existing group run `9894414d-3d45-4384-910d-0084a5a68a20`
+- Validated the second grouped API against the same semantic group:
+  - first `POST /api/remediation-runs/group-pr-bundle` with `{"action_type":"enable_guardduty","account_id":"696505809372","status":"resolved","region":"eu-north-1","strategy_id":"guardduty_enable_pr_bundle","risk_acknowledged":true}` returned `201`
+  - live remediation run `f8e85ea3-9427-4ce6-8fb6-6bcbe3ef823c` reached terminal `success` at `2026-03-23T20:34:45Z` with outcome `Group PR bundle generated (1 actions)`
+  - immediate retry of that exact same request then returned `409` with reason `grouped_bundle_already_created_no_changes` and `existing_run_id=f8e85ea3-9427-4ce6-8fb6-6bcbe3ef823c`
+- Logged into the live browser at `https://ocypheris.com`, opened `/actions/group?group_id=a5630610-ad33-49b3-aef7-369047651e3d`, and confirmed the currently deployed frontend is still the rolled-back build:
+  - it shows `Generate Bundle Run` enabled
+  - clicking it posts the old empty-body request and surfaces `strategy_id is required for grouped action_type 'enable_guardduty'...`
+  - it does not yet use the new backend gating fields or the accepted grouped payload shape for this strategy-required family
+- Probed a second family during the same live session and found an unrelated production bug:
+  - both grouped create APIs still return raw `500 Internal Server Error` for `us-east-1 ebs_default_encryption` group `d6d3ec05-fbaa-4ad6-872f-be0b16e42c16` even when passed valid `strategy_id="ebs_enable_default_encryption_aws_managed_kms_pr_bundle"`
+  - no remediation run or action-group run row was created for those failed attempts
+
+**Validation:**
+- Live auth: `POST https://api.ocypheris.com/api/auth/login` -> `200`
+- Live scan: `GET https://api.ocypheris.com/api/action-groups?limit=100` plus per-group detail reads
+- Live action-group no-change proof:
+  - `POST https://api.ocypheris.com/api/action-groups/a5630610-ad33-49b3-aef7-369047651e3d/bundle-run`
+  - result: `409 grouped_bundle_already_created_no_changes`
+- Live remediation-runs grouped-route proof:
+  - first `POST https://api.ocypheris.com/api/remediation-runs/group-pr-bundle` -> `201` (`run_id=f8e85ea3-9427-4ce6-8fb6-6bcbe3ef823c`)
+  - `GET https://api.ocypheris.com/api/remediation-runs/f8e85ea3-9427-4ce6-8fb6-6bcbe3ef823c` -> terminal `success`
+  - second identical `POST https://api.ocypheris.com/api/remediation-runs/group-pr-bundle` -> `409 grouped_bundle_already_created_no_changes`
+- Live browser check with Playwright on `https://ocypheris.com/login` and `https://ocypheris.com/actions/group?group_id=a5630610-ad33-49b3-aef7-369047651e3d`
+
+**Open questions / TODOs:**
+- Production is not yet enforcing identical-success rejection consistently across both grouped entry points for pre-existing successful runs; the action-group route blocked immediately, while `POST /api/remediation-runs/group-pr-bundle` only blocked after generating a fresh successful run in the current live session.
+- The live frontend remains on the rolled-back build, so users still see the old enabled CTA and hit strategy-shape validation errors instead of the new backend-provided blocked-state UX.
+- `us-east-1 ebs_default_encryption` grouped create still reproduces a raw `500` on both APIs despite valid strategy selection and needs a separate production fix.
+
+## Implement floating chatbot 6-hour recent history and multi-turn restore (2026-03-23)
+
+**Task:** Upgrade the globally mounted floating `Ask AI` chatbot so it keeps multiple temporary recent chats for `6` hours, restores the latest non-expired chat after reload, and lets the user reopen recent temporary chats directly from the widget.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/help/FloatingChat.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/floating-chat-history.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/floating-chat-history.test.ts`
+- `/Users/marcomaher/AWS Security Autopilot/docs/customer-guide/help-hub.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/help-desk-platform.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Replaced the old single-thread floating-chat local storage model with a dedicated recent-session helper that stores:
+  - `thread_id`
+  - last question preview
+  - last activity timestamp
+  - expiry timestamp
+- Changed floating-chat expiry from `3` hours to `6` hours and made the expiry window refresh on every new message.
+- Added recent-chat restore rules so the widget:
+  - reopens the latest non-expired chat after reload
+  - keeps multiple temporary chats available inside the floating bot
+  - prunes expired chats automatically from local storage
+- Reworked the floating chatbot UI so `New chat` starts a fresh session without wiping the whole temporary history, and added an in-chat `Recent chats` view for reopening or removing temporary sessions.
+- Aligned floating-chat message rendering more closely with the Help Hub assistant contract by preserving citations, support-case approval CTA, context gaps, live-lookup cards, and suggested follow-up prompts inside the widget.
+- Added focused frontend unit coverage for the new recent-session storage helper.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/lib/floating-chat-history.test.ts`
+  - `4 passed`
+- `cd frontend && npm run typecheck`
+  - passed
+- `cd frontend && npm run lint -- src/components/help/FloatingChat.tsx src/lib/floating-chat-history.ts src/lib/floating-chat-history.test.ts`
+  - passed
+
+**Open questions / TODOs:**
+- Temporary expiration is currently enforced only in the floating-chat product layer; backend Help Assistant interaction rows still persist as before.
+- The floating widget now renders citations and live-lookup status inline, but it still intentionally stays lighter than the full `/help?tab=assistant` surface.
+
+## Block unchanged grouped PR-bundle reruns after successful generation (2026-03-23)
+
+**Task:** Enforce the approved grouped PR-bundle policy so unchanged groups cannot generate the same bundle again after a successful run, keep the older active-run duplicate guard intact across both grouped create APIs, and surface the blocked state on the action-group page before submit.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_bundle_conflicts.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/action-groups-persistent.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a shared grouped-bundle conflict helper that evaluates:
+  - active identical grouped PR-bundle requests, while still ignoring stale `pending` grouped runs older than the existing `10` minute threshold
+  - latest successful identical grouped PR-bundle requests where the canonical grouped signature still matches current membership, resolutions, and top-level bundle inputs
+- Wired that helper into both grouped create entry points:
+  - `POST /api/action-groups/{group_id}/bundle-run`
+  - `POST /api/remediation-runs/group-pr-bundle`
+- Added a distinct grouped no-changes conflict reason `grouped_bundle_already_created_no_changes` and returned `409` with the existing run identifiers so callers can distinguish it from active-pending duplicate conflicts.
+- Extended `GET /api/action-groups/{group_id}` with additive CTA-gating fields:
+  - `can_generate_bundle`
+  - `blocked_reason`
+  - `blocked_detail`
+  - `blocked_by_run_id`
+- Updated the action-group page to disable `Generate Bundle Run` and show the backend-provided no-changes message when the current default grouped request is blocked.
+- Added focused backend and frontend regression coverage for:
+  - successful identical grouped rerun rejection on both APIs
+  - unchanged active duplicate guard preservation
+  - action-group detail exposure of the blocked state
+  - action-group UI disabled CTA rendering
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_groups_bundle_run.py tests/test_action_groups_api.py tests/test_remediation_runs_api.py -q -k 'group_bundle or group_pr_bundle or action_group_detail_includes_pending_confirmation_fields'`
+  - `31 passed`
+- `cd /Users/marcomaher/AWS Security Autopilot/frontend && npm run test:ui -- src/app/actions/group/page.test.tsx`
+  - `1 passed file, 2 passed tests`
+
+**Open questions / TODOs:**
+- The action-group CTA gating is intentionally computed for the current default action-group request body (`{}`); groups that still require explicit strategy selection keep their existing behavior and are not newly blocked by this change.
+- The new no-changes guard is grouped-only; single-action `POST /api/remediation-runs` remains unchanged by design.
+
+## Live `CloudTrail.1` generate, download, and local apply validation (2026-03-23)
+
+**Task:** Generate a fresh live `CloudTrail.1` PR bundle from production, download it, execute it locally against account `696505809372`, and record whether the post-deploy approved create-if-missing flow is actually runnable end to end.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T162259Z/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T162259Z/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Created a retained live-run workspace under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T162259Z/`.
+- Authenticated to `https://api.ocypheris.com` as tenant admin and selected live `CloudTrail.1` action `2ea6f141-6134-4dcd-8c82-4f0d0b6e582d` for `eu-north-1`.
+- Created live remediation run `64a6bd18-abff-4cc8-aef7-f7f8dddb4171` with:
+  - `trail_name = security-autopilot-trail`
+  - `trail_bucket_name = ocypheris-live-ct-20260323162333-eu-north-1`
+  - `create_bucket_if_missing = true`
+  - `create_bucket_policy = true`
+  - `bucket_creation_acknowledged = true`
+- Waited for the live remediation run to reach terminal `success`, then downloaded the PR bundle ZIP and unpacked it locally.
+- Ran the generated Terraform bundle locally with `AWS_PROFILE=test28-root` and `AWS_REGION=eu-north-1`:
+  - `terraform init`
+  - `terraform plan -out=tfplan`
+  - `terraform apply -auto-approve tfplan`
+- Verified the AWS-side effect after apply:
+  - bucket `ocypheris-live-ct-20260323162333-eu-north-1` exists
+  - trail `security-autopilot-trail` exists
+  - trail is multi-region
+  - trail status reports `IsLogging = true`
+- Triggered live refresh after apply:
+  - `POST /api/aws/accounts/696505809372/ingest`
+  - `POST /api/actions/compute`
+  - `POST /api/actions/reconcile`
+- Queried post-refresh finding status across regions:
+  - both `eu-north-1` findings are now `RESOLVED`
+  - one `us-east-1` finding still remains `NEW`
+
+**Validation:**
+- Live remediation run `64a6bd18-abff-4cc8-aef7-f7f8dddb4171` -> `success`
+- Local Terraform apply -> `Apply complete! Resources: 6 added, 0 changed, 0 destroyed.`
+- AWS verification:
+  - `describe-trails` shows `security-autopilot-trail`
+  - `S3BucketName = ocypheris-live-ct-20260323162333-eu-north-1`
+  - `IsMultiRegionTrail = true`
+  - `get-trail-status` shows `IsLogging = true`
+- Live platform verification:
+  - `eu-north-1` `CloudTrail.1` findings -> `RESOLVED`
+  - `us-east-1` `CloudTrail.1` finding -> still `NEW`
+
+**Open questions / TODOs:**
+- The generated CloudTrail bundle still carries an execution-quality gap: it references `null_resource.cloudtrail_bucket_policy` even when `create_bucket_if_missing = true`, which drags in `hashicorp/null` on an inactive path.
+- Local execution required a manual local provider-mirror workaround for `hashicorp/null`; the generated bundle did not run cleanly in this environment without that operator fixup.
+- The multi-region trail apply succeeded, but the control family did not fully converge because `us-east-1` remained `NEW` after the apply plus refresh cycle. That needs follow-up to determine whether the remaining gap is Security Hub propagation delay or a platform-side recompute/reconciliation issue.
+
+## Deploy frontend so the live CloudTrail bucket-creation approval UI is visible (2026-03-23)
+
+**Task:** Deploy the current frontend to production and verify that the live CloudTrail remediation modal now shows the separate `bucket_creation_acknowledged` approval control when `Create a new CloudTrail log bucket if the named bucket does not already exist` is enabled.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, and docs entrypoint before starting the deploy task.
+- Confirmed the local frontend already contains the CloudTrail approval UX in:
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- Verified the frontend deploy path is the OpenNext Cloudflare worker flow driven by:
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/package.json`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/scripts/run-opennext-production.mjs`
+  - `/Users/marcomaher/AWS Security Autopilot/frontend/wrangler.jsonc`
+- Ran the production frontend deploy from `/Users/marcomaher/AWS Security Autopilot/frontend` with:
+  - `npm run deploy`
+  - then retried in non-interactive mode with `CI=1 npm run deploy` after the first Wrangler session stalled after asset upload
+- Verified the live site directly in Playwright against `https://ocypheris.com`:
+  - authenticated as `marco.ibrahim@ocypheris.com`
+  - opened the `CloudTrail.1` remediation modal
+  - confirmed the delivery-settings toggle is present
+  - enabled `Create a new CloudTrail log bucket if the named bucket does not already exist`
+  - confirmed the separate approval checkbox now renders:
+    - `I approve creating a new S3 bucket and bucket policy for CloudTrail log delivery if the named bucket is missing.`
+
+**Validation:**
+- Live browser verification on `https://ocypheris.com/findings` showed the production UI now includes:
+  - `CloudTrail log bucket`
+  - `Create a new CloudTrail log bucket if the named bucket does not already exist`
+  - the separate approval checkbox required for `bucket_creation_acknowledged`
+- This matches the live backend contract already deployed on `https://api.ocypheris.com`
+
+**Open questions / TODOs:**
+- Wrangler reached asset upload successfully but its CLI session stayed open instead of printing a clean final publish summary in this local environment; the live browser verification is the authoritative proof that the new frontend is now serving production traffic.
+
+## Live E2E for `SSM.7` and `CloudTrail.1` on production (2026-03-23)
+
+**Task:** Run a retained live production E2E for `SSM.7` and `CloudTrail.1` against `https://api.ocypheris.com` / account `696505809372`, capture the current live create/apply/verification behavior, and record whether the newly implemented CloudTrail bucket-toggle contract is actually deployed on production yet.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Authenticated to the live API as tenant `Valens` admin user and created a retained run package under `docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/`.
+- Enumerated the current live `SSM.7` and `CloudTrail.1` actions/findings by region before execution.
+- Ran a full live `SSM.7` PR-bundle cycle on `us-east-1` action `e6b1eac2-041c-4fb3-9a47-2525a3afa908`:
+  - created remediation run `cea5c507-fbc1-41a9-941b-131429704ff3`
+  - waited for terminal `success`
+  - downloaded the generated bundle
+  - applied it locally with `AWS_PROFILE=test28-root`
+  - triggered live ingest, compute, and reconciliation
+  - confirmed reconciliation run `96a6078e-6f02-44b0-ad4b-47f01ee35eea` reached `succeeded`
+  - confirmed the live action state became `resolved`
+- Exercised the current live `CloudTrail.1` default contract:
+  - both live option/preview surfaces still show unresolved bucket prerequisites
+  - `eu-north-1` single-run create accepted run `0730bf95-34f7-40a6-87b5-c11d593b705d`, which completed as a non-executable `review_required_bundle`
+  - the downloaded bundle contained only `README.txt`, `decision.json`, and `pr_automation/*`
+  - `us-east-1` single-run create hit the duplicate-active-run guard for existing run `92e67c82-926f-4847-a7ab-eb0d2cd23230`
+- Performed a safe live create-time check for the new CloudTrail bucket-toggle inputs without applying any bundle:
+  - sent `trail_bucket_name`
+  - sent `create_bucket_if_missing=true`
+  - tested with and without `bucket_creation_acknowledged=true`
+  - production returned `400 Invalid strategy selection` both times because `trail_bucket_name` and `create_bucket_if_missing` are still unknown fields on the live API
+
+**Validation:**
+- `SSM.7`
+  - remediation run `cea5c507-fbc1-41a9-941b-131429704ff3` -> `success`
+  - local Terraform apply -> success
+  - reconciliation run `96a6078e-6f02-44b0-ad4b-47f01ee35eea` -> `succeeded`
+  - live action `e6b1eac2-041c-4fb3-9a47-2525a3afa908` -> `resolved`
+- `CloudTrail.1`
+  - `eu-north-1` default create -> run `0730bf95-34f7-40a6-87b5-c11d593b705d`, `success`, support tier `review_required_bundle`, non-executable guidance-only bundle
+  - `us-east-1` default create -> `409 duplicate_active_run`
+  - create-if-missing input check -> `400 Invalid strategy selection` on live production
+
+**Open questions / TODOs:**
+- Default unresolved-bucket `CloudTrail.1` behavior is still intentionally review-only on production; only the approved create-if-missing path is newly executable.
+- No live Terraform apply was executed for the post-deploy CloudTrail create-if-missing bundle in this task; the live proof here is create-time contract correctness plus executable bundle generation.
+
+**Follow-up completed later the same day:**
+- Deployed the current backend runtime to production with `./scripts/deploy_saas_serverless.sh --region eu-north-1` after fixing the deploy script’s runtime-alignment guard calls to include `PYTHONPATH=.`
+- Re-ran the same live `CloudTrail.1` create-if-missing checks and confirmed the contract is now live:
+  - no-ack request returns `400 Bucket creation acknowledgement required`
+  - with-ack request creates remediation run `3a6200f9-919d-43a4-a53c-92c79380329a`
+  - the run reaches terminal `success`
+  - the resulting bundle is executable Terraform with `cloudtrail_enabled.tf`
+
+## CloudTrail.1 approved bucket-creation toggle and destination-bucket contract (2026-03-23)
+
+**Task:** Implement the CloudTrail.1 remediation flow update that keeps existing-bucket resolution fail-closed by default, adds an explicit `create_bucket_if_missing` toggle plus separate approval gate, and threads the new bucket source/mode semantics through preview, create, grouped runs, bundle generation, and the remediation modal UI.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added additive CloudTrail strategy inputs:
+  - `trail_bucket_name`
+  - `create_bucket_if_missing` with default `false`
+- Updated runtime checks so CloudTrail now auto-resolves the log bucket only when one safe existing-trail bucket candidate is present, and records `cloudtrail_resolved_bucket_source = existing_trail`.
+- Preserved fail-closed existing-bucket behavior when `create_bucket_if_missing=false`: unreachable or unresolved buckets still block executable generation as `invalid_strategy_inputs`.
+- Added create-if-missing runtime handling so a missing named bucket can become executable only when:
+  - `create_bucket_if_missing=true`
+  - the named bucket appears available for creation
+  - the caller explicitly sends `bucket_creation_acknowledged=true`
+- Added separate create-time approval enforcement for both single-run and grouped PR-bundle creation and persisted the approval into run artifacts.
+- Extended `preservation_summary` and resolved artifacts to expose:
+  - `trail_bucket_source = existing_trail | tenant_default | user_input`
+  - `trail_bucket_mode = existing | create_if_missing`
+- Extended CloudTrail Terraform and CloudFormation bundle generation so create-if-missing mode can provision the destination bucket plus baseline bucket policy controls and then wire CloudTrail to that exact bucket.
+- Updated the remediation modal so CloudTrail create-if-missing mode:
+  - changes the helper text under `CloudTrail log bucket`
+  - requires an explicit approval checkbox before submit
+  - sends `bucket_creation_acknowledged=true` only after the user confirms the infrastructure creation
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py tests/test_remediation_run_resolution_create.py tests/test_remediation_profile_options_preview.py tests/test_step7_components.py -q`
+  - `195 passed`
+- `cd frontend && npm run test:ui -- src/components/RemediationModal.test.tsx`
+  - `17 passed`
+- `cd frontend && npm run typecheck`
+  - `passed`
+
+**Open questions / TODOs:**
+- The focused CloudTrail and remediation-modal coverage is green, but a later broad regression sweep surfaced unrelated existing fixture/API expectation failures in tests outside this feature scope. Those were intentionally not folded into this task.
+- The current create-if-missing implementation supports the minimum safe bucket-creation shape for the CloudTrail bundle contract; it does not yet try to solve every org-centralized logging variant automatically.
+
+## Live `POST /api/auth/login` 500 incident recovery without rollback (2026-03-23)
+
+**Task:** Recover the live `https://api.ocypheris.com/api/auth/login` `500` incident without rolling production back.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reproduced the user-reported live failure directly and confirmed the blast radius was broader than login:
+  - `GET https://api.ocypheris.com/health` returned `500`
+  - `GET https://api.ocypheris.com/ready` returned `500`
+  - `POST https://api.ocypheris.com/api/auth/login` returned `500` even for obviously invalid credentials
+- Verified the shared production database was already at Alembic head `0049_action_group_metadata_only_bucket`, which meant any older API image would fail the startup migration guard before route execution.
+- Redeployed the live serverless runtime in `eu-north-1` from the current workspace with:
+  - `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./scripts/deploy_saas_serverless.sh --region eu-north-1'`
+- Re-ran the post-deploy DB migration command to confirm the database stayed at head:
+  - `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade heads'`
+- Re-verified the live API after deploy:
+  - `/health` returned `200`
+  - `/ready` returned `200`
+  - invalid `POST /api/auth/login` returned `401 {"detail":"Invalid email or password"}`
+
+**Validation:**
+- Before fix:
+  - `curl -sS https://api.ocypheris.com/health` -> `500`
+  - `curl -sS https://api.ocypheris.com/ready` -> `500`
+  - invalid `POST https://api.ocypheris.com/api/auth/login` -> `500`
+- Deploy:
+  - `./scripts/deploy_saas_serverless.sh --region eu-north-1`
+  - runtime image tag `20260323T140540Z`
+- After fix:
+  - `curl -sS https://api.ocypheris.com/health` -> `200 {"status":"ok","app":"AWS Security Autopilot"}`
+  - `curl -sS https://api.ocypheris.com/ready` -> `200 {"status":"ok","ready":true,...}`
+  - invalid `POST https://api.ocypheris.com/api/auth/login` -> `401 {"detail":"Invalid email or password"}`
+
+**Open questions / TODOs:**
+- The outage pattern is consistent with runtime/DB deploy-order drift: the database was at head `0049`, while the live API was still serving an older image that failed startup before the auth route ran.
+- Future live deploys should keep the runtime image and Alembic head advancement in lockstep so the migration guard cannot strand the API on an older image again.
+
+## Fix grouped vs flat remediation truth for metadata-only S3.5 / CloudTrail.1 / EC2.7 states (2026-03-23)
+
+**Task:** Implement the grouped-state truthfulness pass that separates executable failure, executable success awaiting AWS confirmation, terminal metadata-only completion, and true `not_run_yet`, while preserving the March 23 CloudTrail fail-closed grouped-create behavior and adding a scoped state reproject utility.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/enums.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0049_action_group_metadata_only_bucket.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/reproject_action_group_state.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_migration.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added additive grouped bucket `run_finished_metadata_only` plus Alembic migration `0049_action_group_metadata_only_bucket.py`.
+- Updated grouped projection logic so:
+  - executable `success` still becomes `run_successful_pending_confirmation`
+  - executable non-success stays `run_not_successful`
+  - terminal non-executable `review_required_metadata_only` results become `run_finished_metadata_only`
+  - reevaluation preserves metadata-only and successful-pending-confirmation states instead of downgrading them back to stale failure buckets
+- Updated `/api/internal/group-runs/report` finished-event handling so metadata-only `non_executable_results[]` use the dedicated non-executable recorder and remain first-class terminal `finished` outcomes.
+- Added additive grouped-state hint fields to finding and grouped-finding responses:
+  - `remediation_action_group_status_bucket`
+  - `remediation_action_group_latest_run_status`
+- Updated grouped counters and UI contracts to include `metadata_only`, and rendered metadata-only review outcomes explicitly in the grouped action page and finding surfaces.
+- Restricted pending-confirmation banners to executable finished runs only; metadata-only review-required outcomes no longer show the waiting-for-AWS note.
+- Added scoped reproject helper `scripts/reproject_action_group_state.py` for tenant/account/action-type repair after deploy.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_groups_migration.py tests/test_action_run_confirmation.py tests/test_internal_group_run_report.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py -q`
+  - `39 passed`
+- `cd frontend && npm run test:ui -- src/app/findings/FindingCard.test.tsx src/app/actions/group/page.test.tsx`
+  - `2 files passed, 5 tests passed`
+- `cd frontend && npm run typecheck`
+  - `passed`
+
+**Open questions / TODOs:**
+- The scoped reproject utility was implemented but not run against live data in this task; it still needs the target tenant UUID and post-deploy execution for account `696505809372`.
+- No live rerun was performed in this task, so the plan’s post-deploy validation items for current `S3.5`, `CloudTrail.1`, and `EC2.7` still remain operational follow-up work.
+
 ## Harden grouped finalization fallback and stale pending grouped-run conflicts (2026-03-23)
 
 **Task:** Implement the follow-up fixes for the March 23 unresolved grouped PR-bundle buckets: stop abandoned `pending` grouped runs from blocking fresh reruns, and harden callback-enabled bundle execution so interrupted or hung runs still produce a terminal grouped event instead of remaining `started` forever.
@@ -27952,3 +28948,170 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - The shared Neon dataset still contains stale active remediation rows for `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`; those rows need to be cleared or retired before a clean full follow-up rerun can prove the remaining two families end to end.
 - The local runtime still cannot reproduce fresh SaaS role-assumption resolution because the tenant read role denies `sts:SetSourceIdentity`, so executable-path validation continues to rely on retained March 22 action-resolution artifacts where local-only proof is insufficient.
+
+## CloudTrail.1 and S3.5 grouped flat-view state + control-alias filtering fixes (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/enums.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py`
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0048_action_group_pending_confirmation_bucket.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_scope.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p0_5_owner_queues.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_migration.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a distinct grouped member bucket `run_successful_pending_confirmation` so a finished grouped execution no longer shares the same immutable member-state bucket as a failed execution.
+- Updated grouped execution result persistence so successful callback results land in the pending-confirmation bucket, while `failed`, `cancelled`, and `unknown` results continue to land in `run_not_successful`.
+- Updated grouped confirmation reevaluation to preserve the pending-confirmation bucket until trusted AWS confirmation arrives, instead of degrading successful grouped executions back to the failure bucket.
+- Updated grouped counters so both pending-confirmation and confirmed-success members count as `run_successful` in group/detail summaries.
+- Wired the internal group-run callback route to pass the per-action execution status into confirmation reevaluation so member projection stays aligned with the actual callback result.
+- Added canonical/alias-aware control-family expansion for `/api/actions` control filtering and control-token text search, so flat action queries now match `S3.11`/`S3.13` and `EC2.53`/`EC2.13`/`EC2.18`/`EC2.19` as one remediation family.
+- Added the enum migration `0048_action_group_pending_confirmation_bucket` so the new grouped member bucket is deployable.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_wave4_contract_fixes.py tests/test_findings_grouped_action_hints.py tests/test_internal_group_run_report.py tests/test_control_scope.py tests/test_phase3_p0_5_owner_queues.py tests/test_action_groups_migration.py -q`
+  - `52 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_groups_api.py tests/test_actions_effective_visibility.py -q`
+  - `8 passed`
+
+**Open questions / TODOs:**
+- I did not run a fresh live/local E2E after this backend contract patch, so the updated flat-card behavior for the current live `CloudTrail.1` and `S3.5` rows still needs runtime confirmation against the shared dataset.
+- The new enum value requires applying migration `0048_action_group_pending_confirmation_bucket` before any deployed environment can persist the new grouped member bucket.
+
+## CloudTrail.1 and S3.5 local live-data rerun after grouped flat-view fix (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Applied local DB migration `0048_action_group_pending_confirmation_bucket` and ran a current-head local API against the shared live tenant/account data for account `696505809372` in `eu-north-1`.
+- Reran the `CloudTrail.1` grouped PR-bundle path and confirmed a fresh grouped create with `risk_acknowledged=true` now fails closed as structured `400 invalid_strategy_inputs` because `trail_bucket_name` is unresolved; the flat findings API correctly shows no pending-confirmation banner for the live `CloudTrail.1` findings.
+- Reran the `S3.5` grouped PR-bundle path and confirmed the current live dataset does not produce a truthful executable fix candidate: the bundle contains `12` actions and all of them downgrade to `review_required_metadata_only` because bucket-policy preservation evidence is missing for merge-safe SSL enforcement.
+- Captured that the remaining runtime bug for `S3.5` is narrower than the earlier flat-view projection issue: after local bundle execution and callback replay attempts, the `ActionGroupRun` still remained `started`, so the metadata-only grouped run did not finalize through the local callback path.
+- Retained the new local-evidence package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e`.
+
+**Validation:**
+- `./venv/bin/alembic upgrade heads`
+  - applied `0048_action_group_pending_confirmation_bucket`
+- Local API run at `http://127.0.0.1:8000` against shared live data with retained evidence:
+  - `01-eu-north-1-cloudtrail_enabled`
+    - grouped create with risk ack: `400 invalid_strategy_inputs`
+    - flat findings: `pending_confirmation_count=0`
+  - `02-eu-north-1-s3_bucket_require_ssl`
+    - grouped create: `201`
+    - remediation worker result: `success`
+    - bundle manifest: `12` actions, all `review_required_metadata_only`
+    - final grouped state: `started`
+    - flat findings: `pending_confirmation_count=0`
+
+**Open questions / TODOs:**
+- `CloudTrail.1` still has no truthful executable grouped path until the tenant supplies or resolves `trail_bucket_name`; the current fix only ensures the grouped family fails closed and does not look falsely successful.
+- `S3.5` still needs a follow-up fix for metadata-only grouped finalization on the local callback/report path, because the rerun left the group in `started` despite a generated bundle and successful worker completion.
+
+## Live `POST /api/auth/login` 500 incident investigation and recovery without rollback (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reproduced the user-reported live login failure directly against `https://api.ocypheris.com/api/auth/login` and confirmed the route was returning a generic `500` even for obviously invalid credentials.
+- Confirmed the blast radius was broader than login by reproducing live `500` responses on `/health` and `/ready`, proving the failure was in the API runtime bootstrap path rather than in the login handler logic.
+- Queried the live `security-autopilot-dev-api` CloudWatch logs and isolated the exact failure: the deployed API Lambda image still expected Alembic head `0047_help_assistant_live_iam_lookup`, while the production database had already been advanced to `0048_action_group_pending_confirmation_bucket`, so the migration guard rejected every request before route execution.
+- Verified the current repo/runtime code and the production DB state were healthy locally with `config/.env.ops`, then redeployed the current serverless runtime using `./scripts/deploy_saas_serverless.sh` without any rollback.
+- Re-verified the live API after deploy: `/health` returned `200`, `/ready` returned `200`, and `POST /api/auth/login` returned the expected `401 Invalid email or password` for a fake user.
+
+**Validation:**
+- Live repro before fix:
+  - `curl -sk https://api.ocypheris.com/health` -> `500`
+  - `curl -sk https://api.ocypheris.com/ready` -> `500`
+  - `curl -sk -X POST https://api.ocypheris.com/api/auth/login ...` -> `500`
+- CloudWatch root cause:
+  - `Refusing to start api: database revision is not at Alembic head. current=0048_action_group_pending_confirmation_bucket expected_head=0047_help_assistant_live_iam_lookup.`
+- Recovery:
+  - `./scripts/deploy_saas_serverless.sh`
+- Live verification after deploy:
+  - `curl -sk https://api.ocypheris.com/health` -> `200`
+  - `curl -sk https://api.ocypheris.com/ready` -> `200`
+  - `curl -sk -X POST https://api.ocypheris.com/api/auth/login ...` -> `401 {"detail":"Invalid email or password"}`
+
+**Open questions / TODOs:**
+- The incident root cause was deploy ordering drift: DB migration `0048` reached production before the API image that included the new Alembic head. The release process should keep runtime deploy and DB-head advancement aligned so the migration guard cannot strand the live API on an older image.
+
+## Deploy-order drift guard and grouped callback replay-repair hardening (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/check_runtime_db_alignment.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/reproject_action_group_state.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_runtime_db_alignment.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_serverless_email_delivery_config.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_internal_group_run_report.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/infrastructure-serverless.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Hardened the serverless deploy flow so it now verifies runtime-vs-DB Alembic alignment before deploy, waits for both Lambda image rollouts, re-checks alignment, runs `alembic upgrade heads`, and requires the target DB to end exactly at repo head before exit.
+- Added `scripts/check_runtime_db_alignment.py` as the dedicated runtime/DB guard utility and extended `scripts/reproject_action_group_state.py` with `--repair-stuck-runs` for scoped grouped-run repair.
+- Refactored `/api/internal/group-runs/report` replay classification so already-terminal matching runs are only treated as fully accepted when both run results and `action_group_action_state` projection are aligned; otherwise replay falls into a repair path.
+- Removed the remaining ORM-heavy confirmation reads from grouped callback projection by switching `action_run_confirmation` membership/state/finding lookups to narrow explicit selects, which avoids the `selectin` relationship churn that had been leaving the callback backend `idle in transaction`.
+- Verified the narrowed live-data S3.5 callback case locally against the shared DB: a fresh signed replay first repaired the stale member projection from `run_not_successful` to `run_finished_metadata_only`, and a second replay returned fast idempotent `200 group_run_report_replay` without leaving any `idle in transaction` rows in `pg_stat_activity`.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_internal_group_run_report.py -q`
+  - `19 passed`
+- `PYTHONPATH=. ./venv/bin/python -m py_compile backend/services/action_run_confirmation.py backend/routers/internal.py`
+  - passed
+- Local shared-DB callback replay validation on March 23, 2026 UTC:
+  - first fresh signed replay repaired group run `fd8e6c29-2ddf-4f0f-bac8-e0e92d2013d6` member buckets to `run_finished_metadata_only`
+  - second replay returned `200 {"status":"accepted","reason":"group_run_report_replay",...,"repaired":false}` in `3.92s`
+  - post-replay `pg_stat_activity` query returned `[]` for `state = 'idle in transaction'`
+
+**Open questions / TODOs:**
+- I did not run the full wider grouped-family local rerun suite again after this callback repair; the validation here was intentionally scoped to the retained March 23 `S3.5` metadata-only case plus focused automated tests.
+- The production scoped repair command still needs to be run deliberately after deploy for any already-stuck live rows that should be recomputed with `--repair-stuck-runs`.
+
+## Remediation canonicalization docs cleanup for user-facing wording (2026-03-23)
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/action-groups-persistent.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/backend.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/manual-test-use-cases.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/06-control-action-inventory.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Removed explicit implementation file-path references from the mixed-audience remediation canonicalization docs while preserving the alias-to-canonical mapping tables and examples.
+- Standardized the wording so the docs explain the user-visible behavior: findings can keep the source control ID, grouped remediation can show the canonical control ID/family, and pending-confirmation plus grouped history follow the canonical remediation family.
+- Audited nearby docs for similar leakage and intentionally left the clearly internal inventory/reference docs alone, including `docs/remediation-profile-resolution/wave-6-control-family-migration.md`, `docs/live-e2e-testing/README.md`, `docs/prod-readiness/06-task1-file-map.md`, and `docs/prod-readiness/06-task4-raw-id-registries.md`.
+
+**Validation:**
+- `rg -n "backend/services/control_scope.py|Current canonicalization cases come from|Current alias set from" docs/action-groups-persistent.md docs/local-dev/backend.md docs/remediation-profile-resolution/README.md docs/runbooks/manual-test-use-cases.md docs/prod-readiness/06-control-action-inventory.md -S`
+  - no remaining canonicalization file-path references in the mixed-audience docs
+- `rg -n "S3\\.3|S3\\.8|S3\\.13|S3\\.17|EC2\\.13|EC2\\.18|EC2\\.19" docs/action-groups-persistent.md docs/local-dev/backend.md docs/remediation-profile-resolution/README.md docs/runbooks/manual-test-use-cases.md docs/prod-readiness/06-control-action-inventory.md -S`
+  - confirmed all current alias mappings are still documented in active docs
+
+**Open questions / TODOs:**
+- Internal implementation-reference docs still mention code files by design; if those documents are later repurposed for operators or customers, they should get the same behavior-first rewrite.

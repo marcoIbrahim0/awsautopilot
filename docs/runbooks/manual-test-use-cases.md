@@ -222,7 +222,14 @@ Use this section to confirm the system fails closed instead of advertising or ex
 |--------------|----------------------------------|------------|-------------------------------------------------|
 | S3.1         | s3_block_public_access           | Out of scope | Turn off account-level S3 Block Public Access |
 | S3.2         | s3_bucket_block_public_access    | PR bundle  | Create S3 bucket without block public access     |
+| S3.3         | canonicalizes to S3.2 / s3_bucket_block_public_access | PR bundle | Trigger the same public-access family as S3.2; the finding can stay S3.3 while grouped remediation displays canonical S3.2 |
+| S3.8         | canonicalizes to S3.2 / s3_bucket_block_public_access | PR bundle | Trigger the same public-access family as S3.2; the finding can stay S3.8 while grouped remediation displays canonical S3.2 |
 | S3.4         | s3_bucket_encryption             | PR bundle  | Create S3 bucket without default encryption     |
+| S3.13        | canonicalizes to S3.11 / s3_bucket_lifecycle_configuration | PR bundle | Trigger the lifecycle family; the finding can stay S3.13 while grouped remediation displays canonical S3.11 |
+| S3.17        | canonicalizes to S3.15 / s3_bucket_encryption_kms | PR bundle | Trigger the SSE-KMS family; the finding can stay S3.17 while grouped remediation displays canonical S3.15 |
+| EC2.13       | canonicalizes to EC2.53 / sg_restrict_public_ports | PR bundle | Trigger the same security-group hardening family as EC2.53; grouped remediation can display canonical EC2.53 |
+| EC2.18       | canonicalizes to EC2.53 / sg_restrict_public_ports | PR bundle | Trigger the same security-group hardening family as EC2.53; grouped remediation can display canonical EC2.53 |
+| EC2.19       | canonicalizes to EC2.53 / sg_restrict_public_ports | PR bundle | Trigger the same security-group hardening family as EC2.53; grouped remediation can display canonical EC2.53 |
 | EC2.53       | sg_restrict_public_ports          | PR bundle  | Create SG with 0.0.0.0/0 (and/or ::/0) on 22 or 3389 |
 | CloudTrail.1 | cloudtrail_enabled               | PR bundle  | No CloudTrail (or delete trail)                 |
 | SecurityHub.1| enable_security_hub              | Out of scope | Disable Security Hub in a region              |

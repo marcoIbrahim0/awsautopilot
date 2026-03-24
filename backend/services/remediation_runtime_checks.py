@@ -712,8 +712,8 @@ def collect_runtime_risk_signals(
                 response = cloudtrail.describe_trails(includeShadowTrails=False)
                 trails = response.get("trailList", [])
                 if isinstance(trails, list) and trails:
-                    trail = trails[0] if isinstance(trails[0], dict) else {}
                     signals["cloudtrail_existing_trail_present"] = True
+                    trail = trails[0] if isinstance(trails[0], dict) else {}
                     trail_name = str(trail.get("Name", "")).strip()
                     if trail_name:
                         signals["cloudtrail_existing_trail_name"] = trail_name
@@ -724,6 +724,21 @@ def collect_runtime_risk_signals(
                         signals["cloudtrail_existing_trail_multi_region"] = multi_region
                         evidence_payload["cloudtrail_existing_trail_multi_region"] = multi_region
                         default_inputs["multi_region"] = multi_region
+                    bucket_candidates = sorted(
+                        {
+                            str(item.get("S3BucketName", "")).strip()
+                            for item in trails
+                            if isinstance(item, dict) and str(item.get("S3BucketName", "")).strip()
+                        }
+                    )
+                    if len(bucket_candidates) == 1:
+                        discovered_bucket = bucket_candidates[0]
+                        default_inputs["trail_bucket_name"] = discovered_bucket
+                        signals["cloudtrail_resolved_bucket_source"] = "existing_trail"
+                        evidence_payload["cloudtrail_existing_trail_bucket_name"] = discovered_bucket
+                    elif len(bucket_candidates) > 1:
+                        signals["cloudtrail_bucket_candidate_count"] = len(bucket_candidates)
+                        evidence_payload["cloudtrail_bucket_candidates"] = bucket_candidates
                 else:
                     signals["cloudtrail_existing_trail_present"] = False
             except ClientError as exc:
@@ -732,34 +747,63 @@ def collect_runtime_risk_signals(
 
         if "trail_name" not in default_inputs:
             default_inputs["trail_name"] = "security-autopilot-trail"
+        default_inputs.setdefault("create_bucket_if_missing", False)
         default_inputs.setdefault("create_bucket_policy", True)
         default_inputs.setdefault("multi_region", True)
         context_payload["default_inputs"] = default_inputs
-        trail_bucket_name = str(strategy_inputs.get("trail_bucket_name", "")).strip()
+        create_bucket_if_missing = bool(strategy_inputs.get("create_bucket_if_missing") is True)
+        trail_bucket_name = str(
+            strategy_inputs.get("trail_bucket_name")
+            or default_inputs.get("trail_bucket_name")
+            or ""
+        ).strip()
         if trail_bucket_name:
             evidence_payload["trail_bucket_name"] = trail_bucket_name
             session = _get_read_session()
             if session is None:
-                signals["cloudtrail_log_bucket_reachable"] = False
-                signals["cloudtrail_log_bucket_error"] = (
-                    "CloudTrail log bucket could not be verified because ReadRole runtime probe is unavailable."
-                )
+                if create_bucket_if_missing:
+                    signals["cloudtrail_bucket_creation_conflict"] = True
+                    signals["cloudtrail_bucket_creation_error"] = (
+                        "CloudTrail log bucket existence could not be verified because ReadRole runtime probe is unavailable."
+                    )
+                else:
+                    signals["cloudtrail_log_bucket_reachable"] = False
+                    signals["cloudtrail_log_bucket_error"] = (
+                        "CloudTrail log bucket could not be verified because ReadRole runtime probe is unavailable."
+                    )
             else:
                 s3 = session.client("s3")
                 try:
                     s3.head_bucket(Bucket=trail_bucket_name)
                     signals["cloudtrail_log_bucket_reachable"] = True
+                    if create_bucket_if_missing:
+                        signals["cloudtrail_bucket_creation_conflict"] = True
+                        signals["cloudtrail_bucket_creation_error"] = (
+                            f"CloudTrail log bucket '{trail_bucket_name}' already exists. "
+                            "Disable 'Create bucket if missing' to reuse it, or choose a different bucket name."
+                        )
                 except ClientError as exc:
                     code = _error_code(exc) or "HeadBucketFailed"
-                    signals["cloudtrail_log_bucket_reachable"] = False
-                    signals["cloudtrail_log_bucket_error"] = (
-                        f"CloudTrail log bucket '{trail_bucket_name}' could not be verified from this account context ({code})."
-                    )
+                    if create_bucket_if_missing and code in {"404", "NoSuchBucket", "NotFound"}:
+                        signals["cloudtrail_log_bucket_reachable"] = False
+                        signals["cloudtrail_log_bucket_missing"] = True
+                        signals["cloudtrail_bucket_available_for_creation"] = True
+                    else:
+                        signals["cloudtrail_log_bucket_reachable"] = False
+                        signals["cloudtrail_log_bucket_error"] = (
+                            f"CloudTrail log bucket '{trail_bucket_name}' could not be verified from this account context ({code})."
+                        )
+                        if create_bucket_if_missing:
+                            signals["cloudtrail_bucket_creation_conflict"] = True
+                            signals["cloudtrail_bucket_creation_error"] = (
+                                f"CloudTrail log bucket '{trail_bucket_name}' could not be verified for managed creation ({code})."
+                            )
 
     if strategy_id in ("config_enable_centralized_delivery", "config_enable_account_local_delivery"):
         session = _get_read_session()
         context_payload = _context_payload(signals)
         default_inputs: dict[str, Any] = {}
+        existing_bucket = ""
         if session is not None:
             config_client = session.client("config", region_name=action.region or None)
             evidence_payload = signals.setdefault("evidence", {})
@@ -792,6 +836,7 @@ def collect_runtime_risk_signals(
                         evidence_payload["config_delivery_channel_exists"] = True
                         bucket_name = str(channel.get("s3BucketName", "")).strip()
                         if bucket_name:
+                            existing_bucket = bucket_name
                             evidence_payload["config_delivery_bucket_name"] = bucket_name
                         kms_key_arn = str(channel.get("s3KmsKeyArn", "")).strip()
                         if kms_key_arn:
@@ -805,22 +850,31 @@ def collect_runtime_risk_signals(
 
         evidence_payload = signals.get("evidence")
         if isinstance(evidence_payload, dict):
+            if not existing_bucket:
+                existing_bucket = str(evidence_payload.get("config_delivery_bucket_name", "")).strip()
             if evidence_payload.get("config_recorder_exists") is True:
                 default_inputs["recording_scope"] = "keep_existing"
             elif evidence_payload.get("config_recorder_exists") is False:
                 default_inputs["recording_scope"] = "all_resources"
 
-            existing_bucket = str(evidence_payload.get("config_delivery_bucket_name", "")).strip()
-            fallback_bucket = f"security-autopilot-config-{(action.account_id or '').strip()}"
-            suggested_bucket = existing_bucket or fallback_bucket
-            if suggested_bucket:
-                default_inputs["delivery_bucket"] = suggested_bucket
-                default_inputs["existing_bucket_name"] = suggested_bucket
-                default_inputs["delivery_bucket_mode"] = "use_existing" if existing_bucket else "create_new"
+            region_token = (action.region or "").strip() or "us-east-1"
+            fallback_bucket = f"security-autopilot-config-{(action.account_id or '').strip()}-{region_token}"
+            if strategy_id == "config_enable_account_local_delivery":
+                default_inputs["delivery_bucket"] = fallback_bucket
+                default_inputs["delivery_bucket_mode"] = "create_new"
+            elif existing_bucket:
+                default_inputs["delivery_bucket"] = existing_bucket
+                default_inputs["existing_bucket_name"] = existing_bucket
+                default_inputs["delivery_bucket_mode"] = "use_existing"
+            elif fallback_bucket:
+                default_inputs["delivery_bucket"] = fallback_bucket
+                default_inputs["delivery_bucket_mode"] = "create_new"
         if default_inputs:
             context_payload["default_inputs"] = default_inputs
 
         bucket = str(strategy_inputs.get("delivery_bucket", "")).strip()
+        if not bucket:
+            bucket = existing_bucket
         if bucket:
             signals["evidence"]["delivery_bucket"] = bucket
             if session is None:

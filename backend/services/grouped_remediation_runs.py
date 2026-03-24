@@ -79,6 +79,7 @@ class NormalizedGroupedRunRequest:
     action_overrides: tuple[GroupedActionOverride, ...] = ()
     repo_target: dict[str, Any] | None = None
     risk_acknowledged: bool = False
+    bucket_creation_acknowledged: bool = False
     pr_bundle_variant: str | None = None
 
 
@@ -212,6 +213,7 @@ def _normalize_grouped_request(raw_request: Any) -> NormalizedGroupedRunRequest:
         action_overrides=_normalize_action_overrides(_raw_field(raw_request, "action_overrides")),
         repo_target=_normalize_repo_target(_raw_field(raw_request, "repo_target")),
         risk_acknowledged=_normalize_bool(_raw_field(raw_request, "risk_acknowledged")),
+        bucket_creation_acknowledged=_normalize_bool(_raw_field(raw_request, "bucket_creation_acknowledged")),
         pr_bundle_variant=_optional_text(_raw_field(raw_request, "pr_bundle_variant")),
     )
 
@@ -762,6 +764,8 @@ def _build_grouped_artifacts(
     _set_optional_mapping(artifacts, "repo_target", request.repo_target)
     if request.risk_acknowledged:
         artifacts["risk_acknowledged"] = True
+    if request.bucket_creation_acknowledged:
+        artifacts["bucket_creation_acknowledged"] = True
     return artifacts
 
 

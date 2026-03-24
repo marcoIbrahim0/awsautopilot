@@ -807,7 +807,9 @@ def test_create_group_pr_bundle_run_success(client: TestClient) -> None:
     resolutions = run.artifacts["group_bundle"]["action_resolutions"]
     assert [entry["action_id"] for entry in resolutions] == [str(action1.id), str(action2.id)]
     assert {entry["strategy_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
-    assert {entry["profile_id"] for entry in resolutions} == {"s3_migrate_cloudfront_oac_private"}
+    assert {entry["profile_id"] for entry in resolutions} == {
+        "s3_migrate_cloudfront_oac_private_manual_preservation"
+    }
 
 
 def test_create_group_pr_bundle_accepts_action_overrides(client: TestClient) -> None:
@@ -880,11 +882,16 @@ def test_create_group_pr_bundle_accepts_action_overrides(client: TestClient) -> 
     }
     assert resolutions[str(action1.id)]["strategy_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["profile_id"] == "config_enable_account_local_delivery"
-    assert resolutions[str(action1.id)]["strategy_inputs"] == {}
+    assert resolutions[str(action1.id)]["strategy_inputs"] == {
+        "delivery_bucket_mode": "create_new"
+    }
     assert resolutions[str(action2.id)]["strategy_id"] == "config_enable_centralized_delivery"
     assert resolutions[str(action2.id)]["profile_id"] == "config_enable_centralized_delivery"
     assert resolutions[str(action2.id)]["strategy_inputs"] == {
-        "delivery_bucket": "central-config-bucket"
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "use_existing",
+        "delivery_bucket": "central-config-bucket",
+        "encrypt_with_kms": False,
     }
 
 
@@ -1410,13 +1417,18 @@ def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: T
             "action_id": str(action1.id),
             "strategy_id": "config_enable_account_local_delivery",
             "profile_id": "config_enable_account_local_delivery",
-            "strategy_inputs": {},
+            "strategy_inputs": {"delivery_bucket_mode": "create_new"},
         },
         {
             "action_id": str(action2.id),
             "strategy_id": "config_enable_centralized_delivery",
             "profile_id": "config_enable_centralized_delivery",
-            "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+            "strategy_inputs": {
+                "recording_scope": "keep_existing",
+                "delivery_bucket_mode": "use_existing",
+                "delivery_bucket": "central-config-bucket",
+                "encrypt_with_kms": False,
+            },
         },
     ]
     pending_run = MagicMock()
@@ -1482,6 +1494,97 @@ def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: T
     detail = r.json().get("detail", {})
     if isinstance(detail, dict):
         assert detail.get("error") == "Duplicate pending run"
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_create_group_pr_bundle_rejects_identical_successful_run(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action1 = _mock_group_action(action_type="aws_config_enabled", priority=100)
+    action2 = _mock_group_action(action_type="aws_config_enabled", priority=90)
+    successful_run = MagicMock()
+    successful_run.id = uuid.uuid4()
+    successful_run.action_id = action1.id
+    successful_run.mode = RemediationRunMode.pr_only
+    successful_run.status = RemediationRunStatus.success
+    successful_run.created_at = datetime.now(timezone.utc)
+    successful_run.artifacts = {
+        "selected_strategy": "config_enable_centralized_delivery",
+        "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+        "group_bundle": {
+            "group_key": "aws_config_enabled|123456789012|eu-north-1|open",
+            "action_ids": [str(action1.id), str(action2.id)],
+            "action_resolutions": [
+                {
+                    "action_id": str(action1.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {
+                        "recording_scope": "keep_existing",
+                        "delivery_bucket_mode": "use_existing",
+                        "delivery_bucket": "central-config-bucket",
+                        "encrypt_with_kms": False,
+                    },
+                },
+                {
+                    "action_id": str(action2.id),
+                    "strategy_id": "config_enable_centralized_delivery",
+                    "profile_id": "config_enable_centralized_delivery",
+                    "strategy_inputs": {
+                        "recording_scope": "keep_existing",
+                        "delivery_bucket_mode": "use_existing",
+                        "delivery_bucket": "central-config-bucket",
+                        "encrypt_with_kms": False,
+                    },
+                },
+            ],
+        },
+    }
+    session = _mock_group_session([action1, action2], active_runs=[successful_run])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client") as mock_boto_client:
+            with patch(
+                "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+                return_value={},
+            ):
+                with patch(
+                    "backend.services.grouped_remediation_runs.evaluate_strategy_impact",
+                    return_value={"checks": [], "warnings": [], "recommendation": "ok"},
+                ):
+                    try:
+                        r = client.post(
+                            "/api/remediation-runs/group-pr-bundle",
+                            json={
+                                "action_type": "aws_config_enabled",
+                                "account_id": "123456789012",
+                                "region": "eu-north-1",
+                                "status": "open",
+                                "strategy_id": "config_enable_centralized_delivery",
+                                "strategy_inputs": {"delivery_bucket": "central-config-bucket"},
+                            },
+                        )
+                    finally:
+                        app.dependency_overrides.pop(get_db, None)
+                        app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 409
+    detail = r.json()["detail"]
+    assert detail["error"] == "PR bundle already created"
+    assert detail["reason"] == "grouped_bundle_already_created_no_changes"
+    assert detail["existing_run_id"] == str(successful_run.id)
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0
@@ -1964,6 +2067,46 @@ def test_create_run_strategy_input_validation_400(client: TestClient) -> None:
     if isinstance(detail, dict):
         assert detail.get("error") == "Invalid strategy selection"
         assert "strategy_inputs.delivery_bucket is required" in str(detail.get("detail", ""))
+
+
+def test_config_account_local_resolution_prefers_create_new_over_unproven_existing_bucket() -> None:
+    from backend.services.remediation_run_resolution import resolve_create_profile_selection
+
+    action = _mock_action("aws_config_enabled")
+    strategy = next(
+        item
+        for item in list_strategies_for_action_type("aws_config_enabled")
+        if item["strategy_id"] == "config_enable_account_local_delivery"
+    )
+
+    resolution = resolve_create_profile_selection(
+        action_type="aws_config_enabled",
+        strategy=strategy,
+        requested_profile_id=None,
+        explicit_inputs={},
+        tenant_settings=None,
+        runtime_signals={
+            "context": {
+                "default_inputs": {
+                    "recording_scope": "keep_existing",
+                    "delivery_bucket_mode": "use_existing",
+                    "delivery_bucket": "config-bucket-123456789012",
+                    "existing_bucket_name": "config-bucket-123456789012",
+                }
+            },
+            "evidence": {"config_delivery_bucket_name": "config-bucket-123456789012"},
+        },
+        action=action,
+    )
+
+    assert resolution.support_tier == "deterministic_bundle"
+    assert resolution.resolved_inputs["delivery_bucket_mode"] == "create_new"
+    assert "existing_bucket_name" not in resolution.resolved_inputs
+    assert resolution.persisted_strategy_inputs == {
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "create_new",
+        "delivery_bucket": "config-bucket-123456789012",
+    }
 
 
 def test_validate_strategy_input_new_types_accept_valid_values() -> None:
@@ -3235,8 +3378,8 @@ def test_remediation_preview_pr_only_config_1_includes_before_after_simulation(c
                         {
                             "recording_scope": "all_resources",
                             "delivery_bucket_mode": "use_existing",
-                            "existing_bucket_name": "security-autopilot-config-123456789012",
-                            "delivery_bucket": "security-autopilot-config-123456789012",
+                            "existing_bucket_name": "security-autopilot-config-123456789012-us-east-1",
+                            "delivery_bucket": "security-autopilot-config-123456789012-us-east-1",
                         }
                     ),
                 },
@@ -3249,7 +3392,7 @@ def test_remediation_preview_pr_only_config_1_includes_before_after_simulation(c
     data = r.json()
     assert data["before_state"]["recorder_enabled"] is False
     assert data["after_state"]["recorder_enabled"] is True
-    assert data["after_state"]["delivery_bucket"] == "security-autopilot-config-123456789012"
+    assert data["after_state"]["delivery_bucket"] == "security-autopilot-config-123456789012-us-east-1"
     assert any(
         line.get("type") == "add" and line.get("label") == "Configuration recorder"
         for line in data["diff_lines"]

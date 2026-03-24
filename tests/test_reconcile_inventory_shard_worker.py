@@ -163,7 +163,7 @@ def test_reconcile_inventory_shard_enqueues_compute_actions_for_changed_status(m
         tracking["finished"].append((str(shard_id), status_value, error_code, error_message))
 
     monkeypatch.setattr(shard_job, "mark_reconcile_shard_finished", _mark_finished)
-    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id: object())
+    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id, source_identity=None, tags=None: object())
 
     def _collect(**kwargs):
         collect_calls.append(kwargs)
@@ -250,7 +250,7 @@ def test_reconcile_inventory_shard_failure_marks_failed_and_reraises(monkeypatch
         tracking["finished"].append((str(shard_id), status_value, error_code, error_message))
 
     monkeypatch.setattr(shard_job, "mark_reconcile_shard_finished", _mark_finished)
-    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id: object())
+    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id, source_identity=None, tags=None: object())
     monkeypatch.setattr(
         shard_job,
         "collect_inventory_snapshots",
@@ -290,7 +290,7 @@ def test_reconcile_inventory_shard_no_change_does_not_enqueue_compute_actions(mo
     monkeypatch.setattr(shard_job, "session_scope", _session_scope_for(worker_session))
     monkeypatch.setattr(shard_job, "mark_reconcile_shard_running", lambda *args, **kwargs: None)
     monkeypatch.setattr(shard_job, "mark_reconcile_shard_finished", lambda *args, **kwargs: None)
-    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id: object())
+    monkeypatch.setattr(shard_job, "assume_role", lambda role_arn, external_id, source_identity=None, tags=None: object())
     monkeypatch.setattr(
         shard_job,
         "collect_inventory_snapshots",

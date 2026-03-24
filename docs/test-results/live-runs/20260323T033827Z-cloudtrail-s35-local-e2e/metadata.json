@@ -1,0 +1,72 @@
+{
+  "run_id": "20260323T033827Z-cloudtrail-s35-local-e2e",
+  "run_root": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e",
+  "api_base": "http://127.0.0.1:8000",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+  "started_at": "2026-03-23T03:42:21.964708+00:00",
+  "targets": {
+    "cloudtrail_enabled": {
+      "group_id": "d0ea8837-bb23-48d4-82cd-eb64d697f42f",
+      "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|cloudtrail_enabled|696505809372|eu-north-1",
+      "case_dir": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/01-eu-north-1-cloudtrail_enabled",
+      "create_status_code": 400,
+      "create_response": {
+        "detail": {
+          "error": "Risk acknowledgement required",
+          "detail": "This remediation strategy has warning/unknown dependency checks. Set risk_acknowledged=true after review.",
+          "risk_snapshot": {
+            "checks": [
+              {
+                "code": "cloudtrail_cost_impact",
+                "status": "warn",
+                "message": "CloudTrail log delivery and retention increase S3 storage and request costs."
+              },
+              {
+                "code": "cloudtrail_log_bucket_prereq",
+                "status": "warn",
+                "message": "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply."
+              }
+            ],
+            "warnings": [
+              "CloudTrail log delivery and retention can increase storage costs."
+            ],
+            "recommendation": "review_and_acknowledge",
+            "evidence": {
+              "collected_at": "2026-03-23T03:42:26.164801+00:00",
+              "strategy_id": "cloudtrail_enable_guided"
+            }
+          }
+        }
+      }
+    },
+    "s3_bucket_require_ssl": {
+      "group_id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+      "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|s3_bucket_require_ssl|696505809372|eu-north-1",
+      "case_dir": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/02-eu-north-1-s3_bucket_require_ssl",
+      "create_status_code": 201,
+      "create_response": {
+        "group_run_id": "fd8e6c29-2ddf-4f0f-bac8-e0e92d2013d6",
+        "remediation_run_id": "7d5e9342-a5e7-4391-a727-3ac50ecb024b",
+        "reporting_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiJmZDhlNmMyOS0yZGRmLTRmMGYtYmFjOC1lMGU5MmQyMDEzZDYiLCJncm91cF9pZCI6ImM1OTIwOTg3LWZiYTMtNGVhNS04MzYzLThjY2FlOGYzOWMwOCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwY2E5OTA3OS0zNGU2LTRjMTctYjEyMS1iMWYxNzI3NDk0ZWIiLCIxMjlmYTY1ZS0xMWUxLTRlYjAtYmY4Zi1kZmY1ZmVjMTM0ODciLCIyM2JmNjkxYi04ZWMyLTQ5MjAtODBhOC0wOWJjYTJiOGUyMTgiLCJiOGE2N2JiZi0xMjU1LTQwZjEtYWIyMS01Njk2ODk0NTlhMzYiLCJjMWMyZWQ2ZC00MDhiLTQ3NDMtODZkOS0wZmVkZWZmOTdjZTYiLCI0ZGEzZDgwNi00MDg0LTQwNzUtOGYzYy0yMjFkMDhlZjVjMmMiLCI2MTU1MjA3My1kNjA0LTRiYTUtODQzMC1iMDQ0ODVmOTBhNWMiLCI5NjdkNzFhOS04MDI3LTQyMjMtYjZjNi1hYTU1NzhkMWQyZDUiLCI5ZTQ1NjJkZi05OTIyLTRmNzUtYjRlNC0yZDE3YzJjNjE1ZjgiLCJiODQxMTVjYi1hNzAxLTQ4ZDctODMyYy00ZmJjZjgwYjg3MjQiLCI4MzA5NDRkOS0zMGFkLTQzMmYtYTg0ZS1lMDljMGRkZTNkNWQiLCIyYWM0NjFlYy1iNGMxLTRmY2QtOGFlMS1hNmQxOGY1M2M4ZDQiXSwianRpIjoiMmUxNmFhZGQtMDM3Mi00MWIyLTllN2QtNWFhZDVlZTA5NTVlIiwiaWF0IjoxNzc0MjM3MzU1LCJleHAiOjE3NzQzMjM3NTV9.pedbKjYA6P5szyDjELkdDfdSLNK4THHT-1QeIElcnSg",
+        "reporting_callback_url": "https://g1frb5hhfg.execute-api.eu-north-1.amazonaws.com/api/internal/group-runs/report",
+        "status": "queued"
+      },
+      "worker_result": {
+        "remediation_run_id": "7d5e9342-a5e7-4391-a727-3ac50ecb024b",
+        "remediation_status": "success",
+        "remediation_outcome": "Group PR bundle generated (12 actions)",
+        "completed_at": "2026-03-23T03:42:46.572717+00:00",
+        "group_run_id": "fd8e6c29-2ddf-4f0f-bac8-e0e92d2013d6",
+        "group_run_status": "started",
+        "group_run_started_at": "2026-03-23T03:42:44.785697+00:00",
+        "group_run_finished_at": null
+      },
+      "bundle_zip_status_code": 200,
+      "bundle_zip_path": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/02-eu-north-1-s3_bucket_require_ssl/pr-bundle.zip"
+    }
+  },
+  "prepared_at": "2026-03-23T03:42:52.173937+00:00"
+}

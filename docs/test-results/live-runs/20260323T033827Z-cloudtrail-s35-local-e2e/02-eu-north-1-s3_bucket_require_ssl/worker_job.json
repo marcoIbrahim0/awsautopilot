@@ -1,0 +1,10 @@
+{
+  "job_type": "remediation_run",
+  "run_id": "7d5e9342-a5e7-4391-a727-3ac50ecb024b",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "action_id": "0ca99079-34e6-4c17-b121-b1f1727494eb",
+  "mode": "pr_only",
+  "created_at": "2026-03-23T03:42:30.496947+00:00",
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "risk_acknowledged": true
+}

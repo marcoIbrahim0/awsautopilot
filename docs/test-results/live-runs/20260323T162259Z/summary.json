@@ -1,0 +1,29 @@
+{
+  "run_id": "20260323T162259Z",
+  "timestamp_utc": "2026-03-23T16:22:59Z",
+  "api_base": "https://api.ocypheris.com",
+  "frontend_base": "https://ocypheris.com",
+  "account_id": "696505809372",
+  "results": {
+    "CloudTrail.1": {
+      "status": "PARTIAL",
+      "region": "eu-north-1",
+      "action_id": "2ea6f141-6134-4dcd-8c82-4f0d0b6e582d",
+      "run_id": "64a6bd18-abff-4cc8-aef7-f7f8dddb4171",
+      "run_status": "success",
+      "bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1",
+      "trail_name": "security-autopilot-trail",
+      "terraform_init": "pass_with_local_provider_mirror_workaround",
+      "terraform_plan": "pass",
+      "terraform_apply": "pass",
+      "aws_trail_logging": true,
+      "eu_north_1_finding_status": "RESOLVED",
+      "us_east_1_finding_status": "NEW",
+      "family_converged": false,
+      "bundle_gaps": [
+        "Generated bundle unnecessarily requires hashicorp/null via null_resource on the inactive non-create path.",
+        "Generated bundle does not pin/cache hashicorp/null cleanly for local execution in this environment."
+      ]
+    }
+  }
+}

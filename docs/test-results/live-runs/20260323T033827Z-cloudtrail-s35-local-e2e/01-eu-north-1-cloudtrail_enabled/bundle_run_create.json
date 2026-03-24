@@ -1,0 +1,31 @@
+{
+  "status_code": 400,
+  "response": {
+    "detail": {
+      "error": "Risk acknowledgement required",
+      "detail": "This remediation strategy has warning/unknown dependency checks. Set risk_acknowledged=true after review.",
+      "risk_snapshot": {
+        "checks": [
+          {
+            "code": "cloudtrail_cost_impact",
+            "status": "warn",
+            "message": "CloudTrail log delivery and retention increase S3 storage and request costs."
+          },
+          {
+            "code": "cloudtrail_log_bucket_prereq",
+            "status": "warn",
+            "message": "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply."
+          }
+        ],
+        "warnings": [
+          "CloudTrail log delivery and retention can increase storage costs."
+        ],
+        "recommendation": "review_and_acknowledge",
+        "evidence": {
+          "collected_at": "2026-03-23T03:42:26.164801+00:00",
+          "strategy_id": "cloudtrail_enable_guided"
+        }
+      }
+    }
+  }
+}

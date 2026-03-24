@@ -17,6 +17,7 @@ from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupRunStatus, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
 from backend.services.bundle_reporting_tokens import BundleReportingTokenSecretNotConfiguredError
+from backend.services.grouped_bundle_conflicts import GroupedBundleRunRecord
 from backend.services.remediation_risk import evaluate_strategy_impact as real_evaluate_strategy_impact
 from backend.services.root_key_resolution_adapter import ROOT_KEY_EXECUTION_AUTHORITY_PATH
 from backend.utils.sqs import REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
@@ -114,14 +115,30 @@ def _mock_group_session(
     group: SimpleNamespace,
     actions: list[SimpleNamespace],
     account: object | None = None,
+    existing_runs: list[GroupedBundleRunRecord] | None = None,
 ) -> tuple[MagicMock, list[object]]:
     added: list[object] = []
     session = MagicMock()
+    grouped_run_rows = []
+    for record in existing_runs or []:
+        remediation_run = SimpleNamespace(
+            id=uuid.UUID(record.run_id),
+            action_id=uuid.UUID(record.action_id),
+            mode=record.mode,
+            status=record.status,
+            created_at=record.created_at,
+            artifacts=record.artifacts,
+        )
+        group_run = SimpleNamespace(id=uuid.UUID(record.group_run_id or str(uuid.uuid4())))
+        grouped_run_rows.append((group_run, remediation_run))
+    grouped_run_result = MagicMock()
+    grouped_run_result.all.return_value = grouped_run_rows
     session.execute = AsyncMock(
         side_effect=[
             _mock_scalar_result(group),
             _mock_scalars_result(actions),
             _mock_scalar_result(account),
+            grouped_run_result,
         ]
     )
     session.commit = AsyncMock()
@@ -706,3 +723,67 @@ def test_create_action_group_bundle_run_enqueue_failure_marks_rows_failed(client
     assert remediation_run.outcome == "Queue enqueue failed for bundle generation."
     assert group_run.remediation_run_id == remediation_run.id
     assert session.commit.await_count == 2
+
+
+def test_create_action_group_bundle_run_rejects_identical_successful_bundle(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="s3_bucket_block_public_access")
+    action1 = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    action2 = _make_action(action_type=group.action_type, priority=90, minutes_ago=2)
+    successful_run = GroupedBundleRunRecord(
+        run_id=str(uuid.uuid4()),
+        action_id=str(action1.id),
+        mode="pr_only",
+        status="success",
+        created_at=datetime.now(timezone.utc),
+        artifacts={
+            "selected_strategy": "s3_migrate_cloudfront_oac_private",
+            "group_bundle": {
+                "group_key": group.group_key,
+                "action_ids": [str(action1.id), str(action2.id)],
+                "action_resolutions": [
+                    {
+                        "action_id": str(action1.id),
+                        "strategy_id": "s3_migrate_cloudfront_oac_private",
+                        "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+                        "strategy_inputs": {},
+                    },
+                    {
+                        "action_id": str(action2.id),
+                        "strategy_id": "s3_migrate_cloudfront_oac_private",
+                        "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+                        "strategy_inputs": {},
+                    },
+                ],
+            },
+        },
+        group_run_id=str(uuid.uuid4()),
+    )
+    session, _ = _mock_group_session(group=group, actions=[action1, action2], existing_runs=[successful_run])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client") as mock_boto_client:
+            with patch(
+                "backend.routers.action_groups.issue_group_run_reporting_token",
+                return_value=("signed-token", "token-jti", datetime.now(timezone.utc) + timedelta(minutes=5)),
+            ):
+                try:
+                    response = client.post(
+                        f"/api/action-groups/{group.id}/bundle-run",
+                        json={"strategy_id": "s3_migrate_cloudfront_oac_private"},
+                    )
+                finally:
+                    _clear_action_group_dependencies()
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail["reason"] == "grouped_bundle_already_created_no_changes"
+    assert detail["existing_run_id"] == successful_run.run_id
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0

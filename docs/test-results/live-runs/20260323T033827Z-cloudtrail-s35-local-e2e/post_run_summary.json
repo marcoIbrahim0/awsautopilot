@@ -1,0 +1,51 @@
+{
+  "CloudTrail.1": {
+    "status_code": 200,
+    "total": 2,
+    "pending_confirmation_count": 0,
+    "sample": [
+      {
+        "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/CloudTrail.1/finding/ae610c86-1b30-4cda-a17a-3562c930e1c5",
+        "resource_id": "AWS::::Account:696505809372",
+        "remediation_action_group_id": "d0ea8837-bb23-48d4-82cd-eb64d697f42f",
+        "pending_confirmation": false,
+        "pending_confirmation_message": null
+      },
+      {
+        "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/CloudTrail.1/finding/cb538a1d-30ae-4497-8cdf-e31aa2a66da3",
+        "resource_id": "AWS::::Account:696505809372",
+        "remediation_action_group_id": "d0ea8837-bb23-48d4-82cd-eb64d697f42f",
+        "pending_confirmation": false,
+        "pending_confirmation_message": null
+      }
+    ]
+  },
+  "S3.5": {
+    "status_code": 200,
+    "total": 12,
+    "pending_confirmation_count": 0,
+    "sample": [
+      {
+        "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/790ea28f-d923-4a71-adc5-3a481ff8d5fd",
+        "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+        "remediation_action_group_id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+        "pending_confirmation": false,
+        "pending_confirmation_message": null
+      },
+      {
+        "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/d59928ae-057b-4e63-8f96-f33d5c520982",
+        "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+        "remediation_action_group_id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+        "pending_confirmation": false,
+        "pending_confirmation_message": null
+      },
+      {
+        "finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/fd050661-af6a-4f26-96cb-02ec2a9173d1",
+        "resource_id": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+        "remediation_action_group_id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+        "pending_confirmation": false,
+        "pending_confirmation_message": null
+      }
+    ]
+  }
+}

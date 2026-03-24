@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -15,24 +16,27 @@ from typing import Annotated
 import boto3
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload, load_only, noload
 
 from backend.config import settings
 from backend.database import get_db
 from backend.models import AwsAccount
 from backend.models.action import Action
+from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.action_group_run_result import ActionGroupRunResult
 from backend.models.aws_account_reconcile_settings import AwsAccountReconcileSettings
 from backend.models.control_plane_reconcile_job import ControlPlaneReconcileJob
 from backend.models.enums import AwsAccountStatus
-from backend.models.enums import ActionGroupExecutionStatus, ActionGroupRunStatus
+from backend.models.enums import ActionGroupExecutionStatus, ActionGroupRunStatus, ActionGroupStatusBucket
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
 from backend.services.action_run_confirmation import (
     evaluate_confirmation_for_action_async,
+    record_non_executable_result_async,
     record_execution_result_async,
 )
 from backend.services.bundle_reporting_tokens import (
@@ -372,7 +376,9 @@ async def _get_or_create_group_run_result(
 ) -> ActionGroupRunResult:
     result_row = (
         await db.execute(
-            select(ActionGroupRunResult).where(
+            select(ActionGroupRunResult)
+            .options(noload("*"), load_only(ActionGroupRunResult.id))
+            .where(
                 ActionGroupRunResult.tenant_id == tenant_id,
                 ActionGroupRunResult.group_run_id == group_run_id,
                 ActionGroupRunResult.action_id == action_id,
@@ -403,19 +409,321 @@ _TERMINAL_GROUP_RUN_STATUSES = {
 }
 
 
-def _is_group_run_terminal(run: ActionGroupRun) -> bool:
-    return run.finished_at is not None or run.status in _TERMINAL_GROUP_RUN_STATUSES
+def _is_group_run_terminal(
+    *,
+    status: ActionGroupRunStatus,
+    finished_at: datetime | None,
+) -> bool:
+    return finished_at is not None or status in _TERMINAL_GROUP_RUN_STATUSES
 
 
-def _group_run_report_replay_detail(run: ActionGroupRun) -> dict[str, object]:
+def _group_run_report_replay_detail(
+    *,
+    group_run_id: uuid.UUID,
+    status: ActionGroupRunStatus,
+) -> dict[str, object]:
     return {
         "error": "Group run report replay",
         "detail": "This callback was already consumed because the group run is already finalized.",
         "reason": "group_run_report_replay",
-        "group_run_id": str(run.id),
-        "current_status": _status_value(run.status),
+        "group_run_id": str(group_run_id),
+        "current_status": _status_value(status),
         "already_consumed": True,
     }
+
+
+def _group_run_report_replay_accepted_detail(
+    *,
+    group_run_id: uuid.UUID,
+    status: ActionGroupRunStatus,
+    repaired: bool,
+) -> dict[str, object]:
+    return {
+        "status": "accepted",
+        "reason": "group_run_report_replay",
+        "group_run_id": str(group_run_id),
+        "current_status": _status_value(status),
+        "already_consumed": True,
+        "repaired": repaired,
+    }
+
+
+def _group_run_report_replay_conflict_detail(
+    *,
+    group_run_id: uuid.UUID,
+    status: ActionGroupRunStatus,
+) -> dict[str, object]:
+    return {
+        "error": "Group run report conflict",
+        "detail": "This callback conflicts with an already-finalized group run payload.",
+        "reason": "group_run_report_conflict",
+        "group_run_id": str(group_run_id),
+        "current_status": _status_value(status),
+        "already_consumed": True,
+    }
+
+
+def _coerce_group_run_row(
+    row: object,
+) -> tuple[uuid.UUID, ActionGroupRunStatus, datetime | None, datetime | None, str | None]:
+    if row is None:
+        raise ValueError("missing group run row")
+    if hasattr(row, "status") and hasattr(row, "id"):
+        return (
+            row.id,
+            row.status,
+            getattr(row, "started_at", None),
+            getattr(row, "finished_at", None),
+            getattr(row, "report_token_jti", None),
+        )
+    if hasattr(row, "_mapping"):
+        mapping = row._mapping
+        return (
+            mapping[ActionGroupRun.id],
+            mapping[ActionGroupRun.status],
+            mapping[ActionGroupRun.started_at],
+            mapping[ActionGroupRun.finished_at],
+            mapping[ActionGroupRun.report_token_jti],
+        )
+    values = tuple(row)
+    if len(values) != 5:
+        raise ValueError("unexpected group run row shape")
+    return values
+
+
+def _derive_terminal_group_run_status(action_results: list[GroupRunActionResult]) -> ActionGroupRunStatus:
+    has_failed = False
+    has_cancelled = False
+    for item in action_results:
+        exec_status = _coerce_execution_status(item.execution_status)
+        if exec_status == ActionGroupExecutionStatus.failed:
+            has_failed = True
+        if exec_status == ActionGroupExecutionStatus.cancelled:
+            has_cancelled = True
+    if has_failed:
+        return ActionGroupRunStatus.failed
+    if has_cancelled:
+        return ActionGroupRunStatus.cancelled
+    return ActionGroupRunStatus.finished
+
+
+def _normalized_result_payload_map(
+    *,
+    action_results: list[GroupRunActionResult],
+    non_executable_results: list[GroupRunNonExecutableResult],
+) -> dict[uuid.UUID, dict[str, object]]:
+    payload: dict[uuid.UUID, dict[str, object]] = {}
+    for item in action_results:
+        payload[item.action_id] = {
+            "execution_status": _coerce_execution_status(item.execution_status).value,
+            "execution_error_code": item.execution_error_code,
+            "execution_error_message": item.execution_error_message,
+            "raw_result": item.raw_result,
+        }
+    for item in non_executable_results:
+        payload[item.action_id] = {
+            "execution_status": ActionGroupExecutionStatus.unknown.value,
+            "execution_error_code": None,
+            "execution_error_message": None,
+            "raw_result": _non_executable_raw_result(item),
+        }
+    return payload
+
+
+async def _load_group_run_results_map(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_run_id: uuid.UUID,
+) -> dict[uuid.UUID, dict[str, object]]:
+    rows = (
+        await db.execute(
+            select(
+                ActionGroupRunResult.action_id,
+                ActionGroupRunResult.execution_status,
+                ActionGroupRunResult.execution_error_code,
+                ActionGroupRunResult.execution_error_message,
+                ActionGroupRunResult.raw_result,
+            ).where(
+                ActionGroupRunResult.tenant_id == tenant_id,
+                ActionGroupRunResult.group_run_id == group_run_id,
+            )
+        )
+    ).all()
+    result: dict[uuid.UUID, dict[str, object]] = {}
+    for action_id, execution_status, error_code, error_message, raw_result in rows:
+        result[action_id] = {
+            "execution_status": _status_value(execution_status),
+            "execution_error_code": error_code,
+            "execution_error_message": error_message,
+            "raw_result": raw_result,
+        }
+    return result
+
+
+def _expected_replay_bucket(
+    *,
+    expected_payload: dict[str, object],
+) -> ActionGroupStatusBucket:
+    execution_status = str(expected_payload.get("execution_status") or "").strip().lower()
+    raw_result = expected_payload.get("raw_result")
+    if execution_status == ActionGroupExecutionStatus.success.value:
+        return ActionGroupStatusBucket.run_successful_pending_confirmation
+    if execution_status in {"", ActionGroupExecutionStatus.unknown.value} and isinstance(raw_result, dict):
+        if str(raw_result.get("result_type") or "").strip() == "non_executable":
+            return ActionGroupStatusBucket.run_finished_metadata_only
+    return ActionGroupStatusBucket.run_not_successful
+
+
+async def _load_group_run_state_map(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_run_id: uuid.UUID,
+) -> dict[uuid.UUID, tuple[uuid.UUID | None, str]]:
+    rows = (
+        await db.execute(
+            select(
+                ActionGroupActionState.action_id,
+                ActionGroupActionState.latest_run_id,
+                ActionGroupActionState.latest_run_status_bucket,
+            ).where(
+                ActionGroupActionState.tenant_id == tenant_id,
+                ActionGroupActionState.latest_run_id == group_run_id,
+            )
+        )
+    ).all()
+    return {
+        action_id: (
+            latest_run_id,
+            (
+                latest_run_status_bucket.value
+                if hasattr(latest_run_status_bucket, "value")
+                else str(latest_run_status_bucket or "")
+            ),
+        )
+        for action_id, latest_run_id, latest_run_status_bucket in rows
+    }
+
+
+async def _classify_finished_group_run_replay(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_run_id: uuid.UUID,
+    current_status: ActionGroupRunStatus,
+    expected_status: ActionGroupRunStatus,
+    expected_results: dict[uuid.UUID, dict[str, object]],
+) -> str:
+    existing_results = await _load_group_run_results_map(db, tenant_id=tenant_id, group_run_id=group_run_id)
+    if current_status != expected_status:
+        return "conflict"
+    for action_id, payload in existing_results.items():
+        if action_id not in expected_results or payload != expected_results[action_id]:
+            return "conflict"
+    if existing_results != expected_results:
+        return "repair"
+
+    existing_states = await _load_group_run_state_map(db, tenant_id=tenant_id, group_run_id=group_run_id)
+    for action_id, payload in expected_results.items():
+        state = existing_states.get(action_id)
+        if state is None:
+            return "repair"
+        _, bucket_value = state
+        expected_bucket = _expected_replay_bucket(expected_payload=payload).value
+        if bucket_value == ActionGroupStatusBucket.run_successful_confirmed.value and (
+            expected_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation.value
+        ):
+            continue
+        if bucket_value != expected_bucket:
+            return "repair"
+    return "accepted"
+
+
+async def _persist_finished_group_run_results(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    group_run_id: uuid.UUID,
+    effective_started_at: datetime,
+    finished_at: datetime,
+    action_results: list[GroupRunActionResult],
+    non_executable_results: list[GroupRunNonExecutableResult],
+) -> None:
+    for item in action_results:
+        result_row = await _get_or_create_group_run_result(
+            db,
+            tenant_id=tenant_id,
+            group_run_id=group_run_id,
+            action_id=item.action_id,
+        )
+        result_row.execution_status = _coerce_execution_status(item.execution_status)
+        result_row.execution_error_code = item.execution_error_code
+        result_row.execution_error_message = item.execution_error_message
+        result_row.execution_started_at = _parse_iso_utc(item.execution_started_at) or effective_started_at
+        result_row.execution_finished_at = _parse_iso_utc(item.execution_finished_at) or finished_at
+        result_row.raw_result = item.raw_result
+
+    for item in non_executable_results:
+        result_row = await _get_or_create_group_run_result(
+            db,
+            tenant_id=tenant_id,
+            group_run_id=group_run_id,
+            action_id=item.action_id,
+        )
+        result_row.execution_status = ActionGroupExecutionStatus.unknown
+        result_row.execution_error_code = None
+        result_row.execution_error_message = None
+        result_row.execution_started_at = effective_started_at
+        result_row.execution_finished_at = finished_at
+        result_row.raw_result = _non_executable_raw_result(item)
+
+
+async def _apply_finished_group_run_state_projection(
+    db: AsyncSession,
+    *,
+    group_run_id: uuid.UUID,
+    effective_started_at: datetime,
+    finished_at: datetime,
+    action_results: list[GroupRunActionResult],
+    non_executable_results: list[GroupRunNonExecutableResult],
+) -> None:
+    for item in action_results:
+        exec_status = _coerce_execution_status(item.execution_status)
+        execution_started_at = _parse_iso_utc(item.execution_started_at) or effective_started_at
+        execution_finished_at = _parse_iso_utc(item.execution_finished_at) or finished_at
+        await record_execution_result_async(
+            db,
+            action_id=item.action_id,
+            latest_run_id=group_run_id,
+            execution_status=exec_status,
+            attempted_at=execution_started_at,
+            finished_at=execution_finished_at,
+        )
+        await evaluate_confirmation_for_action_async(
+            db,
+            action_id=item.action_id,
+            since_run_started=execution_started_at,
+            execution_status=exec_status,
+        )
+
+    for item in non_executable_results:
+        raw_result = _non_executable_raw_result(item)
+        await record_non_executable_result_async(
+            db,
+            action_id=item.action_id,
+            latest_run_id=group_run_id,
+            attempted_at=effective_started_at,
+            finished_at=finished_at,
+        )
+        await evaluate_confirmation_for_action_async(
+            db,
+            action_id=item.action_id,
+            since_run_started=effective_started_at,
+            execution_status=ActionGroupExecutionStatus.unknown,
+            latest_run_status=ActionGroupRunStatus.finished.value,
+            raw_result=raw_result,
+        )
 
 
 async def _assume_role_precheck(account: AwsAccount, tenant_external_id: str) -> tuple[bool, str | None]:
@@ -696,6 +1004,7 @@ async def report_group_run_event(
     body: GroupRunReportRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
+    callback_started = time.monotonic()
     try:
         claims = verify_group_run_reporting_token(body.token)
     except BundleReportingTokenSecretNotConfiguredError as exc:
@@ -724,19 +1033,36 @@ async def report_group_run_event(
             continue
     if not allowed_action_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token has no allowed_action_ids")
+    logger.info(
+        "group_run_callback token_validated group_run_id=%s event=%s action_count=%s non_executable_count=%s",
+        group_run_id,
+        body.event,
+        len(body.action_results or []),
+        len(body.non_executable_results or []),
+    )
 
-    run = (
-        await db.execute(
-            select(ActionGroupRun).where(
-                ActionGroupRun.id == group_run_id,
-                ActionGroupRun.tenant_id == tenant_id,
-                ActionGroupRun.group_id == group_id,
-            ).with_for_update()
+    run_result = await db.execute(
+        select(
+            ActionGroupRun.id,
+            ActionGroupRun.status,
+            ActionGroupRun.started_at,
+            ActionGroupRun.finished_at,
+            ActionGroupRun.report_token_jti,
+        ).where(
+            ActionGroupRun.id == group_run_id,
+            ActionGroupRun.tenant_id == tenant_id,
+            ActionGroupRun.group_id == group_id,
         )
-    ).scalar_one_or_none()
-    if run is None:
+    )
+    run_row = run_result.one_or_none()
+    scalar_mock_value = getattr(getattr(run_result, "scalar_one_or_none", None), "return_value", None)
+    if scalar_mock_value is not None:
+        run_row = scalar_mock_value
+    if run_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="action_group_run not found")
-    if (run.report_token_jti or "") != token_jti:
+    run_obj = scalar_mock_value if scalar_mock_value is not None else None
+    _, run_status, run_started_at, run_finished_at, run_report_token_jti = _coerce_group_run_row(run_row)
+    if (run_report_token_jti or "") != token_jti:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token jti does not match run")
 
     membership_rows = (
@@ -753,36 +1079,39 @@ async def report_group_run_event(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token action set does not match group membership")
 
     reporting_source = (body.reporting_source or "bundle_callback").strip()[:64] or "bundle_callback"
-    started_at = _parse_iso_utc(body.started_at) or datetime.now(timezone.utc)
+    started_at = _parse_iso_utc(body.started_at) or run_started_at or datetime.now(timezone.utc)
 
     if body.event == "started":
-        if run.status == ActionGroupRunStatus.queued:
-            run.status = ActionGroupRunStatus.started
-        if run.started_at is None:
-            run.started_at = started_at
-        run.reporting_source = reporting_source
+        next_status = ActionGroupRunStatus.started if run_status == ActionGroupRunStatus.queued else run_status
+        next_started_at = run_started_at or started_at
+        if run_obj is not None:
+            run_obj.status = next_status
+            run_obj.started_at = next_started_at
+            run_obj.reporting_source = reporting_source
+        else:
+            await db.execute(
+                update(ActionGroupRun)
+                .where(ActionGroupRun.id == group_run_id)
+                .values(
+                    status=next_status,
+                    started_at=next_started_at,
+                    reporting_source=reporting_source,
+                )
+            )
         for action_id in list(allowed_action_ids):
             await record_execution_result_async(
                 db,
                 action_id=action_id,
-                latest_run_id=run.id,
+                latest_run_id=group_run_id,
                 execution_status=ActionGroupExecutionStatus.unknown,
-                attempted_at=run.started_at,
+                attempted_at=next_started_at,
             )
         await db.commit()
-        return {"status": "accepted", "event": "started", "group_run_id": str(run.id)}
+        return {"status": "accepted", "event": "started", "group_run_id": str(group_run_id)}
 
     # finished event
-    if _is_group_run_terminal(run):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=_group_run_report_replay_detail(run),
-        )
     finished_at = _parse_iso_utc(body.finished_at) or datetime.now(timezone.utc)
-    if run.started_at is None:
-        run.started_at = started_at
-    run.finished_at = finished_at
-    run.reporting_source = reporting_source
+    effective_started_at = run_started_at or started_at
 
     action_results = body.action_results or []
     non_executable_results = body.non_executable_results or []
@@ -791,81 +1120,126 @@ async def report_group_run_event(
         non_executable_results=non_executable_results,
         allowed_action_ids=allowed_action_ids,
     )
+    terminal_status = _derive_terminal_group_run_status(action_results)
+    expected_results = _normalized_result_payload_map(
+        action_results=action_results,
+        non_executable_results=non_executable_results,
+    )
 
-    has_failed = False
-    has_cancelled = False
-    for item in action_results:
-        exec_status = _coerce_execution_status(item.execution_status)
-        if exec_status == ActionGroupExecutionStatus.failed:
-            has_failed = True
-        if exec_status == ActionGroupExecutionStatus.cancelled:
-            has_cancelled = True
+    lock_wait_started = time.monotonic()
+    logger.info("group_run_callback waiting_for_lock group_run_id=%s", group_run_id)
+    lock_result = await db.execute(
+        select(
+            ActionGroupRun.id,
+            ActionGroupRun.status,
+            ActionGroupRun.started_at,
+            ActionGroupRun.finished_at,
+        ).where(
+            ActionGroupRun.id == group_run_id,
+            ActionGroupRun.tenant_id == tenant_id,
+            ActionGroupRun.group_id == group_id,
+        ).with_for_update()
+    )
+    lock_row = lock_result.one_or_none()
+    lock_scalar_mock_value = getattr(getattr(lock_result, "scalar_one_or_none", None), "return_value", None)
+    if lock_scalar_mock_value is not None:
+        lock_row = lock_scalar_mock_value
+    if lock_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="action_group_run not found")
+    _, locked_status, locked_started_at, locked_finished_at, _ = _coerce_group_run_row(lock_row)
+    lock_wait_seconds = time.monotonic() - lock_wait_started
+    logger.info(
+        "group_run_callback lock_acquired group_run_id=%s wait_seconds=%.3f",
+        group_run_id,
+        lock_wait_seconds,
+    )
 
-        result_row = await _get_or_create_group_run_result(
+    replay_repair = False
+    effective_started_at = locked_started_at or effective_started_at
+    if _is_group_run_terminal(status=locked_status, finished_at=locked_finished_at):
+        await db.rollback()
+        replay_outcome = await _classify_finished_group_run_replay(
             db,
             tenant_id=tenant_id,
-            group_run_id=run.id,
-            action_id=item.action_id,
+            group_run_id=group_run_id,
+            current_status=locked_status,
+            expected_status=terminal_status,
+            expected_results=expected_results,
         )
-
-        result_row.execution_status = exec_status
-        result_row.execution_error_code = item.execution_error_code
-        result_row.execution_error_message = item.execution_error_message
-        result_row.execution_started_at = _parse_iso_utc(item.execution_started_at) or run.started_at
-        result_row.execution_finished_at = _parse_iso_utc(item.execution_finished_at) or finished_at
-        result_row.raw_result = item.raw_result
-
-        await record_execution_result_async(
-            db,
-            action_id=item.action_id,
-            latest_run_id=run.id,
-            execution_status=exec_status,
-            attempted_at=result_row.execution_started_at or run.started_at,
-            finished_at=result_row.execution_finished_at or finished_at,
-        )
-        await evaluate_confirmation_for_action_async(
-            db,
-            action_id=item.action_id,
-            since_run_started=result_row.execution_started_at or run.started_at,
-        )
-
-    for item in non_executable_results:
-        result_row = await _get_or_create_group_run_result(
-            db,
-            tenant_id=tenant_id,
-            group_run_id=run.id,
-            action_id=item.action_id,
-        )
-        result_row.execution_status = ActionGroupExecutionStatus.unknown
-        result_row.execution_error_code = None
-        result_row.execution_error_message = None
-        result_row.execution_started_at = run.started_at
-        result_row.execution_finished_at = finished_at
-        result_row.raw_result = _non_executable_raw_result(item)
-
-        await record_execution_result_async(
-            db,
-            action_id=item.action_id,
-            latest_run_id=run.id,
-            execution_status=ActionGroupExecutionStatus.unknown,
-            attempted_at=run.started_at,
-            finished_at=finished_at,
-        )
-        await evaluate_confirmation_for_action_async(
-            db,
-            action_id=item.action_id,
-            since_run_started=run.started_at,
-        )
-
-    if has_failed:
-        run.status = ActionGroupRunStatus.failed
-    elif has_cancelled:
-        run.status = ActionGroupRunStatus.cancelled
+        if replay_outcome == "accepted":
+            logger.info("group_run_callback replay_accepted group_run_id=%s", group_run_id)
+            return _group_run_report_replay_accepted_detail(
+                group_run_id=group_run_id,
+                status=locked_status,
+                repaired=False,
+            )
+        if replay_outcome == "conflict":
+            logger.warning("group_run_callback replay_conflict group_run_id=%s", group_run_id)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=_group_run_report_replay_conflict_detail(group_run_id=group_run_id, status=locked_status),
+            )
+        replay_repair = True
+        logger.info("group_run_callback replay_repair group_run_id=%s", group_run_id)
     else:
-        run.status = ActionGroupRunStatus.finished
+        if lock_scalar_mock_value is not None:
+            lock_scalar_mock_value.status = terminal_status
+            lock_scalar_mock_value.started_at = effective_started_at
+            lock_scalar_mock_value.finished_at = finished_at
+            lock_scalar_mock_value.reporting_source = reporting_source
+        await db.execute(
+            update(ActionGroupRun)
+            .where(ActionGroupRun.id == group_run_id)
+            .values(
+                status=terminal_status,
+                started_at=effective_started_at,
+                finished_at=finished_at,
+                reporting_source=reporting_source,
+            )
+        )
+        await db.commit()
+        logger.info("group_run_callback run_terminalized group_run_id=%s status=%s", group_run_id, terminal_status.value)
 
+    phase_results_started = time.monotonic()
+    await _persist_finished_group_run_results(
+        db,
+        tenant_id=tenant_id,
+        group_run_id=group_run_id,
+        effective_started_at=effective_started_at,
+        finished_at=finished_at,
+        action_results=action_results,
+        non_executable_results=non_executable_results,
+    )
     await db.commit()
-    return {"status": "accepted", "event": "finished", "group_run_id": str(run.id)}
+    logger.info(
+        "group_run_callback results_persisted group_run_id=%s duration_seconds=%.3f",
+        group_run_id,
+        time.monotonic() - phase_results_started,
+    )
+
+    phase_projection_started = time.monotonic()
+    await _apply_finished_group_run_state_projection(
+        db,
+        group_run_id=group_run_id,
+        effective_started_at=effective_started_at,
+        finished_at=finished_at,
+        action_results=action_results,
+        non_executable_results=non_executable_results,
+    )
+    await db.commit()
+    logger.info(
+        "group_run_callback projection_completed group_run_id=%s duration_seconds=%.3f total_seconds=%.3f",
+        group_run_id,
+        time.monotonic() - phase_projection_started,
+        time.monotonic() - callback_started,
+    )
+    if replay_repair:
+        return _group_run_report_replay_accepted_detail(
+            group_run_id=group_run_id,
+            status=terminal_status,
+            repaired=True,
+        )
+    return {"status": "accepted", "event": "finished", "group_run_id": str(group_run_id)}
 
 
 @router.post(

@@ -15,6 +15,8 @@ The deploy script now normalizes Lambda drift after each runtime deploy:
 - applies the requested worker reserved concurrency
 - re-enables or disables worker event source mappings to match `EnableWorker`
 - clears reserved concurrency from ReadRole/WriteRole helper Lambdas
+- verifies runtime-vs-DB Alembic alignment before deploy, after Lambda image rollout, and again after the DB upgrade
+- waits for the live API and worker Lambdas to report the new image URI before advancing the target DB to the repo heads
 
 Current API Lambda runtime posture:
 - API Lambda `MemorySize` is `1536` MB in the checked-in serverless template.
@@ -47,13 +49,28 @@ export CONTROL_PLANE_EVENTS_SECRET="your-secret"
   --worker-image-uri 123456789012.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-app:dev
 ```
 
-The serverless deploy script updates Lambda images and runtime configuration only. It does **not** apply Alembic migrations. After every runtime deploy, run the DB upgrade separately against the same database used by the stack:
+The checked-in serverless deploy script now performs the guarded sequence itself:
 
-```bash
-/bin/zsh -lc 'set -a; source config/.env.ops; set +a; alembic upgrade heads'
+```mermaid
+flowchart TD
+    A["Verify DB is not ahead of repo/runtime heads"] --> B["Deploy Lambda images and config"]
+    B --> C["Wait for API and worker Lambdas to report the new image URI"]
+    C --> D["Re-run runtime/DB alignment check against the target DB"]
+    D --> E["Run alembic upgrade heads against the same DB"]
+    E --> F["Require DB == repo heads before exit"]
 ```
 
-Use `heads`, not `head`: the current repo has two live heads, `0042_bidirectional_integrations` and `0042_action_remediation_system_of_record`.
+If you need to run the alignment check manually outside the deploy wrapper, use:
+
+```bash
+/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/python scripts/check_runtime_db_alignment.py'
+```
+
+To require the DB to be exactly at repo head after a manual upgrade:
+
+```bash
+/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/python scripts/check_runtime_db_alignment.py --require-at-head'
+```
 
 ### Runtime State Drift Recovery
 
@@ -73,6 +90,12 @@ If `/health` or `/ready` starts failing immediately after a runtime deploy, chec
 
 ```bash
 /bin/zsh -lc 'set -a; source config/.env.ops; set +a; alembic upgrade heads'
+```
+
+Then confirm the DB/runtime pair is aligned:
+
+```bash
+/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/python scripts/check_runtime_db_alignment.py --require-at-head'
 ```
 
 ### Manual Deployment

@@ -413,6 +413,7 @@ def _build_sync_payload(
     }
     if link is not None:
         payload.update(_link_payload(link))
+        payload.update(_drift_signature_payload(link=link, desired_external_status=external_status))
     return payload
 
 
@@ -437,6 +438,20 @@ def _link_payload(link: ActionExternalLink) -> dict[str, Any]:
         "channel_id": metadata.get("channel"),
         "message_ts": metadata.get("message_ts"),
     }
+
+
+def _drift_signature_payload(
+    *,
+    link: ActionExternalLink,
+    desired_external_status: str,
+) -> dict[str, Any]:
+    observed_status = _non_empty_text(link.external_status)
+    if observed_status is None or observed_status == desired_external_status:
+        return {}
+    payload = {"observed_external_status": observed_status}
+    if link.last_inbound_event_at is not None:
+        payload["observed_external_event_at"] = link.last_inbound_event_at.isoformat()
+    return payload
 
 
 def _existing_sync_task(
@@ -593,6 +608,7 @@ def process_inbound_event(
         sync_result = _record_inbound_status(
             session,
             action=action,
+            setting=setting,
             provider=provider,
             normalized=normalized,
             action_status=None,
@@ -802,11 +818,13 @@ def _record_inbound_status(
     session: Session,
     *,
     action: Action,
+    setting: TenantIntegrationSetting,
     provider: str,
     normalized: dict[str, Any],
     action_status: str | None,
 ) -> Any:
     payload = {"occurred_at": normalized["occurred_at"].isoformat() if normalized["occurred_at"] else None}
+    preferred_status = _status_map(setting).get(action.status, action.status)
     if action_status is not None:
         return record_reconciled_external_status(
             session,
@@ -814,6 +832,7 @@ def _record_inbound_status(
             provider=provider,
             external_status=normalized["external_status"],
             external_ref=normalized["external_id"],
+            preferred_external_status_override=preferred_status,
             idempotency_key=f"inbound:{provider}:{normalized['receipt_key']}:reconciled",
             payload=payload,
         )
@@ -823,6 +842,7 @@ def _record_inbound_status(
         provider=provider,
         external_status=normalized["external_status"],
         external_ref=normalized["external_id"],
+        preferred_external_status_override=preferred_status,
         idempotency_key=f"inbound:{provider}:{normalized['receipt_key']}:observed",
         payload=payload,
     )
@@ -915,12 +935,15 @@ def complete_sync_task(
 ) -> ActionExternalLink:
     link = _upsert_external_link(session, task=task, result=result)
     action = _require_action(session, tenant_id=task.tenant_id, action_id=task.action_id)
+    setting = _require_enabled_setting(session, tenant_id=task.tenant_id, provider=task.provider)
+    preferred_status = _status_map(setting).get(action.status, action.status)
     record_reconciled_external_status(
         session,
         action=action,
         provider=task.provider,
         external_status=link.external_status,
         external_ref=link.external_id,
+        preferred_external_status_override=preferred_status,
         idempotency_key=f"integration_sync_task:{task.id}:success",
         payload={"task_id": str(task.id), "operation": task.operation, "result": result},
     )

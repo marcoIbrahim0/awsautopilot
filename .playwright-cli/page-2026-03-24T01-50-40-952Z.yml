@@ -1,0 +1,128 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+        - link "Audit Log" [ref=e78] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e80]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Action Detail" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: M
+      - main [ref=e56]:
+        - generic [ref=e59]:
+          - link "Back to Findings" [ref=e60] [cursor=pointer]:
+            - /url: /findings
+            - img [ref=e61]
+            - text: Back to Findings
+          - link "Need help with this action?" [ref=e63] [cursor=pointer]:
+            - /url: /help?tab=assistant&from=%2Factions%2F0abc603d-b75a-4b49-9a5f-431a0aa82a4e&action_id=0abc603d-b75a-4b49-9a5f-431a0aa82a4e
+            - generic [ref=e64]: Need help with this action?
+  - alert [ref=e65]
+  - dialog "Run progress" [ref=e520]:
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - button "Back to action detail" [ref=e330]:
+          - img [ref=e331]
+        - generic [ref=e71]:
+          - heading "Run progress" [level=2] [ref=e521]
+          - paragraph [ref=e83]: Security groups should not allow unrestricted access to ports with high risk
+      - button "Close modal" [ref=e74]:
+        - img [ref=e75]
+    - generic [ref=e336]:
+      - generic [ref=e522]:
+        - generic [ref=e523]:
+          - paragraph [ref=e524]: Action
+          - link "Security groups should not allow unrestricted access to ports with high risk" [ref=e525] [cursor=pointer]:
+            - /url: /actions/0abc603d-b75a-4b49-9a5f-431a0aa82a4e
+          - paragraph [ref=e526]: 696505809372 · eu-north-1
+          - paragraph [ref=e527]: "Action status: open"
+        - generic [ref=e528]:
+          - generic [ref=e529]:
+            - paragraph [ref=e530]: Generating PR bundle
+            - generic [ref=e531]:
+              - generic [ref=e533]:
+                - img [ref=e535]
+                - generic [ref=e538]: Queued
+              - generic [ref=e541]:
+                - generic [ref=e543]: "2"
+                - generic [ref=e544]: Generating
+              - generic [ref=e547]:
+                - generic [ref=e549]: "3"
+                - generic [ref=e550]: Complete
+          - generic [ref=e552]:
+            - generic [ref=e553]: Progress
+            - generic [ref=e554]: 15%
+          - generic [ref=e557]:
+            - heading "Activity" [level=4] [ref=e558]
+            - generic [ref=e560]:
+              - generic [ref=e561]: ›
+              - generic [ref=e562]: Run queued, waiting for worker…
+          - generic [ref=e564]:
+            - generic [ref=e566]:
+              - generic [ref=e568]: "1"
+              - generic [ref=e569]: Pending
+            - generic [ref=e572]:
+              - generic [ref=e574]: "2"
+              - generic [ref=e575]: Running
+            - generic [ref=e578]:
+              - generic [ref=e580]: "3"
+              - generic [ref=e581]: Complete
+          - generic [ref=e582]:
+            - generic [ref=e583]:
+              - generic [ref=e584]: pending
+              - button "Cancel run" [ref=e585]:
+                - generic [ref=e586]: Cancel run
+            - generic [ref=e587]:
+              - generic [ref=e588]:
+                - heading "Closure checklist" [level=4] [ref=e589]
+                - paragraph [ref=e590]: Checklist will populate when the run reaches a terminal state.
+              - generic [ref=e591]:
+                - heading "Evidence pointers" [level=4] [ref=e592]
+                - generic [ref=e594]:
+                  - paragraph [ref=e595]: Dependency review snapshot
+                  - paragraph [ref=e596]: 1 dependency check captured for this run.
+                  - generic [ref=e598]: risk snapshot
+      - generic [ref=e599]:
+        - button "Close" [ref=e600]:
+          - generic [ref=e601]: Close
+        - link "View run details" [ref=e602] [cursor=pointer]:
+          - /url: /remediation-runs/8445a29f-a6d6-48cd-ace7-2a2a66cfef3e
+          - button "View run details" [ref=e603]:
+            - generic [ref=e604]: View run details
+  - button "Open Ask AI Chat" [ref=e326]:
+    - img [ref=e327]

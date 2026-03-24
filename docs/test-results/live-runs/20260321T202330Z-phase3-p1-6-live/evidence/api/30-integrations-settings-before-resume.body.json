@@ -1,0 +1,1 @@
+{"items":[{"provider":"jira","enabled":true,"outbound_enabled":true,"inbound_enabled":true,"auto_create":true,"reopen_on_regression":true,"config":{"base_url":"https://ocypheris.atlassian.net","project_key":"KAN"},"secret_configured":true,"webhook_configured":true}]}

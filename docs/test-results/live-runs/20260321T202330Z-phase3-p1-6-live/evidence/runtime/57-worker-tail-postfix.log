@@ -1,0 +1,275 @@
+2026-03-23T17:08:01.963000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb START RequestId: edc197dc-ba17-5b27-bce8-f5e7cf8903ac Version: $LATEST
+2026-03-23T17:08:03.403000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb END RequestId: edc197dc-ba17-5b27-bce8-f5e7cf8903ac
+2026-03-23T17:08:03.403000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb REPORT RequestId: edc197dc-ba17-5b27-bce8-f5e7cf8903ac	Duration: 1439.64 ms	Billed Duration: 4221 ms	Memory Size: 1024 MB	Max Memory Used: 194 MB	Init Duration: 2780.60 ms
+2026-03-23T17:08:03.409000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb START RequestId: b5824ecb-5e28-5712-91be-2cf02b80f805 Version: $LATEST
+2026-03-23T17:08:05.143000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb END RequestId: b5824ecb-5e28-5712-91be-2cf02b80f805
+2026-03-23T17:08:05.143000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb REPORT RequestId: b5824ecb-5e28-5712-91be-2cf02b80f805	Duration: 1733.44 ms	Billed Duration: 1734 ms	Memory Size: 1024 MB	Max Memory Used: 194 MB
+2026-03-23T17:08:06.402000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 START RequestId: c7da04fd-7b89-5d36-8b15-66c60e2fc7a6 Version: $LATEST
+2026-03-23T17:08:32.225000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 END RequestId: c7da04fd-7b89-5d36-8b15-66c60e2fc7a6
+2026-03-23T17:08:32.225000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 REPORT RequestId: c7da04fd-7b89-5d36-8b15-66c60e2fc7a6	Duration: 25822.24 ms	Billed Duration: 28624 ms	Memory Size: 1024 MB	Max Memory Used: 209 MB	Init Duration: 2800.89 ms
+2026-03-23T17:10:08.844000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 START RequestId: adec381e-8cfd-58d8-b29f-5a25fada1576 Version: $LATEST
+2026-03-23T17:10:08.853000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb START RequestId: 7058adc2-a690-5b03-83b9-cff9d0ba0996 Version: $LATEST
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 [ERROR]	2026-03-23T17:10:08.850Z	adec381e-8cfd-58d8-b29f-5a25fada1576	Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x7fadd5fffd40>>
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 Traceback (most recent call last):
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/pool/base.py", line 373, in _close_connection
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._dialect.do_terminate(connection)
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 1127, in do_terminate
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 dbapi_connection.terminate()
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 value = await result
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 await self._connection.close(timeout=2)
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/asyncpg/connection.py", line 1513, in close
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 await self._protocol.close(timeout)
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "asyncpg/protocol/protocol.pyx", line 617, in close
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._request_cancel()
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 con._cancel_current_command(self.cancel_sent_waiter)
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/asyncpg/connection.py", line 1682, in _cancel_current_command
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 455, in create_task
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._check_closed()
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 545, in _check_closed
+2026-03-23T17:10:08.862000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 raise RuntimeError('Event loop is closed')
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 RuntimeError: Event loop is closed[ERROR]	2026-03-23T17:10:08.855Z	adec381e-8cfd-58d8-b29f-5a25fada1576	[a7248820-c3d3-4235-b536-ceff401048a8] Handler failed (RuntimeError) job_type=attack_path_materialization. Message will retry/DLQ.
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 Traceback (most recent call last):
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/backend/workers/lambda_handler.py", line 338, in _process_record
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 handler_fn(job)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 25, in execute_attack_path_materialization_job
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = asyncio.run(_run_refresh(tenant_id=tenant_id, account_id=account_id, region=region))
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/lang/lib/python3.12/asyncio/runners.py", line 195, in run
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return runner.run(main)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/lang/lib/python3.12/asyncio/runners.py", line 118, in run
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return self._loop.run_until_complete(task)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return future.result()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 39, in _run_refresh
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/backend/services/attack_path_materialized.py", line 160, in materialize_attack_paths
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 actions = await _load_actions_for_materialization(db, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/backend/services/attack_path_materialized.py", line 324, in _load_actions_for_materialization
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = await db.execute(
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/ext/asyncio/session.py", line 449, in execute
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = await greenlet_spawn(
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = context.throw(*sys.exc_info())
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/orm/session.py", line 2351, in execute
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return self._execute_internal(
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/orm/session.py", line 2239, in _execute_internal
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 conn = self._connection_for_bind(bind)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/orm/session.py", line 2108, in _connection_for_bind
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return trans._connection_for_bind(engine, execution_options)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "<string>", line 2, in _connection_for_bind
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/orm/state_changes.py", line 137, in _go
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ret_value = fn(self, *arg, **kw)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/orm/session.py", line 1187, in _connection_for_bind
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 conn = bind.connect()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/engine/base.py", line 3293, in connect
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return self._connection_cls(self)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/engine/base.py", line 143, in __init__
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._dbapi_connection = engine.raw_connection()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/engine/base.py", line 3317, in raw_connection
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return self.pool.connect()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/pool/base.py", line 448, in connect
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return _ConnectionFairy._checkout(self)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/pool/base.py", line 1371, in _checkout
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 with util.safe_reraise():
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 raise exc_value.with_traceback(exc_tb)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/pool/base.py", line 1309, in _checkout
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = pool._dialect._do_ping_w_event(
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/engine/default.py", line 729, in _do_ping_w_event
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return self.do_ping(dbapi_connection)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 1160, in do_ping
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 dbapi_connection.ping()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 818, in ping
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 self._handle_exception(error)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 799, in _handle_exception
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 raise error
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 816, in ping
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 _ = self.await_(self._async_ping())
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 value = await result
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 825, in _async_ping
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 await tr.start()
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/asyncpg/transaction.py", line 146, in start
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 await self._connection.execute(query)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "/var/task/asyncpg/connection.py", line 354, in execute
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 result = await self._protocol.query(query, timeout)
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 File "asyncpg/protocol/protocol.pyx", line 369, in query
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 return await waiter
+2026-03-23T17:10:08.883000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 RuntimeError: Task <Task pending name='Task-6' coro=<_run_refresh() running at /var/task/backend/workers/jobs/attack_path_materialization.py:39> cb=[_run_until_complete_cb() at /var/lang/lib/python3.12/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+2026-03-23T17:10:08.907000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 END RequestId: adec381e-8cfd-58d8-b29f-5a25fada1576
+2026-03-23T17:10:08.907000+00:00 2026/03/23/[$LATEST]d6da45d781594a9bb293f2e188120e70 REPORT RequestId: adec381e-8cfd-58d8-b29f-5a25fada1576	Duration: 63.31 ms	Billed Duration: 64 ms	Memory Size: 1024 MB	Max Memory Used: 211 MB
+2026-03-23T17:10:09.580000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb END RequestId: 7058adc2-a690-5b03-83b9-cff9d0ba0996
+2026-03-23T17:10:09.580000+00:00 2026/03/23/[$LATEST]13082c384a914127ae847b57852ef3fb REPORT RequestId: 7058adc2-a690-5b03-83b9-cff9d0ba0996	Duration: 726.10 ms	Billed Duration: 727 ms	Memory Size: 1024 MB	Max Memory Used: 196 MB
+2026-03-23T17:15:19.404000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 INIT_REPORT Init Duration: 9999.57 ms	Phase: init	Status: timeout
+2026-03-23T17:15:21.603000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 START RequestId: 02c78618-2e3f-5407-8f57-e4235964037f Version: $LATEST
+2026-03-23T17:15:21.604000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 [WARNING]	2026-03-23T17:15:21.603Z	02c78618-2e3f-5407-8f57-e4235964037f	[a7248820-c3d3-4235-b536-ceff401048a8] Retried message queue=security-autopilot-ingest-queue receive_count=2 job_type=attack_path_materialization schema_version=1 tenant=a3e2a53f-3027-4696-ba4b-6ebaa562ee9a account=None region=None
+2026-03-23T17:15:22.979000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 END RequestId: 02c78618-2e3f-5407-8f57-e4235964037f
+2026-03-23T17:15:22.979000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 REPORT RequestId: 02c78618-2e3f-5407-8f57-e4235964037f	Duration: 3561.47 ms	Billed Duration: 3562 ms	Memory Size: 1024 MB	Max Memory Used: 194 MB
+2026-03-23T17:15:38.751000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 START RequestId: cfc62272-baa4-5064-8a73-4049cdd42e91 Version: $LATEST
+2026-03-23T17:15:39.414000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 END RequestId: cfc62272-baa4-5064-8a73-4049cdd42e91
+2026-03-23T17:15:39.414000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 REPORT RequestId: cfc62272-baa4-5064-8a73-4049cdd42e91	Duration: 662.27 ms	Billed Duration: 663 ms	Memory Size: 1024 MB	Max Memory Used: 195 MB
+2026-03-23T17:15:39.446000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 START RequestId: c5ec4725-a339-5c54-8bf7-251ed450cb2c Version: $LATEST
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 [ERROR]	2026-03-23T17:15:39.450Z	c5ec4725-a339-5c54-8bf7-251ed450cb2c	Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x7faf6062bc50>>
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 Traceback (most recent call last):
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/pool/base.py", line 373, in _close_connection
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._dialect.do_terminate(connection)
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 1127, in do_terminate
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 dbapi_connection.terminate()
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 value = await result
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 await self._connection.close(timeout=2)
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/asyncpg/connection.py", line 1513, in close
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 await self._protocol.close(timeout)
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "asyncpg/protocol/protocol.pyx", line 617, in close
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._request_cancel()
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 con._cancel_current_command(self.cancel_sent_waiter)
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/asyncpg/connection.py", line 1682, in _cancel_current_command
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 455, in create_task
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._check_closed()
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 545, in _check_closed
+2026-03-23T17:15:39.457000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 raise RuntimeError('Event loop is closed')
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 RuntimeError: Event loop is closed[ERROR]	2026-03-23T17:15:39.458Z	c5ec4725-a339-5c54-8bf7-251ed450cb2c	[eb6b7e59-278e-431c-a25c-de7886ba5bae] Handler failed (RuntimeError) job_type=attack_path_materialization. Message will retry/DLQ.
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 Traceback (most recent call last):
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/backend/workers/lambda_handler.py", line 338, in _process_record
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 handler_fn(job)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 25, in execute_attack_path_materialization_job
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = asyncio.run(_run_refresh(tenant_id=tenant_id, account_id=account_id, region=region))
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/lang/lib/python3.12/asyncio/runners.py", line 195, in run
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return runner.run(main)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/lang/lib/python3.12/asyncio/runners.py", line 118, in run
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return self._loop.run_until_complete(task)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return future.result()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 39, in _run_refresh
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/backend/services/attack_path_materialized.py", line 160, in materialize_attack_paths
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 actions = await _load_actions_for_materialization(db, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/backend/services/attack_path_materialized.py", line 324, in _load_actions_for_materialization
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = await db.execute(
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/ext/asyncio/session.py", line 449, in execute
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = await greenlet_spawn(
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = context.throw(*sys.exc_info())
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/orm/session.py", line 2351, in execute
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return self._execute_internal(
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/orm/session.py", line 2239, in _execute_internal
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 conn = self._connection_for_bind(bind)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/orm/session.py", line 2108, in _connection_for_bind
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return trans._connection_for_bind(engine, execution_options)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "<string>", line 2, in _connection_for_bind
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/orm/state_changes.py", line 137, in _go
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ret_value = fn(self, *arg, **kw)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/orm/session.py", line 1187, in _connection_for_bind
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 conn = bind.connect()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/engine/base.py", line 3293, in connect
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return self._connection_cls(self)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/engine/base.py", line 143, in __init__
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._dbapi_connection = engine.raw_connection()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/engine/base.py", line 3317, in raw_connection
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return self.pool.connect()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/pool/base.py", line 448, in connect
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return _ConnectionFairy._checkout(self)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/pool/base.py", line 1371, in _checkout
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 with util.safe_reraise():
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 raise exc_value.with_traceback(exc_tb)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/pool/base.py", line 1309, in _checkout
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = pool._dialect._do_ping_w_event(
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/engine/default.py", line 729, in _do_ping_w_event
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return self.do_ping(dbapi_connection)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 1160, in do_ping
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 dbapi_connection.ping()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 818, in ping
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 self._handle_exception(error)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 799, in _handle_exception
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 raise error
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 816, in ping
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 _ = self.await_(self._async_ping())
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 value = await result
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 825, in _async_ping
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 await tr.start()
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/asyncpg/transaction.py", line 146, in start
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 await self._connection.execute(query)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "/var/task/asyncpg/connection.py", line 354, in execute
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 result = await self._protocol.query(query, timeout)
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 File "asyncpg/protocol/protocol.pyx", line 369, in query
+2026-03-23T17:15:39.556000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 return await waiter
+2026-03-23T17:15:39.557000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 END RequestId: c5ec4725-a339-5c54-8bf7-251ed450cb2c
+2026-03-23T17:15:39.557000+00:00 2026/03/23/[$LATEST]710e21f133c8470d8c2feb79b4a0a769 REPORT RequestId: c5ec4725-a339-5c54-8bf7-251ed450cb2c	Duration: 110.76 ms	Billed Duration: 111 ms	Memory Size: 1024 MB	Max Memory Used: 198 MB

@@ -67,6 +67,7 @@ from backend.services.attack_paths import (
     build_attack_path_graph_context,
     build_shared_attack_path_records,
 )
+from backend.services.control_scope import equivalent_control_ids_for_control
 from backend.services.attack_path_materialized import (
     get_materialized_attack_path,
     has_materialized_attack_paths,
@@ -1736,7 +1737,11 @@ async def list_actions(
     if region is not None:
         action_filters.append(Action.region == region)
     if control_id is not None:
-        action_filters.append(Action.control_id == control_id.strip())
+        equivalent_control_ids = equivalent_control_ids_for_control(control_id)
+        if equivalent_control_ids:
+            action_filters.append(Action.control_id.in_(equivalent_control_ids))
+        else:
+            action_filters.append(Action.control_id == control_id.strip())
     if resource_id is not None:
         action_filters.append(Action.resource_id == resource_id.strip())
     if action_type is not None:
@@ -1745,15 +1750,19 @@ async def list_actions(
         action_filters.append(Action.id.in_(requested_action_ids))
     if normalized_query is not None:
         query_pattern = f"%{normalized_query}%"
+        normalized_query_controls = equivalent_control_ids_for_control(normalized_query)
+        query_filters = [
+            Action.title.ilike(query_pattern),
+            Action.action_type.ilike(query_pattern),
+            Action.control_id.ilike(query_pattern),
+            Action.resource_id.ilike(query_pattern),
+            Action.account_id.ilike(query_pattern),
+            Action.region.ilike(query_pattern),
+        ]
+        if normalized_query_controls:
+            query_filters.append(Action.control_id.in_(normalized_query_controls))
         action_filters.append(
-            or_(
-                Action.title.ilike(query_pattern),
-                Action.action_type.ilike(query_pattern),
-                Action.control_id.ilike(query_pattern),
-                Action.resource_id.ilike(query_pattern),
-                Action.account_id.ilike(query_pattern),
-                Action.region.ilike(query_pattern),
-            )
+            or_(*query_filters)
         )
     if normalized_owner_type is not None:
         action_filters.append(Action.owner_type == normalized_owner_type)

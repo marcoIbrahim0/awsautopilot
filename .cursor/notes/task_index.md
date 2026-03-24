@@ -4,6 +4,72 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Conditionally hide Tenant ID Configuration UI (2026-03-24)](task_log.md#conditionally-hide-tenant-id-configuration-ui-2026-03-24)
+  - Updated all dashboard pages to conditionally hide the `TenantIdForm` component during authentication loading and for unauthenticated users.
+  - Applied the logic `!showContent && !authLoading && isAuthenticated` to the Findings, Accounts, Top Risks, Actions Group, Findings Detail, Exceptions, and PR Bundle pages.
+  - This change eliminates UI flicker and removes the dev-only tenant entry form from the standard user experience.
+- [Fix PR bundle pending-confirmation stall for deleted inventory resources (2026-03-24)](task_log.md#fix-pr-bundle-pending-confirmation-stall-for-deleted-inventory-resources-2026-03-24)
+  - Diagnosed that targeted `post_apply_reconcile` sweeps were throwing `NotFound` on deleted resources and silently skipping them instead of yielding a `RESOLVED` shadow state.
+  - Patched `_collect_ec2_security_groups`, `_collect_rds_instances`, and `_collect_eks_clusters` to detect and yield `SHADOW_STATUS_RESOLVED` evaluations for missing targeted resources.
+  - Deployed backend fixes to production and pushed global worker recompute to clear the pending-confirmation stalls for the customer account.
+- [Split grouped findings by account/region scope so EC2.182 pending-confirmation badges stay accurate (2026-03-24)](task_log.md#split-grouped-findings-by-accountregion-scope-so-ec2182-pending-confirmation-badges-stay-accurate-2026-03-24)
+  - Changed `/api/findings/grouped` from `(control_id, resource_type)` grouping to scoped `(control_id, resource_type, account_id, region)` rows so mixed-region controls like `EC2.182` no longer hide a successful region's waiting-for-AWS badge behind another region's state.
+  - Stopped the frontend from parsing grouped `group_key`, added explicit `control_id` on grouped rows, and narrowed grouped-card expansion so it reloads findings for the card's own `control_id/resource_type/account/region` scope.
+  - Deployed backend image tag `20260324T042908Z` and frontend version `b8d6b016-78e2-4aff-bae6-60bd8eab9d3f`, then proved live in the browser that `EC2.182` now renders separate `eu-north-1` and `us-east-1` cards and scoped expansion no longer mixes the sibling `AwsAccount` finding into the snapshot-block-public-access card.
+- [Fix Config.1 global S3 bucket collision, deploy, and prove local live apply succeeds (2026-03-24)](task_log.md#fix-config1-global-s3-bucket-collision-deploy-and-prove-local-live-apply-succeeds-2026-03-24)
+  - Fixed the remaining Config.1 live failure by changing the account-local delivery bucket contract from `security-autopilot-config-<account_id>` to the globally unique `security-autopilot-config-<account_id>-<region>` and threading that same value through backend generation plus frontend safe defaults.
+  - Deployed the backend/frontend, generated fresh production run `45bdd196-20a2-4be0-8659-fa3a05a356a1`, and proved the new bundle applies successfully locally against AWS account `696505809372`.
+- [Deploy bundle progress UI wording + layout cleanup to Cloudflare frontend (2026-03-24)](task_log.md#deploy-bundle-progress-ui-wording--layout-cleanup-to-cloudflare-frontend-2026-03-24)
+  - Published the frontend bundle-progress wording/layout cleanup to Cloudflare as deployment version `acdc7ce5-4259-4349-8ac7-edfe7c94b093`.
+  - Verified `https://ocypheris.com` plus the new `/remediation-runs/[id]` and `/actions/group` chunk assets all returned `200`.
+- [Fix Config.1 stale existing-bucket defaults and prove live bundle generation (2026-03-24)](task_log.md#fix-config1-stale-existing-bucket-defaults-and-prove-live-bundle-generation-2026-03-24)
+  - Fixed Config.1 runtime/profile resolution so the recommended account-local delivery path no longer inherits the stale unreachable `config-bucket-696505809372` branch and instead resolves to a creatable `security-autopilot-config-<account_id>-<region>` bucket with `delivery_bucket_mode=create_new`.
+  - Deployed the backend and proved the production fix by generating live remediation run `d74a5c66-9e4c-4e53-b1a8-2579853ef7ea`, whose Terraform bundle now sets `create_local_bucket=true` and drops the stale bucket name.
+- [Redo bundle progress UI and remove misleading "run" terminology (2026-03-24)](task_log.md#redo-bundle-progress-ui-and-remove-misleading-run-terminology-2026-03-24)
+  - Renamed the PR-bundle progress/detail surfaces to generation-oriented wording, removed the duplicate full-width progress bar, and kept `Download bundle` visible in the first success-state action block.
+  - Applied the same generation-oriented copy cleanup across the grouped bundle page while leaving backend/internal `remediation_runs` contracts unchanged.
+- [Add Jira operator runbook for remediation sync and live proof follow-through (2026-03-24)](task_log.md#add-jira-operator-runbook-for-remediation-sync-and-live-proof-follow-through-2026-03-24)
+  - Added an operator-facing Jira runbook covering credential acquisition, tenant config, webhook and reconciliation execution, DB verification, and troubleshooting for the retained Phase 3 `P1.6` live proof.
+  - Linked the new runbook from the active feature docs plus the docs/runbooks indexes so the practical Jira workflow is discoverable from the current documentation surface.
+- [Close Phase 3 P1.6 live Jira proof on production (2026-03-24)](task_log.md#close-phase-3-p16-live-jira-proof-on-production-2026-03-24)
+  - Cleared the remaining live blockers by isolating the attack-path materialization async engine per Lambda invocation and by making reconciliation dedupe drift-aware so repeat sync to the same canonical provider state can be re-queued after real drift.
+  - Extended the retained `20260321T202330Z-phase3-p1-6-live` package to a final PASS: real Jira issue `KAN-7` was drifted to `Done`, the live webhook preserved `Action.status=open`, drift was recorded, and production reconciliation returned Jira and the sync ledger to `In Progress` / `in_sync`.
+- [Deploy EC2.53 semantics fix and run live browser E2E on production (2026-03-24)](task_log.md#deploy-ec253-semantics-fix-and-run-live-browser-e2e-on-production-2026-03-24)
+  - Deployed the backend/runtime and frontend so production now serves the corrected additive `close_public` wording and the non-resetting EC2.53 safe-default modal behavior.
+  - Repaired the stale live grouped rows for `sg_restrict_public_ports` account `696505809372`, then proved the production browser flow by creating successful remediation run `8445a29f-a6d6-48cd-ace7-2a2a66cfef3e`.
+- [Fix EC2.53 public-access wording and grouped pending-confirmation repair (2026-03-23)](task_log.md#fix-ec253-public-access-wording-and-grouped-pending-confirmation-repair-2026-03-23)
+  - Renamed the additive EC2.53 `close_public` option/profile so it no longer implies automatic public-rule revocation, and removed the modal safe-default fallback that could silently reset SG access mode back to that branch.
+  - Hardened grouped confirmation reevaluation to recover the latest persisted run result before recomputing member buckets, and restricted pending-confirmation banners to the dedicated successful-pending bucket only.
+- [Document remediation control-ID canonicalization mismatches in active docs (2026-03-23)](task_log.md#document-remediation-control-id-canonicalization-mismatches-in-active-docs-2026-03-23)
+  - Added active documentation for every current alias-to-canonical remediation mapping so readers can understand why findings may keep alias IDs while grouped remediation, run history, and pending-confirmation use canonical families.
+  - Corrected the active inventory docs so `S3.17` now documents canonicalization to `S3.15`, and expanded the grouped/backend docs with the practical user-facing consequence of canonicalization.
+- [Deploy grouped PR-bundle no-change guard and re-run live production E2E (2026-03-23)](task_log.md#deploy-grouped-pr-bundle-no-change-guard-and-re-run-live-production-e2e-2026-03-23)
+  - Deployed the grouped-bundle backend changes live with serverless image tag `20260323T204848Z`, then published the frontend from the current workspace after the clean-base publish path failed on older shared UI/API files.
+  - Post-deploy live verification showed both grouped create APIs now reject the unchanged `enable_guardduty` request with `409 grouped_bundle_already_created_no_changes`, while no current tenant group naturally exposes the disabled action-group CTA state for browser proof.
+- [Live grouped PR-bundle rerun verification on production (2026-03-23)](task_log.md#live-grouped-pr-bundle-rerun-verification-on-production-2026-03-23)
+  - Live production verification showed the action-group grouped-create route already blocks unchanged successful `enable_guardduty` reruns with `409 grouped_bundle_already_created_no_changes`.
+  - The legacy `POST /api/remediation-runs/group-pr-bundle` route did not block the same pre-existing successful group until after a fresh March 23, 2026 successful run, and the live frontend is still the rolled-back build that does not consume the new blocked-state contract.
+- [Implement floating chatbot 6-hour recent history and multi-turn restore (2026-03-23)](task_log.md#implement-floating-chatbot-6-hour-recent-history-and-multi-turn-restore-2026-03-23)
+  - Replaced the floating chatbot’s single-thread local storage with a recent-chat session index that restores the latest non-expired chat and prunes temporary sessions after `6` hours of inactivity.
+  - Reworked the widget so `New chat` is non-destructive, recent chats are accessible inside the bot, and floating replies keep citations, follow-up prompts, support-case approval, and live-lookup status visible.
+- [Block unchanged grouped PR-bundle reruns after successful generation (2026-03-23)](task_log.md#block-unchanged-grouped-pr-bundle-reruns-after-successful-generation-2026-03-23)
+  - Added shared grouped conflict evaluation so both grouped create APIs now return `409` when the latest successful grouped PR bundle is identical and no canonical group/request changes have occurred since generation.
+  - Extended the action-group detail contract and page UI so `Generate Bundle Run` disables early with the backend-provided no-changes reason instead of failing only after submit.
+- [Live `CloudTrail.1` generate, download, and local apply validation (2026-03-23)](task_log.md#live-cloudtrail1-generate-download-and-local-apply-validation-2026-03-23)
+  - Production `CloudTrail.1` now generates and downloads an approval-gated create-if-missing bundle that can be applied successfully against AWS account `696505809372`; the retained run created multi-region trail `security-autopilot-trail` and bucket `ocypheris-live-ct-20260323162333-eu-north-1`.
+  - The same run exposed two remaining gaps: the generated Terraform bundle still unnecessarily depends on `hashicorp/null` for the inactive non-create path, and the family did not fully converge because `eu-north-1` findings flipped to `RESOLVED` while `us-east-1` remained `NEW` after apply plus refresh.
+- [Deploy frontend so the live CloudTrail bucket-creation approval UI is visible (2026-03-23)](task_log.md#deploy-frontend-so-the-live-cloudtrail-bucket-creation-approval-ui-is-visible-2026-03-23)
+  - Published the current frontend and verified in the live browser on `https://ocypheris.com` that `CloudTrail.1` now shows the separate bucket-creation approval checkbox when the create-if-missing toggle is enabled.
+  - Local Wrangler stayed open after asset upload, so the retained proof for this task is the live Playwright verification rather than a clean CLI publish footer.
+- [Live E2E for `SSM.7` and `CloudTrail.1` on production (2026-03-23)](task_log.md#live-e2e-for-ssm7-and-cloudtrail1-on-production-2026-03-23)
+  - `SSM.7` passed end to end on live production for `us-east-1`: run `cea5c507-fbc1-41a9-941b-131429704ff3` generated and applied successfully, reconciliation succeeded, and the live action flipped to `resolved`.
+  - `CloudTrail.1` initially proved the new additive inputs were not deployed live yet, then after the same-day backend deploy the live API correctly enforced `bucket_creation_acknowledged` and generated deterministic executable run `3a6200f9-919d-43a4-a53c-92c79380329a` for the approved create-if-missing path.
+- [CloudTrail.1 approved bucket-creation toggle and destination-bucket contract (2026-03-23)](task_log.md#cloudtrail1-approved-bucket-creation-toggle-and-destination-bucket-contract-2026-03-23)
+  - Added additive CloudTrail inputs `trail_bucket_name` and `create_bucket_if_missing`, plus a separate `bucket_creation_acknowledged` create-time approval requirement for single-run and grouped PR-bundle flows.
+  - Landed deterministic existing-trail bucket discovery, fail-closed existing-bucket validation, opt-in bucket-creation bundle generation, and the remediation modal approval UX with focused backend/frontend coverage.
+- [Fix grouped vs flat remediation truth for metadata-only S3.5 / CloudTrail.1 / EC2.7 states (2026-03-23)](task_log.md#fix-grouped-vs-flat-remediation-truth-for-metadata-only-s35--cloudtrail1--ec27-states-2026-03-23)
+  - Added the additive grouped bucket `run_finished_metadata_only`, threaded it through grouped projection, findings/action-group APIs, and the flat/grouped UI so metadata-only completion is no longer misclassified as failure or `not_run_yet`.
+  - Added `scripts/reproject_action_group_state.py` for scoped live-state repair of account `696505809372` action families after deploy, and validated the new backend/frontend contracts with focused tests and typecheck.
 - [Grouped PR-bundle local current-head rerun against live data without redeploy (2026-03-23)](task_log.md#grouped-pr-bundle-local-current-head-rerun-against-live-data-without-redeploy-2026-03-23)
   - Confirmed the March 23 create-time fixes live against shared tenant data: grouped `cloudtrail_enabled` now returns structured `invalid_strategy_inputs` in both regions and `us-east-1 ebs_default_encryption` fresh create planning no longer crashes.
   - Confirmed current-head retained execute success for `eu-north-1 ebs_default_encryption` and `s3_bucket_encryption_kms`, while `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` still reproduced grouped-run finalization gaps and two families were blocked by pre-existing active remediation rows on the shared DB.
@@ -2002,3 +2068,24 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Reran the four remaining grouped PR-bundle families against shared live tenant/account data on a local current-head API.
   - Confirmed `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` now reach grouped `finished` on follow-up reruns.
   - Narrowed the remaining unresolved cases to stale active remediation rows blocking `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`.
+- [CloudTrail.1 and S3.5 grouped flat-view state + control-alias filtering fixes (2026-03-23)](task_log.md#cloudtrail1-and-s35-grouped-flat-view-state--control-alias-filtering-fixes-2026-03-23)
+  - Added a distinct grouped member bucket for successful executions awaiting AWS confirmation and preserved it through callback reevaluation.
+  - Updated grouped counters and findings/action hint derivation so pending-confirmation state can stay truthful instead of collapsing into `run_not_successful`.
+  - Made `/api/actions` control filtering and control-token search canonical/alias-aware for `S3.11`/`S3.13` and `EC2.53` alias families.
+- [Live `POST /api/auth/login` 500 incident recovery without rollback (2026-03-23)](task_log.md#live-post-apiauthlogin-500-incident-recovery-without-rollback-2026-03-23)
+  - Reproduced live `500`s on `/health`, `/ready`, and `/api/auth/login`, confirmed production DB head was already `0049`, and redeployed the serverless runtime without rollback.
+  - Re-verified that live `/health` and `/ready` return `200` and invalid login now returns the expected `401 Invalid email or password`.
+- [CloudTrail.1 and S3.5 local live-data rerun after grouped flat-view fix (2026-03-23)](task_log.md#cloudtrail1-and-s35-local-live-data-rerun-after-grouped-flat-view-fix-2026-03-23)
+  - Applied migration `0048` locally and reran `CloudTrail.1` plus `S3.5` against the shared live tenant/account data on a current-head local API.
+  - Confirmed `CloudTrail.1` now fails closed as `400 invalid_strategy_inputs` with no false pending-confirmation banner, while the current live `S3.5` family degrades entirely to `review_required_metadata_only`.
+  - Captured the narrower remaining `S3.5` runtime bug: the metadata-only grouped run still remained `started` after local callback execution/replay attempts.
+- [Live `POST /api/auth/login` 500 incident investigation and recovery without rollback (2026-03-23)](task_log.md#live-post-apiauthlogin-500-incident-investigation-and-recovery-without-rollback-2026-03-23)
+  - Reproduced live `500`s on `/health`, `/ready`, and `/api/auth/login`, then confirmed in CloudWatch that the API Lambda was failing the migration guard because the DB had advanced to `0048` while the deployed image still expected `0047`.
+  - Redeployed the current serverless runtime without rollback and re-verified that live `/health` and `/ready` return `200` and invalid login now returns the expected `401`.
+- [Deploy-order drift guard and grouped callback replay-repair hardening (2026-03-23)](task_log.md#deploy-order-drift-guard-and-grouped-callback-replay-repair-hardening-2026-03-23)
+  - Hardened `scripts/deploy_saas_serverless.sh` with runtime/DB alignment gates, Lambda image rollout waits, automatic `alembic upgrade heads`, and exact-head verification before exit.
+  - Refactored grouped callback replay handling so terminal metadata-only runs repair stale `action_group_action_state` instead of being treated as already-consumed, and switched confirmation reevaluation to narrow explicit selects to avoid `idle in transaction` callback leaks.
+  - Validated the retained March 23 `S3.5` shared-DB case locally: first replay repaired the member buckets to `run_finished_metadata_only`, second replay returned idempotent `200` in `3.92s`, and no `idle in transaction` sessions remained.
+- [Remediation canonicalization docs cleanup for user-facing wording (2026-03-23)](task_log.md#remediation-canonicalization-docs-cleanup-for-user-facing-wording-2026-03-23)
+  - Removed explicit implementation file-path references from the mixed-audience canonicalization docs while keeping the alias mappings and user-visible behavior explanation.
+  - Audited nearby docs for similar leakage and intentionally left the clearly internal inventory/reference docs unchanged.

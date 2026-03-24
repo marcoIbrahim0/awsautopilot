@@ -96,7 +96,7 @@ def test_pending_confirmation_state_is_info_before_deadline() -> None:
     finished_at = datetime.now(timezone.utc) - timedelta(hours=2)
 
     state = derive_pending_confirmation_state(
-        status_bucket="run_not_successful",
+        status_bucket="run_successful_pending_confirmation",
         latest_run_status="finished",
         latest_run_finished_at=finished_at,
         last_confirmed_at=None,
@@ -111,7 +111,7 @@ def test_pending_confirmation_state_is_warning_after_deadline() -> None:
     finished_at = datetime.now(timezone.utc) - timedelta(hours=13)
 
     state = derive_pending_confirmation_state(
-        status_bucket="run_not_successful",
+        status_bucket="run_successful_pending_confirmation",
         latest_run_status="finished",
         latest_run_finished_at=finished_at,
         last_confirmed_at=None,
@@ -177,6 +177,8 @@ def test_finding_response_includes_pending_confirmation_hints() -> None:
         finding,
         remediation_hints={
             "remediation_action_group_id": "group-123",
+            "remediation_action_group_status_bucket": "run_successful_pending_confirmation",
+            "remediation_action_group_latest_run_status": "finished",
             "pending_confirmation": True,
             "pending_confirmation_started_at": now.isoformat(),
             "pending_confirmation_deadline_at": (now + timedelta(hours=12)).isoformat(),
@@ -186,9 +188,41 @@ def test_finding_response_includes_pending_confirmation_hints() -> None:
     )
 
     assert response.remediation_action_group_id == "group-123"
+    assert response.remediation_action_group_status_bucket == "run_successful_pending_confirmation"
+    assert response.remediation_action_group_latest_run_status == "finished"
     assert response.pending_confirmation is True
     assert response.pending_confirmation_message == PENDING_CONFIRMATION_INFO_MESSAGE
     assert response.pending_confirmation_severity == "info"
+
+
+def test_pending_confirmation_state_is_false_for_metadata_only_bucket() -> None:
+    finished_at = datetime.now(timezone.utc) - timedelta(hours=2)
+
+    state = derive_pending_confirmation_state(
+        status_bucket="run_finished_metadata_only",
+        latest_run_status="finished",
+        latest_run_finished_at=finished_at,
+        last_confirmed_at=None,
+    )
+
+    assert state["pending_confirmation"] is False
+    assert state["pending_confirmation_message"] is None
+    assert state["pending_confirmation_severity"] is None
+
+
+def test_pending_confirmation_state_is_false_for_failed_bucket() -> None:
+    finished_at = datetime.now(timezone.utc) - timedelta(hours=2)
+
+    state = derive_pending_confirmation_state(
+        status_bucket="run_not_successful",
+        latest_run_status="finished",
+        latest_run_finished_at=finished_at,
+        last_confirmed_at=None,
+    )
+
+    assert state["pending_confirmation"] is False
+    assert state["pending_confirmation_message"] is None
+    assert state["pending_confirmation_severity"] is None
 
 
 def test_ingest_progress_includes_compatibility_fields(client: TestClient) -> None:

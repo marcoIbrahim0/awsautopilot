@@ -284,11 +284,13 @@ def _resolve_sg_restrict_defaults(strategy_inputs: dict[str, Any] | None) -> tup
 def _resolve_aws_config_defaults(
     *,
     account_id: str,
+    region: str,
     strategy: str,
     strategy_inputs: dict[str, Any],
 ) -> tuple[str, str, bool, bool]:
     """Resolve AWS Config guided inputs with legacy fallback behavior."""
-    default_bucket = f"security-autopilot-config-{account_id}"
+    normalized_region = region.strip() or "us-east-1"
+    default_bucket = f"security-autopilot-config-{account_id}-{normalized_region}"
     delivery_bucket_mode = str(strategy_inputs.get("delivery_bucket_mode", "")).strip().lower()
     if delivery_bucket_mode == "create_new":
         create_local_bucket = True
@@ -316,15 +318,16 @@ def _resolve_aws_config_defaults(
 
 def _resolve_cloudtrail_defaults(
     strategy_inputs: dict[str, Any] | None,
-) -> tuple[str, str, str, bool, bool]:
+) -> tuple[str, str, str, bool, bool, bool]:
     """Resolve CloudTrail guided-input defaults with legacy-safe fallbacks."""
     inputs = strategy_inputs or {}
     trail_name = str(inputs.get("trail_name", "")).strip() or "security-autopilot-trail"
     trail_bucket_name = str(inputs.get("trail_bucket_name", "")).strip()
     kms_key_arn = str(inputs.get("kms_key_arn", "")).strip()
+    create_bucket_if_missing = _coerce_bool(inputs.get("create_bucket_if_missing"), default=False)
     create_bucket_policy = _coerce_bool(inputs.get("create_bucket_policy"), default=True)
     multi_region = _coerce_bool(inputs.get("multi_region"), default=True)
-    return trail_name, trail_bucket_name, kms_key_arn, create_bucket_policy, multi_region
+    return trail_name, trail_bucket_name, kms_key_arn, create_bucket_if_missing, create_bucket_policy, multi_region
 
 
 def _resolve_s3_lifecycle_abort_days(strategy_inputs: dict[str, Any] | None) -> int:
@@ -3042,7 +3045,7 @@ def _generate_for_cloudtrail_enabled(
 ) -> PRBundleResult:
     """Generate IaC for cloudtrail_enabled (multi-region trail, CloudTrail.1). Step 9.12."""
     meta = _action_meta(action)
-    trail_name, trail_bucket_name, kms_key_arn, create_bucket_policy, multi_region = _resolve_cloudtrail_defaults(
+    trail_name, trail_bucket_name, kms_key_arn, create_bucket_if_missing, create_bucket_policy, multi_region = _resolve_cloudtrail_defaults(
         strategy_inputs,
     )
     if not trail_bucket_name:
@@ -3066,6 +3069,7 @@ def _generate_for_cloudtrail_enabled(
                     trail_name=trail_name,
                     trail_bucket_name=trail_bucket_name,
                     kms_key_arn=kms_key_arn,
+                    create_bucket_if_missing=create_bucket_if_missing,
                     multi_region=multi_region,
                     create_bucket_policy=create_bucket_policy,
                 ),
@@ -3073,7 +3077,10 @@ def _generate_for_cloudtrail_enabled(
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']}.",
-            "Create or identify an S3 bucket for CloudTrail logs; set parameter TrailBucketName.",
+            (
+                "Review TrailBucketName. When CreateBucketIfMissing=true, this template creates the bucket; "
+                "otherwise it must already exist."
+            ),
             (
                 "If you need to keep existing bucket policy management external, set "
                 "CreateBucketPolicy=false."
@@ -3091,6 +3098,7 @@ def _generate_for_cloudtrail_enabled(
                     trail_name=trail_name,
                     trail_bucket_name=trail_bucket_name,
                     kms_key_arn=kms_key_arn,
+                    create_bucket_if_missing=create_bucket_if_missing,
                     multi_region=multi_region,
                     create_bucket_policy=create_bucket_policy,
                 ),
@@ -3098,7 +3106,10 @@ def _generate_for_cloudtrail_enabled(
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
-            "Create an S3 bucket for trail logs and set trail_bucket_name in the Terraform file.",
+            (
+                "Review trail_bucket_name. When create_bucket_if_missing = true, Terraform creates the bucket; "
+                "otherwise the bucket must already exist."
+            ),
             (
                 "Set create_bucket_policy = false only when bucket policy statements are managed "
                 "outside this bundle."
@@ -3152,25 +3163,59 @@ def _terraform_cloudtrail_content(
     trail_name: str,
     trail_bucket_name: str,
     kms_key_arn: str,
+    create_bucket_if_missing: bool,
     multi_region: bool,
     create_bucket_policy: bool,
 ) -> str:
     """Terraform for CloudTrail enabled (multi-region, CloudTrail.1)."""
+    create_bucket_if_missing_default = "true" if create_bucket_if_missing else "false"
     multi_region_default = "true" if multi_region else "false"
     create_bucket_policy_default = "true" if create_bucket_policy else "false"
     trail_bucket_default = f'  default     = "{trail_bucket_name}"\n' if trail_bucket_name else ""
     kms_key_default = kms_key_arn or ""
-    policy_block = ""
-    if create_bucket_policy:
-        policy_block = f"""
+    policy_block = f"""
 variable "remediation_region" {{
   type        = string
   default     = "{meta["region"]}"
   description = "Region used by local AWS CLI bucket-policy merge command."
 }}
 
+data "aws_iam_policy_document" "cloudtrail_delivery" {{
+  statement {{
+    sid     = "AWSCloudTrailAclCheck"
+    effect  = "Allow"
+    actions = ["s3:GetBucketAcl"]
+
+    principals {{
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }}
+
+    resources = [local.cloudtrail_bucket_arn]
+  }}
+
+  statement {{
+    sid     = "AWSCloudTrailWrite"
+    effect  = "Allow"
+    actions = ["s3:PutObject"]
+
+    principals {{
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }}
+
+    resources = ["${{local.cloudtrail_bucket_arn}}/AWSLogs/{meta["account_id"]}/CloudTrail/*"]
+
+    condition {{
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }}
+  }}
+}}
+
 resource "null_resource" "cloudtrail_bucket_policy" {{
-  count  = var.create_bucket_policy ? 1 : 0
+  count  = var.create_bucket_policy && !var.create_bucket_if_missing ? 1 : 0
 
   triggers = {{
     trail_bucket_name  = var.trail_bucket_name
@@ -3273,16 +3318,55 @@ PY
 EOT
   }}
 }}
+resource "aws_s3_bucket" "cloudtrail_logs" {{
+  count  = var.create_bucket_if_missing ? 1 : 0
+  bucket = var.trail_bucket_name
+}}
+
+resource "aws_s3_bucket_versioning" "cloudtrail_logs" {{
+  count  = var.create_bucket_if_missing ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail_logs[0].id
+
+  versioning_configuration {{
+    status = "Enabled"
+  }}
+}}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs" {{
+  count  = var.create_bucket_if_missing ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail_logs[0].id
+
+  rule {{
+    apply_server_side_encryption_by_default {{
+      sse_algorithm = "AES256"
+    }}
+  }}
+}}
+
+resource "aws_s3_bucket_public_access_block" "cloudtrail_logs" {{
+  count                   = var.create_bucket_if_missing ? 1 : 0
+  bucket                  = aws_s3_bucket.cloudtrail_logs[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}}
+
+resource "aws_s3_bucket_policy" "cloudtrail_managed" {{
+  count  = var.create_bucket_policy && var.create_bucket_if_missing ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail_logs[0].id
+  policy = data.aws_iam_policy_document.cloudtrail_delivery.json
+}}
 """
     return f"""# CloudTrail enabled - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]}
 # Control: {meta["control_id"]}
-# Create an S3 bucket for trail logs and set trail_bucket_name below.
+# Review trail_bucket_name below. Toggle create_bucket_if_missing to create the bucket in this bundle.
 
 variable "trail_bucket_name" {{
   type        = string
-  description = "S3 bucket name for CloudTrail logs (create the bucket if it does not exist)"
+  description = "S3 bucket name for CloudTrail logs."
 {trail_bucket_default if trail_bucket_default else ""}
 }}
 
@@ -3290,6 +3374,12 @@ variable "trail_name" {{
   type        = string
   default     = "{trail_name}"
   description = "CloudTrail trail name."
+}}
+
+variable "create_bucket_if_missing" {{
+  type        = bool
+  default     = {create_bucket_if_missing_default}
+  description = "When true, create the CloudTrail log bucket and baseline controls in this bundle."
 }}
 
 variable "multi_region" {{
@@ -3310,14 +3400,19 @@ variable "kms_key_arn" {{
   description = "Optional KMS key ARN for CloudTrail log encryption."
 }}
 
+locals {{
+  cloudtrail_bucket_name = var.create_bucket_if_missing ? aws_s3_bucket.cloudtrail_logs[0].bucket : var.trail_bucket_name
+  cloudtrail_bucket_arn  = "arn:aws:s3:::${{local.cloudtrail_bucket_name}}"
+}}
+
 resource "aws_cloudtrail" "security_autopilot" {{
   name                          = var.trail_name
-  s3_bucket_name                = var.trail_bucket_name
+  s3_bucket_name                = local.cloudtrail_bucket_name
   is_multi_region_trail          = var.multi_region
   include_global_service_events = true
   enable_logging                = true
   kms_key_id                    = var.kms_key_arn != "" ? var.kms_key_arn : null
-{"  depends_on                    = [null_resource.cloudtrail_bucket_policy]" if create_bucket_policy else ""}
+  depends_on                    = [aws_s3_bucket_policy.cloudtrail_managed, null_resource.cloudtrail_bucket_policy]
 }}
 {policy_block if policy_block else ""}
 """
@@ -3329,10 +3424,12 @@ def _cloudformation_cloudtrail_content(
     trail_name: str,
     trail_bucket_name: str,
     kms_key_arn: str,
+    create_bucket_if_missing: bool,
     multi_region: bool,
     create_bucket_policy: bool,
 ) -> str:
     """CloudFormation for CloudTrail enabled (CloudTrail.1). Step 9.5 (all seven), 9.12."""
+    create_bucket_if_missing_default = "true" if create_bucket_if_missing else "false"
     multi_region_default = "true" if multi_region else "false"
     create_bucket_policy_default = "true" if create_bucket_policy else "false"
     kms_key_default = kms_key_arn or ""
@@ -3348,14 +3445,28 @@ def _cloudformation_cloudtrail_content(
     Description: S3 bucket name for CloudTrail logs
 """
     )
-    bucket_policy_resource = ""
-    if create_bucket_policy:
-        bucket_policy_resource = f"""
+    bucket_policy_resource = f"""
+  TrailBucket:
+    Condition: ShouldCreateBucket
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref TrailBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   TrailBucketPolicy:
     Condition: ShouldCreateBucketPolicy
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref TrailBucketName
+      Bucket: !If [ShouldCreateBucket, !Ref TrailBucket, !Ref TrailBucketName]
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -3388,6 +3499,13 @@ Parameters:
     Default: "{trail_name}"
     Description: CloudTrail trail name
 {trail_bucket_parameter}
+  CreateBucketIfMissing:
+    Type: String
+    Default: "{create_bucket_if_missing_default}"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When true, create the CloudTrail log bucket in this stack.
   MultiRegion:
     Type: String
     Default: "{multi_region_default}"
@@ -3407,6 +3525,7 @@ Parameters:
     Default: "{kms_key_default}"
     Description: Optional KMS key ARN for CloudTrail log encryption.
 Conditions:
+  ShouldCreateBucket: !Equals [!Ref CreateBucketIfMissing, "true"]
   ShouldCreateBucketPolicy: !Equals [!Ref CreateBucketPolicy, "true"]
   HasKmsKeyArn: !Not [!Equals [!Ref KmsKeyArn, ""]]
 Resources:
@@ -3414,7 +3533,7 @@ Resources:
     Type: AWS::CloudTrail::Trail
     Properties:
       TrailName: !Ref TrailName
-      S3BucketName: !Ref TrailBucketName
+      S3BucketName: !If [ShouldCreateBucket, !Ref TrailBucket, !Ref TrailBucketName]
       IsMultiRegionTrail: !Equals [!Ref MultiRegion, "true"]
       IncludeGlobalServiceEvents: true
       KMSKeyId: !If [HasKmsKeyArn, !Ref KmsKeyArn, !Ref AWS::NoValue]
@@ -3480,6 +3599,7 @@ def _generate_for_aws_config_enabled(
 
     bucket, kms_key_arn, create_local_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
         account_id=meta["account_id"],
+        region=meta["region"],
         strategy=strategy,
         strategy_inputs=inputs,
     )
@@ -3908,6 +4028,7 @@ def _terraform_aws_config_enabled_content(
 ) -> str:
     bucket, kms_key_arn, create_local_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
         account_id=meta["account_id"],
+        region=meta["region"],
         strategy=strategy,
         strategy_inputs=strategy_inputs,
     )
@@ -3991,6 +4112,7 @@ def _cloudformation_aws_config_enabled_content(
 ) -> str:
     bucket, kms_key_arn, create_bucket, overwrite_recording_group = _resolve_aws_config_defaults(
         account_id=meta["account_id"],
+        region=meta["region"],
         strategy=strategy,
         strategy_inputs=strategy_inputs,
     )

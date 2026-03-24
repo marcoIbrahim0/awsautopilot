@@ -1,0 +1,1 @@
+{"detail":{"error":"Bucket creation acknowledgement required","detail":"This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. Set bucket_creation_acknowledged=true after review."}}

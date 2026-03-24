@@ -1,0 +1,183 @@
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260323T171825Z
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment passed: relation=at_head current=['0049_action_group_metadata_only_bucket'] expected=['0049_action_group_metadata_only_bucket']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260323T171825Z.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:d4e495e7-12fe-4f94-8258-399d7be1c013
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 33e5fe46-482b-47da-bbd6-bdac64b8e5c0
+worker mapping already enabled: 990f0c7a-2153-404b-9ddd-e59664c205cf
+worker mapping already enabled: 3d876d16-4afa-4f1c-a892-d9387fda469e
+worker mapping already enabled: 53192e01-6578-4de4-935a-5777e0f8cf87
+reserved concurrency already clear: SecurityAutopilotReadRole-ReadRoleHelperFunction-nDM4XAHSGjeD
+reserved concurrency already clear: SecurityAutopilotWriteRole-WriteRoleHelperFunction-eSSlEZAQXgVD
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/sybw8x0716/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://sybw8x0716.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  sybw8x0716                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260323T171825Z
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260323T171825Z
+
+7) Verifying runtime/DB alignment before database upgrade...
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3309, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 447, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1264, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 711, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    with util.safe_reraise():
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 388, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 673, in __init__
+    self.__connect()
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 899, in __connect
+    with util.safe_reraise():
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 895, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 661, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech" (3.69.34.233), port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/scripts/check_runtime_db_alignment.py", line 61, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/scripts/check_runtime_db_alignment.py", line 54, in main
+    ok, message = validate_revision_status(require_at_head=bool(args.require_at_head))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/scripts/check_runtime_db_alignment.py", line 10, in validate_revision_status
+    status = get_revision_status()
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/migration_guard.py", line 43, in get_revision_status
+    with engine.connect() as connection:
+         ^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3285, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 145, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2448, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3309, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 447, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1264, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 711, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    with util.safe_reraise():
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 388, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 673, in __init__
+    self.__connect()
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 899, in __connect
+    with util.safe_reraise():
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 895, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 661, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech" (3.69.34.233), port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

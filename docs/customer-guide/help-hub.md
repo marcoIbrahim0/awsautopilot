@@ -46,6 +46,8 @@ Use `Ask AI` when you want a quick answer tied to the page you are on:
 - the assistant can include the current route, visible account/action/finding context, and platform-visible security metrics already shown in the product
 - the assistant keeps responses short by default unless you explicitly ask for more detail
 - AI follow-up turns stay grouped in one Help Hub thread until you start a new thread
+- the floating chatbot icon is available across the authenticated dashboard and keeps a temporary `Recent chats` list for the last `6` hours
+- floating-chat history is temporary and expires automatically after `6` hours of inactivity; support cases remain permanent
 - if the evidence is weak, the assistant can offer to open a support case; the case is created only after you approve
 - for some accounts, support may enable a bounded live IAM inspection mode; when available, the assistant asks for confirmation before running a read-only check against your connected AWS account
 

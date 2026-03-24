@@ -1,0 +1,37 @@
+{
+  "run_id": "20260323T190500Z-ssm7-cloudtrail1-live-e2e",
+  "timestamp_utc": "2026-03-23T19:05:00Z",
+  "api_base": "https://api.ocypheris.com",
+  "account_id": "696505809372",
+  "results": {
+    "SSM.7": {
+      "status": "PASS",
+      "region": "us-east-1",
+      "action_id": "e6b1eac2-041c-4fb3-9a47-2525a3afa908",
+      "run_id": "cea5c507-fbc1-41a9-941b-131429704ff3",
+      "run_status": "success",
+      "reconcile_run_id": "96a6078e-6f02-44b0-ad4b-47f01ee35eea",
+      "reconcile_status": "succeeded",
+      "action_final_status": "resolved"
+    },
+    "CloudTrail.1": {
+      "status": "PASS_AFTER_DEPLOY",
+      "eu_north_1_action_id": "2ea6f141-6134-4dcd-8c82-4f0d0b6e582d",
+      "eu_north_1_default_run_id": "0730bf95-34f7-40a6-87b5-c11d593b705d",
+      "eu_north_1_default_run_status": "success",
+      "eu_north_1_default_support_tier": "review_required_bundle",
+      "eu_north_1_default_outcome": "Non-executable remediation guidance bundle generated",
+      "us_east_1_action_id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+      "us_east_1_default_create_status": 409,
+      "us_east_1_existing_run_id": "92e67c82-926f-4847-a7ab-eb0d2cd23230",
+      "predeploy_create_if_missing_live_status": 400,
+      "predeploy_create_if_missing_live_error": "strategy_inputs contains unknown field(s): create_bucket_if_missing, trail_bucket_name.",
+      "postdeploy_no_ack_status": 400,
+      "postdeploy_no_ack_error": "Bucket creation acknowledgement required",
+      "postdeploy_with_ack_run_id": "3a6200f9-919d-43a4-a53c-92c79380329a",
+      "postdeploy_with_ack_run_status": "success",
+      "postdeploy_with_ack_support_tier": "deterministic_bundle",
+      "postdeploy_with_ack_bucket_name": "ocypheris-live-e2e-cloudtrail-20260323-eu-north-1"
+    }
+  }
+}

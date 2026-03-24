@@ -4,6 +4,7 @@ Operational runbooks for AWS Security Autopilot.
 
 ## Available
 
+- [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md)
 - [Serverless lifecycle cost-control runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/serverless-lifecycle-cost-control.md)
 - [No-UI PR bundle agent runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/no-ui-pr-bundle-agent.md)
 - [S3 PR-bundle E2E debug plan (no UI)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/s3-pr-bundle-e2e-debug-plan.md)

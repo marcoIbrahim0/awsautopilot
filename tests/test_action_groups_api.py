@@ -103,8 +103,9 @@ def test_list_action_groups_returns_counters(client: TestClient) -> None:
                             "metadata": {},
                             "run_successful": 1,
                             "run_not_successful": 2,
+                            "metadata_only": 1,
                             "not_run_yet": 3,
-                            "total_actions": 6,
+                            "total_actions": 7,
                         }
                     ],
                     "total": 1,
@@ -118,8 +119,9 @@ def test_list_action_groups_returns_counters(client: TestClient) -> None:
     assert payload["total"] == 1
     assert payload["items"][0]["counters"]["run_successful"] == 1
     assert payload["items"][0]["counters"]["run_not_successful"] == 2
+    assert payload["items"][0]["counters"]["metadata_only"] == 1
     assert payload["items"][0]["counters"]["not_run_yet"] == 3
-    assert payload["items"][0]["counters"]["total_actions"] == 6
+    assert payload["items"][0]["counters"]["total_actions"] == 7
 
 
 def test_get_action_group_detail_not_found(client: TestClient) -> None:
@@ -176,8 +178,9 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
                     "counters": {
                         "run_successful": 1,
                         "run_not_successful": 0,
+                        "metadata_only": 1,
                         "not_run_yet": 0,
-                        "total_actions": 1,
+                        "total_actions": 2,
                     },
                     "members": [
                         {
@@ -188,7 +191,7 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
                             "action_status": "open",
                             "priority": 10,
                             "assigned_at": None,
-                            "status_bucket": "run_not_successful",
+                            "status_bucket": "run_successful_pending_confirmation",
                             "last_attempt_at": now,
                             "last_confirmed_at": None,
                             "last_confirmation_source": None,
@@ -201,18 +204,59 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
                             "pending_confirmation_deadline_at": deadline.isoformat(),
                             "pending_confirmation_message": "Waiting for AWS confirmation.",
                             "pending_confirmation_severity": "info",
+                        },
+                        {
+                            "action_id": str(uuid.uuid4()),
+                            "title": "S3 review-only fix",
+                            "control_id": "S3.5",
+                            "resource_id": "resource-2",
+                            "action_status": "open",
+                            "priority": 8,
+                            "assigned_at": None,
+                            "status_bucket": "run_finished_metadata_only",
+                            "last_attempt_at": now,
+                            "last_confirmed_at": None,
+                            "last_confirmation_source": None,
+                            "latest_run_id": str(uuid.uuid4()),
+                            "latest_run_status": "finished",
+                            "latest_run_started_at": now,
+                            "latest_run_finished_at": now,
+                            "pending_confirmation": False,
+                            "pending_confirmation_started_at": None,
+                            "pending_confirmation_deadline_at": None,
+                            "pending_confirmation_message": None,
+                            "pending_confirmation_severity": None,
                         }
                     ],
                 }
             ),
+        ), patch(
+            "backend.routers.action_groups._load_action_group_or_404",
+            AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4(), account_id="123456789012", action_type="aws_config_enabled")),
+        ), patch(
+            "backend.routers.action_groups._load_group_actions_or_404",
+            AsyncMock(return_value=[]),
+        ), patch(
+            "backend.routers.action_groups._load_group_account",
+            AsyncMock(return_value=None),
+        ), patch(
+            "backend.routers.action_groups._group_bundle_generation_state",
+            AsyncMock(return_value=(False, "grouped_bundle_already_created_no_changes", "No changes since the previous bundle.", "run-1")),
         ):
             response = client.get(f"/api/action-groups/{uuid.uuid4()}")
 
     assert response.status_code == 200
-    member = response.json()["members"][0]
+    payload = response.json()
+    member = payload["members"][0]
     assert member["pending_confirmation"] is True
     assert member["pending_confirmation_message"] == "Waiting for AWS confirmation."
     assert member["pending_confirmation_severity"] == "info"
+    assert payload["counters"]["metadata_only"] == 1
+    assert payload["members"][1]["status_bucket"] == "run_finished_metadata_only"
+    assert payload["can_generate_bundle"] is False
+    assert payload["blocked_reason"] == "grouped_bundle_already_created_no_changes"
+    assert payload["blocked_detail"] == "No changes since the previous bundle."
+    assert payload["blocked_by_run_id"] == "run-1"
 
 
 def test_get_action_group_runs_includes_mixed_per_action_results(client: TestClient) -> None:

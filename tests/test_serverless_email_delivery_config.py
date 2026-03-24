@@ -50,3 +50,17 @@ def test_serverless_deploy_script_reads_email_delivery_inputs() -> None:
 
     for token in required_tokens:
         assert token in text
+
+
+def test_serverless_deploy_script_enforces_runtime_db_alignment_sequence() -> None:
+    text = _read("scripts/deploy_saas_serverless.sh")
+
+    required_tokens = (
+        "scripts/check_runtime_db_alignment.py",
+        "wait_for_lambda_image",
+        "./venv/bin/python scripts/check_runtime_db_alignment.py --require-at-head",
+        "./venv/bin/alembic upgrade heads",
+    )
+
+    for token in required_tokens:
+        assert token in text

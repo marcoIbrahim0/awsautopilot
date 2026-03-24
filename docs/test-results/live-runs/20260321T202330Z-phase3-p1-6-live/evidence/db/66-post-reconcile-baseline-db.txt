@@ -1,0 +1,37 @@
+Pager usage is off.
+ status 
+--------
+ open
+(1 row)
+
+ provider | external_key | external_status |          updated_at           
+----------+--------------+-----------------+-------------------------------
+ jira     | KAN-7        | In Progress     | 2026-03-24 02:13:27.045383+00
+(1 row)
+
+ provider | external_ref | external_status | canonical_internal_status | preferred_external_status | sync_status |       resolution_decision        |          updated_at           
+----------+--------------+-----------------+---------------------------+---------------------------+-------------+----------------------------------+-------------------------------
+ jira     | 10049        | In Progress     | open                      | In Progress               | in_sync     | reconciled_to_internal_canonical | 2026-03-24 02:13:27.045383+00
+(1 row)
+
+        event_type        |     source     | external_ref | external_status | preferred_external_status |       resolution_decision        |          created_at           
+--------------------------+----------------+--------------+-----------------+---------------------------+----------------------------------+-------------------------------
+ reconciliation_applied   | reconciliation | 10049        | In Progress     | In Progress               | reconciled_to_internal_canonical | 2026-03-24 02:13:27.045383+00
+ reconciliation_queued    | reconciliation | 10049        | Done            | In Progress               | preserve_internal_canonical      | 2026-03-24 02:13:24.842228+00
+ external_status_observed | external       | 10049        | Done            | In Progress               | preserve_internal_canonical      | 2026-03-23 17:15:09.492102+00
+ reconciliation_applied   | reconciliation | 10049        | In Progress     | To Do                     | reconciled_to_internal_canonical | 2026-03-23 17:08:04.808798+00
+ reconciliation_queued    | reconciliation | 10049        | Done            | To Do                     | preserve_internal_canonical      | 2026-03-23 17:08:02.983366+00
+ external_status_observed | external       | 10049        | Done            | To Do                     | preserve_internal_canonical      | 2026-03-23 17:06:32.289675+00
+ reconciliation_applied   | reconciliation | 10049        | To Do           | To Do                     | reconciled_to_internal_canonical | 2026-03-22 19:35:12.125633+00
+ reconciliation_applied   | reconciliation | 10049        | To Do           | To Do                     | reconciled_to_internal_canonical | 2026-03-22 19:35:07.498714+00
+(8 rows)
+
+                  id                  | provider | operation | status  |          created_at           |          updated_at           
+--------------------------------------+----------+-----------+---------+-------------------------------+-------------------------------
+ 06b1a4e8-c0b8-4d30-93b1-39b3610b0b5c | jira     | update    | success | 2026-03-24 02:13:24.842228+00 | 2026-03-24 02:13:27.045383+00
+ e45d7ab6-4096-419e-b06e-f97d99e43227 | jira     | update    | success | 2026-03-23 17:08:02.983366+00 | 2026-03-23 17:08:04.808798+00
+ 6abe6835-2631-4f0a-b4f6-06c7d63a4a43 | jira     | update    | success | 2026-03-22 19:34:59.437362+00 | 2026-03-22 19:35:12.125633+00
+ 36e97027-b884-4c75-aa13-630008d0e0f6 | jira     | create    | success | 2026-03-22 19:34:52.559807+00 | 2026-03-22 19:35:07.498714+00
+ d932b185-3ae9-4f7c-a4a4-619230f57f4e | jira     | create    | failed  | 2026-03-21 20:41:54.068271+00 | 2026-03-21 20:56:33.614624+00
+(5 rows)
+

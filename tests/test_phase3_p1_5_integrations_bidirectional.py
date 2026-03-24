@@ -25,6 +25,7 @@ from backend.services.integration_sync import (
     SYNC_OPERATION_CREATE,
     SYNC_OPERATION_REOPEN,
     SYNC_OPERATION_UPDATE,
+    _build_sync_payload,
     process_inbound_event,
     plan_action_sync_tasks,
 )
@@ -310,6 +311,37 @@ def test_plan_action_sync_tasks_omits_non_user_owner_from_outbound_payload() -> 
     created_task = session.add.call_args.args[0]
     assert created_task.payload_json["external_assignee_key"] is None
     assert created_task.payload_json["external_assignee_label"] is None
+
+
+def test_build_sync_payload_includes_drift_version_metadata_for_reconciliation() -> None:
+    tenant_id = uuid.uuid4()
+    action = _action(
+        tenant_id=tenant_id,
+        action_id=uuid.uuid4(),
+        status=ACTION_STATUS_OPEN,
+        owner_key="owner-open",
+        owner_label="Owner Open",
+    )
+    link = _link(
+        tenant_id=tenant_id,
+        action_id=action.id,
+        provider="jira",
+        external_id="10049",
+        external_key="KAN-7",
+        external_status="Done",
+    )
+    link.last_inbound_event_at = datetime(2026, 3, 24, 2, 10, tzinfo=timezone.utc)
+
+    payload = _build_sync_payload(
+        action=action,
+        setting=_setting(tenant_id=tenant_id, provider="jira"),
+        link=link,
+        operation=SYNC_OPERATION_UPDATE,
+    )
+
+    assert payload["external_status"] == "To Do"
+    assert payload["observed_external_status"] == "Done"
+    assert payload["observed_external_event_at"] == "2026-03-24T02:10:00+00:00"
 
 
 def test_process_inbound_event_preserves_canonical_platform_state_from_jira_webhook() -> None:

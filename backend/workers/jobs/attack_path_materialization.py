@@ -5,7 +5,7 @@ import asyncio
 import logging
 import uuid
 
-from backend.database import AsyncSessionLocal
+from backend.database import build_async_session_factory
 from backend.services.attack_path_materialized import materialize_attack_paths
 
 logger = logging.getLogger("worker.jobs.attack_path_materialization")
@@ -35,7 +35,11 @@ def execute_attack_path_materialization_job(job: dict) -> None:
 
 
 async def _run_refresh(*, tenant_id: uuid.UUID, account_id: str | None, region: str | None) -> dict:
-    async with AsyncSessionLocal() as session:
-        result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
-        await session.commit()
-        return result
+    engine, session_factory = build_async_session_factory(isolated=True)
+    try:
+        async with session_factory() as session:
+            result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
+            await session.commit()
+            return result
+    finally:
+        await engine.dispose()

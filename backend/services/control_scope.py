@@ -312,3 +312,27 @@ def canonical_control_id_for_action_type(action_type: str, observed_control_id: 
         return None
     normalized = observed_control_id.strip()
     return normalized or None
+
+
+def equivalent_control_ids_for_control(control_id: str | None) -> tuple[str, ...]:
+    """
+    Return the canonical control plus any runtime-safe aliases for the same family.
+
+    This is used for UI filtering/search so flat action queries can match the same
+    remediation family regardless of whether the caller uses a canonical ID or an alias.
+    """
+    normalized = _normalize_control_id(control_id)
+    if not normalized:
+        return ()
+
+    action_type = action_type_from_control(normalized)
+    if action_type == ACTION_TYPE_DEFAULT:
+        return (normalized,)
+
+    canonical = canonical_control_id_for_action_type(action_type, normalized) or normalized
+    aliases = sorted(
+        control_id
+        for control_id, alias_action_type in CONTROL_ALIAS_TO_ACTION_TYPE.items()
+        if alias_action_type == action_type
+    )
+    return tuple(dict.fromkeys([canonical, *aliases]))

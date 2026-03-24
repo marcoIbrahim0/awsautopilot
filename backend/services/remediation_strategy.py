@@ -418,7 +418,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                         "type": "string",
                         "required": True,
                         "description": "Centralized S3 bucket for Config delivery.",
-                        "safe_default_value": "security-autopilot-config-{{account_id}}",
+                        "safe_default_value": "security-autopilot-config-{{account_id}}-{{region}}",
                         "safe_default_label": "Use a dedicated Config bucket",
                     },
                     {
@@ -486,6 +486,26 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                         "group": "Trail Settings",
                         "safe_default_value": "security-autopilot-trail",
                         "safe_default_label": "Use the standard trail name",
+                    },
+                    {
+                        "key": "trail_bucket_name",
+                        "type": "string",
+                        "required": False,
+                        "description": "CloudTrail log bucket.",
+                        "help_text": (
+                            "Enter the S3 bucket CloudTrail should use for log delivery. "
+                            "When 'Create bucket if missing' is off, this must be an existing reachable bucket. "
+                            "When it is on, this becomes the exact bucket name to create and use."
+                        ),
+                        "group": "Delivery Settings",
+                    },
+                    {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "Create a new CloudTrail log bucket if the named bucket does not already exist.",
+                        "default_value": False,
+                        "group": "Delivery Settings",
                     },
                     {
                         "key": "create_bucket_policy",
@@ -1047,7 +1067,7 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                         "options": [
                             {
                                 "value": "close_public",
-                                "label": "Close all public access",
+                                "label": "Add restricted access without removing old public rules",
                                 "impact_text": (
                                     "Public SSH/RDP access on ports 22 and 3389 will remain until you "
                                     "manually remove the 0.0.0.0/0 rules. New restricted rules will be added."

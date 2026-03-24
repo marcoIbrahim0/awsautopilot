@@ -1,0 +1,142 @@
+[0m[1mdata.aws_iam_policy_document.cloudtrail_delivery: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.cloudtrail_delivery: Read complete after 0s [id=3938617389][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_cloudtrail.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudtrail" "security_autopilot" {
+      [32m+[0m[0m arn                           = (known after apply)
+      [32m+[0m[0m enable_log_file_validation    = false
+      [32m+[0m[0m enable_logging                = true
+      [32m+[0m[0m home_region                   = (known after apply)
+      [32m+[0m[0m id                            = (known after apply)
+      [32m+[0m[0m include_global_service_events = true
+      [32m+[0m[0m is_multi_region_trail         = true
+      [32m+[0m[0m is_organization_trail         = false
+      [32m+[0m[0m name                          = "security-autopilot-trail"
+      [32m+[0m[0m s3_bucket_name                = "ocypheris-live-ct-20260323162333-eu-north-1"
+      [32m+[0m[0m sns_topic_arn                 = (known after apply)
+      [32m+[0m[0m tags_all                      = (known after apply)
+    }
+
+[1m  # aws_s3_bucket.cloudtrail_logs[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket" "cloudtrail_logs" {
+      [32m+[0m[0m acceleration_status         = (known after apply)
+      [32m+[0m[0m acl                         = (known after apply)
+      [32m+[0m[0m arn                         = (known after apply)
+      [32m+[0m[0m bucket                      = "ocypheris-live-ct-20260323162333-eu-north-1"
+      [32m+[0m[0m bucket_domain_name          = (known after apply)
+      [32m+[0m[0m bucket_prefix               = (known after apply)
+      [32m+[0m[0m bucket_regional_domain_name = (known after apply)
+      [32m+[0m[0m force_destroy               = false
+      [32m+[0m[0m hosted_zone_id              = (known after apply)
+      [32m+[0m[0m id                          = (known after apply)
+      [32m+[0m[0m object_lock_enabled         = (known after apply)
+      [32m+[0m[0m policy                      = (known after apply)
+      [32m+[0m[0m region                      = (known after apply)
+      [32m+[0m[0m request_payer               = (known after apply)
+      [32m+[0m[0m tags_all                    = (known after apply)
+      [32m+[0m[0m website_domain              = (known after apply)
+      [32m+[0m[0m website_endpoint            = (known after apply)
+
+      [32m+[0m[0m cors_rule (known after apply)
+
+      [32m+[0m[0m grant (known after apply)
+
+      [32m+[0m[0m lifecycle_rule (known after apply)
+
+      [32m+[0m[0m logging (known after apply)
+
+      [32m+[0m[0m object_lock_configuration (known after apply)
+
+      [32m+[0m[0m replication_configuration (known after apply)
+
+      [32m+[0m[0m server_side_encryption_configuration (known after apply)
+
+      [32m+[0m[0m versioning (known after apply)
+
+      [32m+[0m[0m website (known after apply)
+    }
+
+[1m  # aws_s3_bucket_policy.cloudtrail_managed[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "cloudtrail_managed" {
+      [32m+[0m[0m bucket = (known after apply)
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketAcl"
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:PutObject"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1/AWSLogs/696505809372/CloudTrail/*"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailWrite"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1m  # aws_s3_bucket_public_access_block.cloudtrail_logs[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_public_access_block" "cloudtrail_logs" {
+      [32m+[0m[0m block_public_acls       = true
+      [32m+[0m[0m block_public_policy     = true
+      [32m+[0m[0m bucket                  = (known after apply)
+      [32m+[0m[0m id                      = (known after apply)
+      [32m+[0m[0m ignore_public_acls      = true
+      [32m+[0m[0m restrict_public_buckets = true
+    }
+
+[1m  # aws_s3_bucket_server_side_encryption_configuration.cloudtrail_logs[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs" {
+      [32m+[0m[0m bucket = (known after apply)
+      [32m+[0m[0m id     = (known after apply)
+
+      [32m+[0m[0m rule {
+          [32m+[0m[0m apply_server_side_encryption_by_default {
+              [32m+[0m[0m sse_algorithm     = "AES256"
+                [90m# (1 unchanged attribute hidden)[0m[0m
+            }
+        }
+    }
+
+[1m  # aws_s3_bucket_versioning.cloudtrail_logs[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_versioning" "cloudtrail_logs" {
+      [32m+[0m[0m bucket = (known after apply)
+      [32m+[0m[0m id     = (known after apply)
+
+      [32m+[0m[0m versioning_configuration {
+          [32m+[0m[0m mfa_delete = (known after apply)
+          [32m+[0m[0m status     = "Enabled"
+        }
+    }
+
+[1mPlan:[0m [0m6 to add, 0 to change, 0 to destroy.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"

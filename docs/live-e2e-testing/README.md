@@ -28,6 +28,11 @@ Execution outputs are stored in:
 
 ## Recent Targeted Runs
 
+- [Phase 3 P1.6 live Jira system-of-record proof on March 24, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/notes/final-summary.md) — PASS after extending the retained March 21 run with the March 24 closure slice: production now proves Jira outbound sync, conflicting inbound webhook preservation of canonical `Action.status`, explicit drift recording, and reconciliation back to the tenant-configured preferred Jira status `In Progress` on real issue `KAN-7`. The closure also fixed two live blockers found during the rerun: the `attack_path_materialization` queue poison on Lambda/Python 3.12 and reconciliation dedupe that previously blocked repeat sync to the same canonical provider state after drift.
+- [CloudTrail.1 live generate/download/apply validation on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T162259Z/notes/final-summary.md) — PARTIAL: production now supports the approval-gated create-if-missing `CloudTrail.1` flow end to end through PR-bundle generation, ZIP download, and successful local Terraform apply against account `696505809372`, including creation of multi-region trail `security-autopilot-trail` and S3 bucket `ocypheris-live-ct-20260323162333-eu-north-1`. The retained run also exposed two remaining gaps: the generated Terraform bundle unnecessarily drags in `hashicorp/null` on the inactive non-create path, and the family still does not fully converge because `eu-north-1` findings flip to `RESOLVED` while `us-east-1` remains `NEW` after the apply and refresh cycle.
+- [SSM.7 and CloudTrail.1 live E2E on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/notes/final-summary.md) — PASS after deploy: `SSM.7` passed end to end on the live stack for `us-east-1` action `e6b1eac2-041c-4fb3-9a47-2525a3afa908` with remediation run `cea5c507-fbc1-41a9-941b-131429704ff3`, successful local bundle apply, successful live ingest/compute/reconcile, and final live action status `resolved`. The same run also captured the CloudTrail rollout transition: production initially rejected `trail_bucket_name` / `create_bucket_if_missing` as unknown fields, then after deploying the current backend runtime it correctly required `bucket_creation_acknowledged` and successfully generated deterministic executable run `3a6200f9-919d-43a4-a53c-92c79380329a` for the approved create-if-missing path.
+- [Grouped callback drift-guard + metadata-only replay repair validation on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/notes/final-summary.md) — PASS for the narrowed March 23 callback/deploy hardening scope: the checked-in serverless deploy path now guards against runtime/DB-head drift before and after Lambda rollout, a fresh current-head local replay of the retained `S3.5` metadata-only callback repaired the stale `run_not_successful` member projection to `run_finished_metadata_only`, a second replay returned idempotent `200 group_run_report_replay` in `3.92s`, and `pg_stat_activity` was clean with no `idle in transaction` backend left behind after replay.
+- [CloudTrail.1 and S3.5 local live-data rerun on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T033827Z-cloudtrail-s35-local-e2e/notes/final-summary.md) — MIXED: current-head local validation against the shared live tenant/account data confirms `CloudTrail.1` now fails closed truthfully as `400 invalid_strategy_inputs` and flat cards show no pending-confirmation banner, while the current live `S3.5` family produces a `12`-member review-required metadata-only bundle with no truthful executable fix to project. The rerun also captured a narrower remaining bug: the metadata-only `S3.5` grouped run still remained `started` after local callback execution/replay attempts.
 - [Grouped PR-bundle local follow-up rerun on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T031500Z-grouped-pr-bundle-local-rerun-followup/notes/final-summary.md) — PARTIAL but narrower than the earlier rerun: current-head follow-up validation against the shared live tenant/account data confirmed that `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` now both reach grouped `finished` on corrected reruns, while the only remaining blockers in this four-family set are stale active remediation rows on the shared DB for `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption`.
 - [Grouped PR-bundle local current-head rerun on March 23, 2026 UTC](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T020030Z-grouped-pr-bundle-local-rerun/notes/final-summary.md) — PARTIAL: local current-head code was exercised against the shared live tenant/account data without a redeploy. `cloudtrail_enabled` in both regions now fails closed as `invalid_strategy_inputs` instead of `500`, `eu-north-1 ebs_default_encryption` and `s3_bucket_encryption_kms` both reached grouped `finished`, but `s3_bucket_lifecycle_configuration` and `sg_restrict_public_ports` still left grouped runs in `started`, and full reruns for `s3_bucket_access_logging` and `us-east-1 ebs_default_encryption` were blocked by already-active remediation rows on the shared Neon DB.
 - Follow-up grouped PR-bundle fix shipped locally on March 23, 2026 after the retained March 22 reruns:
@@ -37,6 +42,20 @@ Execution outputs are stored in:
   - grouped callback wrappers now emit a terminal failed `finished` callback on process exit or signal, so interrupted bundle runs stop leaving the group permanently stuck in `started`
   - grouped Terraform runners now bound each action folder with `ACTION_TIMEOUT_SECS` for both `plan` and `apply`, so a hung Terraform subprocess fails closed and still allows the wrapper to publish a terminal callback
   - stale grouped `pr_only` runs that are still `pending` after `10` minutes no longer block a new grouped PR-bundle create request, which unblocks reruns after abandoned or never-started queue rows
+- Grouped flat-view follow-up contract fix shipped locally on March 23, 2026:
+  - grouped member state now distinguishes `run_successful_pending_confirmation` from `run_not_successful`, so finished grouped executions can surface the standard `This fix was applied successfully...` waiting-for-AWS banner without pretending they are already confirmed
+  - internal grouped callback reevaluation now preserves successful-but-unconfirmed member state instead of collapsing it back into the failure bucket
+  - `/api/actions` control filtering and control-token search are now canonical/alias-aware, so flat queries for `S3.13` resolve the `S3.11` lifecycle family and `EC2.19` resolves the canonical `EC2.53` security-group family
+- Grouped metadata-only truthfulness fix shipped locally on March 23, 2026:
+  - grouped member state now distinguishes terminal metadata-only/review-required completion as `run_finished_metadata_only` instead of collapsing it into `run_not_successful` or `not_run_yet`
+  - flat findings and grouped findings now carry authoritative grouped status fields, so `latest_pr_bundle_run_id` remains navigation-only and no longer implies execution failure or “not run”
+  - pending-confirmation banners are now reserved for executable finished runs that are awaiting AWS confirmation; metadata-only families like current live `S3.5` stay terminal review-only with no waiting-for-AWS banner
+  - scoped repair path is now available via `PYTHONPATH=. ./venv/bin/python scripts/reproject_action_group_state.py --tenant-id <TENANT_UUID> --account-id 696505809372 --action-type s3_bucket_require_ssl --action-type cloudtrail_enabled --action-type ebs_default_encryption`
+- Grouped findings scope split shipped locally on March 24, 2026:
+  - `GET /api/findings/grouped` now returns one row per `(control_id, resource_type, account_id, region)` scope instead of collapsing mixed-region findings into one card
+  - grouped findings `group_key` is now a scope-specific opaque identifier and the frontend no longer parses it for control labels or expansion filters
+  - expanding a grouped findings card now reloads only that card's scoped findings, including `resource_type`, which keeps pending-confirmation notes like `EC2.182` aligned with the exact region/account/resource family that generated the bundle
+  - live production verification after deploy (`backend image 20260324T042908Z`, `frontend version b8d6b016-78e2-4aff-bae6-60bd8eab9d3f`) confirmed `EC2.182` renders separate `eu-north-1` and `us-east-1` cards and the expanded `eu-north-1` snapshot-block-public-access card now requests `/api/findings?...&resource_type=AwsEc2SnapshotBlockPublicAccess...` and returns only the matching finding
 - Follow-up fix shipped on March 22, 2026 local workspace after the retained all-groups run:
   - grouped PR-bundle member/finding surfaces now show a pending-confirmation note when execution finished but AWS source-of-truth confirmation is still outstanding, escalating after `12` hours
   - grouped bundle runners now execute each Terraform action folder inside its own isolated temporary workspace so local `.terraform` and state files do not collide across folders
@@ -81,4 +100,21 @@ Generate a new run scaffold with:
 
 ```bash
 bash scripts/init_live_e2e_run.sh
+```
+
+## Grouped Callback Replay Notes
+
+- Metadata-only grouped callbacks are terminal when they carry only `non_executable_results[]`; they should finalize the group run as `finished` and project member state to `run_finished_metadata_only`.
+- `POST /api/internal/group-runs/report` now treats already-terminal matching payloads as replay-safe idempotent success instead of conflict, and it will repair missing/stale member projection when the run/results are already terminal but `action_group_action_state` is still behind.
+- Use the retained `.bundle-callback-replay/` payloads with a freshly signed token when validating against a local current-head API; historical retained tokens can fail locally if the signing secret has rotated.
+- The scoped maintenance helper now supports stuck grouped-run repair:
+
+```bash
+PYTHONPATH=. ./venv/bin/python scripts/reproject_action_group_state.py \
+  --tenant-id <TENANT_UUID> \
+  --account-id 696505809372 \
+  --action-type s3_bucket_require_ssl \
+  --action-type cloudtrail_enabled \
+  --action-type ebs_default_encryption \
+  --repair-stuck-runs
 ```

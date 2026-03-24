@@ -662,6 +662,8 @@ def _resolve_cloudtrail_family_selection(
             "blocked_reasons": blocked_reasons,
             "preservation_summary": _cloudtrail_preservation_summary(
                 resolved_inputs=resolved_inputs,
+                explicit_inputs=explicit_inputs,
+                tenant_settings=tenant_settings,
                 runtime_signals=runtime_signals,
             ),
             "decision_rationale": _family_rationale(
@@ -844,6 +846,28 @@ def _cloudtrail_resolved_inputs(
     )
 
 
+def _cloudtrail_bucket_source(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> str | None:
+    if not _present(resolved_inputs.get("trail_bucket_name")):
+        return None
+    if _present(_mapping_value(explicit_inputs, "trail_bucket_name")):
+        return "user_input"
+    if runtime_signals and _present(_runtime_default_inputs("cloudtrail_enable_guided", "cloudtrail_enable_guided", runtime_signals).get("trail_bucket_name")):
+        return "existing_trail"
+    if _present(_settings_value(tenant_settings, "cloudtrail.default_bucket_name")):
+        return "tenant_default"
+    return None
+
+
+def _cloudtrail_bucket_mode(resolved_inputs: Mapping[str, Any]) -> str:
+    return "create_if_missing" if resolved_inputs.get("create_bucket_if_missing") is True else "existing"
+
+
 def _config_resolved_inputs(
     *,
     strategy: RemediationStrategy,
@@ -853,15 +877,20 @@ def _config_resolved_inputs(
     runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> dict[str, Any]:
+    strategy_id = strategy["strategy_id"]
     values = _schema_defaults_without_keys(strategy, action=action, ignored_keys={"delivery_bucket"})
-    values.update(_runtime_default_inputs(strategy["strategy_id"], profile.profile_id, runtime_signals))
-    values.update(_tenant_default_inputs(strategy["strategy_id"], profile.profile_id, tenant_settings))
+    values.update(_runtime_default_inputs(strategy_id, profile.profile_id, runtime_signals))
+    tenant_inputs = _tenant_default_inputs(strategy_id, profile.profile_id, tenant_settings)
+    values.update(tenant_inputs)
     values.update(dict(explicit_inputs or {}))
     values.update(dict(profile.default_inputs))
-    if strategy["strategy_id"] == "config_enable_account_local_delivery":
-        values.setdefault("delivery_bucket_mode", "create_new")
-    elif strategy["strategy_id"] == "config_enable_centralized_delivery":
+    if strategy_id == "config_enable_account_local_delivery":
+        values["delivery_bucket_mode"] = "create_new"
+        values.pop("existing_bucket_name", None)
+    elif strategy_id == "config_enable_centralized_delivery":
         values.setdefault("delivery_bucket_mode", "use_existing")
+    if values.get("delivery_bucket_mode") == "create_new":
+        values.pop("existing_bucket_name", None)
     if "encrypt_with_kms" not in dict(explicit_inputs or {}) and _present(values.get("kms_key_arn")):
         values["encrypt_with_kms"] = True
     return {key: value for key, value in values.items() if _present(value)}
@@ -1067,6 +1096,8 @@ def _ec2_53_persisted_inputs(
 def _cloudtrail_missing_defaults(resolved_inputs: Mapping[str, Any]) -> list[str]:
     if _present(resolved_inputs.get("trail_bucket_name")):
         return []
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        return []
     return ["cloudtrail.default_bucket_name"]
 
 
@@ -1076,17 +1107,29 @@ def _cloudtrail_blocked_reasons(
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons: list[str] = []
+    create_bucket_if_missing = resolved_inputs.get("create_bucket_if_missing") is True
     if not _present(resolved_inputs.get("trail_bucket_name")):
         reasons.append(
-            "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
+            "CloudTrail log bucket name is unresolved. Provide strategy_inputs.trail_bucket_name for the S3 bucket CloudTrail should use."
+            if create_bucket_if_missing
+            else "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
         )
     if runtime_signals and resolved_inputs.get("trail_bucket_name"):
-        if runtime_signals.get("cloudtrail_log_bucket_reachable") is False:
-            reasons.append(
-                str(runtime_signals.get("cloudtrail_log_bucket_error") or "CloudTrail log bucket could not be verified from this account context.")
-            )
-        elif runtime_signals.get("cloudtrail_log_bucket_reachable") is not True:
-            reasons.append("CloudTrail log bucket reachability has not been proven from this account context.")
+        if create_bucket_if_missing:
+            if runtime_signals.get("cloudtrail_bucket_creation_conflict") is True:
+                reasons.append(
+                    str(
+                        runtime_signals.get("cloudtrail_bucket_creation_error")
+                        or "CloudTrail log bucket could not be verified for managed creation."
+                    )
+                )
+        else:
+            if runtime_signals.get("cloudtrail_log_bucket_reachable") is False:
+                reasons.append(
+                    str(runtime_signals.get("cloudtrail_log_bucket_error") or "CloudTrail log bucket could not be verified from this account context.")
+                )
+            elif runtime_signals.get("cloudtrail_log_bucket_reachable") is not True:
+                reasons.append("CloudTrail log bucket reachability has not been proven from this account context.")
     if resolved_inputs.get("create_bucket_policy") is False:
         reasons.append(
             "CloudTrail bundle is review-only when create_bucket_policy=false because required delivery policy is managed outside the bundle."
@@ -1101,11 +1144,21 @@ def _cloudtrail_blocked_reasons(
 def _cloudtrail_preservation_summary(
     *,
     resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+    tenant_settings: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
         "trail_bucket_name_resolved": _present(resolved_inputs.get("trail_bucket_name")),
         "log_bucket_reachable": bool(runtime_signals and runtime_signals.get("cloudtrail_log_bucket_reachable") is True),
+        "trail_bucket_source": _cloudtrail_bucket_source(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+        ),
+        "trail_bucket_mode": _cloudtrail_bucket_mode(resolved_inputs),
+        "bucket_creation_requested": resolved_inputs.get("create_bucket_if_missing") is True,
         "kms_delivery_requested": _present(resolved_inputs.get("kms_key_arn")),
         "external_bucket_policy_management": resolved_inputs.get("create_bucket_policy") is False,
         "multi_region_requested": resolved_inputs.get("multi_region") is not False,
@@ -1118,7 +1171,7 @@ def _cloudtrail_persisted_inputs(
     explicit_inputs: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     values = copy.deepcopy(dict(explicit_inputs or {}))
-    for key in ("trail_name", "trail_bucket_name", "kms_key_arn", "create_bucket_policy", "multi_region"):
+    for key in ("trail_name", "trail_bucket_name", "kms_key_arn", "create_bucket_if_missing", "create_bucket_policy", "multi_region"):
         if _present(resolved_inputs.get(key)):
             values[key] = resolved_inputs[key]
     return values
@@ -1169,7 +1222,8 @@ def _config_centralized_blocked_reasons(
         reasons.append(
             "Centralized AWS Config delivery bucket is unresolved. Configure config.default_bucket_name or provide strategy_inputs.delivery_bucket."
         )
-    reasons.extend(_config_existing_bucket_reasons(runtime_signals))
+    if resolved_inputs.get("delivery_bucket_mode") == "use_existing":
+        reasons.extend(_config_existing_bucket_reasons(runtime_signals))
     reasons.extend(_config_kms_reasons(resolved_inputs, runtime_signals=runtime_signals))
     return _dedupe_strings(reasons)
 

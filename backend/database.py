@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from backend.config import settings
 from backend.models.base import Base
@@ -60,6 +61,28 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
     autocommit=False,
 )
+
+
+def build_async_session_factory(*, isolated: bool = False) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+    engine = async_engine
+    if isolated:
+        engine = create_async_engine(
+            _db_url,
+            echo=settings.LOG_LEVEL.upper() == "DEBUG",
+            pool_pre_ping=True,
+            connect_args=dict(_connect_args),
+            poolclass=NullPool,
+        )
+    return (
+        engine,
+        async_sessionmaker(
+            bind=engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+        ),
+    )
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

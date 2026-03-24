@@ -12,7 +12,7 @@ import logging
 import uuid
 import zipfile
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Any, Literal, NoReturn, Optional
+from typing import Annotated, Any, Literal, Mapping, NoReturn, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import lazyload, load_only, noload, selectinload
 
 from backend.auth import get_current_user, get_optional_user
 from backend.config import settings
@@ -51,6 +51,12 @@ from backend.services.grouped_remediation_runs import (
     build_grouped_run_persistence_plan,
     normalize_grouped_request_from_remediation_runs,
 )
+from backend.services.grouped_bundle_conflicts import (
+    GroupedBundleRunRecord,
+    filter_active_group_duplicate_runs,
+    find_active_grouped_duplicate,
+    find_latest_successful_grouped_duplicate,
+)
 from backend.services.remediation_handoff import RunArtifactMetadata, build_run_artifact_metadata
 from backend.services.remediation_run_resolution import (
     RemediationRunResolutionError,
@@ -60,8 +66,6 @@ from backend.services.remediation_run_resolution import (
 )
 from backend.services.remediation_profile_selection import resolve_runtime_probe_inputs
 from backend.services.remediation_run_queue_contract import (
-    grouped_run_signatures_match,
-    normalize_grouped_run_artifact_signature,
     normalize_grouped_run_request_signature,
     normalize_single_run_artifact_signature,
     normalize_single_run_request_signature,
@@ -120,7 +124,6 @@ ACTIVE_RUN_DUPLICATE_STATUSES = (
     RemediationRunStatus.awaiting_approval,
 )
 ACTIVE_RUN_DUPLICATE_STATUS_VALUES = {status.value for status in ACTIVE_RUN_DUPLICATE_STATUSES}
-STALE_PENDING_PR_BUNDLE_RUN_MINUTES = 10
 RECENT_DUPLICATE_WINDOW_SECONDS = 30
 PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES = 20
 PR_BUNDLE_RATE_LIMIT_TOTAL_PER_WINDOW = 6
@@ -144,6 +147,7 @@ SAAS_BUNDLE_EXECUTION_ARCHIVED_DETAIL = (
     "and run it with your own credentials or pipeline outside the SaaS. "
     "Optional grouped reporting callbacks remain supported for customer-run bundles."
 )
+CLOUDTRAIL_BUCKET_CREATION_APPROVAL_ARTIFACT_KEY = "cloudtrail_bucket_creation_approval"
 
 
 def _raise_saas_bundle_execution_archived() -> NoReturn:
@@ -249,32 +253,25 @@ def _grouped_representative_candidate_ids(
     return (preferred_action_id, *tuple(action_id for action_id in action_ids if action_id != preferred_action_id))
 
 
-def _is_stale_pending_pr_bundle_run(run: RemediationRun, *, now: datetime) -> bool:
-    if _as_mode_value(run.mode) != RemediationRunMode.pr_only.value:
-        return False
-    if run.status != RemediationRunStatus.pending:
-        return False
-    created_at = getattr(run, "created_at", None)
-    if not isinstance(created_at, datetime):
-        return False
-    if created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=timezone.utc)
-    age = now - created_at.astimezone(timezone.utc)
-    return age >= timedelta(minutes=STALE_PENDING_PR_BUNDLE_RUN_MINUTES)
-
-
-def _filter_active_group_duplicate_runs(active_runs: list[RemediationRun], *, now: datetime) -> list[RemediationRun]:
-    return [run for run in active_runs if not _is_stale_pending_pr_bundle_run(run, now=now)]
+def _grouped_bundle_run_record(run: RemediationRun) -> GroupedBundleRunRecord:
+    return GroupedBundleRunRecord(
+        run_id=str(run.id),
+        action_id=str(run.action_id),
+        mode=_as_mode_value(run.mode),
+        status=_as_status_value(run.status),
+        created_at=getattr(run, "created_at", None),
+        artifacts=run.artifacts if isinstance(run.artifacts, dict) else None,
+    )
 
 
 def _select_grouped_representative_action_id(
     *,
     preferred_action_id: str,
     action_ids: tuple[str, ...],
-    active_runs: list[RemediationRun],
+    active_runs: list[GroupedBundleRunRecord],
 ) -> str | None:
     action_id_set = set(action_ids)
-    occupied = {str(run.action_id) for run in active_runs if str(run.action_id) in action_id_set}
+    occupied = {run.action_id for run in active_runs if run.action_id in action_id_set}
     for action_id in _grouped_representative_candidate_ids(
         preferred_action_id=preferred_action_id,
         action_ids=action_ids,
@@ -286,11 +283,11 @@ def _select_grouped_representative_action_id(
 
 def _raise_grouped_active_run_conflict(
     *,
-    active_runs: list[RemediationRun],
+    active_runs: list[GroupedBundleRunRecord],
     action_ids: tuple[str, ...],
 ) -> NoReturn:
     action_id_set = set(action_ids)
-    conflicting_runs = [run for run in active_runs if str(run.action_id) in action_id_set]
+    conflicting_runs = [run for run in active_runs if run.action_id in action_id_set]
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
         detail={
@@ -300,8 +297,8 @@ def _raise_grouped_active_run_conflict(
                 "Wait for an existing run to complete before creating another differentiated grouped request."
             ),
             "reason": "grouped_active_run_conflict",
-            "conflicting_action_ids": sorted({str(run.action_id) for run in conflicting_runs}),
-            "existing_run_ids": [str(run.id) for run in conflicting_runs],
+            "conflicting_action_ids": sorted({run.action_id for run in conflicting_runs}),
+            "existing_run_ids": [run.run_id for run in conflicting_runs],
         },
     )
 
@@ -369,6 +366,34 @@ def _with_direct_fix_approval(
     return merged
 
 
+def _requires_cloudtrail_bucket_creation_approval(
+    *,
+    action_type: str | None,
+    strategy_id: str | None,
+    strategy_inputs: Mapping[str, Any] | None,
+) -> bool:
+    return (
+        action_type == "cloudtrail_enabled"
+        and strategy_id == "cloudtrail_enable_guided"
+        and isinstance(strategy_inputs, Mapping)
+        and strategy_inputs.get("create_bucket_if_missing") is True
+    )
+
+
+def _with_cloudtrail_bucket_creation_approval(
+    artifacts: dict[str, Any] | None,
+    *,
+    approved_by_user_id: uuid.UUID | None,
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(artifacts or {})
+    merged[CLOUDTRAIL_BUCKET_CREATION_APPROVAL_ARTIFACT_KEY] = {
+        "approved": True,
+        "approved_by_user_id": str(approved_by_user_id) if approved_by_user_id else None,
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return merged
+
+
 def _run_requires_root_credentials(run: RemediationRun) -> bool:
     action = getattr(run, "action", None)
     if action is not None and is_root_credentials_required_action(getattr(action, "action_type", None)):
@@ -431,6 +456,10 @@ class CreateRemediationRunRequest(BaseModel):
     risk_acknowledged: bool = Field(
         False,
         description="Must be true when dependency checks include warn/unknown statuses.",
+    )
+    bucket_creation_acknowledged: bool = Field(
+        False,
+        description="Must be true when CloudTrail remediation is allowed to create a new log bucket.",
     )
     pr_bundle_variant: str | None = Field(
         None,
@@ -520,6 +549,10 @@ class CreateGroupPrBundleRunRequest(BaseModel):
     risk_acknowledged: bool = Field(
         False,
         description="Must be true when dependency checks include warn/unknown statuses.",
+    )
+    bucket_creation_acknowledged: bool = Field(
+        False,
+        description="Must be true when CloudTrail remediation is allowed to create a new log bucket.",
     )
     pr_bundle_variant: str | None = Field(
         None,
@@ -1086,6 +1119,20 @@ def _run_to_detail_response(run: RemediationRun, action: Action | None = None) -
     )
 
 
+def _action_summary_load_option():
+    return selectinload(RemediationRun.action).options(
+        lazyload("*"),
+        load_only(
+            Action.id,
+            Action.title,
+            Action.account_id,
+            Action.region,
+            Action.status,
+        ),
+        noload(Action.action_finding_links),
+    )
+
+
 def _progress_for_execution_status(status_value: str) -> tuple[int, int]:
     return EXECUTION_STATUS_PROGRESS.get(status_value, (0, 0))
 
@@ -1595,6 +1642,28 @@ async def create_remediation_run(
                         "risk_snapshot": risk_snapshot,
                     },
                 )
+        if _requires_cloudtrail_bucket_creation_approval(
+            action_type=action.action_type,
+            strategy_id=selected_strategy_id,
+            strategy_inputs=selected_strategy_inputs,
+        ) and not body.bucket_creation_acknowledged:
+            emit_validation_failure(
+                logger,
+                reason="cloudtrail_bucket_creation_ack_missing",
+                action_type=action.action_type,
+                strategy_id=selected_strategy_id,
+                mode=body.mode,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "Bucket creation acknowledgement required",
+                    "detail": (
+                        "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
+                        "Set bucket_creation_acknowledged=true after review."
+                    ),
+                },
+            )
     if body.mode == "direct_fix":
         supported_direct_fix_action_types = get_supported_direct_fix_action_types()
         if not supported_direct_fix_action_types:
@@ -1840,6 +1909,11 @@ async def create_remediation_run(
         artifacts["risk_snapshot"] = risk_snapshot
     if body.risk_acknowledged:
         artifacts["risk_acknowledged"] = True
+    if body.bucket_creation_acknowledged:
+        artifacts = _with_cloudtrail_bucket_creation_approval(
+            artifacts,
+            approved_by_user_id=current_user.id,
+        )
     if legacy_variant_mapped_from:
         artifacts["legacy_variant_mapped_from"] = legacy_variant_mapped_from
     if repo_target_payload:
@@ -2165,46 +2239,94 @@ async def create_group_pr_bundle_run(
             action_type=action_type,
             strategy_id=normalized_request.strategy_id,
         )
+    requires_bucket_creation_ack = any(
+        _requires_cloudtrail_bucket_creation_approval(
+            action_type=action_type,
+            strategy_id=entry.strategy_id,
+            strategy_inputs=entry.strategy_inputs,
+        )
+        for entry in plan.action_resolutions
+    )
+    if requires_bucket_creation_ack and not body.bucket_creation_acknowledged:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Bucket creation acknowledgement required",
+                "detail": (
+                    "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
+                    "Set bucket_creation_acknowledged=true after review."
+                ),
+            },
+        )
 
     active_run_result = await db.execute(
         select(RemediationRun).where(
             RemediationRun.tenant_id == tenant_uuid,
-            RemediationRun.status.in_(ACTIVE_RUN_DUPLICATE_STATUSES),
+            RemediationRun.mode == RemediationRunMode.pr_only,
+            RemediationRun.status.in_((*ACTIVE_RUN_DUPLICATE_STATUSES, RemediationRunStatus.success)),
         )
     )
-    active_runs = _filter_active_group_duplicate_runs(
-        active_run_result.scalars().unique().all(),
+    grouped_records = [
+        _grouped_bundle_run_record(run)
+        for run in active_run_result.scalars().unique().all()
+    ]
+    active_runs = filter_active_group_duplicate_runs(
+        grouped_records,
         now=datetime.now(timezone.utc),
     )
-    for pending in active_runs:
-        if _as_mode_value(pending.mode) != RemediationRunMode.pr_only.value:
-            continue
-        if not isinstance(pending.artifacts, dict):
-            continue
-        existing_signature = normalize_grouped_run_artifact_signature(pending.artifacts)
-        request_signature = normalize_grouped_run_request_signature(
-            group_key=group_key,
+    request_signature = normalize_grouped_run_request_signature(
+        group_key=group_key,
+        strategy_id=plan.request.strategy_id,
+        strategy_inputs=plan.request.strategy_inputs,
+        pr_bundle_variant=plan.request.pr_bundle_variant,
+        repo_target=plan.request.repo_target,
+        action_resolutions=plan.action_resolutions,
+    )
+    active_conflict = find_active_grouped_duplicate(
+        grouped_records,
+        request_signature=request_signature,
+        now=datetime.now(timezone.utc),
+    )
+    if active_conflict is not None:
+        emit_validation_failure(
+            logger,
+            reason=active_conflict.reason,
+            action_type=action_type,
             strategy_id=plan.request.strategy_id,
-            strategy_inputs=plan.request.strategy_inputs,
-            pr_bundle_variant=plan.request.pr_bundle_variant,
-            repo_target=plan.request.repo_target,
-            action_resolutions=plan.action_resolutions,
+            mode="pr_only",
         )
-        if grouped_run_signatures_match(existing_signature, request_signature):
-            emit_validation_failure(
-                logger,
-                reason="duplicate_pending_group_run",
-                action_type=action_type,
-                strategy_id=plan.request.strategy_id,
-                mode="pr_only",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error": "Duplicate pending run",
-                    "detail": "A pending group PR bundle run already exists for this execution group.",
-                },
-            )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate pending run",
+                "detail": active_conflict.detail,
+                "reason": active_conflict.reason,
+                "existing_run_id": active_conflict.run_id,
+                "existing_run_status": active_conflict.run_status,
+            },
+        )
+    successful_conflict = find_latest_successful_grouped_duplicate(
+        grouped_records,
+        request_signature=request_signature,
+    )
+    if successful_conflict is not None:
+        emit_validation_failure(
+            logger,
+            reason=successful_conflict.reason,
+            action_type=action_type,
+            strategy_id=plan.request.strategy_id,
+            mode="pr_only",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "PR bundle already created",
+                "detail": successful_conflict.detail,
+                "reason": successful_conflict.reason,
+                "existing_run_id": successful_conflict.run_id,
+                "existing_run_status": successful_conflict.run_status,
+            },
+        )
 
     representative_action_id = _select_grouped_representative_action_id(
         preferred_action_id=plan.representative_action_id,
@@ -2224,6 +2346,11 @@ async def create_group_pr_bundle_run(
     representative_by_id = {str(action.id): action for action in actions}
     representative = representative_by_id.get(representative_action_id, actions[0])
     artifacts: dict[str, Any] = dict(plan.artifacts)
+    if body.bucket_creation_acknowledged:
+        artifacts = _with_cloudtrail_bucket_creation_approval(
+            artifacts,
+            approved_by_user_id=current_user.id,
+        )
     if plan.request.pr_bundle_variant:
         artifacts["legacy_variant_mapped_from"] = plan.request.pr_bundle_variant
     root_required, pre_execution_notice, runbook_url = _root_notice(action_type)
@@ -2464,7 +2591,7 @@ async def patch_remediation_run(
     result = await db.execute(
         select(RemediationRun)
         .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
-        .options(selectinload(RemediationRun.action))
+        .options(lazyload("*"), _action_summary_load_option())
     )
     run = result.scalar_one_or_none()
     if not run:
@@ -2538,7 +2665,7 @@ async def get_remediation_run(
     result = await db.execute(
         select(RemediationRun)
         .where(RemediationRun.id == run_uuid, RemediationRun.tenant_id == tenant_uuid)
-        .options(selectinload(RemediationRun.action))
+        .options(lazyload("*"), _action_summary_load_option())
     )
     run = result.scalar_one_or_none()
     if not run:

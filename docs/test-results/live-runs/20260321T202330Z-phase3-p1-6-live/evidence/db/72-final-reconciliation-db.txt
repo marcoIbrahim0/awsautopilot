@@ -1,0 +1,48 @@
+Pager usage is off.
+                  id                  | status 
+--------------------------------------+--------
+ 0ca64b94-9dcb-4a97-91b0-27b0341865bc | open
+(1 row)
+
+ provider | external_key | external_status |          updated_at           
+----------+--------------+-----------------+-------------------------------
+ jira     | KAN-7        | In Progress     | 2026-03-24 02:14:35.935081+00
+(1 row)
+
+ provider | external_ref | external_status | canonical_internal_status | preferred_external_status | sync_status |       resolution_decision        | conflict_reason |      last_reconciled_at       |          updated_at           
+----------+--------------+-----------------+---------------------------+---------------------------+-------------+----------------------------------+-----------------+-------------------------------+-------------------------------
+ jira     | 10049        | In Progress     | open                      | In Progress               | in_sync     | reconciled_to_internal_canonical |                 | 2026-03-24 02:14:36.150466+00 | 2026-03-24 02:14:35.935081+00
+(1 row)
+
+        event_type        |     source     | external_ref | external_status | internal_status_before | internal_status_after | mapped_internal_status | preferred_external_status |       resolution_decision        |                                         decision_detail                                         |          created_at           
+--------------------------+----------------+--------------+-----------------+------------------------+-----------------------+------------------------+---------------------------+----------------------------------+-------------------------------------------------------------------------------------------------+-------------------------------
+ reconciliation_applied   | reconciliation | 10049        | In Progress     | open                   | open                  | open                   | In Progress               | reconciled_to_internal_canonical | External jira status reconciled to canonical state open.                                        | 2026-03-24 02:14:35.935081+00
+ reconciliation_queued    | reconciliation | 10049        | Done            | open                   | open                  | resolved               | In Progress               | preserve_internal_canonical      | Queued outbound reconciliation for drifted jira status.                                         | 2026-03-24 02:14:34.44055+00
+ external_status_observed | external       | 10049        | Done            | open                   | open                  | resolved               | In Progress               | preserve_internal_canonical      | External status 'Done' mapped to resolved; internal canonical state open remains authoritative. | 2026-03-24 02:14:30.851257+00
+ reconciliation_applied   | reconciliation | 10049        | In Progress     | open                   | open                  | open                   | In Progress               | reconciled_to_internal_canonical | External jira status reconciled to canonical state open.                                        | 2026-03-24 02:13:27.045383+00
+ reconciliation_queued    | reconciliation | 10049        | Done            | open                   | open                  | resolved               | In Progress               | preserve_internal_canonical      | Queued outbound reconciliation for drifted jira status.                                         | 2026-03-24 02:13:24.842228+00
+ external_status_observed | external       | 10049        | Done            | open                   | open                  | resolved               | In Progress               | preserve_internal_canonical      | External status 'Done' mapped to resolved; internal canonical state open remains authoritative. | 2026-03-23 17:15:09.492102+00
+ reconciliation_applied   | reconciliation | 10049        | In Progress     | open                   | open                  | open                   | To Do                     | reconciled_to_internal_canonical | External jira status reconciled to canonical state open.                                        | 2026-03-23 17:08:04.808798+00
+ reconciliation_queued    | reconciliation | 10049        | Done            | open                   | open                  | resolved               | To Do                     | preserve_internal_canonical      | Queued outbound reconciliation for drifted jira status.                                         | 2026-03-23 17:08:02.983366+00
+ external_status_observed | external       | 10049        | Done            | open                   | open                  | resolved               | To Do                     | preserve_internal_canonical      | External status 'Done' mapped to resolved; internal canonical state open remains authoritative. | 2026-03-23 17:06:32.289675+00
+ reconciliation_applied   | reconciliation | 10049        | To Do           | open                   | open                  | open                   | To Do                     | reconciled_to_internal_canonical | External jira status reconciled to canonical state open.                                        | 2026-03-22 19:35:12.125633+00
+ reconciliation_applied   | reconciliation | 10049        | To Do           | open                   | open                  | open                   | To Do                     | reconciled_to_internal_canonical | External jira status reconciled to canonical state open.                                        | 2026-03-22 19:35:07.498714+00
+(11 rows)
+
+ provider |               receipt_key                |  status   |        occurred_at         |          created_at           
+----------+------------------------------------------+-----------+----------------------------+-------------------------------
+ jira     | jira-live-drift-final-20260324T0214Z     | processed | 2026-03-24 02:14:29.658+00 | 2026-03-24 02:14:30.851257+00
+ jira     | jira-live-drift-postfix-20260323T171453Z | processed | 2026-03-23 17:14:00+00     | 2026-03-23 17:15:09.492102+00
+ jira     | jira-live-drift-20260323T170631Z         | processed | 2026-03-23 17:08:00+00     | 2026-03-23 17:06:32.289675+00
+(3 rows)
+
+                  id                  | provider | operation | status  |                        request_signature                         |          created_at           |          updated_at           
+--------------------------------------+----------+-----------+---------+------------------------------------------------------------------+-------------------------------+-------------------------------
+ c3225686-ba7d-4293-be35-244bddda143a | jira     | update    | success | 6c35829783801aa5a153f6a15afffbe2aef63b22c706d83ecd7207e776351404 | 2026-03-24 02:14:34.44055+00  | 2026-03-24 02:14:35.935081+00
+ 06b1a4e8-c0b8-4d30-93b1-39b3610b0b5c | jira     | update    | success | ec501400cbbe0fe2e71d60f85d5f08ac219113ed3b6026db0bb15c89d7a54dc3 | 2026-03-24 02:13:24.842228+00 | 2026-03-24 02:13:27.045383+00
+ e45d7ab6-4096-419e-b06e-f97d99e43227 | jira     | update    | success | 33583f9be3390a7911377a323acff80d1ed92ebce9bb73401d0da1993ece6158 | 2026-03-23 17:08:02.983366+00 | 2026-03-23 17:08:04.808798+00
+ 6abe6835-2631-4f0a-b4f6-06c7d63a4a43 | jira     | update    | success | 1c052530fb55eb79a5614aa451bdbe60fcdd189ad6682fa5032d82a522a07e32 | 2026-03-22 19:34:59.437362+00 | 2026-03-22 19:35:12.125633+00
+ 36e97027-b884-4c75-aa13-630008d0e0f6 | jira     | create    | success | 904b87aa3a8f058f215ebde8229265b22e9189f9fe6727e849471fa8a8923e5d | 2026-03-22 19:34:52.559807+00 | 2026-03-22 19:35:07.498714+00
+ d932b185-3ae9-4f7c-a4a4-619230f57f4e | jira     | create    | failed  | 91c77ba8505e32a7c9b5d45cec2a944338365cdc0e61a3ff994b50d961022721 | 2026-03-21 20:41:54.068271+00 | 2026-03-21 20:56:33.614624+00
+(6 rows)
+

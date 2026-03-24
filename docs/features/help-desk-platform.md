@@ -59,7 +59,9 @@ Frontend:
 - `frontend/src/app/help-center/page.tsx`
 - `frontend/src/app/help-center/[slug]/page.tsx`
 - `frontend/src/app/admin/help/page.tsx`
+- `frontend/src/components/help/FloatingChat.tsx`
 - `frontend/src/components/help/NeedHelpLink.tsx`
+- `frontend/src/lib/floating-chat-history.ts`
 - `frontend/src/lib/help.ts`
 - `frontend/src/lib/api.ts`
 
@@ -144,6 +146,11 @@ Current behavior:
 - low-confidence answers can suggest opening a support case, but the case is created only after explicit user approval
 - Help Hub AI chats are grouped by `thread_id`; the backend persists bounded turn history, follow-up prompts, context gaps, provider metadata, token usage, and latency on each interaction row
 - the assistant never triggers remediation, AWS mutations, or any action execution side effects
+- the floating chatbot is mounted globally across the authenticated dashboard and uses frontend-managed temporary history:
+  - multiple recent floating chat sessions are available from inside the chatbot
+  - floating sessions expire after `6` hours from last activity
+  - expired floating sessions are pruned from local storage and are no longer reopened from the widget
+  - this temporary behavior does not affect permanent Help Hub support cases
 - live IAM lookup is a separate bounded read-only path:
   - default source remains ingested SaaS data
   - live lookup is available only for accounts explicitly enabled by a SaaS admin
