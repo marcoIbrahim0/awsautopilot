@@ -1,5 +1,442 @@
 # Task Log
 
+## Restore `/exports` as navbar workspace and fix active gradient icon visibility (2026-03-24)
+
+**Task:** Move the exports/compliance surface back to the top-level navbar route, remove the duplicate exports tab from Settings, and fix the white-on-white icon regression caused by active gradient surfaces not rendering correctly.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/settings-tabs.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/ExportsComplianceTab.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/exports/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/exports/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/layout/Sidebar.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/Button.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/globals.css`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/frontend.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/audit-remediation/05-ux-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Removed `Exports & Compliance` from the Settings tab list so `/settings` now keeps the admin/configuration tabs plus `Baseline Report`.
+- Restored `/exports` as the real exports/compliance workspace by rendering the shared `ExportsComplianceTab` there and adding a direct CTA to `Baseline Report`.
+- Added legacy route normalization so old settings export URLs:
+  - `/settings?tab=exports-compliance`
+  - `/settings?tab=evidence-export`
+  - `/settings?tab=control-mappings`
+  now redirect to `/exports`.
+- Fixed the active-state styling regression by replacing invalid `bg-[var(--tab-active-bg)]` usages with a real shared CSS utility class (`.bg-tab-active`) so gradient-backed nav/buttons/progress bars render their intended background and white icons/text remain visible.
+- Added focused UI coverage for:
+  - legacy export-tab redirects from Settings to `/exports`
+  - exports no longer appearing in Settings tabs
+  - `/exports` rendering the real workspace instead of a handoff page
+- Updated current docs so the route contract now reflects:
+  - `/exports` is canonical for export/compliance flows
+  - `/settings?tab=baseline-report` remains canonical for baseline reports
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/app/settings/page.test.tsx src/app/exports/page.test.tsx`
+  - result: `4 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+
+**Technical debt / gotchas:**
+- `ExportsComplianceTab` is still physically housed under `frontend/src/app/settings/`; it is now shared by both routes via a configurable panel id. If the exports surface keeps diverging from Settings concerns, it should eventually move into a route-neutral shared module.
+
+## Fix findings-page suppressed filter to honor active exceptions (2026-03-24)
+
+**Task:** Repair the Findings page `Suppressed` filter so findings with an active finding exception are returned when filtering by suppressed status, matching the suppressed state already shown on the cards.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_status_filters.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Extended the findings effective-status helpers so an active finding exception now resolves to effective status `SUPPRESSED`.
+- Updated the backend findings status filter path to use an exception-aware SQL expression, so both:
+  - `GET /api/findings`
+  - `GET /api/findings/grouped`
+  honor active suppressed findings when `status=SUPPRESSED`.
+- Updated flat finding response shaping so the API now returns `effective_status=SUPPRESSED` for actively suppressed findings, keeping the API contract aligned with the UI badge behavior.
+- Added focused regression coverage for:
+  - exception-driven effective status in the response mapper
+  - flat findings suppressed filtering
+  - grouped findings suppressed filtering
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_findings_status_filters.py tests/test_findings_grouped_action_hints.py`
+  - result: `6 passed`
+- `./venv/bin/python -m py_compile backend/routers/findings.py tests/test_findings_status_filters.py`
+  - result: pass
+
+**Technical debt / gotchas:**
+- This fix makes findings filtering consistent with finding-level exception suppression only. Action-level `suppressed` semantics remain separate and continue to live in the actions API/state machine.
+
+## Refine floating Ask AI icon toward the Ocypheris obelisk mark (2026-03-24)
+
+**Task:** Replace the chatbot’s mascot-style icon with a smaller obelisk-inspired brand mark so the floating `Ask AI` widget feels closer to the Ocypheris identity.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/help/FloatingChat.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Replaced the previous face-like assistant glyph with a geometric two-tone obelisk-style symbol based on the existing `frontend/public/logo/ocypheris-icon.png` brand mark.
+- Reduced the icon size and visual weight in the three places it appears:
+  - floating launcher
+  - open chat header
+  - empty state
+- Kept the stronger launcher/send-button treatment from the previous refresh, but made the icon read as a tighter brand accent instead of the dominant visual.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+  - result: pass
+- `cd frontend && npm run lint -- src/components/help/FloatingChat.tsx`
+  - result: pass
+
+**Technical debt / gotchas:**
+- The chatbot icon is now brand-inspired rather than generic, but it is still an inline SVG in `FloatingChat.tsx`; if this mark starts getting reused elsewhere, it should move into a shared branded icon component instead of staying local to the chatbot.
+
+## Deploy current backend + frontend workspace updates after findings-page fixes (2026-03-24)
+
+**Task:** Deploy the current backend and frontend workspace after the findings-page fixes, including the existing dirty worktree state, then verify the live API and site.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed Cloudflare authentication with `npx wrangler whoami` before publishing the frontend.
+- Ran a backend regression slice before deploy:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py tests/test_remediation_runs_api.py -q`
+  - current workspace result: `131 passed`, `15 failed`
+- Proceeded with a full deploy of the current dirty backend/frontend workspaces as explicitly requested.
+- Deployed the backend with `./scripts/deploy_saas_serverless.sh`.
+- Verified the serverless runtime rolled forward to image tag `20260324T171736Z` and the script completed Lambda rollout plus runtime/DB alignment checks.
+- Ran the explicit post-deploy database command from the repo instructions:
+  - `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade heads'`
+- Verified frontend typecheck before publish:
+  - `cd frontend && npm run typecheck`
+  - result: pass
+- Published the frontend with `cd frontend && npm run deploy`.
+- Verified Cloudflare version `63122072-7d13-4905-a945-4281e065519a` was created for the `frontend` worker.
+
+**Validation:**
+- Cloudflare auth:
+  - `cd frontend && npx wrangler whoami`
+  - logged in as `maromaher54@gmail.com`
+- Backend regression slice:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py tests/test_remediation_runs_api.py -q`
+  - result: `131 passed`, `15 failed`
+- Frontend typecheck:
+  - `cd frontend && npm run typecheck`
+  - result: pass
+- Production API:
+  - `curl -m 15 -sS -D - -o /tmp/deploy_api_health_20260324.txt https://api.ocypheris.com/health`
+  - result: `HTTP/2 200`
+- Production frontend shell:
+  - `curl -m 15 -sS -D - -o /tmp/deploy_frontend_root_20260324.txt https://ocypheris.com`
+  - result: `HTTP/2 200`
+- Cloudflare deployment record:
+  - `cd frontend && npx wrangler deployments list --name frontend`
+  - confirmed deployment created at `2026-03-24T17:22:53.306Z` with version `63122072-7d13-4905-a945-4281e065519a`
+
+**Technical debt / gotchas:**
+- The deployed workspace was not test-clean: `tests/test_remediation_runs_api.py` still had `15` failures around remediation-run duplicate/retry/detail/zip flows at deploy time.
+- The frontend deploy completed with the recurring OpenNext/esbuild duplicate-key warnings inside generated `.open-next/server-functions/default/handler.mjs`; they did not block the publish.
+- This rollout included the broader pre-existing dirty worktree in both the root repo and nested `frontend/` worktree, not just the findings-page files changed in this session.
+
+## Refresh floating Ask AI launcher and composer identity (2026-03-24)
+
+**Task:** Make the floating `Ask AI` chatbot feel more noticeable and branded by redesigning the launcher, reinforcing the chatbot icon identity, and upgrading the send button into a clearer primary action.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/help/FloatingChat.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Replaced the generic floating launcher treatment with a stronger branded pill that combines:
+  - the custom assistant glyph
+  - a brighter blue gradient treatment
+  - explicit `Ocypheris` / `Ask AI` labeling on larger screens
+- Reused the same custom assistant glyph inside the empty state and the open-panel header so the chatbot has a consistent visual identity instead of a generic chat bubble.
+- Upgraded the open chat header with a branded icon tile and `AI Assistant` badge so the launcher styling carries through after the panel opens.
+- Redesigned the composer CTA from a small icon button into a larger labeled primary action (`Send now`) with stronger contrast and clearer affordance.
+
+**Validation:**
+- `cd frontend && npm run typecheck`
+  - result: pass
+- `cd frontend && npm run lint -- src/components/help/FloatingChat.tsx`
+  - result: pass
+
+**Technical debt / gotchas:**
+- This task intentionally changes only the chatbot’s visual treatment; it does not alter Help Hub behavior, API contracts, or chat-session persistence rules, so no product-doc content changed.
+
+## Fix findings-page suppressed badges, grouped-card action rail, and multi-level group-by rendering (2026-03-24)
+
+**Task:** Fix the Findings page so suppressed findings reliably show as suppressed, grouped findings cards keep `View PR bundle group` beside the other action buttons, the overflow menu is replaced by visible grouped actions, and added grouping dimensions like `region` actually change the rendered hierarchy.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/GroupedFindingsView.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/GroupedFindingsView.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Updated the flat finding card so a finding with workflow state `SUPPRESSED` now renders a visible `Suppressed` badge even when the richer expiry badge branch is not populated.
+- Reworked grouped findings cards so:
+  - `View PR bundle group` sits in the same action row as the other controls
+  - the three-dot overflow menu is removed
+  - `Suppress Group`, `Acknowledge Risk`, and `Mark False Positive` are always visible as direct buttons
+- Replaced the grouped findings renderer’s first-dimension-only bucketing with recursive nested bucketing across the full grouping stack, so adding `region` or other later dimensions now visibly changes the hierarchy.
+- Added focused regression coverage for:
+  - suppressed badge rendering on findings cards
+  - direct grouped-action buttons on grouped cards
+  - nested `severity -> rule -> region` grouping output
+- Updated the active findings UI doc so the grouped-card action rail and multi-level grouping behavior are documented.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx src/app/findings/GroupedFindingsView.test.tsx src/app/findings/page.test.tsx`
+  - result: `14 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+
+**Technical debt / gotchas:**
+- The grouped renderer now honors every selected grouping dimension in the UI, but the backend grouped endpoint still emits one row per `(control_id, resource_type, account_id, region)` scope. Any future grouping dimension expansion beyond the current client-only hierarchy should keep that backend contract in mind instead of assuming the API returns pre-nested buckets.
+
+## Revalidate remember-me login persistence and add password visibility toggle (2026-03-24)
+
+**Task:** Confirm the existing `remember me` login/session persistence path still works in the current codebase and add a view/hide password control to the login form.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/auth/AuthFormField.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/login/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/login/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Revalidated the existing remember-me path instead of changing the backend auth contract:
+  - frontend login still submits `remember_me`
+  - backend login/MFA still issue session-only vs persistent cookies correctly
+  - refresh still preserves the existing session persistence mode
+- Extended the shared auth form field to support a right-side adornment without changing other auth screens.
+- Added a password visibility toggle to the login password input with accessible `Show password` / `Hide password` labels and pressed-state semantics.
+- Expanded the login-page UI regression coverage to prove both the existing remember-me submission behavior and the new password visibility toggle.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/app/login/page.test.tsx`
+  - result: `4 passed`
+- `PYTHONPATH=. ./venv/bin/pytest -q tests/test_auth_wave2_blocking_fixes.py tests/test_auth_login_rate_limit.py tests/test_auth_verification_mfa.py`
+  - result: `25 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+
+**Technical debt / gotchas:**
+- The login page intentionally still defaults `Remember me` to unchecked even though the backend request model defaults to `true`; the frontend explicitly opts into `false` until the user checks it, and the tests now continue to lock that behavior in.
+
+## Deploy current backend + frontend dirty workspace on production (2026-03-24)
+
+**Task:** Deploy the entire current backend and frontend workspace to production, including pre-existing dirty changes not authored in this session, and verify the live API/site after rollout.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Confirmed the root workspace and nested `frontend/` worktree both contained existing dirty changes and proceeded with a full deploy as explicitly requested.
+- Ran the current backend regression slice before deployment:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py -q`
+  - result: `30 passed`
+- Deployed the current backend workspace with `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`.
+- Verified the backend/runtime rollout completed with image tag `20260324T165727Z` for:
+  - `security-autopilot-dev-api`
+  - `security-autopilot-dev-worker`
+- Ran the explicit post-deploy database upgrade command from the repo instructions:
+  - `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./venv/bin/alembic upgrade heads'`
+- Published the current frontend workspace with `cd frontend && npm run deploy`.
+- Verified Cloudflare published frontend version `21c44f73-59ae-4548-b128-b0a37a97b333`.
+
+**Validation:**
+- Backend tests:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py -q`
+  - result: `30 passed`
+- Frontend checks already green in the current workspace before deploy:
+  - `cd frontend && npm run test:ui -- src/app/actions/group/page.test.tsx`
+    - result: `2 passed`
+  - `cd frontend && npm run typecheck`
+    - result: pass
+- Production API:
+  - `curl -m 15 -sS -D - -o /tmp/deploy_api_health.txt https://api.ocypheris.com/health`
+  - result: `HTTP/2 200`
+- Production frontend shell:
+  - `curl -m 15 -sS -D - -o /tmp/deploy_frontend_root.txt https://ocypheris.com`
+  - result: `HTTP/2 200`
+- Cloudflare deployment record:
+  - `cd frontend && npx wrangler deployments list --name frontend | rg -n "21c44f73|Created:"`
+  - confirmed created at `2026-03-24T17:03:05.681Z` with version `21c44f73-59ae-4548-b128-b0a37a97b333`
+
+**Technical debt / gotchas:**
+- The frontend deploy completed with the known OpenNext/esbuild duplicate-key warnings inside generated `.open-next/server-functions/default/handler.mjs`; they did not block the publish.
+- This rollout intentionally included pre-existing dirty frontend/backend changes that were already present in the workspace before this deploy task.
+
+## Compact action-group follow-up UX and add action-detail CTA (2026-03-24)
+
+**Task:** Update the grouped action detail page so it emphasizes actionable follow-through after bundle generation by adding a back link, removing low-signal summary cards, narrowing the member section to true follow-up cases, adding per-member action-detail CTAs, and compacting older generation timelines.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/ui-ux-redesign-implementation.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a `Back to Findings` link above the action-group hero using the existing chevron-link detail-page pattern.
+- Simplified the summary cards to keep only `Generated and successful`, `Metadata-only`, and `Total actions`.
+- Replaced the broad member list with a focused `Generated and needs follow-up` section that renders only `run_successful_needs_followup` members.
+- Added a per-member CTA that sends the user to `/actions/[id]` with explicit copy telling them to finish the manual fix and then click `Refresh State`.
+- Compacted the generation timeline so the latest run is expanded by default while older runs start collapsed behind `Show outcomes` / `Hide outcomes`.
+- Updated the focused grouped-page UI test to cover the new back link, follow-up-only section, per-member CTA, and collapsed older-run behavior.
+- Updated the active UI/UX implementation doc so the grouped page behavior is documented alongside the earlier generation-oriented wording cleanup.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- src/app/actions/group/page.test.tsx`
+  - result: `2 passed`
+- `cd frontend && npm run typecheck`
+  - result: pass
+
+**Technical debt / gotchas:**
+- The page now repeats the same follow-up message in both the top summary note and the per-member follow-up card when a group has one follow-up state. That duplication is intentional for now so the group-level summary and the action-level next step remain visible without adding new backend CTA metadata.
+
+## Run local E2E for non-closing success state and deploy verified fix to production (2026-03-24)
+
+**Task:** Run a live end-to-end check of the new non-closing success state on localhost, then deploy the backend/frontend and verify the same grouped `EC2.53` account `696505809372` experience on production.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Started the local backend with `./venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000` and reused the existing local frontend on `http://localhost:3000`.
+- Signed into the local app and verified `http://localhost:3000/actions/group?group_id=825acfd7-d0ec-4dd0-806d-b1628ab3e35e` rendered:
+  - `Post-generation follow-up · 4`
+  - `Generated and needs follow-up`
+  - `The fix was applied successfully. Restricted access was added, but unrestricted public access is still present. Remove the unrestricted rule to resolve this finding.`
+- Deployed the backend with `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`.
+- Verified the backend runtime rolled out image tag `20260324T155247Z` and the deploy script completed the database upgrade/alignment for Alembic head `0050_action_group_needs_followup_bucket`.
+- Deployed the frontend with `cd frontend && npm run deploy`, publishing Cloudflare version `64ee04a7-65db-4dd0-9956-1d37c54eadc9`.
+- Verified production health on `https://api.ocypheris.com/health`.
+- Signed into `https://ocypheris.com` and verified the live grouped page `https://ocypheris.com/actions/group?group_id=825acfd7-d0ec-4dd0-806d-b1628ab3e35e` now renders:
+  - `Post-generation follow-up · 4`
+  - `Generated and needs follow-up`
+  - the new additive-remediation follow-up message for all 4 stale `EC2.53` members
+
+**Validation:**
+- Local browser E2E:
+  - `http://localhost:3000/actions/group?group_id=825acfd7-d0ec-4dd0-806d-b1628ab3e35e`
+  - verified the new warning-style follow-up summary and member badges after login
+- Production API:
+  - `curl -m 10 -sS -D - -o /tmp/live_api_health_body.txt https://api.ocypheris.com/health`
+  - result: `HTTP/2 200`
+  - body: `{"status":"ok","app":"AWS Security Autopilot"}`
+- Production frontend shell:
+  - `curl -sS -D - 'https://ocypheris.com/actions/group?group_id=825acfd7-d0ec-4dd0-806d-b1628ab3e35e'`
+  - result: `HTTP/2 200`
+- Production browser E2E:
+  - signed into `https://ocypheris.com/login`
+  - verified the live `/actions/group` page shows the new `Post-generation follow-up` copy plus `Generated and needs follow-up` badges for the known `EC2.53` group
+
+**Technical debt / gotchas:**
+- The frontend deploy emitted existing OpenNext/esbuild duplicate-key warnings inside generated `.open-next/server-functions/default/handler.mjs`, but the deploy completed successfully and did not block the published worker version.
+
+## Add non-closing success state for additive PR bundle runs and reproject stale EC2.53 rows (2026-03-24)
+
+**Task:** Add a persisted grouped-remediation status for successful but non-closing PR bundle runs, update the backend/frontend messaging so additive `EC2.53` / `EC2.19` runs stop pretending they are merely waiting on AWS confirmation, and reproject the known stale live rows for account `696505809372`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/enums.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py`
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0050_action_group_needs_followup_bucket.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/reproject_action_group_success_states.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_run_confirmation.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_wave4_contract_fixes.py`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/action-groups-persistent.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a new `ActionGroupStatusBucket` value, `run_successful_needs_followup`, plus Alembic revision `0050_action_group_needs_followup_bucket`.
+- Reworked grouped-run status projection in `action_run_confirmation.py` so successful executable runs now classify into:
+  - `run_successful_confirmed` when Security Hub or reconcile confirms closure
+  - `run_successful_needs_followup` when the run applied successfully but is intentionally non-closing
+  - `run_successful_pending_confirmation` only for true source-of-truth lag cases
+- Implemented the first explicit non-closing-success rule from persisted remediation artifacts:
+  - `selected_strategy=sg_restrict_public_ports_guided`
+  - `strategy_inputs.access_mode=close_public`
+- Added generalized additive status-note fields (`status_message`, `status_severity`, `followup_kind`) to grouped action members and findings/grouped-finding remediation hints while keeping existing `pending_confirmation_*` fields for backward compatibility.
+- Updated grouped replay acceptance logic so a persisted `run_successful_needs_followup` row is treated as a valid replay outcome for successful bundle callbacks instead of false drift.
+- Updated the findings and action-group frontend surfaces so they render the new “Generated and needs follow-up” state and show the EC2 additive guidance message instead of the generic AWS-delay warning.
+- Added `scripts/reproject_action_group_success_states.py` to reevaluate existing successful-pending rows in a focused scope.
+- Applied `./venv/bin/alembic upgrade heads` against the active DB connection to install the new enum value.
+- Reprojected the live `sg_restrict_public_ports` rows for tenant `9f7616d8-af04-43ca-99cd-713625357b70`, account `696505809372`.
+
+**Validation:**
+- Backend tests:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_run_confirmation.py tests/test_action_groups_api.py tests/test_findings_grouped_action_hints.py tests/test_wave4_contract_fixes.py -q`
+  - result: `30 passed`
+- Frontend tests:
+  - `cd frontend && npm run test:ui -- src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx src/app/actions/group/page.test.tsx`
+  - result: `12 passed`
+- Frontend typecheck:
+  - `cd frontend && npm run typecheck`
+  - result: pass
+- DB migration:
+  - `set -a; source backend/.env; set +a; ./venv/bin/alembic current`
+    - before: `0049_action_group_metadata_only_bucket`
+  - `set -a; source backend/.env; set +a; ./venv/bin/alembic upgrade heads`
+    - applied: `0050_action_group_needs_followup_bucket`
+- Live reprojection:
+  - `set -a; source backend/.env; set +a; PYTHONPATH=. ./venv/bin/python scripts/reproject_action_group_success_states.py --tenant-id 9f7616d8-af04-43ca-99cd-713625357b70 --account-id 696505809372 --action-type sg_restrict_public_ports`
+    - result: `Reprojected 4 action-group states. run_successful_needs_followup: 4`
+  - Follow-up SQL verification showed:
+    - `run_successful_needs_followup: 4`
+    - `run_successful_pending_confirmation: 0`
+
+**Technical debt / gotchas:**
+- The first non-closing-success classifier is intentionally narrow and currently only covers the proven SG additive path. Other additive families will still stay on the generic pending-confirmation bucket until their persisted strategy/profile signatures are wired into the classifier table.
+- The reprojection script depends on the target DB already having Alembic revision `0050_action_group_needs_followup_bucket`; without that enum migration the write will fail with `invalid input value for enum action_group_status_bucket`.
+
 ## Conditionally hide Tenant ID Configuration UI (2026-03-24)
 
 **Task:** Conditionally hide the `TenantIdForm` component across all dashboard pages to prevent UI flicker and remove the dev-fallback form for unauthenticated users.
@@ -29115,3 +29552,59 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Open questions / TODOs:**
 - Internal implementation-reference docs still mention code files by design; if those documents are later repurposed for operators or customers, they should get the same behavior-first rewrite.
+
+## Fix recompute pipeline stall on local live tenant/account before deploy (2026-03-24)
+
+**Task:** Permanently fix the local `compute_actions` recompute stall on the shared live tenant/account, verify the queue worker no longer leaves `compute_actions` stuck indefinitely, and stop before any deploy.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_engine.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/compute_actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/integration_sync.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/attack_path_materialized.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_service.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_account_scoped_sg.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_5_integrations_bidirectional.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260324T183815Z-recompute-pipeline-fix-validation/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added phase-level timing logs around recompute grouping, upsert, group projection, resolve/reopen, security-graph sync, sync-task dispatch, and attack-path enqueue so future stalls are attributable to a concrete phase.
+- Replaced the per-action immutable group assignment path with a set-based bulk projection flow that preloads existing groups/memberships/state rows and uses conflict-safe bulk inserts only for missing rows.
+- Reworked action recompute to stop replacing `action_finding_links` wholesale on existing actions and to resolve/reopen actions from batched unresolved-finding counts instead of relationship-driven per-action traversal.
+- Updated the worker `compute_actions` job to log `compute_core`, `plan_sync`, `dispatch_sync`, and `attack_path_enqueue` phases explicitly, and updated attack-path enqueue to use the parsed SQS queue region.
+- Added direct service regressions for bulk action-group projection plus updated the action-engine and compute-worker tests to match the new batched behavior.
+- Validated the real local recompute path against tenant `9f7616d8-af04-43ca-99cd-713625357b70` / account `696505809372` under the local target-account profile split; the command now completes successfully instead of hanging indefinitely.
+- Queued one real local worker `compute_actions` message and observed the worker advance into its follow-on `integration_sync` and `attack_path_materialization` jobs, which proves the earlier `compute_actions` stuck symptom no longer reproduces on that path.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_groups_service.py tests/test_action_engine_merge.py tests/test_action_engine_account_scoped_sg.py tests/test_phase3_p1_5_integrations_bidirectional.py -q`
+  - `35 passed`
+- `PYTHONPATH=. ./venv/bin/python -m py_compile backend/services/action_groups.py backend/services/action_engine.py backend/workers/jobs/compute_actions.py backend/services/integration_sync.py backend/services/attack_path_materialized.py tests/test_action_groups_service.py tests/test_action_engine_merge.py tests/test_phase3_p1_5_integrations_bidirectional.py`
+  - passed
+- Real local recompute proof:
+  - `PYTHONPATH=. ./venv/bin/python scripts/recompute_account_actions.py --tenant-id 9f7616d8-af04-43ca-99cd-713625357b70 --account-id 696505809372`
+  - completed with `actions_updated=45`, `action_findings_linked=58`
+  - returned phase timings:
+    - `grouping=19380ms`
+    - `upsert=14211ms`
+    - `group_projection=39713ms`
+    - `resolve_reopen=236ms`
+    - `security_graph=5891ms`
+    - `total=79436ms`
+- Broader local worker proof:
+  - queued one real `compute_actions` SQS message for the same tenant/account on the legacy queue
+  - observed the worker proceed to `integration_sync` and `attack_path_materialization`, which only happen after `compute_actions` completes
+
+**Technical debt / gotchas:**
+- The recompute path is fixed from “indefinite hang” to “slow but attributable”; the remaining dominant cost is still `group_projection` at about `39.7s` on the shared live tenant/account.
+- The queued worker validation immediately surfaced an unrelated local Jira integration issue: existing `integration_sync` jobs fail locally with `SSL: CERTIFICATE_VERIFY_FAILED`, which is outside the recompute fix scope.
+- The wider `tests/test_remediation_runs_api.py` slice still has unrelated pre-existing failures in this workspace, so I did not use that suite as the release gate for this recompute-only task.
+
+**Open questions / TODOs:**
+- Run the unresolved PR-bundle family sweep again on current head after the recompute-specific blocker is removed so the remaining failures, if any, are real family/runtime issues instead of queue-worker hangs.
+- If local operator latency becomes a problem, continue drilling into the still-slowest `group_projection` phase now that its timing is isolated.

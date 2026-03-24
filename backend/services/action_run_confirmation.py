@@ -20,6 +20,7 @@ from backend.models.enums import (
     ActionGroupStatusBucket,
 )
 from backend.models.finding import Finding
+from backend.models.remediation_run import RemediationRun
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,11 @@ PENDING_CONFIRMATION_WARNING_MESSAGE = (
     "The fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. "
     "Check Security Hub/reconciliation and investigate why the resolved state has not propagated."
 )
+SUCCESS_NEEDS_FOLLOWUP_MESSAGE = (
+    "The fix was applied successfully. Restricted access was added, but unrestricted public access is still present. "
+    "Remove the unrestricted rule to resolve this finding."
+)
+SUCCESS_NEEDS_FOLLOWUP_KIND = "unrestricted_public_access_retained"
 
 
 def _utcnow() -> datetime:
@@ -90,21 +96,63 @@ def _parse_execution_status(
     return ActionGroupExecutionStatus(str(value))
 
 
+def _extract_strategy_context(
+    remediation_artifacts: dict | None,
+    raw_result: dict | None,
+) -> tuple[str | None, dict[str, object]]:
+    artifacts = remediation_artifacts if isinstance(remediation_artifacts, dict) else {}
+    result = raw_result if isinstance(raw_result, dict) else {}
+    selected_strategy = str(artifacts.get("selected_strategy") or result.get("strategy_id") or "").strip() or None
+    strategy_inputs = artifacts.get("strategy_inputs")
+    if not isinstance(strategy_inputs, dict):
+        strategy_inputs = result.get("strategy_inputs")
+    return selected_strategy, dict(strategy_inputs or {})
+
+
+def _is_non_closing_success(
+    *,
+    selected_strategy: str | None,
+    strategy_inputs: dict[str, object],
+) -> tuple[bool, str | None]:
+    if selected_strategy != "sg_restrict_public_ports_guided":
+        return False, None
+    access_mode = str(strategy_inputs.get("access_mode") or "").strip()
+    if access_mode == "close_public":
+        return True, SUCCESS_NEEDS_FOLLOWUP_KIND
+    return False, None
+
+
+def _successful_unconfirmed_bucket(
+    *,
+    remediation_artifacts: dict | None,
+    raw_result: dict | None,
+) -> ActionGroupStatusBucket:
+    selected_strategy, strategy_inputs = _extract_strategy_context(remediation_artifacts, raw_result)
+    is_non_closing, _ = _is_non_closing_success(
+        selected_strategy=selected_strategy,
+        strategy_inputs=strategy_inputs,
+    )
+    if is_non_closing:
+        return ActionGroupStatusBucket.run_successful_needs_followup
+    return ActionGroupStatusBucket.run_successful_pending_confirmation
+
+
 def _load_latest_run_context(
     session: Session,
     *,
     tenant_id: uuid.UUID,
     action_id: uuid.UUID,
     latest_run_id: uuid.UUID | None,
-) -> tuple[ActionGroupExecutionStatus | None, str | None, dict | None, datetime | None]:
+) -> tuple[ActionGroupExecutionStatus | None, str | None, dict | None, datetime | None, dict | None]:
     if latest_run_id is None:
-        return None, None, None, None
+        return None, None, None, None, None
     stmt = (
         select(
             ActionGroupRunResult.execution_status,
             ActionGroupRunResult.raw_result,
             ActionGroupRun.status.label("run_status"),
             ActionGroupRun.started_at.label("run_started_at"),
+            RemediationRun.artifacts.label("remediation_artifacts"),
         )
         .select_from(ActionGroupRunResult)
         .join(
@@ -112,6 +160,7 @@ def _load_latest_run_context(
             (ActionGroupRun.id == ActionGroupRunResult.group_run_id)
             & (ActionGroupRun.tenant_id == ActionGroupRunResult.tenant_id),
         )
+        .outerjoin(RemediationRun, RemediationRun.id == ActionGroupRun.remediation_run_id)
         .where(
             ActionGroupRunResult.tenant_id == tenant_id,
             ActionGroupRunResult.action_id == action_id,
@@ -120,16 +169,17 @@ def _load_latest_run_context(
     )
     row = session.execute(stmt).one_or_none()
     if row is None:
-        return None, None, None, None
+        return None, None, None, None, None
     return (
         _parse_execution_status(row.execution_status),
         row.run_status.value if hasattr(row.run_status, "value") else str(row.run_status),
         row.raw_result if isinstance(row.raw_result, dict) else None,
         _to_utc(row.run_started_at),
+        row.remediation_artifacts if isinstance(row.remediation_artifacts, dict) else None,
     )
 
 
-def derive_pending_confirmation_state(
+def derive_action_run_status(
     *,
     status_bucket: ActionGroupStatusBucket | str | None,
     latest_run_status: ActionGroupExecutionStatus | str | None,
@@ -156,13 +206,24 @@ def derive_pending_confirmation_state(
         or run_status_value not in {"finished", "success"}
         or finished_at is None
     ):
-        return {
+        base_state = {
             "pending_confirmation": False,
             "pending_confirmation_started_at": None,
             "pending_confirmation_deadline_at": None,
             "pending_confirmation_message": None,
             "pending_confirmation_severity": None,
+            "status_message": None,
+            "status_severity": None,
+            "followup_kind": None,
         }
+        if bucket_value == ActionGroupStatusBucket.run_successful_needs_followup.value:
+            return {
+                **base_state,
+                "status_message": SUCCESS_NEEDS_FOLLOWUP_MESSAGE,
+                "status_severity": "warning",
+                "followup_kind": SUCCESS_NEEDS_FOLLOWUP_KIND,
+            }
+        return base_state
 
     current_time = _to_utc(now) or _utcnow()
     deadline_at = finished_at + PENDING_CONFIRMATION_WINDOW
@@ -175,7 +236,27 @@ def derive_pending_confirmation_state(
             PENDING_CONFIRMATION_WARNING_MESSAGE if escalated else PENDING_CONFIRMATION_INFO_MESSAGE
         ),
         "pending_confirmation_severity": "warning" if escalated else "info",
+        "status_message": PENDING_CONFIRMATION_WARNING_MESSAGE if escalated else PENDING_CONFIRMATION_INFO_MESSAGE,
+        "status_severity": "warning" if escalated else "info",
+        "followup_kind": "awaiting_aws_confirmation",
     }
+
+
+def derive_pending_confirmation_state(
+    *,
+    status_bucket: ActionGroupStatusBucket | str | None,
+    latest_run_status: ActionGroupExecutionStatus | str | None,
+    latest_run_finished_at: datetime | None,
+    last_confirmed_at: datetime | None = None,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    return derive_action_run_status(
+        status_bucket=status_bucket,
+        latest_run_status=latest_run_status,
+        latest_run_finished_at=latest_run_finished_at,
+        last_confirmed_at=last_confirmed_at,
+        now=now,
+    )
 
 
 def _get_or_create_state(
@@ -273,18 +354,28 @@ def record_execution_result(
         if isinstance(execution_status, ActionGroupExecutionStatus)
         else ActionGroupExecutionStatus(str(execution_status))
     )
+    membership = _get_membership(session, action_id=action_id)
     state = record_execution_attempt(
         session,
         action_id=action_id,
         latest_run_id=latest_run_id,
         attempted_at=attempted_at or finished_at,
     )
-    if state is None:
+    if state is None or membership is None:
         return None
 
     # Execution success is distinct from AWS/source-of-truth confirmation.
     if parsed_status == ActionGroupExecutionStatus.success:
-        state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+        _, _, raw_result, _, remediation_artifacts = _load_latest_run_context(
+            session,
+            tenant_id=membership.tenant_id,
+            action_id=membership.action_id,
+            latest_run_id=latest_run_id,
+        )
+        state.latest_run_status_bucket = _successful_unconfirmed_bucket(
+            remediation_artifacts=remediation_artifacts,
+            raw_result=raw_result,
+        )
     else:
         state.latest_run_status_bucket = ActionGroupStatusBucket.run_not_successful
     logger.info(
@@ -392,7 +483,13 @@ def evaluate_confirmation_for_action(
         group_id=membership.group_id,
         action_id=membership.action_id,
     )
-    persisted_execution_status, persisted_run_status, persisted_raw_result, persisted_started_at = _load_latest_run_context(
+    (
+        persisted_execution_status,
+        persisted_run_status,
+        persisted_raw_result,
+        persisted_started_at,
+        remediation_artifacts,
+    ) = _load_latest_run_context(
         session,
         tenant_id=membership.tenant_id,
         action_id=membership.action_id,
@@ -456,10 +553,14 @@ def evaluate_confirmation_for_action(
             state.latest_run_status_bucket != ActionGroupStatusBucket.run_finished_metadata_only
             and (
                 parsed_execution_status == ActionGroupExecutionStatus.success
-            or state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation
+                or state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation
+                or state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_needs_followup
             )
         ):
-            state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+            state.latest_run_status_bucket = _successful_unconfirmed_bucket(
+                remediation_artifacts=remediation_artifacts,
+                raw_result=effective_raw_result,
+            )
         elif state.latest_run_status_bucket != ActionGroupStatusBucket.run_finished_metadata_only:
             state.latest_run_status_bucket = ActionGroupStatusBucket.run_not_successful
         logger.debug(

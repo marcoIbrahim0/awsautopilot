@@ -162,9 +162,13 @@ def _preserve_selection_support_tier(strategy_id: str) -> bool:
     return strategy_id in {
         # Family resolvers already determine whether these EC2.53 branches remain executable.
         "sg_restrict_public_ports_guided",
+        # Account-level account-setting remediations remain executable after warn/unknown checks.
+        "snapshot_block_all_sharing",
+        "snapshot_block_new_sharing_only",
         "cloudtrail_enable_guided",
         "config_enable_account_local_delivery",
         "config_enable_centralized_delivery",
+        "s3_account_block_public_access_pr_bundle",
         # Family resolvers already determine whether these branches stay executable.
         "s3_enforce_ssl_strict_deny",
         "s3_enforce_ssl_with_principal_exemptions",

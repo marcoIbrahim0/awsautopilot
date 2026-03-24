@@ -10,6 +10,7 @@ Core guarantees:
 - Recompute only appends membership for newly created actions.
 - Group counters are driven by `action_group_action_state`, not by ad-hoc execution outcomes.
 - `run_successful_confirmed` can only come from trusted AWS confirmation signals.
+- Successful PR bundle runs can now remain in a separate `run_successful_needs_followup` bucket when the bundle applied a safe additive change that is not expected to resolve the finding yet.
 
 ## Data Model
 
@@ -30,9 +31,14 @@ The migration includes additive backfill for existing actions into groups/member
 Service: `backend/services/action_run_confirmation.py`
 
 - Execution attempts/results always move state to `run_not_successful`.
-- Success is only promoted by trusted post-run confirmation:
+- Executable success is then classified into one of:
+  - `run_successful_pending_confirmation` when the change should resolve after AWS source-of-truth catches up
+  - `run_successful_needs_followup` when the change applied successfully but intentionally left a residual failing condition in place
+- Success is only promoted to `run_successful_confirmed` by trusted post-run confirmation:
   - Security Hub finding resolved signal.
   - Control-plane reconcile/shadow resolved signal.
+- Current explicit non-closing-success rule:
+  - `sg_restrict_public_ports_guided` with `access_mode=close_public` adds restricted ingress but keeps the unrestricted public rule, so the finding stays open by design and the UI tells the user to remove the public rule.
 
 No API path marks `run_successful_confirmed` directly from apply success.
 

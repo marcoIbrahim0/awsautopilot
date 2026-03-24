@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
 from backend.models.enums import RemediationRunMode, RemediationRunStatus
+from backend.services.remediation_run_retirement import stale_active_run_reason
 from backend.services.remediation_run_queue_contract import (
     grouped_run_signatures_match,
     normalize_grouped_run_artifact_signature,
 )
-
-STALE_PENDING_PR_BUNDLE_RUN_MINUTES = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +20,8 @@ class GroupedBundleRunRecord:
     status: str | None
     created_at: datetime | None
     artifacts: Mapping[str, Any] | None
+    started_at: datetime | None = None
+    updated_at: datetime | None = None
     group_run_id: str | None = None
 
 
@@ -57,13 +58,6 @@ def _as_utc(value: datetime | None) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
-def _is_stale_pending(record: GroupedBundleRunRecord, *, now: datetime) -> bool:
-    created_at = _as_utc(record.created_at)
-    if record.status != RemediationRunStatus.pending.value or created_at is None:
-        return False
-    return (now - created_at) >= timedelta(minutes=STALE_PENDING_PR_BUNDLE_RUN_MINUTES)
-
-
 def _matches_signature(record: GroupedBundleRunRecord, request_signature: Mapping[str, Any]) -> bool:
     if not _is_pr_only(record):
         return False
@@ -76,7 +70,7 @@ def filter_active_group_duplicate_runs(
     *,
     now: datetime,
 ) -> list[GroupedBundleRunRecord]:
-    return [record for record in records if _is_active(record) and not _is_stale_pending(record, now=now)]
+    return [record for record in records if _is_active(record) and stale_active_run_reason(record, now=now) is None]
 
 
 def find_active_grouped_duplicate(

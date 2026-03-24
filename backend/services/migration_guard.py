@@ -11,6 +11,7 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
 
 from backend.config import settings
+from backend.services.database_failover import build_sync_connect_args, resolve_database_urls
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def _alembic_config() -> Config:
     project_root = Path(__file__).resolve().parents[2]
     cfg = Config(str(project_root / "alembic.ini"))
     cfg.set_main_option("script_location", str(project_root / "alembic"))
-    cfg.set_main_option("sqlalchemy.url", settings.database_url_sync)
+    cfg.set_main_option("sqlalchemy.url", resolve_database_urls().sync_url)
     return cfg
 
 
@@ -38,7 +39,12 @@ def get_revision_status() -> RevisionStatus:
     script = ScriptDirectory.from_config(cfg)
     expected_heads = tuple(sorted(script.get_heads()))
 
-    engine = create_engine(settings.database_url_sync, pool_pre_ping=True)
+    resolved = resolve_database_urls()
+    engine = create_engine(
+        resolved.sync_url,
+        pool_pre_ping=True,
+        connect_args=build_sync_connect_args(resolved.sync_url),
+    )
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)

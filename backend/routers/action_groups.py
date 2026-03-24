@@ -104,6 +104,9 @@ class ActionGroupMemberResponse(BaseModel):
     pending_confirmation_deadline_at: str | None = None
     pending_confirmation_message: str | None = None
     pending_confirmation_severity: str | None = None
+    status_message: str | None = None
+    status_severity: str | None = None
+    followup_kind: str | None = None
     latest_run: ActionGroupMemberLatestRunResponse
 
 
@@ -454,6 +457,8 @@ def _build_grouped_run_record(group_run: ActionGroupRun, remediation_run: Remedi
         status=remediation_run.status.value if hasattr(remediation_run.status, "value") else str(remediation_run.status),
         created_at=remediation_run.created_at,
         artifacts=remediation_run.artifacts if isinstance(remediation_run.artifacts, dict) else None,
+        started_at=remediation_run.started_at,
+        updated_at=remediation_run.updated_at,
         group_run_id=str(group_run.id),
     )
 
@@ -732,6 +737,9 @@ async def get_action_group_detail(
                 pending_confirmation_deadline_at=_as_iso(member.get("pending_confirmation_deadline_at")),
                 pending_confirmation_message=member.get("pending_confirmation_message"),
                 pending_confirmation_severity=member.get("pending_confirmation_severity"),
+                status_message=member.get("status_message"),
+                status_severity=member.get("status_severity"),
+                followup_kind=member.get("followup_kind"),
                 latest_run=ActionGroupMemberLatestRunResponse(
                     id=member.get("latest_run_id"),
                     status=member.get("latest_run_status"),

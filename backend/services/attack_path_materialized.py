@@ -28,7 +28,7 @@ from backend.models.finding import Finding
 from backend.models.remediation_run import RemediationRun
 from backend.services.attack_paths import build_shared_attack_path_records
 from backend.services.remediation_handoff import build_action_implementation_artifacts
-from backend.utils.sqs import ATTACK_PATH_MATERIALIZATION_JOB_TYPE, QUEUE_PAYLOAD_SCHEMA_VERSION
+from backend.utils.sqs import ATTACK_PATH_MATERIALIZATION_JOB_TYPE, QUEUE_PAYLOAD_SCHEMA_VERSION, parse_queue_region
 
 logger = logging.getLogger("services.attack_path_materialized")
 
@@ -253,21 +253,39 @@ def maybe_schedule_attack_path_refresh(
     account_id: str | None = None,
     region: str | None = None,
 ) -> bool:
+    started = time.perf_counter()
     queue_url = str(getattr(settings, "SQS_INGEST_QUEUE_URL", "") or "").strip()
     if not queue_url:
+        logger.info(
+            "attack_path refresh skipped tenant_id=%s scope=(account=%s region=%s) reason=no_queue_url elapsed_ms=%s",
+            tenant_id,
+            account_id,
+            region,
+            int((time.perf_counter() - started) * 1000),
+        )
         return False
     try:
-        boto3.client("sqs", region_name=settings.AWS_REGION).send_message(
+        queue_region = parse_queue_region(queue_url)
+        boto3.client("sqs", region_name=queue_region).send_message(
             QueueUrl=queue_url,
             MessageBody=_attack_path_refresh_message(tenant_id=tenant_id, account_id=account_id, region=region),
+        )
+        logger.info(
+            "attack_path refresh enqueued tenant_id=%s scope=(account=%s region=%s) queue_region=%s elapsed_ms=%s",
+            tenant_id,
+            account_id,
+            region,
+            queue_region,
+            int((time.perf_counter() - started) * 1000),
         )
         return True
     except Exception:
         logger.warning(
-            "attack_path refresh enqueue failed tenant_id=%s scope=(account=%s region=%s)",
+            "attack_path refresh enqueue failed tenant_id=%s scope=(account=%s region=%s) elapsed_ms=%s",
             tenant_id,
             account_id,
             region,
+            int((time.perf_counter() - started) * 1000),
             exc_info=True,
         )
         return False

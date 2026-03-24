@@ -1,0 +1,75 @@
+{
+  "actions": [
+    {
+      "action_id": "4c8c904a-1683-4b29-ab97-3b6eb1b50260",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "e57d1452-509c-42cb-996d-1752c967cefe",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "318c8b1d-0a93-43f0-9b32-24014b6dbf15",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "82072bfa-7707-411b-ab5a-4b8a75bef104",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "8499e226-d3e8-4031-b225-9f905160ef5f",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "a8a06ade-67b9-4b5b-89df-1f4f430036a5",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "e97ffef8-f6f9-4417-ac99-0e83305df718",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "ece8a96e-8e9c-44de-a715-d0b7caa061c1",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "f67a9064-2a5f-47fd-820c-15797f354c7c",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "f9535173-3de1-44d0-8583-ee937e1ad811",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "8f64dd84-763c-4081-ad1e-9a36757b5c87",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "6ba6522c-a1d9-48bd-ab96-b6129f4363b8",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "770a4f18-3858-4efd-8973-a39d154fa919",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "257bc11e-c522-4419-8af5-be24ae406691",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

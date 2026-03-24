@@ -4,7 +4,10 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from sqlalchemy.exc import IntegrityError
+
 from backend.models.action import Action
+from backend.models.action_finding import ActionFinding
 from backend.models.aws_account import AwsAccount
 from backend.models.finding import Finding
 from backend.models.tenant import Tenant
@@ -44,6 +47,9 @@ class _ActionQuery:
     def __init__(self, existing):
         self._existing = existing
 
+    def options(self, *args, **kwargs):
+        return self
+
     def filter(self, *args, **kwargs):
         return self
 
@@ -51,18 +57,83 @@ class _ActionQuery:
         return self._existing
 
 
+class _LinkQuery:
+    def filter(self, *args, **kwargs):
+        return self
+
+    def all(self):
+        return []
+
+
 class _ActionSessionStub:
     def __init__(self, existing_action: Action | None = None):
         self._existing_action = existing_action
-        self.added: list[Action] = []
+        self.added: list[object] = []
 
     def query(self, model):
         if model is Action:
             return _ActionQuery(self._existing_action)
+        if model is ActionFinding:
+            return _LinkQuery()
         raise AssertionError(f"unexpected query model: {model}")
 
-    def add(self, obj: Action) -> None:
+    def add(self, obj: object) -> None:
         self.added.append(obj)
+
+    def begin_nested(self):
+        return _NullContextManager()
+
+    def flush(self, objs=None) -> None:  # noqa: ANN001
+        return None
+
+    def __contains__(self, obj: object) -> bool:
+        return obj in self.added
+
+    def expunge(self, obj: object) -> None:
+        if obj in self.added:
+            self.added.remove(obj)
+
+
+class _NullContextManager:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+        return False
+
+
+class _DuplicateInsertActionSessionStub(_ActionSessionStub):
+    def __init__(self, existing_action: Action):
+        super().__init__(existing_action=None)
+        self._recovered_action = existing_action
+        self.flush_calls = 0
+
+    def flush(self, objs=None) -> None:  # noqa: ANN001
+        self.flush_calls += 1
+        if self.flush_calls == 1:
+            self._existing_action = self._recovered_action
+            raise IntegrityError("insert", {}, Exception("duplicate"))
+
+
+def _s3_lifecycle_finding(tenant_id: uuid.UUID) -> Finding:
+    return Finding(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        account_id="696505809372",
+        region="eu-north-1",
+        finding_id="finding-s3-lifecycle",
+        source="security_hub",
+        severity_label="LOW",
+        control_id="S3.13",
+        resource_id="arn:aws:s3:::config-bucket-696505809372",
+        resource_type="AwsS3Bucket",
+        severity_normalized=18,
+        title="S3 general purpose buckets should have Lifecycle configurations",
+        description="Lifecycle configuration missing",
+        status="NEW",
+        in_scope=True,
+        raw_json={},
+    )
 
 
 class _ConfigClientHappy:
@@ -246,5 +317,51 @@ def test_expanded_sg_action_upsert_is_idempotent() -> None:
 
     assert created is False
     assert action is existing_action
-    assert session.added == []
+    assert len(session.added) == 1
+    assert isinstance(session.added[0], ActionFinding)
     assert action.resource_id == "sg-0de002382892023f5"
+
+
+def test_upsert_action_recovers_from_duplicate_insert_race() -> None:
+    tenant_id = uuid.uuid4()
+    finding = _s3_lifecycle_finding(tenant_id)
+    existing_action = Action(
+        tenant_id=tenant_id,
+        action_type="s3_bucket_lifecycle_configuration",
+        target_id="696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.11",
+        account_id="696505809372",
+        region="eu-north-1",
+        priority=18,
+        status="open",
+        title="old",
+        description="old",
+        control_id="S3.11",
+        resource_id="arn:aws:s3:::config-bucket-696505809372",
+        resource_type="AwsS3Bucket",
+    )
+    session = _DuplicateInsertActionSessionStub(existing_action)
+    group = [
+        ExpandedFindingTarget(
+            finding=finding,
+            resource_id="arn:aws:s3:::config-bucket-696505809372",
+            resource_type="AwsS3Bucket",
+        )
+    ]
+    action_cache: dict[tuple[uuid.UUID, str, str, str, str | None], Action] = {}
+
+    action, created, finding_ids, allow_multi = _upsert_action_and_sync_links(
+        session,
+        tenant_id,
+        group,
+        action_cache=action_cache,
+    )
+
+    assert created is False
+    assert allow_multi is False
+    assert finding_ids == [finding.id]
+    assert action is existing_action
+    assert session.flush_calls == 1
+    assert len(session.added) == 1
+    assert isinstance(session.added[0], ActionFinding)
+    assert existing_action.title == "S3 general purpose buckets should have Lifecycle configurations"
+    assert action_cache[(tenant_id, existing_action.action_type, existing_action.target_id, existing_action.account_id, existing_action.region)] is existing_action

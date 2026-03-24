@@ -6,12 +6,12 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import case, func, select
+from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -23,13 +23,14 @@ from backend.models.action_finding import ActionFinding
 from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
+from backend.models.exception import Exception
 from backend.models.finding import Finding
-from backend.models.enums import RemediationRunMode
+from backend.models.enums import EntityType, RemediationRunMode
 from backend.models.remediation_run import RemediationRun
 from backend.models.tenant import Tenant
 from backend.models.user import User
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
-from backend.services.action_run_confirmation import derive_pending_confirmation_state
+from backend.services.action_run_confirmation import derive_action_run_status
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,9 @@ class FindingResponse(BaseModel):
     pending_confirmation_deadline_at: str | None = None
     pending_confirmation_message: str | None = None
     pending_confirmation_severity: str | None = None
+    status_message: str | None = None
+    status_severity: str | None = None
+    followup_kind: str | None = None
 
 
 class FindingsListResponse(BaseModel):
@@ -156,6 +160,9 @@ class FindingGroupItem(BaseModel):
     pending_confirmation_deadline_at: str | None = None
     pending_confirmation_message: str | None = None
     pending_confirmation_severity: str | None = None
+    status_message: str | None = None
+    status_severity: str | None = None
+    followup_kind: str | None = None
 
 
 class FindingsGroupedResponse(BaseModel):
@@ -203,6 +210,7 @@ def finding_to_response(
     effective_status = _effective_status_from_values(
         canonical_status=str(getattr(finding, "status", "") or ""),
         shadow_status_normalized=str(getattr(finding, "shadow_status_normalized", "") or ""),
+        has_active_exception=bool(state.get("exception_id")),
     )
 
     return FindingResponse(
@@ -251,6 +259,9 @@ def finding_to_response(
         pending_confirmation_deadline_at=hints.get("pending_confirmation_deadline_at"),
         pending_confirmation_message=hints.get("pending_confirmation_message"),
         pending_confirmation_severity=hints.get("pending_confirmation_severity"),
+        status_message=hints.get("status_message"),
+        status_severity=hints.get("status_severity"),
+        followup_kind=hints.get("followup_kind"),
     )
 
 
@@ -320,7 +331,7 @@ async def get_remediation_hints_for_findings(
             continue
         if finding_uuid in hints_by_finding:
             continue
-        pending_confirmation = derive_pending_confirmation_state(
+        status_note = derive_action_run_status(
             status_bucket=row[7],
             latest_run_status=row[9],
             latest_run_finished_at=row[10],
@@ -340,19 +351,22 @@ async def get_remediation_hints_for_findings(
                 row[9].value if row[9] is not None and hasattr(row[9], "value") else str(row[9]) if row[9] else None
             ),
             "latest_pr_bundle_run_id": None,
-            "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
+            "pending_confirmation": bool(status_note["pending_confirmation"]),
             "pending_confirmation_started_at": (
-                pending_confirmation["pending_confirmation_started_at"].isoformat()
-                if pending_confirmation["pending_confirmation_started_at"]
+                status_note["pending_confirmation_started_at"].isoformat()
+                if status_note["pending_confirmation_started_at"]
                 else None
             ),
             "pending_confirmation_deadline_at": (
-                pending_confirmation["pending_confirmation_deadline_at"].isoformat()
-                if pending_confirmation["pending_confirmation_deadline_at"]
+                status_note["pending_confirmation_deadline_at"].isoformat()
+                if status_note["pending_confirmation_deadline_at"]
                 else None
             ),
-            "pending_confirmation_message": pending_confirmation["pending_confirmation_message"],
-            "pending_confirmation_severity": pending_confirmation["pending_confirmation_severity"],
+            "pending_confirmation_message": status_note["pending_confirmation_message"],
+            "pending_confirmation_severity": status_note["pending_confirmation_severity"],
+            "status_message": status_note["status_message"],
+            "status_severity": status_note["status_severity"],
+            "followup_kind": status_note["followup_kind"],
         }
         action_ids.add(action_uuid)
 
@@ -473,7 +487,23 @@ def _parse_status_filter_values(raw_value: str) -> list[str]:
     return [part.strip().upper() for part in raw_value.split(",") if part.strip()]
 
 
-def _effective_status_from_values(canonical_status: str | None, shadow_status_normalized: str | None) -> str:
+def _active_finding_exception_exists_expr(reference_time: datetime | None = None) -> object:
+    current_time = reference_time or datetime.now(timezone.utc)
+    return exists(
+        select(Exception.id).where(
+            Exception.tenant_id == Finding.tenant_id,
+            Exception.entity_type == EntityType.finding,
+            Exception.entity_id == Finding.id,
+            Exception.expires_at > current_time,
+        )
+    )
+
+
+def _effective_status_from_values(
+    canonical_status: str | None,
+    shadow_status_normalized: str | None,
+    has_active_exception: bool = False,
+) -> str:
     """
     Resolve the effective status shown to users and used for findings filters.
 
@@ -482,6 +512,8 @@ def _effective_status_from_values(canonical_status: str | None, shadow_status_no
     - shadow RESOLVED always presents as RESOLVED
     - shadow OPEN reopens canonically RESOLVED findings
     """
+    if has_active_exception:
+        return "SUPPRESSED"
     canonical = str(canonical_status or "").strip().upper()
     shadow = _normalize_shadow_status(shadow_status_normalized)
     if shadow == "RESOLVED":
@@ -491,10 +523,12 @@ def _effective_status_from_values(canonical_status: str | None, shadow_status_no
     return canonical
 
 
-def _effective_status_sql_expr() -> object:
+def _effective_status_sql_expr(reference_time: datetime | None = None) -> object:
     shadow_status = func.upper(func.coalesce(Finding.shadow_status_normalized, ""))
     canonical_status = func.upper(func.coalesce(Finding.status, ""))
+    has_active_exception = _active_finding_exception_exists_expr(reference_time)
     return case(
+        (has_active_exception, "SUPPRESSED"),
         (shadow_status == "RESOLVED", "RESOLVED"),
         ((shadow_status == "OPEN") & (canonical_status == "RESOLVED"), "NEW"),
         else_=canonical_status,
@@ -650,7 +684,7 @@ async def _fetch_action_hints_for_group_rows(
             continue
         if group_key in hints:
             continue
-        pending_confirmation = derive_pending_confirmation_state(
+        status_note = derive_action_run_status(
             status_bucket=row[7],
             latest_run_status=row[9],
             latest_run_finished_at=row[10],
@@ -669,19 +703,22 @@ async def _fetch_action_hints_for_group_rows(
             "remediation_action_group_latest_run_status": (
                 row[9].value if row[9] is not None and hasattr(row[9], "value") else str(row[9]) if row[9] else None
             ),
-            "pending_confirmation": bool(pending_confirmation["pending_confirmation"]),
+            "pending_confirmation": bool(status_note["pending_confirmation"]),
             "pending_confirmation_started_at": (
-                pending_confirmation["pending_confirmation_started_at"].isoformat()
-                if pending_confirmation["pending_confirmation_started_at"]
+                status_note["pending_confirmation_started_at"].isoformat()
+                if status_note["pending_confirmation_started_at"]
                 else None
             ),
             "pending_confirmation_deadline_at": (
-                pending_confirmation["pending_confirmation_deadline_at"].isoformat()
-                if pending_confirmation["pending_confirmation_deadline_at"]
+                status_note["pending_confirmation_deadline_at"].isoformat()
+                if status_note["pending_confirmation_deadline_at"]
                 else None
             ),
-            "pending_confirmation_message": pending_confirmation["pending_confirmation_message"],
-            "pending_confirmation_severity": pending_confirmation["pending_confirmation_severity"],
+            "pending_confirmation_message": status_note["pending_confirmation_message"],
+            "pending_confirmation_severity": status_note["pending_confirmation_severity"],
+            "status_message": status_note["status_message"],
+            "status_severity": status_note["status_severity"],
+            "followup_kind": status_note["followup_kind"],
         }
     return hints
 
@@ -708,6 +745,9 @@ def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
         pending_confirmation_deadline_at=hint.get("pending_confirmation_deadline_at"),
         pending_confirmation_message=hint.get("pending_confirmation_message"),
         pending_confirmation_severity=hint.get("pending_confirmation_severity"),
+        status_message=hint.get("status_message"),
+        status_severity=hint.get("status_severity"),
+        followup_kind=hint.get("followup_kind"),
     )
 
 

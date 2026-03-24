@@ -1,0 +1,76 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 1,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 0
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "0ca64b94-9dcb-4a97-91b0-27b0341865bc"
+    ],
+    "action_type": "ebs_default_encryption",
+    "confirmed": 0,
+    "control_ids": [
+      "EC2.7"
+    ],
+    "latest_artifacts": {
+      "direct_fix_approval": {
+        "approval_path": "api.remediation_runs.create_direct_fix",
+        "approved_at": "2026-03-14T19:59:51.214173+00:00",
+        "approved_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+        "kind": "direct_fix_execute",
+        "mode": "direct_fix"
+      },
+      "queue_resend_attempts": [
+        "2026-03-14T19:59:59.697492+00:00"
+      ],
+      "selected_strategy": "ebs_enable_default_encryption_aws_managed_kms",
+      "strategy_inputs": {}
+    },
+    "latest_run_id": "3c47f1bb-2d8f-4489-b498-22b72405b315",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 1,
+    "region": "us-east-1",
+    "representative_action_id": "0ca64b94-9dcb-4a97-91b0-27b0341865bc",
+    "run_not_successful": 0,
+    "status": "open",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "total_actions": 1
+  },
+  "error": "Unknown strategy_id 'ebs_enable_default_encryption_aws_managed_kms' for action_type 'ebs_default_encryption'.",
+  "request_candidates": [
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_default_encryption",
+      "bucket_creation_acknowledged": false,
+      "region": "us-east-1",
+      "risk_acknowledged": false,
+      "status": "open",
+      "strategy_id": "ebs_enable_default_encryption_aws_managed_kms",
+      "strategy_inputs": {}
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_default_encryption",
+      "bucket_creation_acknowledged": false,
+      "region": "us-east-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_default_encryption",
+      "bucket_creation_acknowledged": false,
+      "region": "us-east-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "ebs_enable_default_encryption_customer_kms_pr_bundle"
+    }
+  ],
+  "status": "failed"
+}

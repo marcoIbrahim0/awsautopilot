@@ -4,6 +4,42 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Restore `/exports` as navbar workspace and fix active gradient icon visibility (2026-03-24)](task_log.md#restore-exports-as-navbar-workspace-and-fix-active-gradient-icon-visibility-2026-03-24)
+  - Removed the duplicate `Exports & Compliance` Settings tab, restored `/exports` as the real exports/compliance workspace, and redirected legacy settings export links there.
+  - Fixed the shared active-state gradient styling so sidebar/nav/button icons no longer disappear against a white background when the active surface should be blue.
+- [Fix findings-page suppressed filter to honor active exceptions (2026-03-24)](task_log.md#fix-findings-page-suppressed-filter-to-honor-active-exceptions-2026-03-24)
+  - Updated findings effective-status resolution so active finding exceptions now surface as `SUPPRESSED` in the API response as well as on the UI.
+  - Fixed both flat and grouped findings status filtering so `status=SUPPRESSED` includes actively suppressed findings instead of only raw workflow-suppressed rows.
+- [Refine floating Ask AI icon toward the Ocypheris obelisk mark (2026-03-24)](task_log.md#refine-floating-ask-ai-icon-toward-the-ocypheris-obelisk-mark-2026-03-24)
+  - Replaced the floating chatbot’s face-like icon with a smaller geometric obelisk-inspired mark based on the existing Ocypheris brand icon.
+  - Reduced the icon weight across the launcher, chat header, and empty state so the widget keeps the stronger redesign without feeling mascot-like.
+- [Fix recompute pipeline stall on local live tenant/account before deploy (2026-03-24)](task_log.md#fix-recompute-pipeline-stall-on-local-live-tenantaccount-before-deploy-2026-03-24)
+  - Replaced the per-action action-group membership/state projection path with a set-based bulk flow, added phase-level recompute/worker timings, and proved the shared live scoped recompute no longer hangs indefinitely on tenant `9f7616d8-af04-43ca-99cd-713625357b70` / account `696505809372`.
+  - The retained local proof shows the command now completes in `79436ms`, with the remaining dominant cost isolated to `group_projection` (`39713ms`) rather than an unbounded `compute_actions` stall, and no deploy was performed.
+- [Deploy current backend + frontend workspace updates after findings-page fixes (2026-03-24)](task_log.md#deploy-current-backend--frontend-workspace-updates-after-findings-page-fixes-2026-03-24)
+  - Deployed the full current root and nested `frontend/` dirty worktrees with backend image tag `20260324T171736Z` and frontend Cloudflare version `63122072-7d13-4905-a945-4281e065519a`.
+  - Live verification returned `HTTP/2 200` for both `https://api.ocypheris.com/health` and `https://ocypheris.com`, but the deployed backend workspace still had `15` failing remediation-runs tests at deploy time.
+- [Refresh floating Ask AI launcher and composer identity (2026-03-24)](task_log.md#refresh-floating-ask-ai-launcher-and-composer-identity-2026-03-24)
+  - Reworked the floating `Ask AI` widget so the launcher, empty state, and open header all use a stronger branded assistant glyph instead of a generic chat icon.
+  - Upgraded the composer CTA into a larger labeled `Send now` action so the chatbot feels more intentional and visually distinct.
+- [Fix findings-page suppressed badges, grouped-card action rail, and multi-level group-by rendering (2026-03-24)](task_log.md#fix-findings-page-suppressed-badges-grouped-card-action-rail-and-multi-level-group-by-rendering-2026-03-24)
+  - Flat findings cards now show a visible `Suppressed` badge from workflow state, even when the richer expiry badge data is not present.
+  - Grouped findings cards now expose `Suppress Group`, `Acknowledge Risk`, and `Mark False Positive` inline, keep `View PR bundle group` in the main action row, and honor every selected grouping dimension in the nested renderer.
+- [Revalidate remember-me login persistence and add password visibility toggle (2026-03-24)](task_log.md#revalidate-remember-me-login-persistence-and-add-password-visibility-toggle-2026-03-24)
+  - Revalidated the existing `remember_me` login, MFA, cookie, and refresh behavior with the focused backend auth regression slice instead of changing the server contract.
+  - Added an accessible login-page password visibility toggle and extended the focused UI test coverage to prove both the toggle and remember-me submission behavior.
+- [Deploy current backend + frontend dirty workspace on production (2026-03-24)](task_log.md#deploy-current-backend--frontend-dirty-workspace-on-production-2026-03-24)
+  - Deployed the full current root and nested `frontend/` dirty worktrees as explicitly requested, including pre-existing changes outside this session.
+  - Backend image tag `20260324T165727Z` and frontend Cloudflare version `21c44f73-59ae-4548-b128-b0a37a97b333` both rolled out successfully; `https://api.ocypheris.com/health` and `https://ocypheris.com` returned `200`.
+- [Compact action-group follow-up UX and add action-detail CTA (2026-03-24)](task_log.md#compact-action-group-follow-up-ux-and-add-action-detail-cta-2026-03-24)
+  - Added a `Back to Findings` link, removed the low-signal `Generation not successful` / `Not generated yet` summary cards, and narrowed the member section to actual `Generated and needs follow-up` rows only.
+  - Added a per-member `Open action and refresh state` CTA and compacted the generation timeline so the latest run stays open while older runs collapse behind an explicit reveal button.
+- [Run local E2E for non-closing success state and deploy verified fix to production (2026-03-24)](task_log.md#run-local-e2e-for-non-closing-success-state-and-deploy-verified-fix-to-production-2026-03-24)
+  - Verified localhost first on `/actions/group?group_id=825acfd7-d0ec-4dd0-806d-b1628ab3e35e`, confirming the new `Post-generation follow-up` summary and `Generated and needs follow-up` member badges for the stale `EC2.53` group.
+  - Deployed backend image tag `20260324T155247Z` plus frontend Cloudflare version `64ee04a7-65db-4dd0-9956-1d37c54eadc9`, then verified the same group renders the new non-closing-success UX live on `https://ocypheris.com`.
+- [Add non-closing success state for additive PR bundle runs and reproject stale EC2.53 rows (2026-03-24)](task_log.md#add-non-closing-success-state-for-additive-pr-bundle-runs-and-reproject-stale-ec253-rows-2026-03-24)
+  - Added the new persisted `run_successful_needs_followup` action-group bucket plus generalized status-note projection so the UI can distinguish true AWS-confirmation waits from successful but non-closing additive remediations.
+  - Wired the first explicit rule for `sg_restrict_public_ports_guided` with `access_mode=close_public`, added a focused reprojection script, applied Alembic revision `0050_action_group_needs_followup_bucket`, and reprojected the live stale `EC2.53` rows for account `696505809372` into the new bucket.
 - [Conditionally hide Tenant ID Configuration UI (2026-03-24)](task_log.md#conditionally-hide-tenant-id-configuration-ui-2026-03-24)
   - Updated all dashboard pages to conditionally hide the `TenantIdForm` component during authentication loading and for unauthenticated users.
   - Applied the logic `!showContent && !authLoading && isAuthenticated` to the Findings, Accounts, Top Risks, Actions Group, Findings Detail, Exceptions, and PR Bundle pages.

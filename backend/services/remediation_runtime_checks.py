@@ -38,8 +38,6 @@ _STRICT_ACCESS_PATH_STRATEGIES = frozenset(
         "s3_migrate_cloudfront_oac_private",
         "s3_enforce_ssl_strict_deny",
         "ssm_disable_public_document_sharing",
-        "snapshot_block_all_sharing",
-        "snapshot_block_new_sharing_only",
     }
 )
 _KMS_ARN_PATTERN = re.compile(

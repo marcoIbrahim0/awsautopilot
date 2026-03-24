@@ -1,0 +1,29 @@
+{
+  "action_id": "35459683-0878-4777-a499-81e80829c8a2",
+  "action_type": "enable_guardduty",
+  "blocked_reasons": [],
+  "control_id": "GuardDuty.1",
+  "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+  "decision_summary": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/01-aws-account-696505809372-35459683",
+  "has_runnable_terraform": false,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "guardduty_enable_pr_bundle",
+  "rejected_profiles": [],
+  "strategy_id": "guardduty_enable_pr_bundle",
+  "strategy_inputs": {},
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "GuardDuty should be enabled"
+}

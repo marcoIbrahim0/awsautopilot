@@ -84,6 +84,9 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
         "pending_confirmation_deadline_at": None,
         "pending_confirmation_message": None,
         "pending_confirmation_severity": None,
+        "status_message": None,
+        "status_severity": None,
+        "followup_kind": None,
     }
     assert hints[("Config.1", "AwsAccount", "696505809372", "eu-north-1")] == {
         "remediation_action_id": str(action_id_account),
@@ -99,6 +102,9 @@ async def test_fetch_action_hints_for_group_rows_keeps_same_control_groups_isola
         "pending_confirmation_deadline_at": None,
         "pending_confirmation_message": None,
         "pending_confirmation_severity": None,
+        "status_message": None,
+        "status_severity": None,
+        "followup_kind": None,
     }
 
 
@@ -183,6 +189,9 @@ async def test_list_findings_grouped_returns_group_specific_remediation_action_h
     assert response.items[0].pending_confirmation is True
     assert response.items[0].pending_confirmation_message is not None
     assert response.items[0].pending_confirmation_severity == "info"
+    assert response.items[0].status_message is not None
+    assert response.items[0].status_severity == "info"
+    assert response.items[0].followup_kind == "awaiting_aws_confirmation"
 
 
 @pytest.mark.asyncio
@@ -296,3 +305,4 @@ async def test_list_findings_grouped_splits_multi_region_control_rows_and_keeps_
     assert response.items[0].pending_confirmation is False
     assert response.items[1].pending_confirmation is True
     assert response.items[1].pending_confirmation_severity == "info"
+    assert response.items[1].status_severity == "info"

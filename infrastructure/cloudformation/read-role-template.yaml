@@ -128,6 +128,7 @@ Resources:
                       {"Sid": "Ec2SecurityGroupReadChecks", "Effect": "Allow", "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeSecurityGroupRules"], "Resource": "*"},
                       {"Sid": "S3AccessPathReadChecks", "Effect": "Allow", "Action": ["s3:GetBucketPolicyStatus", "s3:GetBucketPolicy", "s3:GetBucketAcl", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation", "s3:GetEncryptionConfiguration", "s3:GetBucketLogging", "s3:GetLifecycleConfiguration"], "Resource": "arn:aws:s3:::*"},
                       {"Sid": "S3InventoryListBuckets", "Effect": "Allow", "Action": ["s3:ListAllMyBuckets"], "Resource": "*"},
+                      {"Sid": "S3AccountInventoryChecks", "Effect": "Allow", "Action": ["s3:GetAccountPublicAccessBlock"], "Resource": "*"},
                       {"Sid": "CloudTrailInventoryChecks", "Effect": "Allow", "Action": ["cloudtrail:DescribeTrails", "cloudtrail:GetTrailStatus"], "Resource": "*"},
                       {"Sid": "IAMInventoryChecks", "Effect": "Allow", "Action": ["iam:GetAccountSummary"], "Resource": "*"},
                       {"Sid": "Ec2InventoryChecks", "Effect": "Allow", "Action": ["ec2:GetEbsEncryptionByDefault", "ec2:GetSnapshotBlockPublicAccessState"], "Resource": "*"},

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from sqlalchemy import case, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -15,9 +17,18 @@ from backend.models.action_group_action_state import ActionGroupActionState
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.enums import ActionGroupStatusBucket
-from backend.services.action_run_confirmation import derive_pending_confirmation_state
+from backend.services.action_run_confirmation import derive_action_run_status
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _PendingGroup:
+    tenant_id: uuid.UUID
+    action_type: str
+    account_id: str
+    region: str | None
+    group_key: str
 
 
 def _normalized_region(region: str | None) -> str:
@@ -41,31 +52,14 @@ def resolve_group_for_action(session: Session, action: Action) -> ActionGroup:
 
     Grouping basis is fixed: tenant + action_type + account_id + region.
     """
-    key = build_group_key(action.tenant_id, action.action_type, action.account_id, action.region)
-    existing = session.query(ActionGroup).filter(ActionGroup.group_key == key).one_or_none()
-    if existing is not None:
-        return existing
-
-    group = ActionGroup(
-        tenant_id=action.tenant_id,
-        action_type=action.action_type,
-        account_id=action.account_id,
-        region=action.region,
-        group_key=key,
-        metadata_json={"source": "auto_assign"},
+    group = _groups_by_key(session, [build_group_key(action.tenant_id, action.action_type, action.account_id, action.region)])
+    if group:
+        return next(iter(group.values()))
+    _ensure_groups(
+        session,
+        [_pending_group_for_action(action)],
     )
-
-    try:
-        with session.begin_nested():
-            session.add(group)
-            session.flush()
-    except IntegrityError:
-        existing = session.query(ActionGroup).filter(ActionGroup.group_key == key).one_or_none()
-        if existing is not None:
-            return existing
-        raise
-
-    return group
+    return resolve_group_for_action(session, action)
 
 
 def _ensure_action_state_projection(
@@ -96,6 +90,158 @@ def _ensure_action_state_projection(
     )
 
 
+def _pending_group_for_action(action: Action) -> _PendingGroup:
+    return _PendingGroup(
+        tenant_id=action.tenant_id,
+        action_type=action.action_type,
+        account_id=action.account_id,
+        region=action.region,
+        group_key=build_group_key(action.tenant_id, action.action_type, action.account_id, action.region),
+    )
+
+
+def _normalized_source(source: str) -> str:
+    normalized = (source or "ingest").strip()[:32]
+    return normalized or "ingest"
+
+
+def _dedupe_actions(actions: Sequence[Action] | Iterable[Action]) -> list[Action]:
+    ordered: list[Action] = []
+    seen: set[uuid.UUID] = set()
+    for action in actions:
+        action_id = getattr(action, "id", None)
+        if action_id is None or action_id in seen:
+            continue
+        seen.add(action_id)
+        ordered.append(action)
+    return ordered
+
+
+def _groups_by_key(session: Session, group_keys: Iterable[str]) -> dict[str, ActionGroup]:
+    keys = [key for key in group_keys if key]
+    if not keys:
+        return {}
+    result = session.execute(select(ActionGroup).where(ActionGroup.group_key.in_(keys)))
+    return {row.group_key: row for row in result.scalars().all()}
+
+
+def _memberships_by_action_id(
+    session: Session,
+    action_ids: Iterable[uuid.UUID],
+) -> dict[uuid.UUID, ActionGroupMembership]:
+    ids = list(action_ids)
+    if not ids:
+        return {}
+    result = session.execute(select(ActionGroupMembership).where(ActionGroupMembership.action_id.in_(ids)))
+    return {row.action_id: row for row in result.scalars().all()}
+
+
+def _existing_state_keys(
+    session: Session,
+    action_ids: Iterable[uuid.UUID],
+) -> set[tuple[uuid.UUID, uuid.UUID, uuid.UUID]]:
+    ids = list(action_ids)
+    if not ids:
+        return set()
+    result = session.execute(
+        select(
+            ActionGroupActionState.tenant_id,
+            ActionGroupActionState.group_id,
+            ActionGroupActionState.action_id,
+        ).where(ActionGroupActionState.action_id.in_(ids))
+    )
+    return set(result.all())
+
+
+def _ensure_groups(session: Session, groups: Sequence[_PendingGroup]) -> dict[str, ActionGroup]:
+    pending = {group.group_key: group for group in groups}
+    existing = _groups_by_key(session, pending)
+    missing = [group for key, group in pending.items() if key not in existing]
+    if missing:
+        session.execute(
+            pg_insert(ActionGroup.__table__)
+            .values(
+                [
+                    {
+                        "tenant_id": group.tenant_id,
+                        "action_type": group.action_type,
+                        "account_id": group.account_id,
+                        "region": group.region,
+                        "group_key": group.group_key,
+                        "metadata": {"source": "auto_assign"},
+                    }
+                    for group in missing
+                ]
+            )
+            .on_conflict_do_nothing(index_elements=[ActionGroup.__table__.c.group_key])
+        )
+        existing = _groups_by_key(session, pending)
+    return existing
+
+
+def _ensure_memberships(
+    session: Session,
+    actions: Sequence[Action],
+    groups_by_key: dict[str, ActionGroup],
+    source: str,
+) -> dict[uuid.UUID, ActionGroupMembership]:
+    existing = _memberships_by_action_id(session, [action.id for action in actions])
+    missing_rows = []
+    for action in actions:
+        if action.id in existing:
+            continue
+        group = groups_by_key[_pending_group_for_action(action).group_key]
+        missing_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "tenant_id": action.tenant_id,
+                "group_id": group.id,
+                "action_id": action.id,
+                "source": source,
+            }
+        )
+    if missing_rows:
+        session.execute(
+            pg_insert(ActionGroupMembership.__table__)
+            .values(missing_rows)
+            .on_conflict_do_nothing(index_elements=[ActionGroupMembership.__table__.c.action_id])
+        )
+        existing = _memberships_by_action_id(session, [action.id for action in actions])
+    return existing
+
+
+def _ensure_action_states(
+    session: Session,
+    memberships: Sequence[ActionGroupMembership],
+) -> None:
+    existing = _existing_state_keys(session, [membership.action_id for membership in memberships])
+    missing_rows = []
+    for membership in memberships:
+        state_key = (membership.tenant_id, membership.group_id, membership.action_id)
+        if state_key in existing:
+            continue
+        missing_rows.append(
+            {
+                "tenant_id": membership.tenant_id,
+                "group_id": membership.group_id,
+                "action_id": membership.action_id,
+                "latest_run_status_bucket": ActionGroupStatusBucket.not_run_yet.value,
+            }
+        )
+    if missing_rows:
+        session.execute(
+            pg_insert(ActionGroupActionState.__table__)
+            .values(missing_rows)
+            .on_conflict_do_nothing(
+                index_elements=[
+                    ActionGroupActionState.__table__.c.tenant_id,
+                    ActionGroupActionState.__table__.c.group_id,
+                    ActionGroupActionState.__table__.c.action_id,
+                ]
+            )
+        )
+
+
 def assign_action_to_group_once(
     session: Session,
     action: Action,
@@ -106,38 +252,10 @@ def assign_action_to_group_once(
 
     If membership already exists, it is returned unchanged.
     """
-    existing = (
-        session.query(ActionGroupMembership)
-        .filter(ActionGroupMembership.action_id == action.id)
-        .one_or_none()
-    )
-    if existing is not None:
-        _ensure_action_state_projection(session, existing.tenant_id, existing.group_id, existing.action_id)
-        return existing
-
-    group = resolve_group_for_action(session, action)
-    membership = ActionGroupMembership(
-        tenant_id=action.tenant_id,
-        group_id=group.id,
-        action_id=action.id,
-        source=(source or "ingest").strip()[:32] or "ingest",
-    )
-    try:
-        with session.begin_nested():
-            session.add(membership)
-            session.flush()
-    except IntegrityError:
-        existing = (
-            session.query(ActionGroupMembership)
-            .filter(ActionGroupMembership.action_id == action.id)
-            .one_or_none()
-        )
-        if existing is None:
-            raise
-        membership = existing
-
-    _ensure_action_state_projection(session, membership.tenant_id, membership.group_id, membership.action_id)
-    return membership
+    memberships = ensure_membership_for_actions(session, [action], source=source)
+    if not memberships:
+        raise ValueError("action must have a persisted id before group assignment")
+    return memberships[0]
 
 
 def ensure_membership_for_actions(
@@ -146,9 +264,14 @@ def ensure_membership_for_actions(
     source: str = "ingest",
 ) -> list[ActionGroupMembership]:
     """Idempotently ensure immutable membership for each action."""
-    memberships: list[ActionGroupMembership] = []
-    for action in actions:
-        memberships.append(assign_action_to_group_once(session, action=action, source=source))
+    ordered_actions = _dedupe_actions(actions)
+    if not ordered_actions:
+        return []
+
+    groups_by_key = _ensure_groups(session, [_pending_group_for_action(action) for action in ordered_actions])
+    memberships_by_action = _ensure_memberships(session, ordered_actions, groups_by_key, _normalized_source(source))
+    memberships = [memberships_by_action[action.id] for action in ordered_actions if action.id in memberships_by_action]
+    _ensure_action_states(session, memberships)
     return memberships
 
 
@@ -181,6 +304,7 @@ async def list_groups_with_counters(
                     ActionGroupActionState.latest_run_status_bucket.in_(
                         [
                             ActionGroupStatusBucket.run_successful_pending_confirmation,
+                            ActionGroupStatusBucket.run_successful_needs_followup,
                             ActionGroupStatusBucket.run_successful_confirmed,
                         ]
                     ),
@@ -358,6 +482,7 @@ async def get_group_detail(
         )
         if bucket in {
             ActionGroupStatusBucket.run_successful_pending_confirmation.value,
+            ActionGroupStatusBucket.run_successful_needs_followup.value,
             ActionGroupStatusBucket.run_successful_confirmed.value,
         }:
             counters["run_successful"] += 1
@@ -395,7 +520,7 @@ async def get_group_detail(
                 ),
                 "latest_run_started_at": row.latest_run_started_at,
                 "latest_run_finished_at": row.latest_run_finished_at,
-                **derive_pending_confirmation_state(
+                **derive_action_run_status(
                     status_bucket=bucket,
                     latest_run_status=(
                         row.latest_run_status.value

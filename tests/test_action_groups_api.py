@@ -204,6 +204,9 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
                             "pending_confirmation_deadline_at": deadline.isoformat(),
                             "pending_confirmation_message": "Waiting for AWS confirmation.",
                             "pending_confirmation_severity": "info",
+                            "status_message": "Waiting for AWS confirmation.",
+                            "status_severity": "info",
+                            "followup_kind": "awaiting_aws_confirmation",
                         },
                         {
                             "action_id": str(uuid.uuid4()),
@@ -226,6 +229,9 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
                             "pending_confirmation_deadline_at": None,
                             "pending_confirmation_message": None,
                             "pending_confirmation_severity": None,
+                            "status_message": None,
+                            "status_severity": None,
+                            "followup_kind": None,
                         }
                     ],
                 }
@@ -251,6 +257,9 @@ def test_get_action_group_detail_includes_pending_confirmation_fields(client: Te
     assert member["pending_confirmation"] is True
     assert member["pending_confirmation_message"] == "Waiting for AWS confirmation."
     assert member["pending_confirmation_severity"] == "info"
+    assert member["status_message"] == "Waiting for AWS confirmation."
+    assert member["status_severity"] == "info"
+    assert member["followup_kind"] == "awaiting_aws_confirmation"
     assert payload["counters"]["metadata_only"] == 1
     assert payload["members"][1]["status_bucket"] == "run_finished_metadata_only"
     assert payload["can_generate_bundle"] is False

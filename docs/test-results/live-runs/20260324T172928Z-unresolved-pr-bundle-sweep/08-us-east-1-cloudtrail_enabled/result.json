@@ -1,0 +1,81 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 1,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 0
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "3301b44c-8846-49c2-9f27-823e6a77e559"
+    ],
+    "action_type": "cloudtrail_enabled",
+    "confirmed": 0,
+    "control_ids": [
+      "CLOUDTRAIL.1"
+    ],
+    "latest_artifacts": {
+      "auto_retired_stale_run": {
+        "previous_status": "pending",
+        "reason": "stale_pending_no_progress",
+        "retired_at": "2026-03-24T17:14:18.937414+00:00"
+      },
+      "resolution": {
+        "blocked_reasons": [],
+        "decision_rationale": "Caller selected remediation profile 'cloudtrail_enable_guided' within strategy 'cloudtrail_enable_guided'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "preservation_summary": {},
+        "profile_id": "cloudtrail_enable_guided",
+        "rejected_profiles": [],
+        "resolved_inputs": {
+          "create_bucket_policy": true,
+          "multi_region": true,
+          "trail_name": "security-autopilot-trail"
+        },
+        "strategy_id": "cloudtrail_enable_guided",
+        "support_tier": "review_required_bundle"
+      },
+      "risk_acknowledged": true,
+      "risk_snapshot": {
+        "checks": [
+          {
+            "code": "cloudtrail_cost_impact",
+            "message": "CloudTrail log delivery and retention increase S3 storage and request costs.",
+            "status": "warn"
+          },
+          {
+            "code": "cloudtrail_log_bucket_prereq",
+            "message": "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply.",
+            "status": "warn"
+          }
+        ],
+        "evidence": {
+          "collected_at": "2026-03-14T19:37:08.175819+00:00",
+          "strategy_id": "cloudtrail_enable_guided"
+        },
+        "recommendation": "review_and_acknowledge",
+        "warnings": [
+          "CloudTrail log delivery and retention can increase storage costs."
+        ]
+      },
+      "selected_strategy": "cloudtrail_enable_guided",
+      "strategy_inputs": {}
+    },
+    "latest_run_id": "92e67c82-926f-4847-a7ab-eb0d2cd23230",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 1,
+    "region": "us-east-1",
+    "representative_action_id": "3301b44c-8846-49c2-9f27-823e6a77e559",
+    "run_not_successful": 0,
+    "status": "open",
+    "total_actions": 1
+  },
+  "error": "Network error on /api/actions/3301b44c-8846-49c2-9f27-823e6a77e559/remediation-options: [Errno 61] Connection refused",
+  "status": "failed"
+}

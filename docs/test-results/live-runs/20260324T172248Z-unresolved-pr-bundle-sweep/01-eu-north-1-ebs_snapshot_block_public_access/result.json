@@ -1,0 +1,378 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 0,
+    "open_actions": 2,
+    "pending_confirmation": 0,
+    "run_not_successful": 2
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+      "3eeb0195-44e3-4df6-9ae3-78e020348e42"
+    ],
+    "action_type": "ebs_snapshot_block_public_access",
+    "confirmed": 0,
+    "control_ids": [
+      "EC2.182"
+    ],
+    "latest_artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "EC2.182"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "EC2.182"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 10,
+        "files": [
+          {
+            "bundle_path": "run_all.sh",
+            "byte_count": 5062,
+            "change_type": "create_or_update",
+            "content_sha256": "4a4e967d3098a3fd87a37bc44819085b18bb376c645d134a5da5bc7798743b84",
+            "line_count": 72,
+            "repo_path": "run_all.sh"
+          },
+          {
+            "bundle_path": "run_actions.sh",
+            "byte_count": 10686,
+            "change_type": "create_or_update",
+            "content_sha256": "4f2957705075178c8b9dca8d4052e15eb08c82a414ca75d797f796abfd34dea5",
+            "line_count": 377,
+            "repo_path": "run_actions.sh"
+          },
+          {
+            "bundle_path": "README_GROUP.txt",
+            "byte_count": 877,
+            "change_type": "create_or_update",
+            "content_sha256": "23479a2cb1cf3d5d2f49810c7a7ce9864883cc8597ed66dd75cf504095f9cf36",
+            "line_count": 22,
+            "repo_path": "README_GROUP.txt"
+          },
+          {
+            "bundle_path": "bundle_manifest.json",
+            "byte_count": 3703,
+            "change_type": "create_or_update",
+            "content_sha256": "98205b141f0d2ccfd907a7c1b76f059068246dfafeaad39b19f4ca4b30d62d1f",
+            "line_count": 77,
+            "repo_path": "bundle_manifest.json"
+          },
+          {
+            "bundle_path": "decision_log.md",
+            "byte_count": 1000,
+            "change_type": "create_or_update",
+            "content_sha256": "0014f1c73f7cfb4827fc57d856f049bf42a042a5f76bab52c47a0b0d6ab697ff",
+            "line_count": 16,
+            "repo_path": "decision_log.md"
+          },
+          {
+            "bundle_path": "finding_coverage.json",
+            "byte_count": 372,
+            "change_type": "create_or_update",
+            "content_sha256": "55730c70271f373bf62c71ac736be1ab62de06f2be315617e342c852f1cb7a90",
+            "line_count": 15,
+            "repo_path": "finding_coverage.json"
+          },
+          {
+            "bundle_path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt",
+            "byte_count": 639,
+            "change_type": "create_or_update",
+            "content_sha256": "6c820a8d70b262d55ea22c5fce98e08f73ebd5786b53d55e683f3bf746c1e518",
+            "line_count": 12,
+            "repo_path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json",
+            "byte_count": 1525,
+            "change_type": "create_or_update",
+            "content_sha256": "d6359536c3b8770cfc2734865959d0978c880a1f18f972b6cea1662e00880d46",
+            "line_count": 29,
+            "repo_path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json"
+          },
+          {
+            "bundle_path": "review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt",
+            "byte_count": 639,
+            "change_type": "create_or_update",
+            "content_sha256": "fdda97be9fbf263b6b58581333e640e47b325be73702be5a8eacb29dcfec9560",
+            "line_count": 12,
+            "repo_path": "review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json",
+            "byte_count": 1454,
+            "change_type": "create_or_update",
+            "content_sha256": "e1d3c3dcf22ea34c6782952f458877fd0bb20e0f27f2c435d3494050936fa694",
+            "line_count": 29,
+            "repo_path": "review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json"
+          }
+        ],
+        "fingerprint_sha256": "711361e8a206f38194df1c7a3cc1de1c03a705c60b1abafbcbb2a3dbcc2ce63b",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`run_all.sh` <- `run_all.sh` (72 lines, sha256:4a4e967d3098)",
+          "`run_actions.sh` <- `run_actions.sh` (377 lines, sha256:4f2957705075)",
+          "`README_GROUP.txt` <- `README_GROUP.txt` (22 lines, sha256:23479a2cb1cf)",
+          "`bundle_manifest.json` <- `bundle_manifest.json` (77 lines, sha256:98205b141f0d)",
+          "`decision_log.md` <- `decision_log.md` (16 lines, sha256:0014f1c73f7c)",
+          "`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:55730c70271f)",
+          "`review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt` <- `review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt` (12 lines, sha256:6c820a8d70b2)",
+          "`review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json` <- `review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json` (29 lines, sha256:d6359536c3b8)",
+          "`review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt` <- `review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt` (12 lines, sha256:fdda97be9fbf)",
+          "`review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json` <- `review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json` (29 lines, sha256:e1d3c3dcf22e)"
+        ],
+        "version": 1
+      },
+      "group_bundle": {
+        "account_id": "696505809372",
+        "action_count": 2,
+        "action_ids": [
+          "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+          "3eeb0195-44e3-4df6-9ae3-78e020348e42"
+        ],
+        "action_resolutions": [
+          {
+            "action_id": "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+            "profile_id": "snapshot_block_all_sharing",
+            "resolution": {
+              "blocked_reasons": [],
+              "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "snapshot_block_all_sharing",
+              "rejected_profiles": [],
+              "resolved_inputs": {},
+              "strategy_id": "snapshot_block_all_sharing",
+              "support_tier": "review_required_bundle"
+            },
+            "strategy_id": "snapshot_block_all_sharing",
+            "strategy_inputs": {}
+          },
+          {
+            "action_id": "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+            "profile_id": "snapshot_block_all_sharing",
+            "resolution": {
+              "blocked_reasons": [],
+              "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "snapshot_block_all_sharing",
+              "rejected_profiles": [],
+              "resolved_inputs": {},
+              "strategy_id": "snapshot_block_all_sharing",
+              "support_tier": "review_required_bundle"
+            },
+            "strategy_id": "snapshot_block_all_sharing",
+            "strategy_inputs": {}
+          }
+        ],
+        "action_type": "ebs_snapshot_block_public_access",
+        "diff_fingerprint_sha256": "711361e8a206f38194df1c7a3cc1de1c03a705c60b1abafbcbb2a3dbcc2ce63b",
+        "executable_action_count": 0,
+        "execution_root": "executable/actions",
+        "generated_action_count": 2,
+        "group_id": "3d27927e-9250-4f95-8dee-bc8adb407e88",
+        "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|ebs_snapshot_block_public_access|696505809372|eu-north-1",
+        "group_run_id": "948a2b4f-62b3-4de7-837f-d767d881828f",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "manual_guidance_action_count": 0,
+        "region": "eu-north-1",
+        "repo_target_configured": false,
+        "reporting": {
+          "callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+          "reporting_source": "bundle_callback",
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiI5NDhhMmI0Zi02MmIzLTRkZTctODM3Zi1kNzY3ZDg4MTgyOGYiLCJncm91cF9pZCI6IjNkMjc5MjdlLTkyNTAtNGY5NS04ZGVlLWJjOGFkYjQwN2U4OCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiMWM1OTJjMC1kZTljLTQzZDAtYmY0MC04ODNkOGFlMTYyM2QiLCIzZWViMDE5NS00NGUzLTRkZjYtOWFlMy03OGUwMjAzNDhlNDIiXSwianRpIjoiY2JhOTY0YmMtZGJmNC00YjY1LWFjYzctOTM5Yzk4N2JjYzdjIiwiaWF0IjoxNzc0MjIxOTE2LCJleHAiOjE3NzQzMDgzMTZ9.6eiSWMyn5y0AuJjv2rVCzXqzzT7PUC-GMNLcrUI6QJ4"
+        },
+        "represented_action_count": 2,
+        "resolved_action_count": 2,
+        "resolved_action_ids": [
+          "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+          "3eeb0195-44e3-4df6-9ae3-78e020348e42"
+        ],
+        "review_required_action_count": 2,
+        "runnable_action_count": 0,
+        "runner_template_source": "embedded_mixed_tier",
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_action_count": 0,
+        "skipped_actions": [],
+        "tier_counts": {
+          "executable": 0,
+          "manual_guidance": 0,
+          "review_required": 2
+        }
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "#!/usr/bin/env bash\nset +e\n\nREPORT_URL=https://api.ocypheris.com/api/internal/group-runs/report\nREPORT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiI5NDhhMmI0Zi02MmIzLTRkZTctODM3Zi1kNzY3ZDg4MTgyOGYiLCJncm91cF9pZCI6IjNkMjc5MjdlLTkyNTAtNGY5NS04ZGVlLWJjOGFkYjQwN2U4OCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiMWM1OTJjMC1kZTljLTQzZDAtYmY0MC04ODNkOGFlMTYyM2QiLCIzZWViMDE5NS00NGUzLTRkZjYtOWFlMy03OGUwMjAzNDhlNDIiXSwianRpIjoiY2JhOTY0YmMtZGJmNC00YjY1LWFjYzctOTM5Yzk4N2JjYzdjIiwiaWF0IjoxNzc0MjIxOTE2LCJleHAiOjE3NzQzMDgzMTZ9.6eiSWMyn5y0AuJjv2rVCzXqzzT7PUC-GMNLcrUI6QJ4\nSTARTED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiI5NDhhMmI0Zi02MmIzLTRkZTctODM3Zi1kNzY3ZDg4MTgyOGYiLCJncm91cF9pZCI6IjNkMjc5MjdlLTkyNTAtNGY5NS04ZGVlLWJjOGFkYjQwN2U4OCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiMWM1OTJjMC1kZTljLTQzZDAtYmY0MC04ODNkOGFlMTYyM2QiLCIzZWViMDE5NS00NGUzLTRkZjYtOWFlMy03OGUwMjAzNDhlNDIiXSwianRpIjoiY2JhOTY0YmMtZGJmNC00YjY1LWFjYzctOTM5Yzk4N2JjYzdjIiwiaWF0IjoxNzc0MjIxOTE2LCJleHAiOjE3NzQzMDgzMTZ9.6eiSWMyn5y0AuJjv2rVCzXqzzT7PUC-GMNLcrUI6QJ4\",\"event\":\"started\",\"reporting_source\":\"bundle_callback\"}'\nFINISHED_SUCCESS_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiI5NDhhMmI0Zi02MmIzLTRkZTctODM3Zi1kNzY3ZDg4MTgyOGYiLCJncm91cF9pZCI6IjNkMjc5MjdlLTkyNTAtNGY5NS04ZGVlLWJjOGFkYjQwN2U4OCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiMWM1OTJjMC1kZTljLTQzZDAtYmY0MC04ODNkOGFlMTYyM2QiLCIzZWViMDE5NS00NGUzLTRkZjYtOWFlMy03OGUwMjAzNDhlNDIiXSwianRpIjoiY2JhOTY0YmMtZGJmNC00YjY1LWFjYzctOTM5Yzk4N2JjYzdjIiwiaWF0IjoxNzc0MjIxOTE2LCJleHAiOjE3NzQzMDgzMTZ9.6eiSWMyn5y0AuJjv2rVCzXqzzT7PUC-GMNLcrUI6QJ4\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[],\"non_executable_results\":[{\"action_id\":\"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"snapshot_block_all_sharing\",\"strategy_id\":\"snapshot_block_all_sharing\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]},{\"action_id\":\"3eeb0195-44e3-4df6-9ae3-78e020348e42\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"snapshot_block_all_sharing\",\"strategy_id\":\"snapshot_block_all_sharing\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]}]}'\nFINISHED_FAILED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiI5NDhhMmI0Zi02MmIzLTRkZTctODM3Zi1kNzY3ZDg4MTgyOGYiLCJncm91cF9pZCI6IjNkMjc5MjdlLTkyNTAtNGY5NS04ZGVlLWJjOGFkYjQwN2U4OCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJiMWM1OTJjMC1kZTljLTQzZDAtYmY0MC04ODNkOGFlMTYyM2QiLCIzZWViMDE5NS00NGUzLTRkZjYtOWFlMy03OGUwMjAzNDhlNDIiXSwianRpIjoiY2JhOTY0YmMtZGJmNC00YjY1LWFjYzctOTM5Yzk4N2JjYzdjIiwiaWF0IjoxNzc0MjIxOTE2LCJleHAiOjE3NzQzMDgzMTZ9.6eiSWMyn5y0AuJjv2rVCzXqzzT7PUC-GMNLcrUI6QJ4\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[],\"non_executable_results\":[{\"action_id\":\"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"snapshot_block_all_sharing\",\"strategy_id\":\"snapshot_block_all_sharing\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]},{\"action_id\":\"3eeb0195-44e3-4df6-9ae3-78e020348e42\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"snapshot_block_all_sharing\",\"strategy_id\":\"snapshot_block_all_sharing\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]}]}'\nREPLAY_DIR=\"./.bundle-callback-replay\"\nRUNNER=\"./run_actions.sh\"\n\nmkdir -p \"$REPLAY_DIR\"\n\niso_now() {\n  date -u +\"%Y-%m-%dT%H:%M:%SZ\"\n}\n\ninject_timestamp() {\n  local template_json=\"$1\"\n  local field_name=\"$2\"\n  local field_value=\"$3\"\n  python3 - \"$template_json\" \"$field_name\" \"$field_value\" <<'PY'\nimport json\nimport sys\n\npayload = json.loads(sys.argv[1])\npayload[str(sys.argv[2])] = str(sys.argv[3])\nprint(json.dumps(payload, separators=(\",\", \":\")))\nPY\n}\n\npost_payload() {\n  local payload=\"$1\"\n  if [ -z \"$REPORT_URL\" ] || [ -z \"$REPORT_TOKEN\" ]; then\n    return 1\n  fi\n  if command -v curl >/dev/null 2>&1; then\n    curl -sS -X POST \"$REPORT_URL\" -H \"Content-Type: application/json\" -d \"$payload\" >/dev/null 2>&1\n    return $?\n  fi\n  return 1\n}\n\npersist_replay() {\n  local suffix=\"$1\"\n  local payload=\"$2\"\n  local file=\"$REPLAY_DIR/${suffix}-$(date +%s).json\"\n  printf '%s\\n' \"$payload\" > \"$file\"\n}\n\nSTARTED_AT=\"$(iso_now)\"\nSTART_PAYLOAD=\"$(inject_timestamp \"$STARTED_TEMPLATE\" \"started_at\" \"$STARTED_AT\")\"\nif ! post_payload \"$START_PAYLOAD\"; then\n  persist_replay \"started\" \"$START_PAYLOAD\"\nfi\n\nchmod +x \"$RUNNER\"\n\"$RUNNER\"\nRUN_RC=$?\n\nFINISHED_AT=\"$(iso_now)\"\nif [ \"$RUN_RC\" -eq 0 ]; then\n  FINISH_PAYLOAD=\"$(inject_timestamp \"$FINISHED_SUCCESS_TEMPLATE\" \"finished_at\" \"$FINISHED_AT\")\"\nelse\n  FINISH_PAYLOAD=\"$(inject_timestamp \"$FINISHED_FAILED_TEMPLATE\" \"finished_at\" \"$FINISHED_AT\")\"\nfi\n\nif ! post_payload \"$FINISH_PAYLOAD\"; then\n  persist_replay \"finished\" \"$FINISH_PAYLOAD\"\nfi\n\nexit \"$RUN_RC\"\n",
+            "path": "run_all.sh"
+          },
+          {
+            "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\" \"${CACHE_ROOT}/provider-mirror\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_PROVIDER_MIRROR_DIR=\"${CACHE_ROOT}/provider-mirror\"\nPREFERRED_TF_PROVIDER_MIRROR_DIR=\"${HOME}/.terraform.d/plugin-cache\"\nACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nwrite_tfrc_with_cache_only() {\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\n}\n\nwrite_tfrc_with_mirror() {\n  local mirror_dir=\"$1\"\n  cat > \"${TFRC_PATH}\" <<EOF\nprovider_installation {\n  filesystem_mirror {\n    path    = \"${mirror_dir}\"\n    include = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n  direct {\n    exclude = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n}\nEOF\n}\n\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nAWS_PROVIDER_VERSION=\"5.100.0\"\nAWS_PROVIDER_LOCKFILE=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl\"\nTERRAFORM_PROVIDER_OS=\"$(uname | tr '[:upper:]' '[:lower:]')\"\nTERRAFORM_PROVIDER_ARCH=\"$(uname -m)\"\ncase \"${TERRAFORM_PROVIDER_ARCH}\" in\n  x86_64)\n    TERRAFORM_PROVIDER_ARCH=\"amd64\"\n    ;;\n  aarch64|arm64)\n    TERRAFORM_PROVIDER_ARCH=\"arm64\"\n    ;;\nesac\nTERRAFORM_PROVIDER_PLATFORM=\"${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}\"\n\nhas_cached_aws_provider() {\n  find -L \"${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .\n}\n\nhas_mirrored_aws_provider() {\n  local mirror_dir=\"${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}\"\n  find -L \"${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -print -quit 2>/dev/null | grep -q .\n}\n\nhas_preferred_mirrored_aws_provider() {\n  has_mirrored_aws_provider \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n}\n\nbootstrap_provider_cache() {\n  local bootstrap_dir marker\n  marker=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready\"\n  ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\n  if has_preferred_mirrored_aws_provider; then\n    ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n  fi\n  if [ -f \"${marker}\" ] && has_mirrored_aws_provider \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" && [ -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    return 0\n  fi\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\nEOF\n\n  if [ \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" = \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\" ]; then\n    (\n      cd \"${bootstrap_dir}\"\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  else\n    (\n      cd \"${bootstrap_dir}\"\n      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" >/dev/null\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  fi\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\nseed_canonical_aws_lockfile() {\n  local dir=\"$1\"\n  if [ ! -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    echo \"ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}.\"\n    return 1\n  fi\n  rm -rf \"$dir/.terraform\"\n  cp \"${AWS_PROVIDER_LOCKFILE}\" \"$dir/.terraform.lock.hcl\"\n}\n\nterraform_init_with_lockfile_fallback() {\n  local dir=\"$1\"\n  local log_file rc\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform init -input=false -lockfile=readonly\n  ) 2>&1 | tee \"$log_file\"\n  rc=${PIPESTATUS[0]}\n  set -e\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n  if ! grep -q \"Provider dependency changes detected\" \"$log_file\"; then\n    rm -f \"$log_file\"\n    return \"$rc\"\n  fi\n  echo \"WARNING: terraform init detected additional providers for $dir; refreshing lockfile.\"\n  rm -f \"$log_file\"\n  (\n    cd \"$dir\"\n    terraform init -input=false\n  )\n}\n\ncopy_action_folder_to_workspace() {\n  local source_dir=\"$1\"\n  local workspace_dir=\"$2\"\n\n  mkdir -p \"$workspace_dir\"\n  if command -v rsync >/dev/null 2>&1; then\n    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' \"$source_dir\"/ \"$workspace_dir\"/\n    return 0\n  fi\n\n  (\n    cd \"$source_dir\"\n    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .\n  ) | (\n    cd \"$workspace_dir\"\n    tar -xf -\n  )\n}\n\nprepare_action_workspace() {\n  local source_dir=\"$1\"\n  local workspace_root workspace_dir\n\n  workspace_root=$(mktemp -d \"${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX\")\n  workspace_dir=\"${workspace_root}/action\"\n  if ! copy_action_folder_to_workspace \"$source_dir\" \"$workspace_dir\"; then\n    rm -rf \"$workspace_root\"\n    return 1\n  fi\n  printf '%s\\n' \"$workspace_dir\"\n}\n\ncleanup_action_workspace() {\n  local workspace_dir=\"$1\"\n  local workspace_root\n\n  workspace_root=$(dirname \"$workspace_dir\")\n  rm -rf \"$workspace_root\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n\n  if ! grep -Eiq \"$duplicate_pattern\" \"$log_file\"; then\n    return 1\n  fi\n  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' \"$log_file\"; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local log_file rc resource existing_id duplicate_line\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    if ! seed_canonical_aws_lockfile \"$dir\"; then\n      return 1\n    fi\n    set +e\n    terraform_init_with_lockfile_fallback \"$dir\"\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\nwrite_tfrc_with_mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\"\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  workspace_dir=\"\"\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  workspace_dir=$(prepare_action_workspace \"$dir\") || {\n    echo \"ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (workspace)\")\n    continue\n  }\n\n  if ! run_terraform_init_with_retry \"$workspace_dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$workspace_dir\"\n    export TF_DATA_DIR=\"${workspace_dir}/.terraform-data\"\n    terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$workspace_dir\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  cleanup_action_workspace \"$workspace_dir\"\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n",
+            "path": "run_actions.sh"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- none\n\nReview-required actions:\n- 1. Amazon EBS Snapshots should not be publicly accessible (review_required_metadata_only) -> review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0\n- 2. Amazon EBS Snapshots should not be publicly accessible (review_required_metadata_only) -> review_required/actions/02-aws-account-696505809372-3eeb0195\n\nManual-guidance actions:\n- none\n",
+            "path": "README_GROUP.txt"
+          },
+          {
+            "content": "{\n  \"action_count\": 2,\n  \"actions\": [\n    {\n      \"action_id\": \"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\n      \"action_type\": \"ebs_snapshot_block_public_access\",\n      \"blocked_reasons\": [],\n      \"control_id\": \"EC2.182\",\n      \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0\",\n      \"has_runnable_terraform\": false,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"review_required_metadata_only\",\n      \"preservation_summary\": {\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"snapshot_block_all_sharing\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"snapshot_block_all_sharing\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"review_required_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182\",\n      \"tier\": \"review_required\",\n      \"tier_root\": \"review_required/actions\",\n      \"title\": \"Amazon EBS Snapshots should not be publicly accessible\"\n    },\n    {\n      \"action_id\": \"3eeb0195-44e3-4df6-9ae3-78e020348e42\",\n      \"action_type\": \"ebs_snapshot_block_public_access\",\n      \"blocked_reasons\": [],\n      \"control_id\": \"EC2.182\",\n      \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"review_required/actions/02-aws-account-696505809372-3eeb0195\",\n      \"has_runnable_terraform\": false,\n      \"index\": 2,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"review_required_metadata_only\",\n      \"preservation_summary\": {\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"snapshot_block_all_sharing\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"snapshot_block_all_sharing\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"review_required_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|EC2.182\",\n      \"tier\": \"review_required\",\n      \"tier_root\": \"review_required/actions\",\n      \"title\": \"Amazon EBS Snapshots should not be publicly accessible\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\n    \"3eeb0195-44e3-4df6-9ae3-78e020348e42\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 0,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 0,\n    \"manual_guidance\": 0,\n    \"review_required\": 2\n  }\n}\n",
+            "path": "bundle_manifest.json"
+          },
+          {
+            "content": "# Decision Log\n\n## 1. Amazon EBS Snapshots should not be publicly accessible\n- Action ID: b1c592c0-de9c-43d0-bf40-883d8ae1623d\n- Tier: review_required/actions\n- Outcome: review_required_metadata_only\n- Strategy/Profile: snapshot_block_all_sharing / snapshot_block_all_sharing\n- Summary: Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\n\n## 2. Amazon EBS Snapshots should not be publicly accessible\n- Action ID: 3eeb0195-44e3-4df6-9ae3-78e020348e42\n- Tier: review_required/actions\n- Outcome: review_required_metadata_only\n- Strategy/Profile: snapshot_block_all_sharing / snapshot_block_all_sharing\n- Summary: Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\n\n",
+            "path": "decision_log.md"
+          },
+          {
+            "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"review_required_bundle\"\n    },\n    {\n      \"action_id\": \"3eeb0195-44e3-4df6-9ae3-78e020348e42\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"review_required_bundle\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n",
+            "path": "finding_coverage.json"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: Amazon EBS Snapshots should not be publicly accessible\nAction ID: b1c592c0-de9c-43d0-bf40-883d8ae1623d\nTier: review_required\nTier root: review_required/actions\nOutcome: review_required_metadata_only\nStrategy: snapshot_block_all_sharing\nProfile: snapshot_block_all_sharing\n\nDecision summary: Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+            "path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"b1c592c0-de9c-43d0-bf40-883d8ae1623d\",\n  \"action_type\": \"ebs_snapshot_block_public_access\",\n  \"blocked_reasons\": [],\n  \"control_id\": \"EC2.182\",\n  \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0\",\n  \"has_runnable_terraform\": false,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"review_required_metadata_only\",\n  \"preservation_summary\": {\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"snapshot_block_all_sharing\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"snapshot_block_all_sharing\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"review_required_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182\",\n  \"tier\": \"review_required\",\n  \"tier_root\": \"review_required/actions\",\n  \"title\": \"Amazon EBS Snapshots should not be publicly accessible\"\n}\n",
+            "path": "review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: Amazon EBS Snapshots should not be publicly accessible\nAction ID: 3eeb0195-44e3-4df6-9ae3-78e020348e42\nTier: review_required\nTier root: review_required/actions\nOutcome: review_required_metadata_only\nStrategy: snapshot_block_all_sharing\nProfile: snapshot_block_all_sharing\n\nDecision summary: Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+            "path": "review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"3eeb0195-44e3-4df6-9ae3-78e020348e42\",\n  \"action_type\": \"ebs_snapshot_block_public_access\",\n  \"blocked_reasons\": [],\n  \"control_id\": \"EC2.182\",\n  \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"review_required/actions/02-aws-account-696505809372-3eeb0195\",\n  \"has_runnable_terraform\": false,\n  \"index\": 2,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"review_required_metadata_only\",\n  \"preservation_summary\": {\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"snapshot_block_all_sharing\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"snapshot_block_all_sharing\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"review_required_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|EC2.182\",\n  \"tier\": \"review_required\",\n  \"tier_root\": \"review_required/actions\",\n  \"title\": \"Amazon EBS Snapshots should not be publicly accessible\"\n}\n",
+            "path": "review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 10,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 5062,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"4a4e967d3098a3fd87a37bc44819085b18bb376c645d134a5da5bc7798743b84\",\n      \"line_count\": 72,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"run_actions.sh\",\n      \"byte_count\": 10686,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"4f2957705075178c8b9dca8d4052e15eb08c82a414ca75d797f796abfd34dea5\",\n      \"line_count\": 377,\n      \"repo_path\": \"run_actions.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 877,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"23479a2cb1cf3d5d2f49810c7a7ce9864883cc8597ed66dd75cf504095f9cf36\",\n      \"line_count\": 22,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 3703,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"98205b141f0d2ccfd907a7c1b76f059068246dfafeaad39b19f4ca4b30d62d1f\",\n      \"line_count\": 77,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 1000,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"0014f1c73f7cfb4827fc57d856f049bf42a042a5f76bab52c47a0b0d6ab697ff\",\n      \"line_count\": 16,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 372,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"55730c70271f373bf62c71ac736be1ab62de06f2be315617e342c852f1cb7a90\",\n      \"line_count\": 15,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt\",\n      \"byte_count\": 639,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"6c820a8d70b262d55ea22c5fce98e08f73ebd5786b53d55e683f3bf746c1e518\",\n      \"line_count\": 12,\n      \"repo_path\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json\",\n      \"byte_count\": 1525,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"d6359536c3b8770cfc2734865959d0978c880a1f18f972b6cea1662e00880d46\",\n      \"line_count\": 29,\n      \"repo_path\": \"review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt\",\n      \"byte_count\": 639,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"fdda97be9fbf263b6b58581333e640e47b325be73702be5a8eacb29dcfec9560\",\n      \"line_count\": 12,\n      \"repo_path\": \"review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json\",\n      \"byte_count\": 1454,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e1d3c3dcf22ea34c6782952f458877fd0bb20e0f27f2c435d3494050936fa694\",\n      \"line_count\": 29,\n      \"repo_path\": \"review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"711361e8a206f38194df1c7a3cc1de1c03a705c60b1abafbcbb2a3dbcc2ce63b\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (72 lines, sha256:4a4e967d3098)\",\n    \"`run_actions.sh` <- `run_actions.sh` (377 lines, sha256:4f2957705075)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (22 lines, sha256:23479a2cb1cf)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (77 lines, sha256:98205b141f0d)\",\n    \"`decision_log.md` <- `decision_log.md` (16 lines, sha256:0014f1c73f7c)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:55730c70271f)\",\n    \"`review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt` <- `review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/README_ACTION.txt` (12 lines, sha256:6c820a8d70b2)\",\n    \"`review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json` <- `review_required/actions/01-arn-aws-ec2-eu-north-1-696505809372-snapshotbloc-b1c592c0/decision.json` (29 lines, sha256:d6359536c3b8)\",\n    \"`review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt` <- `review_required/actions/02-aws-account-696505809372-3eeb0195/README_ACTION.txt` (12 lines, sha256:fdda97be9fbf)\",\n    \"`review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json` <- `review_required/actions/02-aws-account-696505809372-3eeb0195/decision.json` (29 lines, sha256:e1d3c3dcf22e)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## Amazon EBS Snapshots should not be publicly accessible\n- Action ID: `b1c592c0-de9c-43d0-bf40-883d8ae1623d`\n- Control ID: `EC2.182`\n- Target: `696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182`\n- Rollback command: `aws ec2 disable-snapshot-block-public-access`\n\n## Amazon EBS Snapshots should not be publicly accessible\n- Action ID: `3eeb0195-44e3-4df6-9ae3-78e020348e42`\n- Control ID: `EC2.182`\n- Target: `696505809372|eu-north-1|AWS::::Account:696505809372|EC2.182`\n- Rollback command: `aws ec2 disable-snapshot-block-public-access`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"EC2.182\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"EC2.182\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "bundle_rollback_entries": {},
+          "diff_fingerprint_sha256": "711361e8a206f38194df1c7a3cc1de1c03a705c60b1abafbcbb2a3dbcc2ce63b",
+          "executable_action_count": 0,
+          "execution_root": "executable/actions",
+          "generated_action_count": 2,
+          "layout_version": "grouped_bundle_mixed_tier/v1",
+          "manual_guidance_action_count": 0,
+          "repo_target_configured": false,
+          "represented_action_count": 2,
+          "requested_action_count": 2,
+          "review_required_action_count": 2,
+          "runnable_action_count": 0,
+          "runner_template_source": "embedded_mixed_tier",
+          "runner_template_version": "grouped_bundle_mixed_tier/v1",
+          "skipped_action_count": 0,
+          "skipped_actions": [],
+          "tier_counts": {
+            "executable": 0,
+            "manual_guidance": 0,
+            "review_required": 2
+          }
+        },
+        "steps": [
+          "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+          "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+          "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+        ]
+      },
+      "risk_acknowledged": true,
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+            "action_type": "ebs_snapshot_block_public_access",
+            "control_id": "EC2.182",
+            "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+            "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182",
+            "title": "Amazon EBS Snapshots should not be publicly accessible"
+          },
+          {
+            "action_id": "3eeb0195-44e3-4df6-9ae3-78e020348e42",
+            "action_type": "ebs_snapshot_block_public_access",
+            "control_id": "EC2.182",
+            "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+            "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|EC2.182",
+            "title": "Amazon EBS Snapshots should not be publicly accessible"
+          }
+        ],
+        "entry_count": 2,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "snapshot_block_all_sharing"
+    },
+    "latest_run_id": "5c59e058-5f8c-4bc3-a4a6-15789cb0eea6",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 0,
+    "region": "eu-north-1",
+    "representative_action_id": "b1c592c0-de9c-43d0-bf40-883d8ae1623d",
+    "run_not_successful": 2,
+    "status": "open",
+    "total_actions": 2
+  },
+  "error": "One or more dependency checks blocked this remediation strategy.",
+  "request_candidates": [
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_snapshot_block_public_access",
+      "bucket_creation_acknowledged": false,
+      "region": "eu-north-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "snapshot_block_all_sharing"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_snapshot_block_public_access",
+      "bucket_creation_acknowledged": false,
+      "region": "eu-north-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "snapshot_block_new_sharing_only"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_snapshot_block_public_access",
+      "bucket_creation_acknowledged": false,
+      "region": "eu-north-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "snapshot_keep_sharing_exception"
+    }
+  ],
+  "status": "failed"
+}

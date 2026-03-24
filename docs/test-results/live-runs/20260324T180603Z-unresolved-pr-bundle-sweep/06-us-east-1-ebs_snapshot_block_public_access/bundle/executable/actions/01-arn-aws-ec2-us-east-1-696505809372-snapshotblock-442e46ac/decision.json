@@ -1,0 +1,29 @@
+{
+  "action_id": "442e46ac-f31c-4242-82ca-9e47081a3adb",
+  "action_type": "ebs_snapshot_block_public_access",
+  "blocked_reasons": [],
+  "control_id": "EC2.182",
+  "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-arn-aws-ec2-us-east-1-696505809372-snapshotblock-442e46ac",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "snapshot_block_all_sharing",
+  "rejected_profiles": [],
+  "strategy_id": "snapshot_block_all_sharing",
+  "strategy_inputs": {},
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|us-east-1|arn:aws:ec2:us-east-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "Amazon EBS Snapshots should not be publicly accessible"
+}

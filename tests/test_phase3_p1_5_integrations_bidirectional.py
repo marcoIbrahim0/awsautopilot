@@ -578,6 +578,7 @@ def test_execute_compute_actions_job_enqueues_sync_for_resolved_and_reopened_act
     updated_id = uuid.uuid4()
     resolved_id = uuid.uuid4()
     reopened_id = uuid.uuid4()
+    call_order: list[str] = []
     session = MagicMock()
     ctx = MagicMock()
     ctx.__enter__.return_value = session
@@ -586,7 +587,7 @@ def test_execute_compute_actions_job_enqueues_sync_for_resolved_and_reopened_act
     with patch("backend.workers.jobs.compute_actions.session_scope", return_value=ctx):
         with patch(
             "backend.workers.jobs.compute_actions.compute_actions_for_tenant",
-            return_value={
+            side_effect=lambda *args, **kwargs: call_order.append("compute") or {
                 "actions_created": 1,
                 "actions_updated": 1,
                 "actions_resolved": 1,
@@ -599,16 +600,23 @@ def test_execute_compute_actions_job_enqueues_sync_for_resolved_and_reopened_act
         ):
             with patch(
                 "backend.workers.jobs.compute_actions.plan_action_sync_tasks",
-                return_value=[uuid.uuid4()],
+                side_effect=lambda *args, **kwargs: call_order.append("plan") or [uuid.uuid4()],
             ) as mock_plan:
-                with patch("backend.workers.jobs.compute_actions.dispatch_sync_tasks") as mock_dispatch:
-                    execute_compute_actions_job(
-                        {
-                            "job_type": "compute_actions",
-                            "tenant_id": str(tenant_id),
-                            "created_at": "2026-03-12T12:00:00Z",
-                        }
-                    )
+                with patch(
+                    "backend.workers.jobs.compute_actions.dispatch_sync_tasks",
+                    side_effect=lambda *args, **kwargs: call_order.append("dispatch") or {"enqueued": 1, "failed": 0},
+                ) as mock_dispatch:
+                    with patch(
+                        "backend.workers.jobs.compute_actions.maybe_schedule_attack_path_refresh",
+                        side_effect=lambda *args, **kwargs: call_order.append("attack_path") or True,
+                    ) as mock_attack_path:
+                        execute_compute_actions_job(
+                            {
+                                "job_type": "compute_actions",
+                                "tenant_id": str(tenant_id),
+                                "created_at": "2026-03-12T12:00:00Z",
+                            }
+                        )
 
     assert set(mock_plan.call_args.kwargs["action_ids"]) == {
         created_id,
@@ -618,3 +626,5 @@ def test_execute_compute_actions_job_enqueues_sync_for_resolved_and_reopened_act
     }
     assert mock_plan.call_args.kwargs["reopened_action_ids"] == {reopened_id}
     mock_dispatch.assert_called_once()
+    mock_attack_path.assert_called_once()
+    assert call_order == ["compute", "plan", "dispatch", "attack_path"]

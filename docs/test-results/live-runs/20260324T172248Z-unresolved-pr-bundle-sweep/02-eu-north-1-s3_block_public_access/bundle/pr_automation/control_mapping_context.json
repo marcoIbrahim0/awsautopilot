@@ -1,0 +1,27 @@
+{
+  "artifact_type": "control_mapping_context",
+  "control_ids": [
+    "S3.1"
+  ],
+  "mapped_control_ids": [
+    "S3.1"
+  ],
+  "mappings": [
+    {
+      "control_id": "S3.1",
+      "control_title": "Ensure S3 block public access",
+      "description": "S3 account-level block public access",
+      "framework_control_code": "3.1",
+      "framework_name": "CIS AWS Foundations Benchmark"
+    },
+    {
+      "control_id": "S3.1",
+      "control_title": "Logical access",
+      "description": "Logical and physical access controls",
+      "framework_control_code": "CC6.1",
+      "framework_name": "SOC 2"
+    }
+  ],
+  "unmapped_control_ids": [],
+  "version": 1
+}

@@ -11,13 +11,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from backend.config import settings
 from backend.models.base import Base
+from backend.services.database_failover import build_sync_connect_args, resolve_database_urls
 
-_sync_url = settings.database_url_sync
-_connect_args: dict = {}
-if "neon" in _sync_url.lower():
-    # psycopg2 only accepts DSN-style options in connect(); sslcontext is not valid.
-    # Use sslmode=require so Neon gets SSL without putting sslcontext in the DSN.
-    _connect_args["sslmode"] = "require"
+_resolved_urls = resolve_database_urls()
+_sync_url = _resolved_urls.sync_url
+_connect_args = build_sync_connect_args(_sync_url)
 
 _engine = create_engine(
     _sync_url,

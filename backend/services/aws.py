@@ -67,6 +67,13 @@ def _role_arn_from_assumed_role_arn(arn: str) -> str | None:
     return f"arn:{partition}:iam::{account_id}:role/{role_path}"
 
 
+def _account_id_from_role_arn(role_arn: str) -> str | None:
+    match = re.match(r"^arn:(aws|aws-cn|aws-us-gov):iam::([0-9]{12}):role/.+$", role_arn)
+    if not match:
+        return None
+    return match.group(2)
+
+
 def _caller_is_saas_execution_role_session(sts_client: STSClient) -> bool:
     execution_role_arns = set(settings.saas_execution_role_arns_list)
     if not execution_role_arns:
@@ -78,6 +85,39 @@ def _caller_is_saas_execution_role_session(sts_client: STSClient) -> bool:
         return False
     current_role_arn = _role_arn_from_assumed_role_arn(caller_arn)
     return current_role_arn in execution_role_arns
+
+
+def _caller_account_id(sts_client: STSClient) -> str | None:
+    try:
+        return str(sts_client.get_caller_identity()["Account"])
+    except Exception:
+        logger.exception("Failed to resolve current caller identity before assume-role compatibility check")
+        return None
+
+
+def _local_target_account_session(target_account_id: str | None) -> boto3.Session | None:
+    profile_name = (settings.LOCAL_TARGET_ACCOUNT_AWS_PROFILE or "").strip()
+    if not target_account_id:
+        return None
+    if profile_name:
+        try:
+            session = boto3.Session(profile_name=profile_name, region_name=settings.AWS_REGION)
+            sts_client = session.client("sts", region_name=settings.AWS_REGION)
+            caller_account_id = _caller_account_id(sts_client)
+            if caller_account_id == target_account_id:
+                logger.warning(
+                    "Using local target-account profile %s for direct AWS session against account %s",
+                    profile_name,
+                    target_account_id,
+                )
+                return session
+        except Exception:
+            logger.exception(
+                "Failed to initialize local target-account profile %s for account %s",
+                profile_name,
+                target_account_id,
+            )
+    return None
 
 
 def assume_role(
@@ -121,6 +161,19 @@ def assume_role(
 
     # Create STS client using default credentials (from env, IAM role, etc.)
     sts_client: STSClient = boto3.client("sts", region_name=settings.AWS_REGION)
+    caller_account_id = _caller_account_id(sts_client)
+    target_account_id = _account_id_from_role_arn(role_arn)
+    if settings.ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION:
+        local_profile_session = _local_target_account_session(target_account_id)
+        if local_profile_session is not None:
+            return local_profile_session
+        if caller_account_id is not None and target_account_id is not None and caller_account_id == target_account_id:
+            logger.warning(
+                "Using ambient AWS session for target account %s instead of STS AssumeRole for %s",
+                target_account_id,
+                role_arn,
+            )
+            return boto3.Session(region_name=settings.AWS_REGION)
     if source_identity and _caller_is_saas_execution_role_session(sts_client):
         logger.info(
             "Skipping STS SourceIdentity and session tags for SaaS execution-role session; using role session name %s instead",

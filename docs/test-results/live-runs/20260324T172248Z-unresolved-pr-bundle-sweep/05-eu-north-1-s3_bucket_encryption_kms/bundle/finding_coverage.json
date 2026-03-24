@@ -1,0 +1,15 @@
+{
+  "actions": [
+    {
+      "action_id": "42356c4a-b399-4e15-b055-3870a370da3d",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

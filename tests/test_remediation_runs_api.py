@@ -97,6 +97,10 @@ def _mock_existing_run(
     run.mode = mode
     run.artifacts = artifacts
     run.created_at = datetime.now(timezone.utc)
+    run.updated_at = run.created_at
+    run.started_at = None
+    run.completed_at = None
+    run.outcome = None
     return run
 
 
@@ -120,7 +124,14 @@ def _mock_async_session(*scalar_results: object) -> MagicMock:
     session.execute = AsyncMock(side_effect=results)
     session.add = MagicMock()
     session.commit = AsyncMock()
-    session.refresh = AsyncMock()
+
+    async def _refresh(obj: MagicMock) -> None:
+        now = datetime.now(timezone.utc)
+        if getattr(obj, "created_at", None) is None:
+            obj.created_at = now
+        obj.updated_at = now
+
+    session.refresh = AsyncMock(side_effect=_refresh)
     return session
 
 
@@ -162,13 +173,17 @@ def _mock_group_session(
     account: MagicMock | None = None,
     pending_runs: list[MagicMock] | None = None,
     active_runs: list[MagicMock] | None = None,
+    refetched_active_runs: list[MagicMock] | None = None,
 ) -> MagicMock:
+    initial_active_runs = active_runs if active_runs is not None else (pending_runs or [])
+    refreshed_active_runs = refetched_active_runs if refetched_active_runs is not None else initial_active_runs
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
             _mock_group_query_result(actions),
             _mock_group_account_result(account),
-            _mock_group_query_result(active_runs if active_runs is not None else (pending_runs or [])),
+            _mock_group_query_result(initial_active_runs),
+            _mock_group_query_result(refreshed_active_runs),
         ]
     )
     added: list[MagicMock] = []
@@ -488,6 +503,89 @@ def test_create_run_duplicate_active_status_returns_409_with_existing_run_id(cli
     assert session.commit.await_count == 0
 
 
+def test_create_run_auto_retires_stale_pending_duplicate(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing = _mock_existing_run(action, status=RemediationRunStatus.pending)
+    stale_time = datetime.now(timezone.utc) - timedelta(minutes=30)
+    existing.created_at = stale_time
+    existing.updated_at = stale_time
+    session = _mock_async_session(action, None, [existing], [existing])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-retired-stale-pending"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(
+                    "/api/remediation-runs",
+                    json={"action_id": str(action.id), "mode": "pr_only"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert existing.status == RemediationRunStatus.failed
+    assert existing.outcome == "stale_active_run_retired"
+    assert session.commit.await_count == 2
+    assert mock_sqs.send_message.call_count == 1
+
+
+def test_create_run_auto_retires_stale_running_duplicate(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="enable_security_hub")
+    action.tenant_id = tenant.id
+    existing = _mock_existing_run(action, status=RemediationRunStatus.running)
+    stale_time = datetime.now(timezone.utc) - timedelta(hours=4)
+    existing.created_at = stale_time
+    existing.updated_at = stale_time
+    existing.started_at = stale_time
+    session = _mock_async_session(action, None, [existing], [existing])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_current_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "msg-retired-stale-running"}
+
+    with patch("backend.routers.remediation_runs.settings") as mock_settings:
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        with patch("backend.routers.remediation_runs.boto3.client", return_value=mock_sqs):
+            try:
+                r = client.post(
+                    "/api/remediation-runs",
+                    json={"action_id": str(action.id), "mode": "pr_only"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_current_user, None)
+
+    assert r.status_code == 201
+    assert existing.status == RemediationRunStatus.failed
+    assert existing.outcome == "stale_active_run_retired"
+    assert session.commit.await_count == 2
+    assert mock_sqs.send_message.call_count == 1
+
+
 def test_create_run_identical_pr_bundle_rate_limit_returns_429(client: TestClient) -> None:
     """Same PR bundle config is capped at 3 queue submissions per 20-minute window."""
     tenant = _mock_tenant()
@@ -591,7 +689,8 @@ def test_create_run_different_profile_id_not_treated_as_identical_duplicate(clie
                     app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert session.commit.await_count == 1
+    assert stale_pending_run.status == RemediationRunStatus.failed
+    assert session.commit.await_count == 2
     assert mock_sqs.send_message.call_count == 1
 
 
@@ -686,7 +785,8 @@ def test_create_run_recent_different_signature_allows_new_run(client: TestClient
                 app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert session.commit.await_count == 1
+    assert stale_pending_run.status == RemediationRunStatus.failed
+    assert session.commit.await_count == 2
     assert mock_sqs.send_message.call_count == 1
 
 
@@ -1217,7 +1317,8 @@ def test_create_group_pr_bundle_different_override_map_not_duplicate(client: Tes
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert session.commit.await_count == 1
+    assert stale_pending_run.status == RemediationRunStatus.failed
+    assert session.commit.await_count == 2
     assert mock_sqs.send_message.call_count == 1
     assert r.json()["action_id"] == str(action2.id)
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
@@ -1317,7 +1418,8 @@ def test_create_group_pr_bundle_different_repo_target_not_duplicate(client: Test
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert session.commit.await_count == 1
+    assert stale_pending_run.status == RemediationRunStatus.failed
+    assert session.commit.await_count == 2
     assert mock_sqs.send_message.call_count == 1
     assert r.json()["action_id"] == str(action2.id)
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
@@ -1402,7 +1504,8 @@ def test_create_group_pr_bundle_ignores_stale_pending_pr_only_run(client: TestCl
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert session.commit.await_count == 1
+    assert stale_pending_run.status == RemediationRunStatus.failed
+    assert session.commit.await_count == 2
     assert mock_sqs.send_message.call_count == 1
 
 

@@ -88,6 +88,7 @@
 2. The dedicated full-width page now shows one primary progress bar only; the secondary duplicate percentage bar was removed from the deeper details section.
 3. The modal/success path now keeps `Download bundle` in the first visible status/actions block so users do not need to scroll down to the generated-files section to retrieve the artifact.
 4. The grouped bundle page now uses generation-oriented wording (`Generate bundle`, `Generation timeline`, `Generated and successful`, `Not generated yet`) while keeping backend routes and internal remediation-run contracts unchanged.
+5. The grouped action detail page now adds a `Back to Findings` link, narrows the member section to only `Generated and needs follow-up` items, adds a per-member `Open action and refresh state` CTA, and collapses older generation outcomes by default so the page emphasizes the next operator step instead of raw timeline volume.
 
 ## 2) New Information Architecture + Navigation Model
 
@@ -114,8 +115,8 @@
    - Authenticated + incomplete onboarding -> `/onboarding`
    - Authenticated + complete onboarding -> `/findings`
    - Unauthenticated -> `/landing`
-5. `/settings` is the canonical admin and reporting surface. Deep links use `/settings?tab=<tab-id>`.
-6. `/exports` remains a navigation entry point only; export/report state lives in Settings.
+5. `/settings` is the canonical admin surface plus the baseline-report deep-link surface. Deep links use `/settings?tab=<tab-id>`.
+6. `/exports` is the canonical exports and compliance workspace in the primary navbar.
 7. `/baseline-report` redirects to `/settings?tab=baseline-report` for compatibility.
 
 ### 2.3 Settings Information Architecture
@@ -360,7 +361,9 @@ Login
    - `View PR bundle group`
 2. If action/group unavailable:
    - Button disabled with explicit reason.
-3. Edge cases:
+3. Grouped findings cards expose inline `Suppress Group`, `Acknowledge Risk`, and `Mark False Positive` controls instead of hiding them behind an overflow menu.
+4. Multi-level `Group by` selections re-render nested buckets for every active dimension, including combinations like `Severity -> Rule -> Region`.
+5. Edge cases:
    - Finding has no mapped action.
    - Action exists but no bundle-run metadata.
 
@@ -404,10 +407,10 @@ Login
 
 ### 6.6 Settings and Reporting
 1. Every supported `?tab=` deep link opens the correct Settings screen.
-2. Legacy Settings aliases (`profile`, `evidence-export`, `control-mappings`) normalize to canonical Settings tabs.
+2. Legacy Settings aliases (`profile`) normalize to canonical Settings tabs, while legacy export tab URLs (`exports-compliance`, `evidence-export`, `control-mappings`) redirect to `/exports`.
 3. `Organization` never runs account validation, ReadRole checks, control-plane checks, or WriteRole flows inline.
 4. Admin-only settings remain editable only for admins; members see read-only rendering where applicable.
-5. `/exports` links users into the canonical Settings tabs instead of owning duplicate export/report state.
+5. `/exports` owns the export/compliance workspace while linking to `/settings?tab=baseline-report` for baseline report workflows.
 6. `/baseline-report` lands on the Settings baseline-report tab through a redirect.
 
 ## 7) Implementation Notes
@@ -471,7 +474,7 @@ Login
 | G. Global async banner + notification center lifecycle | `/frontend/src/components/ui/GlobalAsyncBannerRail.tsx`, `/frontend/src/components/layout/TopBar.tsx`, `/frontend/src/contexts/BackgroundJobsContext.tsx`, `/frontend/src/contexts/NotificationCenterContext.tsx` | Start banner immediate; bell shows merged persisted jobs + governance alerts; desktop dropdown and mobile sheet share one source | `/api/notifications`, frontend job event model | Every tracked action emits banner + persisted notification item and the bell preserves unread/archive state per user |
 | H. Account area redesign with health/roles/integrations/lifecycle | `/frontend/src/app/accounts/page.tsx` | Sectioned account hub with summary KPIs and actionable views | accounts API | User can locate connection health and account management paths in one place |
 | I. Canonical settings admin surface | `/frontend/src/app/settings/page.tsx`, `/frontend/src/app/settings/settings-tabs.ts`, `/frontend/src/app/settings/IntegrationsSettingsTab.tsx`, `/frontend/src/app/settings/GovernanceSettingsTab.tsx`, `/frontend/src/app/settings/RemediationDefaultsTab.tsx` | Settings is the single deep-linked configuration surface for integrations, governance, and remediation defaults | `/api/integrations/settings`, `/api/users/me/governance-settings`, `/api/users/me/remediation-settings` | Admin users can manage backend-backed settings from Settings without separate hidden surfaces |
-| J. Export/report route consolidation | `/frontend/src/app/settings/ExportsComplianceTab.tsx`, `/frontend/src/app/exports/page.tsx`, `/frontend/src/app/baseline-report/page.tsx` | Reporting state lives in Settings; `/exports` is a handoff page and `/baseline-report` redirects | `/api/exports`, `/api/control-mappings`, `/api/baseline-report` | Export, control-mapping, and baseline-report flows no longer drift across duplicate route implementations |
+| J. Export/report route consolidation | `/frontend/src/app/settings/ExportsComplianceTab.tsx`, `/frontend/src/app/exports/page.tsx`, `/frontend/src/app/baseline-report/page.tsx` | `/exports` owns export/control-mapping workflows, legacy settings export links redirect there, and `/baseline-report` redirects into Settings | `/api/exports`, `/api/control-mappings`, `/api/baseline-report` | Export, control-mapping, and baseline-report flows stay reachable without duplicate route implementations |
 
 ## 9) Key Microcopy Examples
 

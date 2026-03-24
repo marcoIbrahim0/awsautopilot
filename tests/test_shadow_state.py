@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from backend.models import Finding
+from backend.models.finding_shadow_state import FindingShadowState
 from backend.workers.services import shadow_state
 
 
@@ -199,6 +200,58 @@ def test_upsert_shadow_state_does_not_warn_when_overlay_update_matches_rows(monk
     )
 
     warning.assert_not_called()
+
+
+def test_upsert_shadow_state_reuses_pending_shadow_row_in_same_session(monkeypatch) -> None:
+    _configure_promotion_guardrails(
+        monkeypatch,
+        shadow_mode=True,
+        promotion_enabled=False,
+        high_confidence_controls="EC2.7",
+        min_confidence=95,
+    )
+    tenant_id = uuid.uuid4()
+    pending = FindingShadowState(
+        tenant_id=tenant_id,
+        account_id="029037611564",
+        region="eu-north-1",
+        source="event_monitor_shadow",
+        fingerprint="029037611564|eu-north-1|AWS::::Account:029037611564|EC2.7",
+        resource_id="AWS::::Account:029037611564",
+        resource_type="AwsAccount",
+        control_id="EC2.7",
+        canonical_control_id="EC2.7",
+        resource_key="account:029037611564",
+        status="OPEN",
+        status_reason="initial",
+        evidence_ref={"source": "inventory"},
+        state_confidence=50,
+        first_observed_event_time=datetime.now(timezone.utc),
+        last_observed_event_time=datetime.now(timezone.utc),
+        last_evaluated_at=datetime.now(timezone.utc),
+    )
+    session = MagicMock()
+    session.new = {pending}
+    session.add = MagicMock()
+    finding_query = MagicMock()
+    finding_query.filter.return_value.update.return_value = 1
+    session.query.return_value = finding_query
+
+    applied, changed = shadow_state.upsert_shadow_state(
+        session=session,
+        tenant_id=tenant_id,
+        account_id="029037611564",
+        region="eu-north-1",
+        event_time=datetime.now(timezone.utc),
+        source="event_monitor_shadow",
+        evaluation=_build_evaluation(status="RESOLVED"),
+    )
+
+    assert applied is True
+    assert changed is True
+    session.add.assert_not_called()
+    assert pending.status == "RESOLVED"
+    assert pending.status_reason == "inventory_confirmed_compliant"
 
 
 def test_upsert_shadow_state_promotes_for_qualified_high_confidence_control(monkeypatch) -> None:

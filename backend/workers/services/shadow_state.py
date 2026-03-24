@@ -38,6 +38,25 @@ def _state_confidence_or_zero(value: Any) -> int:
         return 0
 
 
+def _pending_shadow_state(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    source: str,
+    fingerprint: str,
+) -> FindingShadowState | None:
+    for candidate in getattr(session, "new", ()):
+        if not isinstance(candidate, FindingShadowState):
+            continue
+        if (
+            candidate.tenant_id == tenant_id
+            and candidate.source == source
+            and candidate.fingerprint == fingerprint
+        ):
+            return candidate
+    return None
+
+
 def _promotion_block_reasons(
     *,
     tenant_id: uuid.UUID,
@@ -95,15 +114,22 @@ def upsert_shadow_state(
         resource_id=evaluation.resource_id,
         control_id=evaluation.control_id,
     )
-    existing = (
-        session.query(FindingShadowState)
-        .filter(
-            FindingShadowState.tenant_id == tenant_id,
-            FindingShadowState.source == source,
-            FindingShadowState.fingerprint == fingerprint,
-        )
-        .first()
+    existing = _pending_shadow_state(
+        session,
+        tenant_id=tenant_id,
+        source=source,
+        fingerprint=fingerprint,
     )
+    if existing is None:
+        existing = (
+            session.query(FindingShadowState)
+            .filter(
+                FindingShadowState.tenant_id == tenant_id,
+                FindingShadowState.source == source,
+                FindingShadowState.fingerprint == fingerprint,
+            )
+            .first()
+        )
 
     canonical_control_id = canonicalize_control_id(getattr(evaluation, "control_id", None))
     resource_key = build_resource_key(

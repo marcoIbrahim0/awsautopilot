@@ -31,8 +31,8 @@ npm run dev
 - Accounts: `/api/aws/accounts`
 - Findings/actions: `/api/findings`, `/api/actions`
 - Remediation: `/api/remediation-runs`
-- Settings routes: `/settings?tab=account|team|organization|notifications|integrations|governance|remediation-defaults|exports-compliance|baseline-report`
-- Reporting routes: `/exports` (entry page only), `/baseline-report` (redirects to Settings)
+- Settings routes: `/settings?tab=account|team|organization|notifications|integrations|governance|remediation-defaults|baseline-report`
+- Reporting routes: `/exports` (canonical exports/compliance workspace), `/baseline-report` (redirects to Settings)
 - Exports/report APIs: `/api/exports`, `/api/baseline-report`, `/api/control-mappings`
 - Users/settings APIs: `/api/users`, `/api/users/me/digest-settings`, `/api/users/me/slack-settings`, `/api/users/me/governance-settings`, `/api/users/me/remediation-settings`, `/api/integrations/settings`
 

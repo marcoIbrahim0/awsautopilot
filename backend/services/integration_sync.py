@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import logging
+import time
 import uuid
 from typing import Any
 
@@ -514,8 +515,15 @@ def _link_for_action(
 
 
 def dispatch_sync_tasks(task_ids: list[uuid.UUID], *, tenant_id: uuid.UUID) -> dict[str, Any]:
+    started = time.perf_counter()
     queue_url = str(settings.SQS_INGEST_QUEUE_URL or "").strip()
     if not queue_url:
+        logger.info(
+            "dispatch_sync_tasks skipped tenant_id=%s requested=%d reason=no_queue_url elapsed_ms=%d",
+            tenant_id,
+            len(task_ids),
+            int((time.perf_counter() - started) * 1000),
+        )
         return {"requested": len(task_ids), "enqueued": 0, "failed": len(task_ids), "task_ids": task_ids}
     queue_region = parse_queue_region(queue_url)
     sqs = boto3.client("sqs", region_name=queue_region)
@@ -527,7 +535,22 @@ def dispatch_sync_tasks(task_ids: list[uuid.UUID], *, tenant_id: uuid.UUID) -> d
             enqueued += 1
         except Exception:
             logger.warning("Failed to enqueue integration sync task task_id=%s", task_id, exc_info=True)
-    return {"requested": len(task_ids), "enqueued": enqueued, "failed": max(0, len(task_ids) - enqueued), "task_ids": task_ids}
+    result = {
+        "requested": len(task_ids),
+        "enqueued": enqueued,
+        "failed": max(0, len(task_ids) - enqueued),
+        "task_ids": task_ids,
+    }
+    logger.info(
+        "dispatch_sync_tasks complete tenant_id=%s requested=%d enqueued=%d failed=%d queue_region=%s elapsed_ms=%d",
+        tenant_id,
+        result["requested"],
+        result["enqueued"],
+        result["failed"],
+        queue_region,
+        int((time.perf_counter() - started) * 1000),
+    )
+    return result
 
 
 def resolve_setting_for_webhook(

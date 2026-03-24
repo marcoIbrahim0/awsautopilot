@@ -1,0 +1,176 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 0,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 1
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "442e46ac-f31c-4242-82ca-9e47081a3adb"
+    ],
+    "action_type": "ebs_snapshot_block_public_access",
+    "confirmed": 0,
+    "control_ids": [
+      "EC2.182"
+    ],
+    "latest_artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "EC2.182"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "EC2.182"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 3,
+        "files": [
+          {
+            "bundle_path": "providers.tf",
+            "byte_count": 477,
+            "change_type": "create_or_update",
+            "content_sha256": "b050571dea6a621e99ec2dc055f351ebdd8d0e3a17652be21cd50898d5cb9140",
+            "line_count": 18,
+            "repo_path": "providers.tf"
+          },
+          {
+            "bundle_path": "ebs_snapshot_block_public_access.tf",
+            "byte_count": 185,
+            "change_type": "create_or_update",
+            "content_sha256": "df6cda8a2f190d1ed48e4c3b5ca288f74480cb2f35820c45f92de6c05c820c0c",
+            "line_count": 4,
+            "repo_path": "ebs_snapshot_block_public_access.tf"
+          },
+          {
+            "bundle_path": "README.txt",
+            "byte_count": 1133,
+            "change_type": "create_or_update",
+            "content_sha256": "c95ea165206f81c5579288f0004453649402b1f9d7205104b5a828a446fcd281",
+            "line_count": 31,
+            "repo_path": "README.txt"
+          }
+        ],
+        "fingerprint_sha256": "b306ad5c14840687caaf4b749fbf743ae7e017f31439793889cab4a0944c8f5e",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`providers.tf` <- `providers.tf` (18 lines, sha256:b050571dea6a)",
+          "`ebs_snapshot_block_public_access.tf` <- `ebs_snapshot_block_public_access.tf` (4 lines, sha256:df6cda8a2f19)",
+          "`README.txt` <- `README.txt` (31 lines, sha256:c95ea165206f)"
+        ],
+        "version": 1
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "# Configure AWS provider for account 696505809372 and region us-east-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"us-east-1\"\n}\n",
+            "path": "providers.tf"
+          },
+          {
+            "content": "# EBS snapshot block public access - Action: 442e46ac-f31c-4242-82ca-9e47081a3adb\nresource \"aws_ebs_snapshot_block_public_access\" \"security_autopilot\" {\n  state = \"block-all-sharing\"\n}\n",
+            "path": "ebs_snapshot_block_public_access.tf"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-24T03:52:16+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nSelected strategy\n-----------------\n- strategy_id: snapshot_block_all_sharing\n\nRisk recommendation\n-------------------\n- review_and_acknowledge\n\nDependency review checklist\n---------------------------\n- [warn] snapshot_sharing_dependency: Confirm no workflows depend on public snapshot sharing before enforcement.\n",
+            "path": "README.txt"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 3,\n  \"files\": [\n    {\n      \"bundle_path\": \"providers.tf\",\n      \"byte_count\": 477,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"b050571dea6a621e99ec2dc055f351ebdd8d0e3a17652be21cd50898d5cb9140\",\n      \"line_count\": 18,\n      \"repo_path\": \"providers.tf\"\n    },\n    {\n      \"bundle_path\": \"ebs_snapshot_block_public_access.tf\",\n      \"byte_count\": 185,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"df6cda8a2f190d1ed48e4c3b5ca288f74480cb2f35820c45f92de6c05c820c0c\",\n      \"line_count\": 4,\n      \"repo_path\": \"ebs_snapshot_block_public_access.tf\"\n    },\n    {\n      \"bundle_path\": \"README.txt\",\n      \"byte_count\": 1133,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"c95ea165206f81c5579288f0004453649402b1f9d7205104b5a828a446fcd281\",\n      \"line_count\": 31,\n      \"repo_path\": \"README.txt\"\n    }\n  ],\n  \"fingerprint_sha256\": \"b306ad5c14840687caaf4b749fbf743ae7e017f31439793889cab4a0944c8f5e\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`providers.tf` <- `providers.tf` (18 lines, sha256:b050571dea6a)\",\n    \"`ebs_snapshot_block_public_access.tf` <- `ebs_snapshot_block_public_access.tf` (4 lines, sha256:df6cda8a2f19)\",\n    \"`README.txt` <- `README.txt` (31 lines, sha256:c95ea165206f)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## Amazon EBS Snapshots should not be publicly accessible\n- Action ID: `442e46ac-f31c-4242-82ca-9e47081a3adb`\n- Control ID: `EC2.182`\n- Target: `696505809372|us-east-1|arn:aws:ec2:us-east-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182`\n- Rollback command: `aws ec2 disable-snapshot-block-public-access`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"EC2.182\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"EC2.182\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "diff_fingerprint_sha256": "b306ad5c14840687caaf4b749fbf743ae7e017f31439793889cab4a0944c8f5e",
+          "repo_target_configured": false
+        },
+        "steps": [
+          "Configure AWS provider for account 696505809372 and region us-east-1.",
+          "Run `terraform init`, `terraform plan`, and `terraform apply`.",
+          "Recompute actions to verify remediation state."
+        ]
+      },
+      "resolution": {
+        "blocked_reasons": [],
+        "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'snapshot_block_all_sharing' for strategy 'snapshot_block_all_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "preservation_summary": {
+          "single_profile_compatible": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "snapshot_block_all_sharing",
+        "rejected_profiles": [],
+        "resolved_inputs": {},
+        "strategy_id": "snapshot_block_all_sharing",
+        "support_tier": "review_required_bundle"
+      },
+      "risk_acknowledged": true,
+      "risk_snapshot": {
+        "checks": [
+          {
+            "code": "snapshot_sharing_dependency",
+            "message": "Confirm no workflows depend on public snapshot sharing before enforcement.",
+            "status": "warn"
+          }
+        ],
+        "evidence": {
+          "access_path_evidence_available": true,
+          "collected_at": "2026-03-24T03:52:10.609568+00:00",
+          "strategy_id": "snapshot_block_all_sharing"
+        },
+        "recommendation": "review_and_acknowledge",
+        "warnings": [
+          "Existing workflows that rely on public snapshot sharing may fail."
+        ]
+      },
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "442e46ac-f31c-4242-82ca-9e47081a3adb",
+            "action_type": "ebs_snapshot_block_public_access",
+            "control_id": "EC2.182",
+            "rollback_command": "aws ec2 disable-snapshot-block-public-access",
+            "target_id": "696505809372|us-east-1|arn:aws:ec2:us-east-1:696505809372:snapshotblockpublicaccess/696505809372|EC2.182",
+            "title": "Amazon EBS Snapshots should not be publicly accessible"
+          }
+        ],
+        "entry_count": 1,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "snapshot_block_all_sharing",
+      "strategy_inputs": {}
+    },
+    "latest_run_id": "01bc8891-09c5-40c5-8299-535c7d87a91d",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 0,
+    "region": "us-east-1",
+    "representative_action_id": "442e46ac-f31c-4242-82ca-9e47081a3adb",
+    "run_not_successful": 1,
+    "status": "open",
+    "total_actions": 1
+  },
+  "error": "Network error on /api/actions/442e46ac-f31c-4242-82ca-9e47081a3adb/remediation-options: [Errno 61] Connection refused",
+  "status": "failed"
+}

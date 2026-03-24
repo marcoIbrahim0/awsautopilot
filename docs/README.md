@@ -108,9 +108,11 @@ For live endpoint and payload behavior, treat source code as authoritative:
 
 - Backend route definitions: `/Users/marcomaher/AWS Security Autopilot/backend/routers/`
 - Frontend API contract calls: `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
-- Frontend admin/reporting route contract: `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/`
-  - `/settings?tab=...` is canonical
-  - `/exports` is a handoff page
+- Frontend admin/reporting route contract:
+  - Settings tabs: `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/`
+  - Exports workspace: `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/exports/`
+  - `/settings?tab=...` is canonical for account/team/org/integrations/governance/remediation defaults and baseline report
+  - `/exports` is the canonical exports and compliance workspace
   - `/baseline-report` redirects into Settings
 
 Historical audit/snapshot docs remain available under `/docs/archive/` and should not be used as current API contract references.

@@ -103,6 +103,7 @@ class ActionGroupStatusBucket(str, Enum):
     run_not_successful = "run_not_successful"
     run_finished_metadata_only = "run_finished_metadata_only"
     run_successful_pending_confirmation = "run_successful_pending_confirmation"
+    run_successful_needs_followup = "run_successful_needs_followup"
     run_successful_confirmed = "run_successful_confirmed"
 
 

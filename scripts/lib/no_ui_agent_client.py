@@ -104,6 +104,29 @@ class SaaSApiClient:
     def get_remediation_options(self, action_id: str) -> dict[str, Any]:
         return self._request_json("GET", f"/api/actions/{action_id}/remediation-options")
 
+    def list_actions(
+        self,
+        *,
+        account_id: str,
+        action_type: str | None = None,
+        region: str | None = None,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {
+            "account_id": account_id,
+            "limit": int(limit),
+            "offset": int(offset),
+        }
+        if action_type:
+            query["action_type"] = action_type
+        if region:
+            query["region"] = region
+        if status:
+            query["status"] = status
+        return self._request_json("GET", "/api/actions", query=query)
+
     def create_pr_bundle_run(self, action_id: str, strategy_id: str | None = None) -> dict[str, Any]:
         body = {
             "action_id": action_id,
@@ -113,6 +136,12 @@ class SaaSApiClient:
         if strategy_id:
             body["strategy_id"] = strategy_id
         return self._request_json("POST", "/api/remediation-runs", body=body)
+
+    def create_group_pr_bundle_run(self, body: dict[str, Any]) -> dict[str, Any]:
+        return self._request_json("POST", "/api/remediation-runs/group-pr-bundle", body=body)
+
+    def create_action_group_bundle_run(self, group_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        return self._request_json("POST", f"/api/action-groups/{group_id}/bundle-run", body=body)
 
     def get_remediation_run(self, run_id: str) -> dict[str, Any]:
         return self._request_json("GET", f"/api/remediation-runs/{run_id}")
@@ -149,6 +178,9 @@ class SaaSApiClient:
     def get_reconciliation_status(self, account_id: str, limit: int = 20) -> dict[str, Any]:
         query = {"account_id": account_id, "limit": int(limit)}
         return self._request_json("GET", "/api/reconciliation/status", query=query)
+
+    def report_group_run(self, body: dict[str, Any]) -> dict[str, Any]:
+        return self._request_json("POST", "/api/internal/group-runs/report", body=body, include_auth=False)
 
     def _request_json(
         self,

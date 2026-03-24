@@ -1,0 +1,37 @@
+{
+  "control_plane_forwarder_default_stack_name": "SecurityAutopilotControlPlaneForwarder",
+  "control_plane_forwarder_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fcontrol-plane-forwarder%2Fv1.0.0.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQNQWGZIWH22QKGKR%252F20260324%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260324T180117Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D8796626116746da80109d87a9f822bc263b19252b126a6ccfb2a3751cfba2ce5&stackName=SecurityAutopilotControlPlaneForwarder&param_SaaSIngestUrl=https%3A%2F%2Fg1frb5hhfg.execute-api.eu-north-1.amazonaws.com%2Fapi%2Fcontrol-plane%2Fevents",
+  "control_plane_forwarder_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml",
+  "control_plane_ingest_url": "https://g1frb5hhfg.execute-api.eu-north-1.amazonaws.com/api/control-plane/events",
+  "control_plane_token": null,
+  "control_plane_token_active": true,
+  "control_plane_token_created_at": "2026-03-11T18:14:13.088163+00:00",
+  "control_plane_token_fingerprint": "cptok-cm...si_M",
+  "control_plane_token_revoked_at": null,
+  "read_role_default_stack_name": "SecurityAutopilotReadRole",
+  "read_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fread-role%2Fv1.5.9.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQNQWGZIWH22QKGKR%252F20260324%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260324T180117Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D3f5541bc7f80df9c1ea1b13f5aed7ee21be3d32d7f309d06a80eb9a56beb77bc&stackName=SecurityAutopilotReadRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b7c363e9430a4f60",
+  "read_role_region": "eu-north-1",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml",
+  "saas_account_id": "029037611564",
+  "tenant": {
+    "external_id": "ext-b7c363e9430a4f60",
+    "id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "name": "Valens"
+  },
+  "user": {
+    "email": "marco.ibrahim@ocypheris.com",
+    "email_verified": true,
+    "id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+    "is_saas_admin": false,
+    "mfa_enabled": false,
+    "mfa_method": null,
+    "name": "Marco Ibrahim",
+    "onboarding_completed_at": "2026-03-11T18:41:09.337069+00:00",
+    "phone_number": null,
+    "phone_verified": false,
+    "role": "admin"
+  },
+  "write_role_default_stack_name": "SecurityAutopilotWriteRole",
+  "write_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/template?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fwrite-role%2Fv1.4.7.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQNQWGZIWH22QKGKR%252F20260324%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260324T180117Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3Da370c1da6d3af39986f20d052dc10eb60ee35ac260324664b9bae03552d13724&stackName=SecurityAutopilotWriteRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-b7c363e9430a4f60",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml"
+}

@@ -490,6 +490,90 @@ def test_s3_11_create_preserves_executable_support_tier_after_risk_acknowledgeme
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
+def test_snapshot_create_preserves_executable_support_tier_after_risk_acknowledgement(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="ebs_snapshot_block_public_access")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "snapshot_block_all_sharing",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "snapshot_sharing_dependency",
+                    "status": "warn",
+                    "message": "Confirm no workflows depend on public snapshot sharing before enforcement.",
+                }
+            ],
+            "recommendation": "review_and_acknowledge",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "snapshot_block_all_sharing"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_account_public_access_create_preserves_executable_support_tier_after_risk_acknowledgement(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_block_public_access")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_account_block_public_access_pr_bundle",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "risk_evaluation_not_specialized",
+                    "status": "unknown",
+                    "message": "No specialized dependency checks are available for this strategy yet.",
+                }
+            ],
+            "recommendation": "review_and_acknowledge",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_account_block_public_access_pr_bundle"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
 def test_s3_9_create_stays_executable_only_when_destination_safety_is_proven(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()

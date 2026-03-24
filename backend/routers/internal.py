@@ -635,6 +635,10 @@ async def _classify_finished_group_run_replay(
             expected_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation.value
         ):
             continue
+        if bucket_value == ActionGroupStatusBucket.run_successful_needs_followup.value and (
+            expected_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation.value
+        ):
+            continue
         if bucket_value != expected_bucket:
             return "repair"
     return "accepted"

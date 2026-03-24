@@ -333,6 +333,7 @@ Phase-1 migration rules captured in the source plan:
 - EC2.53 semantics:
   - `close_public` is additive only. It adds restricted SSH/RDP ingress but does not revoke existing public `0.0.0.0/0` or `::/0` admin rules.
   - `close_and_revoke` is the only executable EC2.53 profile that automatically removes the existing public admin rules.
+  - Successful grouped/single-run execution of `close_public` now projects to a non-closing success bucket (`run_successful_needs_followup`) instead of the generic waiting-for-AWS-confirmation warning, because the finding is still expected to remain open until the public rule is removed.
 - When those executable EC2.53 branches resolve deterministically with sufficient inputs, preview, single-run create, and grouped customer-run bundle resolution all preserve the same executable tier.
 - `ssm_only` and `bastion_sg_reference` are review/manual profiles until runtime support exists.
 - IAM.4 keeps `iam_root_key_disable` and `iam_root_key_delete`, each starting with `profile_id == strategy_id`.

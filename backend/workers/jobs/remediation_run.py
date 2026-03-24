@@ -718,12 +718,17 @@ collect_action_dirs() {{
 is_known_duplicate_only() {{
   local log_file="$1"
   local duplicate_pattern
+  local error_lines
   duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'
+  error_lines=$(sed -E $'s/\x1B\\[[0-9;]*[[:alpha:]]//g' "$log_file" | grep -E '^[[:space:]]*(Error:|│)' || true)
 
-  if ! grep -Eiq "$duplicate_pattern" "$log_file"; then
+  if [ -z "$error_lines" ]; then
     return 1
   fi
-  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' "$log_file"; then
+  if ! printf '%s\\n' "$error_lines" | grep -Eiq "$duplicate_pattern"; then
+    return 1
+  fi
+  if printf '%s\\n' "$error_lines" | grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch'; then
     return 1
   fi
   return 0
@@ -1762,12 +1767,17 @@ FAILED_ACTIONS=()
 is_known_duplicate_only() {
   local log_file="$1"
   local duplicate_pattern
+  local error_lines
   duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'
+  error_lines=$(sed -E $'s/\x1B\\[[0-9;]*[[:alpha:]]//g' "$log_file" | grep -E '^[[:space:]]*(Error:|│)' || true)
 
-  if ! grep -Eiq "$duplicate_pattern" "$log_file"; then
+  if [ -z "$error_lines" ]; then
     return 1
   fi
-  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' "$log_file"; then
+  if ! printf '%s\n' "$error_lines" | grep -Eiq "$duplicate_pattern"; then
+    return 1
+  fi
+  if printf '%s\n' "$error_lines" | grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch'; then
     return 1
   fi
   return 0

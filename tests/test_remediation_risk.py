@@ -139,6 +139,28 @@ def test_snapshot_public_shares_inventory_adds_warn() -> None:
     assert status_map["snapshot_public_shares_present"] == "warn"
 
 
+def test_snapshot_strategy_does_not_require_access_path_evidence() -> None:
+    action = SimpleNamespace(action_type="ebs_snapshot_block_public_access")
+    strategy = _fake_strategy(
+        "snapshot_block_all_sharing",
+        action_type="ebs_snapshot_block_public_access",
+        risk_level="medium",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "ReadRole probe unavailable.",
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert "access_path_evidence_unavailable" not in status_map
+    assert status_map["snapshot_sharing_dependency"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
 def test_s3_public_access_dependency_passes_when_bucket_not_public_and_website_disabled() -> None:
     action = SimpleNamespace(action_type="s3_bucket_block_public_access")
     strategy = _fake_strategy(

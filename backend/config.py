@@ -37,6 +37,14 @@ class Settings(BaseSettings):
         default=None,
         description="Sync Postgres URL for Alembic (postgresql+psycopg2). If unset, derived from DATABASE_URL.",
     )
+    DATABASE_URL_FALLBACK: str | None = Field(
+        default=None,
+        description="Optional fallback Postgres URL used when the primary database is unreachable.",
+    )
+    DATABASE_URL_SYNC_FALLBACK: str | None = Field(
+        default=None,
+        description="Optional sync fallback Postgres URL. If unset, derived from DATABASE_URL_FALLBACK.",
+    )
     DB_REVISION_GUARD_ENABLED: bool = Field(
         default=True,
         description=(
@@ -50,6 +58,17 @@ class Settings(BaseSettings):
         if self.DATABASE_URL_SYNC:
             return self.DATABASE_URL_SYNC
         u = self.DATABASE_URL
+        if "+asyncpg" in u:
+            return u.replace("postgresql+asyncpg", "postgresql+psycopg2", 1)
+        return u
+
+    @property
+    def database_url_sync_fallback(self) -> str | None:
+        if self.DATABASE_URL_SYNC_FALLBACK:
+            return self.DATABASE_URL_SYNC_FALLBACK
+        if not self.DATABASE_URL_FALLBACK:
+            return None
+        u = self.DATABASE_URL_FALLBACK
         if "+asyncpg" in u:
             return u.replace("postgresql+asyncpg", "postgresql+psycopg2", 1)
         return u
@@ -77,6 +96,21 @@ class Settings(BaseSettings):
     ROLE_SESSION_NAME: str = Field(
         default="security-autopilot-session",
         description="Session name used when calling STS AssumeRole",
+    )
+    ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION: bool = Field(
+        default=False,
+        description=(
+            "Local/dev-only escape hatch. When true, assume-role helpers may reuse the current "
+            "ambient AWS session instead of STS AssumeRole if the caller is already authenticated "
+            "directly to the same target account as the requested role ARN."
+        ),
+    )
+    LOCAL_TARGET_ACCOUNT_AWS_PROFILE: str = Field(
+        default="",
+        description=(
+            "Optional local/dev-only AWS profile used for direct target-account reads when "
+            "ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION is enabled."
+        ),
     )
     ALLOW_RUNTIME_IAM_CLEANUP: bool = Field(
         default=False,

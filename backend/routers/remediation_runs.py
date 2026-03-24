@@ -57,6 +57,7 @@ from backend.services.grouped_bundle_conflicts import (
     find_active_grouped_duplicate,
     find_latest_successful_grouped_duplicate,
 )
+from backend.services.remediation_run_retirement import retire_stale_active_runs
 from backend.services.remediation_handoff import RunArtifactMetadata, build_run_artifact_metadata
 from backend.services.remediation_run_resolution import (
     RemediationRunResolutionError,
@@ -261,7 +262,23 @@ def _grouped_bundle_run_record(run: RemediationRun) -> GroupedBundleRunRecord:
         status=_as_status_value(run.status),
         created_at=getattr(run, "created_at", None),
         artifacts=run.artifacts if isinstance(run.artifacts, dict) else None,
+        started_at=getattr(run, "started_at", None),
+        updated_at=getattr(run, "updated_at", None),
     )
+
+
+async def _retire_stale_runs(
+    db: AsyncSession,
+    *,
+    runs: list[RemediationRun],
+) -> list[RemediationRun]:
+    retired = retire_stale_active_runs(runs, now=datetime.now(timezone.utc))
+    if not retired:
+        return []
+    await db.commit()
+    for run in retired:
+        logger.warning("Auto-retired stale remediation run id=%s", run.id)
+    return retired
 
 
 def _select_grouped_representative_action_id(
@@ -1764,7 +1781,7 @@ async def create_remediation_run(
     recent_cutoff = now_utc - timedelta(seconds=RECENT_DUPLICATE_WINDOW_SECONDS)
     pr_bundle_window_cutoff = now_utc - timedelta(minutes=PR_BUNDLE_RATE_LIMIT_WINDOW_MINUTES)
     duplicate_scan_cutoff = pr_bundle_window_cutoff if body.mode == "pr_only" else recent_cutoff
-    duplicate_candidate_result = await db.execute(
+    duplicate_candidate_query = (
         select(RemediationRun)
         .where(
             RemediationRun.tenant_id == tenant_uuid,
@@ -1782,7 +1799,12 @@ async def create_remediation_run(
             RemediationRun.created_at.desc(),
         )
     )
+    duplicate_candidate_result = await db.execute(duplicate_candidate_query)
     duplicate_candidates = duplicate_candidate_result.scalars().all()
+    retired_duplicates = await _retire_stale_runs(db, runs=duplicate_candidates)
+    if retired_duplicates:
+        duplicate_candidate_result = await db.execute(duplicate_candidate_query)
+        duplicate_candidates = duplicate_candidate_result.scalars().all()
     active_duplicate = next(
         (
             candidate
@@ -2259,16 +2281,20 @@ async def create_group_pr_bundle_run(
             },
         )
 
-    active_run_result = await db.execute(
-        select(RemediationRun).where(
-            RemediationRun.tenant_id == tenant_uuid,
-            RemediationRun.mode == RemediationRunMode.pr_only,
-            RemediationRun.status.in_((*ACTIVE_RUN_DUPLICATE_STATUSES, RemediationRunStatus.success)),
-        )
+    active_group_run_query = select(RemediationRun).where(
+        RemediationRun.tenant_id == tenant_uuid,
+        RemediationRun.mode == RemediationRunMode.pr_only,
+        RemediationRun.status.in_((*ACTIVE_RUN_DUPLICATE_STATUSES, RemediationRunStatus.success)),
     )
+    active_run_result = await db.execute(active_group_run_query)
+    existing_group_runs = active_run_result.scalars().unique().all()
+    retired_group_runs = await _retire_stale_runs(db, runs=existing_group_runs)
+    if retired_group_runs:
+        active_run_result = await db.execute(active_group_run_query)
+        existing_group_runs = active_run_result.scalars().unique().all()
     grouped_records = [
         _grouped_bundle_run_record(run)
-        for run in active_run_result.scalars().unique().all()
+        for run in existing_group_runs
     ]
     active_runs = filter_active_group_duplicate_runs(
         grouped_records,

@@ -29,7 +29,7 @@ This plan must deliver:
 
 | Phase | In-Scope IDs | Expected Outputs |
 | --- | --- | --- |
-| Phase 1 | `UX-001` | Exports/compliance and baseline-report workflows are reachable from canonical Settings tabs, with `/exports` retained only as an entry surface |
+| Phase 1 | `UX-001` | Exports/compliance and baseline-report workflows are reachable from stable first-class routes, with `/exports` restored as the canonical exports workspace |
 | Phase 2 | `UX-002`, `UX-006` | Settings/actions align with real behavior, Organization is read-only, and URL state is deterministic/shareable |
 | Phase 3 | `UX-004`, `UX-005` | Accessibility controls in CI and faster onboarding time-to-value with measured outcomes |
 
@@ -48,9 +48,9 @@ This plan must deliver:
 ### UX-001: Evidence export and baseline report are unreachable
 
 **Implementation actions**
-1. Make `/settings` the canonical reporting surface with `Exports & Compliance` and `Baseline Report` tabs.
-2. Support route-based deep links (`/settings?tab=exports-compliance` and `/settings?tab=baseline-report`) while normalizing the legacy `evidence-export` alias into `exports-compliance`.
-3. Replace `/exports` with a thin entry page and redirect `/baseline-report` into Settings.
+1. Keep `/settings` as the canonical admin surface and retain `Baseline Report` there.
+2. Restore `/exports` as the canonical exports/compliance workspace while redirecting legacy settings export deep links there.
+3. Keep `/baseline-report` redirecting into Settings.
 4. Add route tests for direct-link behavior and tab-state synchronization.
 
 **Code touchpoints**
@@ -59,7 +59,7 @@ This plan must deliver:
 - `frontend/src/app/baseline-report/page.tsx`
 
 **Validation**
-- Manual smoke test confirms both views accessible from primary settings flow.
+- Manual smoke test confirms exports remains reachable from the navbar and baseline report remains reachable from Settings.
 - Automated tests cover click navigation and direct URL load.
 
 **Acceptance criteria**
@@ -67,8 +67,9 @@ This plan must deliver:
 
 **Execution status (2026-03-20)**
 - Completed.
-- Landed canonical Settings tabs plus thin `/exports` and redirecting `/baseline-report` surfaces.
-- Added route coverage in `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.test.tsx`.
+- Restored `/exports` as the main export/compliance workspace while removing the duplicate exports tab from Settings.
+- Legacy `/settings?tab=exports-compliance|evidence-export|control-mappings` URLs now normalize to `/exports`, and `/baseline-report` still redirects into Settings.
+- Added focused route coverage in `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/settings/page.test.tsx` and `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/exports/page.test.tsx`.
 
 ### UX-002: "Validate Read Role" action is no-op
 
@@ -181,8 +182,8 @@ This plan must deliver:
 
 **Execution status (2026-03-20)**
 - Completed.
-- `/settings` now uses query-param-backed tabs for `account`, `team`, `organization`, `notifications`, `integrations`, `governance`, `remediation-defaults`, `exports-compliance`, and `baseline-report`.
-- Route tests cover direct loads, legacy alias normalization, and tab-click URL updates.
+- `/settings` now uses query-param-backed tabs for `account`, `team`, `organization`, `notifications`, `integrations`, `governance`, `remediation-defaults`, and `baseline-report`.
+- Route tests cover direct loads, legacy export-link normalization to `/exports`, and tab-click URL updates.
 
 ## Milestones
 

@@ -25,6 +25,8 @@ from backend.services.action_run_confirmation import (
     PENDING_CONFIRMATION_INFO_MESSAGE,
     PENDING_CONFIRMATION_WARNING_MESSAGE,
     derive_pending_confirmation_state,
+    derive_action_run_status,
+    SUCCESS_NEEDS_FOLLOWUP_MESSAGE,
 )
 
 
@@ -138,6 +140,22 @@ def test_pending_confirmation_state_clears_after_confirmation() -> None:
     assert state["pending_confirmation_severity"] is None
 
 
+def test_action_run_status_returns_followup_message_for_non_closing_success() -> None:
+    finished_at = datetime.now(timezone.utc) - timedelta(hours=1)
+
+    state = derive_action_run_status(
+        status_bucket="run_successful_needs_followup",
+        latest_run_status="finished",
+        latest_run_finished_at=finished_at,
+        last_confirmed_at=None,
+    )
+
+    assert state["pending_confirmation"] is False
+    assert state["status_message"] == SUCCESS_NEEDS_FOLLOWUP_MESSAGE
+    assert state["status_severity"] == "warning"
+    assert state["followup_kind"] == "unrestricted_public_access_retained"
+
+
 def test_finding_response_includes_pending_confirmation_hints() -> None:
     now = datetime.now(timezone.utc)
     finding = SimpleNamespace(
@@ -184,6 +202,9 @@ def test_finding_response_includes_pending_confirmation_hints() -> None:
             "pending_confirmation_deadline_at": (now + timedelta(hours=12)).isoformat(),
             "pending_confirmation_message": PENDING_CONFIRMATION_INFO_MESSAGE,
             "pending_confirmation_severity": "info",
+            "status_message": PENDING_CONFIRMATION_INFO_MESSAGE,
+            "status_severity": "info",
+            "followup_kind": "awaiting_aws_confirmation",
         },
     )
 
@@ -193,6 +214,9 @@ def test_finding_response_includes_pending_confirmation_hints() -> None:
     assert response.pending_confirmation is True
     assert response.pending_confirmation_message == PENDING_CONFIRMATION_INFO_MESSAGE
     assert response.pending_confirmation_severity == "info"
+    assert response.status_message == PENDING_CONFIRMATION_INFO_MESSAGE
+    assert response.status_severity == "info"
+    assert response.followup_kind == "awaiting_aws_confirmation"
 
 
 def test_pending_confirmation_state_is_false_for_metadata_only_bucket() -> None:

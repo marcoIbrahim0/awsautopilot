@@ -9,12 +9,15 @@ action when remediation is the same.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import case, func
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, noload
 
 from backend.config import settings
 from backend.models import Action, ActionFinding, AwsAccount, Finding, Tenant
@@ -289,6 +292,7 @@ def _upsert_action_and_sync_links(
     session: Session,
     tenant_id: uuid.UUID,
     group: list[ExpandedFindingTarget],
+    action_cache: dict[tuple[uuid.UUID, str, str, str, str | None], Action] | None = None,
 ) -> tuple[Action, bool, list[uuid.UUID], bool]:
     """
     Upsert one action for the group of findings; sync action_findings to current group.
@@ -314,18 +318,19 @@ def _upsert_action_and_sync_links(
     if resource_type and len(resource_type) > 128:
         resource_type = resource_type[:128]
     owner = resolve_action_owner(findings, action_type=action_type, resource_type=resource_type)
-
-    q = session.query(Action).filter(
-        Action.tenant_id == tenant_id,
-        Action.action_type == action_type,
-        Action.target_id == target_id,
-        Action.account_id == account_id,
-    )
-    if region is None:
-        q = q.filter(Action.region.is_(None))
-    else:
-        q = q.filter(Action.region == region)
-    action = q.first()
+    cache_key = (tenant_id, action_type, target_id, account_id, region)
+    action = action_cache.get(cache_key) if action_cache is not None else None
+    if action is None:
+        action = _find_existing_action(
+            session,
+            tenant_id=tenant_id,
+            action_type=action_type,
+            target_id=target_id,
+            account_id=account_id,
+            region=region,
+        )
+        if action is not None and action_cache is not None:
+            action_cache[cache_key] = action
 
     if action:
         action.score = score
@@ -341,7 +346,7 @@ def _upsert_action_and_sync_links(
         action.owner_type = owner.owner_type
         action.owner_key = owner.owner_key
         action.owner_label = owner.owner_label
-        action.action_finding_links = [ActionFinding(finding=finding) for finding in findings]
+        _sync_action_finding_links(session, action, findings)
         finding_ids = [finding.id for finding in findings]
         allow_multi = any(item.allow_multi_action_links for item in group)
         return action, False, finding_ids, allow_multi
@@ -365,11 +370,86 @@ def _upsert_action_and_sync_links(
         owner_key=owner.owner_key,
         owner_label=owner.owner_label,
     )
-    action.action_finding_links = [ActionFinding(finding=finding) for finding in findings]
-    session.add(action)
+    try:
+        with session.begin_nested():
+            session.add(action)
+            session.flush([action])
+    except IntegrityError:
+        if action in session:
+            session.expunge(action)
+        action = _find_existing_action(
+            session,
+            tenant_id=tenant_id,
+            action_type=action_type,
+            target_id=target_id,
+            account_id=account_id,
+            region=region,
+        )
+        if action is None:
+            raise
+        if action_cache is not None:
+            action_cache[cache_key] = action
+        action.score = score
+        action.score_components = score_components
+        action.priority = score
+        if action.status != status:
+            _sync_existing_action_status(session, action, status, "Recovered canonical action after duplicate insert race.")
+        action.title = title
+        action.description = description
+        action.resource_id = resource_id
+        action.resource_type = resource_type
+        action.control_id = control_id
+        action.owner_type = owner.owner_type
+        action.owner_key = owner.owner_key
+        action.owner_label = owner.owner_label
+        _sync_action_finding_links(session, action, findings)
+        finding_ids = [finding.id for finding in findings]
+        allow_multi = any(item.allow_multi_action_links for item in group)
+        return action, False, finding_ids, allow_multi
+
+    if action_cache is not None:
+        action_cache[cache_key] = action
+    _sync_action_finding_links(session, action, findings)
     finding_ids = [finding.id for finding in findings]
     allow_multi = any(item.allow_multi_action_links for item in group)
     return action, True, finding_ids, allow_multi
+
+
+def _find_existing_action(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    action_type: str,
+    target_id: str,
+    account_id: str,
+    region: str | None,
+) -> Action | None:
+    query = session.query(Action).options(noload(Action.action_finding_links)).filter(
+        Action.tenant_id == tenant_id,
+        Action.action_type == action_type,
+        Action.target_id == target_id,
+        Action.account_id == account_id,
+    )
+    if region is None:
+        query = query.filter(Action.region.is_(None))
+    else:
+        query = query.filter(Action.region == region)
+    return query.first()
+
+
+def _sync_action_finding_links(session: Session, action: Action, findings: list[Finding]) -> None:
+    desired_ids = {finding.id for finding in findings if finding.id is not None}
+    existing_links = session.query(ActionFinding).filter(ActionFinding.action_id == action.id).all()
+    existing_ids = {link.finding_id for link in existing_links}
+
+    for link in existing_links:
+        if link.finding_id not in desired_ids:
+            session.delete(link)
+
+    for finding in findings:
+        if finding.id in existing_ids:
+            continue
+        session.add(ActionFinding(action_id=action.id, finding_id=finding.id))
 
 
 def _remove_conflicting_links_for_findings(
@@ -440,44 +520,95 @@ def _mark_resolved_actions_with_no_open_findings(
     Mark actions as resolved when all their linked findings are RESOLVED.
     Returns number of actions updated.
     """
-    q = session.query(Action).filter(Action.tenant_id == tenant_id, Action.status == ActionStatus.open.value)
-    if account_id is not None:
-        q = q.filter(Action.account_id == account_id)
-    if region is not None:
-        q = q.filter(Action.region == region)
-    open_actions = q.all()
+    resolve_ids = _action_ids_by_unresolved_count(
+        session,
+        tenant_id,
+        account_id=account_id,
+        region=region,
+        status_value=ActionStatus.open.value,
+        include_when_zero=True,
+    )
+    if not resolve_ids:
+        return [] if return_action_ids else 0
+    open_actions = (
+        _scoped_action_query(
+            session,
+            tenant_id,
+            account_id=account_id,
+            region=region,
+            status_value=ActionStatus.open.value,
+        )
+        .filter(Action.id.in_(resolve_ids))
+        .all()
+    )
     resolved_count = 0
     resolved_ids: list[uuid.UUID] = []
     for action in open_actions:
-        unresolved_count = _linked_unresolved_finding_count(action)
-        if unresolved_count == 0:
-            _sync_existing_action_status(session, action, ActionStatus.resolved.value, "Closed action after linked findings resolved.")
-            resolved_count += 1
-            if return_action_ids:
-                action_id = getattr(action, "id", None)
-                if action_id is not None:
-                    resolved_ids.append(action_id)
+        _sync_existing_action_status(session, action, ActionStatus.resolved.value, "Closed action after linked findings resolved.")
+        resolved_count += 1
+        if return_action_ids:
+            action_id = getattr(action, "id", None)
+            if action_id is not None:
+                resolved_ids.append(action_id)
     if return_action_ids:
         return resolved_ids
     return resolved_count
 
 
-def _linked_unresolved_finding_count(action: Action) -> int:
-    """
-    Count unresolved findings linked to an action.
+def _effective_open_indicator():
+    shadow_normalized = func.upper(func.coalesce(Finding.shadow_status_normalized, ""))
+    return case(
+        (ActionFinding.finding_id.is_(None), 0),
+        (shadow_normalized.in_(tuple(_SHADOW_CLOSED_STATUSES)), 0),
+        (shadow_normalized.in_(tuple(_SHADOW_OPEN_STATUSES)), 1),
+        (Finding.status.in_(_CLOSED_STATUSES), 0),
+        else_=1,
+    )
 
-    A missing linked finding object is treated as unresolved to fail safe.
-    """
-    unresolved = 0
-    links = action.action_finding_links or []
-    for link in links:
-        finding = getattr(link, "finding", None)
-        if finding is None:
-            unresolved += 1
-            continue
-        if _is_effectively_open_finding(finding):
-            unresolved += 1
-    return unresolved
+
+def _scoped_action_query(
+    session: Session,
+    tenant_id: uuid.UUID,
+    *,
+    account_id: str | None,
+    region: str | None,
+    status_value: str,
+):
+    query = session.query(Action).options(noload(Action.action_finding_links)).filter(
+        Action.tenant_id == tenant_id,
+        Action.status == status_value,
+    )
+    if account_id is not None:
+        query = query.filter(Action.account_id == account_id)
+    if region is not None:
+        query = query.filter(Action.region == region)
+    return query
+
+
+def _action_ids_by_unresolved_count(
+    session: Session,
+    tenant_id: uuid.UUID,
+    *,
+    account_id: str | None,
+    region: str | None,
+    status_value: str,
+    include_when_zero: bool,
+) -> list[uuid.UUID]:
+    query = (
+        session.query(Action.id, func.coalesce(func.sum(_effective_open_indicator()), 0).label("unresolved_count"))
+        .outerjoin(ActionFinding, ActionFinding.action_id == Action.id)
+        .outerjoin(Finding, Finding.id == ActionFinding.finding_id)
+        .filter(Action.tenant_id == tenant_id, Action.status == status_value)
+        .group_by(Action.id)
+    )
+    if account_id is not None:
+        query = query.filter(Action.account_id == account_id)
+    if region is not None:
+        query = query.filter(Action.region == region)
+    rows = query.all()
+    if include_when_zero:
+        return [action_id for action_id, unresolved_count in rows if int(unresolved_count or 0) == 0]
+    return [action_id for action_id, unresolved_count in rows if int(unresolved_count or 0) > 0]
 
 
 def _reopen_resolved_orphan_actions(
@@ -491,26 +622,36 @@ def _reopen_resolved_orphan_actions(
     """
     Reopen actions marked resolved when linked unresolved findings still exist.
     """
-    q = session.query(Action).filter(
-        Action.tenant_id == tenant_id,
-        Action.status == ActionStatus.resolved.value,
+    reopen_ids = _action_ids_by_unresolved_count(
+        session,
+        tenant_id,
+        account_id=account_id,
+        region=region,
+        status_value=ActionStatus.resolved.value,
+        include_when_zero=False,
     )
-    if account_id is not None:
-        q = q.filter(Action.account_id == account_id)
-    if region is not None:
-        q = q.filter(Action.region == region)
-
-    resolved_actions = q.all()
+    if not reopen_ids:
+        return [] if return_action_ids else 0
+    resolved_actions = (
+        _scoped_action_query(
+            session,
+            tenant_id,
+            account_id=account_id,
+            region=region,
+            status_value=ActionStatus.resolved.value,
+        )
+        .filter(Action.id.in_(reopen_ids))
+        .all()
+    )
     reopened_count = 0
     reopened_ids: list[uuid.UUID] = []
     for action in resolved_actions:
-        if _linked_unresolved_finding_count(action) > 0:
-            _sync_existing_action_status(session, action, ActionStatus.open.value, "Reopened action after linked findings regressed.")
-            reopened_count += 1
-            if return_action_ids:
-                action_id = getattr(action, "id", None)
-                if action_id is not None:
-                    reopened_ids.append(action_id)
+        _sync_existing_action_status(session, action, ActionStatus.open.value, "Reopened action after linked findings regressed.")
+        reopened_count += 1
+        if return_action_ids:
+            action_id = getattr(action, "id", None)
+            if action_id is not None:
+                reopened_ids.append(action_id)
     if return_action_ids:
         return reopened_ids
     return reopened_count
@@ -532,6 +673,7 @@ def compute_actions_for_tenant(
     Returns:
         dict with keys: actions_created, actions_updated, actions_resolved, action_findings_linked.
     """
+    total_started = time.perf_counter()
     q = session.query(Finding).filter(Finding.tenant_id == tenant_id)
     if account_id is not None:
         q = q.filter(Finding.account_id == account_id)
@@ -550,6 +692,16 @@ def compute_actions_for_tenant(
             expanded_account_scoped_finding_ids.add(finding.id)
         for target in expansion_context.expand_finding(finding):
             groups[_grouping_key_for_target(finding, target.resource_id)].append(target)
+    grouping_elapsed_ms = int((time.perf_counter() - total_started) * 1000)
+    logger.info(
+        "compute_actions phase=grouping tenant_id=%s scope=(account=%s region=%s) findings=%d groups=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        len(findings),
+        len(groups),
+        grouping_elapsed_ms,
+    )
 
     created = 0
     updated = 0
@@ -559,9 +711,16 @@ def compute_actions_for_tenant(
     created_action_ids: list[str] = []
     updated_action_ids: list[str] = []
     allowed_expanded_action_ids_by_finding: defaultdict[uuid.UUID, set[uuid.UUID]] = defaultdict(set)
+    action_cache: dict[tuple[uuid.UUID, str, str, str, str | None], Action] = {}
 
+    upsert_started = time.perf_counter()
     for group in groups.values():
-        action, is_new, finding_ids, allow_multi = _upsert_action_and_sync_links(session, tenant_id, group)
+        action, is_new, finding_ids, allow_multi = _upsert_action_and_sync_links(
+            session,
+            tenant_id,
+            group,
+            action_cache=action_cache,
+        )
         if action.id is None:
             session.flush()
         actions_touched.append(action)
@@ -594,12 +753,48 @@ def compute_actions_for_tenant(
             tenant_id,
             dict(allowed_expanded_action_ids_by_finding),
         )
+    upsert_elapsed_ms = int((time.perf_counter() - upsert_started) * 1000)
+    logger.info(
+        "compute_actions phase=upsert tenant_id=%s scope=(account=%s region=%s) touched_actions=%d created=%d updated=%d links=%d removed_links=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        len(actions_touched),
+        created,
+        updated,
+        links_count,
+        removed_conflicting_links,
+        upsert_elapsed_ms,
+    )
 
+    toxic_started = time.perf_counter()
     toxic_combination_matches = apply_toxic_combination_overlays(actions_touched)
+    toxic_elapsed_ms = int((time.perf_counter() - toxic_started) * 1000)
+    logger.info(
+        "compute_actions phase=toxic_overlay tenant_id=%s scope=(account=%s region=%s) matches=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        toxic_combination_matches,
+        toxic_elapsed_ms,
+    )
 
     if actions_touched:
+        projection_started = time.perf_counter()
         ensure_membership_for_actions(session, actions_touched, source="recompute")
+        projection_elapsed_ms = int((time.perf_counter() - projection_started) * 1000)
+        logger.info(
+            "compute_actions phase=group_projection tenant_id=%s scope=(account=%s region=%s) actions=%d elapsed_ms=%d",
+            tenant_id,
+            account_id,
+            region,
+            len(actions_touched),
+            projection_elapsed_ms,
+        )
+    else:
+        projection_elapsed_ms = 0
 
+    resolve_started = time.perf_counter()
     resolved_action_ids = _mark_resolved_actions_with_no_open_findings(
         session,
         tenant_id,
@@ -616,15 +811,40 @@ def compute_actions_for_tenant(
     )
     resolved = len(resolved_action_ids)
     reopened_with_open_findings = len(reopened_action_ids)
+    resolve_elapsed_ms = int((time.perf_counter() - resolve_started) * 1000)
+    logger.info(
+        "compute_actions phase=resolve_reopen tenant_id=%s scope=(account=%s region=%s) resolved=%d reopened=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        resolved,
+        reopened_with_open_findings,
+        resolve_elapsed_ms,
+    )
+
+    graph_started = time.perf_counter()
     graph_counts = sync_security_graph_for_scope(
         session,
         tenant_id,
         account_id=account_id,
         region=region,
     )
+    graph_elapsed_ms = int((time.perf_counter() - graph_started) * 1000)
+    total_elapsed_ms = int((time.perf_counter() - total_started) * 1000)
+    logger.info(
+        "compute_actions phase=security_graph tenant_id=%s scope=(account=%s region=%s) nodes_created=%d edges_created=%d nodes_deleted=%d edges_deleted=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        graph_counts["graph_nodes_created"],
+        graph_counts["graph_edges_created"],
+        graph_counts["graph_nodes_deleted"],
+        graph_counts["graph_edges_deleted"],
+        graph_elapsed_ms,
+    )
 
     logger.info(
-        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d toxic_combination_matches=%d graph_nodes_created=%d graph_edges_created=%d graph_nodes_deleted=%d graph_edges_deleted=%d",
+        "compute_actions_for_tenant tenant_id=%s scope=(account=%s region=%s) groups=%d created=%d updated=%d resolved=%d reopened_with_open_findings=%d links=%d removed_links=%d toxic_combination_matches=%d graph_nodes_created=%d graph_edges_created=%d graph_nodes_deleted=%d graph_edges_deleted=%d elapsed_ms=%d",
         tenant_id,
         account_id,
         region,
@@ -640,6 +860,7 @@ def compute_actions_for_tenant(
         graph_counts["graph_edges_created"],
         graph_counts["graph_nodes_deleted"],
         graph_counts["graph_edges_deleted"],
+        total_elapsed_ms,
     )
     return {
         "actions_created": created,
@@ -653,5 +874,14 @@ def compute_actions_for_tenant(
         "resolved_action_ids": [str(action_id) for action_id in resolved_action_ids],
         "reopened_action_ids": [str(action_id) for action_id in reopened_action_ids],
         "toxic_combination_matches": toxic_combination_matches,
+        "phase_timings_ms": {
+            "grouping": grouping_elapsed_ms,
+            "upsert": upsert_elapsed_ms,
+            "toxic_overlay": toxic_elapsed_ms,
+            "group_projection": projection_elapsed_ms,
+            "resolve_reopen": resolve_elapsed_ms,
+            "security_graph": graph_elapsed_ms,
+            "total": total_elapsed_ms,
+        },
         **graph_counts,
     }

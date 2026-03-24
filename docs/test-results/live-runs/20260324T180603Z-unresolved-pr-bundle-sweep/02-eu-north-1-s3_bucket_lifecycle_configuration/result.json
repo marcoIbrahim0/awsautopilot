@@ -1,0 +1,429 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 2,
+    "open_actions": 3,
+    "pending_confirmation": 0,
+    "run_not_successful": 1
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "bc116f71-a480-40ab-8b97-b1217eec9a65",
+      "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+      "4a5a765e-cf7d-40bf-91c2-19a361d242ae"
+    ],
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "confirmed": 0,
+    "control_ids": [
+      "S3.11"
+    ],
+    "latest_artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "S3.11"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "S3.11"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 11,
+        "files": [
+          {
+            "bundle_path": "run_all.sh",
+            "byte_count": 11538,
+            "change_type": "create_or_update",
+            "content_sha256": "e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5",
+            "line_count": 404,
+            "repo_path": "run_all.sh"
+          },
+          {
+            "bundle_path": "README_GROUP.txt",
+            "byte_count": 1084,
+            "change_type": "create_or_update",
+            "content_sha256": "8ed5bdfc504a47748f06bdc501f48ede111503085c86afe3ab4517b1aaac7cee",
+            "line_count": 23,
+            "repo_path": "README_GROUP.txt"
+          },
+          {
+            "bundle_path": "bundle_manifest.json",
+            "byte_count": 7925,
+            "change_type": "create_or_update",
+            "content_sha256": "f4a785f97443f943148e37eaac32973c8bc614f1fa6136920e22c4f78586474e",
+            "line_count": 139,
+            "repo_path": "bundle_manifest.json"
+          },
+          {
+            "bundle_path": "decision_log.md",
+            "byte_count": 1951,
+            "change_type": "create_or_update",
+            "content_sha256": "21bcd9a357a40399b4c96569a825364670b273b874a801f7e002a5e60969d38b",
+            "line_count": 23,
+            "repo_path": "decision_log.md"
+          },
+          {
+            "bundle_path": "finding_coverage.json",
+            "byte_count": 515,
+            "change_type": "create_or_update",
+            "content_sha256": "f7c41121d3c09d1865849cccdc4f213f2593abbc1d6cce3cfd8ba2221bad903f",
+            "line_count": 20,
+            "repo_path": "finding_coverage.json"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt",
+            "byte_count": 832,
+            "change_type": "create_or_update",
+            "content_sha256": "a84bb4eb6a2e4adcf8eeef6fad0d78c917bb47bdf1ee1f09a9e0437a198c0991",
+            "line_count": 12,
+            "repo_path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json",
+            "byte_count": 2442,
+            "change_type": "create_or_update",
+            "content_sha256": "f37bcc690b507f10f3b8065fe08fe9d429b84e9f83897fbc1538f403f2c12166",
+            "line_count": 40,
+            "repo_path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt",
+            "byte_count": 832,
+            "change_type": "create_or_update",
+            "content_sha256": "d67c89f11f2ed9fb8bd210ea96dcb50c420663151fe2908afdfdb85404b5ab43",
+            "line_count": 12,
+            "repo_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json",
+            "byte_count": 2448,
+            "change_type": "create_or_update",
+            "content_sha256": "b124cb70839e99faffd17d55f2605f8b5275df4d67c109beab14ee92fd04aa4a",
+            "line_count": 40,
+            "repo_path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt",
+            "byte_count": 712,
+            "change_type": "create_or_update",
+            "content_sha256": "4b40f67be0e22d70bbad3e52417e2bdfa9b688db15fd87a45ee30d0900a1f061",
+            "line_count": 12,
+            "repo_path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json",
+            "byte_count": 2022,
+            "change_type": "create_or_update",
+            "content_sha256": "6bf759eeb312b0af6605b3c3294fb97b18994a0bbc4508ed828a70dd20f48b63",
+            "line_count": 39,
+            "repo_path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json"
+          }
+        ],
+        "fingerprint_sha256": "23bbc8b5ad55710f8c0c48c946207e4efcb3ee9b0dedebbc212baccf49672c96",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)",
+          "`README_GROUP.txt` <- `README_GROUP.txt` (23 lines, sha256:8ed5bdfc504a)",
+          "`bundle_manifest.json` <- `bundle_manifest.json` (139 lines, sha256:f4a785f97443)",
+          "`decision_log.md` <- `decision_log.md` (23 lines, sha256:21bcd9a357a4)",
+          "`finding_coverage.json` <- `finding_coverage.json` (20 lines, sha256:f7c41121d3c0)",
+          "`manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` (12 lines, sha256:a84bb4eb6a2e)",
+          "`manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` <- `manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` (40 lines, sha256:f37bcc690b50)",
+          "`manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` (12 lines, sha256:d67c89f11f2e)",
+          "`manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` (40 lines, sha256:b124cb70839e)",
+          "`manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt` <- `manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt` (12 lines, sha256:4b40f67be0e2)",
+          "`manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json` <- `manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json` (39 lines, sha256:6bf759eeb312)"
+        ],
+        "version": 1
+      },
+      "group_bundle": {
+        "account_id": "696505809372",
+        "action_count": 3,
+        "action_ids": [
+          "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+          "bc116f71-a480-40ab-8b97-b1217eec9a65",
+          "4a5a765e-cf7d-40bf-91c2-19a361d242ae"
+        ],
+        "action_resolutions": [
+          {
+            "action_id": "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "resolution": {
+              "blocked_reasons": [
+                "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+                "Lifecycle preservation evidence is missing for additive merge review."
+              ],
+              "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "abort_days": 7,
+                "additive_merge_safe": false,
+                "executable_lifecycle_merge_allowed": false,
+                "existing_lifecycle_configuration_captured": false,
+                "existing_lifecycle_configuration_equivalent": false,
+                "existing_lifecycle_rule_count": null,
+                "family": "s3_bucket_lifecycle_configuration",
+                "family_strategy": "s3_enable_abort_incomplete_uploads",
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "s3_enable_abort_incomplete_uploads",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "abort_days": 7
+              },
+              "strategy_id": "s3_enable_abort_incomplete_uploads",
+              "support_tier": "manual_guidance_only"
+            },
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "strategy_inputs": {}
+          },
+          {
+            "action_id": "bc116f71-a480-40ab-8b97-b1217eec9a65",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "resolution": {
+              "blocked_reasons": [
+                "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+                "Lifecycle preservation evidence is missing for additive merge review."
+              ],
+              "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "abort_days": 7,
+                "additive_merge_safe": false,
+                "executable_lifecycle_merge_allowed": false,
+                "existing_lifecycle_configuration_captured": false,
+                "existing_lifecycle_configuration_equivalent": false,
+                "existing_lifecycle_rule_count": null,
+                "family": "s3_bucket_lifecycle_configuration",
+                "family_strategy": "s3_enable_abort_incomplete_uploads",
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "s3_enable_abort_incomplete_uploads",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "abort_days": 7
+              },
+              "strategy_id": "s3_enable_abort_incomplete_uploads",
+              "support_tier": "manual_guidance_only"
+            },
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "strategy_inputs": {}
+          },
+          {
+            "action_id": "4a5a765e-cf7d-40bf-91c2-19a361d242ae",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "resolution": {
+              "blocked_reasons": [
+                "Lifecycle preservation evidence is missing for additive merge review."
+              ],
+              "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "abort_days": 7,
+                "additive_merge_safe": false,
+                "executable_lifecycle_merge_allowed": false,
+                "existing_lifecycle_configuration_captured": false,
+                "existing_lifecycle_configuration_equivalent": false,
+                "existing_lifecycle_rule_count": null,
+                "family": "s3_bucket_lifecycle_configuration",
+                "family_strategy": "s3_enable_abort_incomplete_uploads",
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "s3_enable_abort_incomplete_uploads",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "abort_days": 7
+              },
+              "strategy_id": "s3_enable_abort_incomplete_uploads",
+              "support_tier": "manual_guidance_only"
+            },
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "strategy_inputs": {}
+          }
+        ],
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "diff_fingerprint_sha256": "23bbc8b5ad55710f8c0c48c946207e4efcb3ee9b0dedebbc212baccf49672c96",
+        "executable_action_count": 0,
+        "execution_root": "executable/actions",
+        "generated_action_count": 3,
+        "group_key": "s3_bucket_lifecycle_configuration|696505809372|eu-north-1|open",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "manual_guidance_action_count": 3,
+        "region": "eu-north-1",
+        "repo_target_configured": false,
+        "represented_action_count": 3,
+        "resolved_action_count": 3,
+        "resolved_action_ids": [
+          "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+          "bc116f71-a480-40ab-8b97-b1217eec9a65",
+          "4a5a765e-cf7d-40bf-91c2-19a361d242ae"
+        ],
+        "review_required_action_count": 0,
+        "runnable_action_count": 0,
+        "runner_template_source": "embedded_mixed_tier",
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_action_count": 0,
+        "skipped_actions": [],
+        "status": "open",
+        "tier_counts": {
+          "executable": 0,
+          "manual_guidance": 3,
+          "review_required": 0
+        }
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\" \"${CACHE_ROOT}/provider-mirror\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_PROVIDER_MIRROR_DIR=\"${CACHE_ROOT}/provider-mirror\"\nPREFERRED_TF_PROVIDER_MIRROR_DIR=\"${HOME}/.terraform.d/plugin-cache\"\nACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nwrite_tfrc_with_cache_only() {\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\n}\n\nwrite_tfrc_with_mirror() {\n  local mirror_dir=\"$1\"\n  cat > \"${TFRC_PATH}\" <<EOF\nprovider_installation {\n  filesystem_mirror {\n    path    = \"${mirror_dir}\"\n    include = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n  direct {\n    exclude = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n}\nEOF\n}\n\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nAWS_PROVIDER_VERSION=\"5.100.0\"\nAWS_PROVIDER_LOCKFILE=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl\"\nTERRAFORM_PROVIDER_OS=\"$(uname | tr '[:upper:]' '[:lower:]')\"\nTERRAFORM_PROVIDER_ARCH=\"$(uname -m)\"\ncase \"${TERRAFORM_PROVIDER_ARCH}\" in\n  x86_64)\n    TERRAFORM_PROVIDER_ARCH=\"amd64\"\n    ;;\n  aarch64|arm64)\n    TERRAFORM_PROVIDER_ARCH=\"arm64\"\n    ;;\nesac\nTERRAFORM_PROVIDER_PLATFORM=\"${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}\"\n\nhas_cached_aws_provider() {\n  find -L \"${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .\n}\n\nhas_mirrored_aws_provider() {\n  local mirror_dir=\"${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}\"\n  find -L \"${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -print -quit 2>/dev/null | grep -q .\n}\n\nhas_preferred_mirrored_aws_provider() {\n  has_mirrored_aws_provider \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n}\n\nbootstrap_provider_cache() {\n  local bootstrap_dir marker\n  marker=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready\"\n  ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\n  if has_preferred_mirrored_aws_provider; then\n    ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n  fi\n  if [ -f \"${marker}\" ] && has_mirrored_aws_provider \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" && [ -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    return 0\n  fi\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\nEOF\n\n  if [ \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" = \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\" ]; then\n    (\n      cd \"${bootstrap_dir}\"\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  else\n    (\n      cd \"${bootstrap_dir}\"\n      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" >/dev/null\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  fi\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\nseed_canonical_aws_lockfile() {\n  local dir=\"$1\"\n  if [ ! -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    echo \"ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}.\"\n    return 1\n  fi\n  rm -rf \"$dir/.terraform\"\n  cp \"${AWS_PROVIDER_LOCKFILE}\" \"$dir/.terraform.lock.hcl\"\n}\n\nterraform_init_with_lockfile_fallback() {\n  local dir=\"$1\"\n  local log_file rc\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform init -input=false -lockfile=readonly\n  ) 2>&1 | tee \"$log_file\"\n  rc=${PIPESTATUS[0]}\n  set -e\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n  if ! grep -q \"Provider dependency changes detected\" \"$log_file\"; then\n    rm -f \"$log_file\"\n    return \"$rc\"\n  fi\n  echo \"WARNING: terraform init detected additional providers for $dir; refreshing lockfile.\"\n  rm -f \"$log_file\"\n  (\n    cd \"$dir\"\n    terraform init -input=false\n  )\n}\n\ncopy_action_folder_to_workspace() {\n  local source_dir=\"$1\"\n  local workspace_dir=\"$2\"\n\n  mkdir -p \"$workspace_dir\"\n  if command -v rsync >/dev/null 2>&1; then\n    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' \"$source_dir\"/ \"$workspace_dir\"/\n    return 0\n  fi\n\n  (\n    cd \"$source_dir\"\n    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .\n  ) | (\n    cd \"$workspace_dir\"\n    tar -xf -\n  )\n}\n\nprepare_action_workspace() {\n  local source_dir=\"$1\"\n  local workspace_root workspace_dir\n\n  workspace_root=$(mktemp -d \"${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX\")\n  workspace_dir=\"${workspace_root}/action\"\n  if ! copy_action_folder_to_workspace \"$source_dir\" \"$workspace_dir\"; then\n    rm -rf \"$workspace_root\"\n    return 1\n  fi\n  printf '%s\\n' \"$workspace_dir\"\n}\n\ncleanup_action_workspace() {\n  local workspace_dir=\"$1\"\n  local workspace_root\n\n  workspace_root=$(dirname \"$workspace_dir\")\n  rm -rf \"$workspace_root\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n\n  if ! grep -Eiq \"$duplicate_pattern\" \"$log_file\"; then\n    return 1\n  fi\n  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' \"$log_file\"; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local timeout_secs=\"${2:-${ACTION_TIMEOUT_SECS}}\"\n  local log_file rc resource existing_id duplicate_line\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    run_with_timeout \"$timeout_secs\" terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_with_timeout() {\n  local timeout_secs=\"$1\"\n  shift\n  python3 - \"$timeout_secs\" \"$@\" <<'PY'\nimport subprocess\nimport sys\n\ntimeout_secs = int(sys.argv[1])\ncommand = sys.argv[2:]\ntry:\n    completed = subprocess.run(command, check=False, timeout=timeout_secs)\nexcept subprocess.TimeoutExpired:\n    print(\"ERROR: command timed out after %ss: %s\" % (timeout_secs, \" \".join(command)))\n    sys.exit(124)\nsys.exit(int(completed.returncode))\nPY\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    if ! seed_canonical_aws_lockfile \"$dir\"; then\n      return 1\n    fi\n    set +e\n    terraform_init_with_lockfile_fallback \"$dir\"\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\nwrite_tfrc_with_mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\"\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nACTION_TIMEOUT_SECS=\"${ACTION_TIMEOUT_SECS:-300}\"\nif ! [[ \"${ACTION_TIMEOUT_SECS}\" =~ ^[0-9]+$ ]] || [ \"${ACTION_TIMEOUT_SECS}\" -le 0 ]; then\n  ACTION_TIMEOUT_SECS=300\nfi\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  workspace_dir=\"\"\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  workspace_dir=$(prepare_action_workspace \"$dir\") || {\n    echo \"ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (workspace)\")\n    continue\n  }\n\n  if ! run_terraform_init_with_retry \"$workspace_dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$workspace_dir\"\n    run_with_timeout \"$ACTION_TIMEOUT_SECS\" terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$workspace_dir\" \"$ACTION_TIMEOUT_SECS\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  cleanup_action_workspace \"$workspace_dir\"\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n",
+            "path": "run_all.sh"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- none\n\nReview-required actions:\n- none\n\nManual-guidance actions:\n- 1. S3 general purpose buckets should have Lifecycle configurations (manual_guidance_metadata_only) -> manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd\n- 2. S3 general purpose buckets should have Lifecycle configurations (manual_guidance_metadata_only) -> manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71\n- 3. S3 general purpose buckets should have Lifecycle configurations (manual_guidance_metadata_only) -> manual_guidance/actions/03-aws-account-696505809372-4a5a765e\n",
+            "path": "README_GROUP.txt"
+          },
+          {
+            "content": "{\n  \"action_count\": 3,\n  \"actions\": [\n    {\n      \"action_id\": \"03bbb5fd-0d45-472e-91f7-b0dc98d8091f\",\n      \"action_type\": \"s3_bucket_lifecycle_configuration\",\n      \"blocked_reasons\": [\n        \"An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.\",\n        \"Lifecycle preservation evidence is missing for additive merge review.\"\n      ],\n      \"control_id\": \"S3.11\",\n      \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd\",\n      \"has_runnable_terraform\": false,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"manual_guidance_metadata_only\",\n      \"preservation_summary\": {\n        \"abort_days\": 7,\n        \"additive_merge_safe\": false,\n        \"executable_lifecycle_merge_allowed\": false,\n        \"existing_lifecycle_configuration_captured\": false,\n        \"existing_lifecycle_configuration_equivalent\": false,\n        \"existing_lifecycle_rule_count\": null,\n        \"family\": \"s3_bucket_lifecycle_configuration\",\n        \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"manual_guidance_only\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11\",\n      \"tier\": \"manual_guidance\",\n      \"tier_root\": \"manual_guidance/actions\",\n      \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n    },\n    {\n      \"action_id\": \"bc116f71-a480-40ab-8b97-b1217eec9a65\",\n      \"action_type\": \"s3_bucket_lifecycle_configuration\",\n      \"blocked_reasons\": [\n        \"An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.\",\n        \"Lifecycle preservation evidence is missing for additive merge review.\"\n      ],\n      \"control_id\": \"S3.11\",\n      \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71\",\n      \"has_runnable_terraform\": false,\n      \"index\": 2,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"manual_guidance_metadata_only\",\n      \"preservation_summary\": {\n        \"abort_days\": 7,\n        \"additive_merge_safe\": false,\n        \"executable_lifecycle_merge_allowed\": false,\n        \"existing_lifecycle_configuration_captured\": false,\n        \"existing_lifecycle_configuration_equivalent\": false,\n        \"existing_lifecycle_rule_count\": null,\n        \"family\": \"s3_bucket_lifecycle_configuration\",\n        \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"manual_guidance_only\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11\",\n      \"tier\": \"manual_guidance\",\n      \"tier_root\": \"manual_guidance/actions\",\n      \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n    },\n    {\n      \"action_id\": \"4a5a765e-cf7d-40bf-91c2-19a361d242ae\",\n      \"action_type\": \"s3_bucket_lifecycle_configuration\",\n      \"blocked_reasons\": [\n        \"Lifecycle preservation evidence is missing for additive merge review.\"\n      ],\n      \"control_id\": \"S3.11\",\n      \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e\",\n      \"has_runnable_terraform\": false,\n      \"index\": 3,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"manual_guidance_metadata_only\",\n      \"preservation_summary\": {\n        \"abort_days\": 7,\n        \"additive_merge_safe\": false,\n        \"executable_lifecycle_merge_allowed\": false,\n        \"existing_lifecycle_configuration_captured\": false,\n        \"existing_lifecycle_configuration_equivalent\": false,\n        \"existing_lifecycle_rule_count\": null,\n        \"family\": \"s3_bucket_lifecycle_configuration\",\n        \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"manual_guidance_only\",\n      \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|S3.11\",\n      \"tier\": \"manual_guidance\",\n      \"tier_root\": \"manual_guidance/actions\",\n      \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"03bbb5fd-0d45-472e-91f7-b0dc98d8091f\",\n    \"bc116f71-a480-40ab-8b97-b1217eec9a65\",\n    \"4a5a765e-cf7d-40bf-91c2-19a361d242ae\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 0,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 0,\n    \"manual_guidance\": 3,\n    \"review_required\": 0\n  }\n}\n",
+            "path": "bundle_manifest.json"
+          },
+          {
+            "content": "# Decision Log\n\n## 1. S3 general purpose buckets should have Lifecycle configurations\n- Action ID: 03bbb5fd-0d45-472e-91f7-b0dc98d8091f\n- Tier: manual_guidance/actions\n- Outcome: manual_guidance_metadata_only\n- Strategy/Profile: s3_enable_abort_incomplete_uploads / s3_enable_abort_incomplete_uploads\n- Summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\n\n## 2. S3 general purpose buckets should have Lifecycle configurations\n- Action ID: bc116f71-a480-40ab-8b97-b1217eec9a65\n- Tier: manual_guidance/actions\n- Outcome: manual_guidance_metadata_only\n- Strategy/Profile: s3_enable_abort_incomplete_uploads / s3_enable_abort_incomplete_uploads\n- Summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\n\n## 3. S3 general purpose buckets should have Lifecycle configurations\n- Action ID: 4a5a765e-cf7d-40bf-91c2-19a361d242ae\n- Tier: manual_guidance/actions\n- Outcome: manual_guidance_metadata_only\n- Strategy/Profile: s3_enable_abort_incomplete_uploads / s3_enable_abort_incomplete_uploads\n- Summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\n\n",
+            "path": "decision_log.md"
+          },
+          {
+            "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"03bbb5fd-0d45-472e-91f7-b0dc98d8091f\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"manual_guidance_only\"\n    },\n    {\n      \"action_id\": \"bc116f71-a480-40ab-8b97-b1217eec9a65\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"manual_guidance_only\"\n    },\n    {\n      \"action_id\": \"4a5a765e-cf7d-40bf-91c2-19a361d242ae\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"manual_guidance_only\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n",
+            "path": "finding_coverage.json"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: S3 general purpose buckets should have Lifecycle configurations\nAction ID: 03bbb5fd-0d45-472e-91f7-b0dc98d8091f\nTier: manual_guidance\nTier root: manual_guidance/actions\nOutcome: manual_guidance_metadata_only\nStrategy: s3_enable_abort_incomplete_uploads\nProfile: s3_enable_abort_incomplete_uploads\n\nDecision summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+            "path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"03bbb5fd-0d45-472e-91f7-b0dc98d8091f\",\n  \"action_type\": \"s3_bucket_lifecycle_configuration\",\n  \"blocked_reasons\": [\n    \"An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.\",\n    \"Lifecycle preservation evidence is missing for additive merge review.\"\n  ],\n  \"control_id\": \"S3.11\",\n  \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd\",\n  \"has_runnable_terraform\": false,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"manual_guidance_metadata_only\",\n  \"preservation_summary\": {\n    \"abort_days\": 7,\n    \"additive_merge_safe\": false,\n    \"executable_lifecycle_merge_allowed\": false,\n    \"existing_lifecycle_configuration_captured\": false,\n    \"existing_lifecycle_configuration_equivalent\": false,\n    \"existing_lifecycle_rule_count\": null,\n    \"family\": \"s3_bucket_lifecycle_configuration\",\n    \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"manual_guidance_only\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11\",\n  \"tier\": \"manual_guidance\",\n  \"tier_root\": \"manual_guidance/actions\",\n  \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n}\n",
+            "path": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: S3 general purpose buckets should have Lifecycle configurations\nAction ID: bc116f71-a480-40ab-8b97-b1217eec9a65\nTier: manual_guidance\nTier root: manual_guidance/actions\nOutcome: manual_guidance_metadata_only\nStrategy: s3_enable_abort_incomplete_uploads\nProfile: s3_enable_abort_incomplete_uploads\n\nDecision summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+            "path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"bc116f71-a480-40ab-8b97-b1217eec9a65\",\n  \"action_type\": \"s3_bucket_lifecycle_configuration\",\n  \"blocked_reasons\": [\n    \"An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.\",\n    \"Lifecycle preservation evidence is missing for additive merge review.\"\n  ],\n  \"control_id\": \"S3.11\",\n  \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71\",\n  \"has_runnable_terraform\": false,\n  \"index\": 2,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"manual_guidance_metadata_only\",\n  \"preservation_summary\": {\n    \"abort_days\": 7,\n    \"additive_merge_safe\": false,\n    \"executable_lifecycle_merge_allowed\": false,\n    \"existing_lifecycle_configuration_captured\": false,\n    \"existing_lifecycle_configuration_equivalent\": false,\n    \"existing_lifecycle_rule_count\": null,\n    \"family\": \"s3_bucket_lifecycle_configuration\",\n    \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"manual_guidance_only\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11\",\n  \"tier\": \"manual_guidance\",\n  \"tier_root\": \"manual_guidance/actions\",\n  \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n}\n",
+            "path": "manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: S3 general purpose buckets should have Lifecycle configurations\nAction ID: 4a5a765e-cf7d-40bf-91c2-19a361d242ae\nTier: manual_guidance\nTier root: manual_guidance/actions\nOutcome: manual_guidance_metadata_only\nStrategy: s3_enable_abort_incomplete_uploads\nProfile: s3_enable_abort_incomplete_uploads\n\nDecision summary: Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+            "path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"4a5a765e-cf7d-40bf-91c2-19a361d242ae\",\n  \"action_type\": \"s3_bucket_lifecycle_configuration\",\n  \"blocked_reasons\": [\n    \"Lifecycle preservation evidence is missing for additive merge review.\"\n  ],\n  \"control_id\": \"S3.11\",\n  \"decision_rationale\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e\",\n  \"has_runnable_terraform\": false,\n  \"index\": 3,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"manual_guidance_metadata_only\",\n  \"preservation_summary\": {\n    \"abort_days\": 7,\n    \"additive_merge_safe\": false,\n    \"executable_lifecycle_merge_allowed\": false,\n    \"existing_lifecycle_configuration_captured\": false,\n    \"existing_lifecycle_configuration_equivalent\": false,\n    \"existing_lifecycle_rule_count\": null,\n    \"family\": \"s3_bucket_lifecycle_configuration\",\n    \"family_strategy\": \"s3_enable_abort_incomplete_uploads\",\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"s3_enable_abort_incomplete_uploads\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"manual_guidance_only\",\n  \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|S3.11\",\n  \"tier\": \"manual_guidance\",\n  \"tier_root\": \"manual_guidance/actions\",\n  \"title\": \"S3 general purpose buckets should have Lifecycle configurations\"\n}\n",
+            "path": "manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 11,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 11538,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5\",\n      \"line_count\": 404,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 1084,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"8ed5bdfc504a47748f06bdc501f48ede111503085c86afe3ab4517b1aaac7cee\",\n      \"line_count\": 23,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 7925,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f4a785f97443f943148e37eaac32973c8bc614f1fa6136920e22c4f78586474e\",\n      \"line_count\": 139,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 1951,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"21bcd9a357a40399b4c96569a825364670b273b874a801f7e002a5e60969d38b\",\n      \"line_count\": 23,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 515,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f7c41121d3c09d1865849cccdc4f213f2593abbc1d6cce3cfd8ba2221bad903f\",\n      \"line_count\": 20,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt\",\n      \"byte_count\": 832,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"a84bb4eb6a2e4adcf8eeef6fad0d78c917bb47bdf1ee1f09a9e0437a198c0991\",\n      \"line_count\": 12,\n      \"repo_path\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json\",\n      \"byte_count\": 2442,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f37bcc690b507f10f3b8065fe08fe9d429b84e9f83897fbc1538f403f2c12166\",\n      \"line_count\": 40,\n      \"repo_path\": \"manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt\",\n      \"byte_count\": 832,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"d67c89f11f2ed9fb8bd210ea96dcb50c420663151fe2908afdfdb85404b5ab43\",\n      \"line_count\": 12,\n      \"repo_path\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json\",\n      \"byte_count\": 2448,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"b124cb70839e99faffd17d55f2605f8b5275df4d67c109beab14ee92fd04aa4a\",\n      \"line_count\": 40,\n      \"repo_path\": \"manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt\",\n      \"byte_count\": 712,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"4b40f67be0e22d70bbad3e52417e2bdfa9b688db15fd87a45ee30d0900a1f061\",\n      \"line_count\": 12,\n      \"repo_path\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json\",\n      \"byte_count\": 2022,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"6bf759eeb312b0af6605b3c3294fb97b18994a0bbc4508ed828a70dd20f48b63\",\n      \"line_count\": 39,\n      \"repo_path\": \"manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"23bbc8b5ad55710f8c0c48c946207e4efcb3ee9b0dedebbc212baccf49672c96\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (23 lines, sha256:8ed5bdfc504a)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (139 lines, sha256:f4a785f97443)\",\n    \"`decision_log.md` <- `decision_log.md` (23 lines, sha256:21bcd9a357a4)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (20 lines, sha256:f7c41121d3c0)\",\n    \"`manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` (12 lines, sha256:a84bb4eb6a2e)\",\n    \"`manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` <- `manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` (40 lines, sha256:f37bcc690b50)\",\n    \"`manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` (12 lines, sha256:d67c89f11f2e)\",\n    \"`manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` <- `manual_guidance/actions/02-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` (40 lines, sha256:b124cb70839e)\",\n    \"`manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt` <- `manual_guidance/actions/03-aws-account-696505809372-4a5a765e/README_ACTION.txt` (12 lines, sha256:4b40f67be0e2)\",\n    \"`manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json` <- `manual_guidance/actions/03-aws-account-696505809372-4a5a765e/decision.json` (39 lines, sha256:6bf759eeb312)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## S3 general purpose buckets should have Lifecycle configurations\n- Action ID: `03bbb5fd-0d45-472e-91f7-b0dc98d8091f`\n- Control ID: `S3.11`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11`\n- Rollback command: `aws s3api delete-bucket-lifecycle --bucket ocypheris-live-ct-20260323162333-eu-north-1`\n\n## S3 general purpose buckets should have Lifecycle configurations\n- Action ID: `bc116f71-a480-40ab-8b97-b1217eec9a65`\n- Control ID: `S3.11`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11`\n- Rollback command: `aws s3api delete-bucket-lifecycle --bucket security-autopilot-config-696505809372-eu-north-1`\n\n## S3 general purpose buckets should have Lifecycle configurations\n- Action ID: `4a5a765e-cf7d-40bf-91c2-19a361d242ae`\n- Control ID: `S3.11`\n- Target: `696505809372|eu-north-1|AWS::::Account:696505809372|S3.11`\n- Rollback command: `aws s3api delete-bucket-lifecycle --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.11`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"S3.11\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"S3.11\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "bundle_rollback_entries": {},
+          "diff_fingerprint_sha256": "23bbc8b5ad55710f8c0c48c946207e4efcb3ee9b0dedebbc212baccf49672c96",
+          "executable_action_count": 0,
+          "execution_root": "executable/actions",
+          "generated_action_count": 3,
+          "layout_version": "grouped_bundle_mixed_tier/v1",
+          "manual_guidance_action_count": 3,
+          "repo_target_configured": false,
+          "represented_action_count": 3,
+          "requested_action_count": 3,
+          "review_required_action_count": 0,
+          "runnable_action_count": 0,
+          "runner_template_source": "embedded_mixed_tier",
+          "runner_template_version": "grouped_bundle_mixed_tier/v1",
+          "skipped_action_count": 0,
+          "skipped_actions": [],
+          "tier_counts": {
+            "executable": 0,
+            "manual_guidance": 3,
+            "review_required": 0
+          }
+        },
+        "steps": [
+          "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+          "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+          "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+        ]
+      },
+      "risk_acknowledged": true,
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+            "action_type": "s3_bucket_lifecycle_configuration",
+            "control_id": "S3.11",
+            "rollback_command": "aws s3api delete-bucket-lifecycle --bucket ocypheris-live-ct-20260323162333-eu-north-1",
+            "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11",
+            "title": "S3 general purpose buckets should have Lifecycle configurations"
+          },
+          {
+            "action_id": "bc116f71-a480-40ab-8b97-b1217eec9a65",
+            "action_type": "s3_bucket_lifecycle_configuration",
+            "control_id": "S3.11",
+            "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-config-696505809372-eu-north-1",
+            "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11",
+            "title": "S3 general purpose buckets should have Lifecycle configurations"
+          },
+          {
+            "action_id": "4a5a765e-cf7d-40bf-91c2-19a361d242ae",
+            "action_type": "s3_bucket_lifecycle_configuration",
+            "control_id": "S3.11",
+            "rollback_command": "aws s3api delete-bucket-lifecycle --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+            "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+            "title": "S3 general purpose buckets should have Lifecycle configurations"
+          }
+        ],
+        "entry_count": 3,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "s3_enable_abort_incomplete_uploads"
+    },
+    "latest_run_id": "afaf47de-f501-4307-a265-66b727d37d2e",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 2,
+    "region": "eu-north-1",
+    "representative_action_id": "bc116f71-a480-40ab-8b97-b1217eec9a65",
+    "run_not_successful": 1,
+    "status": "open",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "total_actions": 3
+  },
+  "error": "Timeout on /api/actions/bc116f71-a480-40ab-8b97-b1217eec9a65/remediation-options",
+  "status": "failed"
+}

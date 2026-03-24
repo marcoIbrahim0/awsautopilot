@@ -12,40 +12,11 @@ from sqlalchemy.pool import NullPool
 
 from backend.config import settings
 from backend.models.base import Base
+from backend.services.database_failover import build_async_connect_args, resolve_database_urls
 
-# Fix DATABASE_URL for asyncpg - remove sslmode/channel_binding query params
-# asyncpg doesn't support these in query string, needs SSL configured via connect_args
-_db_url = settings.DATABASE_URL
-if "+asyncpg" in _db_url and ("sslmode=" in _db_url or "channel_binding=" in _db_url):
-    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-
-    parsed = urlparse(_db_url)
-    query_params = parse_qs(parsed.query)
-    query_params.pop("sslmode", None)
-    query_params.pop("channel_binding", None)
-    new_query = urlencode(query_params, doseq=True)
-    _db_url = urlunparse(parsed._replace(query=new_query))
-
-# Configure SSL for asyncpg (Neon requires SSL)
-# For Neon, we need SSL but may need relaxed verification for certificate chain issues
-_connect_args = {}
-if "neon" in _db_url.lower() or "sslmode=require" in settings.DATABASE_URL.lower():
-    import ssl
-
-    # Try default context first, but allow fallback to relaxed verification if needed
-    # For local development, relaxed verification may be needed if cert chain is incomplete
-    try:
-        ssl_context = ssl.create_default_context()
-        # For Neon, we might need to relax verification
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-    except Exception:
-        # Fallback: create minimal SSL context
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-    
-    _connect_args["ssl"] = ssl_context
+_resolved_urls = resolve_database_urls()
+_db_url = _resolved_urls.async_url
+_connect_args = build_async_connect_args(_db_url)
 
 async_engine: AsyncEngine = create_async_engine(
     _db_url,

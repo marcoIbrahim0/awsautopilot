@@ -5,6 +5,7 @@ Runs the action engine for a tenant (optionally scoped to account/region).
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 
 from backend.services.attack_path_materialized import maybe_schedule_attack_path_refresh
@@ -35,14 +36,32 @@ def execute_compute_actions_job(job: dict) -> None:
     account_id = job.get("account_id")
     region = job.get("region")
     sync_task_ids: list[uuid.UUID] = []
+    started = time.perf_counter()
 
+    logger.info(
+        "compute_actions start tenant_id=%s scope=(account=%s region=%s)",
+        tenant_id,
+        account_id,
+        region,
+    )
     with session_scope() as session:
+        compute_started = time.perf_counter()
         result = compute_actions_for_tenant(
             session,
             tenant_id,
             account_id=account_id,
             region=region,
         )
+        compute_elapsed_ms = int((time.perf_counter() - compute_started) * 1000)
+        logger.info(
+            "compute_actions phase=compute_core tenant_id=%s scope=(account=%s region=%s) elapsed_ms=%d",
+            tenant_id,
+            account_id,
+            region,
+            compute_elapsed_ms,
+        )
+
+        planning_started = time.perf_counter()
         sync_task_ids = plan_action_sync_tasks(
             session,
             tenant_id=tenant_id,
@@ -50,12 +69,57 @@ def execute_compute_actions_job(job: dict) -> None:
             reopened_action_ids=_task_reopened_ids(result),
             trigger="worker.compute_actions",
         )
+        logger.info(
+            "compute_actions phase=plan_sync tenant_id=%s scope=(account=%s region=%s) tasks=%d elapsed_ms=%d",
+            tenant_id,
+            account_id,
+            region,
+            len(sync_task_ids),
+            int((time.perf_counter() - planning_started) * 1000),
+        )
 
-    dispatch_sync_tasks(sync_task_ids, tenant_id=tenant_id)
-    maybe_schedule_attack_path_refresh(tenant_id=tenant_id, account_id=account_id, region=region)
+    dispatch_started = time.perf_counter()
+    logger.info(
+        "compute_actions phase=dispatch_sync start tenant_id=%s scope=(account=%s region=%s) tasks=%d",
+        tenant_id,
+        account_id,
+        region,
+        len(sync_task_ids),
+    )
+    dispatch_result = dispatch_sync_tasks(sync_task_ids, tenant_id=tenant_id)
+    logger.info(
+        "compute_actions phase=dispatch_sync complete tenant_id=%s scope=(account=%s region=%s) enqueued=%d failed=%d elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        int(dispatch_result.get("enqueued") or 0),
+        int(dispatch_result.get("failed") or 0),
+        int((time.perf_counter() - dispatch_started) * 1000),
+    )
+
+    attack_path_started = time.perf_counter()
+    logger.info(
+        "compute_actions phase=attack_path_enqueue start tenant_id=%s scope=(account=%s region=%s)",
+        tenant_id,
+        account_id,
+        region,
+    )
+    attack_path_scheduled = maybe_schedule_attack_path_refresh(
+        tenant_id=tenant_id,
+        account_id=account_id,
+        region=region,
+    )
+    logger.info(
+        "compute_actions phase=attack_path_enqueue complete tenant_id=%s scope=(account=%s region=%s) scheduled=%s elapsed_ms=%d",
+        tenant_id,
+        account_id,
+        region,
+        attack_path_scheduled,
+        int((time.perf_counter() - attack_path_started) * 1000),
+    )
 
     logger.info(
-        "compute_actions complete tenant_id=%s scope=(account=%s region=%s) created=%d updated=%d resolved=%d links=%d",
+        "compute_actions complete tenant_id=%s scope=(account=%s region=%s) created=%d updated=%d resolved=%d links=%d elapsed_ms=%d",
         tenant_id,
         account_id,
         region,
@@ -63,6 +127,7 @@ def execute_compute_actions_job(job: dict) -> None:
         result["actions_updated"],
         result["actions_resolved"],
         result["action_findings_linked"],
+        int((time.perf_counter() - started) * 1000),
     )
 
 

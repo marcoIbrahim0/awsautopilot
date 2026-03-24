@@ -1,0 +1,40 @@
+{
+  "action_id": "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "blocked_reasons": [
+    "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+    "Lifecycle preservation evidence is missing for additive merge review."
+  ],
+  "control_id": "S3.11",
+  "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "manual_guidance/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd",
+  "has_runnable_terraform": false,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "manual_guidance_metadata_only",
+  "preservation_summary": {
+    "abort_days": 7,
+    "additive_merge_safe": false,
+    "executable_lifecycle_merge_allowed": false,
+    "existing_lifecycle_configuration_captured": false,
+    "existing_lifecycle_configuration_equivalent": false,
+    "existing_lifecycle_rule_count": null,
+    "family": "s3_bucket_lifecycle_configuration",
+    "family_strategy": "s3_enable_abort_incomplete_uploads",
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_enable_abort_incomplete_uploads",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enable_abort_incomplete_uploads",
+  "strategy_inputs": {},
+  "support_tier": "manual_guidance_only",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11",
+  "tier": "manual_guidance",
+  "tier_root": "manual_guidance/actions",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}

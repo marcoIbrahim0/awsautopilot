@@ -12,14 +12,15 @@ from alembic import context
 from alembic.ddl.impl import DefaultImpl
 
 from backend.config import settings
+from backend.services.database_failover import resolve_database_urls
 from backend.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Use sync DB URL from settings (derived or DATABASE_URL_SYNC env).
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Use the same resolved sync DB URL as the runtime so migrations follow failover too.
+config.set_main_option("sqlalchemy.url", resolve_database_urls().sync_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

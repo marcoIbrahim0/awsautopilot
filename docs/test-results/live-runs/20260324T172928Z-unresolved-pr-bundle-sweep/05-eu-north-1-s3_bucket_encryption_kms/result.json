@@ -1,0 +1,545 @@
+{
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 1,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 0
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "42356c4a-b399-4e15-b055-3870a370da3d",
+      "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c"
+    ],
+    "action_type": "s3_bucket_encryption_kms",
+    "confirmed": 0,
+    "control_ids": [
+      "S3.15"
+    ],
+    "latest_artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "S3.15"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "S3.15"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 19,
+        "files": [
+          {
+            "bundle_path": "run_all.sh",
+            "byte_count": 11538,
+            "change_type": "create_or_update",
+            "content_sha256": "e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5",
+            "line_count": 404,
+            "repo_path": "run_all.sh"
+          },
+          {
+            "bundle_path": "README_GROUP.txt",
+            "byte_count": 923,
+            "change_type": "create_or_update",
+            "content_sha256": "52e0e1f66203cb8b66c5f7c49f6593d401a9faa7e8e3004dfce853d67f4c6e54",
+            "line_count": 22,
+            "repo_path": "README_GROUP.txt"
+          },
+          {
+            "bundle_path": "bundle_manifest.json",
+            "byte_count": 5478,
+            "change_type": "create_or_update",
+            "content_sha256": "d6f43f1e0a013f88aa4810b52c7cd5db542983f5569ea2b40879db4b987661b5",
+            "line_count": 111,
+            "repo_path": "bundle_manifest.json"
+          },
+          {
+            "bundle_path": "decision_log.md",
+            "byte_count": 896,
+            "change_type": "create_or_update",
+            "content_sha256": "5049ec64c1fd75a7cfa10f0eafaa0b49d3d7203f76ea1ad47ddb4f017635cc3b",
+            "line_count": 16,
+            "repo_path": "decision_log.md"
+          },
+          {
+            "bundle_path": "finding_coverage.json",
+            "byte_count": 368,
+            "change_type": "create_or_update",
+            "content_sha256": "f48a812af529a623ec78ad117607bed41572ad26626f3d2a140dd2fd44f3b974",
+            "line_count": 15,
+            "repo_path": "finding_coverage.json"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf",
+            "byte_count": 479,
+            "change_type": "create_or_update",
+            "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+            "line_count": 18,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf",
+            "byte_count": 826,
+            "change_type": "create_or_update",
+            "content_sha256": "85d3f0ab1be4376f8b5026b389717e4736c2187e6eab936752e13aa145971c8b",
+            "line_count": 22,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py",
+            "byte_count": 3192,
+            "change_type": "create_or_update",
+            "content_sha256": "103d4f64c11aebc28c8f47617023aebce45d59495b48c8000a6e7768ceb6d69d",
+            "line_count": 97,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py",
+            "byte_count": 3181,
+            "change_type": "create_or_update",
+            "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+            "line_count": 95,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt",
+            "byte_count": 1568,
+            "change_type": "create_or_update",
+            "content_sha256": "94cae4644a8263b7be3f57dd69b7b9f7f899cd135679523ac27f4c7efdb5a68e",
+            "line_count": 31,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt",
+            "byte_count": 558,
+            "change_type": "create_or_update",
+            "content_sha256": "6bbd5fc3a7b50e428b927ad6ad7aba4b0358242c3ec85eb225abf638123ce0cb",
+            "line_count": 12,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json",
+            "byte_count": 2303,
+            "change_type": "create_or_update",
+            "content_sha256": "c7b1ec32d62f6a3c236ab06ff2d2446eefb461845bbc3f9803050a8a26a0e414",
+            "line_count": 46,
+            "repo_path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf",
+            "byte_count": 479,
+            "change_type": "create_or_update",
+            "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+            "line_count": 18,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf",
+            "byte_count": 838,
+            "change_type": "create_or_update",
+            "content_sha256": "fe329b8cd6f4a5912335ec2ed7e1356cdd3baff8dc123ebd9790b1284ce17941",
+            "line_count": 22,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py",
+            "byte_count": 3198,
+            "change_type": "create_or_update",
+            "content_sha256": "dceee2c84d5110b9a561361e8844ea38b07dc3ea08688b6214cc2f9d8ed39c03",
+            "line_count": 97,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py",
+            "byte_count": 3181,
+            "change_type": "create_or_update",
+            "content_sha256": "18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274",
+            "line_count": 95,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt",
+            "byte_count": 1568,
+            "change_type": "create_or_update",
+            "content_sha256": "94cae4644a8263b7be3f57dd69b7b9f7f899cd135679523ac27f4c7efdb5a68e",
+            "line_count": 31,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt",
+            "byte_count": 558,
+            "change_type": "create_or_update",
+            "content_sha256": "00ed38898d7e5ef64f53ffc72cad3c6d9991bec809441a46d97fe3e43be510ce",
+            "line_count": 12,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json",
+            "byte_count": 2315,
+            "change_type": "create_or_update",
+            "content_sha256": "97931373b28c387395d2d592d3d683cc071b73be9add7c7887598db6d17f51b7",
+            "line_count": 46,
+            "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json"
+          }
+        ],
+        "fingerprint_sha256": "53a59861a691f054fd859ec5d2ba7ba4359e3b3aa78e21684828901222b2645e",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)",
+          "`README_GROUP.txt` <- `README_GROUP.txt` (22 lines, sha256:52e0e1f66203)",
+          "`bundle_manifest.json` <- `bundle_manifest.json` (111 lines, sha256:d6f43f1e0a01)",
+          "`decision_log.md` <- `decision_log.md` (16 lines, sha256:5049ec64c1fd)",
+          "`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:f48a812af529)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf` (18 lines, sha256:9a0536e0e979)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf` (22 lines, sha256:85d3f0ab1be4)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py` (97 lines, sha256:103d4f64c11a)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt` (31 lines, sha256:94cae4644a82)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt` (12 lines, sha256:6bbd5fc3a7b5)",
+          "`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json` (46 lines, sha256:c7b1ec32d62f)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf` (18 lines, sha256:9a0536e0e979)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf` (22 lines, sha256:fe329b8cd6f4)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py` (97 lines, sha256:dceee2c84d51)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt` (31 lines, sha256:94cae4644a82)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt` (12 lines, sha256:00ed38898d7e)",
+          "`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json` (46 lines, sha256:97931373b28c)"
+        ],
+        "version": 1
+      },
+      "group_bundle": {
+        "account_id": "696505809372",
+        "action_count": 2,
+        "action_ids": [
+          "42356c4a-b399-4e15-b055-3870a370da3d",
+          "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c"
+        ],
+        "action_resolutions": [
+          {
+            "action_id": "42356c4a-b399-4e15-b055-3870a370da3d",
+            "profile_id": "s3_enable_sse_kms_guided",
+            "resolution": {
+              "blocked_reasons": [],
+              "decision_rationale": "Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "customer_managed_dependency_proven": false,
+                "customer_managed_grants_captured": false,
+                "customer_managed_key_valid": null,
+                "customer_managed_policy_json_captured": false,
+                "executable_kms_change_allowed": true,
+                "family": "s3_bucket_encryption_kms",
+                "family_strategy": "s3_enable_sse_kms_guided",
+                "kms_key_arn_present": false,
+                "kms_key_mode": "aws_managed",
+                "selected_branch": "s3_enable_sse_kms_guided",
+                "single_profile_compatible": true,
+                "strategy_only_supported": true,
+                "target_bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1",
+                "target_bucket_scope_proven": true
+              },
+              "profile_id": "s3_enable_sse_kms_guided",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "kms_key_mode": "aws_managed"
+              },
+              "strategy_id": "s3_enable_sse_kms_guided",
+              "support_tier": "deterministic_bundle"
+            },
+            "strategy_id": "s3_enable_sse_kms_guided",
+            "strategy_inputs": {
+              "kms_key_mode": "aws_managed"
+            }
+          },
+          {
+            "action_id": "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c",
+            "profile_id": "s3_enable_sse_kms_guided",
+            "resolution": {
+              "blocked_reasons": [],
+              "decision_rationale": "Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "customer_managed_dependency_proven": false,
+                "customer_managed_grants_captured": false,
+                "customer_managed_key_valid": null,
+                "customer_managed_policy_json_captured": false,
+                "executable_kms_change_allowed": true,
+                "family": "s3_bucket_encryption_kms",
+                "family_strategy": "s3_enable_sse_kms_guided",
+                "kms_key_arn_present": false,
+                "kms_key_mode": "aws_managed",
+                "selected_branch": "s3_enable_sse_kms_guided",
+                "single_profile_compatible": true,
+                "strategy_only_supported": true,
+                "target_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+                "target_bucket_scope_proven": true
+              },
+              "profile_id": "s3_enable_sse_kms_guided",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "kms_key_mode": "aws_managed"
+              },
+              "strategy_id": "s3_enable_sse_kms_guided",
+              "support_tier": "deterministic_bundle"
+            },
+            "strategy_id": "s3_enable_sse_kms_guided",
+            "strategy_inputs": {
+              "kms_key_mode": "aws_managed"
+            }
+          }
+        ],
+        "action_type": "s3_bucket_encryption_kms",
+        "diff_fingerprint_sha256": "53a59861a691f054fd859ec5d2ba7ba4359e3b3aa78e21684828901222b2645e",
+        "executable_action_count": 2,
+        "execution_root": "executable/actions",
+        "generated_action_count": 2,
+        "group_key": "s3_bucket_encryption_kms|696505809372|eu-north-1|open",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "manual_guidance_action_count": 0,
+        "region": "eu-north-1",
+        "repo_target_configured": false,
+        "represented_action_count": 2,
+        "resolved_action_count": 2,
+        "resolved_action_ids": [
+          "42356c4a-b399-4e15-b055-3870a370da3d",
+          "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c"
+        ],
+        "review_required_action_count": 0,
+        "runnable_action_count": 2,
+        "runner_template_source": "embedded_mixed_tier",
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_action_count": 0,
+        "skipped_actions": [],
+        "status": "open",
+        "tier_counts": {
+          "executable": 2,
+          "manual_guidance": 0,
+          "review_required": 0
+        }
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\" \"${CACHE_ROOT}/provider-mirror\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_PROVIDER_MIRROR_DIR=\"${CACHE_ROOT}/provider-mirror\"\nPREFERRED_TF_PROVIDER_MIRROR_DIR=\"${HOME}/.terraform.d/plugin-cache\"\nACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nwrite_tfrc_with_cache_only() {\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\n}\n\nwrite_tfrc_with_mirror() {\n  local mirror_dir=\"$1\"\n  cat > \"${TFRC_PATH}\" <<EOF\nprovider_installation {\n  filesystem_mirror {\n    path    = \"${mirror_dir}\"\n    include = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n  direct {\n    exclude = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n}\nEOF\n}\n\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nAWS_PROVIDER_VERSION=\"5.100.0\"\nAWS_PROVIDER_LOCKFILE=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl\"\nTERRAFORM_PROVIDER_OS=\"$(uname | tr '[:upper:]' '[:lower:]')\"\nTERRAFORM_PROVIDER_ARCH=\"$(uname -m)\"\ncase \"${TERRAFORM_PROVIDER_ARCH}\" in\n  x86_64)\n    TERRAFORM_PROVIDER_ARCH=\"amd64\"\n    ;;\n  aarch64|arm64)\n    TERRAFORM_PROVIDER_ARCH=\"arm64\"\n    ;;\nesac\nTERRAFORM_PROVIDER_PLATFORM=\"${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}\"\n\nhas_cached_aws_provider() {\n  find -L \"${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .\n}\n\nhas_mirrored_aws_provider() {\n  local mirror_dir=\"${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}\"\n  find -L \"${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -print -quit 2>/dev/null | grep -q .\n}\n\nhas_preferred_mirrored_aws_provider() {\n  has_mirrored_aws_provider \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n}\n\nbootstrap_provider_cache() {\n  local bootstrap_dir marker\n  marker=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready\"\n  ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\n  if has_preferred_mirrored_aws_provider; then\n    ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n  fi\n  if [ -f \"${marker}\" ] && has_mirrored_aws_provider \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" && [ -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    return 0\n  fi\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\nEOF\n\n  if [ \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" = \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\" ]; then\n    (\n      cd \"${bootstrap_dir}\"\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  else\n    (\n      cd \"${bootstrap_dir}\"\n      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" >/dev/null\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  fi\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\nseed_canonical_aws_lockfile() {\n  local dir=\"$1\"\n  if [ ! -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    echo \"ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}.\"\n    return 1\n  fi\n  rm -rf \"$dir/.terraform\"\n  cp \"${AWS_PROVIDER_LOCKFILE}\" \"$dir/.terraform.lock.hcl\"\n}\n\nterraform_init_with_lockfile_fallback() {\n  local dir=\"$1\"\n  local log_file rc\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform init -input=false -lockfile=readonly\n  ) 2>&1 | tee \"$log_file\"\n  rc=${PIPESTATUS[0]}\n  set -e\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n  if ! grep -q \"Provider dependency changes detected\" \"$log_file\"; then\n    rm -f \"$log_file\"\n    return \"$rc\"\n  fi\n  echo \"WARNING: terraform init detected additional providers for $dir; refreshing lockfile.\"\n  rm -f \"$log_file\"\n  (\n    cd \"$dir\"\n    terraform init -input=false\n  )\n}\n\ncopy_action_folder_to_workspace() {\n  local source_dir=\"$1\"\n  local workspace_dir=\"$2\"\n\n  mkdir -p \"$workspace_dir\"\n  if command -v rsync >/dev/null 2>&1; then\n    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' \"$source_dir\"/ \"$workspace_dir\"/\n    return 0\n  fi\n\n  (\n    cd \"$source_dir\"\n    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .\n  ) | (\n    cd \"$workspace_dir\"\n    tar -xf -\n  )\n}\n\nprepare_action_workspace() {\n  local source_dir=\"$1\"\n  local workspace_root workspace_dir\n\n  workspace_root=$(mktemp -d \"${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX\")\n  workspace_dir=\"${workspace_root}/action\"\n  if ! copy_action_folder_to_workspace \"$source_dir\" \"$workspace_dir\"; then\n    rm -rf \"$workspace_root\"\n    return 1\n  fi\n  printf '%s\\n' \"$workspace_dir\"\n}\n\ncleanup_action_workspace() {\n  local workspace_dir=\"$1\"\n  local workspace_root\n\n  workspace_root=$(dirname \"$workspace_dir\")\n  rm -rf \"$workspace_root\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n\n  if ! grep -Eiq \"$duplicate_pattern\" \"$log_file\"; then\n    return 1\n  fi\n  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' \"$log_file\"; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local timeout_secs=\"${2:-${ACTION_TIMEOUT_SECS}}\"\n  local log_file rc resource existing_id duplicate_line\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    run_with_timeout \"$timeout_secs\" terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_with_timeout() {\n  local timeout_secs=\"$1\"\n  shift\n  python3 - \"$timeout_secs\" \"$@\" <<'PY'\nimport subprocess\nimport sys\n\ntimeout_secs = int(sys.argv[1])\ncommand = sys.argv[2:]\ntry:\n    completed = subprocess.run(command, check=False, timeout=timeout_secs)\nexcept subprocess.TimeoutExpired:\n    print(\"ERROR: command timed out after %ss: %s\" % (timeout_secs, \" \".join(command)))\n    sys.exit(124)\nsys.exit(int(completed.returncode))\nPY\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    if ! seed_canonical_aws_lockfile \"$dir\"; then\n      return 1\n    fi\n    set +e\n    terraform_init_with_lockfile_fallback \"$dir\"\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\nwrite_tfrc_with_mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\"\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nACTION_TIMEOUT_SECS=\"${ACTION_TIMEOUT_SECS:-300}\"\nif ! [[ \"${ACTION_TIMEOUT_SECS}\" =~ ^[0-9]+$ ]] || [ \"${ACTION_TIMEOUT_SECS}\" -le 0 ]; then\n  ACTION_TIMEOUT_SECS=300\nfi\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  workspace_dir=\"\"\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  workspace_dir=$(prepare_action_workspace \"$dir\") || {\n    echo \"ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (workspace)\")\n    continue\n  }\n\n  if ! run_terraform_init_with_retry \"$workspace_dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$workspace_dir\"\n    run_with_timeout \"$ACTION_TIMEOUT_SECS\" terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$workspace_dir\" \"$ACTION_TIMEOUT_SECS\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  cleanup_action_workspace \"$workspace_dir\"\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n",
+            "path": "run_all.sh"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- 1. S3 general purpose buckets should be encrypted at rest with AWS KMS keys (executable_bundle_generated) -> executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a\n- 2. S3 general purpose buckets should be encrypted at rest with AWS KMS keys (executable_bundle_generated) -> executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27\n\nReview-required actions:\n- none\n\nManual-guidance actions:\n- none\n",
+            "path": "README_GROUP.txt"
+          },
+          {
+            "content": "{\n  \"action_count\": 2,\n  \"actions\": [\n    {\n      \"action_id\": \"42356c4a-b399-4e15-b055-3870a370da3d\",\n      \"action_type\": \"s3_bucket_encryption_kms\",\n      \"blocked_reasons\": [],\n      \"bundle_rollback_command\": \"python3 ./executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\",\n      \"bundle_rollback_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\",\n      \"bundle_rollback_runner\": \"python3\",\n      \"control_id\": \"S3.15\",\n      \"decision_rationale\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a\",\n      \"has_runnable_terraform\": true,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"executable_bundle_generated\",\n      \"preservation_summary\": {\n        \"customer_managed_dependency_proven\": false,\n        \"customer_managed_grants_captured\": false,\n        \"customer_managed_key_valid\": null,\n        \"customer_managed_policy_json_captured\": false,\n        \"executable_kms_change_allowed\": true,\n        \"family\": \"s3_bucket_encryption_kms\",\n        \"family_strategy\": \"s3_enable_sse_kms_guided\",\n        \"kms_key_arn_present\": false,\n        \"kms_key_mode\": \"aws_managed\",\n        \"selected_branch\": \"s3_enable_sse_kms_guided\",\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true,\n        \"target_bucket_name\": \"ocypheris-live-ct-20260323162333-eu-north-1\",\n        \"target_bucket_scope_proven\": true\n      },\n      \"profile_id\": \"s3_enable_sse_kms_guided\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"s3_enable_sse_kms_guided\",\n      \"strategy_inputs\": {\n        \"kms_key_mode\": \"aws_managed\"\n      },\n      \"support_tier\": \"deterministic_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.15\",\n      \"tier\": \"executable\",\n      \"tier_root\": \"executable/actions\",\n      \"title\": \"S3 general purpose buckets should be encrypted at rest with AWS KMS keys\"\n    },\n    {\n      \"action_id\": \"88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\",\n      \"action_type\": \"s3_bucket_encryption_kms\",\n      \"blocked_reasons\": [],\n      \"bundle_rollback_command\": \"python3 ./executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\",\n      \"bundle_rollback_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\",\n      \"bundle_rollback_runner\": \"python3\",\n      \"control_id\": \"S3.15\",\n      \"decision_rationale\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27\",\n      \"has_runnable_terraform\": true,\n      \"index\": 2,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"executable_bundle_generated\",\n      \"preservation_summary\": {\n        \"customer_managed_dependency_proven\": false,\n        \"customer_managed_grants_captured\": false,\n        \"customer_managed_key_valid\": null,\n        \"customer_managed_policy_json_captured\": false,\n        \"executable_kms_change_allowed\": true,\n        \"family\": \"s3_bucket_encryption_kms\",\n        \"family_strategy\": \"s3_enable_sse_kms_guided\",\n        \"kms_key_arn_present\": false,\n        \"kms_key_mode\": \"aws_managed\",\n        \"selected_branch\": \"s3_enable_sse_kms_guided\",\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true,\n        \"target_bucket_name\": \"security-autopilot-config-696505809372-eu-north-1\",\n        \"target_bucket_scope_proven\": true\n      },\n      \"profile_id\": \"s3_enable_sse_kms_guided\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"s3_enable_sse_kms_guided\",\n      \"strategy_inputs\": {\n        \"kms_key_mode\": \"aws_managed\"\n      },\n      \"support_tier\": \"deterministic_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.15\",\n      \"tier\": \"executable\",\n      \"tier_root\": \"executable/actions\",\n      \"title\": \"S3 general purpose buckets should be encrypted at rest with AWS KMS keys\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"42356c4a-b399-4e15-b055-3870a370da3d\",\n    \"88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 2,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 2,\n    \"manual_guidance\": 0,\n    \"review_required\": 0\n  }\n}\n",
+            "path": "bundle_manifest.json"
+          },
+          {
+            "content": "# Decision Log\n\n## 1. S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n- Action ID: 42356c4a-b399-4e15-b055-3870a370da3d\n- Tier: executable/actions\n- Outcome: executable_bundle_generated\n- Strategy/Profile: s3_enable_sse_kms_guided / s3_enable_sse_kms_guided\n- Summary: Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\n\n## 2. S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n- Action ID: 88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\n- Tier: executable/actions\n- Outcome: executable_bundle_generated\n- Strategy/Profile: s3_enable_sse_kms_guided / s3_enable_sse_kms_guided\n- Summary: Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\n\n",
+            "path": "decision_log.md"
+          },
+          {
+            "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"42356c4a-b399-4e15-b055-3870a370da3d\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"deterministic_bundle\"\n    },\n    {\n      \"action_id\": \"88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"deterministic_bundle\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n",
+            "path": "finding_coverage.json"
+          },
+          {
+            "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf"
+          },
+          {
+            "content": "# S3 bucket SSE-KMS encryption - Action: 42356c4a-b399-4e15-b055-3870a370da3d\n# Remediation for: S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n# Account: 696505809372 | Region: eu-north-1 | Bucket: ocypheris-live-ct-20260323162333-eu-north-1\n# Control: S3.15\n\nvariable \"kms_key_arn\" {\n  type        = string\n  description = \"KMS key ARN to use for bucket default encryption (override for customer-managed key)\"\n  default     = \"arn:aws:kms:eu-north-1:696505809372:alias/aws/s3\"\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"security_autopilot\" {\n  bucket = \"ocypheris-live-ct-20260323162333-eu-north-1\"\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm     = \"aws:kms\"\n      kms_master_key_id = var.kms_key_arn\n    }\n    bucket_key_enabled = true\n  }\n}\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf"
+          },
+          {
+            "content": "#!/usr/bin/env python3\n\"\"\"\nSecurity Autopilot \u2014 S3 bucket encryption pre-state capture.\n\nRun BEFORE terraform apply to snapshot the current bucket encryption so\nrollback can restore the exact pre-remediation encryption after\nterraform destroy.\n\nUsage:\n    python3 scripts/s3_encryption_capture.py\n\nOptional overrides:\n    BUCKET_NAME=my-bucket REGION=us-east-1 python3 scripts/s3_encryption_capture.py\n\nWrites: .s3-encryption-rollback/encryption_snapshot.json\n\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nfrom pathlib import Path\n\nSNAPSHOT_VERSION = 1\nROLLBACK_DIR = \".s3-encryption-rollback\"\nSNAPSHOT_FILE = \"encryption_snapshot.json\"\nDEFAULT_BUCKET_NAME = 'ocypheris-live-ct-20260323162333-eu-north-1'\nDEFAULT_REGION = 'eu-north-1'\n\n\ndef env_text(name: str, default: str) -> str:\n    value = os.environ.get(name, \"\").strip()\n    if value:\n        return value\n    fallback = default.strip()\n    if fallback:\n        return fallback\n    raise SystemExit(f\"{{name}} is required\")\n\n\ndef run_aws(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run([\"aws\", *args], capture_output=True, text=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"AWS CLI command failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n    return result\n\n\ndef main() -> None:\n    bucket_name = env_text(\"BUCKET_NAME\", DEFAULT_BUCKET_NAME)\n    region = env_text(\"REGION\", DEFAULT_REGION)\n    result = run_aws(\n        \"s3api\",\n        \"get-bucket-encryption\",\n        \"--bucket\",\n        bucket_name,\n        \"--region\",\n        region,\n        \"--output\",\n        \"json\",\n        check=False,\n    )\n    output = f\"{result.stdout}\\n{result.stderr}\"\n\n    encryption_exists = False\n    encryption_configuration = None\n    if result.returncode == 0:\n        payload = json.loads(result.stdout or \"{}\")\n        configuration = payload.get(\"ServerSideEncryptionConfiguration\")\n        if not isinstance(configuration, dict) and isinstance(payload.get(\"Rules\"), list):\n            configuration = payload\n        if isinstance(configuration, dict):\n            encryption_exists = True\n            encryption_configuration = configuration\n    elif \"ServerSideEncryptionConfigurationNotFoundError\" not in output:\n        message = result.stderr.strip() or result.stdout.strip() or \"get-bucket-encryption failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n\n    rollback_dir = Path(ROLLBACK_DIR)\n    rollback_dir.mkdir(parents=True, exist_ok=True)\n    snapshot_path = rollback_dir / SNAPSHOT_FILE\n    snapshot = {\n        \"version\": SNAPSHOT_VERSION,\n        \"bucket_name\": bucket_name,\n        \"region\": region,\n        \"encryption_exists\": encryption_exists,\n        \"encryption_configuration\": encryption_configuration,\n    }\n    snapshot_path.write_text(json.dumps(snapshot, indent=2) + \"\\n\", encoding=\"utf-8\")\n    if encryption_exists:\n        print(f\"Captured existing bucket encryption to {snapshot_path}\")\n    else:\n        print(f\"No existing bucket encryption found; captured empty pre-state to {snapshot_path}\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py"
+          },
+          {
+            "content": "#!/usr/bin/env python3\n\"\"\"\nSecurity Autopilot \u2014 S3 bucket encryption rollback restore.\n\nRun AFTER terraform destroy to restore the exact bucket encryption state\nthat was captured before apply.\n\nUsage:\n    python3 rollback/s3_encryption_restore.py\n\nReads: .s3-encryption-rollback/encryption_snapshot.json\n\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nimport tempfile\nfrom pathlib import Path\n\nROLLBACK_DIR = \".s3-encryption-rollback\"\nSNAPSHOT_FILE = \"encryption_snapshot.json\"\n\n\ndef run_aws(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run([\"aws\", *args], capture_output=True, text=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"AWS CLI command failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n    return result\n\n\ndef main() -> None:\n    snapshot_path = Path(ROLLBACK_DIR) / SNAPSHOT_FILE\n    if not snapshot_path.exists():\n        raise SystemExit(\n            f\"Snapshot not found at {snapshot_path}. \"\n            \"Was s3_encryption_capture.py run before apply?\"\n        )\n\n    snapshot = json.loads(snapshot_path.read_text(encoding=\"utf-8\"))\n    bucket_name = str(snapshot.get(\"bucket_name\") or \"\").strip()\n    region = str(snapshot.get(\"region\") or \"\").strip()\n    encryption_exists = bool(snapshot.get(\"encryption_exists\"))\n    configuration = snapshot.get(\"encryption_configuration\")\n\n    if not bucket_name or not region:\n        raise SystemExit(\"Snapshot is missing bucket_name or region.\")\n\n    if encryption_exists:\n        if not isinstance(configuration, dict) or not configuration:\n            raise SystemExit(\n                \"Snapshot says bucket encryption existed, but encryption_configuration is missing.\"\n            )\n        with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n            json.dump(configuration, handle, sort_keys=True, separators=(\",\", \":\"))\n            handle.flush()\n            config_path = Path(handle.name)\n        try:\n            run_aws(\n                \"s3api\",\n                \"put-bucket-encryption\",\n                \"--bucket\",\n                bucket_name,\n                \"--region\",\n                region,\n                \"--server-side-encryption-configuration\",\n                f\"file://{config_path}\",\n            )\n        finally:\n            config_path.unlink(missing_ok=True)\n        print(f\"Restored bucket encryption for {bucket_name} from {snapshot_path}.\")\n        return\n\n    result = run_aws(\n        \"s3api\",\n        \"delete-bucket-encryption\",\n        \"--bucket\",\n        bucket_name,\n        \"--region\",\n        region,\n        check=False,\n    )\n    output = f\"{result.stdout}\\n{result.stderr}\"\n    if result.returncode == 0 or \"ServerSideEncryptionConfigurationNotFoundError\" in output:\n        print(\n            f\"Original bucket encryption was absent; ensured {bucket_name} has no default encryption.\"\n        )\n        return\n\n    message = result.stderr.strip() or result.stdout.strip() or \"delete-bucket-encryption failed\"\n    raise SystemExit(f\"AWS CLI error: {message}\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-24T17:26:31+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nS3.15 rollback safeguards\n-------------------------\n- This executable Terraform path snapshots the exact pre-remediation bucket encryption state under `.s3-encryption-rollback/`.\n- Run `python3 scripts/s3_encryption_capture.py` before `terraform apply`. The generated helper already targets this bundle's bucket and region; `BUCKET_NAME` and `REGION` are optional overrides only.\n- After `terraform destroy`, run `python3 rollback/s3_encryption_restore.py` to restore the captured encryption exactly.\n- If the bucket originally had no default encryption configuration, the restore helper deletes the post-remediation config instead of forcing a fallback encryption mode.\n\n\nSelected strategy\n-----------------\n- strategy_id: s3_enable_sse_kms_guided\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: S3 general purpose buckets should be encrypted at rest with AWS KMS keys\nAction ID: 42356c4a-b399-4e15-b055-3870a370da3d\nTier: executable\nTier root: executable/actions\nOutcome: executable_bundle_generated\nStrategy: s3_enable_sse_kms_guided\nProfile: s3_enable_sse_kms_guided\n\nDecision summary: Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\nRunnable Terraform is present in this folder.\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"42356c4a-b399-4e15-b055-3870a370da3d\",\n  \"action_type\": \"s3_bucket_encryption_kms\",\n  \"blocked_reasons\": [],\n  \"bundle_rollback_command\": \"python3 ./executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\",\n  \"bundle_rollback_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\",\n  \"bundle_rollback_runner\": \"python3\",\n  \"control_id\": \"S3.15\",\n  \"decision_rationale\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a\",\n  \"has_runnable_terraform\": true,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"executable_bundle_generated\",\n  \"preservation_summary\": {\n    \"customer_managed_dependency_proven\": false,\n    \"customer_managed_grants_captured\": false,\n    \"customer_managed_key_valid\": null,\n    \"customer_managed_policy_json_captured\": false,\n    \"executable_kms_change_allowed\": true,\n    \"family\": \"s3_bucket_encryption_kms\",\n    \"family_strategy\": \"s3_enable_sse_kms_guided\",\n    \"kms_key_arn_present\": false,\n    \"kms_key_mode\": \"aws_managed\",\n    \"selected_branch\": \"s3_enable_sse_kms_guided\",\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true,\n    \"target_bucket_name\": \"ocypheris-live-ct-20260323162333-eu-north-1\",\n    \"target_bucket_scope_proven\": true\n  },\n  \"profile_id\": \"s3_enable_sse_kms_guided\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"s3_enable_sse_kms_guided\",\n  \"strategy_inputs\": {\n    \"kms_key_mode\": \"aws_managed\"\n  },\n  \"support_tier\": \"deterministic_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.15\",\n  \"tier\": \"executable\",\n  \"tier_root\": \"executable/actions\",\n  \"title\": \"S3 general purpose buckets should be encrypted at rest with AWS KMS keys\"\n}\n",
+            "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json"
+          },
+          {
+            "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf"
+          },
+          {
+            "content": "# S3 bucket SSE-KMS encryption - Action: 88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\n# Remediation for: S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n# Account: 696505809372 | Region: eu-north-1 | Bucket: security-autopilot-config-696505809372-eu-north-1\n# Control: S3.15\n\nvariable \"kms_key_arn\" {\n  type        = string\n  description = \"KMS key ARN to use for bucket default encryption (override for customer-managed key)\"\n  default     = \"arn:aws:kms:eu-north-1:696505809372:alias/aws/s3\"\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"security_autopilot\" {\n  bucket = \"security-autopilot-config-696505809372-eu-north-1\"\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm     = \"aws:kms\"\n      kms_master_key_id = var.kms_key_arn\n    }\n    bucket_key_enabled = true\n  }\n}\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf"
+          },
+          {
+            "content": "#!/usr/bin/env python3\n\"\"\"\nSecurity Autopilot \u2014 S3 bucket encryption pre-state capture.\n\nRun BEFORE terraform apply to snapshot the current bucket encryption so\nrollback can restore the exact pre-remediation encryption after\nterraform destroy.\n\nUsage:\n    python3 scripts/s3_encryption_capture.py\n\nOptional overrides:\n    BUCKET_NAME=my-bucket REGION=us-east-1 python3 scripts/s3_encryption_capture.py\n\nWrites: .s3-encryption-rollback/encryption_snapshot.json\n\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nfrom pathlib import Path\n\nSNAPSHOT_VERSION = 1\nROLLBACK_DIR = \".s3-encryption-rollback\"\nSNAPSHOT_FILE = \"encryption_snapshot.json\"\nDEFAULT_BUCKET_NAME = 'security-autopilot-config-696505809372-eu-north-1'\nDEFAULT_REGION = 'eu-north-1'\n\n\ndef env_text(name: str, default: str) -> str:\n    value = os.environ.get(name, \"\").strip()\n    if value:\n        return value\n    fallback = default.strip()\n    if fallback:\n        return fallback\n    raise SystemExit(f\"{{name}} is required\")\n\n\ndef run_aws(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run([\"aws\", *args], capture_output=True, text=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"AWS CLI command failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n    return result\n\n\ndef main() -> None:\n    bucket_name = env_text(\"BUCKET_NAME\", DEFAULT_BUCKET_NAME)\n    region = env_text(\"REGION\", DEFAULT_REGION)\n    result = run_aws(\n        \"s3api\",\n        \"get-bucket-encryption\",\n        \"--bucket\",\n        bucket_name,\n        \"--region\",\n        region,\n        \"--output\",\n        \"json\",\n        check=False,\n    )\n    output = f\"{result.stdout}\\n{result.stderr}\"\n\n    encryption_exists = False\n    encryption_configuration = None\n    if result.returncode == 0:\n        payload = json.loads(result.stdout or \"{}\")\n        configuration = payload.get(\"ServerSideEncryptionConfiguration\")\n        if not isinstance(configuration, dict) and isinstance(payload.get(\"Rules\"), list):\n            configuration = payload\n        if isinstance(configuration, dict):\n            encryption_exists = True\n            encryption_configuration = configuration\n    elif \"ServerSideEncryptionConfigurationNotFoundError\" not in output:\n        message = result.stderr.strip() or result.stdout.strip() or \"get-bucket-encryption failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n\n    rollback_dir = Path(ROLLBACK_DIR)\n    rollback_dir.mkdir(parents=True, exist_ok=True)\n    snapshot_path = rollback_dir / SNAPSHOT_FILE\n    snapshot = {\n        \"version\": SNAPSHOT_VERSION,\n        \"bucket_name\": bucket_name,\n        \"region\": region,\n        \"encryption_exists\": encryption_exists,\n        \"encryption_configuration\": encryption_configuration,\n    }\n    snapshot_path.write_text(json.dumps(snapshot, indent=2) + \"\\n\", encoding=\"utf-8\")\n    if encryption_exists:\n        print(f\"Captured existing bucket encryption to {snapshot_path}\")\n    else:\n        print(f\"No existing bucket encryption found; captured empty pre-state to {snapshot_path}\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py"
+          },
+          {
+            "content": "#!/usr/bin/env python3\n\"\"\"\nSecurity Autopilot \u2014 S3 bucket encryption rollback restore.\n\nRun AFTER terraform destroy to restore the exact bucket encryption state\nthat was captured before apply.\n\nUsage:\n    python3 rollback/s3_encryption_restore.py\n\nReads: .s3-encryption-rollback/encryption_snapshot.json\n\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nimport tempfile\nfrom pathlib import Path\n\nROLLBACK_DIR = \".s3-encryption-rollback\"\nSNAPSHOT_FILE = \"encryption_snapshot.json\"\n\n\ndef run_aws(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run([\"aws\", *args], capture_output=True, text=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"AWS CLI command failed\"\n        raise SystemExit(f\"AWS CLI error: {message}\")\n    return result\n\n\ndef main() -> None:\n    snapshot_path = Path(ROLLBACK_DIR) / SNAPSHOT_FILE\n    if not snapshot_path.exists():\n        raise SystemExit(\n            f\"Snapshot not found at {snapshot_path}. \"\n            \"Was s3_encryption_capture.py run before apply?\"\n        )\n\n    snapshot = json.loads(snapshot_path.read_text(encoding=\"utf-8\"))\n    bucket_name = str(snapshot.get(\"bucket_name\") or \"\").strip()\n    region = str(snapshot.get(\"region\") or \"\").strip()\n    encryption_exists = bool(snapshot.get(\"encryption_exists\"))\n    configuration = snapshot.get(\"encryption_configuration\")\n\n    if not bucket_name or not region:\n        raise SystemExit(\"Snapshot is missing bucket_name or region.\")\n\n    if encryption_exists:\n        if not isinstance(configuration, dict) or not configuration:\n            raise SystemExit(\n                \"Snapshot says bucket encryption existed, but encryption_configuration is missing.\"\n            )\n        with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n            json.dump(configuration, handle, sort_keys=True, separators=(\",\", \":\"))\n            handle.flush()\n            config_path = Path(handle.name)\n        try:\n            run_aws(\n                \"s3api\",\n                \"put-bucket-encryption\",\n                \"--bucket\",\n                bucket_name,\n                \"--region\",\n                region,\n                \"--server-side-encryption-configuration\",\n                f\"file://{config_path}\",\n            )\n        finally:\n            config_path.unlink(missing_ok=True)\n        print(f\"Restored bucket encryption for {bucket_name} from {snapshot_path}.\")\n        return\n\n    result = run_aws(\n        \"s3api\",\n        \"delete-bucket-encryption\",\n        \"--bucket\",\n        bucket_name,\n        \"--region\",\n        region,\n        check=False,\n    )\n    output = f\"{result.stdout}\\n{result.stderr}\"\n    if result.returncode == 0 or \"ServerSideEncryptionConfigurationNotFoundError\" in output:\n        print(\n            f\"Original bucket encryption was absent; ensured {bucket_name} has no default encryption.\"\n        )\n        return\n\n    message = result.stderr.strip() or result.stdout.strip() or \"delete-bucket-encryption failed\"\n    raise SystemExit(f\"AWS CLI error: {message}\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-24T17:26:31+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nS3.15 rollback safeguards\n-------------------------\n- This executable Terraform path snapshots the exact pre-remediation bucket encryption state under `.s3-encryption-rollback/`.\n- Run `python3 scripts/s3_encryption_capture.py` before `terraform apply`. The generated helper already targets this bundle's bucket and region; `BUCKET_NAME` and `REGION` are optional overrides only.\n- After `terraform destroy`, run `python3 rollback/s3_encryption_restore.py` to restore the captured encryption exactly.\n- If the bucket originally had no default encryption configuration, the restore helper deletes the post-remediation config instead of forcing a fallback encryption mode.\n\n\nSelected strategy\n-----------------\n- strategy_id: s3_enable_sse_kms_guided\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: S3 general purpose buckets should be encrypted at rest with AWS KMS keys\nAction ID: 88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\nTier: executable\nTier root: executable/actions\nOutcome: executable_bundle_generated\nStrategy: s3_enable_sse_kms_guided\nProfile: s3_enable_sse_kms_guided\n\nDecision summary: Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\nRunnable Terraform is present in this folder.\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c\",\n  \"action_type\": \"s3_bucket_encryption_kms\",\n  \"blocked_reasons\": [],\n  \"bundle_rollback_command\": \"python3 ./executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\",\n  \"bundle_rollback_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\",\n  \"bundle_rollback_runner\": \"python3\",\n  \"control_id\": \"S3.15\",\n  \"decision_rationale\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27\",\n  \"has_runnable_terraform\": true,\n  \"index\": 2,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"executable_bundle_generated\",\n  \"preservation_summary\": {\n    \"customer_managed_dependency_proven\": false,\n    \"customer_managed_grants_captured\": false,\n    \"customer_managed_key_valid\": null,\n    \"customer_managed_policy_json_captured\": false,\n    \"executable_kms_change_allowed\": true,\n    \"family\": \"s3_bucket_encryption_kms\",\n    \"family_strategy\": \"s3_enable_sse_kms_guided\",\n    \"kms_key_arn_present\": false,\n    \"kms_key_mode\": \"aws_managed\",\n    \"selected_branch\": \"s3_enable_sse_kms_guided\",\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true,\n    \"target_bucket_name\": \"security-autopilot-config-696505809372-eu-north-1\",\n    \"target_bucket_scope_proven\": true\n  },\n  \"profile_id\": \"s3_enable_sse_kms_guided\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"s3_enable_sse_kms_guided\",\n  \"strategy_inputs\": {\n    \"kms_key_mode\": \"aws_managed\"\n  },\n  \"support_tier\": \"deterministic_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.15\",\n  \"tier\": \"executable\",\n  \"tier_root\": \"executable/actions\",\n  \"title\": \"S3 general purpose buckets should be encrypted at rest with AWS KMS keys\"\n}\n",
+            "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 19,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 11538,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5\",\n      \"line_count\": 404,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 923,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"52e0e1f66203cb8b66c5f7c49f6593d401a9faa7e8e3004dfce853d67f4c6e54\",\n      \"line_count\": 22,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 5478,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"d6f43f1e0a013f88aa4810b52c7cd5db542983f5569ea2b40879db4b987661b5\",\n      \"line_count\": 111,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 896,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"5049ec64c1fd75a7cfa10f0eafaa0b49d3d7203f76ea1ad47ddb4f017635cc3b\",\n      \"line_count\": 16,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 368,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f48a812af529a623ec78ad117607bed41572ad26626f3d2a140dd2fd44f3b974\",\n      \"line_count\": 15,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf\",\n      \"byte_count\": 479,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3\",\n      \"line_count\": 18,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf\",\n      \"byte_count\": 826,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"85d3f0ab1be4376f8b5026b389717e4736c2187e6eab936752e13aa145971c8b\",\n      \"line_count\": 22,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py\",\n      \"byte_count\": 3192,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"103d4f64c11aebc28c8f47617023aebce45d59495b48c8000a6e7768ceb6d69d\",\n      \"line_count\": 97,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\",\n      \"byte_count\": 3181,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274\",\n      \"line_count\": 95,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt\",\n      \"byte_count\": 1568,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"94cae4644a8263b7be3f57dd69b7b9f7f899cd135679523ac27f4c7efdb5a68e\",\n      \"line_count\": 31,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt\",\n      \"byte_count\": 558,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"6bbd5fc3a7b50e428b927ad6ad7aba4b0358242c3ec85eb225abf638123ce0cb\",\n      \"line_count\": 12,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json\",\n      \"byte_count\": 2303,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"c7b1ec32d62f6a3c236ab06ff2d2446eefb461845bbc3f9803050a8a26a0e414\",\n      \"line_count\": 46,\n      \"repo_path\": \"executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf\",\n      \"byte_count\": 479,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3\",\n      \"line_count\": 18,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf\",\n      \"byte_count\": 838,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"fe329b8cd6f4a5912335ec2ed7e1356cdd3baff8dc123ebd9790b1284ce17941\",\n      \"line_count\": 22,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py\",\n      \"byte_count\": 3198,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"dceee2c84d5110b9a561361e8844ea38b07dc3ea08688b6214cc2f9d8ed39c03\",\n      \"line_count\": 97,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\",\n      \"byte_count\": 3181,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"18f0b4848b3624e2a73f3f4cf7904e40be7a775f51faa9683b4de019e738f274\",\n      \"line_count\": 95,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt\",\n      \"byte_count\": 1568,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"94cae4644a8263b7be3f57dd69b7b9f7f899cd135679523ac27f4c7efdb5a68e\",\n      \"line_count\": 31,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt\",\n      \"byte_count\": 558,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"00ed38898d7e5ef64f53ffc72cad3c6d9991bec809441a46d97fe3e43be510ce\",\n      \"line_count\": 12,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json\",\n      \"byte_count\": 2315,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"97931373b28c387395d2d592d3d683cc071b73be9add7c7887598db6d17f51b7\",\n      \"line_count\": 46,\n      \"repo_path\": \"executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"53a59861a691f054fd859ec5d2ba7ba4359e3b3aa78e21684828901222b2645e\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (22 lines, sha256:52e0e1f66203)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (111 lines, sha256:d6f43f1e0a01)\",\n    \"`decision_log.md` <- `decision_log.md` (16 lines, sha256:5049ec64c1fd)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (15 lines, sha256:f48a812af529)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/providers.tf` (18 lines, sha256:9a0536e0e979)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/s3_bucket_encryption_kms.tf` (22 lines, sha256:85d3f0ab1be4)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/scripts/s3_encryption_capture.py` (97 lines, sha256:103d4f64c11a)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README.txt` (31 lines, sha256:94cae4644a82)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/README_ACTION.txt` (12 lines, sha256:6bbd5fc3a7b5)\",\n    \"`executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json` <- `executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/decision.json` (46 lines, sha256:c7b1ec32d62f)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/providers.tf` (18 lines, sha256:9a0536e0e979)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/s3_bucket_encryption_kms.tf` (22 lines, sha256:fe329b8cd6f4)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/scripts/s3_encryption_capture.py` (97 lines, sha256:dceee2c84d51)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py` (95 lines, sha256:18f0b4848b36)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README.txt` (31 lines, sha256:94cae4644a82)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/README_ACTION.txt` (12 lines, sha256:00ed38898d7e)\",\n    \"`executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/decision.json` (46 lines, sha256:97931373b28c)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n- Action ID: `42356c4a-b399-4e15-b055-3870a370da3d`\n- Control ID: `S3.15`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.15`\n- Rollback command: `python3 ./executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py`\n\n## S3 general purpose buckets should be encrypted at rest with AWS KMS keys\n- Action ID: `88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c`\n- Control ID: `S3.15`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.15`\n- Rollback command: `python3 ./executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"S3.15\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"S3.15\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "bundle_rollback_entries": {
+            "42356c4a-b399-4e15-b055-3870a370da3d": {
+              "path": "executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py",
+              "runner": "python3"
+            },
+            "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c": {
+              "path": "executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py",
+              "runner": "python3"
+            }
+          },
+          "diff_fingerprint_sha256": "53a59861a691f054fd859ec5d2ba7ba4359e3b3aa78e21684828901222b2645e",
+          "executable_action_count": 2,
+          "execution_root": "executable/actions",
+          "generated_action_count": 2,
+          "layout_version": "grouped_bundle_mixed_tier/v1",
+          "manual_guidance_action_count": 0,
+          "repo_target_configured": false,
+          "represented_action_count": 2,
+          "requested_action_count": 2,
+          "review_required_action_count": 0,
+          "runnable_action_count": 2,
+          "runner_template_source": "embedded_mixed_tier",
+          "runner_template_version": "grouped_bundle_mixed_tier/v1",
+          "skipped_action_count": 0,
+          "skipped_actions": [],
+          "tier_counts": {
+            "executable": 2,
+            "manual_guidance": 0,
+            "review_required": 0
+          }
+        },
+        "steps": [
+          "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+          "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+          "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+        ]
+      },
+      "risk_acknowledged": true,
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "42356c4a-b399-4e15-b055-3870a370da3d",
+            "action_type": "s3_bucket_encryption_kms",
+            "control_id": "S3.15",
+            "rollback_command": "python3 ./executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-42356c4a/rollback/s3_encryption_restore.py",
+            "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.15",
+            "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+          },
+          {
+            "action_id": "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c",
+            "action_type": "s3_bucket_encryption_kms",
+            "control_id": "S3.15",
+            "rollback_command": "python3 ./executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-88e42d27/rollback/s3_encryption_restore.py",
+            "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.15",
+            "title": "S3 general purpose buckets should be encrypted at rest with AWS KMS keys"
+          }
+        ],
+        "entry_count": 2,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "s3_enable_sse_kms_guided",
+      "strategy_inputs": {
+        "kms_key_mode": "aws_managed"
+      }
+    },
+    "latest_run_id": "a1f3a1bd-d80c-40a2-931f-26a6235d0c96",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 2,
+    "region": "eu-north-1",
+    "representative_action_id": "42356c4a-b399-4e15-b055-3870a370da3d",
+    "run_not_successful": 0,
+    "status": "open",
+    "total_actions": 2
+  },
+  "error": "action_id '42356c4a-b399-4e15-b055-3870a370da3d' is not part of this grouped action set.",
+  "request_candidates": [
+    {
+      "account_id": "696505809372",
+      "action_overrides": [
+        {
+          "action_id": "42356c4a-b399-4e15-b055-3870a370da3d",
+          "profile_id": "s3_enable_sse_kms_guided",
+          "strategy_id": "s3_enable_sse_kms_guided",
+          "strategy_inputs": {
+            "kms_key_mode": "aws_managed"
+          }
+        },
+        {
+          "action_id": "88e42d27-d1ed-4efe-9bf8-6b6d7b6b6c2c",
+          "profile_id": "s3_enable_sse_kms_guided",
+          "strategy_id": "s3_enable_sse_kms_guided",
+          "strategy_inputs": {
+            "kms_key_mode": "aws_managed"
+          }
+        }
+      ],
+      "action_type": "s3_bucket_encryption_kms",
+      "bucket_creation_acknowledged": false,
+      "region": "eu-north-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "s3_enable_sse_kms_guided",
+      "strategy_inputs": {
+        "kms_key_mode": "aws_managed"
+      }
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_encryption_kms",
+      "bucket_creation_acknowledged": false,
+      "region": "eu-north-1",
+      "risk_acknowledged": true,
+      "status": "open",
+      "strategy_id": "s3_enable_sse_kms_guided"
+    }
+  ],
+  "status": "failed"
+}

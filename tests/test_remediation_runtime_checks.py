@@ -212,6 +212,10 @@ def _strict_ssl_strategy() -> dict[str, Any]:
     return {"strategy_id": "s3_enforce_ssl_strict_deny"}
 
 
+def _snapshot_strategy() -> dict[str, Any]:
+    return {"strategy_id": "snapshot_block_all_sharing"}
+
+
 def _s3_9_strategy() -> dict[str, Any]:
     return {"strategy_id": "s3_enable_access_logging_guided"}
 
@@ -325,6 +329,29 @@ def test_collect_runtime_risk_signals_s3_2_captures_private_bucket_and_disabled_
     assert signals["s3_bucket_website_configured"] is False
     assert signals["access_path_evidence_available"] is True
     assert signals["evidence"]["target_bucket"] == "safe-bucket"
+
+
+def test_collect_runtime_risk_signals_snapshot_does_not_mark_access_path_unavailable(monkeypatch) -> None:
+    def _raise_access_denied(**kwargs):
+        raise RuntimeError("Access denied")
+
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        _raise_access_denied,
+    )
+
+    action = _make_action(
+        target_id="123456789012|us-east-1|arn:aws:ec2:us-east-1:123456789012:snapshot/snap-12345678|EC2.182",
+        action_type="ebs_snapshot_block_public_access",
+    )
+    signals = collect_runtime_risk_signals(
+        action=action,
+        strategy=_snapshot_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert "access_path_evidence_available" not in signals
 
 
 def test_collect_runtime_risk_signals_s3_11_captures_existing_lifecycle_document(monkeypatch) -> None:

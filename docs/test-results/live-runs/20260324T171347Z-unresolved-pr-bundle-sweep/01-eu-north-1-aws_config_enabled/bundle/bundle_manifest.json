@@ -1,0 +1,59 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+      "action_type": "aws_config_enabled",
+      "blocked_reasons": [],
+      "bundle_rollback_command": "python3 ./executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+      "bundle_rollback_path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+      "bundle_rollback_runner": "python3",
+      "control_id": "Config.1",
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "executable/actions/01-aws-account-696505809372-7d51a23a",
+      "has_runnable_terraform": true,
+      "index": 1,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "executable_bundle_generated",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": false,
+        "kms_delivery_requested": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "config_enable_account_local_delivery",
+      "rejected_profiles": [],
+      "strategy_id": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+        "delivery_bucket_mode": "create_new"
+      },
+      "support_tier": "deterministic_bundle",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|Config.1",
+      "tier": "executable",
+      "tier_root": "executable/actions",
+      "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+    }
+  ],
+  "execution_root": "executable/actions",
+  "grouped_actions": [
+    "7d51a23a-9af2-4a82-ae75-67561c01cf8e"
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 1,
+  "runner_template_source": "embedded_mixed_tier",
+  "runner_template_version": "grouped_bundle_mixed_tier/v1",
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 0,
+    "review_required": 0
+  }
+}

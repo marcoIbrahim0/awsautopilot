@@ -1,0 +1,789 @@
+{
+  "after": {
+    "confirmed": 0,
+    "not_run_yet": 0,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 0
+  },
+  "before": {
+    "confirmed": 0,
+    "not_run_yet": 0,
+    "open_actions": 1,
+    "pending_confirmation": 0,
+    "run_not_successful": 1
+  },
+  "candidate": {
+    "account_id": "696505809372",
+    "action_ids": [
+      "7d51a23a-9af2-4a82-ae75-67561c01cf8e"
+    ],
+    "action_type": "aws_config_enabled",
+    "confirmed": 0,
+    "control_ids": [
+      "CONFIG.1"
+    ],
+    "latest_artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "Config.1"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "Config.1"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 5,
+        "files": [
+          {
+            "bundle_path": "providers.tf",
+            "byte_count": 557,
+            "change_type": "create_or_update",
+            "content_sha256": "f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f",
+            "line_count": 22,
+            "repo_path": "providers.tf"
+          },
+          {
+            "bundle_path": "aws_config_enabled.tf",
+            "byte_count": 2210,
+            "change_type": "create_or_update",
+            "content_sha256": "96eb5b7f1efbd3bc6bdc0e28412954a004858b43da3f8f1aedd2fd0f5e6d2afa",
+            "line_count": 68,
+            "repo_path": "aws_config_enabled.tf"
+          },
+          {
+            "bundle_path": "scripts/aws_config_apply.py",
+            "byte_count": 16973,
+            "change_type": "create_or_update",
+            "content_sha256": "1a9d28516678b7f32533d55d8b5716af40788c836894934927e1ebbd1d56c907",
+            "line_count": 443,
+            "repo_path": "scripts/aws_config_apply.py"
+          },
+          {
+            "bundle_path": "rollback/aws_config_restore.py",
+            "byte_count": 11154,
+            "change_type": "create_or_update",
+            "content_sha256": "344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b",
+            "line_count": 309,
+            "repo_path": "rollback/aws_config_restore.py"
+          },
+          {
+            "bundle_path": "README.txt",
+            "byte_count": 2323,
+            "change_type": "create_or_update",
+            "content_sha256": "54f2443c05fa60ed9c5b613d9bd2859313a9269cf0eafe622cb5dc47ccdaf6f5",
+            "line_count": 42,
+            "repo_path": "README.txt"
+          }
+        ],
+        "fingerprint_sha256": "bdeb50acd8c38e346f98395aebda489d35497bf6af732d38269f0fd2764f56f5",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`providers.tf` <- `providers.tf` (22 lines, sha256:f94b43f86e30)",
+          "`aws_config_enabled.tf` <- `aws_config_enabled.tf` (68 lines, sha256:96eb5b7f1efb)",
+          "`scripts/aws_config_apply.py` <- `scripts/aws_config_apply.py` (443 lines, sha256:1a9d28516678)",
+          "`rollback/aws_config_restore.py` <- `rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)",
+          "`README.txt` <- `README.txt` (42 lines, sha256:54f2443c05fa)"
+        ],
+        "version": 1
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n    null = {\n      source  = \"hashicorp/null\"\n      version = \"= 3.2.4\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n",
+            "path": "providers.tf"
+          },
+          {
+            "content": "# AWS Config enablement - Action: 7d51a23a-9af2-4a82-ae75-67561c01cf8e\n# Remediation for: AWS Config should be enabled and use the service-linked role for resource recording\n# Account: 696505809372 | Region: eu-north-1\n# Control: Config.1\n\nvariable \"remediation_region\" {\n  type        = string\n  default     = \"eu-north-1\"\n  description = \"Region for AWS Config enablement.\"\n}\n\nvariable \"delivery_bucket_name\" {\n  type        = string\n  default     = \"security-autopilot-config-696505809372-eu-north-1\"\n  description = \"S3 bucket for AWS Config delivery.\"\n}\n\nvariable \"config_role_arn\" {\n  type        = string\n  default     = \"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\n  description = \"IAM role ARN used by AWS Config recorder.\"\n}\n\nvariable \"kms_key_arn\" {\n  type        = string\n  default     = \"\"\n  description = \"Optional KMS key ARN for Config delivery channel.\"\n}\n\nvariable \"create_local_bucket\" {\n  type        = bool\n  default     = true\n  description = \"When true, create delivery bucket in this account if missing.\"\n}\n\nvariable \"overwrite_recording_group\" {\n  type        = bool\n  default     = false\n  description = \"When true, overwrite an existing recorder recordingGroup with all-supported mode.\"\n}\n\nresource \"null_resource\" \"aws_config_enablement\" {\n  triggers = {\n    region                    = var.remediation_region\n    delivery_bucket           = var.delivery_bucket_name\n    config_role_arn           = var.config_role_arn\n    kms_key_arn               = var.kms_key_arn\n    create_local_bucket       = tostring(var.create_local_bucket)\n    overwrite_recording_group = tostring(var.overwrite_recording_group)\n  }\n\n  provisioner \"local-exec\" {\n    interpreter = [\"/bin/bash\", \"-c\"]\n    command     = <<-EOT\nset -euo pipefail\nexport REGION=\"${var.remediation_region}\"\nexport BUCKET=\"${var.delivery_bucket_name}\"\nexport ROLE_ARN=\"${var.config_role_arn}\"\nexport KMS_ARN=\"${var.kms_key_arn}\"\nexport CREATE_LOCAL_BUCKET=\"${var.create_local_bucket}\"\nexport OVERWRITE_RECORDING_GROUP=\"${var.overwrite_recording_group}\"\nexport ACCOUNT_ID=\"696505809372\"\nexport ROLLBACK_DIR=\".aws-config-rollback\"\n\npython3 ./scripts/aws_config_apply.py\nEOT\n  }\n}\n",
+            "path": "aws_config_enabled.tf"
+          },
+          {
+            "content": "#!/usr/bin/env python3\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nimport sys\nimport tempfile\nfrom pathlib import Path\nfrom typing import Any\n\nSNAPSHOT_VERSION = 1\nDEFAULT_REGION = 'eu-north-1'\nDEFAULT_BUCKET = 'security-autopilot-config-696505809372-eu-north-1'\nDEFAULT_ROLE_ARN = 'arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'\nDEFAULT_KMS_ARN = ''\nDEFAULT_ACCOUNT_ID = '696505809372'\nDEFAULT_CREATE_LOCAL_BUCKET = True\nDEFAULT_OVERWRITE_RECORDING_GROUP = False\n\ndef env_text(name: str, default: str = \"\") -> str:\n    value = os.environ.get(name, \"\").strip()\n    if value:\n        return value\n    fallback = default.strip()\n    if fallback:\n        return fallback\n    raise SystemExit(f\"{name} is required\")\n\n\ndef env_bool(name: str, default: bool) -> bool:\n    raw_value = os.environ.get(name, \"\").strip().lower()\n    if not raw_value:\n        return default\n    if raw_value not in {\"true\", \"false\"}:\n        raise SystemExit(f\"{name} must be 'true' or 'false'\")\n    return raw_value == \"true\"\n\n\ndef run_command(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run(args, text=True, capture_output=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"command failed\"\n        raise SystemExit(f\"{' '.join(args)}: {message}\")\n    return result\n\n\ndef run_json(args: list[str]) -> dict[str, Any]:\n    result = run_command(args)\n    return json.loads(result.stdout or \"{}\")\n\n\ndef atomic_write_json(path: Path, payload: Any) -> None:\n    path.parent.mkdir(parents=True, exist_ok=True)\n    with tempfile.NamedTemporaryFile(\n        \"w\",\n        dir=path.parent,\n        encoding=\"utf-8\",\n        delete=False,\n    ) as handle:\n        json.dump(payload, handle, indent=2, sort_keys=True)\n        handle.write(\"\\n\")\n        tmp_path = Path(handle.name)\n    tmp_path.replace(path)\n\n\ndef load_json(path: Path) -> Any:\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n\n\ndef bucket_exists(bucket: str, region: str) -> bool:\n    result = run_command(\n        [\"aws\", \"s3api\", \"head-bucket\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    return result.returncode == 0\n\n\ndef create_bucket(bucket: str, region: str) -> None:\n    args = [\"aws\", \"s3api\", \"create-bucket\", \"--bucket\", bucket, \"--region\", region]\n    if region != \"us-east-1\":\n        args.extend(\n            [\n                \"--create-bucket-configuration\",\n                f\"LocationConstraint={region}\",\n            ]\n        )\n    run_command(args)\n\n\ndef get_bucket_policy_json(bucket: str, region: str) -> dict[str, Any] | None:\n    result = run_command(\n        [\n            \"aws\",\n            \"s3api\",\n            \"get-bucket-policy\",\n            \"--bucket\",\n            bucket,\n            \"--region\",\n            region,\n            \"--query\",\n            \"Policy\",\n            \"--output\",\n            \"text\",\n        ],\n        check=False,\n    )\n    if result.returncode != 0:\n        output = f\"{result.stdout}\\n{result.stderr}\"\n        if \"NoSuchBucketPolicy\" in output or \"NoSuchBucket\" in output:\n            return None\n        message = result.stderr.strip() or result.stdout.strip() or \"get-bucket-policy failed\"\n        raise SystemExit(message)\n    text = (result.stdout or \"\").strip()\n    if text in {\"\", \"None\", \"null\"}:\n        return None\n    return json.loads(text)\n\n\ndef put_bucket_policy(bucket: str, region: str, policy: dict[str, Any]) -> None:\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(policy, handle, sort_keys=True, separators=(\",\", \":\"))\n        policy_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"s3api\",\n                \"put-bucket-policy\",\n                \"--bucket\",\n                bucket,\n                \"--region\",\n                region,\n                \"--policy\",\n                f\"file://{policy_path}\",\n            ]\n        )\n    finally:\n        policy_path.unlink(missing_ok=True)\n\n\ndef sanitize_payload(value: Any) -> Any:\n    if isinstance(value, dict):\n        return {\n            key: sanitize_payload(item)\n            for key, item in value.items()\n            if item is not None\n        }\n    if isinstance(value, list):\n        return [sanitize_payload(item) for item in value if item is not None]\n    return value\n\n\ndef put_structured_payload(option: str, payload: dict[str, Any], *, region: str) -> None:\n    cleaned = sanitize_payload(payload)\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(cleaned, handle, sort_keys=True, separators=(\",\", \":\"))\n        payload_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                option,\n                \"--region\",\n                region,\n                f\"--{option.replace('put-', '')}\",\n                f\"file://{payload_path}\",\n            ]\n        )\n    finally:\n        payload_path.unlink(missing_ok=True)\n\n\ndef build_required_bucket_policy(bucket: str, account_id: str) -> dict[str, Any]:\n    return {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n            {\n                \"Sid\": \"AWSConfigBucketPermissionsCheck\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:GetBucketAcl\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n            {\n                \"Sid\": \"AWSConfigBucketExistenceCheck\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:ListBucket\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n            {\n                \"Sid\": \"AWSConfigBucketDelivery\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:PutObject\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}/AWSLogs/{account_id}/Config/*\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"s3:x-amz-acl\": \"bucket-owner-full-control\",\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n        ],\n    }\n\n\ndef statement_key(statement: dict[str, Any]) -> tuple[str, str]:\n    sid = statement.get(\"Sid\")\n    if isinstance(sid, str) and sid.strip():\n        return (\"sid\", sid.strip())\n    return (\"json\", json.dumps(statement, sort_keys=True, separators=(\",\", \":\")))\n\n\ndef merge_bucket_policies(\n    existing: dict[str, Any] | None,\n    required: dict[str, Any],\n) -> dict[str, Any]:\n    merged: dict[tuple[str, str], dict[str, Any]] = {}\n    for statement in (existing or {}).get(\"Statement\", []):\n        if isinstance(statement, dict):\n            merged[statement_key(statement)] = statement\n    for statement in required.get(\"Statement\", []):\n        if isinstance(statement, dict):\n            merged[statement_key(statement)] = statement\n    version = (existing or {}).get(\"Version\") or \"2012-10-17\"\n    return {\"Version\": version, \"Statement\": list(merged.values())}\n\ndef recorder_status_map(status_payload: dict[str, Any]) -> dict[str, dict[str, Any]]:\n    mapping: dict[str, dict[str, Any]] = {}\n    for item in status_payload.get(\"ConfigurationRecordersStatus\", []):\n        if isinstance(item, dict):\n            name = str(item.get(\"name\") or \"\").strip()\n            if name:\n                mapping[name] = item\n    return mapping\n\n\ndef build_pre_state_summary(\n    recorders_payload: dict[str, Any],\n    status_payload: dict[str, Any],\n    deliveries_payload: dict[str, Any],\n    *,\n    target_bucket_name: str,\n    target_bucket_existed_before: bool,\n) -> dict[str, Any]:\n    recorders = list(recorders_payload.get(\"ConfigurationRecorders\") or [])\n    deliveries = list(deliveries_payload.get(\"DeliveryChannels\") or [])\n    if len(recorders) > 1:\n        raise SystemExit(\"Exact AWS Config rollback is unsupported when multiple configuration recorders exist.\")\n    if len(deliveries) > 1:\n        raise SystemExit(\"Exact AWS Config rollback is unsupported when multiple delivery channels exist.\")\n    recorder = recorders[0] if recorders else None\n    delivery = deliveries[0] if deliveries else None\n    status = None\n    if recorder is not None:\n        status = recorder_status_map(status_payload).get(str(recorder.get(\"name\") or \"\"))\n    return {\n        \"version\": SNAPSHOT_VERSION,\n        \"recorder_exists\": recorder is not None,\n        \"recorder_name\": \"\" if recorder is None else str(recorder.get(\"name\") or \"\"),\n        \"recorder_all_supported\": bool((recorder or {}).get(\"recordingGroup\", {}).get(\"allSupported\")),\n        \"recording_before\": None if status is None else bool(status.get(\"recording\")),\n        \"delivery_channel_exists\": delivery is not None,\n        \"delivery_channel_name\": \"\" if delivery is None else str(delivery.get(\"name\") or \"\"),\n        \"delivery_bucket_name\": \"\" if delivery is None else str(delivery.get(\"s3BucketName\") or \"\"),\n        \"target_bucket_name\": target_bucket_name,\n        \"target_bucket_existed_before\": target_bucket_existed_before,\n    }\n\n\ndef capture_snapshot(snapshot_dir: Path, *, region: str, bucket: str) -> dict[str, Any]:\n    recorders_payload = run_json(\n        [\"aws\", \"configservice\", \"describe-configuration-recorders\", \"--region\", region, \"--output\", \"json\"]\n    )\n    status_payload = run_json(\n        [\n            \"aws\",\n            \"configservice\",\n            \"describe-configuration-recorder-status\",\n            \"--region\",\n            region,\n            \"--output\",\n            \"json\",\n        ]\n    )\n    deliveries_payload = run_json(\n        [\"aws\", \"configservice\", \"describe-delivery-channels\", \"--region\", region, \"--output\", \"json\"]\n    )\n    bucket_existed_before = bucket_exists(bucket, region)\n    bucket_state = {\n        \"version\": SNAPSHOT_VERSION,\n        \"bucket_name\": bucket,\n        \"bucket_existed_before\": bucket_existed_before,\n        \"policy_json\": None if not bucket_existed_before else get_bucket_policy_json(bucket, region),\n    }\n    summary = build_pre_state_summary(\n        recorders_payload,\n        status_payload,\n        deliveries_payload,\n        target_bucket_name=bucket,\n        target_bucket_existed_before=bucket_existed_before,\n    )\n    atomic_write_json(snapshot_dir / \"pre_configuration_recorders.json\", recorders_payload)\n    atomic_write_json(snapshot_dir / \"pre_configuration_recorder_status.json\", status_payload)\n    atomic_write_json(snapshot_dir / \"pre_delivery_channels.json\", deliveries_payload)\n    atomic_write_json(snapshot_dir / \"pre_target_bucket_state.json\", bucket_state)\n    atomic_write_json(snapshot_dir / \"pre_state_summary.json\", summary)\n    (snapshot_dir / \".snapshot-ready\").write_text(\"ready\\n\", encoding=\"utf-8\")\n    return summary\n\n\ndef load_or_capture_snapshot(snapshot_dir: Path, *, region: str, bucket: str) -> dict[str, Any]:\n    ready_path = snapshot_dir / \".snapshot-ready\"\n    if ready_path.exists():\n        summary_path = snapshot_dir / \"pre_state_summary.json\"\n        if not summary_path.exists():\n            raise SystemExit(\"Existing AWS Config rollback snapshot is incomplete.\")\n        return load_json(summary_path)\n    snapshot_dir.mkdir(parents=True, exist_ok=True)\n    return capture_snapshot(snapshot_dir, region=region, bucket=bucket)\n\ndef main() -> int:\n    region = env_text(\"REGION\", DEFAULT_REGION)\n    bucket = env_text(\"BUCKET\", DEFAULT_BUCKET)\n    role_arn = env_text(\"ROLE_ARN\", DEFAULT_ROLE_ARN)\n    kms_arn = os.environ.get(\"KMS_ARN\", DEFAULT_KMS_ARN).strip()\n    account_id = env_text(\"ACCOUNT_ID\", DEFAULT_ACCOUNT_ID)\n    create_local_bucket = env_bool(\"CREATE_LOCAL_BUCKET\", DEFAULT_CREATE_LOCAL_BUCKET)\n    overwrite_recording_group = env_bool(\n        \"OVERWRITE_RECORDING_GROUP\",\n        DEFAULT_OVERWRITE_RECORDING_GROUP,\n    )\n    rollback_dir = Path(os.environ.get(\"ROLLBACK_DIR\") or \".aws-config-rollback\")\n    snapshot_dir = rollback_dir / \"snapshot\"\n\n    summary = load_or_capture_snapshot(snapshot_dir, region=region, bucket=bucket)\n    if create_local_bucket:\n        if not bucket_exists(bucket, region):\n            create_bucket(bucket, region)\n        original_policy = load_json(snapshot_dir / \"pre_target_bucket_state.json\").get(\"policy_json\")\n        merged_policy = merge_bucket_policies(\n            original_policy,\n            build_required_bucket_policy(bucket, account_id),\n        )\n        put_bucket_policy(bucket, region, merged_policy)\n    elif not bucket_exists(bucket, region):\n        raise SystemExit(\n            f\"create_local_bucket=false and delivery bucket '{bucket}' is unreachable. \"\n            \"Provide a reachable delivery_bucket_name or set create_local_bucket=true.\"\n        )\n\n    recorders_payload = load_json(snapshot_dir / \"pre_configuration_recorders.json\")\n    recorder = next(iter(recorders_payload.get(\"ConfigurationRecorders\") or []), None)\n    recorder_name = str(summary.get(\"recorder_name\") or \"\") or \"security-autopilot-recorder\"\n    if not bool(summary.get(\"recorder_exists\")) or overwrite_recording_group:\n        recorder_payload = sanitize_payload(recorder or {\"name\": recorder_name})\n        recorder_payload[\"name\"] = recorder_name\n        recorder_payload[\"roleARN\"] = role_arn\n        recorder_payload[\"recordingGroup\"] = {\n            \"allSupported\": True,\n            \"includeGlobalResourceTypes\": True,\n        }\n        put_structured_payload(\"put-configuration-recorder\", recorder_payload, region=region)\n    elif not bool(summary.get(\"recorder_all_supported\")):\n        print(\n            f\"Preserving existing selective AWS Config recorder '{recorder_name}' \"\n            \"(overwrite_recording_group=false).\",\n            file=sys.stderr,\n        )\n    else:\n        print(\n            f\"Preserving existing AWS Config recorder '{recorder_name}' recording group \"\n            \"(overwrite_recording_group=false).\",\n            file=sys.stderr,\n        )\n\n    deliveries_payload = load_json(snapshot_dir / \"pre_delivery_channels.json\")\n    delivery = next(iter(deliveries_payload.get(\"DeliveryChannels\") or []), None)\n    delivery_name = str(summary.get(\"delivery_channel_name\") or \"\") or \"security-autopilot-delivery-channel\"\n    existing_delivery_bucket = str(summary.get(\"delivery_bucket_name\") or \"\")\n    existing_delivery_bucket_stale = bool(existing_delivery_bucket) and not bucket_exists(existing_delivery_bucket, region)\n    if existing_delivery_bucket_stale and not create_local_bucket and existing_delivery_bucket == bucket:\n        raise SystemExit(\n            f\"Existing AWS Config delivery channel '{delivery_name}' points to unreachable bucket \"\n            f\"'{existing_delivery_bucket}' and create_local_bucket=false cannot repair it. \"\n            \"Provide a reachable delivery_bucket_name or set create_local_bucket=true.\"\n        )\n    if existing_delivery_bucket and existing_delivery_bucket != bucket:\n        warning = (\n            f\"WARNING: Existing AWS Config delivery channel '{delivery_name}' currently targets \"\n            f\"{'unreachable ' if existing_delivery_bucket_stale else ''}bucket \"\n            f\"'{existing_delivery_bucket}'. This bundle will redirect delivery to '{bucket}'.\"\n        )\n        print(warning, file=sys.stderr)\n    delivery_payload = sanitize_payload(delivery or {\"name\": delivery_name})\n    delivery_payload[\"name\"] = delivery_name\n    delivery_payload[\"s3BucketName\"] = bucket\n    if kms_arn:\n        delivery_payload[\"s3KmsKeyArn\"] = kms_arn\n    else:\n        delivery_payload.pop(\"s3KmsKeyArn\", None)\n    put_structured_payload(\"put-delivery-channel\", delivery_payload, region=region)\n    run_command(\n        [\n            \"aws\",\n            \"configservice\",\n            \"start-configuration-recorder\",\n            \"--region\",\n            region,\n            \"--configuration-recorder-name\",\n            recorder_name,\n        ],\n        check=False,\n    )\n\n    apply_context = {\n        \"version\": SNAPSHOT_VERSION,\n        \"target_bucket_name\": bucket,\n        \"target_bucket_created_by_apply\": (\n            not bool(summary.get(\"target_bucket_existed_before\")) and bucket_exists(bucket, region)\n        ),\n        \"applied_recorder_name\": recorder_name,\n        \"applied_delivery_channel_name\": delivery_name,\n    }\n    atomic_write_json(rollback_dir / \"apply_context.json\", apply_context)\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+            "path": "scripts/aws_config_apply.py"
+          },
+          {
+            "content": "#!/usr/bin/env python3\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nimport tempfile\nfrom pathlib import Path\nfrom typing import Any\n\nDEFAULT_REGION = 'eu-north-1'\n\ndef run_command(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run(args, text=True, capture_output=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"command failed\"\n        raise SystemExit(f\"{' '.join(args)}: {message}\")\n    return result\n\n\ndef run_json(args: list[str]) -> dict[str, Any]:\n    result = run_command(args)\n    return json.loads(result.stdout or \"{}\")\n\n\ndef load_json(path: Path) -> Any:\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n\n\ndef bucket_exists(bucket: str, region: str) -> bool:\n    result = run_command(\n        [\"aws\", \"s3api\", \"head-bucket\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    return result.returncode == 0\n\n\ndef sanitize_payload(value: Any) -> Any:\n    if isinstance(value, dict):\n        return {\n            key: sanitize_payload(item)\n            for key, item in value.items()\n            if item is not None\n        }\n    if isinstance(value, list):\n        return [sanitize_payload(item) for item in value if item is not None]\n    return value\n\n\ndef put_structured_payload(option: str, payload: dict[str, Any], *, region: str) -> None:\n    cleaned = sanitize_payload(payload)\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(cleaned, handle, sort_keys=True, separators=(\",\", \":\"))\n        payload_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                option,\n                \"--region\",\n                region,\n                f\"--{option.replace('put-', '')}\",\n                f\"file://{payload_path}\",\n            ]\n        )\n    finally:\n        payload_path.unlink(missing_ok=True)\n\n\ndef put_bucket_policy(bucket: str, region: str, policy: dict[str, Any]) -> None:\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(policy, handle, sort_keys=True, separators=(\",\", \":\"))\n        policy_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"s3api\",\n                \"put-bucket-policy\",\n                \"--bucket\",\n                bucket,\n                \"--region\",\n                region,\n                \"--policy\",\n                f\"file://{policy_path}\",\n            ]\n        )\n    finally:\n        policy_path.unlink(missing_ok=True)\n\n\ndef delete_bucket_policy(bucket: str, region: str) -> None:\n    result = run_command(\n        [\"aws\", \"s3api\", \"delete-bucket-policy\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    if result.returncode != 0:\n        output = f\"{result.stdout}\\n{result.stderr}\"\n        if \"NoSuchBucketPolicy\" not in output and \"NoSuchBucket\" not in output:\n            message = result.stderr.strip() or result.stdout.strip() or \"delete-bucket-policy failed\"\n            raise SystemExit(message)\n\n\ndef ensure_singletons(payload: dict[str, Any], key: str, description: str) -> list[dict[str, Any]]:\n    items = list(payload.get(key) or [])\n    if len(items) > 1:\n        raise SystemExit(f\"Exact AWS Config rollback is unsupported when multiple {description} exist.\")\n    return items\n\n\ndef current_config_state(region: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:\n    recorders = ensure_singletons(\n        run_json([\"aws\", \"configservice\", \"describe-configuration-recorders\", \"--region\", region, \"--output\", \"json\"]),\n        \"ConfigurationRecorders\",\n        \"configuration recorders\",\n    )\n    deliveries = ensure_singletons(\n        run_json([\"aws\", \"configservice\", \"describe-delivery-channels\", \"--region\", region, \"--output\", \"json\"]),\n        \"DeliveryChannels\",\n        \"delivery channels\",\n    )\n    return recorders, deliveries\n\n\ndef bucket_is_empty(bucket: str, region: str) -> bool:\n    current = run_json(\n        [\"aws\", \"s3api\", \"list-objects-v2\", \"--bucket\", bucket, \"--region\", region, \"--max-items\", \"1\", \"--output\", \"json\"]\n    )\n    if current.get(\"Contents\"):\n        return False\n    versions = run_json(\n        [\"aws\", \"s3api\", \"list-object-versions\", \"--bucket\", bucket, \"--region\", region, \"--max-items\", \"1\", \"--output\", \"json\"]\n    )\n    return not versions.get(\"Versions\") and not versions.get(\"DeleteMarkers\")\n\n\ndef allowed_name(current_name: str, expected_names: set[str]) -> bool:\n    return not current_name or current_name in expected_names\n\ndef main() -> int:\n    region = os.environ.get(\"REGION\", \"\").strip() or DEFAULT_REGION.strip()\n    if not region:\n        raise SystemExit(\"REGION is required\")\n    rollback_dir = Path(os.environ.get(\"ROLLBACK_DIR\") or \".aws-config-rollback\")\n    snapshot_dir = rollback_dir / \"snapshot\"\n    ready_path = snapshot_dir / \".snapshot-ready\"\n    if not ready_path.exists():\n        raise SystemExit(\"No AWS Config rollback snapshot exists for this bundle.\")\n\n    summary = load_json(snapshot_dir / \"pre_state_summary.json\")\n    bucket_state = load_json(snapshot_dir / \"pre_target_bucket_state.json\")\n    apply_context = load_json(rollback_dir / \"apply_context.json\")\n    pre_recorders = ensure_singletons(\n        load_json(snapshot_dir / \"pre_configuration_recorders.json\"),\n        \"ConfigurationRecorders\",\n        \"configuration recorders\",\n    )\n    pre_deliveries = ensure_singletons(\n        load_json(snapshot_dir / \"pre_delivery_channels.json\"),\n        \"DeliveryChannels\",\n        \"delivery channels\",\n    )\n    current_recorders, current_deliveries = current_config_state(region)\n    pre_recorder = pre_recorders[0] if pre_recorders else None\n    pre_delivery = pre_deliveries[0] if pre_deliveries else None\n    expected_recorder_names = {\n        str(name).strip()\n        for name in [\n            summary.get(\"recorder_name\"),\n            apply_context.get(\"applied_recorder_name\"),\n        ]\n        if str(name).strip()\n    }\n    expected_delivery_names = {\n        str(name).strip()\n        for name in [\n            summary.get(\"delivery_channel_name\"),\n            apply_context.get(\"applied_delivery_channel_name\"),\n        ]\n        if str(name).strip()\n    }\n\n    current_recorder_name = str((current_recorders[0] if current_recorders else {}).get(\"name\") or \"\")\n    current_delivery_name = str((current_deliveries[0] if current_deliveries else {}).get(\"name\") or \"\")\n    if current_recorders and not allowed_name(current_recorder_name, expected_recorder_names):\n        raise SystemExit(\n            \"Current AWS Config recorder does not match the bundle's recorded mutation target; \"\n            \"exact rollback is not guaranteed.\"\n        )\n    if current_deliveries and not allowed_name(current_delivery_name, expected_delivery_names):\n        raise SystemExit(\n            \"Current AWS Config delivery channel does not match the bundle's recorded mutation target; \"\n            \"exact rollback is not guaranteed.\"\n        )\n\n    if current_recorder_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"stop-configuration-recorder\",\n                \"--region\",\n                region,\n                \"--configuration-recorder-name\",\n                current_recorder_name,\n            ],\n            check=False,\n        )\n\n    if pre_recorder is not None:\n        put_structured_payload(\"put-configuration-recorder\", pre_recorder, region=region)\n\n    if pre_delivery is not None:\n        put_structured_payload(\"put-delivery-channel\", pre_delivery, region=region)\n    elif current_delivery_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"delete-delivery-channel\",\n                \"--region\",\n                region,\n                \"--delivery-channel-name\",\n                current_delivery_name,\n            ]\n        )\n\n    if pre_recorder is not None:\n        pre_recorder_name = str(pre_recorder.get(\"name\") or \"\")\n        if bool(summary.get(\"recording_before\")):\n            run_command(\n                [\n                    \"aws\",\n                    \"configservice\",\n                    \"start-configuration-recorder\",\n                    \"--region\",\n                    region,\n                    \"--configuration-recorder-name\",\n                    pre_recorder_name,\n                ]\n            )\n        else:\n            run_command(\n                [\n                    \"aws\",\n                    \"configservice\",\n                    \"stop-configuration-recorder\",\n                    \"--region\",\n                    region,\n                    \"--configuration-recorder-name\",\n                    pre_recorder_name,\n                ],\n                check=False,\n            )\n    elif current_recorder_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"delete-configuration-recorder\",\n                \"--region\",\n                region,\n                \"--configuration-recorder-name\",\n                current_recorder_name,\n            ]\n        )\n\n    target_bucket_name = str(bucket_state.get(\"bucket_name\") or \"\")\n    if bool(bucket_state.get(\"bucket_existed_before\")):\n        if not bucket_exists(target_bucket_name, region):\n            raise SystemExit(\n                f\"Original AWS Config delivery bucket '{target_bucket_name}' is now unreachable; \"\n                \"exact rollback is not guaranteed.\"\n            )\n        original_policy = bucket_state.get(\"policy_json\")\n        if isinstance(original_policy, dict):\n            put_bucket_policy(target_bucket_name, region, original_policy)\n        else:\n            delete_bucket_policy(target_bucket_name, region)\n    elif bucket_exists(target_bucket_name, region):\n        if not bool(apply_context.get(\"target_bucket_created_by_apply\")):\n            raise SystemExit(\n                \"Rollback cannot prove that the target bucket was created by this bundle; \"\n                \"exact cleanup is not guaranteed.\"\n            )\n        if not bucket_is_empty(target_bucket_name, region):\n            raise SystemExit(\n                f\"Rollback would need to delete non-empty bucket '{target_bucket_name}'. \"\n                \"Exact restoration is not guaranteed.\"\n            )\n        delete_bucket_policy(target_bucket_name, region)\n        run_command([\"aws\", \"s3api\", \"delete-bucket\", \"--bucket\", target_bucket_name, \"--region\", region])\n\n    receipt = {\n        \"restored\": True,\n        \"target_bucket_name\": target_bucket_name,\n        \"recorder_name\": \"\" if pre_recorder is None else str(pre_recorder.get(\"name\") or \"\"),\n        \"delivery_channel_name\": \"\" if pre_delivery is None else str(pre_delivery.get(\"name\") or \"\"),\n    }\n    (rollback_dir / \"rollback_receipt.json\").write_text(\n        json.dumps(receipt, indent=2, sort_keys=True) + \"\\n\",\n        encoding=\"utf-8\",\n    )\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+            "path": "rollback/aws_config_restore.py"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-24T03:44:04+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nConfig.1 preflight safeguards\n-----------------------------\n- This bundle inspects existing AWS Config recorder and delivery-channel state before mutating settings.\n- The executable Terraform path snapshots exact pre-state under `.aws-config-rollback/` before mutation and ships a bundle-local restore command at `rollback/aws_config_restore.py`.\n- Recorder safety default: `overwrite_recording_group = false` preserves an existing recorder's recording group (including selective mode).\n- Set `overwrite_recording_group = true` only when you explicitly want to replace existing recorder scope with all-supported recording.\n- Delivery safety: if an existing delivery channel points to a different bucket, apply emits a warning before redirecting to `delivery_bucket_name`.\n- Delivery fail-closed: when `create_local_bucket = false`, apply exits early if `delivery_bucket_name` is unreachable so remediation does not fail later with an ambiguous `NoSuchBucket` error.\n- Rollback safety: the restore script replays the exact pre-remediation recorder, recording mode, delivery-channel, and target-bucket policy state; it fails closed if drift or non-empty created buckets make exact restoration ambiguous.\n\n\nSelected strategy\n-----------------\n- strategy_id: config_enable_account_local_delivery\n\nRisk recommendation\n-------------------\n- review_and_acknowledge\n\nDependency review checklist\n---------------------------\n- [warn] config_cost_impact: Enabling AWS Config may increase logging and storage costs.\n",
+            "path": "README.txt"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 5,\n  \"files\": [\n    {\n      \"bundle_path\": \"providers.tf\",\n      \"byte_count\": 557,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f\",\n      \"line_count\": 22,\n      \"repo_path\": \"providers.tf\"\n    },\n    {\n      \"bundle_path\": \"aws_config_enabled.tf\",\n      \"byte_count\": 2210,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"96eb5b7f1efbd3bc6bdc0e28412954a004858b43da3f8f1aedd2fd0f5e6d2afa\",\n      \"line_count\": 68,\n      \"repo_path\": \"aws_config_enabled.tf\"\n    },\n    {\n      \"bundle_path\": \"scripts/aws_config_apply.py\",\n      \"byte_count\": 16973,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"1a9d28516678b7f32533d55d8b5716af40788c836894934927e1ebbd1d56c907\",\n      \"line_count\": 443,\n      \"repo_path\": \"scripts/aws_config_apply.py\"\n    },\n    {\n      \"bundle_path\": \"rollback/aws_config_restore.py\",\n      \"byte_count\": 11154,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b\",\n      \"line_count\": 309,\n      \"repo_path\": \"rollback/aws_config_restore.py\"\n    },\n    {\n      \"bundle_path\": \"README.txt\",\n      \"byte_count\": 2323,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"54f2443c05fa60ed9c5b613d9bd2859313a9269cf0eafe622cb5dc47ccdaf6f5\",\n      \"line_count\": 42,\n      \"repo_path\": \"README.txt\"\n    }\n  ],\n  \"fingerprint_sha256\": \"bdeb50acd8c38e346f98395aebda489d35497bf6af732d38269f0fd2764f56f5\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`providers.tf` <- `providers.tf` (22 lines, sha256:f94b43f86e30)\",\n    \"`aws_config_enabled.tf` <- `aws_config_enabled.tf` (68 lines, sha256:96eb5b7f1efb)\",\n    \"`scripts/aws_config_apply.py` <- `scripts/aws_config_apply.py` (443 lines, sha256:1a9d28516678)\",\n    \"`rollback/aws_config_restore.py` <- `rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)\",\n    \"`README.txt` <- `README.txt` (42 lines, sha256:54f2443c05fa)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## AWS Config should be enabled and use the service-linked role for resource recording\n- Action ID: `7d51a23a-9af2-4a82-ae75-67561c01cf8e`\n- Control ID: `Config.1`\n- Target: `696505809372|eu-north-1|AWS::::Account:696505809372|Config.1`\n- Rollback command: `python3 ./rollback/aws_config_restore.py`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"Config.1\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"Config.1\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "bundle_rollback_entries": {
+            "7d51a23a-9af2-4a82-ae75-67561c01cf8e": {
+              "path": "rollback/aws_config_restore.py",
+              "runner": "python3"
+            }
+          },
+          "diff_fingerprint_sha256": "bdeb50acd8c38e346f98395aebda489d35497bf6af732d38269f0fd2764f56f5",
+          "repo_target_configured": false
+        },
+        "steps": [
+          "Configure AWS provider for account 696505809372 and region eu-north-1.",
+          "Adjust bucket/KMS variables as needed; keep overwrite_recording_group=false unless you explicitly intend to replace recorder scope.",
+          "Run `terraform init`, `terraform plan`, and `terraform apply`.",
+          "Use `python3 ./rollback/aws_config_restore.py` only when you need to restore the exact pre-remediation AWS Config state captured by this bundle.",
+          "Recompute actions to verify remediation state."
+        ]
+      },
+      "resolution": {
+        "blocked_reasons": [],
+        "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "preservation_summary": {
+          "delivery_bucket_reachable": false,
+          "delivery_bucket_resolved": true,
+          "delivery_mode": "account_local_delivery",
+          "delivery_policy_proven": false,
+          "existing_bucket_path": false,
+          "kms_delivery_requested": false,
+          "single_profile_compatible": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "config_enable_account_local_delivery",
+        "rejected_profiles": [],
+        "resolved_inputs": {
+          "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+          "delivery_bucket_mode": "create_new",
+          "recording_scope": "keep_existing"
+        },
+        "strategy_id": "config_enable_account_local_delivery",
+        "support_tier": "deterministic_bundle"
+      },
+      "risk_acknowledged": true,
+      "risk_snapshot": {
+        "checks": [
+          {
+            "code": "config_cost_impact",
+            "message": "Enabling AWS Config may increase logging and storage costs.",
+            "status": "warn"
+          }
+        ],
+        "evidence": {
+          "collected_at": "2026-03-24T03:43:49.830158+00:00",
+          "config_delivery_bucket_name": "config-bucket-696505809372",
+          "config_delivery_channel_exists": true,
+          "config_recorder_exists": true,
+          "config_recorder_name": "default",
+          "config_recording_scope": "custom",
+          "delivery_bucket": "config-bucket-696505809372",
+          "strategy_id": "config_enable_account_local_delivery"
+        },
+        "recommendation": "review_and_acknowledge",
+        "warnings": [
+          "Enabling Config can increase logging/storage costs."
+        ]
+      },
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+            "action_type": "aws_config_enabled",
+            "control_id": "Config.1",
+            "rollback_command": "python3 ./rollback/aws_config_restore.py",
+            "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|Config.1",
+            "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+          }
+        ],
+        "entry_count": 1,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "config_enable_account_local_delivery",
+      "strategy_inputs": {
+        "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+        "delivery_bucket_mode": "create_new",
+        "recording_scope": "keep_existing"
+      }
+    },
+    "latest_run_id": "45bdd196-20a2-4be0-8659-fa3a05a356a1",
+    "metadata_only": 0,
+    "needs_followup": 0,
+    "not_run_yet": 0,
+    "region": "eu-north-1",
+    "representative_action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+    "run_not_successful": 1,
+    "status": "open",
+    "total_actions": 1
+  },
+  "refresh": {
+    "compute": {
+      "message": "Action computation job queued",
+      "scope": {
+        "account_id": "696505809372",
+        "region": "eu-north-1"
+      },
+      "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70"
+    },
+    "ingest": {
+      "account_id": "696505809372",
+      "jobs_queued": 1,
+      "message": "Ingestion jobs queued successfully",
+      "message_ids": [
+        "1ec72a23-b9c3-454a-a639-71edc34e45e3"
+      ],
+      "regions": [
+        "eu-north-1"
+      ]
+    },
+    "reconcile": {
+      "run": {
+        "account_id": "696505809372",
+        "completed_at": "2026-03-24T17:15:17.099463+00:00",
+        "enqueued_shards": 1,
+        "failed_shards": 0,
+        "id": "2bdfe451-a6b8-48bf-a8d5-71396afc1052",
+        "last_error": null,
+        "max_resources": 500,
+        "regions": [
+          "eu-north-1"
+        ],
+        "running_shards": 0,
+        "services": [
+          "config"
+        ],
+        "started_at": "2026-03-24T17:15:15.248871+00:00",
+        "status": "succeeded",
+        "submitted_at": "2026-03-24T17:15:11.043405+00:00",
+        "succeeded_shards": 1,
+        "sweep_mode": "global",
+        "total_shards": 1,
+        "trigger_type": "manual"
+      },
+      "status": "succeeded",
+      "trigger": {
+        "account_id": "696505809372",
+        "enqueued_shards": 1,
+        "failed_shards": 0,
+        "preflight": null,
+        "run_id": "2bdfe451-a6b8-48bf-a8d5-71396afc1052",
+        "status": "queued",
+        "submitted_at": "2026-03-24T17:15:11.043405+00:00",
+        "total_shards": 1
+      }
+    }
+  },
+  "request_body": {
+    "account_id": "696505809372",
+    "action_type": "aws_config_enabled",
+    "bucket_creation_acknowledged": false,
+    "region": "eu-north-1",
+    "risk_acknowledged": true,
+    "status": "open",
+    "strategy_id": "config_enable_account_local_delivery",
+    "strategy_inputs": {
+      "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+      "delivery_bucket_mode": "create_new",
+      "recording_scope": "keep_existing"
+    }
+  },
+  "run_create": {
+    "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+    "created_at": "2026-03-24T17:14:20.708241+00:00",
+    "id": "0036c4c2-722e-4789-8fe2-203449d4f8d2",
+    "manual_high_risk": false,
+    "mode": "pr_only",
+    "pre_execution_notice": null,
+    "runbook_url": null,
+    "status": "pending",
+    "updated_at": "2026-03-24T17:14:20.708241+00:00"
+  },
+  "run_final": {
+    "action": {
+      "account_id": "696505809372",
+      "id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+      "region": "eu-north-1",
+      "status": "open",
+      "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+    },
+    "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+    "approved_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+    "artifact_metadata": {
+      "closure_checklist": [
+        {
+          "detail": "Implementation artifact linked for engineering handoff.",
+          "evidence_keys": [
+            "pr_bundle"
+          ],
+          "id": "artifact_recorded",
+          "status": "complete",
+          "title": "Implementation artifact recorded"
+        },
+        {
+          "detail": "Evidence pointers are attached to this run.",
+          "evidence_keys": [
+            "pr_bundle",
+            "diff_summary",
+            "rollback_notes",
+            "control_mapping_context",
+            "activity_log"
+          ],
+          "id": "evidence_attached",
+          "status": "complete",
+          "title": "Evidence pointers attached"
+        },
+        {
+          "detail": "Refresh or recompute the parent action to confirm closure.",
+          "evidence_keys": [],
+          "id": "action_closure_verified",
+          "status": "pending",
+          "title": "Action closure verified"
+        }
+      ],
+      "evidence_pointers": [
+        {
+          "description": "Terraform remediation bundle with 15 files.",
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-generated-files",
+          "key": "pr_bundle",
+          "kind": "bundle",
+          "label": "Engineering PR bundle",
+          "metadata": {
+            "file_count": 15,
+            "format": "terraform",
+            "generated_action_count": 1,
+            "has_readme": true,
+            "skipped_action_count": 0,
+            "step_count": 3
+          }
+        },
+        {
+          "description": "12 mapped file(s) captured with reproducible hashes.",
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-generated-files",
+          "key": "diff_summary",
+          "kind": "diff_summary",
+          "label": "Generated diff summary",
+          "metadata": {
+            "file_count": 12,
+            "fingerprint_sha256": "65e28d13de1fd32f189061660dd5f04457108cb086ce24073ccdef94297f7a72"
+          }
+        },
+        {
+          "description": "1 rollback note(s) prepared for this run.",
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-generated-files",
+          "key": "rollback_notes",
+          "kind": "rollback_notes",
+          "label": "Rollback notes",
+          "metadata": {
+            "entry_count": 1
+          }
+        },
+        {
+          "description": "1 control ID(s) and 0 framework mapping row(s) attached.",
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-generated-files",
+          "key": "control_mapping_context",
+          "kind": "control_mapping_context",
+          "label": "Control mapping context",
+          "metadata": {
+            "control_count": 1,
+            "mapping_count": 0
+          }
+        },
+        {
+          "description": "3 execution log lines recorded for this run.",
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-activity",
+          "key": "activity_log",
+          "kind": "activity_log",
+          "label": "Run activity log",
+          "metadata": {
+            "line_count": 3
+          }
+        }
+      ],
+      "implementation_artifacts": [
+        {
+          "description": "Terraform remediation bundle with 15 files.",
+          "executable": true,
+          "href": "/remediation-runs/0036c4c2-722e-4789-8fe2-203449d4f8d2#run-generated-files",
+          "key": "pr_bundle",
+          "kind": "bundle",
+          "label": "Engineering PR bundle",
+          "metadata": {
+            "file_count": 15,
+            "format": "terraform",
+            "generated_action_count": 1,
+            "has_readme": true,
+            "skipped_action_count": 0,
+            "step_count": 3
+          }
+        }
+      ]
+    },
+    "artifacts": {
+      "control_mapping_context": {
+        "artifact_type": "control_mapping_context",
+        "control_ids": [
+          "Config.1"
+        ],
+        "mapped_control_ids": [],
+        "mappings": [],
+        "unmapped_control_ids": [
+          "Config.1"
+        ],
+        "version": 1
+      },
+      "diff_summary": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 12,
+        "files": [
+          {
+            "bundle_path": "run_all.sh",
+            "byte_count": 11538,
+            "change_type": "create_or_update",
+            "content_sha256": "e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5",
+            "line_count": 404,
+            "repo_path": "run_all.sh"
+          },
+          {
+            "bundle_path": "README_GROUP.txt",
+            "byte_count": 719,
+            "change_type": "create_or_update",
+            "content_sha256": "ddd56ab68670860c68649e752ff1eec0f5d8f2745825891c9a3fc3f8b101c150",
+            "line_count": 21,
+            "repo_path": "README_GROUP.txt"
+          },
+          {
+            "bundle_path": "bundle_manifest.json",
+            "byte_count": 2696,
+            "change_type": "create_or_update",
+            "content_sha256": "93f31ae5176076ef5f47922b30514c4f8cf404aecb245ce59e182182c3310cff",
+            "line_count": 59,
+            "repo_path": "bundle_manifest.json"
+          },
+          {
+            "bundle_path": "decision_log.md",
+            "byte_count": 538,
+            "change_type": "create_or_update",
+            "content_sha256": "75fdefa24df7ddd7fd2b30e2dcc712a4911e01b489131b8e7fd7ec7bdcb563dd",
+            "line_count": 9,
+            "repo_path": "decision_log.md"
+          },
+          {
+            "bundle_path": "finding_coverage.json",
+            "byte_count": 221,
+            "change_type": "create_or_update",
+            "content_sha256": "2fb4ffcf5cafc9ae394936442391669f820d5899c07866ec8cf6b23024f1e44a",
+            "line_count": 10,
+            "repo_path": "finding_coverage.json"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf",
+            "byte_count": 557,
+            "change_type": "create_or_update",
+            "content_sha256": "f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f",
+            "line_count": 22,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf",
+            "byte_count": 2210,
+            "change_type": "create_or_update",
+            "content_sha256": "96eb5b7f1efbd3bc6bdc0e28412954a004858b43da3f8f1aedd2fd0f5e6d2afa",
+            "line_count": 68,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py",
+            "byte_count": 16973,
+            "change_type": "create_or_update",
+            "content_sha256": "1a9d28516678b7f32533d55d8b5716af40788c836894934927e1ebbd1d56c907",
+            "line_count": 443,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+            "byte_count": 11154,
+            "change_type": "create_or_update",
+            "content_sha256": "344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b",
+            "line_count": 309,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README.txt",
+            "byte_count": 2111,
+            "change_type": "create_or_update",
+            "content_sha256": "b177a0b9c36bb5066f9bd4b5e45b20f7db5faf96cf452be2ee88843978cf4b58",
+            "line_count": 34,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README.txt"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt",
+            "byte_count": 640,
+            "change_type": "create_or_update",
+            "content_sha256": "e677da553ed9859e16177193a5733e4c522353608528705820440919f0d4266a",
+            "line_count": 12,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/decision.json",
+            "byte_count": 2085,
+            "change_type": "create_or_update",
+            "content_sha256": "964f45d64bcadf519ca28c095c458c8a77eaf7ca93d6e35293ad01060c591fd0",
+            "line_count": 41,
+            "repo_path": "executable/actions/01-aws-account-696505809372-7d51a23a/decision.json"
+          }
+        ],
+        "fingerprint_sha256": "65e28d13de1fd32f189061660dd5f04457108cb086ce24073ccdef94297f7a72",
+        "repo_target_configured": false,
+        "summary_lines": [
+          "`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)",
+          "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:ddd56ab68670)",
+          "`bundle_manifest.json` <- `bundle_manifest.json` (59 lines, sha256:93f31ae51760)",
+          "`decision_log.md` <- `decision_log.md` (9 lines, sha256:75fdefa24df7)",
+          "`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:2fb4ffcf5caf)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` (22 lines, sha256:f94b43f86e30)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` (68 lines, sha256:96eb5b7f1efb)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` (443 lines, sha256:1a9d28516678)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` (34 lines, sha256:b177a0b9c36b)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` (12 lines, sha256:e677da553ed9)",
+          "`executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` <- `executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` (41 lines, sha256:964f45d64bca)"
+        ],
+        "version": 1
+      },
+      "group_bundle": {
+        "account_id": "696505809372",
+        "action_count": 1,
+        "action_ids": [
+          "7d51a23a-9af2-4a82-ae75-67561c01cf8e"
+        ],
+        "action_resolutions": [
+          {
+            "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+            "profile_id": "config_enable_account_local_delivery",
+            "resolution": {
+              "blocked_reasons": [],
+              "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.",
+              "decision_version": "resolver/v1",
+              "finding_coverage": {},
+              "missing_defaults": [],
+              "missing_inputs": [],
+              "preservation_summary": {
+                "delivery_bucket_reachable": false,
+                "delivery_bucket_resolved": true,
+                "delivery_mode": "account_local_delivery",
+                "delivery_policy_proven": false,
+                "existing_bucket_path": false,
+                "kms_delivery_requested": false,
+                "single_profile_compatible": true,
+                "strategy_only_supported": true
+              },
+              "profile_id": "config_enable_account_local_delivery",
+              "rejected_profiles": [],
+              "resolved_inputs": {
+                "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+                "delivery_bucket_mode": "create_new"
+              },
+              "strategy_id": "config_enable_account_local_delivery",
+              "support_tier": "deterministic_bundle"
+            },
+            "strategy_id": "config_enable_account_local_delivery",
+            "strategy_inputs": {
+              "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+              "delivery_bucket_mode": "create_new"
+            }
+          }
+        ],
+        "action_type": "aws_config_enabled",
+        "diff_fingerprint_sha256": "65e28d13de1fd32f189061660dd5f04457108cb086ce24073ccdef94297f7a72",
+        "executable_action_count": 1,
+        "execution_root": "executable/actions",
+        "generated_action_count": 1,
+        "group_key": "aws_config_enabled|696505809372|eu-north-1|open",
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "manual_guidance_action_count": 0,
+        "region": "eu-north-1",
+        "repo_target_configured": false,
+        "represented_action_count": 1,
+        "resolved_action_count": 1,
+        "resolved_action_ids": [
+          "7d51a23a-9af2-4a82-ae75-67561c01cf8e"
+        ],
+        "review_required_action_count": 0,
+        "runnable_action_count": 1,
+        "runner_template_source": "embedded_mixed_tier",
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_action_count": 0,
+        "skipped_actions": [],
+        "status": "open",
+        "tier_counts": {
+          "executable": 1,
+          "manual_guidance": 0,
+          "review_required": 0
+        }
+      },
+      "pr_bundle": {
+        "files": [
+          {
+            "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\" \"${CACHE_ROOT}/provider-mirror\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_PROVIDER_MIRROR_DIR=\"${CACHE_ROOT}/provider-mirror\"\nPREFERRED_TF_PROVIDER_MIRROR_DIR=\"${HOME}/.terraform.d/plugin-cache\"\nACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nwrite_tfrc_with_cache_only() {\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\n}\n\nwrite_tfrc_with_mirror() {\n  local mirror_dir=\"$1\"\n  cat > \"${TFRC_PATH}\" <<EOF\nprovider_installation {\n  filesystem_mirror {\n    path    = \"${mirror_dir}\"\n    include = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n  direct {\n    exclude = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n}\nEOF\n}\n\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nAWS_PROVIDER_VERSION=\"5.100.0\"\nAWS_PROVIDER_LOCKFILE=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl\"\nTERRAFORM_PROVIDER_OS=\"$(uname | tr '[:upper:]' '[:lower:]')\"\nTERRAFORM_PROVIDER_ARCH=\"$(uname -m)\"\ncase \"${TERRAFORM_PROVIDER_ARCH}\" in\n  x86_64)\n    TERRAFORM_PROVIDER_ARCH=\"amd64\"\n    ;;\n  aarch64|arm64)\n    TERRAFORM_PROVIDER_ARCH=\"arm64\"\n    ;;\nesac\nTERRAFORM_PROVIDER_PLATFORM=\"${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}\"\n\nhas_cached_aws_provider() {\n  find -L \"${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .\n}\n\nhas_mirrored_aws_provider() {\n  local mirror_dir=\"${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}\"\n  find -L \"${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -print -quit 2>/dev/null | grep -q .\n}\n\nhas_preferred_mirrored_aws_provider() {\n  has_mirrored_aws_provider \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n}\n\nbootstrap_provider_cache() {\n  local bootstrap_dir marker\n  marker=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready\"\n  ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\n  if has_preferred_mirrored_aws_provider; then\n    ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n  fi\n  if [ -f \"${marker}\" ] && has_mirrored_aws_provider \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" && [ -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    return 0\n  fi\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\nEOF\n\n  if [ \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" = \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\" ]; then\n    (\n      cd \"${bootstrap_dir}\"\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  else\n    (\n      cd \"${bootstrap_dir}\"\n      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" >/dev/null\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  fi\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\nseed_canonical_aws_lockfile() {\n  local dir=\"$1\"\n  if [ ! -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    echo \"ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}.\"\n    return 1\n  fi\n  rm -rf \"$dir/.terraform\"\n  cp \"${AWS_PROVIDER_LOCKFILE}\" \"$dir/.terraform.lock.hcl\"\n}\n\nterraform_init_with_lockfile_fallback() {\n  local dir=\"$1\"\n  local log_file rc\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform init -input=false -lockfile=readonly\n  ) 2>&1 | tee \"$log_file\"\n  rc=${PIPESTATUS[0]}\n  set -e\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n  if ! grep -q \"Provider dependency changes detected\" \"$log_file\"; then\n    rm -f \"$log_file\"\n    return \"$rc\"\n  fi\n  echo \"WARNING: terraform init detected additional providers for $dir; refreshing lockfile.\"\n  rm -f \"$log_file\"\n  (\n    cd \"$dir\"\n    terraform init -input=false\n  )\n}\n\ncopy_action_folder_to_workspace() {\n  local source_dir=\"$1\"\n  local workspace_dir=\"$2\"\n\n  mkdir -p \"$workspace_dir\"\n  if command -v rsync >/dev/null 2>&1; then\n    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' \"$source_dir\"/ \"$workspace_dir\"/\n    return 0\n  fi\n\n  (\n    cd \"$source_dir\"\n    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .\n  ) | (\n    cd \"$workspace_dir\"\n    tar -xf -\n  )\n}\n\nprepare_action_workspace() {\n  local source_dir=\"$1\"\n  local workspace_root workspace_dir\n\n  workspace_root=$(mktemp -d \"${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX\")\n  workspace_dir=\"${workspace_root}/action\"\n  if ! copy_action_folder_to_workspace \"$source_dir\" \"$workspace_dir\"; then\n    rm -rf \"$workspace_root\"\n    return 1\n  fi\n  printf '%s\\n' \"$workspace_dir\"\n}\n\ncleanup_action_workspace() {\n  local workspace_dir=\"$1\"\n  local workspace_root\n\n  workspace_root=$(dirname \"$workspace_dir\")\n  rm -rf \"$workspace_root\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n\n  if ! grep -Eiq \"$duplicate_pattern\" \"$log_file\"; then\n    return 1\n  fi\n  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' \"$log_file\"; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local timeout_secs=\"${2:-${ACTION_TIMEOUT_SECS}}\"\n  local log_file rc resource existing_id duplicate_line\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    run_with_timeout \"$timeout_secs\" terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_with_timeout() {\n  local timeout_secs=\"$1\"\n  shift\n  python3 - \"$timeout_secs\" \"$@\" <<'PY'\nimport subprocess\nimport sys\n\ntimeout_secs = int(sys.argv[1])\ncommand = sys.argv[2:]\ntry:\n    completed = subprocess.run(command, check=False, timeout=timeout_secs)\nexcept subprocess.TimeoutExpired:\n    print(\"ERROR: command timed out after %ss: %s\" % (timeout_secs, \" \".join(command)))\n    sys.exit(124)\nsys.exit(int(completed.returncode))\nPY\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    if ! seed_canonical_aws_lockfile \"$dir\"; then\n      return 1\n    fi\n    set +e\n    terraform_init_with_lockfile_fallback \"$dir\"\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\nwrite_tfrc_with_mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\"\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nACTION_TIMEOUT_SECS=\"${ACTION_TIMEOUT_SECS:-300}\"\nif ! [[ \"${ACTION_TIMEOUT_SECS}\" =~ ^[0-9]+$ ]] || [ \"${ACTION_TIMEOUT_SECS}\" -le 0 ]; then\n  ACTION_TIMEOUT_SECS=300\nfi\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  workspace_dir=\"\"\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  workspace_dir=$(prepare_action_workspace \"$dir\") || {\n    echo \"ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (workspace)\")\n    continue\n  }\n\n  if ! run_terraform_init_with_retry \"$workspace_dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$workspace_dir\"\n    run_with_timeout \"$ACTION_TIMEOUT_SECS\" terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$workspace_dir\" \"$ACTION_TIMEOUT_SECS\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  cleanup_action_workspace \"$workspace_dir\"\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n",
+            "path": "run_all.sh"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- 1. AWS Config should be enabled and use the service-linked role for resource recording (executable_bundle_generated) -> executable/actions/01-aws-account-696505809372-7d51a23a\n\nReview-required actions:\n- none\n\nManual-guidance actions:\n- none\n",
+            "path": "README_GROUP.txt"
+          },
+          {
+            "content": "{\n  \"action_count\": 1,\n  \"actions\": [\n    {\n      \"action_id\": \"7d51a23a-9af2-4a82-ae75-67561c01cf8e\",\n      \"action_type\": \"aws_config_enabled\",\n      \"blocked_reasons\": [],\n      \"bundle_rollback_command\": \"python3 ./executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\",\n      \"bundle_rollback_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\",\n      \"bundle_rollback_runner\": \"python3\",\n      \"control_id\": \"Config.1\",\n      \"decision_rationale\": \"Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\",\n      \"decision_summary\": \"Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"executable/actions/01-aws-account-696505809372-7d51a23a\",\n      \"has_runnable_terraform\": true,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"executable_bundle_generated\",\n      \"preservation_summary\": {\n        \"delivery_bucket_reachable\": false,\n        \"delivery_bucket_resolved\": true,\n        \"delivery_mode\": \"account_local_delivery\",\n        \"delivery_policy_proven\": false,\n        \"existing_bucket_path\": false,\n        \"kms_delivery_requested\": false,\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"config_enable_account_local_delivery\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"config_enable_account_local_delivery\",\n      \"strategy_inputs\": {\n        \"delivery_bucket\": \"security-autopilot-config-696505809372-eu-north-1\",\n        \"delivery_bucket_mode\": \"create_new\"\n      },\n      \"support_tier\": \"deterministic_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|Config.1\",\n      \"tier\": \"executable\",\n      \"tier_root\": \"executable/actions\",\n      \"title\": \"AWS Config should be enabled and use the service-linked role for resource recording\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"7d51a23a-9af2-4a82-ae75-67561c01cf8e\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 1,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 1,\n    \"manual_guidance\": 0,\n    \"review_required\": 0\n  }\n}\n",
+            "path": "bundle_manifest.json"
+          },
+          {
+            "content": "# Decision Log\n\n## 1. AWS Config should be enabled and use the service-linked role for resource recording\n- Action ID: 7d51a23a-9af2-4a82-ae75-67561c01cf8e\n- Tier: executable/actions\n- Outcome: executable_bundle_generated\n- Strategy/Profile: config_enable_account_local_delivery / config_enable_account_local_delivery\n- Summary: Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\n\n",
+            "path": "decision_log.md"
+          },
+          {
+            "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"7d51a23a-9af2-4a82-ae75-67561c01cf8e\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"deterministic_bundle\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n",
+            "path": "finding_coverage.json"
+          },
+          {
+            "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n    null = {\n      source  = \"hashicorp/null\"\n      version = \"= 3.2.4\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf"
+          },
+          {
+            "content": "# AWS Config enablement - Action: 7d51a23a-9af2-4a82-ae75-67561c01cf8e\n# Remediation for: AWS Config should be enabled and use the service-linked role for resource recording\n# Account: 696505809372 | Region: eu-north-1\n# Control: Config.1\n\nvariable \"remediation_region\" {\n  type        = string\n  default     = \"eu-north-1\"\n  description = \"Region for AWS Config enablement.\"\n}\n\nvariable \"delivery_bucket_name\" {\n  type        = string\n  default     = \"security-autopilot-config-696505809372-eu-north-1\"\n  description = \"S3 bucket for AWS Config delivery.\"\n}\n\nvariable \"config_role_arn\" {\n  type        = string\n  default     = \"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\n  description = \"IAM role ARN used by AWS Config recorder.\"\n}\n\nvariable \"kms_key_arn\" {\n  type        = string\n  default     = \"\"\n  description = \"Optional KMS key ARN for Config delivery channel.\"\n}\n\nvariable \"create_local_bucket\" {\n  type        = bool\n  default     = true\n  description = \"When true, create delivery bucket in this account if missing.\"\n}\n\nvariable \"overwrite_recording_group\" {\n  type        = bool\n  default     = false\n  description = \"When true, overwrite an existing recorder recordingGroup with all-supported mode.\"\n}\n\nresource \"null_resource\" \"aws_config_enablement\" {\n  triggers = {\n    region                    = var.remediation_region\n    delivery_bucket           = var.delivery_bucket_name\n    config_role_arn           = var.config_role_arn\n    kms_key_arn               = var.kms_key_arn\n    create_local_bucket       = tostring(var.create_local_bucket)\n    overwrite_recording_group = tostring(var.overwrite_recording_group)\n  }\n\n  provisioner \"local-exec\" {\n    interpreter = [\"/bin/bash\", \"-c\"]\n    command     = <<-EOT\nset -euo pipefail\nexport REGION=\"${var.remediation_region}\"\nexport BUCKET=\"${var.delivery_bucket_name}\"\nexport ROLE_ARN=\"${var.config_role_arn}\"\nexport KMS_ARN=\"${var.kms_key_arn}\"\nexport CREATE_LOCAL_BUCKET=\"${var.create_local_bucket}\"\nexport OVERWRITE_RECORDING_GROUP=\"${var.overwrite_recording_group}\"\nexport ACCOUNT_ID=\"696505809372\"\nexport ROLLBACK_DIR=\".aws-config-rollback\"\n\npython3 ./scripts/aws_config_apply.py\nEOT\n  }\n}\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf"
+          },
+          {
+            "content": "#!/usr/bin/env python3\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nimport sys\nimport tempfile\nfrom pathlib import Path\nfrom typing import Any\n\nSNAPSHOT_VERSION = 1\nDEFAULT_REGION = 'eu-north-1'\nDEFAULT_BUCKET = 'security-autopilot-config-696505809372-eu-north-1'\nDEFAULT_ROLE_ARN = 'arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'\nDEFAULT_KMS_ARN = ''\nDEFAULT_ACCOUNT_ID = '696505809372'\nDEFAULT_CREATE_LOCAL_BUCKET = True\nDEFAULT_OVERWRITE_RECORDING_GROUP = False\n\ndef env_text(name: str, default: str = \"\") -> str:\n    value = os.environ.get(name, \"\").strip()\n    if value:\n        return value\n    fallback = default.strip()\n    if fallback:\n        return fallback\n    raise SystemExit(f\"{name} is required\")\n\n\ndef env_bool(name: str, default: bool) -> bool:\n    raw_value = os.environ.get(name, \"\").strip().lower()\n    if not raw_value:\n        return default\n    if raw_value not in {\"true\", \"false\"}:\n        raise SystemExit(f\"{name} must be 'true' or 'false'\")\n    return raw_value == \"true\"\n\n\ndef run_command(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run(args, text=True, capture_output=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"command failed\"\n        raise SystemExit(f\"{' '.join(args)}: {message}\")\n    return result\n\n\ndef run_json(args: list[str]) -> dict[str, Any]:\n    result = run_command(args)\n    return json.loads(result.stdout or \"{}\")\n\n\ndef atomic_write_json(path: Path, payload: Any) -> None:\n    path.parent.mkdir(parents=True, exist_ok=True)\n    with tempfile.NamedTemporaryFile(\n        \"w\",\n        dir=path.parent,\n        encoding=\"utf-8\",\n        delete=False,\n    ) as handle:\n        json.dump(payload, handle, indent=2, sort_keys=True)\n        handle.write(\"\\n\")\n        tmp_path = Path(handle.name)\n    tmp_path.replace(path)\n\n\ndef load_json(path: Path) -> Any:\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n\n\ndef bucket_exists(bucket: str, region: str) -> bool:\n    result = run_command(\n        [\"aws\", \"s3api\", \"head-bucket\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    return result.returncode == 0\n\n\ndef create_bucket(bucket: str, region: str) -> None:\n    args = [\"aws\", \"s3api\", \"create-bucket\", \"--bucket\", bucket, \"--region\", region]\n    if region != \"us-east-1\":\n        args.extend(\n            [\n                \"--create-bucket-configuration\",\n                f\"LocationConstraint={region}\",\n            ]\n        )\n    run_command(args)\n\n\ndef get_bucket_policy_json(bucket: str, region: str) -> dict[str, Any] | None:\n    result = run_command(\n        [\n            \"aws\",\n            \"s3api\",\n            \"get-bucket-policy\",\n            \"--bucket\",\n            bucket,\n            \"--region\",\n            region,\n            \"--query\",\n            \"Policy\",\n            \"--output\",\n            \"text\",\n        ],\n        check=False,\n    )\n    if result.returncode != 0:\n        output = f\"{result.stdout}\\n{result.stderr}\"\n        if \"NoSuchBucketPolicy\" in output or \"NoSuchBucket\" in output:\n            return None\n        message = result.stderr.strip() or result.stdout.strip() or \"get-bucket-policy failed\"\n        raise SystemExit(message)\n    text = (result.stdout or \"\").strip()\n    if text in {\"\", \"None\", \"null\"}:\n        return None\n    return json.loads(text)\n\n\ndef put_bucket_policy(bucket: str, region: str, policy: dict[str, Any]) -> None:\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(policy, handle, sort_keys=True, separators=(\",\", \":\"))\n        policy_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"s3api\",\n                \"put-bucket-policy\",\n                \"--bucket\",\n                bucket,\n                \"--region\",\n                region,\n                \"--policy\",\n                f\"file://{policy_path}\",\n            ]\n        )\n    finally:\n        policy_path.unlink(missing_ok=True)\n\n\ndef sanitize_payload(value: Any) -> Any:\n    if isinstance(value, dict):\n        return {\n            key: sanitize_payload(item)\n            for key, item in value.items()\n            if item is not None\n        }\n    if isinstance(value, list):\n        return [sanitize_payload(item) for item in value if item is not None]\n    return value\n\n\ndef put_structured_payload(option: str, payload: dict[str, Any], *, region: str) -> None:\n    cleaned = sanitize_payload(payload)\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(cleaned, handle, sort_keys=True, separators=(\",\", \":\"))\n        payload_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                option,\n                \"--region\",\n                region,\n                f\"--{option.replace('put-', '')}\",\n                f\"file://{payload_path}\",\n            ]\n        )\n    finally:\n        payload_path.unlink(missing_ok=True)\n\n\ndef build_required_bucket_policy(bucket: str, account_id: str) -> dict[str, Any]:\n    return {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n            {\n                \"Sid\": \"AWSConfigBucketPermissionsCheck\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:GetBucketAcl\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n            {\n                \"Sid\": \"AWSConfigBucketExistenceCheck\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:ListBucket\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n            {\n                \"Sid\": \"AWSConfigBucketDelivery\",\n                \"Effect\": \"Allow\",\n                \"Principal\": {\"Service\": \"config.amazonaws.com\"},\n                \"Action\": \"s3:PutObject\",\n                \"Resource\": f\"arn:aws:s3:::{bucket}/AWSLogs/{account_id}/Config/*\",\n                \"Condition\": {\n                    \"StringEquals\": {\n                        \"s3:x-amz-acl\": \"bucket-owner-full-control\",\n                        \"AWS:SourceAccount\": account_id,\n                    }\n                },\n            },\n        ],\n    }\n\n\ndef statement_key(statement: dict[str, Any]) -> tuple[str, str]:\n    sid = statement.get(\"Sid\")\n    if isinstance(sid, str) and sid.strip():\n        return (\"sid\", sid.strip())\n    return (\"json\", json.dumps(statement, sort_keys=True, separators=(\",\", \":\")))\n\n\ndef merge_bucket_policies(\n    existing: dict[str, Any] | None,\n    required: dict[str, Any],\n) -> dict[str, Any]:\n    merged: dict[tuple[str, str], dict[str, Any]] = {}\n    for statement in (existing or {}).get(\"Statement\", []):\n        if isinstance(statement, dict):\n            merged[statement_key(statement)] = statement\n    for statement in required.get(\"Statement\", []):\n        if isinstance(statement, dict):\n            merged[statement_key(statement)] = statement\n    version = (existing or {}).get(\"Version\") or \"2012-10-17\"\n    return {\"Version\": version, \"Statement\": list(merged.values())}\n\ndef recorder_status_map(status_payload: dict[str, Any]) -> dict[str, dict[str, Any]]:\n    mapping: dict[str, dict[str, Any]] = {}\n    for item in status_payload.get(\"ConfigurationRecordersStatus\", []):\n        if isinstance(item, dict):\n            name = str(item.get(\"name\") or \"\").strip()\n            if name:\n                mapping[name] = item\n    return mapping\n\n\ndef build_pre_state_summary(\n    recorders_payload: dict[str, Any],\n    status_payload: dict[str, Any],\n    deliveries_payload: dict[str, Any],\n    *,\n    target_bucket_name: str,\n    target_bucket_existed_before: bool,\n) -> dict[str, Any]:\n    recorders = list(recorders_payload.get(\"ConfigurationRecorders\") or [])\n    deliveries = list(deliveries_payload.get(\"DeliveryChannels\") or [])\n    if len(recorders) > 1:\n        raise SystemExit(\"Exact AWS Config rollback is unsupported when multiple configuration recorders exist.\")\n    if len(deliveries) > 1:\n        raise SystemExit(\"Exact AWS Config rollback is unsupported when multiple delivery channels exist.\")\n    recorder = recorders[0] if recorders else None\n    delivery = deliveries[0] if deliveries else None\n    status = None\n    if recorder is not None:\n        status = recorder_status_map(status_payload).get(str(recorder.get(\"name\") or \"\"))\n    return {\n        \"version\": SNAPSHOT_VERSION,\n        \"recorder_exists\": recorder is not None,\n        \"recorder_name\": \"\" if recorder is None else str(recorder.get(\"name\") or \"\"),\n        \"recorder_all_supported\": bool((recorder or {}).get(\"recordingGroup\", {}).get(\"allSupported\")),\n        \"recording_before\": None if status is None else bool(status.get(\"recording\")),\n        \"delivery_channel_exists\": delivery is not None,\n        \"delivery_channel_name\": \"\" if delivery is None else str(delivery.get(\"name\") or \"\"),\n        \"delivery_bucket_name\": \"\" if delivery is None else str(delivery.get(\"s3BucketName\") or \"\"),\n        \"target_bucket_name\": target_bucket_name,\n        \"target_bucket_existed_before\": target_bucket_existed_before,\n    }\n\n\ndef capture_snapshot(snapshot_dir: Path, *, region: str, bucket: str) -> dict[str, Any]:\n    recorders_payload = run_json(\n        [\"aws\", \"configservice\", \"describe-configuration-recorders\", \"--region\", region, \"--output\", \"json\"]\n    )\n    status_payload = run_json(\n        [\n            \"aws\",\n            \"configservice\",\n            \"describe-configuration-recorder-status\",\n            \"--region\",\n            region,\n            \"--output\",\n            \"json\",\n        ]\n    )\n    deliveries_payload = run_json(\n        [\"aws\", \"configservice\", \"describe-delivery-channels\", \"--region\", region, \"--output\", \"json\"]\n    )\n    bucket_existed_before = bucket_exists(bucket, region)\n    bucket_state = {\n        \"version\": SNAPSHOT_VERSION,\n        \"bucket_name\": bucket,\n        \"bucket_existed_before\": bucket_existed_before,\n        \"policy_json\": None if not bucket_existed_before else get_bucket_policy_json(bucket, region),\n    }\n    summary = build_pre_state_summary(\n        recorders_payload,\n        status_payload,\n        deliveries_payload,\n        target_bucket_name=bucket,\n        target_bucket_existed_before=bucket_existed_before,\n    )\n    atomic_write_json(snapshot_dir / \"pre_configuration_recorders.json\", recorders_payload)\n    atomic_write_json(snapshot_dir / \"pre_configuration_recorder_status.json\", status_payload)\n    atomic_write_json(snapshot_dir / \"pre_delivery_channels.json\", deliveries_payload)\n    atomic_write_json(snapshot_dir / \"pre_target_bucket_state.json\", bucket_state)\n    atomic_write_json(snapshot_dir / \"pre_state_summary.json\", summary)\n    (snapshot_dir / \".snapshot-ready\").write_text(\"ready\\n\", encoding=\"utf-8\")\n    return summary\n\n\ndef load_or_capture_snapshot(snapshot_dir: Path, *, region: str, bucket: str) -> dict[str, Any]:\n    ready_path = snapshot_dir / \".snapshot-ready\"\n    if ready_path.exists():\n        summary_path = snapshot_dir / \"pre_state_summary.json\"\n        if not summary_path.exists():\n            raise SystemExit(\"Existing AWS Config rollback snapshot is incomplete.\")\n        return load_json(summary_path)\n    snapshot_dir.mkdir(parents=True, exist_ok=True)\n    return capture_snapshot(snapshot_dir, region=region, bucket=bucket)\n\ndef main() -> int:\n    region = env_text(\"REGION\", DEFAULT_REGION)\n    bucket = env_text(\"BUCKET\", DEFAULT_BUCKET)\n    role_arn = env_text(\"ROLE_ARN\", DEFAULT_ROLE_ARN)\n    kms_arn = os.environ.get(\"KMS_ARN\", DEFAULT_KMS_ARN).strip()\n    account_id = env_text(\"ACCOUNT_ID\", DEFAULT_ACCOUNT_ID)\n    create_local_bucket = env_bool(\"CREATE_LOCAL_BUCKET\", DEFAULT_CREATE_LOCAL_BUCKET)\n    overwrite_recording_group = env_bool(\n        \"OVERWRITE_RECORDING_GROUP\",\n        DEFAULT_OVERWRITE_RECORDING_GROUP,\n    )\n    rollback_dir = Path(os.environ.get(\"ROLLBACK_DIR\") or \".aws-config-rollback\")\n    snapshot_dir = rollback_dir / \"snapshot\"\n\n    summary = load_or_capture_snapshot(snapshot_dir, region=region, bucket=bucket)\n    if create_local_bucket:\n        if not bucket_exists(bucket, region):\n            create_bucket(bucket, region)\n        original_policy = load_json(snapshot_dir / \"pre_target_bucket_state.json\").get(\"policy_json\")\n        merged_policy = merge_bucket_policies(\n            original_policy,\n            build_required_bucket_policy(bucket, account_id),\n        )\n        put_bucket_policy(bucket, region, merged_policy)\n    elif not bucket_exists(bucket, region):\n        raise SystemExit(\n            f\"create_local_bucket=false and delivery bucket '{bucket}' is unreachable. \"\n            \"Provide a reachable delivery_bucket_name or set create_local_bucket=true.\"\n        )\n\n    recorders_payload = load_json(snapshot_dir / \"pre_configuration_recorders.json\")\n    recorder = next(iter(recorders_payload.get(\"ConfigurationRecorders\") or []), None)\n    recorder_name = str(summary.get(\"recorder_name\") or \"\") or \"security-autopilot-recorder\"\n    if not bool(summary.get(\"recorder_exists\")) or overwrite_recording_group:\n        recorder_payload = sanitize_payload(recorder or {\"name\": recorder_name})\n        recorder_payload[\"name\"] = recorder_name\n        recorder_payload[\"roleARN\"] = role_arn\n        recorder_payload[\"recordingGroup\"] = {\n            \"allSupported\": True,\n            \"includeGlobalResourceTypes\": True,\n        }\n        put_structured_payload(\"put-configuration-recorder\", recorder_payload, region=region)\n    elif not bool(summary.get(\"recorder_all_supported\")):\n        print(\n            f\"Preserving existing selective AWS Config recorder '{recorder_name}' \"\n            \"(overwrite_recording_group=false).\",\n            file=sys.stderr,\n        )\n    else:\n        print(\n            f\"Preserving existing AWS Config recorder '{recorder_name}' recording group \"\n            \"(overwrite_recording_group=false).\",\n            file=sys.stderr,\n        )\n\n    deliveries_payload = load_json(snapshot_dir / \"pre_delivery_channels.json\")\n    delivery = next(iter(deliveries_payload.get(\"DeliveryChannels\") or []), None)\n    delivery_name = str(summary.get(\"delivery_channel_name\") or \"\") or \"security-autopilot-delivery-channel\"\n    existing_delivery_bucket = str(summary.get(\"delivery_bucket_name\") or \"\")\n    existing_delivery_bucket_stale = bool(existing_delivery_bucket) and not bucket_exists(existing_delivery_bucket, region)\n    if existing_delivery_bucket_stale and not create_local_bucket and existing_delivery_bucket == bucket:\n        raise SystemExit(\n            f\"Existing AWS Config delivery channel '{delivery_name}' points to unreachable bucket \"\n            f\"'{existing_delivery_bucket}' and create_local_bucket=false cannot repair it. \"\n            \"Provide a reachable delivery_bucket_name or set create_local_bucket=true.\"\n        )\n    if existing_delivery_bucket and existing_delivery_bucket != bucket:\n        warning = (\n            f\"WARNING: Existing AWS Config delivery channel '{delivery_name}' currently targets \"\n            f\"{'unreachable ' if existing_delivery_bucket_stale else ''}bucket \"\n            f\"'{existing_delivery_bucket}'. This bundle will redirect delivery to '{bucket}'.\"\n        )\n        print(warning, file=sys.stderr)\n    delivery_payload = sanitize_payload(delivery or {\"name\": delivery_name})\n    delivery_payload[\"name\"] = delivery_name\n    delivery_payload[\"s3BucketName\"] = bucket\n    if kms_arn:\n        delivery_payload[\"s3KmsKeyArn\"] = kms_arn\n    else:\n        delivery_payload.pop(\"s3KmsKeyArn\", None)\n    put_structured_payload(\"put-delivery-channel\", delivery_payload, region=region)\n    run_command(\n        [\n            \"aws\",\n            \"configservice\",\n            \"start-configuration-recorder\",\n            \"--region\",\n            region,\n            \"--configuration-recorder-name\",\n            recorder_name,\n        ],\n        check=False,\n    )\n\n    apply_context = {\n        \"version\": SNAPSHOT_VERSION,\n        \"target_bucket_name\": bucket,\n        \"target_bucket_created_by_apply\": (\n            not bool(summary.get(\"target_bucket_existed_before\")) and bucket_exists(bucket, region)\n        ),\n        \"applied_recorder_name\": recorder_name,\n        \"applied_delivery_channel_name\": delivery_name,\n    }\n    atomic_write_json(rollback_dir / \"apply_context.json\", apply_context)\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py"
+          },
+          {
+            "content": "#!/usr/bin/env python3\nfrom __future__ import annotations\n\nimport json\nimport os\nimport subprocess\nimport tempfile\nfrom pathlib import Path\nfrom typing import Any\n\nDEFAULT_REGION = 'eu-north-1'\n\ndef run_command(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:\n    result = subprocess.run(args, text=True, capture_output=True)\n    if check and result.returncode != 0:\n        message = result.stderr.strip() or result.stdout.strip() or \"command failed\"\n        raise SystemExit(f\"{' '.join(args)}: {message}\")\n    return result\n\n\ndef run_json(args: list[str]) -> dict[str, Any]:\n    result = run_command(args)\n    return json.loads(result.stdout or \"{}\")\n\n\ndef load_json(path: Path) -> Any:\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n\n\ndef bucket_exists(bucket: str, region: str) -> bool:\n    result = run_command(\n        [\"aws\", \"s3api\", \"head-bucket\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    return result.returncode == 0\n\n\ndef sanitize_payload(value: Any) -> Any:\n    if isinstance(value, dict):\n        return {\n            key: sanitize_payload(item)\n            for key, item in value.items()\n            if item is not None\n        }\n    if isinstance(value, list):\n        return [sanitize_payload(item) for item in value if item is not None]\n    return value\n\n\ndef put_structured_payload(option: str, payload: dict[str, Any], *, region: str) -> None:\n    cleaned = sanitize_payload(payload)\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(cleaned, handle, sort_keys=True, separators=(\",\", \":\"))\n        payload_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                option,\n                \"--region\",\n                region,\n                f\"--{option.replace('put-', '')}\",\n                f\"file://{payload_path}\",\n            ]\n        )\n    finally:\n        payload_path.unlink(missing_ok=True)\n\n\ndef put_bucket_policy(bucket: str, region: str, policy: dict[str, Any]) -> None:\n    with tempfile.NamedTemporaryFile(\"w\", encoding=\"utf-8\", delete=False) as handle:\n        json.dump(policy, handle, sort_keys=True, separators=(\",\", \":\"))\n        policy_path = Path(handle.name)\n    try:\n        run_command(\n            [\n                \"aws\",\n                \"s3api\",\n                \"put-bucket-policy\",\n                \"--bucket\",\n                bucket,\n                \"--region\",\n                region,\n                \"--policy\",\n                f\"file://{policy_path}\",\n            ]\n        )\n    finally:\n        policy_path.unlink(missing_ok=True)\n\n\ndef delete_bucket_policy(bucket: str, region: str) -> None:\n    result = run_command(\n        [\"aws\", \"s3api\", \"delete-bucket-policy\", \"--bucket\", bucket, \"--region\", region],\n        check=False,\n    )\n    if result.returncode != 0:\n        output = f\"{result.stdout}\\n{result.stderr}\"\n        if \"NoSuchBucketPolicy\" not in output and \"NoSuchBucket\" not in output:\n            message = result.stderr.strip() or result.stdout.strip() or \"delete-bucket-policy failed\"\n            raise SystemExit(message)\n\n\ndef ensure_singletons(payload: dict[str, Any], key: str, description: str) -> list[dict[str, Any]]:\n    items = list(payload.get(key) or [])\n    if len(items) > 1:\n        raise SystemExit(f\"Exact AWS Config rollback is unsupported when multiple {description} exist.\")\n    return items\n\n\ndef current_config_state(region: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:\n    recorders = ensure_singletons(\n        run_json([\"aws\", \"configservice\", \"describe-configuration-recorders\", \"--region\", region, \"--output\", \"json\"]),\n        \"ConfigurationRecorders\",\n        \"configuration recorders\",\n    )\n    deliveries = ensure_singletons(\n        run_json([\"aws\", \"configservice\", \"describe-delivery-channels\", \"--region\", region, \"--output\", \"json\"]),\n        \"DeliveryChannels\",\n        \"delivery channels\",\n    )\n    return recorders, deliveries\n\n\ndef bucket_is_empty(bucket: str, region: str) -> bool:\n    current = run_json(\n        [\"aws\", \"s3api\", \"list-objects-v2\", \"--bucket\", bucket, \"--region\", region, \"--max-items\", \"1\", \"--output\", \"json\"]\n    )\n    if current.get(\"Contents\"):\n        return False\n    versions = run_json(\n        [\"aws\", \"s3api\", \"list-object-versions\", \"--bucket\", bucket, \"--region\", region, \"--max-items\", \"1\", \"--output\", \"json\"]\n    )\n    return not versions.get(\"Versions\") and not versions.get(\"DeleteMarkers\")\n\n\ndef allowed_name(current_name: str, expected_names: set[str]) -> bool:\n    return not current_name or current_name in expected_names\n\ndef main() -> int:\n    region = os.environ.get(\"REGION\", \"\").strip() or DEFAULT_REGION.strip()\n    if not region:\n        raise SystemExit(\"REGION is required\")\n    rollback_dir = Path(os.environ.get(\"ROLLBACK_DIR\") or \".aws-config-rollback\")\n    snapshot_dir = rollback_dir / \"snapshot\"\n    ready_path = snapshot_dir / \".snapshot-ready\"\n    if not ready_path.exists():\n        raise SystemExit(\"No AWS Config rollback snapshot exists for this bundle.\")\n\n    summary = load_json(snapshot_dir / \"pre_state_summary.json\")\n    bucket_state = load_json(snapshot_dir / \"pre_target_bucket_state.json\")\n    apply_context = load_json(rollback_dir / \"apply_context.json\")\n    pre_recorders = ensure_singletons(\n        load_json(snapshot_dir / \"pre_configuration_recorders.json\"),\n        \"ConfigurationRecorders\",\n        \"configuration recorders\",\n    )\n    pre_deliveries = ensure_singletons(\n        load_json(snapshot_dir / \"pre_delivery_channels.json\"),\n        \"DeliveryChannels\",\n        \"delivery channels\",\n    )\n    current_recorders, current_deliveries = current_config_state(region)\n    pre_recorder = pre_recorders[0] if pre_recorders else None\n    pre_delivery = pre_deliveries[0] if pre_deliveries else None\n    expected_recorder_names = {\n        str(name).strip()\n        for name in [\n            summary.get(\"recorder_name\"),\n            apply_context.get(\"applied_recorder_name\"),\n        ]\n        if str(name).strip()\n    }\n    expected_delivery_names = {\n        str(name).strip()\n        for name in [\n            summary.get(\"delivery_channel_name\"),\n            apply_context.get(\"applied_delivery_channel_name\"),\n        ]\n        if str(name).strip()\n    }\n\n    current_recorder_name = str((current_recorders[0] if current_recorders else {}).get(\"name\") or \"\")\n    current_delivery_name = str((current_deliveries[0] if current_deliveries else {}).get(\"name\") or \"\")\n    if current_recorders and not allowed_name(current_recorder_name, expected_recorder_names):\n        raise SystemExit(\n            \"Current AWS Config recorder does not match the bundle's recorded mutation target; \"\n            \"exact rollback is not guaranteed.\"\n        )\n    if current_deliveries and not allowed_name(current_delivery_name, expected_delivery_names):\n        raise SystemExit(\n            \"Current AWS Config delivery channel does not match the bundle's recorded mutation target; \"\n            \"exact rollback is not guaranteed.\"\n        )\n\n    if current_recorder_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"stop-configuration-recorder\",\n                \"--region\",\n                region,\n                \"--configuration-recorder-name\",\n                current_recorder_name,\n            ],\n            check=False,\n        )\n\n    if pre_recorder is not None:\n        put_structured_payload(\"put-configuration-recorder\", pre_recorder, region=region)\n\n    if pre_delivery is not None:\n        put_structured_payload(\"put-delivery-channel\", pre_delivery, region=region)\n    elif current_delivery_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"delete-delivery-channel\",\n                \"--region\",\n                region,\n                \"--delivery-channel-name\",\n                current_delivery_name,\n            ]\n        )\n\n    if pre_recorder is not None:\n        pre_recorder_name = str(pre_recorder.get(\"name\") or \"\")\n        if bool(summary.get(\"recording_before\")):\n            run_command(\n                [\n                    \"aws\",\n                    \"configservice\",\n                    \"start-configuration-recorder\",\n                    \"--region\",\n                    region,\n                    \"--configuration-recorder-name\",\n                    pre_recorder_name,\n                ]\n            )\n        else:\n            run_command(\n                [\n                    \"aws\",\n                    \"configservice\",\n                    \"stop-configuration-recorder\",\n                    \"--region\",\n                    region,\n                    \"--configuration-recorder-name\",\n                    pre_recorder_name,\n                ],\n                check=False,\n            )\n    elif current_recorder_name:\n        run_command(\n            [\n                \"aws\",\n                \"configservice\",\n                \"delete-configuration-recorder\",\n                \"--region\",\n                region,\n                \"--configuration-recorder-name\",\n                current_recorder_name,\n            ]\n        )\n\n    target_bucket_name = str(bucket_state.get(\"bucket_name\") or \"\")\n    if bool(bucket_state.get(\"bucket_existed_before\")):\n        if not bucket_exists(target_bucket_name, region):\n            raise SystemExit(\n                f\"Original AWS Config delivery bucket '{target_bucket_name}' is now unreachable; \"\n                \"exact rollback is not guaranteed.\"\n            )\n        original_policy = bucket_state.get(\"policy_json\")\n        if isinstance(original_policy, dict):\n            put_bucket_policy(target_bucket_name, region, original_policy)\n        else:\n            delete_bucket_policy(target_bucket_name, region)\n    elif bucket_exists(target_bucket_name, region):\n        if not bool(apply_context.get(\"target_bucket_created_by_apply\")):\n            raise SystemExit(\n                \"Rollback cannot prove that the target bucket was created by this bundle; \"\n                \"exact cleanup is not guaranteed.\"\n            )\n        if not bucket_is_empty(target_bucket_name, region):\n            raise SystemExit(\n                f\"Rollback would need to delete non-empty bucket '{target_bucket_name}'. \"\n                \"Exact restoration is not guaranteed.\"\n            )\n        delete_bucket_policy(target_bucket_name, region)\n        run_command([\"aws\", \"s3api\", \"delete-bucket\", \"--bucket\", target_bucket_name, \"--region\", region])\n\n    receipt = {\n        \"restored\": True,\n        \"target_bucket_name\": target_bucket_name,\n        \"recorder_name\": \"\" if pre_recorder is None else str(pre_recorder.get(\"name\") or \"\"),\n        \"delivery_channel_name\": \"\" if pre_delivery is None else str(pre_delivery.get(\"name\") or \"\"),\n    }\n    (rollback_dir / \"rollback_receipt.json\").write_text(\n        json.dumps(receipt, indent=2, sort_keys=True) + \"\\n\",\n        encoding=\"utf-8\",\n    )\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-24T17:14:31+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nConfig.1 preflight safeguards\n-----------------------------\n- This bundle inspects existing AWS Config recorder and delivery-channel state before mutating settings.\n- The executable Terraform path snapshots exact pre-state under `.aws-config-rollback/` before mutation and ships a bundle-local restore command at `rollback/aws_config_restore.py`.\n- Recorder safety default: `overwrite_recording_group = false` preserves an existing recorder's recording group (including selective mode).\n- Set `overwrite_recording_group = true` only when you explicitly want to replace existing recorder scope with all-supported recording.\n- Delivery safety: if an existing delivery channel points to a different bucket, apply emits a warning before redirecting to `delivery_bucket_name`.\n- Delivery fail-closed: when `create_local_bucket = false`, apply exits early if `delivery_bucket_name` is unreachable so remediation does not fail later with an ambiguous `NoSuchBucket` error.\n- Rollback safety: the restore script replays the exact pre-remediation recorder, recording mode, delivery-channel, and target-bucket policy state; it fails closed if drift or non-empty created buckets make exact restoration ambiguous.\n\n\nSelected strategy\n-----------------\n- strategy_id: config_enable_account_local_delivery\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/README.txt"
+          },
+          {
+            "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: AWS Config should be enabled and use the service-linked role for resource recording\nAction ID: 7d51a23a-9af2-4a82-ae75-67561c01cf8e\nTier: executable\nTier root: executable/actions\nOutcome: executable_bundle_generated\nStrategy: config_enable_account_local_delivery\nProfile: config_enable_account_local_delivery\n\nDecision summary: Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\nRunnable Terraform is present in this folder.\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt"
+          },
+          {
+            "content": "{\n  \"action_id\": \"7d51a23a-9af2-4a82-ae75-67561c01cf8e\",\n  \"action_type\": \"aws_config_enabled\",\n  \"blocked_reasons\": [],\n  \"bundle_rollback_command\": \"python3 ./executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\",\n  \"bundle_rollback_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\",\n  \"bundle_rollback_runner\": \"python3\",\n  \"control_id\": \"Config.1\",\n  \"decision_rationale\": \"Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\",\n  \"decision_summary\": \"Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"executable/actions/01-aws-account-696505809372-7d51a23a\",\n  \"has_runnable_terraform\": true,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"executable_bundle_generated\",\n  \"preservation_summary\": {\n    \"delivery_bucket_reachable\": false,\n    \"delivery_bucket_resolved\": true,\n    \"delivery_mode\": \"account_local_delivery\",\n    \"delivery_policy_proven\": false,\n    \"existing_bucket_path\": false,\n    \"kms_delivery_requested\": false,\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"config_enable_account_local_delivery\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"config_enable_account_local_delivery\",\n  \"strategy_inputs\": {\n    \"delivery_bucket\": \"security-autopilot-config-696505809372-eu-north-1\",\n    \"delivery_bucket_mode\": \"create_new\"\n  },\n  \"support_tier\": \"deterministic_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|Config.1\",\n  \"tier\": \"executable\",\n  \"tier_root\": \"executable/actions\",\n  \"title\": \"AWS Config should be enabled and use the service-linked role for resource recording\"\n}\n",
+            "path": "executable/actions/01-aws-account-696505809372-7d51a23a/decision.json"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 12,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 11538,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e50db38f5499b262d89e322b1f10e76eebfb491cda987269293406322f0de6d5\",\n      \"line_count\": 404,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 719,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"ddd56ab68670860c68649e752ff1eec0f5d8f2745825891c9a3fc3f8b101c150\",\n      \"line_count\": 21,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 2696,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"93f31ae5176076ef5f47922b30514c4f8cf404aecb245ce59e182182c3310cff\",\n      \"line_count\": 59,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 538,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"75fdefa24df7ddd7fd2b30e2dcc712a4911e01b489131b8e7fd7ec7bdcb563dd\",\n      \"line_count\": 9,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 221,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"2fb4ffcf5cafc9ae394936442391669f820d5899c07866ec8cf6b23024f1e44a\",\n      \"line_count\": 10,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf\",\n      \"byte_count\": 557,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f\",\n      \"line_count\": 22,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf\",\n      \"byte_count\": 2210,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"96eb5b7f1efbd3bc6bdc0e28412954a004858b43da3f8f1aedd2fd0f5e6d2afa\",\n      \"line_count\": 68,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py\",\n      \"byte_count\": 16973,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"1a9d28516678b7f32533d55d8b5716af40788c836894934927e1ebbd1d56c907\",\n      \"line_count\": 443,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\",\n      \"byte_count\": 11154,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b\",\n      \"line_count\": 309,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/README.txt\",\n      \"byte_count\": 2111,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"b177a0b9c36bb5066f9bd4b5e45b20f7db5faf96cf452be2ee88843978cf4b58\",\n      \"line_count\": 34,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/README.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt\",\n      \"byte_count\": 640,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"e677da553ed9859e16177193a5733e4c522353608528705820440919f0d4266a\",\n      \"line_count\": 12,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/decision.json\",\n      \"byte_count\": 2085,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"964f45d64bcadf519ca28c095c458c8a77eaf7ca93d6e35293ad01060c591fd0\",\n      \"line_count\": 41,\n      \"repo_path\": \"executable/actions/01-aws-account-696505809372-7d51a23a/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"65e28d13de1fd32f189061660dd5f04457108cb086ce24073ccdef94297f7a72\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (404 lines, sha256:e50db38f5499)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:ddd56ab68670)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (59 lines, sha256:93f31ae51760)\",\n    \"`decision_log.md` <- `decision_log.md` (9 lines, sha256:75fdefa24df7)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:2fb4ffcf5caf)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` (22 lines, sha256:f94b43f86e30)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` (68 lines, sha256:96eb5b7f1efb)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` (443 lines, sha256:1a9d28516678)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` (34 lines, sha256:b177a0b9c36b)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` (12 lines, sha256:e677da553ed9)\",\n    \"`executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` <- `executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` (41 lines, sha256:964f45d64bca)\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/diff_summary.json"
+          },
+          {
+            "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## AWS Config should be enabled and use the service-linked role for resource recording\n- Action ID: `7d51a23a-9af2-4a82-ae75-67561c01cf8e`\n- Control ID: `Config.1`\n- Target: `696505809372|eu-north-1|AWS::::Account:696505809372|Config.1`\n- Rollback command: `python3 ./executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py`\n",
+            "path": "pr_automation/rollback_notes.md"
+          },
+          {
+            "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"Config.1\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"Config.1\"\n  ],\n  \"version\": 1\n}\n",
+            "path": "pr_automation/control_mapping_context.json"
+          }
+        ],
+        "format": "terraform",
+        "metadata": {
+          "automation_file_count": 3,
+          "bundle_rollback_entries": {
+            "7d51a23a-9af2-4a82-ae75-67561c01cf8e": {
+              "path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+              "runner": "python3"
+            }
+          },
+          "diff_fingerprint_sha256": "65e28d13de1fd32f189061660dd5f04457108cb086ce24073ccdef94297f7a72",
+          "executable_action_count": 1,
+          "execution_root": "executable/actions",
+          "generated_action_count": 1,
+          "layout_version": "grouped_bundle_mixed_tier/v1",
+          "manual_guidance_action_count": 0,
+          "repo_target_configured": false,
+          "represented_action_count": 1,
+          "requested_action_count": 1,
+          "review_required_action_count": 0,
+          "runnable_action_count": 1,
+          "runner_template_source": "embedded_mixed_tier",
+          "runner_template_version": "grouped_bundle_mixed_tier/v1",
+          "skipped_action_count": 0,
+          "skipped_actions": [],
+          "tier_counts": {
+            "executable": 1,
+            "manual_guidance": 0,
+            "review_required": 0
+          }
+        },
+        "steps": [
+          "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+          "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+          "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+        ]
+      },
+      "risk_acknowledged": true,
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "7d51a23a-9af2-4a82-ae75-67561c01cf8e",
+            "action_type": "aws_config_enabled",
+            "control_id": "Config.1",
+            "rollback_command": "python3 ./executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+            "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|Config.1",
+            "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+          }
+        ],
+        "entry_count": 1,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "selected_strategy": "config_enable_account_local_delivery"
+    },
+    "completed_at": "2026-03-24T17:14:31.853700+00:00",
+    "created_at": "2026-03-24T17:14:20.708241+00:00",
+    "id": "0036c4c2-722e-4789-8fe2-203449d4f8d2",
+    "logs": "Run started at 2026-03-24T17:14:31.704896+00:00.\nGroup PR bundle generated (actions=1, strategy=config_enable_account_local_delivery).\nRun completed at 2026-03-24T17:14:31.853700+00:00.",
+    "mode": "pr_only",
+    "outcome": "Group PR bundle generated (1 actions)",
+    "resolution": null,
+    "started_at": "2026-03-24T17:14:31.704896+00:00",
+    "status": "success",
+    "updated_at": "2026-03-24T17:14:31.552151+00:00"
+  },
+  "status": "passed",
+  "terraform_transcript": [
+    {
+      "command": "chmod +x run_all.sh",
+      "duration_sec": 0.011,
+      "exit_code": 0,
+      "finished_at_epoch": 1774372485.5096052,
+      "started_at_epoch": 1774372485.4989052,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "bash ./run_all.sh",
+      "duration_sec": 22.404,
+      "exit_code": 0,
+      "finished_at_epoch": 1774372507.913437,
+      "started_at_epoch": 1774372485.509811,
+      "stderr": "",
+      "stdout": "\n=== Running terraform in executable/actions/01-aws-account-696505809372-7d51a23a ===\n\u001b[0m\u001b[1mInitializing the backend...\u001b[0m\n\u001b[0m\u001b[1mInitializing provider plugins...\u001b[0m\n- Reusing previous version of hashicorp/aws from the dependency lock file\n- Finding hashicorp/null versions matching \"3.2.4\"...\n- Using hashicorp/aws v5.100.0 from the shared cache directory\n- Installing hashicorp/null v3.2.4...\n- Installed hashicorp/null v3.2.4 (signed by HashiCorp)\n\u001b[31m\u2577\u001b[0m\u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mProvider dependency changes detected\u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\n\u001b[31m\u2502\u001b[0m \u001b[0m\u001b[0mChanges to the required provider dependencies were detected, but the lock\n\u001b[31m\u2502\u001b[0m \u001b[0mfile is read-only. To use and record these requirements, run \"terraform\n\u001b[31m\u2502\u001b[0m \u001b[0minit\" without the \"-lockfile=readonly\" flag.\n\u001b[31m\u2575\u001b[0m\u001b[0m\nWARNING: terraform init detected additional providers for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-IaZC9R/action; refreshing lockfile.\n\u001b[0m\u001b[1mInitializing the backend...\u001b[0m\n\u001b[0m\u001b[1mInitializing provider plugins...\u001b[0m\n- Reusing previous version of hashicorp/aws from the dependency lock file\n- Finding hashicorp/null versions matching \"3.2.4\"...\n- Using previously-installed hashicorp/aws v5.100.0\n- Installing hashicorp/null v3.2.4...\n- Installed hashicorp/null v3.2.4 (signed by HashiCorp)\nTerraform has made some changes to the provider dependency selections recorded\nin the .terraform.lock.hcl file. Review those changes and commit them to your\nversion control system if they represent changes you intended to make.\n\n\u001b[0m\u001b[1m\u001b[32mTerraform has been successfully initialized!\u001b[0m\u001b[32m\u001b[0m\n\u001b[0m\u001b[32m\nYou may now begin working with Terraform. Try running \"terraform plan\" to see\nany changes that are required for your infrastructure. All Terraform commands\nshould now work.\n\nIf you ever set or change modules or backend configuration for Terraform,\nrerun this command to reinitialize your working directory. If you forget, other\ncommands will detect it and remind you to do so if necessary.\u001b[0m\n\nTerraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n  \u001b[32m+\u001b[0m create\u001b[0m\n\nTerraform will perform the following actions:\n\n\u001b[1m  # null_resource.aws_config_enablement\u001b[0m will be created\n\u001b[0m  \u001b[32m+\u001b[0m\u001b[0m resource \"null_resource\" \"aws_config_enablement\" {\n      \u001b[32m+\u001b[0m\u001b[0m id       = (known after apply)\n      \u001b[32m+\u001b[0m\u001b[0m triggers = {\n          \u001b[32m+\u001b[0m\u001b[0m \"config_role_arn\"           = \"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\n          \u001b[32m+\u001b[0m\u001b[0m \"create_local_bucket\"       = \"true\"\n          \u001b[32m+\u001b[0m\u001b[0m \"delivery_bucket\"           = \"security-autopilot-config-696505809372-eu-north-1\"\n          \u001b[32m+\u001b[0m\u001b[0m \"kms_key_arn\"               = \u001b[90mnull\u001b[0m\u001b[0m\n          \u001b[32m+\u001b[0m\u001b[0m \"overwrite_recording_group\" = \"false\"\n          \u001b[32m+\u001b[0m\u001b[0m \"region\"                    = \"eu-north-1\"\n        }\n    }\n\n\u001b[1mPlan:\u001b[0m \u001b[0m1 to add, 0 to change, 0 to destroy.\n\u001b[90m\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u001b[0m\n\nNote: You didn't use the -out option to save this plan, so Terraform can't\nguarantee to take exactly these actions if you run \"terraform apply\" now.\n\nTerraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n  \u001b[32m+\u001b[0m create\u001b[0m\n\nTerraform will perform the following actions:\n\n\u001b[1m  # null_resource.aws_config_enablement\u001b[0m will be created\n\u001b[0m  \u001b[32m+\u001b[0m\u001b[0m resource \"null_resource\" \"aws_config_enablement\" {\n      \u001b[32m+\u001b[0m\u001b[0m id       = (known after apply)\n      \u001b[32m+\u001b[0m\u001b[0m triggers = {\n          \u001b[32m+\u001b[0m\u001b[0m \"config_role_arn\"           = \"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\n          \u001b[32m+\u001b[0m\u001b[0m \"create_local_bucket\"       = \"true\"\n          \u001b[32m+\u001b[0m\u001b[0m \"delivery_bucket\"           = \"security-autopilot-config-696505809372-eu-north-1\"\n          \u001b[32m+\u001b[0m\u001b[0m \"kms_key_arn\"               = \u001b[90mnull\u001b[0m\u001b[0m\n          \u001b[32m+\u001b[0m\u001b[0m \"overwrite_recording_group\" = \"false\"\n          \u001b[32m+\u001b[0m\u001b[0m \"region\"                    = \"eu-north-1\"\n        }\n    }\n\n\u001b[1mPlan:\u001b[0m \u001b[0m1 to add, 0 to change, 0 to destroy.\n\u001b[0m\u001b[1mnull_resource.aws_config_enablement: Creating...\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mnull_resource.aws_config_enablement: Provisioning with 'local-exec'...\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mnull_resource.aws_config_enablement (local-exec):\u001b[0m \u001b[0mExecuting: [\"/bin/bash\" \"-c\" \"set -euo pipefail\\nexport REGION=\\\"eu-north-1\\\"\\nexport BUCKET=\\\"security-autopilot-config-696505809372-eu-north-1\\\"\\nexport ROLE_ARN=\\\"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\\\"\\nexport KMS_ARN=\\\"\\\"\\nexport CREATE_LOCAL_BUCKET=\\\"true\\\"\\nexport OVERWRITE_RECORDING_GROUP=\\\"false\\\"\\nexport ACCOUNT_ID=\\\"696505809372\\\"\\nexport ROLLBACK_DIR=\\\".aws-config-rollback\\\"\\n\\npython3 ./scripts/aws_config_apply.py\\n\"]\n\u001b[0m\u001b[1mnull_resource.aws_config_enablement (local-exec):\u001b[0m \u001b[0mPreserving existing selective AWS Config recorder 'default' (overwrite_recording_group=false).\n\u001b[0m\u001b[1mnull_resource.aws_config_enablement: Creation complete after 9s [id=3135815223025091937]\u001b[0m\n\u001b[0m\u001b[1m\u001b[32m\nApply complete! Resources: 1 added, 0 changed, 0 destroyed.\u001b[0m\nBundle run completed.\n  Successful action folders: 1/1\n  Failed action folders: 0/1\nAll action folders completed successfully.\n"
+    }
+  ]
+}
