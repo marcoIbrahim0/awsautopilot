@@ -25,6 +25,8 @@ from backend.models.remediation_run import RemediationRun
 logger = logging.getLogger(__name__)
 
 PENDING_CONFIRMATION_WINDOW = timedelta(hours=12)
+PENDING_CONFIRMATION_FIRST_REFRESH_DELAY = timedelta(minutes=15)
+PENDING_CONFIRMATION_SUBSEQUENT_REFRESH_DELAY = timedelta(hours=1)
 PENDING_CONFIRMATION_INFO_MESSAGE = (
     "This fix was applied successfully. AWS source-of-truth checks like Security Hub can take up to 12 hours "
     "to confirm the finding is resolved."
@@ -48,6 +50,48 @@ def _to_utc(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _pending_confirmation_deadline(finished_at: datetime | None) -> datetime | None:
+    base = _to_utc(finished_at)
+    if base is None:
+        return None
+    return base + PENDING_CONFIRMATION_WINDOW
+
+
+def clear_confirmation_refresh_schedule(state: ActionGroupActionState) -> None:
+    state.confirmation_refresh_last_enqueued_at = None
+    state.confirmation_refresh_next_due_at = None
+    state.confirmation_refresh_attempt_count = 0
+
+
+def seed_confirmation_refresh_schedule(
+    state: ActionGroupActionState,
+    *,
+    finished_at: datetime | None,
+) -> None:
+    finished = _to_utc(finished_at) or _to_utc(state.last_attempt_at) or _utcnow()
+    deadline = _pending_confirmation_deadline(finished)
+    next_due = finished + PENDING_CONFIRMATION_FIRST_REFRESH_DELAY
+    state.confirmation_refresh_last_enqueued_at = None
+    state.confirmation_refresh_attempt_count = 0
+    state.confirmation_refresh_next_due_at = deadline if deadline is not None and next_due > deadline else next_due
+
+
+def mark_confirmation_refresh_enqueued(
+    state: ActionGroupActionState,
+    *,
+    enqueued_at: datetime | None = None,
+) -> None:
+    current_time = _to_utc(enqueued_at) or _utcnow()
+    attempt_count = int(getattr(state, "confirmation_refresh_attempt_count", 0) or 0) + 1
+    deadline = _pending_confirmation_deadline(_to_utc(state.last_attempt_at) or current_time)
+    next_due = current_time + PENDING_CONFIRMATION_SUBSEQUENT_REFRESH_DELAY
+    state.confirmation_refresh_last_enqueued_at = current_time
+    state.confirmation_refresh_attempt_count = attempt_count
+    state.confirmation_refresh_next_due_at = (
+        next_due if deadline is None or next_due < deadline else None
+    )
 
 
 def _max_ts(*values: datetime | None) -> datetime | None:
@@ -279,6 +323,9 @@ def _get_or_create_state(
                 ActionGroupActionState.last_attempt_at,
                 ActionGroupActionState.last_confirmed_at,
                 ActionGroupActionState.last_confirmation_source,
+                ActionGroupActionState.confirmation_refresh_last_enqueued_at,
+                ActionGroupActionState.confirmation_refresh_next_due_at,
+                ActionGroupActionState.confirmation_refresh_attempt_count,
             ),
         )
         .where(
@@ -324,6 +371,7 @@ def record_execution_attempt(
         group_id=membership.group_id,
         action_id=membership.action_id,
     )
+    clear_confirmation_refresh_schedule(state)
     state.latest_run_id = latest_run_id
     state.last_attempt_at = _to_utc(attempted_at) or _utcnow()
     state.latest_run_status_bucket = ActionGroupStatusBucket.run_not_successful
@@ -378,6 +426,8 @@ def record_execution_result(
         )
     else:
         state.latest_run_status_bucket = ActionGroupStatusBucket.run_not_successful
+    if state.latest_run_status_bucket != ActionGroupStatusBucket.run_successful_pending_confirmation:
+        clear_confirmation_refresh_schedule(state)
     logger.info(
         "action_run_confirmation result action_id=%s run_id=%s execution_status=%s bucket=%s",
         action_id,
@@ -410,6 +460,7 @@ def record_non_executable_result(
     state.latest_run_id = latest_run_id
     state.last_attempt_at = _to_utc(attempted_at) or _to_utc(finished_at) or _utcnow()
     state.latest_run_status_bucket = ActionGroupStatusBucket.run_finished_metadata_only
+    clear_confirmation_refresh_schedule(state)
     logger.info(
         "action_run_confirmation metadata_only action_id=%s run_id=%s bucket=%s",
         action_id,
@@ -535,6 +586,7 @@ def evaluate_confirmation_for_action(
         state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_confirmed
         state.last_confirmed_at = confirmed_at or _utcnow()
         state.last_confirmation_source = source
+        clear_confirmation_refresh_schedule(state)
         logger.info(
             "action_run_confirmation confirmed action_id=%s group_id=%s source=%s confirmed_at=%s",
             action_id,
@@ -563,6 +615,13 @@ def evaluate_confirmation_for_action(
             )
         elif state.latest_run_status_bucket != ActionGroupStatusBucket.run_finished_metadata_only:
             state.latest_run_status_bucket = ActionGroupStatusBucket.run_not_successful
+        if state.latest_run_status_bucket != ActionGroupStatusBucket.run_successful_pending_confirmation:
+            clear_confirmation_refresh_schedule(state)
+        else:
+            current_time = _utcnow()
+            deadline = _pending_confirmation_deadline(threshold)
+            if deadline is not None and current_time >= deadline:
+                state.confirmation_refresh_next_due_at = None
         logger.debug(
             "action_run_confirmation pending action_id=%s group_id=%s since=%s",
             action_id,
@@ -588,6 +647,33 @@ def reevaluate_confirmation_for_actions(
     for action_id in action_ids:
         results.append(evaluate_confirmation_for_action(session, action_id=action_id))
     return results
+
+
+def schedule_confirmation_refresh(
+    session: Session,
+    *,
+    action_id: uuid.UUID,
+    finished_at: datetime | None = None,
+) -> ActionGroupActionState | None:
+    membership = _get_membership(session, action_id=action_id)
+    if membership is None:
+        logger.debug("schedule_confirmation_refresh skipped: no membership action_id=%s", action_id)
+        return None
+
+    state = _get_or_create_state(
+        session,
+        tenant_id=membership.tenant_id,
+        group_id=membership.group_id,
+        action_id=membership.action_id,
+    )
+    if (
+        state.latest_run_status_bucket != ActionGroupStatusBucket.run_successful_pending_confirmation
+        or state.last_confirmed_at is not None
+    ):
+        clear_confirmation_refresh_schedule(state)
+        return state
+    seed_confirmation_refresh_schedule(state, finished_at=finished_at)
+    return state
 
 
 async def evaluate_confirmation_for_action_async(
@@ -623,6 +709,22 @@ async def reevaluate_confirmation_for_actions_async(
         return reevaluate_confirmation_for_actions(sync_session, action_ids=action_ids_list)
 
     return await db.run_sync(_run)
+
+
+async def schedule_confirmation_refresh_async(
+    db: AsyncSession,
+    *,
+    action_id: uuid.UUID,
+    finished_at: datetime | None = None,
+) -> None:
+    def _run(sync_session: Session) -> None:
+        schedule_confirmation_refresh(
+            sync_session,
+            action_id=action_id,
+            finished_at=finished_at,
+        )
+
+    await db.run_sync(_run)
 
 
 async def record_execution_result_async(

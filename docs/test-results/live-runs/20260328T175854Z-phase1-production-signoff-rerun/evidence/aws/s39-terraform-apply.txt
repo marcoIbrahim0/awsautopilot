@@ -1,0 +1,151 @@
+data.aws_iam_policy_document.ssl_only_access_logs: Reading...
+data.aws_iam_policy_document.ssl_only_access_logs: Read complete after 0s [id=536561307]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket.access_logs[0] will be created
+  + resource "aws_s3_bucket" "access_logs" {
+      + acceleration_status         = (known after apply)
+      + acl                         = (known after apply)
+      + arn                         = (known after apply)
+      + bucket                      = "security-autopilot-access-logs-696505809372-r221001-access-logs"
+      + bucket_domain_name          = (known after apply)
+      + bucket_prefix               = (known after apply)
+      + bucket_regional_domain_name = (known after apply)
+      + force_destroy               = false
+      + hosted_zone_id              = (known after apply)
+      + id                          = (known after apply)
+      + object_lock_enabled         = (known after apply)
+      + policy                      = (known after apply)
+      + region                      = (known after apply)
+      + request_payer               = (known after apply)
+      + tags_all                    = (known after apply)
+      + website_domain              = (known after apply)
+      + website_endpoint            = (known after apply)
+
+      + cors_rule (known after apply)
+
+      + grant (known after apply)
+
+      + lifecycle_rule (known after apply)
+
+      + logging (known after apply)
+
+      + object_lock_configuration (known after apply)
+
+      + replication_configuration (known after apply)
+
+      + server_side_encryption_configuration (known after apply)
+
+      + versioning (known after apply)
+
+      + website (known after apply)
+    }
+
+  # aws_s3_bucket_lifecycle_configuration.access_logs[0] will be created
+  + resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
+      + bucket                                 = (known after apply)
+      + expected_bucket_owner                  = (known after apply)
+      + id                                     = (known after apply)
+      + transition_default_minimum_object_size = "all_storage_classes_128K"
+
+      + rule {
+          + id     = "abort-incomplete-multipart"
+          + status = "Enabled"
+            # (1 unchanged attribute hidden)
+
+          + abort_incomplete_multipart_upload {
+              + days_after_initiation = 7
+            }
+
+          + filter {
+                # (1 unchanged attribute hidden)
+            }
+        }
+    }
+
+  # aws_s3_bucket_logging.security_autopilot will be created
+  + resource "aws_s3_bucket_logging" "security_autopilot" {
+      + bucket        = "security-autopilot-access-logs-696505809372-r221001"
+      + id            = (known after apply)
+      + target_bucket = "security-autopilot-access-logs-696505809372-r221001-access-logs"
+      + target_prefix = "s3-access-logs/"
+    }
+
+  # aws_s3_bucket_policy.access_logs[0] will be created
+  + resource "aws_s3_bucket_policy" "access_logs" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + policy = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "s3:*"
+                      + Condition = {
+                          + Bool = {
+                              + "aws:SecureTransport" = "false"
+                            }
+                        }
+                      + Effect    = "Deny"
+                      + Principal = "*"
+                      + Resource  = [
+                          + "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs/*",
+                          + "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+                        ]
+                      + Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+    }
+
+  # aws_s3_bucket_public_access_block.access_logs[0] will be created
+  + resource "aws_s3_bucket_public_access_block" "access_logs" {
+      + block_public_acls       = true
+      + block_public_policy     = true
+      + bucket                  = (known after apply)
+      + id                      = (known after apply)
+      + ignore_public_acls      = true
+      + restrict_public_buckets = true
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.access_logs[0] will be created
+  + resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+
+      + rule {
+          + bucket_key_enabled = true
+
+          + apply_server_side_encryption_by_default {
+              + kms_master_key_id = "alias/aws/s3"
+              + sse_algorithm     = "aws:kms"
+            }
+        }
+    }
+
+Plan: 6 to add, 0 to change, 0 to destroy.
+aws_s3_bucket.access_logs[0]: Creating...
+aws_s3_bucket.access_logs[0]: Creation complete after 7s [id=security-autopilot-access-logs-696505809372-r221001-access-logs]
+aws_s3_bucket_public_access_block.access_logs[0]: Creating...
+aws_s3_bucket_policy.access_logs[0]: Creating...
+aws_s3_bucket_server_side_encryption_configuration.access_logs[0]: Creating...
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Creating...
+aws_s3_bucket_public_access_block.access_logs[0]: Creation complete after 1s [id=security-autopilot-access-logs-696505809372-r221001-access-logs]
+aws_s3_bucket_server_side_encryption_configuration.access_logs[0]: Creation complete after 2s [id=security-autopilot-access-logs-696505809372-r221001-access-logs]
+aws_s3_bucket_policy.access_logs[0]: Creation complete after 2s [id=security-autopilot-access-logs-696505809372-r221001-access-logs]
+aws_s3_bucket_logging.security_autopilot: Creating...
+aws_s3_bucket_logging.security_autopilot: Creation complete after 1s [id=security-autopilot-access-logs-696505809372-r221001]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Still creating... [00m10s elapsed]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Still creating... [00m20s elapsed]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Still creating... [00m30s elapsed]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Still creating... [00m40s elapsed]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Still creating... [00m50s elapsed]
+aws_s3_bucket_lifecycle_configuration.access_logs[0]: Creation complete after 59s [id=security-autopilot-access-logs-696505809372-r221001-access-logs]
+
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.

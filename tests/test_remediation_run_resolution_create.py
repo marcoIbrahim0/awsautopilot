@@ -202,6 +202,7 @@ def test_s3_2_create_downgrades_standard_strategy_to_manual_preservation_profile
             "action_id": str(action.id),
             "mode": "pr_only",
             "strategy_id": "s3_bucket_block_public_access_standard",
+            "risk_acknowledged": True,
         },
         runtime_signals={
             "s3_bucket_policy_public": True,
@@ -281,6 +282,308 @@ def test_s3_2_create_keeps_standard_strategy_executable_for_private_bucket_scope
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
+def test_s3_2_create_routes_public_non_website_bucket_to_review_policy_scrub_profile(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::public-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::public-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_bucket_block_public_access_standard",
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": True,
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_public_access_dependency",
+                    "status": "warn",
+                    "message": "Validate direct bucket access dependencies before applying this strategy.",
+                }
+            ],
+            "recommendation": "review_and_acknowledge",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_bucket_block_public_access_review_public_policy_scrub"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+    ]
+    assert resolution["preservation_summary"]["public_policy_scrub_available"] is True
+    assert resolution["preservation_summary"]["manual_preservation_required"] is False
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
+def test_s3_2_create_keeps_oac_strategy_executable_with_runtime_proven_zero_policy(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::safe-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::safe-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "pr_bundle_variant": "cloudfront_oac_private_s3",
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": True,
+            "evidence": {"existing_bucket_policy_statement_count": 0},
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert run.artifacts["strategy_inputs"]["existing_bucket_policy_statement_count"] == 0
+    assert resolution["preservation_summary"]["apply_time_merge"] is False
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_2_create_keeps_oac_apply_time_merge_executable_after_risk_acknowledgement(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::oac-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::oac-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "pr_bundle_variant": "cloudfront_oac_private_s3",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "Unable to capture existing bucket policy (AccessDenied).",
+            "evidence": {
+                "target_bucket": "oac-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_public_access_dependency",
+                    "status": "pass",
+                    "message": (
+                        "Bucket policy is not public and website hosting is disabled; no direct-public-access "
+                        "dependency was detected from runtime probes."
+                    ),
+                },
+                {
+                    "code": "access_path_evidence_unavailable",
+                    "status": "warn",
+                    "message": "Unable to capture existing bucket policy (AccessDenied).",
+                },
+            ],
+            "recommendation": "review_and_acknowledge",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["existing_bucket_policy_json_captured"] is False
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
+    assert "existing_bucket_policy_json" not in _added_run(session).artifacts["strategy_inputs"]
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_2_create_keeps_website_strategy_executable_for_simple_website_cutover(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::website-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::website-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_migrate_website_cloudfront_private",
+            "strategy_inputs": {
+                "aliases": ["www.example.com"],
+                "route53_hosted_zone_id": "Z123456ABCDEFG",
+                "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+            },
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "s3_bucket_website_translation_supported": True,
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {
+                        "IndexDocument": {"Suffix": "index.html"},
+                        "ErrorDocument": {"Key": "error.html"},
+                    }
+                ),
+            },
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_public_access_dependency",
+                    "status": "pass",
+                    "message": (
+                        "Runtime probes captured a simple S3 website configuration and explicit Route53/ACM "
+                        "inputs, so the CloudFront website migration path can preserve access during cutover."
+                    ),
+                }
+            ],
+            "recommendation": "safe_to_proceed",
+            "warnings": [],
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {
+                        "IndexDocument": {"Suffix": "index.html"},
+                        "ErrorDocument": {"Key": "error.html"},
+                    }
+                ),
+            },
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_migrate_website_cloudfront_private"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["preservation_summary"]["website_translation_supported"] is True
+    assert resolution["preservation_summary"]["dns_inputs_complete"] is True
+    assert run.artifacts["strategy_inputs"]["aliases"] == ["www.example.com"]
+    assert "existing_bucket_website_configuration_json" in run.artifacts["strategy_inputs"]
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_2_create_website_strategy_downgrades_complex_website_to_review_required(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::website-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::website-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_migrate_website_cloudfront_private",
+            "strategy_inputs": {
+                "aliases": ["www.example.com"],
+                "route53_hosted_zone_id": "Z123456ABCDEFG",
+                "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+            },
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "s3_bucket_website_translation_supported": False,
+            "s3_bucket_website_translation_reason": "S3 website RoutingRules require manual CloudFront translation review.",
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {
+                        "IndexDocument": {"Suffix": "index.html"},
+                        "RoutingRules": [{"Condition": {"KeyPrefixEquals": "docs/"}}],
+                    }
+                ),
+            },
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_public_access_dependency",
+                    "status": "fail",
+                    "message": "S3 website RoutingRules require manual CloudFront translation review.",
+                }
+            ],
+            "recommendation": "blocked",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_migrate_website_cloudfront_private_review_required"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert any("RoutingRules" in reason for reason in resolution["blocked_reasons"])
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
 def test_s3_5_create_requires_policy_preservation_evidence_before_executable_output(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()
@@ -325,7 +628,67 @@ def test_s3_5_create_requires_policy_preservation_evidence_before_executable_out
         "Existing bucket policy statements were detected, but their JSON was not captured for safe merge.",
     ]
     assert resolution["preservation_summary"]["merge_safe_policy_available"] is False
+    assert resolution["preservation_summary"]["apply_time_merge"] is False
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
+def test_s3_5_create_keeps_apply_time_merge_executable_after_risk_acknowledgement(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::ssl-bucket|S3.5"
+    action.resource_id = "arn:aws:s3:::ssl-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_policy_analysis_possible": False,
+            "s3_policy_analysis_error": "AccessDenied",
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_policy_merge_risk",
+                    "status": "warn",
+                    "message": "Runtime policy capture failed (AccessDenied); customer-run Terraform will fetch and merge the live bucket policy at plan/apply time.",
+                },
+                {
+                    "code": "access_path_evidence_unavailable",
+                    "status": "warn",
+                    "message": "Unable to inspect current bucket policy (AccessDenied).",
+                },
+            ],
+            "recommendation": "review_and_acknowledge",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["merge_safe_policy_available"] is False
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_s3_5_create_preserves_executable_support_tier_after_risk_acknowledgement(client: TestClient) -> None:
@@ -393,6 +756,56 @@ def test_s3_5_create_preserves_executable_support_tier_after_risk_acknowledgemen
     assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny"
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["blocked_reasons"] == []
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_5_create_keeps_zero_policy_fallback_executable_without_risk_acknowledgement(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::ssl-bucket|S3.5"
+    action.resource_id = "arn:aws:s3:::ssl-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+        },
+        runtime_signals={
+            "s3_policy_analysis_possible": True,
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_statement_count": 0,
+                "s3_ssl_deny_present": False,
+            },
+        },
+        risk_snapshot={
+            "checks": [],
+            "recommendation": "safe_to_proceed",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["existing_bucket_policy_statement_count"] == 0
+    assert resolution["preservation_summary"]["apply_time_merge"] is False
+    assert run.artifacts["strategy_inputs"]["existing_bucket_policy_statement_count"] == 0
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
@@ -487,6 +900,58 @@ def test_s3_11_create_preserves_executable_support_tier_after_risk_acknowledgeme
     assert resolution["profile_id"] == "s3_enable_abort_incomplete_uploads"
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["blocked_reasons"] == []
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_11_create_keeps_renderable_captured_lifecycle_executable(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "expire-logs",
+                "Status": "Enabled",
+                "Filter": {"Prefix": "logs/"},
+                "Expiration": {"Days": 30},
+            },
+            {
+                "ID": "AbortMultipartUploads",
+                "Status": "Enabled",
+                "Filter": {"Prefix": ""},
+                "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7},
+            },
+        ]
+    }
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+        },
+        runtime_signals={
+            "s3_lifecycle_analysis_possible": True,
+            "evidence": {
+                "existing_lifecycle_rule_count": 2,
+                "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
+            },
+        },
+        risk_snapshot={"checks": [], "recommendation": None, "warnings": [], "evidence": {}},
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["existing_lifecycle_merge_renderable"] is True
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
@@ -598,6 +1063,7 @@ def test_s3_9_create_stays_executable_only_when_destination_safety_is_proven(cli
         runtime_signals={
             "s3_access_logging_destination_safe": True,
             "s3_access_logging_destination_bucket_reachable": True,
+            "support_bucket_probe": {"safe": True},
         },
         risk_snapshot={
             "checks": [
@@ -625,6 +1091,129 @@ def test_s3_9_create_stays_executable_only_when_destination_safety_is_proven(cli
     assert resolution["blocked_reasons"] == []
     assert resolution["preservation_summary"]["destination_safety_proven"] is True
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_9_create_stays_executable_when_destination_bucket_will_be_created(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_access_logging")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_access_logging_guided",
+            "strategy_inputs": {"log_bucket_name": "new-access-log-bucket"},
+        },
+        runtime_signals={
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": False,
+            "s3_access_logging_destination_creation_planned": True,
+            "helper_bucket_creation_planned": True,
+            "support_bucket_probe": {"safe": True, "raw": {"creation_planned": True}},
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_access_logging_bucket_scope_confirmed",
+                    "status": "pass",
+                    "message": "Bucket scope is confirmed.",
+                },
+                {
+                    "code": "s3_access_logging_destination_safety_proven",
+                    "status": "pass",
+                    "message": "Managed destination creation will apply the support-bucket baseline.",
+                },
+            ],
+            "recommendation": "safe_to_proceed",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["log_bucket_name"] == "new-access-log-bucket"
+    assert _added_run(session).artifacts["strategy_inputs"] == {
+        "log_bucket_name": "new-access-log-bucket",
+        "create_log_bucket": True,
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_9_create_auto_generates_bucket_name_when_input_is_omitted(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_access_logging")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_access_logging_guided",
+            "strategy_inputs": {},
+        },
+        runtime_signals={
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": False,
+            "s3_access_logging_destination_creation_planned": True,
+            "helper_bucket_creation_planned": True,
+            "support_bucket_probe": {"safe": True, "raw": {"creation_planned": True}},
+            "evidence": {
+                "log_bucket_name": "source-bucket-access-logs",
+                "log_bucket_name_auto_generated": True,
+            },
+        },
+        risk_snapshot={
+            "checks": [
+                {
+                    "code": "s3_access_logging_bucket_scope_confirmed",
+                    "status": "pass",
+                    "message": "Bucket scope is confirmed.",
+                },
+                {
+                    "code": "s3_access_logging_destination_safety_proven",
+                    "status": "pass",
+                    "message": "Managed destination creation will apply the support-bucket baseline.",
+                },
+            ],
+            "recommendation": "safe_to_proceed",
+            "warnings": [],
+            "evidence": {},
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["log_bucket_name"] == "source-bucket-access-logs"
+    assert _added_run(session).artifacts["strategy_inputs"] == {
+        "log_bucket_name": "source-bucket-access-logs",
+        "create_log_bucket": True,
+    }
+    assert _queued_payload(mock_sqs)["strategy_inputs"] == {
+        "log_bucket_name": "source-bucket-access-logs",
+        "create_log_bucket": True,
+    }
 
 
 def test_s3_15_create_downgrades_customer_managed_branch_when_dependency_proof_is_missing(
@@ -758,7 +1347,7 @@ def test_cloudtrail_create_uses_tenant_bucket_default_when_runtime_proves_bucket
             "strategy_id": "cloudtrail_enable_guided",
             "risk_acknowledged": True,
         },
-        runtime_signals={"cloudtrail_log_bucket_reachable": True},
+        runtime_signals={"cloudtrail_log_bucket_reachable": True, "support_bucket_probe": {"safe": True}},
     )
 
     run = _added_run(session)
@@ -809,7 +1398,7 @@ def test_config_local_create_uses_tenant_defaults_and_stays_executable(client: T
             "strategy_id": "config_enable_account_local_delivery",
             "risk_acknowledged": True,
         },
-        runtime_signals={},
+        runtime_signals={"support_bucket_probe": {"safe": True}},
     )
 
     run = _added_run(session)
@@ -818,10 +1407,12 @@ def test_config_local_create_uses_tenant_defaults_and_stays_executable(client: T
     assert resolution["profile_id"] == "config_enable_account_local_delivery"
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["resolved_inputs"] == {
+        "recording_scope": "keep_existing",
         "delivery_bucket": "tenant-config-bucket",
         "delivery_bucket_mode": "create_new",
     }
     assert run.artifacts["strategy_inputs"] == {
+        "recording_scope": "keep_existing",
         "delivery_bucket": "tenant-config-bucket",
         "delivery_bucket_mode": "create_new",
     }
@@ -859,6 +1450,7 @@ def test_config_centralized_create_uses_tenant_defaults_when_runtime_proves_depe
             "config_delivery_bucket_reachable": True,
             "config_central_bucket_policy_valid": True,
             "config_kms_policy_valid": True,
+            "support_bucket_probe": {"safe": True},
         },
     )
 
@@ -937,20 +1529,49 @@ def test_strategy_only_pr_only_client_still_succeeds_with_defaulted_inputs(clien
         runtime_signals={},
     )
 
-    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "Bucket creation acknowledgement required"
+
+
+def test_strategy_only_pr_only_client_uses_safe_default_bucket_with_acknowledgement(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "risk_acknowledged": True,
+            "bucket_creation_acknowledged": True,
+        },
+        runtime_signals={"cloudtrail_bucket_available_for_creation": True},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
     assert response.status_code == 201
     assert resolution["profile_id"] == "cloudtrail_enable_guided"
-    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["resolved_inputs"] == {
         "trail_name": "security-autopilot-trail",
-        "create_bucket_if_missing": False,
+        "trail_bucket_name": "security-autopilot-trail-logs-123456789012-us-east-1",
+        "create_bucket_if_missing": True,
         "create_bucket_policy": True,
         "multi_region": True,
     }
-    assert resolution["missing_defaults"] == ["cloudtrail.default_bucket_name"]
-    assert resolution["blocked_reasons"] == [
-        "CloudTrail log bucket name is unresolved. Configure cloudtrail.default_bucket_name or provide strategy_inputs.trail_bucket_name."
-    ]
+    assert resolution["missing_defaults"] == []
+    assert resolution["blocked_reasons"] == []
+    assert run.artifacts["cloudtrail_bucket_creation_approval"]["approved"] is True
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
 def test_cloudtrail_create_downgrades_under_proven_multi_region_override(client: TestClient) -> None:
@@ -975,7 +1596,7 @@ def test_cloudtrail_create_downgrades_under_proven_multi_region_override(client:
             },
             "risk_acknowledged": True,
         },
-        runtime_signals={"cloudtrail_log_bucket_reachable": True},
+        runtime_signals={"cloudtrail_log_bucket_reachable": True, "support_bucket_probe": {"safe": True}},
     )
 
     run = _added_run(session)
@@ -994,6 +1615,177 @@ def test_cloudtrail_create_downgrades_under_proven_multi_region_override(client:
         "multi_region": False,
     }
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
+def test_cloudtrail_reuse_stays_review_only_when_support_bucket_probe_is_unsafe(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"cloudtrail": {"default_bucket_name": "tenant-cloudtrail-logs"}})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="cloudtrail_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, _ = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "cloudtrail_enable_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "cloudtrail_log_bucket_reachable": True,
+            "support_bucket_probe": {"safe": False},
+            "cloudtrail_log_bucket_error": "CloudTrail log bucket 'tenant-cloudtrail-logs' does not meet the shared support-bucket baseline. Missing attributes: versioning_enabled.",
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        "CloudTrail log bucket 'tenant-cloudtrail-logs' does not meet the shared support-bucket baseline. Missing attributes: versioning_enabled."
+    ]
+
+
+def test_config_local_create_auto_promotes_selective_recorder_scope(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "account_local_delivery",
+                "default_bucket_name": "tenant-config-bucket",
+            }
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="aws_config_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, _ = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "config_enable_account_local_delivery",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "support_bucket_probe": {"safe": True},
+            "evidence": {
+                "config_recorder_exists": True,
+                "config_recording_scope": "custom",
+            },
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["recording_scope"] == "all_resources"
+    assert run.artifacts["strategy_inputs"]["recording_scope"] == "all_resources"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["existing_recorder_scope"] == "custom"
+    assert resolution["preservation_summary"]["recording_scope_auto_promoted"] is True
+    assert resolution["preservation_summary"]["selective_recorder_requires_review"] is False
+
+
+def test_config_local_create_stays_executable_with_explicit_all_resources_override(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "account_local_delivery",
+                "default_bucket_name": "tenant-config-bucket",
+            }
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="aws_config_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, _ = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "config_enable_account_local_delivery",
+            "strategy_inputs": {"recording_scope": "all_resources"},
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "support_bucket_probe": {"safe": True},
+            "evidence": {
+                "config_recorder_exists": True,
+                "config_recording_scope": "custom",
+            },
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["recording_scope"] == "all_resources"
+    assert resolution["preservation_summary"]["recording_scope_auto_promoted"] is False
+
+
+def test_config_local_create_overrides_explicit_keep_existing_when_custom_scope_is_detected(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant(
+        {
+            "config": {
+                "delivery_mode": "account_local_delivery",
+                "default_bucket_name": "tenant-config-bucket",
+            }
+        }
+    )
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="aws_config_enabled")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, _ = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "config_enable_account_local_delivery",
+            "strategy_inputs": {"recording_scope": "keep_existing"},
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "support_bucket_probe": {"safe": True},
+            "evidence": {
+                "config_recorder_exists": True,
+                "config_recording_scope": "custom",
+            },
+        },
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["recording_scope"] == "all_resources"
+    assert run.artifacts["strategy_inputs"]["recording_scope"] == "all_resources"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["recording_scope_auto_promoted"] is True
 
 
 def test_cloudtrail_create_if_missing_requires_bucket_creation_acknowledgement(client: TestClient) -> None:
@@ -1149,7 +1941,7 @@ def test_ec2_53_create_uses_tenant_cidr_preference_when_safe(client: TestClient)
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
-def test_ec2_53_create_downgrades_unsupported_profiles_explicitly(client: TestClient) -> None:
+def test_ec2_53_create_resolves_ssm_only_profile_as_executable(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()
     tenant.id = tenant_id
@@ -1176,11 +1968,111 @@ def test_ec2_53_create_downgrades_unsupported_profiles_explicitly(client: TestCl
     resolution = run.artifacts["resolution"]
     assert response.status_code == 201
     assert resolution["profile_id"] == "ssm_only"
-    assert resolution["support_tier"] == "manual_guidance_only"
-    assert resolution["blocked_reasons"] == [
-        "Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert run.artifacts["strategy_inputs"] == {"access_mode": "ssm_only"}
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+    assert _queued_payload(mock_sqs)["resolution"]["resolved_inputs"]["access_mode"] == "ssm_only"
+
+
+def test_ec2_53_create_uses_tenant_ssm_preference_when_selected(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"sg_access_path_preference": "ssm_only"})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "ssm_only"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert run.artifacts["strategy_inputs"] == {"access_mode": "ssm_only"}
+    assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == "ssm_only"
+
+
+def test_ec2_53_create_resolves_bastion_profile_as_executable(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"]})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "profile_id": "bastion_sg_reference",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "bastion_sg_reference"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert run.artifacts["strategy_inputs"] == {
+        "access_mode": "bastion_sg_reference",
+        "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+    }
+    assert _queued_payload(mock_sqs)["resolution"]["resolved_inputs"]["approved_bastion_security_group_ids"] == [
+        "sg-bastion-1",
+        "sg-bastion-2",
     ]
-    assert run.artifacts["strategy_inputs"] == {}
+
+
+def test_ec2_53_create_keeps_bastion_profile_manual_without_ids(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant({"sg_access_path_preference": "bastion_sg_reference"})
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="sg_restrict_public_ports")
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "bastion_sg_reference"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert "No approved bastion security group IDs are configured." in resolution["blocked_reasons"]
+    assert run.artifacts["strategy_inputs"] == {"access_mode": "bastion_sg_reference"}
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "manual_guidance_only"
 
 

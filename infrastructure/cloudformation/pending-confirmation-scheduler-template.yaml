@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Deploys a 15-minute EventBridge scheduler that triggers pending-confirmation
+  Security Hub refresh sweeps in AWS Security Autopilot via API Destination.
+
+Parameters:
+  SaaSBaseUrl:
+    Type: String
+    Description: "Base HTTPS URL for the SaaS API (e.g. https://api.example.com)."
+
+  SchedulerSecret:
+    Type: String
+    NoEcho: true
+    Description: "Shared secret sent as X-Reconciliation-Scheduler-Secret for internal pending-confirmation sweep auth."
+
+  ScheduleExpression:
+    Type: String
+    Default: "rate(15 minutes)"
+    Description: "EventBridge schedule expression (default: rate(15 minutes))."
+
+  TenantIdsJson:
+    Type: String
+    Default: "[]"
+    Description: "Optional JSON array of tenant UUIDs to scope the sweep. Use [] for all tenants."
+
+  AccountIdsJson:
+    Type: String
+    Default: "[]"
+    Description: "Optional JSON array of AWS account IDs to scope the sweep. Use [] for all accounts."
+
+  RegionsJson:
+    Type: String
+    Default: "[]"
+    Description: "Optional JSON array of AWS regions to scope the sweep. Use [] for all regions."
+
+  SweepLimit:
+    Type: Number
+    Default: 200
+    MinValue: 1
+    MaxValue: 1000
+    Description: "Maximum number of due pending-confirmation states scanned per invocation."
+
+  InvocationRateLimitPerSecond:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 300
+    Description: "API Destination invocation rate limit (requests per second)."
+
+  RetryMaximumEventAgeSeconds:
+    Type: Number
+    Default: 3600
+    MinValue: 60
+    MaxValue: 86400
+    Description: "Max age of an event for target retries (seconds)."
+
+  RetryMaximumRetryAttempts:
+    Type: Number
+    Default: 8
+    MinValue: 0
+    MaxValue: 185
+    Description: "Max retry attempts for API Destination target before DLQ."
+
+  AlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: "Optional SNS topic ARN for EventBridge/SQS alarms."
+
+  FailedInvocationsThreshold:
+    Type: Number
+    Default: 1
+    Description: "FailedInvocations threshold for EventBridge schedule rule alarm."
+
+  TargetDLQDepthThreshold:
+    Type: Number
+    Default: 1
+    Description: "ApproximateNumberOfMessagesVisible threshold for target DLQ depth alarm."
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
+
+Resources:
+  PendingConfirmationSchedulerConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      Name: !Sub "SecurityAutopilotPendingConfirmationConnection-${AWS::Region}"
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: X-Reconciliation-Scheduler-Secret
+          ApiKeyValue: !Ref SchedulerSecret
+
+  PendingConfirmationSchedulerApiDestination:
+    Type: AWS::Events::ApiDestination
+    Properties:
+      Name: !Sub "SecurityAutopilotPendingConfirmationDestination-${AWS::Region}"
+      ConnectionArn: !GetAtt PendingConfirmationSchedulerConnection.Arn
+      InvocationEndpoint: !Sub "${SaaSBaseUrl}/api/internal/pending-confirmation/sweep"
+      HttpMethod: POST
+      InvocationRateLimitPerSecond: !Ref InvocationRateLimitPerSecond
+
+  PendingConfirmationSchedulerTargetDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "security-autopilot-pending-confirmation-scheduler-target-dlq-${AWS::Region}"
+      MessageRetentionPeriod: 1209600
+
+  PendingConfirmationSchedulerTargetDLQPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PendingConfirmationSchedulerTargetDLQ
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeSend
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt PendingConfirmationSchedulerTargetDLQ.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt PendingConfirmationScheduleRule.Arn
+
+  EventBridgeInvokePendingConfirmationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokePendingConfirmationApiDestination
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:InvokeApiDestination
+                Resource: !GetAtt PendingConfirmationSchedulerApiDestination.Arn
+
+  PendingConfirmationScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "SecurityAutopilotPendingConfirmationSweep-${AWS::Region}"
+      Description: "Trigger pending-confirmation Security Hub refresh sweeps on a fixed schedule."
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: PendingConfirmationSweep
+          Arn: !GetAtt PendingConfirmationSchedulerApiDestination.Arn
+          RoleArn: !GetAtt EventBridgeInvokePendingConfirmationRole.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt PendingConfirmationSchedulerTargetDLQ.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref RetryMaximumEventAgeSeconds
+            MaximumRetryAttempts: !Ref RetryMaximumRetryAttempts
+          Input: !Sub |
+            {
+              "tenant_ids": ${TenantIdsJson},
+              "account_ids": ${AccountIdsJson},
+              "regions": ${RegionsJson},
+              "limit": ${SweepLimit}
+            }
+
+  PendingConfirmationRuleFailedInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-pending-confirmation-failed-invocations-${AWS::Region}"
+      AlarmDescription: Pending-confirmation EventBridge schedule rule has failed invocations.
+      Namespace: AWS/Events
+      MetricName: FailedInvocations
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref PendingConfirmationScheduleRule
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref FailedInvocationsThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+  PendingConfirmationTargetDLQDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "security-autopilot-pending-confirmation-target-dlq-depth-${AWS::Region}"
+      AlarmDescription: Pending-confirmation EventBridge target DLQ has messages pending replay.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt PendingConfirmationSchedulerTargetDLQ.QueueName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetDLQDepthThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+
+Outputs:
+  RuleArn:
+    Description: "ARN of the EventBridge schedule rule."
+    Value: !GetAtt PendingConfirmationScheduleRule.Arn
+  ApiDestinationArn:
+    Description: "ARN of the EventBridge API Destination."
+    Value: !GetAtt PendingConfirmationSchedulerApiDestination.Arn
+  ConnectionArn:
+    Description: "ARN of the EventBridge Connection."
+    Value: !GetAtt PendingConfirmationSchedulerConnection.Arn
+  TargetDLQUrl:
+    Description: "URL of EventBridge target DLQ."
+    Value: !Ref PendingConfirmationSchedulerTargetDLQ
+  TargetDLQArn:
+    Description: "ARN of EventBridge target DLQ."
+    Value: !GetAtt PendingConfirmationSchedulerTargetDLQ.Arn

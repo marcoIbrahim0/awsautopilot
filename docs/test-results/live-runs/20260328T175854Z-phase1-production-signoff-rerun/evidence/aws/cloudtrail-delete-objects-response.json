@@ -1,0 +1,12 @@
+{
+    "Deleted": [
+        {
+            "Key": "AWSLogs/696505809372/CloudTrail/eu-north-1/2026/03/28/696505809372_CloudTrail_eu-north-1_20260328T1815Z_6eZMAMAiTFK1uYSV.json.gz",
+            "VersionId": "0NKHY8yd1uQqBlhK5_8q0ra0daKUrbCj"
+        },
+        {
+            "Key": "AWSLogs/696505809372/CloudTrail/",
+            "VersionId": "ue2Rnp_K1OT0s.vE7CuxrM0inTexJI8a"
+        }
+    ]
+}

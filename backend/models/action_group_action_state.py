@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -58,6 +58,14 @@ class ActionGroupActionState(Base):
     last_confirmation_source: Mapped[ActionGroupConfirmationSource | None] = mapped_column(
         SAEnum(ActionGroupConfirmationSource, name="action_group_confirmation_source", create_type=False),
         nullable=True,
+    )
+    confirmation_refresh_last_enqueued_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmation_refresh_next_due_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmation_refresh_attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
     )
     updated_at: Mapped[object] = mapped_column(
         DateTime(timezone=True),

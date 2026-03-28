@@ -170,6 +170,8 @@ def _preserve_selection_support_tier(strategy_id: str) -> bool:
         "config_enable_centralized_delivery",
         "s3_account_block_public_access_pr_bundle",
         # Family resolvers already determine whether these branches stay executable.
+        "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
         "s3_enforce_ssl_strict_deny",
         "s3_enforce_ssl_with_principal_exemptions",
         "s3_enable_abort_incomplete_uploads",

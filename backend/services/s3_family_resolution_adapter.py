@@ -6,6 +6,10 @@ import re
 from typing import Any, Mapping, TypedDict
 
 from backend.services.remediation_profile_resolver import ResolverRejectedProfile, SupportTier
+from backend.services.s3_lifecycle_preservation import (
+    analyze_lifecycle_preservation,
+    rule_is_equivalent_abort_incomplete,
+)
 
 S3_2_FAMILY_RESOLVER_KIND = "s3_2_public_access_family"
 S3_9_FAMILY_RESOLVER_KIND = "s3_9_access_logging_family"
@@ -15,8 +19,11 @@ S3_15_FAMILY_RESOLVER_KIND = "s3_15_kms_family"
 
 S3_2_STANDARD_STRATEGY_ID = "s3_bucket_block_public_access_standard"
 S3_2_STANDARD_MANUAL_PROFILE_ID = "s3_bucket_block_public_access_manual_preservation"
+S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID = "s3_bucket_block_public_access_review_public_policy_scrub"
 S3_2_OAC_STRATEGY_ID = "s3_migrate_cloudfront_oac_private"
 S3_2_OAC_MANUAL_PROFILE_ID = "s3_migrate_cloudfront_oac_private_manual_preservation"
+S3_2_WEBSITE_STRATEGY_ID = "s3_migrate_website_cloudfront_private"
+S3_2_WEBSITE_REVIEW_PROFILE_ID = "s3_migrate_website_cloudfront_private_review_required"
 
 S3_9_STRATEGY_ID = "s3_enable_access_logging_guided"
 S3_9_REVIEW_PROFILE_ID = "s3_enable_access_logging_review_destination_safety"
@@ -28,6 +35,10 @@ S3_15_STRATEGY_ID = "s3_enable_sse_kms_guided"
 S3_15_CUSTOMER_MANAGED_PROFILE_ID = "s3_enable_sse_kms_customer_managed"
 
 _S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
+_S3_BUCKET_NAME_PATTERN = re.compile(
+    r"^(?!\d{1,3}(?:\.\d{1,3}){3}$)(?!xn--)(?!sthree-)(?!amzn-s3-demo-)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+)
+_S3_ACCESS_LOG_BUCKET_SUFFIX = "-access-logs"
 
 
 class FamilySelectionOutcome(TypedDict):
@@ -42,7 +53,25 @@ class FamilySelectionOutcome(TypedDict):
 
 
 def resolve_s3_access_logging_source_bucket(action: Any | None) -> str | None:
-    return _bucket_name_from_action_fields(action, "target_id", "resource_id")
+    return _bucket_name_from_runtime_like_action_fields(action, "target_id", "resource_id")
+
+
+def derive_s3_access_logging_log_bucket_name(source_bucket: str | None) -> str | None:
+    source = _clean_text(source_bucket)
+    if source is None:
+        return None
+    max_source_len = 63 - len(_S3_ACCESS_LOG_BUCKET_SUFFIX)
+    candidate_source = source[:max_source_len].rstrip(".-")
+    if not candidate_source:
+        return None
+    candidate = f"{candidate_source}{_S3_ACCESS_LOG_BUCKET_SUFFIX}"
+    if _S3_BUCKET_NAME_PATTERN.fullmatch(candidate):
+        return candidate
+    return None
+
+
+def default_s3_access_logging_log_bucket_name(action: Any | None) -> str | None:
+    return derive_s3_access_logging_log_bucket_name(resolve_s3_access_logging_source_bucket(action))
 
 
 def resolve_s3_kms_key_mode(values: Mapping[str, Any] | None) -> str:
@@ -58,10 +87,15 @@ def resolve_s3_2_selection(
     *,
     strategy_id: str,
     requested_profile_id: str | None,
+    explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> FamilySelectionOutcome:
     explicit_profile = _clean_text(requested_profile_id)
-    blocked_reasons = _s3_2_blocked_reasons(strategy_id=strategy_id, runtime_signals=runtime_signals)
+    blocked_reasons = _s3_2_blocked_reasons(
+        strategy_id=strategy_id,
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    )
     fallback_profile_id = _s3_2_fallback_profile_id(strategy_id)
     profile_id = explicit_profile or _automatic_s3_2_profile_id(strategy_id, blocked_reasons)
     rejected_profiles = _automatic_rejected_profile(
@@ -82,6 +116,7 @@ def resolve_s3_2_selection(
         "preservation_summary": _s3_2_preservation_summary(
             strategy_id=strategy_id,
             profile_id=profile_id,
+            explicit_inputs=explicit_inputs,
             runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
@@ -89,6 +124,7 @@ def resolve_s3_2_selection(
             strategy_id=strategy_id,
             profile_id=profile_id,
             explicit_profile=explicit_profile,
+            runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
     }
@@ -164,6 +200,7 @@ def resolve_s3_5_selection(
         "decision_rationale": _s3_5_rationale(
             strategy_id=strategy_id,
             preserve_existing_policy=preserve_existing_policy,
+            runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
     }
@@ -259,6 +296,10 @@ def _automatic_rejected_profile(
 def _automatic_s3_2_profile_id(strategy_id: str, blocked_reasons: list[str]) -> str:
     if not blocked_reasons:
         return strategy_id
+    if strategy_id == S3_2_STANDARD_STRATEGY_ID and blocked_reasons == [
+        "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+    ]:
+        return S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID
     return _s3_2_fallback_profile_id(strategy_id)
 
 
@@ -271,6 +312,8 @@ def _automatic_s3_9_profile_id(blocked_reasons: list[str]) -> str:
 def _s3_2_fallback_profile_id(strategy_id: str) -> str:
     if strategy_id == S3_2_STANDARD_STRATEGY_ID:
         return S3_2_STANDARD_MANUAL_PROFILE_ID
+    if strategy_id == S3_2_WEBSITE_STRATEGY_ID:
+        return S3_2_WEBSITE_REVIEW_PROFILE_ID
     return S3_2_OAC_MANUAL_PROFILE_ID
 
 
@@ -285,7 +328,13 @@ def _s3_2_support_tier(
         S3_2_OAC_MANUAL_PROFILE_ID,
     }:
         return "manual_guidance_only"
+    if profile_id == S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID:
+        return "review_required_bundle"
+    if profile_id == S3_2_WEBSITE_REVIEW_PROFILE_ID:
+        return "review_required_bundle"
     if strategy_id != profile_id or blocked_reasons:
+        if strategy_id == S3_2_WEBSITE_STRATEGY_ID:
+            return "review_required_bundle"
         return "manual_guidance_only"
     return "deterministic_bundle"
 
@@ -301,10 +350,13 @@ def _s3_9_support_tier(*, profile_id: str, blocked_reasons: list[str]) -> Suppor
 def _s3_2_blocked_reasons(
     *,
     strategy_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
     if strategy_id == S3_2_STANDARD_STRATEGY_ID:
         return _s3_2_standard_blocked_reasons(runtime_signals)
+    if strategy_id == S3_2_WEBSITE_STRATEGY_ID:
+        return _s3_2_website_blocked_reasons(runtime_signals, explicit_inputs=explicit_inputs)
     return _s3_2_oac_blocked_reasons(runtime_signals)
 
 
@@ -319,9 +371,14 @@ def _s3_2_standard_blocked_reasons(
             "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access."
         )
     if policy_public is True:
-        reasons.append(
-            "Bucket policy is currently public; direct public-access preservation must be reviewed manually."
-        )
+        if website_configured is not True:
+            reasons.append(
+                "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+            )
+        else:
+            reasons.append(
+                "Bucket policy is currently public; direct public-access preservation must be reviewed manually."
+            )
     if not reasons and (policy_public is not False or website_configured is not False):
         reasons.append("Runtime evidence could not prove the bucket is private and website hosting is disabled.")
     return _append_access_path_reason(reasons, runtime_signals)
@@ -330,13 +387,54 @@ def _s3_2_standard_blocked_reasons(
 def _s3_2_oac_blocked_reasons(
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
+    reasons = _s3_2_oac_preservation_blocked_reasons(runtime_signals)
+    if _s3_2_oac_preservation_evidence_available(runtime_signals):
+        return _dedupe_strings(reasons)
+    return _append_access_path_reason(reasons, runtime_signals)
+
+
+def _s3_2_website_blocked_reasons(
+    runtime_signals: Mapping[str, Any] | None,
+    *,
+    explicit_inputs: Mapping[str, Any] | None,
+) -> list[str]:
+    evidence = _evidence(runtime_signals)
+    website_configured = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_website_configured"))
+    website_translation_supported = _optional_bool(
+        _mapping_value(runtime_signals, "s3_bucket_website_translation_supported")
+    )
+    reasons = _s3_2_oac_preservation_blocked_reasons(runtime_signals)
+    if website_configured is not True:
+        reasons.append(
+            "S3 static website hosting is not confirmed for this bucket; use the non-website S3.2 strategy instead."
+        )
+    if (
+        website_configured is True
+        and _clean_text(evidence.get("existing_bucket_website_configuration_json")) is None
+    ):
+        reasons.append("S3 website configuration was not captured for translation into the CloudFront bundle.")
+    if website_configured is True and website_translation_supported is not True:
+        reasons.append(
+            _clean_text(_mapping_value(runtime_signals, "s3_bucket_website_translation_reason"))
+            or "The captured S3 website configuration requires manual review before CloudFront cutover."
+        )
+    reasons.extend(_s3_2_website_dns_reasons(explicit_inputs))
+    if not reasons:
+        return []
+    return _append_access_path_reason(reasons, runtime_signals)
+
+
+def _s3_2_oac_preservation_blocked_reasons(
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
     evidence = _evidence(runtime_signals)
     statement_count = _coerce_int(evidence.get("existing_bucket_policy_statement_count"))
     policy_json_captured = _clean_text(evidence.get("existing_bucket_policy_json")) is not None
+    apply_time_merge_reason = _s3_2_oac_apply_time_merge_reason(runtime_signals)
     reasons: list[str] = []
     capture_error = _clean_text(evidence.get("existing_bucket_policy_capture_error"))
     parse_error = _clean_text(evidence.get("existing_bucket_policy_parse_error"))
-    if capture_error is not None:
+    if capture_error is not None and apply_time_merge_reason is None:
         reasons.append(
             f"Existing bucket policy capture failed ({capture_error}); CloudFront + OAC preservation must be reviewed manually."
         )
@@ -344,7 +442,7 @@ def _s3_2_oac_blocked_reasons(
         reasons.append(
             "Existing bucket policy could not be parsed for preservation; CloudFront + OAC migration is manual-only."
         )
-    if statement_count is None and not policy_json_captured:
+    if statement_count is None and not policy_json_captured and apply_time_merge_reason is None:
         reasons.append(
             "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration."
         )
@@ -352,7 +450,7 @@ def _s3_2_oac_blocked_reasons(
         reasons.append(
             "Existing bucket policy statements were detected, but their JSON was not captured for safe preservation."
         )
-    return _append_access_path_reason(reasons, runtime_signals)
+    return _dedupe_strings(reasons)
 
 
 def _s3_9_blocked_reasons(
@@ -387,6 +485,39 @@ def _append_access_path_reason(
     return _dedupe_strings(reasons)
 
 
+def _s3_2_oac_preservation_evidence_available(
+    runtime_signals: Mapping[str, Any] | None,
+) -> bool:
+    evidence = _evidence(runtime_signals)
+    statement_count = _coerce_int(evidence.get("existing_bucket_policy_statement_count"))
+    if statement_count == 0:
+        return True
+    if _clean_text(evidence.get("existing_bucket_policy_json")) is not None:
+        return True
+    return _s3_2_oac_apply_time_merge_reason(runtime_signals) is not None
+
+
+def _s3_2_oac_apply_time_merge_reason(
+    runtime_signals: Mapping[str, Any] | None,
+) -> str | None:
+    evidence = _evidence(runtime_signals)
+    if _clean_text(evidence.get("existing_bucket_policy_json")) is not None:
+        return None
+    if _clean_text(evidence.get("existing_bucket_policy_parse_error")) is not None:
+        return None
+    if _clean_text(evidence.get("target_bucket")) is None:
+        return None
+    if _coerce_int(evidence.get("existing_bucket_policy_statement_count")) is not None:
+        return None
+    capture_error = _clean_text(evidence.get("existing_bucket_policy_capture_error"))
+    if capture_error is None:
+        return None
+    return (
+        f"Runtime capture failed ({capture_error}), so the customer-run Terraform bundle must fetch "
+        "the live bucket policy."
+    )
+
+
 def _s3_9_destination_blocked_reasons(
     *,
     source_bucket: str,
@@ -408,15 +539,29 @@ def _s3_2_preservation_summary(
     *,
     strategy_id: str,
     profile_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> dict[str, Any]:
     evidence = _evidence(runtime_signals)
+    apply_time_merge_reason = _s3_2_oac_apply_time_merge_reason(runtime_signals)
+    public_policy_scrub_reason = _s3_2_public_policy_scrub_reason(runtime_signals)
     return {
         "family": "s3_bucket_block_public_access",
         "selected_branch": profile_id,
         "bucket_policy_public": _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public")),
         "website_configured": _optional_bool(_mapping_value(runtime_signals, "s3_bucket_website_configured")),
+        "website_configuration_captured": _clean_text(
+            evidence.get("existing_bucket_website_configuration_json")
+        )
+        is not None,
+        "website_translation_supported": _optional_bool(
+            _mapping_value(runtime_signals, "s3_bucket_website_translation_supported")
+        ),
+        "website_translation_reason": _clean_text(
+            _mapping_value(runtime_signals, "s3_bucket_website_translation_reason")
+        ),
+        "dns_inputs_complete": _s3_2_website_dns_inputs_complete(explicit_inputs),
         "existing_bucket_policy_statement_count": _coerce_int(
             evidence.get("existing_bucket_policy_statement_count")
         ),
@@ -427,10 +572,30 @@ def _s3_2_preservation_summary(
         "access_path_evidence_available": _optional_bool(
             _mapping_value(runtime_signals, "access_path_evidence_available")
         ),
+        "apply_time_merge": apply_time_merge_reason is not None and not blocked_reasons,
+        "apply_time_merge_reason": apply_time_merge_reason,
+        "public_policy_scrub_available": profile_id == S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID,
+        "public_policy_scrub_reason": public_policy_scrub_reason,
         "executable_preservation_allowed": not blocked_reasons,
-        "manual_preservation_required": bool(blocked_reasons),
+        "manual_preservation_required": profile_id in {
+            S3_2_STANDARD_MANUAL_PROFILE_ID,
+            S3_2_OAC_MANUAL_PROFILE_ID,
+        },
         "family_strategy": strategy_id,
     }
+
+
+def _s3_2_public_policy_scrub_reason(
+    runtime_signals: Mapping[str, Any] | None,
+) -> str | None:
+    policy_public = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public"))
+    website_configured = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_website_configured"))
+    if policy_public is True and website_configured is not True:
+        return (
+            "Runtime probes found a public bucket policy without website hosting, so the review bundle will "
+            "remove unconditional public Allow statements and then enable Block Public Access."
+        )
+    return None
 
 
 def _s3_9_preservation_summary(
@@ -464,11 +629,23 @@ def _s3_2_rationale(
     strategy_id: str,
     profile_id: str,
     explicit_profile: str | None,
+    runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
+    apply_time_merge_reason = _s3_2_oac_apply_time_merge_reason(runtime_signals)
     if not blocked_reasons and explicit_profile is not None:
         return f"Family resolver preserved explicit S3.2 profile '{profile_id}' for strategy '{strategy_id}'."
     if not blocked_reasons:
+        if strategy_id == S3_2_WEBSITE_STRATEGY_ID:
+            return (
+                f"Family resolver kept executable S3.2 profile '{profile_id}' for strategy '{strategy_id}' "
+                "because website translation evidence, DNS cutover inputs, and private-origin preservation checks are satisfied."
+            )
+        if apply_time_merge_reason is not None:
+            return (
+                f"Family resolver kept executable S3.2 profile '{profile_id}' because Terraform can merge "
+                f"the current bucket policy at apply time. {apply_time_merge_reason}"
+            )
         return f"Family resolver kept executable S3.2 profile '{profile_id}' for strategy '{strategy_id}'."
     detail = " ".join(blocked_reasons)
     if explicit_profile is not None:
@@ -490,6 +667,26 @@ def _s3_9_rationale(*, profile_id: str, blocked_reasons: list[str]) -> str:
     return f"Family resolver preserved the explicit S3.9 profile but downgraded executability. {' '.join(blocked_reasons)}"
 
 
+def _s3_2_website_dns_reasons(explicit_inputs: Mapping[str, Any] | None) -> list[str]:
+    aliases = _string_list(_mapping_value(explicit_inputs, "aliases"))
+    route53_hosted_zone_id = _clean_text(_mapping_value(explicit_inputs, "route53_hosted_zone_id"))
+    acm_certificate_arn = _clean_text(_mapping_value(explicit_inputs, "acm_certificate_arn"))
+    reasons: list[str] = []
+    if not aliases:
+        reasons.append("Website migration requires strategy_inputs.aliases for the Route53 cutover hostnames.")
+    if route53_hosted_zone_id is None:
+        reasons.append("Website migration requires strategy_inputs.route53_hosted_zone_id for Route53 alias updates.")
+    if acm_certificate_arn is None:
+        reasons.append("Website migration requires strategy_inputs.acm_certificate_arn for the CloudFront viewer certificate.")
+    elif ":acm:us-east-1:" not in acm_certificate_arn:
+        reasons.append("CloudFront website migration requires an ACM certificate ARN from us-east-1.")
+    return reasons
+
+
+def _s3_2_website_dns_inputs_complete(explicit_inputs: Mapping[str, Any] | None) -> bool:
+    return not _s3_2_website_dns_reasons(explicit_inputs)
+
+
 def _s3_5_blocked_reasons(
     *,
     preserve_existing_policy: bool,
@@ -502,15 +699,19 @@ def _s3_5_blocked_reasons(
     evidence = _evidence(runtime_signals)
     statement_count = _coerce_int(evidence.get("existing_bucket_policy_statement_count"))
     policy_json_captured = _clean_text(evidence.get("existing_bucket_policy_json")) is not None
+    apply_time_merge_reason = _s3_5_apply_time_merge_reason(
+        preserve_existing_policy=preserve_existing_policy,
+        runtime_signals=runtime_signals,
+    )
     reasons: list[str] = []
-    if _mapping_value(runtime_signals, "s3_policy_analysis_possible") is False:
+    if _mapping_value(runtime_signals, "s3_policy_analysis_possible") is False and apply_time_merge_reason is None:
         reasons.append(
             str(
                 _mapping_value(runtime_signals, "s3_policy_analysis_error")
                 or "Unable to inspect the current bucket policy for merge-safe SSL enforcement."
             ).strip()
         )
-    if statement_count is None and not policy_json_captured:
+    if statement_count is None and not policy_json_captured and apply_time_merge_reason is None:
         reasons.append("Bucket policy preservation evidence is missing for merge-safe SSL enforcement.")
     if statement_count not in (None, 0) and not policy_json_captured:
         reasons.append(
@@ -518,7 +719,7 @@ def _s3_5_blocked_reasons(
         )
     capture_error = _clean_text(evidence.get("existing_bucket_policy_capture_error"))
     parse_error = _clean_text(evidence.get("existing_bucket_policy_parse_error"))
-    if capture_error is not None:
+    if capture_error is not None and apply_time_merge_reason is None:
         reasons.append(f"Existing bucket policy capture failed ({capture_error}).")
     if parse_error is not None:
         reasons.append("Existing bucket policy could not be parsed for merge-safe preservation.")
@@ -545,6 +746,13 @@ def _s3_5_preservation_summary(
     blocked_reasons: list[str],
 ) -> dict[str, Any]:
     evidence = _evidence(runtime_signals)
+    apply_time_merge_reason = _s3_5_apply_time_merge_reason(
+        preserve_existing_policy=preserve_existing_policy,
+        runtime_signals=runtime_signals,
+    )
+    merge_safe_policy_available = (
+        _clean_text(evidence.get("existing_bucket_policy_json")) is not None and not blocked_reasons
+    )
     return {
         "family": "s3_bucket_require_ssl",
         "family_strategy": strategy_id,
@@ -559,8 +767,10 @@ def _s3_5_preservation_summary(
             evidence.get("existing_bucket_policy_json")
         )
         is not None,
-        "merge_safe_policy_available": not blocked_reasons,
+        "merge_safe_policy_available": merge_safe_policy_available,
         "unsafe_overwrite_requested": not preserve_existing_policy,
+        "apply_time_merge": apply_time_merge_reason is not None and not blocked_reasons,
+        "apply_time_merge_reason": apply_time_merge_reason,
         "executable_policy_merge_allowed": not blocked_reasons,
     }
 
@@ -569,9 +779,19 @@ def _s3_5_rationale(
     *,
     strategy_id: str,
     preserve_existing_policy: bool,
+    runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
+    apply_time_merge_reason = _s3_5_apply_time_merge_reason(
+        preserve_existing_policy=preserve_existing_policy,
+        runtime_signals=runtime_signals,
+    )
     if not blocked_reasons:
+        if apply_time_merge_reason is not None:
+            return (
+                f"Family resolver kept S3.5 strategy '{strategy_id}' executable because Terraform can merge "
+                f"the current bucket policy at apply time. {apply_time_merge_reason}"
+            )
         return (
             f"Family resolver kept S3.5 strategy '{strategy_id}' executable because merge-safe policy "
             "preservation evidence is available."
@@ -587,6 +807,28 @@ def _s3_5_rationale(
     )
 
 
+def _s3_5_apply_time_merge_reason(
+    *,
+    preserve_existing_policy: bool,
+    runtime_signals: Mapping[str, Any] | None,
+) -> str | None:
+    if not preserve_existing_policy:
+        return None
+    evidence = _evidence(runtime_signals)
+    if _mapping_value(runtime_signals, "s3_policy_analysis_possible") is not False:
+        return None
+    if _clean_text(evidence.get("existing_bucket_policy_json")) is not None:
+        return None
+    if _clean_text(evidence.get("existing_bucket_policy_parse_error")) is not None:
+        return None
+    if _clean_text(evidence.get("target_bucket")) is None:
+        return None
+    capture_error = _clean_text(evidence.get("existing_bucket_policy_capture_error"))
+    if capture_error is None:
+        return None
+    return f"Runtime capture failed ({capture_error}), so the customer-run Terraform bundle must fetch the live policy."
+
+
 def _s3_11_blocked_reasons(
     *,
     abort_days: int,
@@ -596,9 +838,12 @@ def _s3_11_blocked_reasons(
     analysis_possible = _optional_bool(_mapping_value(runtime_signals, "s3_lifecycle_analysis_possible"))
     rule_count = _coerce_int(evidence.get("existing_lifecycle_rule_count"))
     lifecycle_json = _clean_text(evidence.get("existing_lifecycle_configuration_json"))
+    lifecycle_analysis = analyze_lifecycle_preservation(lifecycle_json, abort_days=abort_days)
     if rule_count == 0:
         return []
-    if _s3_11_equivalent_safe_state(lifecycle_json, abort_days=abort_days):
+    if lifecycle_analysis["equivalent_safe_state"]:
+        return []
+    if lifecycle_analysis["merge_renderable"]:
         return []
     reasons: list[str] = []
     if analysis_possible is False:
@@ -616,7 +861,8 @@ def _s3_11_blocked_reasons(
         )
     elif rule_count not in (None, 0):
         reasons.append(
-            "Existing lifecycle rules are present, and additive merge generation is not implemented for this branch."
+            lifecycle_analysis["render_failure_reason"]
+            or "Existing lifecycle rules are present, but the captured lifecycle document cannot be rendered safely for additive merge."
         )
     return _dedupe_strings(reasons)
 
@@ -645,16 +891,17 @@ def _s3_11_preservation_summary(
 ) -> dict[str, Any]:
     evidence = _evidence(runtime_signals)
     lifecycle_json = _clean_text(evidence.get("existing_lifecycle_configuration_json"))
+    lifecycle_analysis = analyze_lifecycle_preservation(lifecycle_json, abort_days=abort_days)
     return {
         "family": "s3_bucket_lifecycle_configuration",
         "family_strategy": strategy_id,
         "abort_days": abort_days,
         "existing_lifecycle_rule_count": _coerce_int(evidence.get("existing_lifecycle_rule_count")),
         "existing_lifecycle_configuration_captured": lifecycle_json is not None,
-        "existing_lifecycle_configuration_equivalent": _s3_11_equivalent_safe_state(
-            lifecycle_json,
-            abort_days=abort_days,
-        ),
+        "existing_lifecycle_configuration_equivalent": lifecycle_analysis["equivalent_safe_state"],
+        "existing_lifecycle_merge_renderable": lifecycle_analysis["merge_renderable"],
+        "existing_lifecycle_render_failure_reason": lifecycle_analysis["render_failure_reason"],
+        "existing_equivalent_abort_rule_present": lifecycle_analysis["has_equivalent_abort_rule"],
         "additive_merge_safe": not blocked_reasons,
         "executable_lifecycle_merge_allowed": not blocked_reasons,
     }
@@ -763,23 +1010,11 @@ def _s3_11_equivalent_safe_state(lifecycle_json: str | None, *, abort_days: int)
     rules = parsed.get("Rules")
     if not isinstance(rules, list) or len(rules) != 1:
         return False
-    return _equivalent_abort_rule(rules[0], abort_days=abort_days)
+    return rule_is_equivalent_abort_incomplete(rules[0], abort_days=abort_days)
 
 
 def _equivalent_abort_rule(rule: Any, *, abort_days: int) -> bool:
-    if not isinstance(rule, Mapping):
-        return False
-    if str(rule.get("Status") or "").strip().lower() != "enabled":
-        return False
-    abort_block = rule.get("AbortIncompleteMultipartUpload")
-    if not isinstance(abort_block, Mapping):
-        return False
-    days_value = _coerce_int(abort_block.get("DaysAfterInitiation"))
-    if days_value != abort_days:
-        return False
-    if rule.get("Expiration") or rule.get("Transitions"):
-        return False
-    return True
+    return rule_is_equivalent_abort_incomplete(rule, abort_days=abort_days)
 
 
 def _abort_days(explicit_inputs: Mapping[str, Any] | None) -> int:
@@ -816,6 +1051,14 @@ def _bucket_name_from_action_fields(action: Any | None, *field_names: str) -> st
     return None
 
 
+def _bucket_name_from_runtime_like_action_fields(action: Any | None, *field_names: str) -> str | None:
+    for field_name in field_names:
+        candidate = _runtime_like_bucket_name_candidate(getattr(action, field_name, None))
+        if candidate:
+            return candidate
+    return None
+
+
 def _bucket_name_candidate(raw: Any) -> str | None:
     if not isinstance(raw, str):
         return None
@@ -838,6 +1081,28 @@ def _bucket_name_candidate(raw: Any) -> str | None:
     return value
 
 
+def _runtime_like_bucket_name_candidate(raw: Any) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().strip("'\"")
+    if not value:
+        return None
+    match = _S3_BUCKET_ARN_PATTERN.search(value)
+    if match:
+        return match.group("bucket")
+    if "|" in value:
+        for part in value.split("|"):
+            match = _S3_BUCKET_ARN_PATTERN.search(part.strip())
+            if match:
+                return match.group("bucket")
+        return None
+    if value.startswith("AWS::::Account:") or value.lower().startswith("account:"):
+        return None
+    if value.lower().startswith("aws-account-") or re.fullmatch(r"\d{12}", value):
+        return None
+    return value
+
+
 def _mapping_value(mapping: Mapping[str, Any] | None, key: str) -> Any:
     if not isinstance(mapping, Mapping):
         return None
@@ -849,6 +1114,17 @@ def _clean_text(value: Any) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: list[str] = []
+    for item in value:
+        text = _clean_text(item)
+        if text is not None and text not in cleaned:
+            cleaned.append(text)
+    return cleaned
 
 
 def _coerce_bool(value: Any, *, default: bool) -> bool:

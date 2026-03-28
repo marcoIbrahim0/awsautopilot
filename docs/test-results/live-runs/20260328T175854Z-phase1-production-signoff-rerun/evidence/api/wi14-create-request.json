@@ -1,0 +1,9 @@
+{
+  "action_id": "96bd1efb-91ee-4b22-9e1e-29613c8492aa",
+  "mode": "pr_only",
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "risk_acknowledged": true,
+  "strategy_inputs": {
+    "preserve_existing_policy": true
+  }
+}

@@ -1,0 +1,5 @@
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}

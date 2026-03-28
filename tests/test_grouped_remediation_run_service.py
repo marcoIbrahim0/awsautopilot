@@ -318,6 +318,7 @@ def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
         lambda **kwargs: {
             "s3_access_logging_destination_safe": True,
             "s3_access_logging_destination_bucket_reachable": True,
+            "support_bucket_probe": {"safe": True},
         }
         if "arn:aws:s3:::" in str(getattr(kwargs["action"], "target_id", ""))
         else {},
@@ -335,6 +336,7 @@ def test_s3_access_logging_grouped_plan_splits_bucket_and_account_scopes(
     )
 
     resolutions = {entry.action_id: entry.resolution for entry in plan.action_resolutions}
+    strategy_inputs = {entry.action_id: entry.strategy_inputs for entry in plan.action_resolutions}
     assert resolutions[str(bucket_action.id)]["support_tier"] == "deterministic_bundle"
     assert resolutions[str(account_action.id)]["support_tier"] == "review_required_bundle"
     assert plan.artifacts["group_bundle"]["action_resolutions"][0]["strategy_id"] == "s3_enable_access_logging_guided"
@@ -394,6 +396,124 @@ def test_s3_ssl_grouped_plan_persists_bucket_policy_evidence_for_executable_bran
     assert bundle_entry["strategy_inputs"]["existing_bucket_policy_json"] == existing_policy
 
 
+def test_s3_ssl_grouped_plan_keeps_apply_time_merge_executable_without_policy_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    action = replace(
+        _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_require_ssl"),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::ssl-bucket|S3.5",
+        resource_id="arn:aws:s3:::ssl-bucket",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enforce_ssl_strict_deny",
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {
+            "s3_policy_analysis_possible": False,
+            "s3_policy_analysis_error": "AccessDenied",
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_require_ssl"),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    resolution = plan.action_resolutions[0].resolution
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert resolution["preservation_summary"]["merge_safe_policy_available"] is False
+    assert "existing_bucket_policy_json" not in plan.action_resolutions[0].strategy_inputs
+
+
+def test_s3_2_oac_grouped_plan_keeps_apply_time_merge_executable_without_policy_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    action = replace(
+        _make_action(priority=100, minutes_ago=1),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::oac-bucket|S3.2",
+        resource_id="arn:aws:s3:::oac-bucket",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_migrate_cloudfront_oac_private",
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "Unable to capture existing bucket policy (AccessDenied).",
+            "evidence": {
+                "target_bucket": "oac-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
+
+    resolution = plan.action_resolutions[0].resolution
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
+    assert "existing_bucket_policy_json" not in plan.action_resolutions[0].strategy_inputs
+
+
+def test_s3_2_standard_grouped_plan_uses_review_policy_scrub_for_public_non_website_bucket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    action = replace(
+        _make_action(priority=100, minutes_ago=1),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::public-bucket|S3.2",
+        resource_id="arn:aws:s3:::public-bucket",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_bucket_block_public_access_standard",
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": True,
+        },
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-public-scrub"},
+    )
+
+    resolution = plan.action_resolutions[0].resolution
+    assert resolution["profile_id"] == "s3_bucket_block_public_access_review_public_policy_scrub"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["preservation_summary"]["public_policy_scrub_available"] is True
+    assert resolution["preservation_summary"]["manual_preservation_required"] is False
+
+
 def test_ec2_53_grouped_plan_matches_preview_for_executable_branch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -417,7 +537,7 @@ def test_ec2_53_grouped_plan_matches_preview_for_executable_branch(
             ),
             GroupedActionOverride(
                 action_id=str(manual_action.id),
-                profile_id="ssm_only",
+                profile_id="bastion_sg_reference",
             ),
         ),
     )
@@ -447,16 +567,50 @@ def test_ec2_53_grouped_plan_matches_preview_for_executable_branch(
         scope=_scope(action_type="sg_restrict_public_ports"),
         actions=[manual_action, executable_action],
         group_bundle_seed={"group_key": "group-1"},
+        tenant_settings={"approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"]},
     )
 
     assert preview is not None
     resolutions = {entry.action_id: entry.resolution for entry in plan.action_resolutions}
+    strategy_inputs = {entry.action_id: entry.strategy_inputs for entry in plan.action_resolutions}
     assert preview["profile_id"] == "close_and_revoke"
     assert preview["support_tier"] == "deterministic_bundle"
     assert resolutions[str(executable_action.id)]["profile_id"] == preview["profile_id"]
     assert resolutions[str(executable_action.id)]["support_tier"] == preview["support_tier"]
-    assert resolutions[str(manual_action.id)]["profile_id"] == "ssm_only"
-    assert resolutions[str(manual_action.id)]["support_tier"] == "manual_guidance_only"
+    assert resolutions[str(manual_action.id)]["profile_id"] == "bastion_sg_reference"
+    assert resolutions[str(manual_action.id)]["support_tier"] == "deterministic_bundle"
+    assert strategy_inputs[str(manual_action.id)] == {
+        "access_mode": "bastion_sg_reference",
+        "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+    }
+
+
+def test_grouped_run_persistence_plan_keeps_ssm_only_executable() -> None:
+    executable_action = _make_action(priority=100, minutes_ago=1, action_type="sg_restrict_public_ports")
+    executable_action.target_id = "123456789012|eu-north-1|sg-0123456789abcdef0|EC2.53"
+    sibling_action = _make_action(priority=90, minutes_ago=2, action_type="sg_restrict_public_ports")
+    sibling_action.target_id = "123456789012|eu-north-1|sg-0fedcba9876543210|EC2.53"
+
+    request = NormalizedGroupedRunRequest(
+        strategy_id="sg_restrict_public_ports_guided",
+        risk_acknowledged=True,
+        action_overrides=(
+            GroupedActionOverride(
+                action_id=str(executable_action.id),
+                profile_id="ssm_only",
+            ),
+        ),
+    )
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="sg_restrict_public_ports"),
+        actions=[sibling_action, executable_action],
+        group_bundle_seed={"group_key": "group-ssm"},
+    )
+
+    resolutions = {entry.action_id: entry.resolution for entry in plan.action_resolutions}
+    assert resolutions[str(executable_action.id)]["profile_id"] == "ssm_only"
+    assert resolutions[str(executable_action.id)]["support_tier"] == "deterministic_bundle"
 
 
 def test_representative_action_selection_is_deterministic() -> None:
@@ -569,6 +723,53 @@ def test_queue_payload_fields_for_schema_v2_include_canonical_action_resolutions
     ]
 
 
+def test_grouped_website_strategy_rejects_top_level_selection() -> None:
+    action = _make_action(priority=100, minutes_ago=1)
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_migrate_website_cloudfront_private",
+        strategy_inputs={
+            "aliases": ["www.example.com"],
+            "route53_hosted_zone_id": "Z123456ABCDEFG",
+            "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+        },
+    )
+
+    with pytest.raises(GroupedRemediationRunValidationError) as exc:
+        build_grouped_run_persistence_plan(
+            request=request,
+            scope=_scope(),
+            actions=[action],
+            group_bundle_seed={"group_key": "group-website"},
+        )
+
+    assert exc.value.code == "grouped_website_strategy_requires_action_overrides"
+
+
+def test_grouped_website_override_without_dns_inputs_downgrades_to_review_required() -> None:
+    action = _make_action(priority=100, minutes_ago=1)
+    request = NormalizedGroupedRunRequest(
+        action_overrides=(
+            GroupedActionOverride(
+                action_id=str(action.id),
+                strategy_id="s3_migrate_website_cloudfront_private",
+            ),
+        ),
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-website"},
+    )
+
+    resolution = plan.action_resolutions[0].resolution
+    assert plan.action_resolutions[0].strategy_id == "s3_migrate_website_cloudfront_private"
+    assert resolution["profile_id"] == "s3_migrate_website_cloudfront_private_review_required"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert any("strategy_inputs.aliases" in reason for reason in resolution["blocked_reasons"])
+
+
 def test_same_strategy_profile_overrides_inherit_top_level_strategy_inputs() -> None:
     action_one = _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_access_logging")
     action_two = _make_action(priority=90, minutes_ago=2, action_type="s3_bucket_access_logging")
@@ -600,7 +801,7 @@ def test_same_strategy_profile_overrides_inherit_top_level_strategy_inputs() -> 
         assert entry.strategy_inputs == {"log_bucket_name": "dedicated-access-log-bucket"}
 
 
-def test_same_strategy_profile_overrides_fail_closed_when_required_inputs_are_missing() -> None:
+def test_same_strategy_profile_overrides_derive_s3_9_log_bucket_name_for_bucket_scope() -> None:
     action = _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_access_logging")
     request = NormalizedGroupedRunRequest(
         strategy_id="s3_enable_access_logging_guided",
@@ -612,16 +813,17 @@ def test_same_strategy_profile_overrides_fail_closed_when_required_inputs_are_mi
         ),
     )
 
-    with pytest.raises(GroupedRemediationRunValidationError) as exc:
-        build_grouped_run_persistence_plan(
-            request=request,
-            scope=_scope(action_type="s3_bucket_access_logging"),
-            actions=[action],
-            group_bundle_seed={"group_key": "group-1"},
-        )
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_access_logging"),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-1"},
+    )
 
-    assert exc.value.code == "invalid_strategy_inputs"
-    assert "strategy_inputs.log_bucket_name is required" in str(exc.value)
+    assert plan.action_resolutions[0].strategy_inputs == {
+        "log_bucket_name": f"{action.resource_id.split(':::')[-1]}-access-logs",
+    }
+    assert plan.action_resolutions[0].resolution["support_tier"] == "review_required_bundle"
 
 
 def _make_action(

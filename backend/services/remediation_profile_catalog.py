@@ -23,7 +23,10 @@ from backend.services.s3_family_resolution_adapter import (
     S3_2_OAC_MANUAL_PROFILE_ID,
     S3_2_OAC_STRATEGY_ID,
     S3_2_STANDARD_MANUAL_PROFILE_ID,
+    S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID,
     S3_2_STANDARD_STRATEGY_ID,
+    S3_2_WEBSITE_REVIEW_PROFILE_ID,
+    S3_2_WEBSITE_STRATEGY_ID,
     S3_5_EXEMPTION_STRATEGY_ID,
     S3_5_FAMILY_RESOLVER_KIND,
     S3_5_STRICT_STRATEGY_ID,
@@ -168,24 +171,28 @@ def _ec2_53_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
             strategy_id=strategy_id,
             profile_id="ssm_only",
             label="Use SSM only",
-            default_support_tier="manual_guidance_only",
+            default_support_tier="deterministic_bundle",
             recommended=False,
             requires_inputs=False,
             supports_exception_flow=False,
             exception_only=False,
             family_resolver_kind=family_kind,
+            default_inputs={"access_mode": "ssm_only"},
+            legacy_input_hints={"access_mode": "ssm_only"},
         ),
         RemediationProfileDefinition(
             action_type=action_type,
             strategy_id=strategy_id,
             profile_id="bastion_sg_reference",
             label="Reference bastion security group",
-            default_support_tier="review_required_bundle",
+            default_support_tier="deterministic_bundle",
             recommended=False,
             requires_inputs=True,
             supports_exception_flow=False,
             exception_only=False,
             family_resolver_kind=family_kind,
+            default_inputs={"access_mode": "bastion_sg_reference"},
+            legacy_input_hints={"access_mode": "bastion_sg_reference"},
         ),
     )
 
@@ -210,6 +217,18 @@ def _s3_2_standard_family_profiles() -> tuple[RemediationProfileDefinition, ...]
             profile_id=S3_2_STANDARD_MANUAL_PROFILE_ID,
             label="Manual website/public preservation review",
             default_support_tier="manual_guidance_only",
+            recommended=False,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_STANDARD_STRATEGY_ID,
+            profile_id=S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID,
+            label="Review apply-time public policy scrub before enabling block",
+            default_support_tier="review_required_bundle",
             recommended=False,
             requires_inputs=False,
             supports_exception_flow=False,
@@ -241,6 +260,35 @@ def _s3_2_oac_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
             default_support_tier="manual_guidance_only",
             recommended=False,
             requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+    )
+
+
+def _s3_2_website_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_WEBSITE_STRATEGY_ID,
+            profile_id=S3_2_WEBSITE_STRATEGY_ID,
+            label="Migrate website bucket to CloudFront + private S3",
+            default_support_tier="deterministic_bundle",
+            recommended=True,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_WEBSITE_STRATEGY_ID,
+            profile_id=S3_2_WEBSITE_REVIEW_PROFILE_ID,
+            label="Review website translation and DNS cutover manually",
+            default_support_tier="review_required_bundle",
+            recommended=False,
+            requires_inputs=True,
             supports_exception_flow=False,
             exception_only=False,
             family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
@@ -347,6 +395,8 @@ def _profile_rows_for_strategy(
         return _s3_2_standard_family_profiles()
     if action_type == "s3_bucket_block_public_access" and strategy_id == S3_2_OAC_STRATEGY_ID:
         return _s3_2_oac_family_profiles()
+    if action_type == "s3_bucket_block_public_access" and strategy_id == S3_2_WEBSITE_STRATEGY_ID:
+        return _s3_2_website_family_profiles()
     if action_type == "s3_bucket_access_logging" and strategy_id == S3_9_STRATEGY_ID:
         return _s3_9_family_profiles()
     if action_type == "s3_bucket_require_ssl" and strategy_id in {

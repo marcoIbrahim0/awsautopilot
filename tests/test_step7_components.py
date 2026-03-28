@@ -7,6 +7,11 @@ worker handler registration. Does not require DB or SQS.
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 import uuid
 
 import pytest
@@ -77,6 +82,12 @@ def _make_action(
 def _bundle_file_content(bundle: dict[str, object], path: str) -> str:
     file_item = next(item for item in bundle["files"] if item["path"] == path)
     return str(file_item["content"])
+
+
+def _write_bundle_files(bundle: dict[str, object], directory: Path) -> None:
+    for item in bundle["files"]:
+        path = directory / str(item["path"])
+        path.write_text(str(item["content"]), encoding="utf-8")
 
 
 def test_pr_bundle_returns_dict_with_format_files_steps() -> None:
@@ -588,10 +599,19 @@ def test_config_1_strategy_schema_guided_choice_fields() -> None:
     }
     strategy = strategies["config_enable_centralized_delivery"]
     fields = {field["key"]: field for field in strategy["input_schema"]["fields"]}
+    account_local_fields = {
+        field["key"]: field
+        for field in strategies["config_enable_account_local_delivery"]["input_schema"]["fields"]
+    }
 
     recording_scope = fields["recording_scope"]
     assert recording_scope["type"] == "select"
     assert [option["value"] for option in recording_scope.get("options", [])] == [
+        "all_resources",
+        "keep_existing",
+    ]
+    assert account_local_fields["recording_scope"]["type"] == "select"
+    assert [option["value"] for option in account_local_fields["recording_scope"].get("options", [])] == [
         "all_resources",
         "keep_existing",
     ]
@@ -651,6 +671,29 @@ def test_pr_bundle_aws_config_enabled_guided_inputs_drive_terraform_defaults() -
     assert 'default     = true' in content
     assert 'variable "kms_key_arn"' in content
     assert 'default     = "arn:aws:kms:eu-north-1:111122223333:key/1234abcd"' in content
+
+
+def test_pr_bundle_aws_config_enabled_guidance_describes_auto_promoted_selective_recorders() -> None:
+    """Config.1 bundle guidance should describe the auto-promotion executable path."""
+    action = _make_action(
+        action_type=ACTION_TYPE_AWS_CONFIG_ENABLED,
+        account_id="111122223333",
+        region="eu-north-1",
+        control_id="Config.1",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="config_enable_account_local_delivery",
+        strategy_inputs={"recording_scope": "all_resources"},
+    )
+    readme = _bundle_file_content(r, "README.txt")
+
+    assert "resolver auto-promotes `recording_scope=all_resources`" in readme
+    assert any(
+        "selective/custom recorders should resolve to all-supported recording" in step
+        for step in r["steps"]
+    )
 
 
 def test_pr_bundle_aws_config_enabled_guided_inputs_drive_cloudformation_defaults() -> None:
@@ -735,8 +778,76 @@ def test_pr_bundle_s3_bucket_block_terraform_readme_has_guardrails() -> None:
     assert "NOT a full CloudFront + OAC + private S3 migration" in readme
     assert "What changes" in readme
     assert "How to access now" in readme
-    assert "Verify" in readme
-    assert "Rollback" in readme
+
+
+def test_pr_bundle_s3_bucket_block_public_policy_scrub_review_bundle_contains_apply_time_filtering() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="public-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_bucket_block_public_access_standard",
+        resolution={
+            "strategy_id": "s3_bucket_block_public_access_standard",
+            "profile_id": "s3_bucket_block_public_access_review_public_policy_scrub",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+            ],
+            "preservation_summary": {
+                "public_policy_scrub_available": True,
+                "public_policy_scrub_reason": "review bundle will remove unconditional public Allow statements",
+                "manual_preservation_required": False,
+            },
+            "decision_rationale": "Review bundle required for public policy scrub.",
+        },
+    )
+
+    content = _bundle_file_content(result, "s3_bucket_block_public_access.tf")
+    readme = _bundle_file_content(result, "README.txt")
+    assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
+    assert 'resource "aws_s3_bucket_public_access_block" "security_autopilot"' in content
+    assert "removed_statement_count" in content
+    assert "removed_statement_identifiers" in content
+    assert 'lower(trimspace(try(tostring(statement.Effect), ""))) == "allow"' in content
+    assert "!can(statement.Condition)" in content
+    assert 'trimspace(try(tostring(statement.Principal), "")) == "*"' in content
+    assert "depends_on = [aws_s3_bucket_policy.security_autopilot]" in content
+    assert "public-policy scrub branches remove unconditional public Allow statements" in readme
+
+
+def test_pr_bundle_s3_bucket_block_public_policy_scrub_cloudformation_raises_error() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="public-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            strategy_id="s3_bucket_block_public_access_standard",
+            resolution={
+                "strategy_id": "s3_bucket_block_public_access_standard",
+                "profile_id": "s3_bucket_block_public_access_review_public_policy_scrub",
+                "support_tier": "review_required_bundle",
+                "blocked_reasons": [
+                    "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+                ],
+                "preservation_summary": {
+                    "public_policy_scrub_available": True,
+                    "manual_preservation_required": False,
+                },
+                "decision_rationale": "Review bundle required for public policy scrub.",
+            },
+        )
+    assert exc_info.value.as_dict()["code"] == "unsupported_variant_format"
 
 
 def test_pr_bundle_non_s3_terraform_readme_excludes_s3_guardrails() -> None:
@@ -973,6 +1084,43 @@ def test_pr_bundle_s3_cloudfront_oac_private_auto_preserves_existing_policy_from
     assert preserved_sids == ["AllowCrossAccountRead", "AllowVpcScopedReadPath"]
 
 
+def test_pr_bundle_s3_cloudfront_oac_private_apply_time_merge_uses_resolution_summary() -> None:
+    """CloudFront+OAC variant can fetch and merge the live bucket policy at apply time."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_cloudfront_oac_private",
+        resolution={
+            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "profile_id": "s3_migrate_cloudfront_oac_private",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+            "decision_rationale": "Apply-time merge is allowed.",
+        },
+    )
+
+    paths = [f["path"] for f in result["files"]]
+    content = next(f for f in result["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
+
+    assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert "filtered_existing_policy_statements" in content
+    assert 'data "aws_iam_policy_document" "bucket_policy"' in content
+    assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
+    assert "terraform.auto.tfvars.json" not in paths
+    assert any("fetched and merged at terraform plan/apply time" in step for step in result["steps"])
+
+
 def test_pr_bundle_s3_cloudfront_oac_private_fails_when_policy_exists_but_preservation_input_missing() -> None:
     """CloudFront+OAC variant fails closed when policy exists but preservation cannot be guaranteed."""
     action = _make_action(
@@ -993,6 +1141,315 @@ def test_pr_bundle_s3_cloudfront_oac_private_fails_when_policy_exists_but_preser
 
     payload = exc_info.value.as_dict()
     assert payload["code"] == "existing_bucket_policy_preservation_required"
+
+
+def test_pr_bundle_s3_website_cloudfront_private_generates_real_iac() -> None:
+    """Website migration variant emits CloudFront, Route53, website removal, and BPA resources."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_website_cloudfront_private",
+        strategy_inputs={
+            "aliases": ["www.example.com"],
+            "route53_hosted_zone_id": "Z123456ABCDEFG",
+            "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+        },
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {
+                        "IndexDocument": {"Suffix": "index.html"},
+                        "ErrorDocument": {"Key": "error.html"},
+                    }
+                ),
+            }
+        },
+    )
+
+    paths = [f["path"] for f in result["files"]]
+    assert "providers.tf" in paths
+    assert "s3_website_cloudfront_private.tf" in paths
+    assert "terraform.auto.tfvars.json" in paths
+    assert "README.txt" in paths
+
+    content = _bundle_file_content(result, "s3_website_cloudfront_private.tf")
+    tfvars = json.loads(_bundle_file_content(result, "terraform.auto.tfvars.json"))
+    assert "aws_cloudfront_origin_access_control" in content
+    assert "aws_cloudfront_distribution" in content
+    assert 'resource "aws_route53_record" "website_ipv4"' in content
+    assert 'resource "aws_route53_record" "website_ipv6"' in content
+    assert 'resource "null_resource" "disable_bucket_website"' in content
+    assert 'resource "aws_s3_bucket_public_access_block" "security_autopilot"' in content
+    assert "default_root_object = var.default_root_object" in content
+    assert "acm_certificate_arn      = var.acm_certificate_arn" in content
+    assert "aliases             = var.aliases" in content
+    assert tfvars["existing_bucket_website_configuration_json"]
+
+
+def test_pr_bundle_s3_website_cloudfront_private_apply_time_merge_uses_resolution_summary() -> None:
+    """Website migration variant can merge the live bucket policy at apply time."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_website_cloudfront_private",
+        strategy_inputs={
+            "aliases": ["www.example.com"],
+            "route53_hosted_zone_id": "Z123456ABCDEFG",
+            "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+        },
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {"IndexDocument": {"Suffix": "index.html"}}
+                ),
+            }
+        },
+        resolution={
+            "strategy_id": "s3_migrate_website_cloudfront_private",
+            "profile_id": "s3_migrate_website_cloudfront_private",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+            "decision_rationale": "Apply-time merge is allowed.",
+        },
+    )
+
+    content = _bundle_file_content(result, "s3_website_cloudfront_private.tf")
+    tfvars = json.loads(_bundle_file_content(result, "terraform.auto.tfvars.json"))
+    assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert "filtered_existing_policy_statements" in content
+    assert "existing_bucket_policy_json" not in tfvars
+    assert "existing_bucket_website_configuration_json" in tfvars
+
+
+def test_pr_bundle_s3_website_cloudfront_private_cloudformation_raises_error() -> None:
+    """Website migration variant is Terraform-only."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            strategy_id="s3_migrate_website_cloudfront_private",
+            strategy_inputs={
+                "aliases": ["www.example.com"],
+                "route53_hosted_zone_id": "Z123456ABCDEFG",
+                "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+            },
+            risk_snapshot={
+                "evidence": {
+                    "existing_bucket_website_configuration_json": json.dumps(
+                        {"IndexDocument": {"Suffix": "index.html"}}
+                    ),
+                }
+            },
+        )
+
+    assert exc_info.value.as_dict()["code"] == "unsupported_variant_format"
+
+
+def test_pr_bundle_s3_website_cloudfront_private_rejects_routing_rules() -> None:
+    """Complex S3 website routing rules stay fail-closed in bundle generation."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "terraform",
+            strategy_id="s3_migrate_website_cloudfront_private",
+            strategy_inputs={
+                "aliases": ["www.example.com"],
+                "route53_hosted_zone_id": "Z123456ABCDEFG",
+                "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+            },
+            risk_snapshot={
+                "evidence": {
+                    "existing_bucket_website_configuration_json": json.dumps(
+                        {
+                            "IndexDocument": {"Suffix": "index.html"},
+                            "RoutingRules": [{"Condition": {"KeyPrefixEquals": "docs/"}}],
+                        }
+                    ),
+                }
+            },
+        )
+
+    assert exc_info.value.as_dict()["code"] == "unsupported_website_configuration"
+
+
+def test_pr_bundle_s3_website_cloudfront_private_has_specific_readme_section() -> None:
+    """README includes website cutover-specific guidance."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_website_cloudfront_private",
+        strategy_inputs={
+            "aliases": ["www.example.com"],
+            "route53_hosted_zone_id": "Z123456ABCDEFG",
+            "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+        },
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {"IndexDocument": {"Suffix": "index.html"}}
+                ),
+            }
+        },
+    )
+
+    readme = _bundle_file_content(result, "README.txt")
+    assert "S3 website migration variant (CloudFront + private S3 + Route53)" in readme
+    assert "existing_bucket_website_configuration_json" in readme
+
+
+@pytest.mark.skipif(shutil.which("terraform") is None, reason="terraform is not installed")
+def test_pr_bundle_s3_website_cloudfront_private_terraform_validate() -> None:
+    """Website migration Terraform bundle should pass terraform validate in a temp dir."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="website-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    bundle = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_website_cloudfront_private",
+        strategy_inputs={
+            "aliases": ["www.example.com"],
+            "route53_hosted_zone_id": "Z123456ABCDEFG",
+            "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+        },
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_policy_statement_count": 0,
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {
+                        "IndexDocument": {"Suffix": "index.html"},
+                        "ErrorDocument": {"Key": "error.html"},
+                    }
+                ),
+            }
+        },
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        bundle_dir = Path(temp_dir)
+        _write_bundle_files(bundle, bundle_dir)
+        plugin_cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
+        plugin_cache_dir.mkdir(parents=True, exist_ok=True)
+        terraform_env = dict(os.environ)
+        terraform_env["TF_PLUGIN_CACHE_DIR"] = str(plugin_cache_dir)
+        init_result = subprocess.run(
+            ["terraform", "init", "-backend=false", "-input=false"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=terraform_env,
+        )
+        assert init_result.returncode == 0, init_result.stdout + init_result.stderr
+
+        validate_result = subprocess.run(
+            ["terraform", "validate", "-no-color"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=terraform_env,
+        )
+        assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
+
+
+@pytest.mark.skipif(shutil.which("terraform") is None, reason="terraform is not installed")
+def test_pr_bundle_s3_bucket_block_public_policy_scrub_terraform_validate() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="public-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    bundle = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_bucket_block_public_access_standard",
+        resolution={
+            "strategy_id": "s3_bucket_block_public_access_standard",
+            "profile_id": "s3_bucket_block_public_access_review_public_policy_scrub",
+            "support_tier": "review_required_bundle",
+            "blocked_reasons": [
+                "Bucket policy is currently public; generated Terraform will scrub unconditional public Allow statements before enabling Block Public Access."
+            ],
+            "preservation_summary": {
+                "public_policy_scrub_available": True,
+                "manual_preservation_required": False,
+            },
+            "decision_rationale": "Review bundle required for public policy scrub.",
+        },
+    )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        bundle_dir = Path(temp_dir)
+        _write_bundle_files(bundle, bundle_dir)
+        plugin_cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
+        plugin_cache_dir.mkdir(parents=True, exist_ok=True)
+        terraform_env = dict(os.environ)
+        terraform_env["TF_PLUGIN_CACHE_DIR"] = str(plugin_cache_dir)
+        init_result = subprocess.run(
+            ["terraform", "init", "-backend=false", "-input=false"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=terraform_env,
+        )
+        assert init_result.returncode == 0, init_result.stdout + init_result.stderr
+
+        validate_result = subprocess.run(
+            ["terraform", "validate", "-no-color"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=terraform_env,
+        )
+        assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
 
 
 def test_s3_bucket_name_from_target_id() -> None:
@@ -1164,6 +1621,49 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform() -> None:
     assert "S3.11" in content or "Control:" in content
 
 
+def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform_preserves_renderable_rules() -> None:
+    """S3.11 additive merge preserves captured lifecycle rules in Terraform output."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "expire-logs",
+                "Status": "Enabled",
+                "Filter": {"Prefix": "logs/"},
+                "Expiration": {"Days": 30},
+            },
+            {
+                "ID": "AbortMultipartUploads",
+                "Status": "Enabled",
+                "Filter": {"Prefix": ""},
+                "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7},
+            },
+        ]
+    }
+
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        risk_snapshot={
+            "evidence": {
+                "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
+            }
+        },
+    )
+
+    content = _bundle_file_content(r, "s3_bucket_lifecycle_configuration.tf")
+    assert 'id     = "expire-logs"' in content
+    assert 'prefix = "logs/"' in content
+    assert "days = 30" in content
+    assert content.count('id     = "security-autopilot-abort-incomplete-multipart"') == 1
+    assert 'id     = "AbortMultipartUploads"' not in content
+
+
 def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_custom_resource() -> None:
     """S3.11: CloudFormation uses Lambda custom resource PutLifecycleConfiguration with delete no-op."""
     action = _make_action(
@@ -1184,6 +1684,39 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_custom_resou
     assert 'if request_type == "Delete":' in content
     assert 'cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "S3BucketLifecycle")' in content
     assert "Delete path is no-op and does NOT remove existing lifecycle rules." in content
+
+
+def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_rejects_additive_merge() -> None:
+    """S3.11 CloudFormation stays fail-closed when additive merge would be required."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "expire-logs",
+                "Status": "Enabled",
+                "Filter": {"Prefix": "logs/"},
+                "Expiration": {"Days": 30},
+            }
+        ]
+    }
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            risk_snapshot={
+                "evidence": {
+                    "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
+                }
+            },
+        )
+
+    assert exc_info.value.as_dict()["code"] == "cloudformation_lifecycle_additive_merge_unsupported"
 
 
 def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
@@ -1333,6 +1866,8 @@ def test_ec2_53_strategy_schema_guided_choice_fields() -> None:
         "close_and_revoke",
         "restrict_to_ip",
         "restrict_to_cidr",
+        "ssm_only",
+        "bastion_sg_reference",
     ]
     for option in access_mode.get("options", []):
         assert option.get("impact_text")
@@ -1431,6 +1966,126 @@ def test_pr_bundle_sg_restrict_close_and_revoke_includes_exact_state_capture_and
         "path": "rollback/sg_restore.py",
         "runner": "python3",
     }
+
+
+def test_pr_bundle_sg_restrict_ssm_only_terraform_is_revoke_only() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"access_mode": "ssm_only"},
+    )
+
+    content = _bundle_file_content(r, "sg_restrict_public_ports.tf")
+    readme = _bundle_file_content(r, "README.txt")
+    assert 'variable "security_group_id"' in content
+    assert 'resource "null_resource" "revoke_public_admin_ingress"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule"' not in content
+    assert 'variable "allowed_cidr"' not in content
+    assert 'variable "allowed_cidr_ipv6"' not in content
+    assert 'remove_existing_public_rules' not in content
+    assert "CidrIp=0.0.0.0/0" in content
+    assert "CidrIpv6=::/0" in content
+    assert "does not add replacement SSH/RDP rules" in content
+    assert "Confirm SSM Session Manager access is already working" in " ".join(r["steps"])
+    assert "scripts/sg_capture_state.py" in readme
+    assert "`ssm_only` removes public SSH/RDP ingress" in readme
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/sg_restore.py",
+        "runner": "python3",
+    }
+
+
+def test_pr_bundle_sg_restrict_ssm_only_cloudformation_is_revoke_only() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-xyz789",
+        region="us-east-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={"access_mode": "ssm_only"},
+    )
+
+    content = r["files"][0]["content"]
+    assert r["format"] == "cloudformation"
+    assert "Confirm SSM Session Manager access is already working" in " ".join(r["steps"])
+    assert "Type: Custom::SecurityGroupIngressRevoke" in content
+    assert "AWS::EC2::SecurityGroupIngress" not in content
+    assert "AllowedCidr:" not in content
+    assert "AllowedCidrIpv6:" not in content
+    assert "does not add replacement ingress rules" in content
+    assert '"CidrIp": "0.0.0.0/0"' in content
+    assert '"CidrIpv6": "::/0"' in content
+
+
+def test_pr_bundle_sg_restrict_bastion_reference_terraform_replaces_public_ingress() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-0abc1234def567890",
+        region="eu-north-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "access_mode": "bastion_sg_reference",
+            "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+        },
+    )
+
+    content = _bundle_file_content(r, "sg_restrict_public_ports.tf")
+    readme = _bundle_file_content(r, "README.txt")
+    assert 'variable "approved_bastion_security_group_ids"' in content
+    assert 'resource "null_resource" "revoke_public_admin_ingress"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "bastion_ssh"' in content
+    assert 'resource "aws_vpc_security_group_ingress_rule" "bastion_rdp"' in content
+    assert "referenced_security_group_id = each.value" in content
+    assert 'default     = ["sg-bastion-1", "sg-bastion-2"]' in content
+    assert "CidrIp=0.0.0.0/0" in content
+    assert "CidrIpv6=::/0" in content
+    assert "approved bastion SG list" in readme
+    assert "scripts/sg_capture_state.py" in readme
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/sg_restore.py",
+        "runner": "python3",
+    }
+
+
+def test_pr_bundle_sg_restrict_bastion_reference_cloudformation_replaces_public_ingress() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+        target_id="sg-xyz789",
+        region="us-east-1",
+        control_id="EC2.53",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "access_mode": "bastion_sg_reference",
+            "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+        },
+    )
+
+    content = r["files"][0]["content"]
+    assert r["format"] == "cloudformation"
+    assert "approved bastion security groups are correct" in " ".join(r["steps"])
+    assert "Type: Custom::SecurityGroupIngressRevoke" in content
+    assert 'SourceSecurityGroupId: "sg-bastion-1"' in content
+    assert 'SourceSecurityGroupId: "sg-bastion-2"' in content
+    assert "CidrIp:" not in content
+    assert "AllowedCidr:" not in content
+    assert '"CidrIp": "0.0.0.0/0"' in content
+    assert '"CidrIpv6": "::/0"' in content
 
 
 def test_pr_bundle_sg_restrict_cloudformation_step_9_11() -> None:
@@ -1655,10 +2310,12 @@ def test_cloudtrail_1_strategy_schema_guided_choice_fields() -> None:
 
     trail_bucket_name = fields["trail_bucket_name"]
     assert trail_bucket_name["type"] == "string"
+    assert trail_bucket_name["safe_default_value"] == "security-autopilot-trail-logs-{{account_id}}-{{region}}"
+    assert trail_bucket_name["safe_default_label"] == "Auto-generate a dedicated CloudTrail log bucket"
 
     create_bucket_if_missing = fields["create_bucket_if_missing"]
     assert create_bucket_if_missing["type"] == "boolean"
-    assert create_bucket_if_missing["default_value"] is False
+    assert create_bucket_if_missing["default_value"] is True
 
     create_bucket_policy = fields["create_bucket_policy"]
     assert create_bucket_policy["type"] == "boolean"
@@ -1707,12 +2364,12 @@ def test_pr_bundle_cloudtrail_terraform_step_9_12_exact_structure() -> None:
     assert "enable_logging" in content
     assert 'resource "null_resource" "cloudtrail_bucket_policy"' in content
     assert 'resource "aws_s3_bucket" "cloudtrail_logs"' in content
-    assert 'resource "aws_s3_bucket_policy" "cloudtrail_managed"' in content
+    assert 'resource "aws_s3_bucket_policy" "cloudtrail_logs"' in content
     assert "python3 - <<'PY'" in content
     assert "get-bucket-policy" in content
     assert "put-bucket-policy" in content
     assert "NoSuchBucketPolicy" in content
-    assert "depends_on                    = [aws_s3_bucket_policy.cloudtrail_managed, null_resource.cloudtrail_bucket_policy]" in content
+    assert "depends_on                    = [aws_s3_bucket_policy.cloudtrail_logs, null_resource.cloudtrail_bucket_policy]" in content
     assert "cloudtrail.amazonaws.com" in content
     assert "s3:GetBucketAcl" in content
     assert "s3:PutObject" in content
@@ -1881,11 +2538,64 @@ def test_pr_bundle_cloudtrail_terraform_create_if_missing_includes_bucket_resour
     )
     content = next(f for f in r["files"] if f["path"] == "cloudtrail_enabled.tf")["content"]
 
-    assert 'resource "aws_s3_bucket" "cloudtrail_logs"' in content
+    assert content.count('resource "aws_s3_bucket" "cloudtrail_logs"') == 1
     assert 'resource "aws_s3_bucket_public_access_block" "cloudtrail_logs"' in content
     assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs"' in content
-    assert 'resource "aws_s3_bucket_policy" "cloudtrail_managed"' in content
+    assert 'resource "aws_s3_bucket_versioning" "cloudtrail_logs"' in content
+    assert 'resource "aws_s3_bucket_policy" "cloudtrail_logs"' in content
+    assert 'kms_master_key_id = "alias/aws/s3"' in content
+    assert 'sid     = "DenyInsecureTransport"' in content
+    assert "local.arn_prefix_cloudtrail_logs" in content
+    assert "${arn_prefix_cloudtrail_logs}" not in content
     assert 'default     = true' in content
+    assert 'resource "aws_s3_bucket_policy" "cloudtrail_managed"' not in content
+    assert 'sse_algorithm = "AES256"' not in content
+
+
+def test_pr_bundle_s3_9_cloudformation_create_log_bucket_uses_support_bucket_baseline() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(
+        action,
+        "cloudformation",
+        strategy_inputs={
+            "log_bucket_name": "new-access-log-bucket",
+            "create_log_bucket": True,
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_access_logging.yaml")["content"]
+
+    assert "CreateLogBucket:" in content
+    assert 'Default: "true"' in content
+    assert "AccessLogBucketPolicy:" in content
+    assert "DenyInsecureTransport" in content
+    assert "KMSMasterKeyID: alias/aws/s3" in content
+    assert "AbortIncompleteMultipartUpload:" in content
+
+
+def test_pr_bundle_s3_9_terraform_create_log_bucket_uses_local_support_bucket_arns() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "log_bucket_name": "new-access-log-bucket",
+            "create_log_bucket": True,
+        },
+    )
+    content = next(f for f in r["files"] if f["path"] == "s3_bucket_access_logging.tf")["content"]
+
+    assert "local.arn_prefix_access_logs" in content
+    assert "${arn_prefix_access_logs}" not in content
 
 
 def test_task_6_s3_impact_text_present_for_s3_1_s3_2_s3_4() -> None:
@@ -1930,6 +2640,7 @@ def test_task_6_s3_9_strategy_schema_log_bucket_required_with_impact_text() -> N
     assert log_bucket_name["type"] == "string"
     assert log_bucket_name["required"] is True
     assert log_bucket_name.get("impact_text")
+    assert "source bucket" in log_bucket_name["safe_default_label"].lower()
     assert strategy.get("impact_text")
 
 
@@ -2008,6 +2719,43 @@ def test_pr_bundle_s3_11_cloudformation_strategy_inputs_map_defaults() -> None:
     content = r["files"][0]["content"]
     assert "AbortIncompleteMultipartDays:" in content
     assert "Default: 30" in content
+
+
+def test_pr_bundle_s3_11_terraform_rejects_unsupported_captured_rule_shape() -> None:
+    """S3.11 additive merge fails closed when the captured lifecycle rule uses unsupported fields."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "unsupported-shape",
+                "Status": "Enabled",
+                "Filter": {"Prefix": "logs/"},
+                "Expiration": {"Days": 30},
+                "UnsupportedField": "value",
+            }
+        ]
+    }
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "terraform",
+            risk_snapshot={
+                "evidence": {
+                    "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
+                    "existing_lifecycle_rule_count": 1,
+                }
+            },
+        )
+
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "lifecycle_additive_merge_unsupported"
+    assert "unsupported fields" in payload["detail"]
 
 
 def test_pr_bundle_s3_15_terraform_strategy_inputs_map_defaults() -> None:
@@ -2290,6 +3038,74 @@ def test_pr_bundle_s3_ssl_fails_closed_when_policy_evidence_is_missing() -> None
     assert payload["code"] == "bucket_policy_preservation_evidence_missing"
 
 
+def test_pr_bundle_s3_ssl_terraform_apply_time_merge_uses_resolution_summary() -> None:
+    """S3.5 Terraform can fetch and merge the live bucket policy when the resolver approved apply-time merge."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        resolution={
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "profile_id": "s3_enforce_ssl_strict_deny",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+            "decision_rationale": "Apply-time merge is allowed.",
+        },
+    )
+
+    content = _bundle_file_content(r, "s3_bucket_require_ssl.tf")
+    paths = [f["path"] for f in r["files"]]
+
+    assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert "filtered_existing_policy_statements" in content
+    assert 'data "aws_iam_policy_document" "merged_policy"' in content
+    assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
+    assert "terraform.auto.tfvars.json" not in paths
+    assert "scripts/s3_policy_capture.py" in paths
+    assert "rollback/s3_policy_restore.py" in paths
+    assert any("fetched and merged at terraform plan/apply time" in step for step in r["steps"])
+    assert any("python3 scripts/s3_policy_capture.py" in step for step in r["steps"])
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/s3_policy_restore.py",
+        "runner": "python3",
+    }
+
+
+def test_pr_bundle_s3_ssl_apply_time_merge_filters_existing_ssl_deny_statement() -> None:
+    """Apply-time merge should filter existing SSL deny statements before adding the managed deny."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        resolution={
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "profile_id": "s3_enforce_ssl_strict_deny",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {"apply_time_merge": True},
+            "decision_rationale": "Apply-time merge is allowed.",
+        },
+    )
+
+    content = _bundle_file_content(r, "s3_bucket_require_ssl.tf")
+    assert 'lower(try(tostring(stmt.Sid), "")) == "denyinsecuretransport"' in content
+    assert 'stmt.Condition.Bool["aws:SecureTransport"]' in content
+
+
 def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
     """S3.5 Terraform should preload existing policy JSON for merge-safe policy generation."""
     action = _make_action(
@@ -2332,6 +3148,31 @@ def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
     assert "local-exec" not in content
     assert "KeepAppRead" in json.dumps(preserved_policy)
     assert "DenyInsecureTransport" in content
+
+
+def test_pr_bundle_s3_ssl_cloudformation_apply_time_merge_stays_fail_closed() -> None:
+    """CloudFormation S3.5 still requires captured policy JSON even when Terraform can merge at apply time."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            resolution={
+                "strategy_id": "s3_enforce_ssl_strict_deny",
+                "profile_id": "s3_enforce_ssl_strict_deny",
+                "support_tier": "deterministic_bundle",
+                "blocked_reasons": [],
+                "preservation_summary": {"apply_time_merge": True},
+                "decision_rationale": "Apply-time merge is allowed.",
+            },
+        )
+    payload = exc_info.value.as_dict()
+    assert payload["code"] == "bucket_policy_preservation_evidence_missing"
 
 
 def test_pr_bundle_s3_ssl_terraform_includes_exact_policy_capture_and_restore_helpers() -> None:

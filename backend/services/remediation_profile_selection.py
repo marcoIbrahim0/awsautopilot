@@ -16,6 +16,7 @@ from backend.services.remediation_profile_catalog import (
     list_profiles_for_strategy,
 )
 from backend.services.remediation_profile_resolver import ResolverRejectedProfile, SupportTier
+from backend.services.remediation_runtime_checks import check_adjacency_safety
 from backend.services.remediation_settings import normalize_remediation_settings
 from backend.services.s3_family_resolution_adapter import (
     S3_11_FAMILY_RESOLVER_KIND,
@@ -24,6 +25,8 @@ from backend.services.s3_family_resolution_adapter import (
     S3_2_FAMILY_RESOLVER_KIND,
     S3_5_FAMILY_RESOLVER_KIND,
     S3_9_FAMILY_RESOLVER_KIND,
+    S3_9_STRATEGY_ID,
+    default_s3_access_logging_log_bucket_name,
     resolve_s3_11_selection,
     resolve_s3_15_selection,
     resolve_s3_2_selection,
@@ -40,6 +43,8 @@ _EC2_53_ACCESS_MODES = {
     "close_and_revoke",
     "restrict_to_ip",
     "restrict_to_cidr",
+    "ssm_only",
+    "bastion_sg_reference",
 }
 _TENANT_DEFAULT_INPUT_PATHS: dict[str, tuple[tuple[str, str], ...]] = {
     "cloudtrail_enable_guided": (
@@ -429,6 +434,7 @@ def _resolve_s3_2_family_selection(
     outcome = resolve_s3_2_selection(
         strategy_id=strategy["strategy_id"],
         requested_profile_id=requested_profile_id,
+        explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
     )
     return _family_selection_resolution(
@@ -439,7 +445,7 @@ def _resolve_s3_2_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
-        persisted_strategy_inputs=_s3_policy_preservation_persisted_inputs(
+        persisted_strategy_inputs=_s3_2_persisted_inputs(
             explicit_inputs=explicit_inputs,
             runtime_signals=runtime_signals,
         ),
@@ -465,6 +471,9 @@ def _resolve_s3_9_family_selection(
         tenant_settings=tenant_settings,
         action=action,
     )
+    if runtime_signals and runtime_signals.get("s3_access_logging_destination_creation_planned") is True:
+        probe_inputs = dict(probe_inputs)
+        probe_inputs["create_log_bucket"] = True
     outcome = resolve_s3_9_selection(
         strategy_id=strategy["strategy_id"],
         requested_profile_id=requested_profile_id,
@@ -729,11 +738,15 @@ def _resolve_config_family_selection(
             "preservation_summary": _config_preservation_summary(
                 strategy_id=strategy["strategy_id"],
                 resolved_inputs=resolved_inputs,
+                explicit_inputs=explicit_inputs,
                 runtime_signals=runtime_signals,
             ),
             "decision_rationale": _config_rationale(
                 strategy_id=strategy["strategy_id"],
                 profile_id=profile.profile_id,
+                resolved_inputs=resolved_inputs,
+                explicit_inputs=explicit_inputs,
+                runtime_signals=runtime_signals,
                 tenant_settings=tenant_settings,
                 blocked_reasons=blocked_reasons,
             ),
@@ -748,6 +761,89 @@ def _resolve_config_family_selection(
             explicit_inputs=explicit_inputs,
         ),
     )
+
+
+def _apply_adjacency_gate(
+    resolution: ProfileSelectionResolution,
+    *,
+    action_type: str | None,
+    resolved_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> ProfileSelectionResolution:
+    """Tail-call gate: downgrade executable tiers when adjacency safety proof is missing."""
+    if not action_type:
+        return resolution
+    # Safety-net: skip if the family resolver already downgraded to a non-executable tier.
+    if resolution.support_tier in ("review_required_bundle", "manual_guidance_only"):
+        return resolution
+    from backend.services.remediation_strategy import get_adjacency_contract
+
+    contract = get_adjacency_contract(action_type)
+    if contract is None:
+        return resolution
+
+    # Build probe payload from resolved_inputs + runtime_signals
+    probe_payload: dict[str, Any] = dict(runtime_signals or {})
+    if "helper_bucket_creation_planned" not in probe_payload:
+        probe_payload["helper_bucket_creation_planned"] = _helper_bucket_creation_planned(
+            action_type=action_type,
+            resolved_inputs=resolved_inputs,
+        )
+    if resolved_inputs:
+        for key in ("kms_key_mode", "s3_customer_kms_dependency_proven"):
+            if key in resolved_inputs:
+                probe_payload.setdefault(key, resolved_inputs[key])
+
+    adjacency = check_adjacency_safety(action_type, probe_payload)
+    if adjacency["safe"]:
+        return resolution
+
+    reason = str(adjacency.get("downgrade_reason") or "")
+    blocked_reasons = list(resolution.blocked_reasons)
+    if reason and reason not in blocked_reasons:
+        blocked_reasons.append(reason)
+
+    support_tier = resolution.support_tier
+    if support_tier == "deterministic_bundle":
+        support_tier = "review_required_bundle"
+
+    preservation_summary = dict(resolution.preservation_summary)
+    preservation_summary["adjacency_safe"] = False
+
+    return ProfileSelectionResolution(
+        profile=resolution.profile,
+        support_tier=support_tier,
+        resolved_inputs=resolution.resolved_inputs,
+        persisted_strategy_inputs=resolution.persisted_strategy_inputs,
+        missing_inputs=resolution.missing_inputs,
+        missing_defaults=resolution.missing_defaults,
+        blocked_reasons=blocked_reasons,
+        rejected_profiles=resolution.rejected_profiles,
+        preservation_summary=preservation_summary,
+        decision_rationale=resolution.decision_rationale,
+    )
+
+
+def _helper_bucket_creation_planned(
+    *,
+    action_type: str | None,
+    resolved_inputs: Mapping[str, Any] | None,
+) -> bool:
+    if not action_type or not isinstance(resolved_inputs, Mapping):
+        return False
+    if action_type == "aws_config_enabled":
+        return resolved_inputs.get("delivery_bucket_mode") == "create_new" and _present(
+            resolved_inputs.get("delivery_bucket")
+        )
+    if action_type == "cloudtrail_enabled":
+        return resolved_inputs.get("create_bucket_if_missing") is True and _present(
+            resolved_inputs.get("trail_bucket_name")
+        )
+    if action_type == "s3_bucket_access_logging":
+        return resolved_inputs.get("create_log_bucket") is True and _present(
+            resolved_inputs.get("log_bucket_name")
+        )
+    return False
 
 
 def _family_selection_resolution(
@@ -775,7 +871,7 @@ def _family_selection_resolution(
             runtime_signals=runtime_signals,
             action=action,
         )
-    return ProfileSelectionResolution(
+    resolution = ProfileSelectionResolution(
         profile=profile,
         support_tier=outcome["support_tier"],
         resolved_inputs=resolved_values,
@@ -795,6 +891,12 @@ def _family_selection_resolution(
         rejected_profiles=list(outcome.get("rejected_profiles") or []),
         preservation_summary=copy.deepcopy(dict(outcome.get("preservation_summary") or {})),
         decision_rationale=str(outcome.get("decision_rationale") or ""),
+    )
+    return _apply_adjacency_gate(
+        resolution,
+        action_type=action_type,
+        resolved_inputs=resolved_values,
+        runtime_signals=runtime_signals,
     )
 
 
@@ -836,7 +938,7 @@ def _cloudtrail_resolved_inputs(
     runtime_signals: Mapping[str, Any] | None,
     action: Action | None,
 ) -> dict[str, Any]:
-    return _resolved_inputs(
+    values = _resolved_inputs(
         strategy=strategy,
         profile=profile,
         explicit_inputs=explicit_inputs,
@@ -844,6 +946,13 @@ def _cloudtrail_resolved_inputs(
         runtime_signals=runtime_signals,
         action=action,
     )
+    if (
+        "create_bucket_if_missing" not in dict(explicit_inputs or {})
+        and _present(values.get("trail_bucket_name"))
+        and _clean_text(_settings_value(tenant_settings, "cloudtrail.default_bucket_name")) == values.get("trail_bucket_name")
+    ):
+        values["create_bucket_if_missing"] = False
+    return values
 
 
 def _cloudtrail_bucket_source(
@@ -857,11 +966,14 @@ def _cloudtrail_bucket_source(
         return None
     if _present(_mapping_value(explicit_inputs, "trail_bucket_name")):
         return "user_input"
+    runtime_source = _clean_text(_mapping_value(runtime_signals, "cloudtrail_resolved_bucket_source"))
+    if runtime_source in {"existing_trail", "safe_default"}:
+        return runtime_source
     if runtime_signals and _present(_runtime_default_inputs("cloudtrail_enable_guided", "cloudtrail_enable_guided", runtime_signals).get("trail_bucket_name")):
         return "existing_trail"
     if _present(_settings_value(tenant_settings, "cloudtrail.default_bucket_name")):
         return "tenant_default"
-    return None
+    return "safe_default"
 
 
 def _cloudtrail_bucket_mode(resolved_inputs: Mapping[str, Any]) -> str:
@@ -893,6 +1005,10 @@ def _config_resolved_inputs(
         values.pop("existing_bucket_name", None)
     if "encrypt_with_kms" not in dict(explicit_inputs or {}) and _present(values.get("kms_key_arn")):
         values["encrypt_with_kms"] = True
+    existing_recorder_scope = _config_existing_recorder_scope(runtime_signals)
+    selected_scope = _clean_text(values.get("recording_scope")) or "keep_existing"
+    if existing_recorder_scope == "custom" and selected_scope != "all_resources":
+        values["recording_scope"] = "all_resources"
     return {key: value for key, value in values.items() if _present(value)}
 
 
@@ -910,15 +1026,24 @@ def _schema_defaults_without_keys(
     for field in strategy["input_schema"].get("fields", []):
         if field["key"] in ignored_keys:
             continue
-        default_value = _render_field_default(field, action=action)
+        default_value = _render_field_default(field, strategy_id=strategy["strategy_id"], action=action)
         if default_value is not _MISSING:
             values[field["key"]] = default_value
     return values
 
 
-def _render_field_default(field: StrategyInputField, *, action: Action | None) -> Any:
+def _render_field_default(
+    field: StrategyInputField,
+    *,
+    strategy_id: str,
+    action: Action | None,
+) -> Any:
     if "default_value" in field:
         return copy.deepcopy(field["default_value"])
+    if strategy_id == S3_9_STRATEGY_ID and field["key"] == "log_bucket_name":
+        safe_default = default_s3_access_logging_log_bucket_name(action)
+        if safe_default is not None:
+            return safe_default
     if "safe_default_value" not in field:
         return _MISSING
     return _render_safe_default(field["safe_default_value"], action=action)
@@ -1050,12 +1175,8 @@ def _ec2_53_blocked_reasons(
         if len(approved_cidrs) > 1:
             return ["Multiple approved admin CIDRs are configured; explicit allowed_cidr is required."]
         return ["No approved admin CIDRs are configured; explicit allowed_cidr is required."]
-    if profile_id == "ssm_only":
-        return ["Wave 6 downgrades 'ssm_only' because SSM-only execution is not implemented."]
     if profile_id == "bastion_sg_reference":
-        reasons = [
-            "Wave 6 downgrades 'bastion_sg_reference' because SG-reference execution is not implemented."
-        ]
+        reasons = []
         if not normalized_settings.get("approved_bastion_security_group_ids"):
             reasons.append("No approved bastion security group IDs are configured.")
         return reasons
@@ -1067,13 +1188,12 @@ def _ec2_53_support_tier(
     blocked_reasons: list[str],
     tenant_settings: Mapping[str, Any] | None,
 ) -> SupportTier:
-    if profile_id in {"close_public", "close_and_revoke"}:
+    if profile_id in {"close_public", "close_and_revoke", "ssm_only"}:
         return "deterministic_bundle"
     if profile_id in {"restrict_to_ip", "restrict_to_cidr"}:
         return "review_required_bundle" if blocked_reasons else "deterministic_bundle"
     if profile_id == "bastion_sg_reference":
-        settings = normalize_remediation_settings(tenant_settings)
-        return "review_required_bundle" if settings.get("approved_bastion_security_group_ids") else "manual_guidance_only"
+        return "manual_guidance_only" if blocked_reasons else "deterministic_bundle"
     return "manual_guidance_only"
 
 
@@ -1090,6 +1210,9 @@ def _ec2_53_persisted_inputs(
         values["allowed_cidr"] = resolved_inputs["allowed_cidr"]
     if _present(resolved_inputs.get("allowed_cidr_ipv6")):
         values["allowed_cidr_ipv6"] = resolved_inputs["allowed_cidr_ipv6"]
+    bastion_sg_ids = resolved_inputs.get("approved_bastion_security_group_ids")
+    if isinstance(bastion_sg_ids, list) and bastion_sg_ids:
+        values["approved_bastion_security_group_ids"] = copy.deepcopy(bastion_sg_ids)
     return values
 
 
@@ -1124,12 +1247,23 @@ def _cloudtrail_blocked_reasons(
                     )
                 )
         else:
-            if runtime_signals.get("cloudtrail_log_bucket_reachable") is False:
+            support_probe = _mapping_value(runtime_signals, "support_bucket_probe")
+            if isinstance(support_probe, Mapping):
+                if support_probe.get("safe") is not True:
+                    reasons.append(
+                        str(
+                            runtime_signals.get("cloudtrail_log_bucket_error")
+                            or "CloudTrail log bucket does not meet the shared support-bucket baseline."
+                        )
+                    )
+            elif runtime_signals.get("cloudtrail_log_bucket_reachable") is False:
                 reasons.append(
                     str(runtime_signals.get("cloudtrail_log_bucket_error") or "CloudTrail log bucket could not be verified from this account context.")
                 )
             elif runtime_signals.get("cloudtrail_log_bucket_reachable") is not True:
                 reasons.append("CloudTrail log bucket reachability has not been proven from this account context.")
+            else:
+                reasons.append("CloudTrail log bucket safety has not been proven against the shared support-bucket baseline.")
     if resolved_inputs.get("create_bucket_policy") is False:
         reasons.append(
             "CloudTrail bundle is review-only when create_bucket_policy=false because required delivery policy is managed outside the bundle."
@@ -1151,6 +1285,10 @@ def _cloudtrail_preservation_summary(
     return {
         "trail_bucket_name_resolved": _present(resolved_inputs.get("trail_bucket_name")),
         "log_bucket_reachable": bool(runtime_signals and runtime_signals.get("cloudtrail_log_bucket_reachable") is True),
+        "support_bucket_safe": bool(
+            isinstance(_mapping_value(runtime_signals, "support_bucket_probe"), Mapping)
+            and _mapping_value(_mapping_value(runtime_signals, "support_bucket_probe"), "safe") is True
+        ),
         "trail_bucket_source": _cloudtrail_bucket_source(
             resolved_inputs=resolved_inputs,
             explicit_inputs=explicit_inputs,
@@ -1206,6 +1344,7 @@ def _config_local_blocked_reasons(
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons: list[str] = []
+    reasons.extend(_config_recording_scope_reasons(resolved_inputs, runtime_signals=runtime_signals))
     if resolved_inputs.get("delivery_bucket_mode") == "use_existing":
         reasons.extend(_config_existing_bucket_reasons(runtime_signals))
     reasons.extend(_config_kms_reasons(resolved_inputs, runtime_signals=runtime_signals))
@@ -1218,6 +1357,7 @@ def _config_centralized_blocked_reasons(
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons: list[str] = []
+    reasons.extend(_config_recording_scope_reasons(resolved_inputs, runtime_signals=runtime_signals))
     if not (_present(resolved_inputs.get("delivery_bucket")) or _present(resolved_inputs.get("existing_bucket_name"))):
         reasons.append(
             "Centralized AWS Config delivery bucket is unresolved. Configure config.default_bucket_name or provide strategy_inputs.delivery_bucket."
@@ -1247,6 +1387,43 @@ def _config_existing_bucket_reasons(runtime_signals: Mapping[str, Any] | None) -
     return reasons
 
 
+def _config_recording_scope_reasons(
+    resolved_inputs: Mapping[str, Any],
+    *,
+    runtime_signals: Mapping[str, Any] | None,
+) -> list[str]:
+    selected_scope = str(resolved_inputs.get("recording_scope") or "keep_existing").strip() or "keep_existing"
+    if selected_scope == "all_resources":
+        return []
+    if _config_existing_recorder_scope(runtime_signals) == "custom":
+        return [
+            "Keeping the existing selective AWS Config recorder scope would still fail Config.1. Choose recording_scope=all_resources for an executable bundle."
+        ]
+    return []
+
+
+def _config_existing_recorder_scope(runtime_signals: Mapping[str, Any] | None) -> str | None:
+    evidence = _mapping_value(runtime_signals, "evidence")
+    if not isinstance(evidence, Mapping):
+        return None
+    if evidence.get("config_recorder_exists") is not True:
+        return None
+    return _clean_text(evidence.get("config_recording_scope"))
+
+
+def _config_recording_scope_auto_promoted(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> bool:
+    return (
+        _config_existing_recorder_scope(runtime_signals) == "custom"
+        and (_clean_text(resolved_inputs.get("recording_scope")) or "keep_existing") == "all_resources"
+        and _clean_text(_mapping_value(explicit_inputs, "recording_scope")) != "all_resources"
+    )
+
+
 def _config_kms_reasons(
     resolved_inputs: Mapping[str, Any],
     *,
@@ -1267,12 +1444,25 @@ def _config_preservation_summary(
     *,
     strategy_id: str,
     resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    auto_promoted = _config_recording_scope_auto_promoted(
+        resolved_inputs=resolved_inputs,
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    )
     return {
         "delivery_mode": "centralized_delivery"
         if strategy_id == "config_enable_centralized_delivery"
         else "account_local_delivery",
+        "recording_scope": str(resolved_inputs.get("recording_scope") or "keep_existing"),
+        "existing_recorder_scope": _config_existing_recorder_scope(runtime_signals),
+        "recording_scope_auto_promoted": auto_promoted,
+        "selective_recorder_requires_review": any(
+            reason.startswith("Keeping the existing selective AWS Config recorder scope")
+            for reason in _config_recording_scope_reasons(resolved_inputs, runtime_signals=runtime_signals)
+        ),
         "existing_bucket_path": resolved_inputs.get("delivery_bucket_mode") == "use_existing",
         "delivery_bucket_resolved": _present(resolved_inputs.get("delivery_bucket"))
         or _present(resolved_inputs.get("existing_bucket_name")),
@@ -1309,10 +1499,12 @@ def _s3_9_persisted_inputs(
     values = copy.deepcopy(dict(explicit_inputs or {}))
     if _present(resolved_inputs.get("log_bucket_name")):
         values["log_bucket_name"] = resolved_inputs["log_bucket_name"]
+    if resolved_inputs.get("create_log_bucket") is True:
+        values["create_log_bucket"] = True
     return values
 
 
-def _s3_policy_preservation_persisted_inputs(
+def _s3_2_persisted_inputs(
     *,
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
@@ -1327,7 +1519,21 @@ def _s3_policy_preservation_persisted_inputs(
     statement_count = _non_negative_int(evidence.get("existing_bucket_policy_statement_count"))
     if statement_count is not None:
         values["existing_bucket_policy_statement_count"] = statement_count
+    website_json = _clean_text(evidence.get("existing_bucket_website_configuration_json"))
+    if website_json is not None:
+        values["existing_bucket_website_configuration_json"] = website_json
     return values
+
+
+def _s3_policy_preservation_persisted_inputs(
+    *,
+    explicit_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return _s3_2_persisted_inputs(
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    )
 
 
 def _non_negative_int(value: Any) -> int | None:
@@ -1399,6 +1605,9 @@ def _config_rationale(
     *,
     strategy_id: str,
     profile_id: str,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+    runtime_signals: Mapping[str, Any] | None,
     tenant_settings: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
@@ -1408,6 +1617,15 @@ def _config_rationale(
         profile_id=profile_id,
         blocked_reasons=blocked_reasons,
     )
+    if _config_recording_scope_auto_promoted(
+        resolved_inputs=resolved_inputs,
+        explicit_inputs=explicit_inputs,
+        runtime_signals=runtime_signals,
+    ):
+        prefix = (
+            f"{prefix} Runtime AWS Config recorder evidence showed a selective/custom scope, "
+            "so the resolver auto-promoted recording_scope to 'all_resources' for Config.1 compliance."
+        )
     if not preferred_mode:
         return prefix
     return f"{prefix} Tenant config.delivery_mode preference is '{preferred_mode}'."
