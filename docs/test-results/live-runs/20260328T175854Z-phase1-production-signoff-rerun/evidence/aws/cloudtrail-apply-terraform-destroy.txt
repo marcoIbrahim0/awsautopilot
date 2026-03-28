@@ -1,0 +1,258 @@
+aws_s3_bucket.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_public_access_block.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_versioning.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_lifecycle_configuration.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_server_side_encryption_configuration.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+data.aws_iam_policy_document.cloudtrail_delivery: Reading...
+data.aws_iam_policy_document.cloudtrail_delivery: Read complete after 0s [id=3056965]
+data.aws_iam_policy_document.ssl_only_cloudtrail_logs: Reading...
+data.aws_iam_policy_document.ssl_only_cloudtrail_logs: Read complete after 0s [id=502546979]
+aws_s3_bucket_policy.cloudtrail_logs[0]: Refreshing state... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_cloudtrail.security_autopilot: Refreshing state... [id=arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail-20260328t181200z]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_cloudtrail.security_autopilot will be destroyed
+  - resource "aws_cloudtrail" "security_autopilot" {
+      - arn                           = "arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail-20260328t181200z" -> null
+      - enable_log_file_validation    = false -> null
+      - enable_logging                = true -> null
+      - home_region                   = "eu-north-1" -> null
+      - id                            = "arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail-20260328t181200z" -> null
+      - include_global_service_events = true -> null
+      - is_multi_region_trail         = true -> null
+      - is_organization_trail         = false -> null
+      - name                          = "security-autopilot-trail-20260328t181200z" -> null
+      - s3_bucket_name                = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {} -> null
+        # (6 unchanged attributes hidden)
+    }
+
+  # aws_s3_bucket.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket" "cloudtrail_logs" {
+      - arn                         = "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - bucket                      = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - bucket_domain_name          = "ocypheris-live-ct-20260328t181200z-eu-north-1.s3.amazonaws.com" -> null
+      - bucket_regional_domain_name = "ocypheris-live-ct-20260328t181200z-eu-north-1.s3.eu-north-1.amazonaws.com" -> null
+      - force_destroy               = false -> null
+      - hosted_zone_id              = "Z3BAZG2TWCNX0D" -> null
+      - id                          = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - object_lock_enabled         = false -> null
+      - policy                      = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "s3:GetBucketAcl"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "cloudtrail.amazonaws.com"
+                        }
+                      - Resource  = "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1"
+                      - Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  - {
+                      - Action    = "s3:PutObject"
+                      - Condition = {
+                          - StringEquals = {
+                              - "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "cloudtrail.amazonaws.com"
+                        }
+                      - Resource  = "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1/AWSLogs/696505809372/CloudTrail/*"
+                      - Sid       = "AWSCloudTrailWrite"
+                    },
+                  - {
+                      - Action    = "s3:*"
+                      - Condition = {
+                          - Bool = {
+                              - "aws:SecureTransport" = "false"
+                            }
+                        }
+                      - Effect    = "Deny"
+                      - Principal = "*"
+                      - Resource  = [
+                          - "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1/*",
+                          - "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+                        ]
+                      - Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - region                      = "eu-north-1" -> null
+      - request_payer               = "BucketOwner" -> null
+      - tags                        = {} -> null
+      - tags_all                    = {} -> null
+        # (2 unchanged attributes hidden)
+
+      - grant {
+          - id          = "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc" -> null
+          - permissions = [
+              - "FULL_CONTROL",
+            ] -> null
+          - type        = "CanonicalUser" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - lifecycle_rule {
+          - abort_incomplete_multipart_upload_days = 7 -> null
+          - enabled                                = true -> null
+          - id                                     = "abort-incomplete-multipart" -> null
+          - tags                                   = {} -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - server_side_encryption_configuration {
+          - rule {
+              - bucket_key_enabled = true -> null
+
+              - apply_server_side_encryption_by_default {
+                  - kms_master_key_id = "alias/aws/s3" -> null
+                  - sse_algorithm     = "aws:kms" -> null
+                }
+            }
+        }
+
+      - versioning {
+          - enabled    = true -> null
+          - mfa_delete = false -> null
+        }
+    }
+
+  # aws_s3_bucket_lifecycle_configuration.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs" {
+      - bucket                                 = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - id                                     = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - transition_default_minimum_object_size = "all_storage_classes_128K" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - id     = "abort-incomplete-multipart" -> null
+          - status = "Enabled" -> null
+            # (1 unchanged attribute hidden)
+
+          - abort_incomplete_multipart_upload {
+              - days_after_initiation = 7 -> null
+            }
+
+          - filter {
+                # (1 unchanged attribute hidden)
+            }
+        }
+    }
+
+  # aws_s3_bucket_policy.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket_policy" "cloudtrail_logs" {
+      - bucket = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - id     = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - policy = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "s3:GetBucketAcl"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "cloudtrail.amazonaws.com"
+                        }
+                      - Resource  = "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1"
+                      - Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  - {
+                      - Action    = "s3:PutObject"
+                      - Condition = {
+                          - StringEquals = {
+                              - "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "cloudtrail.amazonaws.com"
+                        }
+                      - Resource  = "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1/AWSLogs/696505809372/CloudTrail/*"
+                      - Sid       = "AWSCloudTrailWrite"
+                    },
+                  - {
+                      - Action    = "s3:*"
+                      - Condition = {
+                          - Bool = {
+                              - "aws:SecureTransport" = "false"
+                            }
+                        }
+                      - Effect    = "Deny"
+                      - Principal = "*"
+                      - Resource  = [
+                          - "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1/*",
+                          - "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+                        ]
+                      - Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+    }
+
+  # aws_s3_bucket_public_access_block.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "cloudtrail_logs" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - id                      = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - ignore_public_acls      = true -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs" {
+      - bucket                = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - id                    = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - bucket_key_enabled = true -> null
+
+          - apply_server_side_encryption_by_default {
+              - kms_master_key_id = "alias/aws/s3" -> null
+              - sse_algorithm     = "aws:kms" -> null
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.cloudtrail_logs[0] will be destroyed
+  - resource "aws_s3_bucket_versioning" "cloudtrail_logs" {
+      - bucket                = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+      - id                    = "ocypheris-live-ct-20260328t181200z-eu-north-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - versioning_configuration {
+          - status     = "Enabled" -> null
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+Plan: 0 to add, 0 to change, 7 to destroy.
+aws_s3_bucket_public_access_block.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_versioning.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_server_side_encryption_configuration.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_cloudtrail.security_autopilot: Destroying... [id=arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail-20260328t181200z]
+aws_s3_bucket_lifecycle_configuration.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_server_side_encryption_configuration.cloudtrail_logs[0]: Destruction complete after 1s
+aws_s3_bucket_versioning.cloudtrail_logs[0]: Destruction complete after 1s
+aws_s3_bucket_lifecycle_configuration.cloudtrail_logs[0]: Destruction complete after 1s
+aws_s3_bucket_public_access_block.cloudtrail_logs[0]: Destruction complete after 1s
+aws_cloudtrail.security_autopilot: Destruction complete after 1s
+aws_s3_bucket_policy.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+aws_s3_bucket_policy.cloudtrail_logs[0]: Destruction complete after 1s
+aws_s3_bucket.cloudtrail_logs[0]: Destroying... [id=ocypheris-live-ct-20260328t181200z-eu-north-1]
+
+Error: deleting S3 Bucket (ocypheris-live-ct-20260328t181200z-eu-north-1): operation error S3: DeleteBucket, https response error StatusCode: 409, RequestID: B0CC1FHR4P08Q3NK, HostID: JpMQCQxIW6xSX71mjtgqvR6Qx9Cq6Ol4XvBWP8NlwP34iTU9XV9dro7WNlg5O8hkrw2lMvj7U9T9U/wlGOf0bwEDi0G98ck8, api error BucketNotEmpty: The bucket you tried to delete is not empty. You must delete all versions in the bucket.
+

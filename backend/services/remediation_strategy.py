@@ -299,6 +299,77 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             legacy_pr_bundle_variant="cloudfront_oac_private_s3",
         ),
         RemediationStrategy(
+            strategy_id="s3_migrate_website_cloudfront_private",
+            action_type="s3_bucket_block_public_access",
+            label="Migrate S3 website to CloudFront + private S3",
+            mode="pr_only",
+            risk_level="medium",
+            recommended=False,
+            requires_inputs=True,
+            input_schema=_schema(
+                [
+                    {
+                        "key": "aliases",
+                        "type": "string_array",
+                        "required": True,
+                        "description": "DNS hostnames that should point to the CloudFront distribution.",
+                        "group": "DNS Cutover",
+                    },
+                    {
+                        "key": "route53_hosted_zone_id",
+                        "type": "string",
+                        "required": True,
+                        "description": "Route53 hosted zone ID that owns the website aliases.",
+                        "group": "DNS Cutover",
+                    },
+                    {
+                        "key": "acm_certificate_arn",
+                        "type": "string",
+                        "required": True,
+                        "description": "ACM certificate ARN for the website aliases. CloudFront certificates must live in us-east-1.",
+                        "group": "DNS Cutover",
+                    },
+                    {
+                        "key": "price_class",
+                        "type": "select",
+                        "required": False,
+                        "description": "CloudFront price class.",
+                        "default_value": "PriceClass_100",
+                        "group": "CloudFront",
+                        "options": [
+                            {"value": "PriceClass_100", "label": "North America + Europe"},
+                            {"value": "PriceClass_200", "label": "Most regions"},
+                            {"value": "PriceClass_All", "label": "All edge locations"},
+                        ],
+                    },
+                    {
+                        "key": "default_root_object_override",
+                        "type": "string",
+                        "required": False,
+                        "description": "Optional CloudFront default root object override when it should differ from the captured website index document.",
+                        "group": "CloudFront",
+                    },
+                ]
+            ),
+            supports_exception_flow=False,
+            exception_only=False,
+            impact_text=(
+                "Creates a CloudFront distribution and Route53 alias cutover, removes S3 website hosting, "
+                "and enables bucket-level public access block settings while serving content from private S3."
+            ),
+            warnings=[
+                (
+                    "This strategy changes origin routing and DNS. It is intended only for buckets currently "
+                    "using S3 static website hosting with a simple index/error configuration."
+                ),
+                (
+                    "CloudFront alias cutover requires explicit Route53 zone and ACM certificate inputs. "
+                    "Certificates must be compatible with CloudFront."
+                ),
+            ],
+            legacy_pr_bundle_variant=None,
+        ),
+        RemediationStrategy(
             strategy_id="s3_keep_public_exception",
             action_type="s3_bucket_block_public_access",
             label="Keep intentionally public (exception path)",
@@ -347,7 +418,28 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             risk_level="medium",
             recommended=True,
             requires_inputs=False,
-            input_schema=_schema(),
+            input_schema=_schema(
+                [
+                    {
+                        "key": "recording_scope",
+                        "type": "select",
+                        "required": False,
+                        "description": "How should AWS Config recording scope be set?",
+                        "default_value": "keep_existing",
+                        "group": "Recorder Settings",
+                        "options": [
+                            {
+                                "value": "all_resources",
+                                "label": "All resources",
+                            },
+                            {
+                                "value": "keep_existing",
+                                "label": "Keep existing scope",
+                            },
+                        ],
+                    }
+                ]
+            ),
             supports_exception_flow=False,
             exception_only=False,
             warnings=[
@@ -498,13 +590,15 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                             "When it is on, this becomes the exact bucket name to create and use."
                         ),
                         "group": "Delivery Settings",
+                        "safe_default_value": "security-autopilot-trail-logs-{{account_id}}-{{region}}",
+                        "safe_default_label": "Auto-generate a dedicated CloudTrail log bucket",
                     },
                     {
                         "key": "create_bucket_if_missing",
                         "type": "boolean",
                         "required": False,
                         "description": "Create a new CloudTrail log bucket if the named bucket does not already exist.",
-                        "default_value": False,
+                        "default_value": True,
                         "group": "Delivery Settings",
                     },
                     {
@@ -823,8 +917,8 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                             "log bucket."
                         ),
                         "group": "Logging Settings",
-                        "safe_default_value": "security-autopilot-access-logs-{{account_id}}",
-                        "safe_default_label": "Use a dedicated access-log bucket",
+                        "safe_default_value": "{{source_bucket}}-access-logs",
+                        "safe_default_label": "Auto-generate a dedicated access-log bucket from the source bucket name",
                     },
                 ]
             ),
@@ -1095,6 +1189,24 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
                                 "impact_text": (
                                     "Only traffic from the provided CIDR range (for example, office/VPN) "
                                     "will be allowed on ports 22 and 3389."
+                                ),
+                            },
+                            {
+                                "value": "ssm_only",
+                                "label": "Use SSM only",
+                                "impact_text": (
+                                    "Public SSH/RDP ingress on ports 22 and 3389 will be removed. "
+                                    "Instances must already be reachable through SSM Session Manager "
+                                    "before you apply this change."
+                                ),
+                            },
+                            {
+                                "value": "bastion_sg_reference",
+                                "label": "Use approved bastion security groups",
+                                "impact_text": (
+                                    "Public SSH/RDP ingress on ports 22 and 3389 will be removed. "
+                                    "Replacement admin access will be limited to the tenant's approved "
+                                    "bastion security groups."
                                 ),
                             },
                         ],
@@ -1435,6 +1547,8 @@ def _resolve_impact_field_values(
         if value is None:
             value = field.get("default_value")
         values[key] = value
+    for key, value in strategy_inputs.items():
+        values.setdefault(key, value)
     return values
 
 
@@ -1567,9 +1681,20 @@ def _simulate_ec2_53(values: dict[str, Any], runtime_signals: dict[str, Any] | N
     access_mode = str(values.get("access_mode") or "close_public").strip() or "close_public"
     allowed_cidr = str(values.get("allowed_cidr") or "10.0.0.0/8").strip() or "10.0.0.0/8"
     allowed_cidr_ipv6 = str(values.get("allowed_cidr_ipv6") or "").strip()
+    bastion_sg_ids = [
+        str(item).strip()
+        for item in (values.get("approved_bastion_security_group_ids") or [])
+        if str(item).strip()
+    ]
     public_ipv4_ports = _normalize_port_list(evidence.get("public_admin_ipv4_ports"))
     public_ipv6_ports = _normalize_port_list(evidence.get("public_admin_ipv6_ports"))
-    remove_public = access_mode == "close_and_revoke"
+    remove_public = access_mode in {"close_and_revoke", "ssm_only", "bastion_sg_reference"}
+    uses_restricted_cidrs = access_mode not in {"ssm_only", "bastion_sg_reference"}
+    operator_access_path = None
+    if access_mode == "ssm_only":
+        operator_access_path = "ssm_session_manager"
+    elif access_mode == "bastion_sg_reference":
+        operator_access_path = "approved_bastion_security_groups"
 
     before_state: dict[str, Any] = {
         "security_group_id": evidence.get("security_group_id"),
@@ -1581,9 +1706,11 @@ def _simulate_ec2_53(values: dict[str, Any], runtime_signals: dict[str, Any] | N
         "security_group_id": evidence.get("security_group_id"),
         "public_admin_ipv4_ports": [] if remove_public else public_ipv4_ports,
         "public_admin_ipv6_ports": [] if remove_public else public_ipv6_ports,
-        "restricted_ipv4_cidr": allowed_cidr,
-        "restricted_ipv6_cidr": allowed_cidr_ipv6 or None,
+        "restricted_ipv4_cidr": allowed_cidr if uses_restricted_cidrs else None,
+        "restricted_ipv6_cidr": allowed_cidr_ipv6 if uses_restricted_cidrs and allowed_cidr_ipv6 else None,
         "access_mode": access_mode,
+        "operator_access_path": operator_access_path,
+        "approved_bastion_security_group_ids": bastion_sg_ids if access_mode == "bastion_sg_reference" else [],
     }
 
     diff_lines: list[PreviewDiffLine] = []
@@ -1607,18 +1734,30 @@ def _simulate_ec2_53(values: dict[str, Any], runtime_signals: dict[str, Any] | N
     else:
         _append_diff_line(diff_lines, "unchanged", "Public admin ingress (IPv6)", "none detected")
 
-    _append_diff_line(
-        diff_lines,
-        "add",
-        "Restricted admin ingress (IPv4)",
-        f"{allowed_cidr} on tcp/22, tcp/3389",
-    )
-    if allowed_cidr_ipv6:
+    if uses_restricted_cidrs:
         _append_diff_line(
             diff_lines,
             "add",
-            "Restricted admin ingress (IPv6)",
-            f"{allowed_cidr_ipv6} on tcp/22, tcp/3389",
+            "Restricted admin ingress (IPv4)",
+            f"{allowed_cidr} on tcp/22, tcp/3389",
+        )
+        if allowed_cidr_ipv6:
+            _append_diff_line(
+                diff_lines,
+                "add",
+                "Restricted admin ingress (IPv6)",
+                f"{allowed_cidr_ipv6} on tcp/22, tcp/3389",
+            )
+    else:
+        _append_diff_line(
+            diff_lines,
+            "add",
+            "Operator access path",
+            (
+                "SSM Session Manager prerequisite"
+                if access_mode == "ssm_only"
+                else f"Approved bastion security groups: {', '.join(bastion_sg_ids) or 'not configured'}"
+            ),
         )
     return {"before_state": before_state, "after_state": after_state, "diff_lines": diff_lines}
 
@@ -1696,8 +1835,6 @@ def _resolve_config_target_bucket(
 
 
 def _resolve_config_scope(strategy_id: str, values: dict[str, Any], before_scope: str) -> str:
-    if strategy_id == "config_enable_account_local_delivery":
-        return "all_resources"
     selected_scope = str(values.get("recording_scope") or "keep_existing").strip() or "keep_existing"
     if selected_scope == "all_resources":
         return "all_resources"
@@ -1971,3 +2108,178 @@ def _validate_enum_and_options(key: str, value: str, field: StrategyInputField) 
     option_values = [option["value"] for option in options]
     if value not in option_values:
         raise ValueError(f"strategy_inputs.{key} must be one of: {', '.join(option_values)}.")
+
+
+# ---------------------------------------------------------------------------
+# Adjacency safety contract registry
+# ---------------------------------------------------------------------------
+
+class AdjacencyContract(TypedDict):
+    """Safety contract declaring what a remediation family touches
+    beyond its own target scope."""
+
+    target_scope_proof: str
+    adjacent_controls_at_risk: list[str]
+    creates_helper_resources: bool
+    merge_safe_preservation_required: bool
+    downgrade_rule: str
+
+
+ADJACENCY_REGISTRY: dict[str, AdjacencyContract] = {
+    # --- P0: creates helper resources (support buckets) ---
+    "s3_bucket_access_logging": {
+        "target_scope_proof": "source_bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": ["S3.2", "S3.5", "S3.9", "S3.11", "S3.15"],
+        "creates_helper_resources": True,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when the destination log bucket fails "
+            "public-access-block, encryption, SSL-only policy, or lifecycle verification."
+        ),
+    },
+    "cloudtrail_enabled": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": ["S3.2", "S3.5", "S3.9", "S3.11", "S3.15"],
+        "creates_helper_resources": True,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when the CloudTrail log bucket fails "
+            "public-access-block, encryption, SSL-only policy, or lifecycle verification."
+        ),
+    },
+    "aws_config_enabled": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": ["S3.2", "S3.5", "S3.9", "S3.11", "S3.15"],
+        "creates_helper_resources": True,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when the delivery bucket is missing "
+            "public-access block, SSL-only policy, or default encryption; "
+            "or when cross-account bucket policies cannot be read."
+        ),
+    },
+    # --- P1: merge-safe preservation required ---
+    "s3_bucket_block_public_access": {
+        "target_scope_proof": "bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": ["S3.5", "S3.9", "S3.11", "S3.15"],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": True,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when existing bucket policy or website "
+            "hosting state cannot be captured for safe preservation."
+        ),
+    },
+    "s3_bucket_require_ssl": {
+        "target_scope_proof": "bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": ["S3.2", "S3.9"],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": True,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when existing bucket policy statements "
+            "are detected but their JSON was not captured for safe merge."
+        ),
+    },
+    "s3_bucket_lifecycle_configuration": {
+        "target_scope_proof": "bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": ["S3.2", "S3.9"],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": True,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when existing lifecycle rules are detected "
+            "but the lifecycle document was not captured for additive review."
+        ),
+    },
+    "s3_bucket_encryption_kms": {
+        "target_scope_proof": "bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": ["S3.2", "S3.5"],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": True,
+        "downgrade_rule": (
+            "Downgrade to review_required_bundle when customer_kms_key_arn is specified "
+            "but key-policy/grant coverage cannot be confirmed for all required compute "
+            "roles; or when GetBucketPolicy returns AccessDenied."
+        ),
+    },
+    # --- P2/P3: advisory ---
+    "s3_block_public_access": {
+        "target_scope_proof": "account_id from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "No structural downgrade; account-level public access block is deterministic."
+        ),
+    },
+    "s3_bucket_encryption": {
+        "target_scope_proof": "bucket_arn from target_id / resource_id",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "No structural downgrade; SSE-S3 AES256 default encryption is deterministic."
+        ),
+    },
+    "sg_restrict_public_ports": {
+        "target_scope_proof": "security_group_id from evidence",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "Downgrade only non-implemented EC2.53 variants such as bastion/vpn; "
+            "ssm_only now stays deterministic when selected explicitly."
+        ),
+    },
+    "enable_security_hub": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": "No structural downgrade; Security Hub enable is deterministic.",
+    },
+    "enable_guardduty": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": "No structural downgrade; GuardDuty enable is deterministic.",
+    },
+    "ssm_block_public_sharing": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": "No structural downgrade; SSM public sharing block is deterministic.",
+    },
+    "ebs_snapshot_block_public_access": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": "No structural downgrade; EBS snapshot sharing block is deterministic.",
+    },
+    "ebs_default_encryption": {
+        "target_scope_proof": "account_id + region from action context",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": "No structural downgrade; EBS default encryption is deterministic.",
+    },
+    "iam_root_access_key_absent": {
+        "target_scope_proof": "root account credential presence from runtime probe",
+        "adjacent_controls_at_risk": [],
+        "creates_helper_resources": False,
+        "merge_safe_preservation_required": False,
+        "downgrade_rule": (
+            "Downgrade delete_key to review_required_bundle when root MFA state is unreadable "
+            "(AccessDenied or unknown); keep disable_key executable when MFA state can be read "
+            "OR when risk is explicitly acknowledged."
+        ),
+    },
+}
+
+
+def get_adjacency_contract(action_type: str) -> AdjacencyContract | None:
+    """Look up the adjacency safety contract for the given action_type."""
+    if not action_type or not action_type.strip():
+        return None
+    return ADJACENCY_REGISTRY.get(action_type.strip())

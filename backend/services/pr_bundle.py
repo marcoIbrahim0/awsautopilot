@@ -48,6 +48,11 @@ from backend.services.aws_s3_encryption_bundle_support import (
     aws_s3_encryption_capture_script_content,
     aws_s3_encryption_restore_script_content,
 )
+from backend.services.remediation_support_bucket import terraform_support_bucket_blocks
+from backend.services.s3_lifecycle_preservation import (
+    analyze_lifecycle_preservation,
+    lifecycle_rules_to_terraform,
+)
 from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_MESSAGE,
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
@@ -183,6 +188,7 @@ _S3_BUCKET_NAME_PATTERN = re.compile(
 )
 _S3_MIGRATE_POLICY_JSON_KEY = "existing_bucket_policy_json"
 _S3_MIGRATE_POLICY_STATEMENT_COUNT_KEY = "existing_bucket_policy_statement_count"
+_S3_WEBSITE_CONFIGURATION_JSON_KEY = "existing_bucket_website_configuration_json"
 
 
 def _normalize_policy_json_document(policy_json: object) -> str | None:
@@ -269,12 +275,33 @@ def _coerce_cidr(value: object, *, default: str, version: int | None) -> str:
     return str(network)
 
 
-def _resolve_sg_restrict_defaults(strategy_inputs: dict[str, Any] | None) -> tuple[str, str, bool]:
-    """Resolve SG restrict defaults from guided strategy inputs."""
+def _resolve_sg_access_mode(strategy_inputs: dict[str, Any] | None) -> str:
+    """Resolve the canonical EC2.53 access mode from guided strategy inputs."""
     inputs = strategy_inputs or {}
     access_mode = str(inputs.get("access_mode", "")).strip().lower()
     if not access_mode and _coerce_bool(inputs.get("remove_existing_public_rules"), default=False):
         access_mode = "close_and_revoke"
+    return access_mode
+
+
+def _resolve_bastion_security_group_ids(strategy_inputs: dict[str, Any] | None) -> list[str]:
+    """Normalize configured bastion SG IDs from strategy inputs."""
+    inputs = strategy_inputs or {}
+    values = inputs.get("approved_bastion_security_group_ids")
+    if not isinstance(values, list):
+        return []
+    normalized: list[str] = []
+    for value in values:
+        cleaned = str(value).strip()
+        if cleaned and cleaned not in normalized:
+            normalized.append(cleaned)
+    return normalized
+
+
+def _resolve_sg_restrict_defaults(strategy_inputs: dict[str, Any] | None) -> tuple[str, str, bool]:
+    """Resolve SG restrict defaults from guided strategy inputs."""
+    inputs = strategy_inputs or {}
+    access_mode = _resolve_sg_access_mode(strategy_inputs)
     allowed_cidr = _coerce_cidr(inputs.get("allowed_cidr"), default="10.0.0.0/8", version=4)
     allowed_cidr_ipv6 = _coerce_cidr(inputs.get("allowed_cidr_ipv6"), default="", version=6)
     remove_existing_public_rules = access_mode == "close_and_revoke"
@@ -472,6 +499,104 @@ def _resolve_s3_migrate_policy_preservation(
     return None
 
 
+def _normalize_website_configuration_json_document(website_json: object) -> str | None:
+    """Normalize S3 website-configuration JSON into a canonical string."""
+    if not isinstance(website_json, str):
+        return None
+    raw = website_json.strip()
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    normalized: dict[str, Any] = {}
+    for key in ("IndexDocument", "ErrorDocument", "RedirectAllRequestsTo", "RoutingRules"):
+        value = parsed.get(key)
+        if value in (None, "", [], {}):
+            continue
+        normalized[key] = value
+    if not normalized:
+        return None
+    return json.dumps(normalized, separators=(",", ":"), sort_keys=True)
+
+
+def _resolve_s3_website_configuration(
+    *,
+    strategy_inputs: dict[str, Any] | None,
+    risk_snapshot: dict[str, Any] | None,
+    action_type: str,
+    format: str,
+    strategy_id: str | None,
+) -> dict[str, Any]:
+    """Resolve captured S3 website configuration for website-to-CloudFront migration."""
+    inputs = strategy_inputs or {}
+    website_json = _normalize_website_configuration_json_document(inputs.get(_S3_WEBSITE_CONFIGURATION_JSON_KEY))
+    evidence = _strategy_risk_evidence(risk_snapshot)
+    if website_json is None:
+        website_json = _normalize_website_configuration_json_document(
+            evidence.get(_S3_WEBSITE_CONFIGURATION_JSON_KEY)
+        )
+    if website_json is None:
+        _raise_pr_bundle_error(
+            code="s3_website_configuration_required",
+            detail=(
+                "Website migration requires captured existing_bucket_website_configuration_json so the "
+                "bundle can translate the current website behavior and document rollback."
+            ),
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+        )
+    parsed = json.loads(website_json)
+    redirect_all = parsed.get("RedirectAllRequestsTo")
+    routing_rules = parsed.get("RoutingRules")
+    if isinstance(redirect_all, dict) and redirect_all:
+        _raise_pr_bundle_error(
+            code="unsupported_website_configuration",
+            detail="S3 website RedirectAllRequestsTo behavior requires manual review and is not executable in WI-5.",
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+        )
+    if isinstance(routing_rules, list) and routing_rules:
+        _raise_pr_bundle_error(
+            code="unsupported_website_configuration",
+            detail="S3 website RoutingRules require manual review and are not executable in WI-5.",
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+        )
+    index_document = parsed.get("IndexDocument")
+    if not isinstance(index_document, dict) or not str(index_document.get("Suffix", "")).strip():
+        _raise_pr_bundle_error(
+            code="unsupported_website_configuration",
+            detail="Executable website migration requires an S3 website IndexDocument suffix.",
+            action_type=action_type,
+            format=format,
+            strategy_id=strategy_id,
+        )
+    error_document = parsed.get("ErrorDocument")
+    error_document_key = ""
+    if error_document is not None:
+        if not isinstance(error_document, dict) or not str(error_document.get("Key", "")).strip():
+            _raise_pr_bundle_error(
+                code="unsupported_website_configuration",
+                detail="Executable website migration requires ErrorDocument to use a concrete object key.",
+                action_type=action_type,
+                format=format,
+                strategy_id=strategy_id,
+            )
+        error_document_key = str(error_document.get("Key", "")).strip().lstrip("/")
+    return {
+        "json": website_json,
+        "default_root_object": str(index_document.get("Suffix", "")).strip(),
+        "error_document_key": error_document_key,
+    }
+
+
 def _raise_pr_bundle_error(
     *,
     code: str,
@@ -507,6 +632,12 @@ def _is_non_executable_resolution(
     }:
         return False
     if not isinstance(resolution, Mapping):
+        return False
+    if (
+        action_type == ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS
+        and str(resolution.get("profile_id") or "").strip()
+        == "s3_bucket_block_public_access_review_public_policy_scrub"
+    ):
         return False
     try:
         return normalize_support_tier(resolution.get("support_tier")) != "deterministic_bundle"
@@ -681,6 +812,7 @@ def generate_pr_bundle(
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
             variant=normalized_variant or None,
+            resolution=resolution,
         )
     elif action_type == ACTION_TYPE_S3_BUCKET_ENCRYPTION:
         result = _generate_for_s3_bucket_encryption(action, normalized_format)
@@ -697,6 +829,7 @@ def generate_pr_bundle(
             action,
             normalized_format,
             strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
         )
     elif action_type == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS:
         result = _generate_for_s3_bucket_encryption_kms(
@@ -745,6 +878,7 @@ def generate_pr_bundle(
             strategy_id=effective_strategy_id,
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
+            resolution=resolution,
         )
     elif action_type == ACTION_TYPE_IAM_ROOT_ACCESS_KEY_ABSENT:
         result = _generate_for_iam_root_access_key_absent(
@@ -858,6 +992,7 @@ S3.2 post-fix access guidance
 What changes
 - This bundle enforces S3 Block Public Access on the target bucket.
 - It is NOT a full CloudFront + OAC + private S3 migration.
+- Review-tier public-policy scrub branches remove unconditional public Allow statements before enabling Block Public Access.
 
 How to access now
 - CloudFront usage note: serve user traffic through a CloudFront HTTPS endpoint, not direct public S3 website/object URLs.
@@ -907,6 +1042,35 @@ Rollback
 """
 
 
+def _terraform_s3_website_cloudfront_private_guardrails_content() -> str:
+    """README notes for website-to-CloudFront migration variant."""
+    return """
+
+S3 website migration variant (CloudFront + private S3 + Route53)
+---------------------------------------------------------------
+What changes
+- Creates CloudFront + OAC for the private S3 REST origin, updates Route53 aliases, removes S3 website hosting, and then enables S3 Block Public Access.
+- Intended only for buckets currently using simple S3 website hosting (`IndexDocument` plus optional `ErrorDocument`).
+
+How to access now
+- Validate each hostname in `aliases` resolves to the new CloudFront distribution after apply.
+- Example HTTPS check:
+  curl -I https://<alias-hostname>/
+
+Verify
+- `terraform.auto.tfvars.json` includes the captured S3 website configuration for rollback documentation.
+- Confirm Route53 aliases point to CloudFront and website hosting is removed:
+  aws s3api get-bucket-website --bucket <bucket-name>
+- Confirm all four block-public-access flags are true:
+  aws s3api get-public-access-block --bucket <bucket-name> --query 'PublicAccessBlockConfiguration' --output json
+
+Rollback
+- Restore Route53 aliases and S3 website hosting before reopening direct public access.
+- Use the captured `existing_bucket_website_configuration_json` value in `terraform.auto.tfvars.json` with `aws s3api put-bucket-website` if emergency rollback is required.
+- Keep rollback temporary and re-apply private-origin controls after traffic is restored.
+"""
+
+
 def _terraform_ec2_53_access_guidance_content() -> str:
     """README guidance for EC2.53 post-fix operator access workflow."""
     return """
@@ -915,20 +1079,23 @@ EC2.53 post-fix access guidance
 -------------------------------
 What changes
 - Public SSH/RDP ingress on 22/3389 is restricted.
-- For `close_and_revoke`, run `scripts/sg_capture_state.py` before apply to snapshot exact public ingress pre-state under `.sg-rollback/sg_ingress_snapshot.json`.
-- For `close_and_revoke`, `rollback/sg_restore.py` restores the captured ingress rules, including rule descriptions, after `terraform destroy`.
+- For `close_and_revoke`, `ssm_only`, and `bastion_sg_reference`, run `scripts/sg_capture_state.py` before apply to snapshot exact public ingress pre-state under `.sg-rollback/sg_ingress_snapshot.json`.
+- For `close_and_revoke`, `ssm_only`, and `bastion_sg_reference`, `rollback/sg_restore.py` restores the captured ingress rules, including rule descriptions, after `terraform destroy`.
+- `ssm_only` removes public SSH/RDP ingress and does not add replacement SSH/RDP allowlists.
+- `bastion_sg_reference` removes public SSH/RDP ingress and replaces it with source-security-group access from the approved bastion SG list.
 
 How to access now
 - Use SSM Session Manager for operator access instead of public SSH/RDP:
   aws ssm start-session --target <instance-id> --region <region>
 - Keep bastion/VPN as fallback for non-SSM-managed workloads.
+- When using `bastion_sg_reference`, connect through instances or services attached to the approved bastion security groups instead of direct public admin ingress.
 
 Verify
 - Confirm no 0.0.0.0/0 or ::/0 remains for 22/3389:
   aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> --query "SecurityGroupRules[?(IsEgress==`false`) && ((FromPort==`22` || FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]" --output json
 
 Rollback
-- Standard rollback for `close_and_revoke`: run `terraform destroy`, then `python3 rollback/sg_restore.py`.
+- Standard rollback for `close_and_revoke`, `ssm_only`, and `bastion_sg_reference`: run `terraform destroy`, then `python3 rollback/sg_restore.py`.
 - Emergency-only fallback if no snapshot exists:
   aws ec2 authorize-security-group-ingress --region <region> --group-id <security-group-id> --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=<admin-cidr>}]'
 """
@@ -994,8 +1161,8 @@ Config.1 preflight safeguards
 -----------------------------
 - This bundle inspects existing AWS Config recorder and delivery-channel state before mutating settings.
 - The executable Terraform path snapshots exact pre-state under `.aws-config-rollback/` before mutation and ships a bundle-local restore command at `rollback/aws_config_restore.py`.
-- Recorder safety default: `overwrite_recording_group = false` preserves an existing recorder's recording group (including selective mode).
-- Set `overwrite_recording_group = true` only when you explicitly want to replace existing recorder scope with all-supported recording.
+- Recorder safety default: `overwrite_recording_group = false` is only safe when the existing recorder already captures the full required scope for `Config.1`.
+- If runtime evidence proves the existing recorder is selective/custom and still fails `Config.1`, the resolver auto-promotes `recording_scope=all_resources` and the generated bundle may intentionally set `overwrite_recording_group = true`.
 - Delivery safety: if an existing delivery channel points to a different bucket, apply emits a warning before redirecting to `delivery_bucket_name`.
 - Delivery fail-closed: when `create_local_bucket = false`, apply exits early if `delivery_bucket_name` is unreachable so remediation does not fail later with an ambiguous `NoSuchBucket` error.
 - Rollback safety: the restore script replays the exact pre-remediation recorder, recording mode, delivery-channel, and target-bucket policy state; it fails closed if drift or non-empty created buckets make exact restoration ambiguous.
@@ -1041,6 +1208,8 @@ def _maybe_append_terraform_readme(
         readme += _terraform_s3_bucket_block_guardrails_content()
     if any(f.get("path") == "s3_cloudfront_oac_private_s3.tf" for f in files):
         readme += _terraform_s3_cloudfront_oac_private_guardrails_content()
+    if any(f.get("path") == "s3_website_cloudfront_private.tf" for f in files):
+        readme += _terraform_s3_website_cloudfront_private_guardrails_content()
     if any(f.get("path") == "sg_restrict_public_ports.tf" for f in files):
         readme += _terraform_ec2_53_access_guidance_content()
     if any(f.get("path") == "s3_bucket_require_ssl.tf" for f in files):
@@ -1625,11 +1794,46 @@ Resources:
 # ---------------------------------------------------------------------------
 
 
-def _generate_for_s3_bucket_block_public_access(action: ActionLike, format: PRBundleFormat) -> PRBundleResult:
+def _generate_for_s3_bucket_block_public_access(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_id: str | None,
+    resolution: Mapping[str, Any] | None,
+) -> PRBundleResult:
     """Generate IaC for s3_bucket_block_public_access (per bucket, S3.2). Step 9.9."""
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    if _s3_2_public_policy_scrub_requested(resolution):
+        if format == CLOUDFORMATION_FORMAT:
+            _raise_pr_bundle_error(
+                code="unsupported_variant_format",
+                detail=(
+                    "Profile 's3_bucket_block_public_access_review_public_policy_scrub' is only supported for terraform format."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+                format=format,
+                strategy_id=strategy_id,
+                variant=None,
+            )
+        files = [
+            PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+            PRBundleFile(
+                path="s3_bucket_block_public_access.tf",
+                content=_terraform_s3_bucket_block_public_access_policy_scrub_content(meta),
+            ),
+        ]
+        steps = [
+            f"Configure AWS provider for account {meta['account_id']} and region {region}.",
+            "What changes: removes unconditional public Allow statements before enabling Block Public Access.",
+            "Review the generated Terraform carefully; this branch preserves Deny statements and conditional wildcard statements.",
+            "Run `terraform init` and inspect `terraform plan`, especially removed_statement_count and removed_statement_identifiers.",
+            "Confirm conditional wildcard statements, Deny statements, and required non-public access paths are preserved before apply.",
+            "Run `terraform apply` only after the review confirms no required public Allow statements will be removed unexpectedly.",
+            "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+        ]
+        return PRBundleResult(format=format, files=files, steps=steps)
     if format == CLOUDFORMATION_FORMAT:
         files = [
             PRBundleFile(
@@ -1675,6 +1879,7 @@ def _generate_for_s3_cloudfront_oac_private(
     strategy_inputs: dict[str, Any] | None,
     risk_snapshot: dict[str, Any] | None,
     variant: str | None,
+    resolution: Mapping[str, Any] | None,
 ) -> PRBundleResult:
     """
     Generate IaC for real migration path: CloudFront + OAC + private S3 (S3.2).
@@ -1698,21 +1903,28 @@ def _generate_for_s3_cloudfront_oac_private(
             variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
         )
 
+    apply_time_merge = _s3_2_apply_time_merge_requested(resolution)
     files = [
         PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
         PRBundleFile(
             path="s3_cloudfront_oac_private_s3.tf",
-            content=_terraform_s3_cloudfront_oac_private_content(meta),
+            content=(
+                _terraform_s3_cloudfront_oac_private_apply_time_content(meta)
+                if apply_time_merge
+                else _terraform_s3_cloudfront_oac_private_content(meta)
+            ),
         ),
     ]
-    preservation_policy = _resolve_s3_migrate_policy_preservation(
-        strategy_inputs=strategy_inputs,
-        risk_snapshot=risk_snapshot,
-        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
-        format=format,
-        strategy_id=strategy_id,
-        variant=variant,
-    )
+    preservation_policy: str | None = None
+    if not apply_time_merge:
+        preservation_policy = _resolve_s3_migrate_policy_preservation(
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            format=format,
+            strategy_id=strategy_id,
+            variant=variant,
+        )
     if preservation_policy is not None:
         files.append(
             PRBundleFile(
@@ -1733,15 +1945,137 @@ def _generate_for_s3_cloudfront_oac_private(
         f"Configure AWS provider for account {meta['account_id']} and region {region}.",
         f"Review variables in s3_cloudfront_oac_private_s3.tf (target bucket: {bucket_name}).",
         (
-            "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
-            "for safe preservation."
-            if preservation_policy is not None
-            else "No existing bucket policy statements were detected; existing_bucket_policy_json remains empty."
+            "Current bucket policy will be fetched and merged at terraform plan/apply time with customer credentials."
+            if apply_time_merge
+            else (
+                "Review terraform.auto.tfvars.json; existing bucket policy statements were preloaded "
+                "for safe preservation."
+                if preservation_policy is not None
+                else "No existing bucket policy statements were detected; existing_bucket_policy_json remains empty."
+            )
         ),
         "If needed, set additional_read_principal_arns before apply.",
         "Run `terraform init` and `terraform plan`.",
         "Run `terraform apply` to create CloudFront+OAC and enforce private S3 access.",
         "Switch clients/apps to CloudFront domain output and validate traffic.",
+        "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+    ]
+    return PRBundleResult(format=format, files=files, steps=steps)
+
+
+def _generate_for_s3_website_cloudfront_private(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    strategy_id: str | None,
+    strategy_inputs: dict[str, Any] | None,
+    risk_snapshot: dict[str, Any] | None,
+    resolution: Mapping[str, Any] | None,
+) -> PRBundleResult:
+    """Generate IaC for website-to-CloudFront private-origin S3 migration."""
+    meta = _action_meta(action)
+    bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    if format == CLOUDFORMATION_FORMAT:
+        _raise_pr_bundle_error(
+            code="unsupported_variant_format",
+            detail=(
+                "Strategy 's3_migrate_website_cloudfront_private' is only supported for terraform format."
+            ),
+            action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            format=format,
+            strategy_id=strategy_id,
+        )
+
+    website_config = _resolve_s3_website_configuration(
+        strategy_inputs=strategy_inputs,
+        risk_snapshot=risk_snapshot,
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        format=format,
+        strategy_id=strategy_id,
+    )
+    apply_time_merge = _s3_2_apply_time_merge_requested(resolution)
+    preservation_policy: str | None = None
+    if not apply_time_merge:
+        preservation_policy = _resolve_s3_migrate_policy_preservation(
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+            format=format,
+            strategy_id=strategy_id,
+            variant=None,
+        )
+    strategy_values = dict(strategy_inputs or {})
+    aliases = [str(alias).strip() for alias in strategy_values.get("aliases", []) if str(alias).strip()]
+    route53_hosted_zone_id = str(strategy_values.get("route53_hosted_zone_id", "")).strip()
+    acm_certificate_arn = str(strategy_values.get("acm_certificate_arn", "")).strip()
+    default_root_object = (
+        str(strategy_values.get("default_root_object_override", "")).strip()
+        or website_config["default_root_object"]
+    )
+    price_class = str(strategy_values.get("price_class", "")).strip() or "PriceClass_100"
+    files = [
+        PRBundleFile(
+            path="providers.tf",
+            content=_terraform_regional_providers_content(meta, include_null_provider=True),
+        ),
+        PRBundleFile(
+            path="s3_website_cloudfront_private.tf",
+            content=(
+                _terraform_s3_website_cloudfront_private_apply_time_content(
+                    meta,
+                    aliases=aliases,
+                    route53_hosted_zone_id=route53_hosted_zone_id,
+                    acm_certificate_arn=acm_certificate_arn,
+                    default_root_object=default_root_object,
+                    error_document_key=website_config["error_document_key"],
+                    price_class=price_class,
+                )
+                if apply_time_merge
+                else _terraform_s3_website_cloudfront_private_content(
+                    meta,
+                    aliases=aliases,
+                    route53_hosted_zone_id=route53_hosted_zone_id,
+                    acm_certificate_arn=acm_certificate_arn,
+                    default_root_object=default_root_object,
+                    error_document_key=website_config["error_document_key"],
+                    price_class=price_class,
+                )
+            ),
+        ),
+        PRBundleFile(
+            path="terraform.auto.tfvars.json",
+            content=json.dumps(
+                {
+                    key: value
+                    for key, value in {
+                        _S3_WEBSITE_CONFIGURATION_JSON_KEY: website_config["json"],
+                        _S3_MIGRATE_POLICY_JSON_KEY: preservation_policy,
+                    }.items()
+                    if value is not None
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+        ),
+    ]
+    steps = [
+        f"Configure AWS provider for account {meta['account_id']} and region {meta['region']}.",
+        f"Review aliases, certificate, and rollback inputs in s3_website_cloudfront_private.tf (bucket: {bucket_name}).",
+        (
+            "Current bucket policy will be fetched and merged at terraform plan/apply time with customer credentials."
+            if apply_time_merge
+            else (
+                "Review terraform.auto.tfvars.json; it contains the captured website configuration and existing "
+                "bucket policy preservation JSON for rollback-aware cutover."
+                if preservation_policy is not None
+                else "Review terraform.auto.tfvars.json; it contains the captured website configuration for rollback-aware cutover."
+            )
+        ),
+        "Run `terraform init` and `terraform plan`.",
+        "Run `terraform apply` to create CloudFront, update Route53 aliases, remove S3 website hosting, and enable bucket public-access block settings.",
+        "Validate each alias resolves to the CloudFront domain and check key pages over HTTPS before declaring the cutover complete.",
+        "Rollback order if needed: restore Route53 aliases and S3 website hosting first, then relax bucket access only as a temporary emergency measure.",
         "Return to the action and click **Recompute actions** or trigger ingest to verify.",
     ]
     return PRBundleResult(format=format, files=files, steps=steps)
@@ -1766,6 +2100,436 @@ resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
   restrict_public_buckets = true
 }}
 """
+
+
+def _terraform_s3_bucket_block_public_access_policy_scrub_content(meta: dict[str, str]) -> str:
+    """Terraform for review-tier S3.2 public-policy scrub before BPA enablement."""
+    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    return f"""# S3 bucket public-policy scrub review bundle - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
+# Control: {meta["control_id"]}
+# NOTE: Review this plan carefully. It removes only unconditional public Allow statements,
+#       preserves Deny statements and conditional wildcard statements, and then enables
+#       S3 Block Public Access on the bucket.
+
+data "aws_s3_bucket_policy" "existing" {{
+  bucket = "{bucket}"
+}}
+
+locals {{
+  existing_policy_document = try(
+    jsondecode(data.aws_s3_bucket_policy.existing.policy),
+    {{
+      Version   = "2012-10-17"
+      Statement = []
+    }}
+  )
+  existing_policy_id = try(local.existing_policy_document.Id, null)
+  existing_policy_statements_candidate = try(local.existing_policy_document.Statement, null)
+  existing_policy_statements = can(local.existing_policy_statements_candidate.Effect) ? [
+    local.existing_policy_statements_candidate
+  ] : (
+    local.existing_policy_statements_candidate == null ? [] : local.existing_policy_statements_candidate
+  )
+  existing_policy_statement_metadata = [
+    for idx, statement in local.existing_policy_statements : {{
+      identifier = trimspace(try(tostring(statement.Sid), "")) != "" ? trimspace(tostring(statement.Sid)) : "statement-index-${{idx}}"
+      statement  = statement
+      remove = (
+        lower(trimspace(try(tostring(statement.Effect), ""))) == "allow" &&
+        !can(statement.Condition) &&
+        (
+          trimspace(try(tostring(statement.Principal), "")) == "*" ||
+          trimspace(try(tostring(statement.Principal.AWS), "")) == "*" ||
+          contains(
+            [for identifier in try(statement.Principal.AWS, []) : trimspace(tostring(identifier))],
+            "*"
+          )
+        )
+      )
+    }}
+  ]
+  removed_statement_identifiers = [
+    for item in local.existing_policy_statement_metadata : item.identifier
+    if item.remove
+  ]
+  preserved_policy_statements = [
+    for item in local.existing_policy_statement_metadata : item.statement
+    if !item.remove
+  ]
+  scrubbed_policy_document = merge(
+    {{
+      Version   = try(tostring(local.existing_policy_document.Version), "2012-10-17")
+      Statement = local.preserved_policy_statements
+    }},
+    local.existing_policy_id == null ? {{}} : {{ Id = local.existing_policy_id }}
+  )
+}}
+
+resource "aws_s3_bucket_policy" "security_autopilot" {{
+  bucket = "{bucket}"
+  policy = jsonencode(local.scrubbed_policy_document)
+}}
+
+resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
+  bucket = "{bucket}"
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  depends_on = [aws_s3_bucket_policy.security_autopilot]
+}}
+
+output "removed_statement_count" {{
+  value       = length(local.removed_statement_identifiers)
+  description = "Number of unconditional public Allow statements removed before enabling Block Public Access."
+}}
+
+output "removed_statement_identifiers" {{
+  value       = local.removed_statement_identifiers
+  description = "Statement Sids or synthetic statement indexes removed by the scrub."
+}}
+"""
+
+
+def _terraform_s3_website_cloudfront_common_content(
+    meta: dict[str, str],
+    *,
+    aliases: list[str],
+    route53_hosted_zone_id: str,
+    acm_certificate_arn: str,
+    default_root_object: str,
+    error_document_key: str,
+    price_class: str,
+    bucket_policy_source: str,
+) -> str:
+    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    action_id_seed = (meta.get("action_id") or "").replace("-", "")
+    bundle_nonce = meta.get("bundle_nonce", "")
+    aliases_json = json.dumps(aliases)
+    route53_hosted_zone_id_json = json.dumps(route53_hosted_zone_id)
+    acm_certificate_arn_json = json.dumps(acm_certificate_arn)
+    default_root_object_json = json.dumps(default_root_object)
+    error_document_key_json = json.dumps(error_document_key)
+    price_class_json = json.dumps(price_class)
+    error_response_blocks = ""
+    if error_document_key:
+        error_page = json.dumps(f"/{error_document_key.lstrip('/')}")
+        error_response_blocks = f"""
+
+  custom_error_response {{
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = {error_page}
+    error_caching_min_ttl = 0
+  }}
+
+  custom_error_response {{
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = {error_page}
+    error_caching_min_ttl = 0
+  }}"""
+    return f"""# S3.2 website migration variant (CloudFront + private S3 + Route53) - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
+# Control: {meta["control_id"]}
+
+locals {{
+  bucket_name               = "{bucket}"
+  remediation_region        = "{meta["region"]}"
+  oac_name_seed             = "${{local.bucket_name}}-{action_id_seed}-{bundle_nonce}"
+  oac_name                  = substr("security-autopilot-oac-${{substr(md5(local.oac_name_seed), 0, 12)}}", 0, 64)
+}}
+
+variable "aliases" {{
+  type        = list(string)
+  description = "Route53 hostnames that should resolve to the CloudFront distribution."
+  default     = {aliases_json}
+}}
+
+variable "route53_hosted_zone_id" {{
+  type        = string
+  description = "Route53 hosted zone ID that owns the aliases."
+  default     = {route53_hosted_zone_id_json}
+}}
+
+variable "acm_certificate_arn" {{
+  type        = string
+  description = "CloudFront viewer certificate ARN (must be in us-east-1)."
+  default     = {acm_certificate_arn_json}
+}}
+
+variable "price_class" {{
+  type        = string
+  description = "CloudFront price class."
+  default     = {price_class_json}
+}}
+
+variable "default_root_object" {{
+  type        = string
+  description = "Default root object translated from the captured S3 website IndexDocument."
+  default     = {default_root_object_json}
+}}
+
+variable "error_document_key" {{
+  type        = string
+  description = "Optional error document key translated from the captured S3 website configuration."
+  default     = {error_document_key_json}
+}}
+
+variable "existing_bucket_website_configuration_json" {{
+  type        = string
+  description = "Captured S3 website configuration JSON for rollback documentation."
+}}
+
+data "aws_s3_bucket" "target" {{
+  bucket = local.bucket_name
+}}
+
+resource "aws_cloudfront_origin_access_control" "security_autopilot" {{
+  name                              = local.oac_name
+  description                       = "OAC for Security Autopilot website migration"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}}
+
+resource "aws_cloudfront_distribution" "security_autopilot" {{
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Security Autopilot website migration for ${{local.bucket_name}}"
+  aliases             = var.aliases
+  default_root_object = var.default_root_object
+  price_class         = var.price_class
+
+  origin {{
+    domain_name              = data.aws_s3_bucket.target.bucket_regional_domain_name
+    origin_id                = "s3-${{local.bucket_name}}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.security_autopilot.id
+  }}
+
+  default_cache_behavior {{
+    target_origin_id         = "s3-${{local.bucket_name}}"
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    cached_methods           = ["GET", "HEAD", "OPTIONS"]
+    compress                 = true
+    cache_policy_id          = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+  }}{error_response_blocks}
+
+  restrictions {{
+    geo_restriction {{
+      restriction_type = "none"
+    }}
+  }}
+
+  viewer_certificate {{
+    acm_certificate_arn      = var.acm_certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }}
+}}
+
+{bucket_policy_source}
+
+resource "aws_route53_record" "website_ipv4" {{
+  for_each = toset(var.aliases)
+  zone_id  = var.route53_hosted_zone_id
+  name     = each.value
+  type     = "A"
+
+  alias {{
+    name                   = aws_cloudfront_distribution.security_autopilot.domain_name
+    zone_id                = aws_cloudfront_distribution.security_autopilot.hosted_zone_id
+    evaluate_target_health = false
+  }}
+
+  depends_on = [aws_s3_bucket_policy.security_autopilot]
+}}
+
+resource "aws_route53_record" "website_ipv6" {{
+  for_each = toset(var.aliases)
+  zone_id  = var.route53_hosted_zone_id
+  name     = each.value
+  type     = "AAAA"
+
+  alias {{
+    name                   = aws_cloudfront_distribution.security_autopilot.domain_name
+    zone_id                = aws_cloudfront_distribution.security_autopilot.hosted_zone_id
+    evaluate_target_health = false
+  }}
+
+  depends_on = [aws_s3_bucket_policy.security_autopilot]
+}}
+
+resource "null_resource" "disable_bucket_website" {{
+  triggers = {{
+    bucket_name               = local.bucket_name
+    remediation_region        = local.remediation_region
+    website_configuration_sha = md5(var.existing_bucket_website_configuration_json)
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set -euo pipefail
+aws s3api delete-bucket-website --bucket "${{local.bucket_name}}" --region "${{local.remediation_region}}"
+EOT
+  }}
+
+  depends_on = [
+    aws_route53_record.website_ipv4,
+    aws_route53_record.website_ipv6,
+  ]
+}}
+
+resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
+  bucket = data.aws_s3_bucket.target.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  depends_on = [null_resource.disable_bucket_website]
+}}
+
+output "cloudfront_distribution_id" {{
+  value       = aws_cloudfront_distribution.security_autopilot.id
+  description = "CloudFront distribution ID."
+}}
+
+output "cloudfront_domain_name" {{
+  value       = aws_cloudfront_distribution.security_autopilot.domain_name
+  description = "Use this CloudFront domain or the configured aliases instead of the S3 website endpoint."
+}}
+
+output "website_aliases" {{
+  value       = var.aliases
+  description = "Aliases expected to resolve to the CloudFront distribution after Route53 cutover."
+}}
+"""
+
+
+def _terraform_s3_website_cloudfront_private_content(
+    meta: dict[str, str],
+    *,
+    aliases: list[str],
+    route53_hosted_zone_id: str,
+    acm_certificate_arn: str,
+    default_root_object: str,
+    error_document_key: str,
+    price_class: str,
+) -> str:
+    bucket_policy_source = """variable "existing_bucket_policy_json" {
+  type        = string
+  description = "Optional existing bucket policy JSON to preserve current non-public statements."
+  default     = ""
+}
+
+data "aws_iam_policy_document" "bucket_policy" {
+  source_policy_documents = var.existing_bucket_policy_json == "" ? [] : [var.existing_bucket_policy_json]
+
+  statement {
+    sid    = "AllowCloudFrontReadOnly"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+    actions   = ["s3:GetObject"]
+    resources = ["${data.aws_s3_bucket.target.arn}/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.security_autopilot.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "security_autopilot" {
+  bucket = data.aws_s3_bucket.target.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
+}"""
+    return _terraform_s3_website_cloudfront_common_content(
+        meta,
+        aliases=aliases,
+        route53_hosted_zone_id=route53_hosted_zone_id,
+        acm_certificate_arn=acm_certificate_arn,
+        default_root_object=default_root_object,
+        error_document_key=error_document_key,
+        price_class=price_class,
+        bucket_policy_source=bucket_policy_source,
+    )
+
+
+def _terraform_s3_website_cloudfront_private_apply_time_content(
+    meta: dict[str, str],
+    *,
+    aliases: list[str],
+    route53_hosted_zone_id: str,
+    acm_certificate_arn: str,
+    default_root_object: str,
+    error_document_key: str,
+    price_class: str,
+) -> str:
+    bucket_policy_source = """data "aws_s3_bucket_policy" "existing" {
+  bucket = data.aws_s3_bucket.target.id
+}
+
+locals {
+  existing_bucket_policy_document = try(jsondecode(data.aws_s3_bucket_policy.existing.policy), null)
+  existing_bucket_policy_statements = try(local.existing_bucket_policy_document.Statement, [])
+  filtered_existing_policy_statements = [
+    for statement in local.existing_bucket_policy_statements : statement
+    if try(statement.Sid, "") != "AllowCloudFrontReadOnly"
+  ]
+}
+
+data "aws_iam_policy_document" "bucket_policy" {
+  source_policy_documents = local.existing_bucket_policy_document == null ? [] : [
+    jsonencode({
+      Version   = try(local.existing_bucket_policy_document.Version, "2012-10-17")
+      Statement = local.filtered_existing_policy_statements
+    })
+  ]
+
+  statement {
+    sid    = "AllowCloudFrontReadOnly"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+    actions   = ["s3:GetObject"]
+    resources = ["${data.aws_s3_bucket.target.arn}/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.security_autopilot.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "security_autopilot" {
+  bucket = data.aws_s3_bucket.target.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
+}"""
+    return _terraform_s3_website_cloudfront_common_content(
+        meta,
+        aliases=aliases,
+        route53_hosted_zone_id=route53_hosted_zone_id,
+        acm_certificate_arn=acm_certificate_arn,
+        default_root_object=default_root_object,
+        error_document_key=error_document_key,
+        price_class=price_class,
+        bucket_policy_source=bucket_policy_source,
+    )
 
 
 def _terraform_s3_cloudfront_oac_private_content(meta: dict[str, str]) -> str:
@@ -1869,6 +2633,191 @@ resource "aws_cloudfront_distribution" "security_autopilot" {{
 
 data "aws_iam_policy_document" "bucket_policy" {{
   source_policy_documents = var.existing_bucket_policy_json == "" ? [] : [var.existing_bucket_policy_json]
+
+  statement {{
+    sid    = "AllowCloudFrontReadOnly"
+    effect = "Allow"
+    principals {{
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }}
+    actions   = ["s3:GetObject"]
+    resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
+    condition {{
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.security_autopilot.arn]
+    }}
+  }}
+
+  dynamic "statement" {{
+    for_each = var.additional_read_principal_arns
+    content {{
+      sid    = "AllowAdditionalRead${{substr(md5(statement.value), 0, 8)}}"
+      effect = "Allow"
+      principals {{
+        type        = "AWS"
+        identifiers = [statement.value]
+      }}
+      actions   = ["s3:GetObject"]
+      resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
+    }}
+  }}
+}}
+
+resource "aws_s3_bucket_policy" "security_autopilot" {{
+  bucket = data.aws_s3_bucket.target.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
+}}
+
+resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
+  bucket = data.aws_s3_bucket.target.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}}
+
+output "cloudfront_distribution_id" {{
+  value       = aws_cloudfront_distribution.security_autopilot.id
+  description = "CloudFront distribution ID."
+}}
+
+output "cloudfront_domain_name" {{
+  value       = aws_cloudfront_distribution.security_autopilot.domain_name
+  description = "Use this domain in clients instead of direct S3 public URLs."
+}}
+
+output "bucket_name" {{
+  value       = data.aws_s3_bucket.target.id
+  description = "Target S3 bucket migrated to private access via CloudFront OAC."
+}}
+"""
+
+
+def _terraform_s3_cloudfront_oac_private_apply_time_content(meta: dict[str, str]) -> str:
+    """Terraform for S3.2 OAC variant with apply-time policy capture."""
+    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    action_id_seed = (meta.get("action_id") or "").replace("-", "")
+    bundle_nonce = meta.get("bundle_nonce", "")
+    return f"""# S3.2 migration variant (CloudFront + OAC + private S3) - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
+# Control: {meta["control_id"]}
+
+locals {{
+  bucket_name = "{bucket}"
+  # Include action/run-level entropy to avoid account-wide OAC name collisions on reruns.
+  oac_name_seed = "${{local.bucket_name}}-{action_id_seed}-{bundle_nonce}"
+  oac_name      = substr("security-autopilot-oac-${{substr(md5(local.oac_name_seed), 0, 12)}}", 0, 64)
+}}
+
+variable "default_root_object" {{
+  type        = string
+  description = "Default object served by CloudFront at /"
+  default     = "index.html"
+}}
+
+variable "price_class" {{
+  type        = string
+  description = "CloudFront price class"
+  default     = "PriceClass_100"
+}}
+
+variable "cache_policy_id" {{
+  type        = string
+  description = "CloudFront cache policy (Managed-CachingOptimized default)"
+  default     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+}}
+
+variable "origin_request_policy_id" {{
+  type        = string
+  description = "CloudFront origin request policy (Managed-CORS-S3Origin default)"
+  default     = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+}}
+
+variable "additional_read_principal_arns" {{
+  type        = list(string)
+  description = "Optional IAM principal ARNs that still require direct S3 GetObject access."
+  default     = []
+}}
+
+data "aws_s3_bucket" "target" {{
+  bucket = local.bucket_name
+}}
+
+data "aws_s3_bucket_policy" "existing" {{
+  bucket = local.bucket_name
+}}
+
+locals {{
+  existing_policy_document = try(
+    jsondecode(data.aws_s3_bucket_policy.existing.policy),
+    {{
+      Version   = "2012-10-17"
+      Statement = []
+    }}
+  )
+  existing_policy_id = try(local.existing_policy_document.Id, null)
+  existing_policy_statements = try(local.existing_policy_document.Statement, [])
+  filtered_existing_policy_statements = [
+    for stmt in local.existing_policy_statements : stmt
+    if lower(try(tostring(stmt.Sid), "")) != "allowcloudfrontreadonly"
+  ]
+  filtered_existing_policy_document = merge(
+    {{
+      Version   = try(tostring(local.existing_policy_document.Version), "2012-10-17")
+      Statement = local.filtered_existing_policy_statements
+    }},
+    local.existing_policy_id == null ? {{}} : {{ Id = local.existing_policy_id }}
+  )
+}}
+
+resource "aws_cloudfront_origin_access_control" "security_autopilot" {{
+  name                              = local.oac_name
+  description                       = "OAC for Security Autopilot remediation"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}}
+
+resource "aws_cloudfront_distribution" "security_autopilot" {{
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Security Autopilot migration for ${{local.bucket_name}}"
+  default_root_object = var.default_root_object
+  price_class         = var.price_class
+
+  origin {{
+    domain_name              = data.aws_s3_bucket.target.bucket_regional_domain_name
+    origin_id                = "s3-${{local.bucket_name}}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.security_autopilot.id
+  }}
+
+  default_cache_behavior {{
+    target_origin_id         = "s3-${{local.bucket_name}}"
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    cached_methods           = ["GET", "HEAD", "OPTIONS"]
+    compress                 = true
+    cache_policy_id          = var.cache_policy_id
+    origin_request_policy_id = var.origin_request_policy_id
+  }}
+
+  restrictions {{
+    geo_restriction {{
+      restriction_type = "none"
+    }}
+  }}
+
+  viewer_certificate {{
+    cloudfront_default_certificate = true
+  }}
+}}
+
+data "aws_iam_policy_document" "bucket_policy" {{
+  source_policy_documents = [jsonencode(local.filtered_existing_policy_document)]
 
   statement {{
     sid    = "AllowCloudFrontReadOnly"
@@ -2101,6 +3050,27 @@ def _resolve_s3_access_logging_log_bucket(
     return log_bucket
 
 
+def _resolve_s3_access_logging_defaults(
+    *,
+    source_bucket: str,
+    strategy_inputs: dict[str, Any] | None,
+    action_type: str,
+    format: str,
+    strategy_id: str | None,
+    variant: str | None,
+) -> tuple[str, bool]:
+    log_bucket = _resolve_s3_access_logging_log_bucket(
+        source_bucket=source_bucket,
+        strategy_inputs=strategy_inputs,
+        action_type=action_type,
+        format=format,
+        strategy_id=strategy_id,
+        variant=variant,
+    )
+    create_log_bucket = _coerce_bool((strategy_inputs or {}).get("create_log_bucket"), default=False)
+    return log_bucket, create_log_bucket
+
+
 def _generate_for_s3_bucket_access_logging(
     action: ActionLike,
     format: PRBundleFormat,
@@ -2113,7 +3083,7 @@ def _generate_for_s3_bucket_access_logging(
     meta = _action_meta(action)
     region = meta["region"]
     source_bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
-    log_bucket_name = _resolve_s3_access_logging_log_bucket(
+    log_bucket_name, create_log_bucket = _resolve_s3_access_logging_defaults(
         source_bucket=source_bucket_name,
         strategy_inputs=strategy_inputs,
         action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
@@ -2128,12 +3098,18 @@ def _generate_for_s3_bucket_access_logging(
                 content=_cloudformation_s3_bucket_access_logging_content(
                     meta,
                     log_bucket_name=log_bucket_name,
+                    create_log_bucket=create_log_bucket,
                 ),
             )
         ]
         steps = [
             f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
             "Set Parameter BucketName (source) and LogBucketName (dedicated destination).",
+            (
+                "When CreateLogBucket=true, the template creates the destination bucket with the shared support-bucket baseline."
+                if create_log_bucket
+                else "When CreateLogBucket=false, the destination bucket must already exist and already meet the shared support-bucket baseline."
+            ),
             "Do not use the source bucket as the log destination.",
             "Validate the template and create/update the stack.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
@@ -2146,12 +3122,18 @@ def _generate_for_s3_bucket_access_logging(
                 content=_terraform_s3_bucket_access_logging_content(
                     meta,
                     log_bucket_name=log_bucket_name,
+                    create_log_bucket=create_log_bucket,
                 ),
             ),
         ]
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             "Set log_bucket_name to a dedicated destination bucket.",
+            (
+                "This bundle will create the destination bucket with the shared support-bucket baseline before enabling access logging."
+                if create_log_bucket
+                else "This bundle assumes the destination bucket already exists and already meets the shared support-bucket baseline."
+            ),
             "Do not use the source bucket as the log destination.",
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enable S3 server access logging.",
@@ -2164,9 +3146,17 @@ def _terraform_s3_bucket_access_logging_content(
     meta: dict[str, str],
     *,
     log_bucket_name: str,
+    create_log_bucket: bool,
 ) -> str:
     """Terraform for S3 bucket server access logging (S3.9)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    create_log_bucket_text = "true" if create_log_bucket else "false"
+    support_bucket_blocks = terraform_support_bucket_blocks(
+        resource_suffix="access_logs",
+        bucket_id_ref="aws_s3_bucket.access_logs[0].id",
+        bucket_name_ref='var.log_bucket_name',
+        count_expr="var.create_log_bucket ? 1 : 0",
+    )
     return f"""# S3 bucket access logging - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -2184,16 +3174,30 @@ variable "log_bucket_name" {{
   default     = "{log_bucket_name}"
 }}
 
+variable "create_log_bucket" {{
+  type        = bool
+  description = "When true, create the destination bucket with the shared support-bucket baseline."
+  default     = {create_log_bucket_text}
+}}
+
 variable "log_prefix" {{
   type        = string
   description = "Prefix for delivered access logs"
   default     = "s3-access-logs/"
 }}
 
+resource "aws_s3_bucket" "access_logs" {{
+  count  = var.create_log_bucket ? 1 : 0
+  bucket = var.log_bucket_name
+}}
+
+{support_bucket_blocks}
+
 resource "aws_s3_bucket_logging" "security_autopilot" {{
   bucket        = var.source_bucket_name
   target_bucket = var.log_bucket_name
   target_prefix = var.log_prefix
+  depends_on    = [aws_s3_bucket_policy.access_logs]
 }}
 """
 
@@ -2202,9 +3206,58 @@ def _cloudformation_s3_bucket_access_logging_content(
     meta: dict[str, str],
     *,
     log_bucket_name: str,
+    create_log_bucket: bool,
 ) -> str:
     """CloudFormation for S3 bucket server access logging (S3.9)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    create_log_bucket_text = "true" if create_log_bucket else "false"
+    log_bucket_resources = """Resources:"""
+    if create_log_bucket:
+        log_bucket_resources = """
+Conditions:
+  ShouldCreateLogBucket: !Equals [!Ref CreateLogBucket, "true"]
+Resources:
+  AccessLogBucket:
+    Condition: ShouldCreateLogBucket
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref LogBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+            BucketKeyEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-multipart
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+  AccessLogBucketPolicy:
+    Condition: ShouldCreateLogBucket
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AccessLogBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${LogBucketName}
+              - !Sub arn:aws:s3:::${LogBucketName}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+"""
     return f"""# S3 bucket access logging - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -2221,11 +3274,18 @@ Parameters:
     Type: String
     Default: "{log_bucket_name}"
     Description: Destination bucket receiving access logs
+  CreateLogBucket:
+    Type: String
+    Default: "{create_log_bucket_text}"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When true, create the destination log bucket with the shared support-bucket baseline
   LogPrefix:
     Type: String
     Default: s3-access-logs/
     Description: Prefix for delivered access logs
-Resources:
+{log_bucket_resources}
   BucketLogging:
     Type: AWS::S3::Bucket
     Properties:
@@ -2246,13 +3306,23 @@ def _generate_for_s3_bucket_lifecycle_configuration(
     format: PRBundleFormat,
     *,
     strategy_inputs: dict[str, Any] | None = None,
+    risk_snapshot: dict[str, Any] | None = None,
 ) -> PRBundleResult:
     """Generate IaC for S3 bucket lifecycle configuration (S3.11)."""
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
     abort_days = _resolve_s3_lifecycle_abort_days(strategy_inputs)
+    lifecycle_analysis = _s3_lifecycle_analysis_from_risk_snapshot(
+        risk_snapshot,
+        abort_days=abort_days,
+    )
     if format == CLOUDFORMATION_FORMAT:
+        _ensure_cloudformation_lifecycle_supported(
+            lifecycle_analysis,
+            action_type=action.action_type,
+            format=format,
+        )
         files = [
             PRBundleFile(
                 path="s3_bucket_lifecycle_configuration.yaml",
@@ -2272,6 +3342,11 @@ def _generate_for_s3_bucket_lifecycle_configuration(
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
+        _ensure_terraform_lifecycle_renderable(
+            lifecycle_analysis,
+            action_type=action.action_type,
+            format=format,
+        )
         files = [
             PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
             PRBundleFile(
@@ -2279,6 +3354,7 @@ def _generate_for_s3_bucket_lifecycle_configuration(
                 content=_terraform_s3_bucket_lifecycle_configuration_content(
                     meta,
                     abort_days=abort_days,
+                    existing_rules=lifecycle_analysis["preserved_rules"],
                 ),
             ),
         ]
@@ -2299,9 +3375,13 @@ def _terraform_s3_bucket_lifecycle_configuration_content(
     meta: dict[str, str],
     *,
     abort_days: int,
+    existing_rules: list[dict[str, Any]] | None = None,
 ) -> str:
     """Terraform for S3 bucket lifecycle configuration (S3.11)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    rendered_existing_rules = lifecycle_rules_to_terraform(existing_rules or [])
+    managed_rule = _managed_abort_rule_block()
+    rule_blocks = "\n\n".join(block for block in (rendered_existing_rules, managed_rule) if block)
     return f"""# S3 bucket lifecycle configuration - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
@@ -2316,18 +3396,80 @@ variable "abort_incomplete_multipart_days" {{
 resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot" {{
   bucket = "{bucket}"
 
-  rule {{
+{rule_blocks}
+}}
+"""
+
+
+def _managed_abort_rule_block() -> str:
+    return """  rule {
     id     = "security-autopilot-abort-incomplete-multipart"
     status = "Enabled"
 
-    filter {{}}
+    filter {}
 
-    abort_incomplete_multipart_upload {{
+    abort_incomplete_multipart_upload {
       days_after_initiation = var.abort_incomplete_multipart_days
-    }}
-  }}
-}}
-"""
+    }
+  }"""
+
+
+def _s3_lifecycle_analysis_from_risk_snapshot(
+    risk_snapshot: dict[str, Any] | None,
+    *,
+    abort_days: int,
+) -> dict[str, Any]:
+    evidence = _strategy_risk_evidence(risk_snapshot)
+    lifecycle_json = evidence.get("existing_lifecycle_configuration_json")
+    if not isinstance(lifecycle_json, str):
+        lifecycle_json = None
+    return analyze_lifecycle_preservation(lifecycle_json, abort_days=abort_days)
+
+
+def _ensure_cloudformation_lifecycle_supported(
+    lifecycle_analysis: Mapping[str, Any],
+    *,
+    action_type: str,
+    format: str,
+) -> None:
+    if lifecycle_analysis.get("rule_count") in (None, 0):
+        return
+    if lifecycle_analysis.get("equivalent_safe_state") is True:
+        return
+    _raise_pr_bundle_error(
+        code="cloudformation_lifecycle_additive_merge_unsupported",
+        detail=(
+            "CloudFormation additive lifecycle merge is out of scope for S3.11. "
+            "Generate the Terraform bundle for captured lifecycle-preservation cases instead."
+        ),
+        action_type=action_type,
+        format=format,
+        strategy_id="s3_enable_abort_incomplete_uploads",
+    )
+
+
+def _ensure_terraform_lifecycle_renderable(
+    lifecycle_analysis: Mapping[str, Any],
+    *,
+    action_type: str,
+    format: str,
+) -> None:
+    if lifecycle_analysis.get("merge_renderable") is True:
+        return
+    if lifecycle_analysis.get("rule_count") in (None, 0):
+        return
+    if lifecycle_analysis.get("equivalent_safe_state") is True:
+        return
+    _raise_pr_bundle_error(
+        code="lifecycle_additive_merge_unsupported",
+        detail=str(
+            lifecycle_analysis.get("render_failure_reason")
+            or "Captured lifecycle configuration cannot be rendered safely for additive merge."
+        ),
+        action_type=action_type,
+        format=format,
+        strategy_id="s3_enable_abort_incomplete_uploads",
+    )
 
 
 def _cloudformation_s3_bucket_lifecycle_configuration_content(
@@ -2619,8 +3761,40 @@ def _generate_for_sg_restrict_public_ports(
 ) -> PRBundleResult:
     """Generate IaC for sg_restrict_public_ports (per security group, EC2.53). Step 9.11."""
     meta = _action_meta(action)
-    region = meta["region"]
     sg_id = _security_group_id_from_action_context(action, meta["target_id"])
+    access_mode = _resolve_sg_access_mode(strategy_inputs)
+    if access_mode == "ssm_only":
+        if not sg_id:
+            _raise_pr_bundle_error(
+                code="missing_security_group_id",
+                detail=(
+                    "Unable to infer a security group ID from action target/resource metadata. "
+                    "Refresh findings and recompute actions, then retry PR bundle generation."
+                ),
+                action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+                format=format,
+            )
+        return _generate_for_sg_ssm_only(action, format, meta=meta, sg_id=sg_id)
+    if access_mode == "bastion_sg_reference":
+        if not sg_id:
+            _raise_pr_bundle_error(
+                code="missing_security_group_id",
+                detail=(
+                    "Unable to infer a security group ID from action target/resource metadata. "
+                    "Refresh findings and recompute actions, then retry PR bundle generation."
+                ),
+                action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+                format=format,
+            )
+        return _generate_for_sg_bastion_reference(
+            action,
+            format,
+            meta=meta,
+            sg_id=sg_id,
+            bastion_sg_ids=_resolve_bastion_security_group_ids(strategy_inputs),
+        )
+
+    region = meta["region"]
     allowed_cidr, allowed_cidr_ipv6, remove_existing_public_rules = _resolve_sg_restrict_defaults(
         strategy_inputs
     )
@@ -2714,6 +3888,153 @@ def _generate_for_sg_restrict_public_ports(
             result["metadata"] = rollback_metadata
         return result
     return PRBundleResult(format=format, files=files, steps=steps)
+
+
+def _generate_for_sg_ssm_only(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    meta: dict[str, str],
+    sg_id: str,
+) -> PRBundleResult:
+    """Generate EC2.53 bundles that remove public SSH/RDP and rely on pre-existing SSM access."""
+    region = meta["region"]
+    if format == CLOUDFORMATION_FORMAT:
+        files = [
+            PRBundleFile(
+                path="sg_restrict_public_ports.yaml",
+                content=_cloudformation_sg_ssm_only_content(meta, sg_id),
+            )
+        ]
+        steps = [
+            f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
+            "Confirm SSM Session Manager access is already working for every workload attached to this security group before applying this bundle.",
+            "What changes: custom resource revokes 0.0.0.0/0 and ::/0 SSH/RDP ingress (22/3389) and does not add replacement admin ingress rules.",
+            "Keep bastion/VPN fallback ready for workloads that are not SSM-managed.",
+            "IMPORTANT: review the revoke-only behavior before applying.",
+            "Set Parameter SecurityGroupId if you need to override the detected target.",
+            "Validate the template and create/update the stack.",
+            "Verify: run `aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query \"SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]\" --output json` and confirm empty result.",
+            "Rollback: delete the stack state if desired, then re-authorize only temporary scoped admin ingress manually after confirming the exact required source CIDRs.",
+            "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+        ]
+        return PRBundleResult(format=format, files=files, steps=steps)
+
+    terraform_files: list[PRBundleFile] = [
+        PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+        PRBundleFile(
+            path="sg_restrict_public_ports.tf",
+            content=_terraform_sg_ssm_only_content(meta, sg_id),
+        ),
+        PRBundleFile(
+            path=AWS_SG_APPLY_SCRIPT_PATH,
+            content=aws_sg_capture_script_content(),
+        ),
+        PRBundleFile(
+            path=AWS_SG_ROLLBACK_SCRIPT_PATH,
+            content=aws_sg_restore_script_content(),
+        ),
+    ]
+    steps = [
+        f"Configure AWS provider for account {meta['account_id']} and region {region}.",
+        "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
+        "Confirm SSM Session Manager access is already working for every workload attached to this security group before applying this bundle.",
+        "IMPORTANT: this bundle removes public SSH/RDP ingress and does not add replacement admin ingress rules.",
+        f"Run `SECURITY_GROUP_ID={sg_id} REGION={region} python3 {AWS_SG_APPLY_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact public ingress pre-state to .sg-rollback/sg_ingress_snapshot.json.",
+        "Run `terraform init` and `terraform plan`.",
+        "Run `terraform apply` to revoke public SSH/RDP ingress on ports 22 and 3389.",
+        "Verify SSM Session Manager access still works and confirm no 0.0.0.0/0 or ::/0 remains for ports 22/3389.",
+        f"Rollback: run `terraform destroy` then `python3 {AWS_SG_ROLLBACK_SCRIPT_PATH}` to restore the captured public ingress rules exactly, including descriptions.",
+        "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+    ]
+    result = PRBundleResult(format=format, files=terraform_files, steps=steps)
+    result["metadata"] = aws_sg_bundle_rollback_metadata(str(action.id))
+    return result
+
+
+def _generate_for_sg_bastion_reference(
+    action: ActionLike,
+    format: PRBundleFormat,
+    *,
+    meta: dict[str, str],
+    sg_id: str,
+    bastion_sg_ids: list[str],
+) -> PRBundleResult:
+    """Generate EC2.53 bundles that replace public SSH/RDP with bastion SG references."""
+    if not bastion_sg_ids:
+        _raise_pr_bundle_error(
+            code="missing_bastion_security_groups",
+            detail=(
+                "The 'bastion_sg_reference' branch requires approved_bastion_security_group_ids in the "
+                "resolved strategy inputs. Configure tenant remediation settings, then retry bundle generation."
+            ),
+            action_type=ACTION_TYPE_SG_RESTRICT_PUBLIC_PORTS,
+            format=format,
+        )
+    if format == CLOUDFORMATION_FORMAT:
+        return _cloudformation_bastion_reference_bundle(meta, sg_id, bastion_sg_ids)
+    return _terraform_bastion_reference_bundle(action, meta, sg_id, bastion_sg_ids)
+
+
+def _terraform_bastion_reference_bundle(
+    action: ActionLike,
+    meta: dict[str, str],
+    sg_id: str,
+    bastion_sg_ids: list[str],
+) -> PRBundleResult:
+    files = [
+        PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+        PRBundleFile(
+            path="sg_restrict_public_ports.tf",
+            content=_terraform_sg_bastion_reference_content(meta, sg_id, bastion_sg_ids),
+        ),
+        PRBundleFile(path=AWS_SG_APPLY_SCRIPT_PATH, content=aws_sg_capture_script_content()),
+        PRBundleFile(path=AWS_SG_ROLLBACK_SCRIPT_PATH, content=aws_sg_restore_script_content()),
+    ]
+    region = meta["region"]
+    bastions = ", ".join(bastion_sg_ids)
+    steps = [
+        f"Configure AWS provider for account {meta['account_id']} and region {region}.",
+        "Identify what is attached to this security group (EC2, ENIs, ALB/NLB, RDS, ECS/EKS) and treat production resources with extra caution.",
+        f"Confirm the approved bastion security groups are correct for this target before apply: {bastions}.",
+        "IMPORTANT: this bundle removes public SSH/RDP ingress and replaces it with source-security-group access from the approved bastion SG list.",
+        f"Run `SECURITY_GROUP_ID={sg_id} REGION={region} python3 {AWS_SG_APPLY_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact public ingress pre-state to .sg-rollback/sg_ingress_snapshot.json.",
+        "Run `terraform init` and `terraform plan`.",
+        "Run `terraform apply` to revoke public SSH/RDP ingress on ports 22 and 3389 and add bastion-only replacement ingress.",
+        "Verify no 0.0.0.0/0 or ::/0 remains for ports 22/3389 and confirm bastion-based operator access still works.",
+        f"Rollback: run `terraform destroy` then `python3 {AWS_SG_ROLLBACK_SCRIPT_PATH}` to restore the captured public ingress rules exactly, including descriptions.",
+        "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+    ]
+    result = PRBundleResult(format=TERRAFORM_FORMAT, files=files, steps=steps)
+    result["metadata"] = aws_sg_bundle_rollback_metadata(str(action.id))
+    return result
+
+
+def _cloudformation_bastion_reference_bundle(
+    meta: dict[str, str],
+    sg_id: str,
+    bastion_sg_ids: list[str],
+) -> PRBundleResult:
+    region = meta["region"]
+    bastions = ", ".join(bastion_sg_ids)
+    files = [
+        PRBundleFile(
+            path="sg_restrict_public_ports.yaml",
+            content=_cloudformation_sg_bastion_reference_content(meta, sg_id, bastion_sg_ids),
+        )
+    ]
+    steps = [
+        f"Configure AWS credentials for account {meta['account_id']} and region {region}.",
+        f"Confirm the approved bastion security groups are correct for this target before apply: {bastions}.",
+        "What changes: custom resource revokes 0.0.0.0/0 and ::/0 SSH/RDP ingress (22/3389) and replaces it with source-security-group access from the approved bastion SG list.",
+        "IMPORTANT: review the revoke-and-replace behavior before applying.",
+        "Set Parameter SecurityGroupId if you need to override the detected target.",
+        "Validate the template and create/update the stack.",
+        "Verify: run `aws ec2 describe-security-group-rules --region <region> --filters Name=group-id,Values=<security-group-id> Name=is-egress,Values=false --query \"SecurityGroupRules[?((FromPort==`22`||FromPort==`3389`) && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0'))]\" --output json` and confirm empty result.",
+        "Rollback: delete the stack state if desired, then restore the prior ingress model manually if bastion-based access is no longer desired.",
+        "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+    ]
+    return PRBundleResult(format=CLOUDFORMATION_FORMAT, files=files, steps=steps)
 
 
 def _terraform_sg_restrict_content(
@@ -2834,6 +4155,127 @@ resource "aws_vpc_security_group_ingress_rule" "rdp_restricted_ipv6" {{
   ip_protocol       = "tcp"
   description       = "RDP from allowed IPv6 CIDR - Security Autopilot"
   depends_on        = [null_resource.revoke_public_admin_ingress]
+}}
+"""
+
+
+def _terraform_sg_ssm_only_content(meta: dict[str, str], sg_id: str) -> str:
+    """Terraform for EC2.53 ssm_only: revoke public SSH/RDP without adding replacement ingress."""
+    return f"""# SG remove public admin ingress for SSM-only access - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
+# Control: {meta["control_id"]}
+# Requires operator access to already be available through SSM Session Manager before apply.
+# This bundle removes public SSH/RDP ingress and intentionally does not add replacement SSH/RDP rules.
+
+variable "security_group_id" {{
+  type        = string
+  default     = "{sg_id}"
+  description = "Security group ID to harden for SSM-only operator access"
+}}
+
+variable "remediation_region" {{
+  type        = string
+  default     = "{meta["region"]}"
+  description = "Region used by local AWS CLI revoke commands."
+}}
+
+resource "null_resource" "revoke_public_admin_ingress" {{
+  triggers = {{
+    security_group_id = var.security_group_id
+    region            = var.remediation_region
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set +e
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+exit 0
+EOT
+  }}
+}}
+"""
+
+
+def _terraform_sg_bastion_reference_content(
+    meta: dict[str, str],
+    sg_id: str,
+    bastion_sg_ids: list[str],
+) -> str:
+    """Terraform for EC2.53 bastion_sg_reference: revoke public SSH/RDP and add SG-reference ingress."""
+    bastion_defaults = ", ".join(f'"{sg}"' for sg in bastion_sg_ids)
+    return f"""# SG replace public admin ingress with bastion SG references - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
+# Control: {meta["control_id"]}
+# Requires operator access to move through approved bastion security groups before apply.
+# This bundle removes public SSH/RDP ingress and replaces it with source-security-group rules from the approved bastion list.
+
+variable "security_group_id" {{
+  type        = string
+  default     = "{sg_id}"
+  description = "Security group ID to harden for bastion-based operator access"
+}}
+
+variable "approved_bastion_security_group_ids" {{
+  type        = list(string)
+  default     = [{bastion_defaults}]
+  description = "Approved bastion security group IDs that may retain SSH/RDP access"
+}}
+
+variable "remediation_region" {{
+  type        = string
+  default     = "{meta["region"]}"
+  description = "Region used by local AWS CLI revoke commands."
+}}
+
+locals {{
+  bastion_security_group_ids = toset(var.approved_bastion_security_group_ids)
+}}
+
+resource "null_resource" "revoke_public_admin_ingress" {{
+  triggers = {{
+    security_group_id = var.security_group_id
+    region            = var.remediation_region
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set +e
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{{CidrIp=0.0.0.0/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+aws ec2 revoke-security-group-ingress --region "${{var.remediation_region}}" --group-id "${{var.security_group_id}}" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{{CidrIpv6=::/0}}]' >/dev/null 2>&1 || true
+exit 0
+EOT
+  }}
+}}
+
+resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {{
+  for_each                      = local.bastion_security_group_ids
+  security_group_id            = var.security_group_id
+  referenced_security_group_id = each.value
+  from_port                    = 22
+  to_port                      = 22
+  ip_protocol                  = "tcp"
+  description                  = "SSH from approved bastion security group ${{each.value}} - Security Autopilot"
+  depends_on                   = [null_resource.revoke_public_admin_ingress]
+}}
+
+resource "aws_vpc_security_group_ingress_rule" "bastion_rdp" {{
+  for_each                      = local.bastion_security_group_ids
+  security_group_id            = var.security_group_id
+  referenced_security_group_id = each.value
+  from_port                    = 3389
+  to_port                      = 3389
+  ip_protocol                  = "tcp"
+  description                  = "RDP from approved bastion security group ${{each.value}} - Security Autopilot"
+  depends_on                   = [null_resource.revoke_public_admin_ingress]
 }}
 """
 
@@ -3029,6 +4471,297 @@ Resources:
 """
 
 
+def _cloudformation_sg_ssm_only_content(meta: dict[str, str], sg_id: str) -> str:
+    """CloudFormation for EC2.53 ssm_only: revoke public SSH/RDP without replacement ingress."""
+    return f"""# SG remove public admin ingress for SSM-only access - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
+# Control: {meta["control_id"]}
+# IMPORTANT: confirm SSM Session Manager access works before apply.
+# This template revokes public SSH/RDP ingress on ports 22/3389 and does not add replacement ingress rules.
+# Delete path is no-op and does NOT restore revoked public ingress rules.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Remove public SSH/RDP ingress and rely on SSM Session Manager access."
+Metadata:
+  SecurityAutopilotNotes:
+    - "Confirm SSM Session Manager access is already working before applying this template."
+    - "This template revokes 0.0.0.0/0 and ::/0 on ports 22/3389 and adds no replacement admin ingress rules."
+    - "Keep bastion/VPN fallback ready for workloads that are not SSM-managed."
+    - "Delete path is no-op and must not re-add revoked public ingress rules."
+Parameters:
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: "{sg_id}"
+    Description: Security group to remove public SSH/RDP ingress from
+Resources:
+  RevokePublicIngressRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sg-ssm-only-revoke-public-ingress
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:RevokeSecurityGroupIngress
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  RevokePublicIngressFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 120
+      Role: !GetAtt RevokePublicIngressRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          from botocore.exceptions import ClientError
+
+          def _revoke(ec2, security_group_id, permission):
+              try:
+                  ec2.revoke_security_group_ingress(
+                      GroupId=security_group_id,
+                      IpPermissions=[permission],
+                  )
+              except ClientError as exc:
+                  code = exc.response.get("Error", {{}}).get("Code", "")
+                  if code != "InvalidPermission.NotFound":
+                      raise
+
+          def handler(event, context):
+              request_type = event.get("RequestType")
+              try:
+                  if request_type == "Delete":
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {{}}, "RevokePublicIngress")
+                      return
+                  security_group_id = (event.get("ResourceProperties", {{}}).get("SecurityGroupId") or "").strip()
+                  if not security_group_id:
+                      raise ValueError("SecurityGroupId is required.")
+                  ec2 = boto3.client("ec2")
+                  ip_permissions = [
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 22,
+                          "ToPort": 22,
+                          "IpRanges": [{{"CidrIp": "0.0.0.0/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 3389,
+                          "ToPort": 3389,
+                          "IpRanges": [{{"CidrIp": "0.0.0.0/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 22,
+                          "ToPort": 22,
+                          "Ipv6Ranges": [{{"CidrIpv6": "::/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 3389,
+                          "ToPort": 3389,
+                          "Ipv6Ranges": [{{"CidrIpv6": "::/0"}}],
+                      }},
+                  ]
+                  for permission in ip_permissions:
+                      _revoke(ec2, security_group_id, permission)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {{}}, "RevokePublicIngress")
+              except Exception as exc:
+                  cfnresponse.send(
+                      event,
+                      context,
+                      cfnresponse.FAILED,
+                      {{"Error": str(exc)}},
+                      "RevokePublicIngress",
+                  )
+  RevokePublicAdminIngress:
+    Type: Custom::SecurityGroupIngressRevoke
+    Properties:
+      ServiceToken: !GetAtt RevokePublicIngressFunction.Arn
+      SecurityGroupId: !Ref SecurityGroupId
+"""
+
+
+def _cf_bastion_logical_id(prefix: str, sg_id: str, port: int) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", sg_id)
+    return f"{prefix}{cleaned}{port}"
+
+
+def _cloudformation_sg_bastion_reference_content(
+    meta: dict[str, str],
+    sg_id: str,
+    bastion_sg_ids: list[str],
+) -> str:
+    """CloudFormation for EC2.53 bastion_sg_reference: revoke public SSH/RDP and add SG-reference ingress."""
+    ingress_blocks: list[str] = []
+    for bastion_sg_id in bastion_sg_ids:
+        ingress_blocks.append(
+            f"""  {_cf_bastion_logical_id("IngressSSHFrom", bastion_sg_id, 22)}:
+    DependsOn: RevokePublicAdminIngress
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: "{bastion_sg_id}"
+      Description: "SSH from approved bastion security group {bastion_sg_id} - Security Autopilot"
+  {_cf_bastion_logical_id("IngressRDPFrom", bastion_sg_id, 3389)}:
+    DependsOn: RevokePublicAdminIngress
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      IpProtocol: tcp
+      FromPort: 3389
+      ToPort: 3389
+      SourceSecurityGroupId: "{bastion_sg_id}"
+      Description: "RDP from approved bastion security group {bastion_sg_id} - Security Autopilot"
+"""
+        )
+    ingress_resources = "\n".join(ingress_blocks)
+    return f"""# SG replace public admin ingress with bastion SG references - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Security group: {sg_id}
+# Control: {meta["control_id"]}
+# IMPORTANT: confirm approved bastion security groups are correct before apply.
+# This template revokes public SSH/RDP ingress on ports 22/3389 and replaces it with source-security-group rules from the approved bastion list.
+# Delete path is no-op and does NOT restore revoked public ingress rules.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Remove public SSH/RDP ingress and restrict operator access to approved bastion security groups."
+Metadata:
+  SecurityAutopilotNotes:
+    - "Confirm the approved bastion security groups are correct before applying this template."
+    - "This template revokes 0.0.0.0/0 and ::/0 on ports 22/3389 and replaces them with source-security-group ingress from the approved bastion list."
+    - "Delete path is no-op and must not re-add revoked public ingress rules."
+Parameters:
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: "{sg_id}"
+    Description: Security group to remove public SSH/RDP ingress from
+Resources:
+  RevokePublicIngressRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sg-bastion-reference-revoke-public-ingress
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:RevokeSecurityGroupIngress
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  RevokePublicIngressFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 120
+      Role: !GetAtt RevokePublicIngressRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          from botocore.exceptions import ClientError
+
+          def _revoke(ec2, security_group_id, permission):
+              try:
+                  ec2.revoke_security_group_ingress(
+                      GroupId=security_group_id,
+                      IpPermissions=[permission],
+                  )
+              except ClientError as exc:
+                  code = exc.response.get("Error", {{}}).get("Code", "")
+                  if code != "InvalidPermission.NotFound":
+                      raise
+
+          def handler(event, context):
+              request_type = event.get("RequestType")
+              try:
+                  if request_type == "Delete":
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {{}}, "RevokePublicIngress")
+                      return
+                  security_group_id = (event.get("ResourceProperties", {{}}).get("SecurityGroupId") or "").strip()
+                  if not security_group_id:
+                      raise ValueError("SecurityGroupId is required.")
+                  ec2 = boto3.client("ec2")
+                  ip_permissions = [
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 22,
+                          "ToPort": 22,
+                          "IpRanges": [{{"CidrIp": "0.0.0.0/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 3389,
+                          "ToPort": 3389,
+                          "IpRanges": [{{"CidrIp": "0.0.0.0/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 22,
+                          "ToPort": 22,
+                          "Ipv6Ranges": [{{"CidrIpv6": "::/0"}}],
+                      }},
+                      {{
+                          "IpProtocol": "tcp",
+                          "FromPort": 3389,
+                          "ToPort": 3389,
+                          "Ipv6Ranges": [{{"CidrIpv6": "::/0"}}],
+                      }},
+                  ]
+                  for permission in ip_permissions:
+                      _revoke(ec2, security_group_id, permission)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {{}}, "RevokePublicIngress")
+              except Exception as exc:
+                  cfnresponse.send(
+                      event,
+                      context,
+                      cfnresponse.FAILED,
+                      {{"Error": str(exc)}},
+                      "RevokePublicIngress",
+                  )
+  RevokePublicAdminIngress:
+    Type: Custom::SecurityGroupIngressRevoke
+    Properties:
+      ServiceToken: !GetAtt RevokePublicIngressFunction.Arn
+      SecurityGroupId: !Ref SecurityGroupId
+{ingress_resources}
+"""
+
+
 # ---------------------------------------------------------------------------
 # CloudTrail enabled — Step 9.12 (action_type: cloudtrail_enabled, control_id: CloudTrail.1)
 # ---------------------------------------------------------------------------
@@ -3107,7 +4840,7 @@ def _generate_for_cloudtrail_enabled(
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             (
-                "Review trail_bucket_name. When create_bucket_if_missing = true, Terraform creates the bucket; "
+                "Review trail_bucket_name. When create_bucket_if_missing = true, Terraform creates the bucket with the shared support-bucket baseline; "
                 "otherwise the bucket must already exist."
             ),
             (
@@ -3318,46 +5051,15 @@ PY
 EOT
   }}
 }}
-resource "aws_s3_bucket" "cloudtrail_logs" {{
-  count  = var.create_bucket_if_missing ? 1 : 0
-  bucket = var.trail_bucket_name
-}}
-
-resource "aws_s3_bucket_versioning" "cloudtrail_logs" {{
-  count  = var.create_bucket_if_missing ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail_logs[0].id
-
-  versioning_configuration {{
-    status = "Enabled"
-  }}
-}}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs" {{
-  count  = var.create_bucket_if_missing ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail_logs[0].id
-
-  rule {{
-    apply_server_side_encryption_by_default {{
-      sse_algorithm = "AES256"
-    }}
-  }}
-}}
-
-resource "aws_s3_bucket_public_access_block" "cloudtrail_logs" {{
-  count                   = var.create_bucket_if_missing ? 1 : 0
-  bucket                  = aws_s3_bucket.cloudtrail_logs[0].id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}}
-
-resource "aws_s3_bucket_policy" "cloudtrail_managed" {{
-  count  = var.create_bucket_policy && var.create_bucket_if_missing ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail_logs[0].id
-  policy = data.aws_iam_policy_document.cloudtrail_delivery.json
-}}
 """
+    support_bucket_blocks = terraform_support_bucket_blocks(
+        resource_suffix="cloudtrail_logs",
+        bucket_id_ref="aws_s3_bucket.cloudtrail_logs[0].id",
+        bucket_name_ref='local.cloudtrail_bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+        enable_versioning=True,
+        service_write_data_source="data.aws_iam_policy_document.cloudtrail_delivery",
+    )
     return f"""# CloudTrail enabled - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]}
@@ -3405,6 +5107,13 @@ locals {{
   cloudtrail_bucket_arn  = "arn:aws:s3:::${{local.cloudtrail_bucket_name}}"
 }}
 
+resource "aws_s3_bucket" "cloudtrail_logs" {{
+  count  = var.create_bucket_if_missing ? 1 : 0
+  bucket = var.trail_bucket_name
+}}
+
+{support_bucket_blocks}
+
 resource "aws_cloudtrail" "security_autopilot" {{
   name                          = var.trail_name
   s3_bucket_name                = local.cloudtrail_bucket_name
@@ -3412,7 +5121,7 @@ resource "aws_cloudtrail" "security_autopilot" {{
   include_global_service_events = true
   enable_logging                = true
   kms_key_id                    = var.kms_key_arn != "" ? var.kms_key_arn : null
-  depends_on                    = [aws_s3_bucket_policy.cloudtrail_managed, null_resource.cloudtrail_bucket_policy]
+  depends_on                    = [aws_s3_bucket_policy.cloudtrail_logs, null_resource.cloudtrail_bucket_policy]
 }}
 {policy_block if policy_block else ""}
 """
@@ -3461,7 +5170,15 @@ def _cloudformation_cloudtrail_content(
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+            BucketKeyEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-multipart
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
   TrailBucketPolicy:
     Condition: ShouldCreateBucketPolicy
     Type: AWS::S3::BucketPolicy
@@ -3485,6 +5202,16 @@ def _cloudformation_cloudtrail_content(
             Condition:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${{TrailBucketName}}
+              - !Sub arn:aws:s3:::${{TrailBucketName}}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
 """
     return f"""# CloudTrail enabled - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
@@ -3553,6 +5280,7 @@ def _generate_for_s3_bucket_strategy(
     strategy_inputs: dict[str, Any] | None,
     risk_snapshot: dict[str, Any] | None,
     variant: str | None,
+    resolution: Mapping[str, Any] | None,
 ) -> PRBundleResult:
     """Generate S3 bucket public-access remediation according to selected strategy."""
     normalized_strategy = (strategy_id or "").strip().lower()
@@ -3564,10 +5292,25 @@ def _generate_for_s3_bucket_strategy(
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
             variant=variant,
+            resolution=resolution,
+        )
+    if normalized_strategy == "s3_migrate_website_cloudfront_private":
+        return _generate_for_s3_website_cloudfront_private(
+            action,
+            format,
+            strategy_id=normalized_strategy,
+            strategy_inputs=strategy_inputs,
+            risk_snapshot=risk_snapshot,
+            resolution=resolution,
         )
     if normalized_strategy == "s3_keep_public_exception":
         return _generate_for_exception_guidance(action, format, "Keep public S3 access (exception path)")
-    return _generate_for_s3_bucket_block_public_access(action, format)
+    return _generate_for_s3_bucket_block_public_access(
+        action,
+        format,
+        strategy_id=normalized_strategy,
+        resolution=resolution,
+    )
 
 
 def _generate_for_aws_config_enabled(
@@ -3587,7 +5330,11 @@ def _generate_for_aws_config_enabled(
         content = _cloudformation_aws_config_enabled_content(meta, strategy=strategy, strategy_inputs=inputs)
         steps = [
             f"Configure AWS credentials for account {meta['account_id']}.",
-            "Validate the template and deploy the stack (keep OverwriteRecordingGroup=false unless you explicitly intend to replace recorder scope).",
+        (
+            "Validate the template and deploy the stack. Keep OverwriteRecordingGroup=false only when the "
+            "existing recorder already captures the full Config.1 scope; selective/custom recorders should "
+            "resolve to all-supported recording on the executable path."
+        ),
             "Confirm AWS Config recorder is running and delivery channel is healthy.",
             "Recompute actions to verify remediation state.",
         ]
@@ -3606,7 +5353,11 @@ def _generate_for_aws_config_enabled(
     content = _terraform_aws_config_enabled_content(meta, strategy=strategy, strategy_inputs=inputs)
     steps = [
         f"Configure AWS provider for account {meta['account_id']} and region {meta['region']}.",
-        "Adjust bucket/KMS variables as needed; keep overwrite_recording_group=false unless you explicitly intend to replace recorder scope.",
+        (
+            "Adjust bucket/KMS variables as needed. Keep overwrite_recording_group=false only when the existing "
+            "recorder already captures the full Config.1 scope; selective/custom recorders should resolve to "
+            "all-supported recording on the executable path."
+        ),
         "Run `terraform init`, `terraform plan`, and `terraform apply`.",
         f"Use `python3 ./{AWS_CONFIG_ROLLBACK_SCRIPT_PATH}` only when you need to restore the exact pre-remediation AWS Config state captured by this bundle.",
         "Recompute actions to verify remediation state.",
@@ -3806,6 +5557,7 @@ def _generate_for_s3_bucket_require_ssl(
     strategy_id: str | None,
     strategy_inputs: dict[str, Any] | None,
     risk_snapshot: dict[str, Any] | None,
+    resolution: Mapping[str, Any] | None,
 ) -> PRBundleResult:
     """Generate S3 SSL enforcement bundle."""
     meta = _action_meta(action)
@@ -3816,8 +5568,9 @@ def _generate_for_s3_bucket_require_ssl(
 
     inputs = strategy_inputs or {}
     preserve_existing_policy = _coerce_bool(inputs.get("preserve_existing_policy"), default=True)
+    apply_time_merge = _s3_5_apply_time_merge_requested(resolution)
     preservation_policy: str | None = None
-    if preserve_existing_policy:
+    if preserve_existing_policy and not apply_time_merge:
         preservation_policy = _resolve_s3_migrate_policy_preservation(
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
@@ -3839,6 +5592,17 @@ def _generate_for_s3_bucket_require_ssl(
         exempt_principals = []
 
     if format == CLOUDFORMATION_FORMAT:
+        if apply_time_merge and preservation_policy is None:
+            _raise_pr_bundle_error(
+                code="bucket_policy_preservation_evidence_missing",
+                detail=(
+                    "CloudFormation S3.5 generation still requires captured existing_bucket_policy_json. "
+                    "Regenerate after refreshing remediation options or use the Terraform bundle for apply-time merge."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+                format=format,
+                strategy_id=strategy_id,
+            )
         return PRBundleResult(
             format=format,
             files=[
@@ -3880,9 +5644,16 @@ def _generate_for_s3_bucket_require_ssl(
         PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
         PRBundleFile(
             path="s3_bucket_require_ssl.tf",
-            content=_terraform_s3_bucket_require_ssl_content(
-                meta,
-                exempt_principals=exempt_principals,
+            content=(
+                _terraform_s3_bucket_require_ssl_apply_time_merge_content(
+                    meta,
+                    exempt_principals=exempt_principals,
+                )
+                if apply_time_merge
+                else _terraform_s3_bucket_require_ssl_content(
+                    meta,
+                    exempt_principals=exempt_principals,
+                )
             ),
         ),
     ]
@@ -3903,8 +5674,9 @@ def _generate_for_s3_bucket_require_ssl(
             )
         )
 
+    include_policy_capture_helpers = preserve_existing_policy and (preservation_policy is not None or apply_time_merge)
     rollback_metadata: dict[str, Any] | None = None
-    if preservation_policy is not None:
+    if include_policy_capture_helpers:
         files.extend(
             [
                 PRBundleFile(
@@ -3926,18 +5698,22 @@ def _generate_for_s3_bucket_require_ssl(
             "for merge-safe preservation."
             if preservation_policy is not None and preserve_existing_policy
             else (
+                "Current bucket policy will be fetched and merged at terraform plan/apply time with customer credentials."
+                if apply_time_merge and preserve_existing_policy
+                else (
                 "No existing bucket policy statements were detected; "
                 "existing_bucket_policy_json remains empty."
                 if preserve_existing_policy
                 else "preserve_existing_policy=false selected; existing bucket policy statements "
                 "are not preloaded."
+                )
             )
         ),
         *(
             [
                 f"Run `BUCKET_NAME={bucket_name} REGION={meta['region']} python3 {AWS_S3_POLICY_CAPTURE_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact bucket policy pre-state to .s3-rollback/policy_snapshot.json.",
             ]
-            if preservation_policy is not None
+            if include_policy_capture_helpers
             else []
         ),
         "Run `terraform init`, `terraform plan`, and `terraform apply`.",
@@ -3945,7 +5721,7 @@ def _generate_for_s3_bucket_require_ssl(
             [
                 f"Rollback: run `terraform destroy` then `python3 {AWS_S3_POLICY_RESTORE_SCRIPT_PATH}` to restore the captured bucket policy exactly.",
             ]
-            if preservation_policy is not None
+            if include_policy_capture_helpers
             else []
         ),
         "Validate impacted clients and recompute actions.",
@@ -3954,6 +5730,32 @@ def _generate_for_s3_bucket_require_ssl(
     if rollback_metadata:
         result["metadata"] = rollback_metadata
     return result
+
+
+def _s3_5_apply_time_merge_requested(resolution: Mapping[str, Any] | None) -> bool:
+    if not isinstance(resolution, Mapping):
+        return False
+    summary = resolution.get("preservation_summary")
+    if not isinstance(summary, Mapping):
+        return False
+    return summary.get("apply_time_merge") is True
+
+
+def _s3_2_apply_time_merge_requested(resolution: Mapping[str, Any] | None) -> bool:
+    if not isinstance(resolution, Mapping):
+        return False
+    summary = resolution.get("preservation_summary")
+    if not isinstance(summary, Mapping):
+        return False
+    return summary.get("apply_time_merge") is True
+
+
+def _s3_2_public_policy_scrub_requested(resolution: Mapping[str, Any] | None) -> bool:
+    if not isinstance(resolution, Mapping):
+        return False
+    return str(resolution.get("profile_id") or "").strip() == (
+        "s3_bucket_block_public_access_review_public_policy_scrub"
+    )
 
 
 def _generate_for_iam_root_access_key_absent(
@@ -4421,6 +6223,106 @@ data "aws_iam_policy_document" "required_ssl" {{
 
 data "aws_iam_policy_document" "merged_policy" {{
   source_policy_documents   = var.existing_bucket_policy_json == "" ? [] : [var.existing_bucket_policy_json]
+  override_policy_documents = [data.aws_iam_policy_document.required_ssl.json]
+}}
+
+resource "aws_s3_bucket_policy" "security_autopilot" {{
+  bucket = local.target_bucket_name
+  policy = data.aws_iam_policy_document.merged_policy.json
+}}
+"""
+
+
+def _terraform_s3_bucket_require_ssl_apply_time_merge_content(
+    meta: dict[str, str],
+    exempt_principals: list[str],
+) -> str:
+    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    exempt_principals_json = json.dumps(exempt_principals)
+    return f"""# Enforce SSL-only S3 requests - Action: {meta["action_id"]}
+locals {{
+  target_bucket_name = "{bucket}"
+}}
+
+variable "exempt_principal_arns" {{
+  type        = list(string)
+  default     = {exempt_principals_json}
+  description = "Optional IAM principal ARNs exempted from strict SSL deny."
+}}
+
+data "aws_s3_bucket_policy" "existing" {{
+  bucket = local.target_bucket_name
+}}
+
+locals {{
+  existing_policy_document = try(
+    jsondecode(data.aws_s3_bucket_policy.existing.policy),
+    {{
+      Version   = "2012-10-17"
+      Statement = []
+    }}
+  )
+  existing_policy_id = try(local.existing_policy_document.Id, null)
+  existing_policy_statements = try(local.existing_policy_document.Statement, [])
+  filtered_existing_policy_statements = [
+    for stmt in local.existing_policy_statements : stmt
+    if !(
+      lower(try(tostring(stmt.Sid), "")) == "denyinsecuretransport" ||
+      (
+        lower(try(tostring(stmt.Effect), "")) == "deny" &&
+        lower(try(tostring(stmt.Condition.Bool["aws:SecureTransport"]), "")) == "false"
+      )
+    )
+  ]
+  filtered_existing_policy_document = merge(
+    {{
+      Version   = try(tostring(local.existing_policy_document.Version), "2012-10-17")
+      Statement = local.filtered_existing_policy_statements
+    }},
+    local.existing_policy_id == null ? {{}} : {{ Id = local.existing_policy_id }}
+  )
+}}
+
+data "aws_iam_policy_document" "required_ssl" {{
+  statement {{
+    sid    = "DenyInsecureTransport"
+    effect = "Deny"
+    principals {{
+      type        = "*"
+      identifiers = ["*"]
+    }}
+    actions = ["s3:*"]
+    resources = [
+      "arn:aws:s3:::${{local.target_bucket_name}}",
+      "arn:aws:s3:::${{local.target_bucket_name}}/*",
+    ]
+    condition {{
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }}
+  }}
+
+  dynamic "statement" {{
+    for_each = length(var.exempt_principal_arns) == 0 ? [] : [var.exempt_principal_arns]
+    content {{
+      sid    = "AllowExemptPrincipals"
+      effect = "Allow"
+      principals {{
+        type        = "AWS"
+        identifiers = statement.value
+      }}
+      actions = ["s3:*"]
+      resources = [
+        "arn:aws:s3:::${{local.target_bucket_name}}",
+        "arn:aws:s3:::${{local.target_bucket_name}}/*",
+      ]
+    }}
+  }}
+}}
+
+data "aws_iam_policy_document" "merged_policy" {{
+  source_policy_documents   = [jsonencode(local.filtered_existing_policy_document)]
   override_policy_documents = [data.aws_iam_policy_document.required_ssl.json]
 }}
 

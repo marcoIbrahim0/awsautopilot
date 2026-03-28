@@ -178,6 +178,11 @@ def build_grouped_run_persistence_plan(
         tenant_settings=tenant_settings,
         default_strategy_id=default_strategy_id,
     )
+    _validate_grouped_strategy_usage(
+        scope=scope,
+        request=request,
+        default_selection=default_selection,
+    )
     normalized_request = _normalized_request(request, default_selection)
     action_resolutions = _build_action_resolutions(
         sorted_actions,
@@ -500,6 +505,10 @@ def _tenant_default_required_input_keys(
     tenant_settings: Mapping[str, Any] | None,
 ) -> set[str]:
     settings = normalize_remediation_settings(tenant_settings)
+    if strategy_id == "s3_migrate_website_cloudfront_private":
+        return {"aliases", "route53_hosted_zone_id", "acm_certificate_arn"}
+    if strategy_id == "s3_enable_access_logging_guided":
+        return {"log_bucket_name"}
     if (
         strategy_id == "config_enable_centralized_delivery"
         and settings.get("config", {}).get("default_bucket_name")
@@ -552,6 +561,31 @@ def _normalized_request(
         request,
         strategy_id=default_selection.strategy_id,
         strategy_inputs=default_selection.strategy_inputs or None,
+    )
+
+
+def _validate_grouped_strategy_usage(
+    *,
+    scope: GroupedActionScope,
+    request: NormalizedGroupedRunRequest,
+    default_selection: _ResolvedSelection | None,
+) -> None:
+    if scope.action_type != "s3_bucket_block_public_access":
+        return
+    if default_selection is None:
+        return
+    if default_selection.strategy_id != "s3_migrate_website_cloudfront_private":
+        return
+    raise GroupedRemediationRunValidationError(
+        "grouped_website_strategy_requires_action_overrides",
+        (
+            "Grouped S3 website migration must use action_overrides per bucket so aliases, "
+            "route53_hosted_zone_id, and acm_certificate_arn stay scoped to each action."
+        ),
+        details={
+            "strategy_id": default_selection.strategy_id,
+            "action_override_count": len(request.action_overrides),
+        },
     )
 
 

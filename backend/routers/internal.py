@@ -38,6 +38,7 @@ from backend.services.action_run_confirmation import (
     evaluate_confirmation_for_action_async,
     record_non_executable_result_async,
     record_execution_result_async,
+    schedule_confirmation_refresh_async,
 )
 from backend.services.bundle_reporting_tokens import (
     BundleReportingTokenSecretNotConfiguredError,
@@ -51,6 +52,7 @@ from backend.services.internal_reconciliation import (
     extract_error_code as extract_error_code_service,
     is_access_denied_code as is_access_denied_code_service,
 )
+from backend.services.pending_confirmation_refresh import enqueue_due_pending_confirmation_refreshes
 from backend.services.reconciliation_prereqs import (
     collect_reconciliation_queue_snapshot,
     evaluate_reconciliation_prereqs_async,
@@ -162,6 +164,13 @@ class ReconciliationScheduleTickRequest(BaseModel):
     account_ids: list[str] | None = None
     limit: int = Field(default=200, ge=1, le=1000)
     dry_run: bool = False
+
+
+class PendingConfirmationSweepRequest(BaseModel):
+    tenant_ids: list[uuid.UUID] | None = None
+    account_ids: list[str] | None = None
+    regions: list[str] | None = None
+    limit: int = Field(default=200, ge=1, le=1000)
 
 
 class InternalComputeRequest(BaseModel):
@@ -710,6 +719,12 @@ async def _apply_finished_group_run_state_projection(
             since_run_started=execution_started_at,
             execution_status=exec_status,
         )
+        if exec_status == ActionGroupExecutionStatus.success:
+            await schedule_confirmation_refresh_async(
+                db,
+                action_id=item.action_id,
+                finished_at=execution_finished_at,
+            )
 
     for item in non_executable_results:
         raw_result = _non_executable_raw_result(item)
@@ -1663,6 +1678,38 @@ async def run_reconciliation_schedule_tick(
         "dry_run": bool(body.dry_run),
         "failures": failures[:20],
     }
+
+
+@router.post(
+    "/pending-confirmation/sweep",
+    status_code=status.HTTP_200_OK,
+    summary="Enqueue due Security Hub refreshes for pending-confirmation actions",
+    description=(
+        "Scans pending-confirmation action-group states, groups due rows by tenant/account/region, "
+        "and enqueues one ingest_findings refresh per scope. Designed for EventBridge/cron invocation."
+    ),
+)
+async def run_pending_confirmation_sweep(
+    body: PendingConfirmationSweepRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_reconciliation_scheduler_secret: Annotated[str | None, Header(alias="X-Reconciliation-Scheduler-Secret")] = None,
+) -> dict[str, object]:
+    _verify_reconciliation_scheduler_secret(x_reconciliation_scheduler_secret)
+    try:
+        result = await enqueue_due_pending_confirmation_refreshes(
+            db,
+            tenant_ids=body.tenant_ids,
+            account_ids=body.account_ids,
+            regions=body.regions,
+            limit=body.limit,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    await db.commit()
+    return result
 
 
 @router.post(

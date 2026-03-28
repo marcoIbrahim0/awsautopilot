@@ -17,6 +17,16 @@ This document defines the production-readiness contract for PR bundle generation
 5. Exception-only strategies must be rejected at `POST /api/remediation-runs` (HTTP 400) before queue dispatch with guidance: `Use Exception workflow instead of PR bundle.`
 
 Cross-reference:
+- [Remediation adjacency hardening plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-adjacency-hardening-plan.md)
+- [Remediation determinism hardening implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md)
+- [Phase 1 remediation determinism production gate evidence (authoritative rerun, live `WI-3` / `WI-6` apply proof, March 28, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T175854Z-phase1-production-signoff-rerun/README.md)
+- [Phase 1 remediation determinism production gate evidence (authenticated live run, historical defects package, March 28, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T163848Z-remediation-determinism-phase1-production-live/README.md)
+- [Phase 1 remediation determinism production gate evidence (blocked on auth, historical March 28, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T162829Z-remediation-determinism-phase1-production/README.md)
+- [WI-4 retained live proof package (March 28, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T021002Z-wi4-s35-apply-time-merge-canary/README.md)
+- [Phase 5 support-bucket family implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/phase-5-support-bucket-family-implementation-plan.md)
+- [Phase 5 live rerun evidence (March 26, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260326T050614Z-phase5-support-bucket-cluster-canary-backup-auth-rerun/notes/final-summary.md)
+- [Phase 5 CloudTrail postdeploy recheck (March 26, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260326T052354Z-phase5-cloudtrail-postdeploy-recheck/notes/final-summary.md)
+- [Phase 5 pending-confirmation repair (March 26, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260326T132117Z-phase5-pending-confirmation-repair/notes/final-summary.md)
 - [Implementation Plan — archived snapshot](../archive/2026-02-doc-cleanup/implementation-plan.md)
 - [No-UI PR Bundle Agent Runbook](../runbooks/no-ui-pr-bundle-agent.md)
 - [Important To Do](important-to-do.md)

@@ -1,0 +1,6 @@
+{
+    "LoggingEnabled": {
+        "TargetBucket": "security-autopilot-access-logs-696505809372-r221001-access-logs",
+        "TargetPrefix": "s3-access-logs/"
+    }
+}

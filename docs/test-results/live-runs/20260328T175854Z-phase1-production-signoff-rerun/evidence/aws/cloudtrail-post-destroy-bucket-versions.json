@@ -1,0 +1,38 @@
+{
+    "Versions": [
+        {
+            "ETag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+            "ChecksumAlgorithm": [
+                "CRC64NVME"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 0,
+            "StorageClass": "STANDARD",
+            "Key": "AWSLogs/696505809372/CloudTrail/",
+            "VersionId": "ue2Rnp_K1OT0s.vE7CuxrM0inTexJI8a",
+            "IsLatest": true,
+            "LastModified": "2026-03-28T18:08:40+00:00",
+            "Owner": {
+                "ID": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc"
+            }
+        },
+        {
+            "ETag": "\"2643ec26d6aef8908ca5d37c89c0858f\"",
+            "ChecksumAlgorithm": [
+                "CRC64NVME"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 1613,
+            "StorageClass": "STANDARD",
+            "Key": "AWSLogs/696505809372/CloudTrail/eu-north-1/2026/03/28/696505809372_CloudTrail_eu-north-1_20260328T1815Z_6eZMAMAiTFK1uYSV.json.gz",
+            "VersionId": "0NKHY8yd1uQqBlhK5_8q0ra0daKUrbCj",
+            "IsLatest": true,
+            "LastModified": "2026-03-28T18:10:20+00:00",
+            "Owner": {
+                "ID": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc"
+            }
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ""
+}

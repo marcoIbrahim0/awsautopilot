@@ -14,7 +14,8 @@ from typing_extensions import NotRequired
 from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
 from backend.services.s3_family_resolution_adapter import resolve_s3_kms_key_mode
-from backend.services.remediation_strategy import RemediationStrategy
+from backend.services.remediation_runtime_checks import check_adjacency_safety
+from backend.services.remediation_strategy import RemediationStrategy, get_adjacency_contract
 
 CheckStatus = Literal["pass", "warn", "unknown", "fail"]
 
@@ -54,6 +55,7 @@ _STRICT_ACCESS_PATH_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
         "s3_enforce_ssl_strict_deny",
         "ssm_disable_public_document_sharing",
     }
@@ -65,6 +67,101 @@ _S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,
 def _specialization_fallback_status(strategy: RemediationStrategy) -> CheckStatus:
     """Promote unspecialized checks to fail for medium/high-risk controls."""
     return "fail" if strategy.get("risk_level") in _MEDIUM_HIGH_RISK_LEVELS else "unknown"
+
+
+def _s3_ssl_apply_time_merge_message(runtime_signals: dict[str, Any]) -> str | None:
+    evidence = runtime_signals.get("evidence")
+    if not isinstance(evidence, dict):
+        return None
+    if runtime_signals.get("s3_policy_analysis_possible") is not False:
+        return None
+    if evidence.get("existing_bucket_policy_json"):
+        return None
+    if evidence.get("existing_bucket_policy_parse_error"):
+        return None
+    capture_error = str(evidence.get("existing_bucket_policy_capture_error") or "").strip()
+    if not capture_error:
+        return None
+    return (
+        f"Runtime policy capture failed ({capture_error}); customer-run Terraform will fetch and merge the "
+        "live bucket policy at plan/apply time."
+    )
+
+
+def _s3_oac_apply_time_merge_message(runtime_signals: dict[str, Any]) -> str | None:
+    evidence = runtime_signals.get("evidence")
+    if not isinstance(evidence, dict):
+        return None
+    if evidence.get("existing_bucket_policy_json"):
+        return None
+    if evidence.get("existing_bucket_policy_parse_error"):
+        return None
+    if not str(evidence.get("target_bucket") or "").strip():
+        return None
+    if evidence.get("existing_bucket_policy_statement_count") is not None:
+        return None
+    capture_error = str(evidence.get("existing_bucket_policy_capture_error") or "").strip()
+    if not capture_error:
+        return None
+    return (
+        f"Runtime policy capture failed ({capture_error}); customer-run Terraform will fetch and merge the "
+        "live bucket policy at plan/apply time for CloudFront/OAC migration."
+    )
+
+
+def _s3_oac_preservation_proven(runtime_signals: dict[str, Any]) -> bool:
+    evidence = runtime_signals.get("evidence")
+    if not isinstance(evidence, dict):
+        return False
+    if evidence.get("existing_bucket_policy_json"):
+        return True
+    return evidence.get("existing_bucket_policy_statement_count") == 0
+
+
+def _s3_website_translation_proven(runtime_signals: dict[str, Any]) -> bool:
+    evidence = runtime_signals.get("evidence")
+    if not isinstance(evidence, dict):
+        return False
+    return (
+        runtime_signals.get("s3_bucket_website_configured") is True
+        and runtime_signals.get("s3_bucket_website_translation_supported") is True
+        and bool(evidence.get("existing_bucket_website_configuration_json"))
+    )
+
+
+def _s3_website_dns_inputs_complete(strategy_inputs: dict[str, Any] | None) -> bool:
+    if not isinstance(strategy_inputs, dict):
+        return False
+    aliases = strategy_inputs.get("aliases")
+    hosted_zone_id = str(strategy_inputs.get("route53_hosted_zone_id") or "").strip()
+    certificate_arn = str(strategy_inputs.get("acm_certificate_arn") or "").strip()
+    return (
+        isinstance(aliases, list)
+        and any(isinstance(alias, str) and alias.strip() for alias in aliases)
+        and bool(hosted_zone_id)
+        and ":acm:us-east-1:" in certificate_arn
+    )
+
+
+def _strict_access_path_unavailable_status(
+    strategy_id: str,
+    runtime_signals: dict[str, Any],
+) -> CheckStatus | None:
+    if strategy_id == "s3_enforce_ssl_strict_deny" and _s3_ssl_apply_time_merge_message(runtime_signals) is not None:
+        return "warn"
+    if strategy_id == "s3_migrate_cloudfront_oac_private":
+        if _s3_oac_preservation_proven(runtime_signals):
+            return None
+        if _s3_oac_apply_time_merge_message(runtime_signals) is not None:
+            return "warn"
+    if strategy_id == "s3_migrate_website_cloudfront_private":
+        if not _s3_website_translation_proven(runtime_signals):
+            return "fail"
+        if _s3_oac_preservation_proven(runtime_signals):
+            return None
+        if _s3_oac_apply_time_merge_message(runtime_signals) is not None:
+            return None
+    return "fail"
 
 
 def _s3_bucket_name_candidate(raw: Any) -> str | None:
@@ -99,6 +196,29 @@ def _s3_access_logging_source_bucket(action: Action) -> str | None:
     return None
 
 
+def _helper_bucket_creation_planned(
+    *,
+    action_type: str | None,
+    strategy_id: str,
+    strategy_inputs: Mapping[str, Any],
+    runtime_signals: Mapping[str, Any],
+) -> bool:
+    if runtime_signals.get("helper_bucket_creation_planned") is True:
+        return True
+    if action_type == "cloudtrail_enabled" and strategy_id == "cloudtrail_enable_guided":
+        return (
+            strategy_inputs.get("create_bucket_if_missing") is True
+            and isinstance(strategy_inputs.get("trail_bucket_name"), str)
+            and bool(str(strategy_inputs.get("trail_bucket_name")).strip())
+        )
+    if action_type == "aws_config_enabled" and strategy_id == "config_enable_account_local_delivery":
+        delivery_mode = str(strategy_inputs.get("delivery_bucket_mode") or "create_new").strip().lower()
+        return delivery_mode == "create_new" and isinstance(strategy_inputs.get("delivery_bucket"), str) and bool(
+            str(strategy_inputs.get("delivery_bucket")).strip()
+        )
+    return False
+
+
 def evaluate_strategy_impact(
     action: Action,
     strategy: RemediationStrategy,
@@ -113,8 +233,17 @@ def evaluate_strategy_impact(
     explicit acknowledgement in run creation.
     """
     strategy_inputs = strategy_inputs or {}
-    runtime_signals = runtime_signals or {}
+    runtime_signals = dict(runtime_signals or {})
     strategy_id = strategy["strategy_id"]
+    runtime_signals.setdefault(
+        "helper_bucket_creation_planned",
+        _helper_bucket_creation_planned(
+            action_type=strategy["action_type"],
+            strategy_id=strategy_id,
+            strategy_inputs=strategy_inputs,
+            runtime_signals=runtime_signals,
+        ),
+    )
     checks: list[DependencyCheck] = []
     warnings = list(strategy.get("warnings", []))
 
@@ -471,7 +600,10 @@ def evaluate_strategy_impact(
         )
         merge_status: CheckStatus = "warn"
         merge_message = "Strict SSL enforcement can conflict with existing bucket policy statements."
-        if runtime_signals.get("s3_policy_analysis_possible") is False:
+        apply_time_merge_message = _s3_ssl_apply_time_merge_message(runtime_signals)
+        if apply_time_merge_message is not None:
+            merge_message = apply_time_merge_message
+        elif runtime_signals.get("s3_policy_analysis_possible") is False:
             merge_status = "fail"
             merge_message = str(
                 runtime_signals.get("s3_policy_analysis_error")
@@ -592,28 +724,60 @@ def evaluate_strategy_impact(
     elif strategy_id in (
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
     ):
         policy_public = runtime_signals.get("s3_bucket_policy_public")
         website_configured = runtime_signals.get("s3_bucket_website_configured")
-        dependency_status: CheckStatus = "warn"
-        dependency_message = (
-            "Validate direct bucket access dependencies before applying this strategy. "
-            "Analyze the affected S3 bucket policy/ACL/public-access-block settings, "
-            "the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, "
-            "and any VPC endpoint or cross-account IAM principals that access the bucket. "
-            "If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
-        )
-        if policy_public is False and website_configured is False:
-            dependency_status = "pass"
+        dependency_status: CheckStatus
+        dependency_message: str
+        if strategy_id == "s3_migrate_website_cloudfront_private":
+            translation_reason = str(runtime_signals.get("s3_bucket_website_translation_reason") or "").strip()
+            if (
+                website_configured is True
+                and runtime_signals.get("s3_bucket_website_translation_supported") is True
+                and _s3_website_dns_inputs_complete(strategy_inputs)
+            ):
+                dependency_status = "pass"
+                dependency_message = (
+                    "Runtime probes captured a simple S3 website configuration and explicit Route53/ACM "
+                    "inputs, so the CloudFront website migration path can preserve access during cutover."
+                )
+            elif website_configured is True and runtime_signals.get("s3_bucket_website_translation_supported") is not True:
+                dependency_status = "fail"
+                dependency_message = translation_reason or (
+                    "The current S3 website configuration requires manual CloudFront translation review."
+                )
+            elif website_configured is not True:
+                dependency_status = "fail"
+                dependency_message = (
+                    "Runtime evidence did not confirm active S3 static website hosting for this bucket."
+                )
+            else:
+                dependency_status = "fail"
+                dependency_message = (
+                    "Website migration requires explicit aliases, route53_hosted_zone_id, and a us-east-1 "
+                    "acm_certificate_arn before executable cutover can be planned."
+                )
+        else:
+            dependency_status = "warn"
             dependency_message = (
-                "Bucket policy is not public and website hosting is disabled; no direct-public-access "
-                "dependency was detected from runtime probes."
+                "Validate direct bucket access dependencies before applying this strategy. "
+                "Analyze the affected S3 bucket policy/ACL/public-access-block settings, "
+                "the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, "
+                "and any VPC endpoint or cross-account IAM principals that access the bucket. "
+                "If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
             )
-        elif policy_public is not True and website_configured is not True:
-            dependency_message = (
-                "Runtime probes could not fully determine bucket public-access posture. "
-                + dependency_message
-            )
+            if policy_public is False and website_configured is False:
+                dependency_status = "pass"
+                dependency_message = (
+                    "Bucket policy is not public and website hosting is disabled; no direct-public-access "
+                    "dependency was detected from runtime probes."
+                )
+            elif policy_public is not True and website_configured is not True:
+                dependency_message = (
+                    "Runtime probes could not fully determine bucket public-access posture. "
+                    + dependency_message
+                )
         checks.append(
             _build_check(
                 "s3_public_access_dependency",
@@ -638,20 +802,37 @@ def evaluate_strategy_impact(
             )
         )
 
+    # Adjacency safety gate: emit fail for P0/P1 families when proof is missing.
+    adjacency = check_adjacency_safety(strategy["action_type"], runtime_signals)
+    if not adjacency["safe"]:
+        contract = get_adjacency_contract(strategy["action_type"])
+        severity: CheckStatus = "warn"
+        if contract and (contract["creates_helper_resources"] or contract["merge_safe_preservation_required"]):
+            severity = "fail"
+        checks.append(
+            _build_check(
+                "adjacency_safety_unproven",
+                severity,
+                str(adjacency.get("downgrade_reason") or "Adjacency safety could not be proven."),
+            )
+        )
+
     if (
         strategy_id in _STRICT_ACCESS_PATH_STRATEGIES
         and runtime_signals.get("access_path_evidence_available") is False
     ):
-        checks.append(
-            _build_check(
-                "access_path_evidence_unavailable",
-                "fail",
-                str(
-                    runtime_signals.get("access_path_evidence_reason")
-                    or "Required access-path discovery evidence is unavailable for strict strategy."
-                ),
+        access_path_status = _strict_access_path_unavailable_status(strategy_id, runtime_signals)
+        if access_path_status is not None:
+            checks.append(
+                _build_check(
+                    "access_path_evidence_unavailable",
+                    access_path_status,
+                    str(
+                        runtime_signals.get("access_path_evidence_reason")
+                        or "Required access-path discovery evidence is unavailable for strict strategy."
+                    ),
+                )
             )
-        )
 
     # Generic sanity signal when no checks were emitted by strategy-specific logic.
     if not checks:

@@ -40,6 +40,7 @@ class RemediationStrategyProfileMetadata(TypedDict):
 
     profiles: list[RemediationProfileOptionPayload]
     recommended_profile_id: str | None
+    resolved_inputs: dict[str, Any]
     missing_defaults: list[str]
     blocked_reasons: list[str]
     preservation_summary: dict[str, Any]
@@ -90,6 +91,7 @@ def build_strategy_profile_metadata(
     return {
         "profiles": profiles,
         "recommended_profile_id": selection.profile.profile_id,
+        "resolved_inputs": dict(selection.resolved_inputs),
         "missing_defaults": list(selection.missing_defaults),
         "blocked_reasons": blocked_reasons,
         "preservation_summary": preservation_summary,

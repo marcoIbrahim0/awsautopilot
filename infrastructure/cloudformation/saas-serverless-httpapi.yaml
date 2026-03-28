@@ -194,6 +194,11 @@ Parameters:
     Type: String
     NoEcho: true
     Description: "Postgres connection string (use Neon)."
+  DatabaseUrlFallback:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: "Optional fallback Postgres connection string used when the primary database is unavailable."
   JwtSecret:
     Type: String
     NoEcho: true
@@ -312,13 +317,6 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-          - Effect: Allow
-            Principal:
-              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-api"
-            Action:
-              - sts:AssumeRole
-              - sts:SetSourceIdentity
-              - sts:TagSession
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - !ImportValue
@@ -349,13 +347,6 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-          - Effect: Allow
-            Principal:
-              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${NamePrefix}-lambda-worker"
-            Action:
-              - sts:AssumeRole
-              - sts:SetSourceIdentity
-              - sts:TagSession
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - !ImportValue
@@ -615,6 +606,7 @@ Resources:
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
           DATABASE_URL: !Ref DatabaseUrl
+          DATABASE_URL_FALLBACK: !Ref DatabaseUrlFallback
           JWT_SECRET: !Ref JwtSecret
           BUNDLE_REPORTING_TOKEN_SECRET: !Ref BundleReportingTokenSecret
           CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret
@@ -761,6 +753,7 @@ Resources:
           CONTROL_PLANE_AUTHORITATIVE_CONTROLS: !Ref ControlPlaneAuthoritativeControls
           CONTROL_PLANE_RECENT_TOUCH_LOOKBACK_MINUTES: !Ref ControlPlaneRecentTouchLookbackMinutes
           DATABASE_URL: !Ref DatabaseUrl
+          DATABASE_URL_FALLBACK: !Ref DatabaseUrlFallback
           JWT_SECRET: !Ref JwtSecret
           BUNDLE_REPORTING_TOKEN_SECRET: !Ref BundleReportingTokenSecret
           CONTROL_PLANE_EVENTS_SECRET: !Ref ControlPlaneEventsSecret

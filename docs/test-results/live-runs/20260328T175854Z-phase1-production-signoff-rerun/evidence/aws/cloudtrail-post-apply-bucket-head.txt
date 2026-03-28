@@ -1,0 +1,5 @@
+{
+    "BucketArn": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}

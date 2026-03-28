@@ -1,0 +1,16 @@
+{
+    "trailList": [
+        {
+            "Name": "security-autopilot-trail-20260328t181200z",
+            "S3BucketName": "ocypheris-live-ct-20260328t181200z-eu-north-1",
+            "IncludeGlobalServiceEvents": true,
+            "IsMultiRegionTrail": true,
+            "HomeRegion": "eu-north-1",
+            "TrailARN": "arn:aws:cloudtrail:eu-north-1:696505809372:trail/security-autopilot-trail-20260328t181200z",
+            "LogFileValidationEnabled": false,
+            "HasCustomEventSelectors": false,
+            "HasInsightSelectors": false,
+            "IsOrganizationTrail": false
+        }
+    ]
+}

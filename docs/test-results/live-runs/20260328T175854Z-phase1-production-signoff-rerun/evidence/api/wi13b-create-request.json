@@ -1,0 +1,6 @@
+{
+  "action_id": "352ac9b2-d343-40ac-b427-4c4f285615ef",
+  "mode": "pr_only",
+  "strategy_id": "s3_migrate_cloudfront_oac_private",
+  "risk_acknowledged": true
+}

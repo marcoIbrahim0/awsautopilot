@@ -33,7 +33,11 @@ from backend.models.enums import (
 )
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
-from backend.services.action_run_confirmation import evaluate_confirmation_for_action, record_execution_result
+from backend.services.action_run_confirmation import (
+    evaluate_confirmation_for_action,
+    record_execution_result,
+    schedule_confirmation_refresh,
+)
 from backend.services.root_credentials_workflow import (
     MANUAL_HIGH_RISK_MARKER,
     ROOT_CREDENTIALS_REQUIRED_MESSAGE,
@@ -808,6 +812,12 @@ def _sync_group_run_results(
             action_id=action_id,
             since_run_started=execution.started_at,
         )
+        if execution.phase == RemediationRunExecutionPhase.apply and exec_status == ActionGroupExecutionStatus.success:
+            schedule_confirmation_refresh(
+                session,
+                action_id=action_id,
+                finished_at=execution.completed_at,
+            )
 
     if execution.phase == RemediationRunExecutionPhase.plan:
         if execution.status == RemediationRunExecutionStatus.failed:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -20,7 +19,7 @@ from backend.models.action_group import ActionGroup
 from backend.models.action_group_membership import ActionGroupMembership
 from backend.models.action_group_run import ActionGroupRun
 from backend.models.aws_account import AwsAccount
-from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
+from backend.models.enums import ActionGroupRunStatus
 from backend.models.remediation_run import RemediationRun
 from backend.models.user import User
 from backend.routers.aws_accounts import get_tenant, resolve_tenant_id
@@ -28,6 +27,10 @@ from backend.services.action_groups import get_group_detail, list_groups_with_co
 from backend.services.bundle_reporting_tokens import (
     BundleReportingTokenSecretNotConfiguredError,
     issue_group_run_reporting_token,
+)
+from backend.services.grouped_bundle_run_persistence import (
+    enqueue_group_bundle_run_or_503,
+    persist_group_bundle_run,
 )
 from backend.services.grouped_bundle_conflicts import (
     GroupedBundleRunRecord,
@@ -45,11 +48,6 @@ from backend.services.root_key_resolution_adapter import (
     is_root_key_action_type,
 )
 from backend.services.remediation_strategy import strategy_required_for_action_type
-from backend.utils.sqs import (
-    REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
-    build_remediation_run_job_payload,
-    parse_queue_region,
-)
 
 router = APIRouter(prefix="/action-groups", tags=["action-groups"])
 logger = logging.getLogger("backend.routers.action_groups")
@@ -573,84 +571,6 @@ def _build_action_group_plan_or_400(
         _raise_action_group_grouped_validation_error(exc)
 
 
-async def _persist_group_bundle_run(
-    db: AsyncSession,
-    *,
-    group_run: ActionGroupRun,
-    tenant_id: uuid.UUID,
-    user_id: uuid.UUID,
-    representative_action_id: str,
-    artifacts: dict[str, Any],
-) -> RemediationRun:
-    remediation_run = RemediationRun(
-        tenant_id=tenant_id,
-        action_id=uuid.UUID(representative_action_id),
-        mode=RemediationRunMode.pr_only,
-        status=RemediationRunStatus.pending,
-        approved_by_user_id=user_id,
-        artifacts=artifacts,
-    )
-    db.add(group_run)
-    db.add(remediation_run)
-    await db.flush()
-    group_run.remediation_run_id = remediation_run.id
-    await db.commit()
-    await db.refresh(group_run)
-    await db.refresh(remediation_run)
-    return remediation_run
-
-
-async def _mark_group_bundle_run_failed(
-    db: AsyncSession,
-    *,
-    group_run: ActionGroupRun,
-    remediation_run: RemediationRun,
-) -> None:
-    now = datetime.now(timezone.utc)
-    group_run.status = ActionGroupRunStatus.failed
-    group_run.finished_at = now
-    remediation_run.status = RemediationRunStatus.failed
-    remediation_run.outcome = "Queue enqueue failed for bundle generation."
-    await db.commit()
-
-
-async def _enqueue_group_bundle_run_or_503(
-    *,
-    db: AsyncSession,
-    plan: Any,
-    group_run: ActionGroupRun,
-    remediation_run: RemediationRun,
-    tenant_id: uuid.UUID,
-) -> None:
-    queue_fields = plan.queue_payload_fields_for_schema(REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2)
-    payload = build_remediation_run_job_payload(
-        run_id=remediation_run.id,
-        tenant_id=tenant_id,
-        action_id=uuid.UUID(plan.representative_action_id),
-        mode=remediation_run.mode.value,
-        created_at=datetime.now(timezone.utc).isoformat(),
-        pr_bundle_variant=queue_fields.get("pr_bundle_variant"),
-        strategy_id=queue_fields.get("strategy_id"),
-        strategy_inputs=queue_fields.get("strategy_inputs"),
-        risk_acknowledged=bool(queue_fields.get("risk_acknowledged")),
-        group_action_ids=queue_fields.get("group_action_ids"),
-        repo_target=queue_fields.get("repo_target"),
-        action_resolutions=queue_fields.get("action_resolutions"),
-        schema_version=REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2,
-    )
-    queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
-    sqs = boto3.client("sqs", region_name=parse_queue_region(queue_url))
-    try:
-        sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
-    except Exception as exc:
-        logger.exception("SQS send_message failed for action group bundle run enqueue: %s", exc)
-        await _mark_group_bundle_run_failed(db, group_run=group_run, remediation_run=remediation_run)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not enqueue group bundle run job.",
-        ) from exc
-
-
 @router.get("", response_model=ActionGroupsListResponse)
 async def list_action_groups(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -895,13 +815,29 @@ async def create_action_group_bundle_run(
         account=account,
         tenant_settings=getattr(tenant, "remediation_settings", None),
     )
+    requires_bucket_creation_ack = any(
+        entry.strategy_id == "cloudtrail_enable_guided"
+        and entry.strategy_inputs.get("create_bucket_if_missing") is True
+        for entry in plan.action_resolutions
+    )
+    if requires_bucket_creation_ack and not request_body.bucket_creation_acknowledged:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Bucket creation acknowledgement required",
+                "detail": (
+                    "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
+                    "Set bucket_creation_acknowledged=true after review."
+                ),
+            },
+        )
     conflict = _grouped_bundle_conflict(
         await _load_grouped_run_records(db, tenant_id=current_user.tenant_id, group_id=group.id),
         request_signature=_grouped_request_signature(plan, group_key=group.group_key),
     )
     if conflict is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_grouped_conflict_detail(conflict))
-    remediation_run = await _persist_group_bundle_run(
+    remediation_run = await persist_group_bundle_run(
         db,
         group_run=group_run,
         tenant_id=current_user.tenant_id,
@@ -909,12 +845,13 @@ async def create_action_group_bundle_run(
         representative_action_id=plan.representative_action_id,
         artifacts=dict(plan.artifacts),
     )
-    await _enqueue_group_bundle_run_or_503(
+    await enqueue_group_bundle_run_or_503(
         db=db,
         plan=plan,
         group_run=group_run,
         remediation_run=remediation_run,
         tenant_id=current_user.tenant_id,
+        client_factory=boto3.client,
     )
 
     return CreateActionGroupBundleRunResponse(

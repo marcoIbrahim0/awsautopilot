@@ -127,6 +127,8 @@ def _mock_group_session(
             mode=record.mode,
             status=record.status,
             created_at=record.created_at,
+            started_at=record.started_at,
+            updated_at=record.updated_at,
             artifacts=record.artifacts,
         )
         group_run = SimpleNamespace(id=uuid.UUID(record.group_run_id or str(uuid.uuid4())))
@@ -322,7 +324,8 @@ def test_create_action_group_bundle_run_accepts_action_overrides(client: TestCli
     assert resolutions[str(action1.id)]["strategy_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["profile_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["strategy_inputs"] == {
-        "delivery_bucket_mode": "create_new"
+        "recording_scope": "keep_existing",
+        "delivery_bucket_mode": "create_new",
     }
     assert resolutions[str(action2.id)]["strategy_id"] == "config_enable_centralized_delivery"
     assert resolutions[str(action2.id)]["profile_id"] == "config_enable_centralized_delivery"
@@ -400,49 +403,74 @@ def test_create_action_group_bundle_run_preserves_ec2_53_executable_family_tier(
         mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
         mock_settings.API_PUBLIC_URL = "https://api.example.com"
         with patch("backend.routers.action_groups.boto3.client", return_value=mock_sqs):
-            with patch(
-                "backend.routers.action_groups.issue_group_run_reporting_token",
-                return_value=("signed-token", "token-jti", token_expiry),
-            ):
-                try:
-                    response = client.post(
-                        f"/api/action-groups/{group.id}/bundle-run",
-                        json={
-                            "strategy_id": "sg_restrict_public_ports_guided",
-                            "risk_acknowledged": True,
-                            "action_overrides": [
-                                {
-                                    "action_id": str(action1.id),
-                                    "profile_id": "close_and_revoke",
-                                },
-                                {
-                                    "action_id": str(action2.id),
-                                    "profile_id": "ssm_only",
-                                },
-                            ],
-                        },
-                    )
-                finally:
-                    _clear_action_group_dependencies()
+            async def _get_tenant_with_bastion(tenant_id: uuid.UUID, db) -> MagicMock:
+                tenant = MagicMock()
+                tenant.id = tenant_id
+                tenant.remediation_settings = {
+                    "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+                }
+                return tenant
+
+            with patch("backend.routers.action_groups.get_tenant", side_effect=_get_tenant_with_bastion):
+                with patch(
+                    "backend.routers.action_groups.issue_group_run_reporting_token",
+                    return_value=("signed-token", "token-jti", token_expiry),
+                ):
+                    try:
+                        response = client.post(
+                            f"/api/action-groups/{group.id}/bundle-run",
+                            json={
+                                "strategy_id": "sg_restrict_public_ports_guided",
+                                "risk_acknowledged": True,
+                                "action_overrides": [
+                                    {
+                                        "action_id": str(action1.id),
+                                        "profile_id": "close_and_revoke",
+                                    },
+                                    {
+                                        "action_id": str(action2.id),
+                                        "profile_id": "bastion_sg_reference",
+                                    },
+                                ],
+                            },
+                        )
+                    finally:
+                        _clear_action_group_dependencies()
 
     assert response.status_code == 201
     remediation_run = added[1]
-    resolutions = {
-        entry["action_id"]: entry["resolution"]
+    action_resolution_entries = {
+        entry["action_id"]: entry
         for entry in remediation_run.artifacts["group_bundle"]["action_resolutions"]
+    }
+    resolutions = {
+        action_id: entry["resolution"]
+        for action_id, entry in action_resolution_entries.items()
     }
     assert resolutions[str(action1.id)]["profile_id"] == "close_and_revoke"
     assert resolutions[str(action1.id)]["support_tier"] == "deterministic_bundle"
-    assert resolutions[str(action2.id)]["profile_id"] == "ssm_only"
-    assert resolutions[str(action2.id)]["support_tier"] == "manual_guidance_only"
+    assert resolutions[str(action2.id)]["profile_id"] == "bastion_sg_reference"
+    assert resolutions[str(action2.id)]["support_tier"] == "deterministic_bundle"
+    assert action_resolution_entries[str(action2.id)]["strategy_inputs"] == {
+        "access_mode": "bastion_sg_reference",
+        "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+    }
 
     queue_payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
-    queue_resolutions = {
-        entry["action_id"]: entry["resolution"]
+    queue_action_entries = {
+        entry["action_id"]: entry
         for entry in queue_payload["action_resolutions"]
     }
+    queue_resolutions = {
+        action_id: entry["resolution"]
+        for action_id, entry in queue_action_entries.items()
+    }
     assert queue_resolutions[str(action1.id)]["support_tier"] == "deterministic_bundle"
-    assert queue_resolutions[str(action2.id)]["support_tier"] == "manual_guidance_only"
+    assert queue_resolutions[str(action2.id)]["support_tier"] == "deterministic_bundle"
+    assert queue_action_entries[str(action2.id)]["strategy_inputs"] == {
+        "access_mode": "bastion_sg_reference",
+        "approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"],
+    }
 
 
 def test_create_action_group_bundle_run_inherits_top_level_inputs_into_same_strategy_profile_overrides(
@@ -499,7 +527,7 @@ def test_create_action_group_bundle_run_inherits_top_level_inputs_into_same_stra
         assert entry["strategy_inputs"] == {"log_bucket_name": "dedicated-access-log-bucket"}
 
 
-def test_create_action_group_bundle_run_missing_required_inherited_inputs_returns_400(
+def test_create_action_group_bundle_run_derives_s3_9_log_bucket_name_when_inputs_are_omitted(
     client: TestClient,
 ) -> None:
     tenant_id = uuid.uuid4()
@@ -530,14 +558,13 @@ def test_create_action_group_bundle_run_missing_required_inherited_inputs_return
             finally:
                 _clear_action_group_dependencies()
 
-    assert response.status_code == 400
-    detail = response.json()["detail"]
-    assert detail["error"] == "Invalid grouped remediation request"
-    assert detail["reason"] == "invalid_strategy_inputs"
-    assert "strategy_inputs.log_bucket_name is required" in detail["detail"]
-    assert session.add.call_count == 0
-    assert session.commit.await_count == 0
-    assert mock_boto_client.call_count == 0
+    assert response.status_code == 201
+    remediation_run = session.add.call_args_list[1].args[0]
+    resolution = remediation_run.artifacts["group_bundle"]["action_resolutions"][0]
+    assert resolution["strategy_inputs"] == {
+        "log_bucket_name": f"{action.resource_id.split(':::')[-1]}-access-logs"
+    }
+    assert resolution["resolution"]["support_tier"] == "review_required_bundle"
 
 
 def test_create_action_group_bundle_run_cloudtrail_unresolved_bucket_returns_400(
@@ -568,9 +595,8 @@ def test_create_action_group_bundle_run_cloudtrail_unresolved_bucket_returns_400
 
     assert response.status_code == 400
     detail = response.json()["detail"]
-    assert detail["error"] == "Invalid grouped remediation request"
-    assert detail["reason"] == "invalid_strategy_inputs"
-    assert "CloudTrail log bucket name is unresolved" in detail["detail"]
+    assert detail["error"] == "Bucket creation acknowledgement required"
+    assert "may create a new S3 bucket and bucket policy" in detail["detail"]
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0

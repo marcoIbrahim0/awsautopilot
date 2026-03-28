@@ -21,7 +21,9 @@ from backend.services.aws import (
     assume_role,
     build_assume_role_tags,
 )
-from backend.services.remediation_strategy import RemediationStrategy
+from backend.services.remediation_support_bucket import probe_support_bucket_safety
+from backend.services.remediation_strategy import RemediationStrategy, get_adjacency_contract
+from backend.services.s3_family_resolution_adapter import default_s3_access_logging_log_bucket_name
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ _STRICT_ACCESS_PATH_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
         "s3_enforce_ssl_strict_deny",
         "ssm_disable_public_document_sharing",
     }
@@ -45,6 +48,7 @@ _KMS_ARN_PATTERN = re.compile(
 )
 _S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
 _SECURITY_GROUP_ID_PATTERN = re.compile(r"\bsg-[0-9a-fA-F]{8,17}\b")
+_S3_BUCKET_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 
 
 def _error_code(exc: ClientError) -> str:
@@ -61,6 +65,14 @@ def _is_access_denied(exc: ClientError) -> bool:
         return True
     message = _error_message(exc).lower()
     return "access denied" in message or "not authorized" in message
+
+
+def _is_not_found_bucket_error(exc: ClientError) -> bool:
+    code = _error_code(exc)
+    if code in {"404", "NoSuchBucket", "NotFound"}:
+        return True
+    message = _error_message(exc).lower()
+    return "not found" in message or "no such bucket" in message
 
 
 def _to_int(value: Any) -> int | None:
@@ -95,7 +107,28 @@ def _bucket_name_from_target_id(target_id: str | None) -> str | None:
         candidate = tid.split("arn:aws:s3:::")[-1].split("/")[0].strip()
         return candidate or None
 
-    return tid
+    if _S3_BUCKET_NAME_PATTERN.fullmatch(tid):
+        return tid
+    return None
+
+
+def _bucket_name_from_action(action: Any | None) -> str | None:
+    if action is None:
+        return None
+    bucket = _bucket_name_from_target_id(getattr(action, "target_id", None))
+    if bucket:
+        return bucket
+    return _bucket_name_from_target_id(getattr(action, "resource_id", None))
+
+
+def _cloudtrail_safe_default_bucket_name(action: Action | None) -> str | None:
+    if action is None:
+        return None
+    account_id = str(getattr(action, "account_id", "")).strip()
+    region = str(getattr(action, "region", "")).strip()
+    if not account_id or not region:
+        return None
+    return f"security-autopilot-trail-logs-{account_id}-{region}"
 
 
 def _security_group_id_from_target_id(target_id: str | None) -> str | None:
@@ -297,6 +330,47 @@ def _normalize_lifecycle_configuration_document(document: Any) -> str | None:
     return json.dumps(document, separators=(",", ":"), sort_keys=True)
 
 
+def _normalize_bucket_website_configuration_document(document: Any) -> str | None:
+    """Return canonical website-configuration JSON or None when invalid."""
+    if isinstance(document, str):
+        try:
+            document = json.loads(document)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(document, dict):
+        return None
+    normalized: dict[str, Any] = {}
+    for key in ("IndexDocument", "ErrorDocument", "RedirectAllRequestsTo", "RoutingRules"):
+        value = document.get(key)
+        if value in (None, "", [], {}):
+            continue
+        normalized[key] = value
+    if not normalized:
+        return None
+    return json.dumps(normalized, separators=(",", ":"), sort_keys=True)
+
+
+def _classify_bucket_website_configuration(document: Any) -> tuple[bool, str | None]:
+    """Classify whether a captured website configuration can be translated safely."""
+    if not isinstance(document, dict):
+        return (False, "S3 website configuration could not be parsed for CloudFront translation.")
+    redirect_all = document.get("RedirectAllRequestsTo")
+    if isinstance(redirect_all, dict) and redirect_all:
+        return (False, "S3 website RedirectAllRequestsTo behavior requires manual CloudFront translation review.")
+    routing_rules = document.get("RoutingRules")
+    if isinstance(routing_rules, list) and routing_rules:
+        return (False, "S3 website RoutingRules require manual CloudFront translation review.")
+    index_document = document.get("IndexDocument")
+    if not isinstance(index_document, dict) or not str(index_document.get("Suffix", "")).strip():
+        return (False, "S3 website configuration must include an IndexDocument suffix for executable translation.")
+    error_document = document.get("ErrorDocument")
+    if error_document is not None and (
+        not isinstance(error_document, dict) or not str(error_document.get("Key", "")).strip()
+    ):
+        return (False, "S3 website ErrorDocument must use a concrete object key for executable translation.")
+    return (True, None)
+
+
 def _lifecycle_rule_count(document: Any) -> int:
     normalized = _normalize_lifecycle_configuration_document(document)
     if not normalized:
@@ -306,6 +380,51 @@ def _lifecycle_rule_count(document: Any) -> int:
     if isinstance(rules, list):
         return len(rules)
     return 0
+
+
+def check_adjacency_safety(action_type: str, probe_results: dict[str, Any] | None) -> dict[str, Any]:
+    """Fail closed when declared adjacency proof is missing for a covered family."""
+    contract = get_adjacency_contract(action_type)
+    if contract is None:
+        return {"safe": True}
+    payload = probe_results if isinstance(probe_results, dict) else {}
+    support_probe = payload.get("support_bucket_probe")
+    helper_creation_planned = payload.get("helper_bucket_creation_planned") is True
+    if contract["creates_helper_resources"] and not helper_creation_planned:
+        if not isinstance(support_probe, dict) or support_probe.get("safe") is not True:
+            return {"safe": False, "downgrade_reason": contract["downgrade_rule"]}
+    if contract["merge_safe_preservation_required"] and not _has_preservation_evidence(action_type, payload):
+        return {"safe": False, "downgrade_reason": contract["downgrade_rule"]}
+    if action_type == "s3_bucket_encryption" and payload.get("s3_kms_family_open") is True:
+        return {"safe": False, "downgrade_reason": contract["downgrade_rule"]}
+    if action_type == "iam_root_access_key_absent" and payload.get("action_mode") == "delete_key":
+        if payload.get("iam_root_account_mfa_enrolled") is not True:
+            return {"safe": False, "downgrade_reason": contract["downgrade_rule"]}
+    return {"safe": True}
+
+
+def _has_preservation_evidence(action_type: str, payload: dict[str, Any]) -> bool:
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        evidence = {}
+    if action_type == "s3_bucket_require_ssl":
+        statement_count = _to_int(evidence.get("existing_bucket_policy_statement_count"))
+        if statement_count == 0 or isinstance(evidence.get("existing_bucket_policy_json"), str):
+            return True
+        return (
+            payload.get("s3_policy_analysis_possible") is False
+            and isinstance(evidence.get("target_bucket"), str)
+            and isinstance(evidence.get("existing_bucket_policy_capture_error"), str)
+            and not evidence.get("existing_bucket_policy_parse_error")
+        )
+    if action_type == "s3_bucket_lifecycle_configuration":
+        rule_count = _to_int(evidence.get("existing_lifecycle_rule_count"))
+        return rule_count == 0 or isinstance(evidence.get("existing_lifecycle_configuration_json"), str)
+    if action_type == "s3_bucket_encryption_kms":
+        if payload.get("kms_key_mode") != "custom":
+            return True
+        return payload.get("s3_customer_kms_dependency_proven") is True
+    return True
 
 
 def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[bool | None, str | None]:
@@ -495,14 +614,22 @@ def collect_runtime_risk_signals(
                         evidence_payload["security_group_probe_error"] = f"{type(exc).__name__}"
 
     if strategy_id == "s3_enable_access_logging_guided":
-        source_bucket = _bucket_name_from_target_id(action.target_id)
+        source_bucket = _bucket_name_from_action(action)
         log_bucket = str(strategy_inputs.get("log_bucket_name", "")).strip()
+        auto_generated_log_bucket = False
+        if not log_bucket:
+            derived_log_bucket = default_s3_access_logging_log_bucket_name(action)
+            if derived_log_bucket:
+                log_bucket = derived_log_bucket
+                auto_generated_log_bucket = True
         evidence_payload = signals.setdefault("evidence", {})
         if isinstance(evidence_payload, dict):
             if source_bucket:
                 evidence_payload["target_bucket"] = source_bucket
             if log_bucket:
                 evidence_payload["log_bucket_name"] = log_bucket
+            if auto_generated_log_bucket:
+                evidence_payload["log_bucket_name_auto_generated"] = True
         if not log_bucket:
             signals["s3_access_logging_destination_safe"] = False
             signals["s3_access_logging_destination_safety_reason"] = (
@@ -528,14 +655,42 @@ def collect_runtime_risk_signals(
                 try:
                     s3.head_bucket(Bucket=log_bucket)
                     signals["s3_access_logging_destination_bucket_reachable"] = True
-                    signals["s3_access_logging_destination_safe"] = True
+                    support_probe = probe_support_bucket_safety(s3, log_bucket)
+                    signals["support_bucket_probe"] = support_probe
+                    signals["s3_access_logging_destination_safe"] = support_probe.get("safe") is True
+                    if support_probe.get("safe") is not True:
+                        failed_attributes = [
+                            attribute["name"]
+                            for attribute in support_probe.get("attributes", [])
+                            if isinstance(attribute, dict) and attribute.get("passed") is False
+                        ]
+                        suffix = f" Missing attributes: {', '.join(failed_attributes)}." if failed_attributes else ""
+                        signals["s3_access_logging_destination_safety_reason"] = (
+                            f"Destination log bucket '{log_bucket}' does not meet the shared support-bucket baseline."
+                            f"{suffix}"
+                        )
                 except ClientError as exc:
                     code = _error_code(exc) or "HeadBucketFailed"
-                    signals["s3_access_logging_destination_bucket_reachable"] = False
-                    signals["s3_access_logging_destination_safe"] = False
-                    signals["s3_access_logging_destination_safety_reason"] = (
-                        f"Destination log bucket '{log_bucket}' could not be verified from this account context ({code})."
-                    )
+                    if _is_not_found_bucket_error(exc):
+                        signals["helper_bucket_creation_planned"] = True
+                        signals["s3_access_logging_destination_bucket_reachable"] = False
+                        signals["s3_access_logging_destination_safe"] = True
+                        signals["s3_access_logging_destination_creation_planned"] = True
+                        signals["s3_access_logging_destination_creation_reason"] = (
+                            f"Destination log bucket '{log_bucket}' does not exist yet and will be created with the shared support-bucket baseline."
+                        )
+                        signals["support_bucket_probe"] = {
+                            "bucket_name": log_bucket,
+                            "safe": True,
+                            "attributes": [],
+                            "raw": {"creation_planned": True},
+                        }
+                    else:
+                        signals["s3_access_logging_destination_bucket_reachable"] = False
+                        signals["s3_access_logging_destination_safe"] = False
+                        signals["s3_access_logging_destination_safety_reason"] = (
+                            f"Destination log bucket '{log_bucket}' could not be verified from this account context ({code})."
+                        )
                 except Exception as exc:  # pragma: no cover - defensive
                     signals["s3_access_logging_destination_bucket_reachable"] = False
                     signals["s3_access_logging_destination_safe"] = False
@@ -745,11 +900,20 @@ def collect_runtime_risk_signals(
 
         if "trail_name" not in default_inputs:
             default_inputs["trail_name"] = "security-autopilot-trail"
+        if "trail_bucket_name" not in default_inputs:
+            generated_bucket = _cloudtrail_safe_default_bucket_name(action)
+            if generated_bucket:
+                default_inputs["trail_bucket_name"] = generated_bucket
+                default_inputs["create_bucket_if_missing"] = True
+                signals["cloudtrail_resolved_bucket_source"] = "safe_default"
+                evidence_payload["cloudtrail_generated_trail_bucket_name"] = generated_bucket
         default_inputs.setdefault("create_bucket_if_missing", False)
         default_inputs.setdefault("create_bucket_policy", True)
         default_inputs.setdefault("multi_region", True)
         context_payload["default_inputs"] = default_inputs
-        create_bucket_if_missing = bool(strategy_inputs.get("create_bucket_if_missing") is True)
+        create_bucket_if_missing = bool(
+            strategy_inputs.get("create_bucket_if_missing", default_inputs.get("create_bucket_if_missing")) is True
+        )
         trail_bucket_name = str(
             strategy_inputs.get("trail_bucket_name")
             or default_inputs.get("trail_bucket_name")
@@ -774,6 +938,23 @@ def collect_runtime_risk_signals(
                 try:
                     s3.head_bucket(Bucket=trail_bucket_name)
                     signals["cloudtrail_log_bucket_reachable"] = True
+                    support_probe = probe_support_bucket_safety(
+                        s3,
+                        trail_bucket_name,
+                        check_versioning=True,
+                    )
+                    signals["support_bucket_probe"] = support_probe
+                    if support_probe.get("safe") is not True:
+                        failed_attributes = [
+                            attribute["name"]
+                            for attribute in support_probe.get("attributes", [])
+                            if isinstance(attribute, dict) and attribute.get("passed") is False
+                        ]
+                        suffix = f" Missing attributes: {', '.join(failed_attributes)}." if failed_attributes else ""
+                        signals["cloudtrail_log_bucket_error"] = (
+                            f"CloudTrail log bucket '{trail_bucket_name}' does not meet the shared support-bucket baseline."
+                            f"{suffix}"
+                        )
                     if create_bucket_if_missing:
                         signals["cloudtrail_bucket_creation_conflict"] = True
                         signals["cloudtrail_bucket_creation_error"] = (
@@ -782,10 +963,11 @@ def collect_runtime_risk_signals(
                         )
                 except ClientError as exc:
                     code = _error_code(exc) or "HeadBucketFailed"
-                    if create_bucket_if_missing and code in {"404", "NoSuchBucket", "NotFound"}:
+                    if create_bucket_if_missing and _is_not_found_bucket_error(exc):
                         signals["cloudtrail_log_bucket_reachable"] = False
                         signals["cloudtrail_log_bucket_missing"] = True
                         signals["cloudtrail_bucket_available_for_creation"] = True
+                        signals["helper_bucket_creation_planned"] = True
                     else:
                         signals["cloudtrail_log_bucket_reachable"] = False
                         signals["cloudtrail_log_bucket_error"] = (
@@ -816,11 +998,15 @@ def collect_runtime_risk_signals(
                         if recorder_name:
                             evidence_payload["config_recorder_name"] = recorder_name
                         recording_group = recorder.get("recordingGroup", {})
-                        if isinstance(recording_group, dict):
-                            if recording_group.get("allSupported") is True:
-                                evidence_payload["config_recording_scope"] = "all_resources"
-                            elif recording_group:
-                                evidence_payload["config_recording_scope"] = "custom"
+                    if isinstance(recording_group, dict):
+                        if recording_group.get("allSupported") is True:
+                            evidence_payload["config_recording_scope"] = "all_resources"
+                            evidence_payload["config_recorder_all_supported"] = True
+                        elif recording_group:
+                            evidence_payload["config_recording_scope"] = "custom"
+                            evidence_payload["config_recorder_all_supported"] = False
+                        else:
+                            evidence_payload["config_recorder_all_supported"] = False
                     else:
                         evidence_payload["config_recorder_exists"] = False
                 except ClientError as exc:
@@ -978,7 +1164,7 @@ def collect_runtime_risk_signals(
                 signals["iam_root_account_mfa_probe_error"] = f"{type(exc).__name__}"
 
     if strategy_id in ("s3_enforce_ssl_strict_deny", "s3_enforce_ssl_with_principal_exemptions"):
-        bucket = _bucket_name_from_target_id(action.target_id)
+        bucket = _bucket_name_from_action(action)
         exempt_principals = strategy_inputs.get("exempt_principals")
         if not isinstance(exempt_principals, list):
             exempt_principals = []
@@ -1027,18 +1213,37 @@ def collect_runtime_risk_signals(
                             evidence_payload["existing_bucket_policy_statement_count"] = 0
                             evidence_payload["s3_ssl_deny_present"] = False
                     else:
-                        signals["s3_policy_analysis_possible"] = False
-                        signals["s3_policy_analysis_error"] = code or "GetBucketPolicyFailed"
-                        evidence_payload = signals.setdefault("evidence", {})
-                        if isinstance(evidence_payload, dict):
-                            evidence_payload["existing_bucket_policy_capture_error"] = code or "GetBucketPolicyFailed"
-                        if is_access_path_strategy and account is not None:
-                            _mark_access_path_unavailable(
-                                f"Unable to inspect current bucket policy ({code or 'GetBucketPolicyFailed'})."
-                            )
+                        status_code: str | None = None
+                        try:
+                            s3.get_bucket_policy_status(Bucket=bucket)
+                        except ClientError as status_exc:
+                            status_code = _error_code(status_exc)
+                        if status_code == "NoSuchBucketPolicy":
+                            signals["s3_policy_analysis_possible"] = True
+                            evidence_payload = signals.setdefault("evidence", {})
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload.pop("existing_bucket_policy_capture_error", None)
+                                evidence_payload["existing_bucket_policy_statement_count"] = 0
+                                evidence_payload["s3_ssl_deny_present"] = False
+                        else:
+                            signals["s3_policy_analysis_possible"] = False
+                            signals["s3_policy_analysis_error"] = code or "GetBucketPolicyFailed"
+                            evidence_payload = signals.setdefault("evidence", {})
+                            if isinstance(evidence_payload, dict):
+                                evidence_payload["existing_bucket_policy_capture_error"] = (
+                                    code or "GetBucketPolicyFailed"
+                                )
+                            if is_access_path_strategy and account is not None:
+                                _mark_access_path_unavailable(
+                                    f"Unable to inspect current bucket policy ({code or 'GetBucketPolicyFailed'})."
+                                )
 
-    if strategy_id in ("s3_bucket_block_public_access_standard", "s3_migrate_cloudfront_oac_private"):
-        bucket = _bucket_name_from_target_id(action.target_id)
+    if strategy_id in (
+        "s3_bucket_block_public_access_standard",
+        "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
+    ):
+        bucket = _bucket_name_from_action(action)
         if bucket:
             signals["evidence"]["target_bucket"] = bucket
             session = _get_read_session()
@@ -1059,7 +1264,10 @@ def collect_runtime_risk_signals(
                             _mark_access_path_unavailable(
                                 f"Unable to inspect bucket policy status ({code or 'GetBucketPolicyStatusFailed'})."
                             )
-                if strategy_id == "s3_migrate_cloudfront_oac_private":
+                if strategy_id in {
+                    "s3_migrate_cloudfront_oac_private",
+                    "s3_migrate_website_cloudfront_private",
+                }:
                     try:
                         raw_policy = s3.get_bucket_policy(Bucket=bucket).get("Policy")
                         normalized_policy = _normalize_bucket_policy_document(raw_policy)
@@ -1083,18 +1291,40 @@ def collect_runtime_risk_signals(
                             if code == "NoSuchBucketPolicy":
                                 evidence_payload["existing_bucket_policy_statement_count"] = 0
                             else:
-                                evidence_payload["existing_bucket_policy_capture_error"] = code or "GetBucketPolicyFailed"
+                                evidence_payload["existing_bucket_policy_capture_error"] = (
+                                    code or "GetBucketPolicyFailed"
+                                )
+                                status_code: str | None = None
+                                try:
+                                    s3.get_bucket_policy_status(Bucket=bucket)
+                                except ClientError as status_exc:
+                                    status_code = _error_code(status_exc)
+                                if status_code == "NoSuchBucketPolicy":
+                                    evidence_payload["existing_bucket_policy_statement_count"] = 0
+                                    evidence_payload.pop("existing_bucket_policy_capture_error", None)
                         if code not in {"NoSuchBucketPolicy", "NoSuchBucket"} and account is not None:
                             _mark_access_path_unavailable(
                                 f"Unable to capture existing bucket policy ({code or 'GetBucketPolicyFailed'})."
                             )
                 try:
-                    s3.get_bucket_website(Bucket=bucket)
+                    website_configuration = s3.get_bucket_website(Bucket=bucket)
                     signals["s3_bucket_website_configured"] = True
+                    normalized_website = _normalize_bucket_website_configuration_document(website_configuration)
+                    translation_supported, translation_reason = _classify_bucket_website_configuration(
+                        website_configuration
+                    )
+                    evidence_payload = signals.setdefault("evidence", {})
+                    if isinstance(evidence_payload, dict) and normalized_website is not None:
+                        evidence_payload["existing_bucket_website_configuration_json"] = normalized_website
+                    signals["s3_bucket_website_translation_supported"] = translation_supported
+                    if translation_reason:
+                        signals["s3_bucket_website_translation_reason"] = translation_reason
                 except ClientError as exc:
                     code = _error_code(exc)
                     if code == "NoSuchWebsiteConfiguration":
                         signals["s3_bucket_website_configured"] = False
+                        signals["s3_bucket_website_translation_supported"] = False
+                        signals["s3_bucket_website_translation_reason"] = "S3 static website hosting is not enabled."
                     elif code not in {"NoSuchBucket"}:
                         if account is not None:
                             _mark_access_path_unavailable(
@@ -1105,7 +1335,7 @@ def collect_runtime_risk_signals(
                 _mark_access_path_unavailable("Missing bucket identifier for access-path validation.")
 
     if strategy_id == "s3_enable_abort_incomplete_uploads":
-        bucket = _bucket_name_from_target_id(action.target_id)
+        bucket = _bucket_name_from_action(action)
         if bucket:
             signals["evidence"]["target_bucket"] = bucket
             session = _get_read_session()

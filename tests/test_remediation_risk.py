@@ -104,6 +104,75 @@ def test_strict_access_path_strategy_without_evidence_blocks() -> None:
     assert snapshot["recommendation"] == "blocked"
 
 
+def test_s3_5_apply_time_merge_keeps_access_path_unavailable_at_warn() -> None:
+    action = SimpleNamespace(action_type="s3_bucket_require_ssl")
+    strategy = _fake_strategy("s3_enforce_ssl_strict_deny", action_type="s3_bucket_require_ssl")
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "s3_policy_analysis_possible": False,
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "Unable to inspect current bucket policy (AccessDenied).",
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_policy_merge_risk"] == "warn"
+    assert status_map["access_path_evidence_unavailable"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
+def test_s3_2_oac_apply_time_merge_keeps_access_path_unavailable_at_warn() -> None:
+    action = SimpleNamespace(action_type="s3_bucket_block_public_access")
+    strategy = _fake_strategy("s3_migrate_cloudfront_oac_private", action_type="s3_bucket_block_public_access")
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "Unable to capture existing bucket policy (AccessDenied).",
+            "evidence": {
+                "target_bucket": "oac-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert status_map["s3_public_access_dependency"] == "warn"
+    assert status_map["access_path_evidence_unavailable"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
+def test_s3_2_oac_zero_policy_proof_skips_access_path_failure() -> None:
+    action = SimpleNamespace(action_type="s3_bucket_block_public_access")
+    strategy = _fake_strategy("s3_migrate_cloudfront_oac_private", action_type="s3_bucket_block_public_access")
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        runtime_signals={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "access_path_evidence_available": False,
+            "access_path_evidence_reason": "Unable to capture existing bucket policy (AccessDenied).",
+            "evidence": {
+                "target_bucket": "oac-bucket",
+                "existing_bucket_policy_statement_count": 0,
+            },
+        },
+    )
+
+    status_map = _code_status(snapshot)
+    assert "access_path_evidence_unavailable" not in status_map
+    assert status_map["s3_public_access_dependency"] == "pass"
+    assert snapshot["recommendation"] == "safe_to_proceed"
+
+
 def test_ssl_exemption_strategy_merge_risk_warn_when_analyzable() -> None:
     action = SimpleNamespace(action_type="s3_bucket_require_ssl")
     strategy = _fake_strategy(
@@ -114,7 +183,10 @@ def test_ssl_exemption_strategy_merge_risk_warn_when_analyzable() -> None:
     snapshot = evaluate_strategy_impact(
         action,
         strategy,
-        runtime_signals={"s3_policy_analysis_possible": True},
+        runtime_signals={
+            "s3_policy_analysis_possible": True,
+            "evidence": {"existing_bucket_policy_statement_count": 0},
+        },
     )
 
     status_map = _code_status(snapshot)
@@ -206,7 +278,8 @@ def test_cloudtrail_guided_strategy_requires_review_instead_of_unspecialized_fai
     assert "risk_evaluation_not_specialized" not in status_map
     assert status_map["cloudtrail_cost_impact"] == "warn"
     assert status_map["cloudtrail_log_bucket_prereq"] == "warn"
-    assert snapshot["recommendation"] == "review_and_acknowledge"
+    assert status_map["adjacency_safety_unproven"] == "fail"
+    assert snapshot["recommendation"] == "blocked"
 
 
 def test_cloudtrail_guided_strategy_warns_when_existing_trail_is_present() -> None:
@@ -233,6 +306,30 @@ def test_cloudtrail_guided_strategy_warns_when_existing_trail_is_present() -> No
     assert "existing-org-trail" in existing_check["message"]
 
 
+def test_cloudtrail_guided_create_if_missing_treats_bucket_creation_as_safe_by_construction() -> None:
+    action = SimpleNamespace(action_type="cloudtrail_enabled")
+    strategy = _fake_strategy(
+        "cloudtrail_enable_guided",
+        action_type="cloudtrail_enabled",
+        risk_level="medium",
+    )
+    snapshot = evaluate_strategy_impact(
+        action,
+        strategy,
+        strategy_inputs={
+            "trail_bucket_name": "new-cloudtrail-logs",
+            "create_bucket_if_missing": True,
+        },
+        runtime_signals={"cloudtrail_bucket_available_for_creation": True},
+    )
+
+    status_map = _code_status(snapshot)
+    assert "adjacency_safety_unproven" not in status_map
+    assert status_map["cloudtrail_cost_impact"] == "warn"
+    assert status_map["cloudtrail_log_bucket_prereq"] == "warn"
+    assert snapshot["recommendation"] == "review_and_acknowledge"
+
+
 def test_s3_access_logging_bucket_scope_is_specialized_and_executable() -> None:
     action = SimpleNamespace(
         action_type="s3_bucket_access_logging",
@@ -248,7 +345,10 @@ def test_s3_access_logging_bucket_scope_is_specialized_and_executable() -> None:
         action,
         strategy,
         strategy_inputs={"log_bucket_name": "security-autopilot-access-logs-123456789012"},
-        runtime_signals={"s3_access_logging_destination_safe": True},
+        runtime_signals={
+            "s3_access_logging_destination_safe": True,
+            "support_bucket_probe": {"safe": True},
+        },
     )
 
     status_map = _code_status(snapshot)
@@ -278,7 +378,8 @@ def test_s3_access_logging_account_scope_downgrades_to_review() -> None:
     status_map = _code_status(snapshot)
     assert "risk_evaluation_not_specialized" not in status_map
     assert status_map["s3_access_logging_scope_requires_review"] == "warn"
-    assert snapshot["recommendation"] == "review_and_acknowledge"
+    assert status_map["adjacency_safety_unproven"] == "fail"
+    assert snapshot["recommendation"] == "blocked"
 
 
 def test_s3_access_logging_bucket_scope_blocks_when_destination_safety_is_missing() -> None:

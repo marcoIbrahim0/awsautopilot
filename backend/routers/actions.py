@@ -8,7 +8,7 @@ import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Any, Literal, Mapping, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -82,6 +82,7 @@ from backend.services.remediation_handoff import (
     build_run_artifact_metadata,
     build_action_implementation_artifacts,
 )
+from backend.services.remediation_run_query import action_related_remediation_runs_clause
 from backend.services.remediation_profile_read_path import (
     InvalidProfileSelection,
     build_preview_resolution,
@@ -123,6 +124,7 @@ _RUNTIME_RISK_OPTION_STRATEGIES = frozenset(
     {
         "s3_bucket_block_public_access_standard",
         "s3_migrate_cloudfront_oac_private",
+        "s3_migrate_website_cloudfront_private",
         "s3_enable_access_logging_guided",
         "s3_enforce_ssl_strict_deny",
         "s3_enforce_ssl_with_principal_exemptions",
@@ -801,7 +803,17 @@ _ACTION_FIX_SUMMARY_BY_TYPE: dict[str, str] = {
 _ATTACK_PATH_ACTION_SCAN_HARD_CAP = 20
 
 
-def _option_recommended(strategy: dict[str, Any], tenant_settings: dict[str, Any] | None) -> bool:
+def _option_recommended(
+    strategy: dict[str, Any],
+    tenant_settings: dict[str, Any] | None,
+    runtime_signals: dict[str, Any] | None = None,
+) -> bool:
+    if strategy.get("action_type") == "s3_bucket_block_public_access":
+        website_enabled = isinstance(runtime_signals, dict) and runtime_signals.get("s3_bucket_website_configured") is True
+        if website_enabled:
+            return strategy["strategy_id"] == "s3_migrate_website_cloudfront_private"
+        if strategy["strategy_id"] == "s3_migrate_website_cloudfront_private":
+            return False
     if strategy.get("action_type") != "aws_config_enabled":
         return bool(strategy["recommended"])
     config_settings = normalize_remediation_settings(tenant_settings).get("config", {})
@@ -951,6 +963,25 @@ class RemediationOptionResponse(BaseModel):
         default="",
         description="Short rationale for the current strategy/profile recommendation.",
     )
+
+
+def _merge_option_context_defaults(
+    strategy_id: str | None,
+    runtime_context: Mapping[str, Any] | None,
+    resolved_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    context = dict(runtime_context or {})
+    default_inputs = context.get("default_inputs")
+    merged_defaults = dict(resolved_inputs or {})
+    if isinstance(default_inputs, dict):
+        merged_defaults.update(default_inputs)
+    elif isinstance(default_inputs, Mapping):
+        merged_defaults.update(dict(default_inputs))
+    if strategy_id == "s3_enable_access_logging_guided":
+        merged_defaults.pop("create_log_bucket", None)
+    if merged_defaults:
+        context["default_inputs"] = merged_defaults
+    return context
 
 
 class RemediationProfileResponse(BaseModel):
@@ -1584,7 +1615,14 @@ async def _load_action_implementation_artifacts(
 ) -> list[ActionImplementationArtifactLink]:
     result = await db.execute(
         select(RemediationRun)
-        .where(RemediationRun.tenant_id == tenant_uuid, RemediationRun.action_id == action.id)
+        .where(
+            RemediationRun.tenant_id == tenant_uuid,
+            action_related_remediation_runs_clause(
+                tenant_id=tenant_uuid,
+                action_id=action.id,
+                include_group_related=True,
+            ),
+        )
         .order_by(RemediationRun.created_at.desc())
         .limit(8)
     )
@@ -3123,6 +3161,19 @@ async def get_remediation_options(
             account=account,
             runtime_signals=runtime_signals,
         )
+        profile_metadata = build_strategy_profile_metadata(
+            action_type=action.action_type,
+            strategy=strategy,
+            tenant_settings=tenant_settings,
+            runtime_signals=runtime_signals,
+            dependency_checks=risk_snapshot["checks"],
+            action=action,
+        )
+        option_context = _merge_option_context_defaults(
+            strategy["strategy_id"],
+            runtime_context,
+            profile_metadata.pop("resolved_inputs", {}),
+        )
         checks: list[DependencyCheckResponse] = [
             DependencyCheckResponse(
                 code=check["code"],
@@ -3137,7 +3188,7 @@ async def get_remediation_options(
                 label=strategy["label"],
                 mode=strategy["mode"],
                 risk_level=strategy["risk_level"],
-                recommended=_option_recommended(strategy, tenant_settings),
+                recommended=_option_recommended(strategy, tenant_settings, runtime_signals),
                 requires_inputs=strategy["requires_inputs"],
                 input_schema=strategy["input_schema"],
                 dependency_checks=checks,
@@ -3158,15 +3209,8 @@ async def get_remediation_options(
                     action.action_type,
                     strategy["strategy_id"],
                 ),
-                context=runtime_context,
-                **build_strategy_profile_metadata(
-                    action_type=action.action_type,
-                    strategy=strategy,
-                    tenant_settings=tenant_settings,
-                    runtime_signals=runtime_signals,
-                    dependency_checks=risk_snapshot["checks"],
-                    action=action,
-                ),
+                context=option_context,
+                **profile_metadata,
             )
         )
 
