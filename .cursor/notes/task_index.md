@@ -4,6 +4,11 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Finalize detached frontend recovery as the durable source of truth (2026-03-31)](task_log.md#finalize-detached-frontend-recovery-as-the-durable-source-of-truth-2026-03-31)
+  - Added frontend guardrail commit `79e04da6` so `npm run preview`, `npm run deploy`, and `npm run upload` now fail unless they run from a named nested frontend checkout whose commit already matches the parent repo gitlink.
+  - Rebuilt the parent recovery from clean root baseline `36d973d7` and pinned the repo `frontend` gitlink to `79e04da6` instead of shipping the earlier mixed-scope root commit.
+  - Documented the deploy guardrail in `docs/deployment/secrets-config.md` and retained the March 31 recovery safety anchors plus `/tmp/aws-sa-detached-frontend-recovery-20260331T003046/` as the last-resort backup.
+
 - [Implement Phase B remediation operator guided-review UX pass (2026-03-30)](task_log.md#implement-phase-b-remediation-operator-guided-review-ux-pass-2026-03-30)
   - Added a frontend-only guided-review helper and refactored the single-action remediation modal into ordered outcome, rationale, preservation, and follow-up sections using the existing preview resolution data.
   - Grouped preservation evidence into themed buckets, generated review-checklist prompts only for `review_required_bundle`, refreshed the PR-bundle run progress copy to emphasize operator review before apply, and updated the focused UI tests plus active feature-plan status.

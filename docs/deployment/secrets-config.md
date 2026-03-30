@@ -172,7 +172,8 @@ Reason:
 - Those commands now run `frontend/scripts/run-opennext-production.mjs`, which:
   - strips inherited `NEXT_PUBLIC_*` shell variables before invoking OpenNext,
   - temporarily hides `frontend/.env.local`,
-  - validates `.open-next/cloudflare/next-env.mjs` after build, and
+  - validates `.open-next/cloudflare/next-env.mjs` after build,
+  - refuses `preview`, `deploy`, and `upload` unless the command is running from the nested `frontend/` checkout inside the parent repo, on a named branch, with the parent repo `HEAD` already pinning the exact same frontend commit, and
   - fails the build if `production.NEXT_PUBLIC_API_URL` is missing or points at `localhost` / `127.0.0.1`.
 - Do not use raw `npx opennextjs-cloudflare build`, `deploy`, `preview`, or `upload` for live builds unless you intentionally reproduce the same safeguards.
 

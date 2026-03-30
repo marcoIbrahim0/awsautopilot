@@ -1,5 +1,49 @@
 # Task Log
 
+## Finalize detached frontend recovery as the durable source of truth (2026-03-31)
+
+**Task:** Turn the March 31 detached frontend recovery into a durable source of truth by adding a frontend deploy guardrail, documenting the operator contract, and pinning the parent repo to the final recovered frontend commit from a clean root baseline.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Kept the recovered frontend history intact:
+  - `8b46ed55de61a97871e953b2c7a4387f5d0fae5a` — `Recover detached frontend working tree`
+  - `ae1daec21f8317b317f1d59fc1f40d93ca7c6835` — `Fix recovery validation compatibility`
+- Added the final frontend guardrail commit:
+  - `79e04da60aa8e0e82c42837510258878ebf61df2` — `Guard production OpenNext deploy commands`
+- Hardened `frontend/scripts/run-opennext-production.mjs` so `preview`, `deploy`, and `upload` now fail closed unless:
+  - the command is running from the nested `frontend/` checkout inside the parent repo
+  - the frontend checkout is on a named branch rather than detached `HEAD`
+  - the parent repo `HEAD` already pins the exact same frontend commit
+- Kept `build` unblocked so operators can still run production-safe local build validation outside the pinned nested checkout when needed.
+- Rebuilt the parent recovery from clean root baseline `36d973d75ba334ae716f53e3aa59f769069a999c` instead of reusing the earlier mixed-scope root commit, then repointed the parent repo `frontend` gitlink to `79e04da60aa8e0e82c42837510258878ebf61df2`.
+- Updated `docs/deployment/secrets-config.md` so the existing Cloudflare/OpenNext build rule now documents the named-branch + pinned-gitlink deploy contract.
+- Retained the earlier recovery safety anchors and raw backup bundle:
+  - root anchor `codex/root-recovery-pre-20260331T003046`
+  - frontend anchor `codex/frontend-recovery-pre-20260331T003046`
+  - raw backup `/tmp/aws-sa-detached-frontend-recovery-20260331T003046/`
+
+**Validation / outcome:**
+- Guardrail deny paths:
+  - blocked `preview` from the standalone recovery worktree because it was not the nested parent-repo checkout
+  - blocked `preview` from the old live detached frontend checkout because it was detached `HEAD`
+  - blocked `preview` from a named frontend branch nested under a clean root worktree while the parent repo still pinned old gitlink `dbc4f018`
+- Guardrail allow path:
+  - after repointing the clean root worktree gitlink to `79e04da6`, the same nested frontend checkout passed the guardrail and reached the wrapped OpenNext command path
+- Recovery safety:
+  - no backend/runtime rollback was performed
+  - no production deploy was performed
+  - the raw detached frontend backup remains available as the last-resort restore source until both repos are merged and the live checkout is normalized
+
+**Open questions / TODOs:**
+- Keep `/tmp/aws-sa-detached-frontend-recovery-20260331T003046/` until both the frontend PR and root PR are merged and the normalized live checkout is stable.
+- Do not run production-style frontend deploy commands from any detached or standalone recovery worktree again.
+
 ## Add remediation operator UX implementation plan (2026-03-30)
 
 **Task:** Create a new implementation plan for frontend-first remediation UX improvements that build user-facing value on top of the now-closed remediation-determinism phases.
