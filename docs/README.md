@@ -126,6 +126,8 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 ## Notes on Source of Truth
 
 - Repo-level agent workflow and binding startup instructions live in [AGENTS.md](/Users/marcomaher/AWS%20Security%20Autopilot/AGENTS.md).
+- Root `master` is the only authoritative git branch for this project.
+- `frontend/` is ordinary monorepo content under the root repo. There is no supported separate frontend repo, gitlink, or submodule deploy path.
 
 For live endpoint and payload behavior, treat source code as authoritative:
 

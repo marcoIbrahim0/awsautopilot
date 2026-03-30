@@ -23,6 +23,9 @@ If the task touches docs, identify affected documents before editing code and up
 - Before writing code or docs, provide a short step-by-step plan and wait for approval.
 - Do not assume AWS service or control names; verify them against repo source and current docs first.
 - Treat [/docs/Production/](/Users/marcomaher/AWS%20Security%20Autopilot/docs/Production/) as protected. Edit it only when the user explicitly asks for it.
+- Root `master` is the only authoritative branch for deployable code.
+- `frontend/` is ordinary tracked monorepo content. Do not recreate a separate frontend repo, gitlink, or submodule workflow.
+- Production frontend deploys must run from `/Users/marcomaher/AWS Security Autopilot/frontend` inside the root repo on `master`.
 - After every successful task, update:
   - [.cursor/notes/task_log.md](/Users/marcomaher/AWS%20Security%20Autopilot/.cursor/notes/task_log.md)
   - [.cursor/notes/task_index.md](/Users/marcomaher/AWS%20Security%20Autopilot/.cursor/notes/task_index.md)

@@ -222,8 +222,8 @@ Source reviews covered:
 - Phase 4 gate decision: `Not Closed` (both closure conditions are currently unsatisfied).
 - Single traceable closure evidence index:
   - `docs/audit-remediation/evidence/phase3-phase4-closure-index-20260217T195458Z.md`
-- Closure condition 1 (live branch-protection evidence proving required-check matrix/baseline enforcement on `main`): `Not Satisfied`.
-  - `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` records the latest snapshot attempt as `Blocked`, with required-check and baseline verification results marked `Fail`.
+- Closure condition 1 (live branch-protection evidence proving required-check matrix/baseline enforcement on `master`): `Not Satisfied`.
+  - `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` is the historical pre-cutover `main` snapshot and does not satisfy the current `master` branch-protection requirement.
 - Closure condition 2 (final leadership residual-risk artifact with `owner_arn`, `owner_name`, `decision` [`Approve`/`Reject`], `decision_timestamp_utc`, `scope`, `evidence_basis`): `Not Satisfied`.
   - `docs/audit-remediation/evidence/phase4-leadership-signoff-request-20260218T011355Z.md` is a blocked request artifact (`decision=Blocked`) and still contains placeholder owner fields.
 - Phase 3 blockers:

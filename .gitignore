@@ -29,3 +29,13 @@ temp/
 *patch
 *.pyc
 
+# Generated infra/browser evidence that must never be tracked again
+**/.terraform/
+**/.terraform/**
+docs/test-results/**/evidence/playwright/profile*/
+docs/test-results/**/evidence/playwright/**/BrowserMetrics*.pma
+docs/test-results/**/evidence/playwright/**/GraphiteDawnCache/
+docs/test-results/**/evidence/playwright/**/Cache/
+docs/test-results/**/evidence/playwright/**/GPUCache/
+docs/test-results/**/evidence/playwright/**/Code Cache/
+docs/test-results/**/evidence/playwright/**/Service Worker/

@@ -23,12 +23,15 @@ The repository uses the following required CI status checks for merge readiness:
 7. `Frontend Accessibility CI / Accessibility Gate`
 8. `Dependency Governance / Dependency Governance Required Gate`
 9. `Migration Gate / Migration Gate`
+10. `Repo Hygiene / Repo Hygiene`
 
 Canonical governance for required checks and branch protection is maintained in:
 - [Phase 4 Required Check Governance](../audit-remediation/phase4-required-check-governance.md)
 
 Dependency version and vulnerability policy details are maintained in:
 - [CI Dependency Governance Policy](ci-dependency-governance.md)
+
+Root `master` is the only authoritative branch for deployable code. Frontend production deploys must come from `frontend/` inside the root repo after the required CI checks pass.
 
 ## GitHub Actions
 
@@ -38,7 +41,7 @@ Dependency version and vulnerability policy details are maintained in:
 name: Deploy
 on:
   push:
-    branches: [main]
+    branches: [master]
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -86,4 +89,5 @@ aws cloudformation cancel-update-stack \
 
 - [Infrastructure: ECS](infrastructure-ecs.md) — Deployment details
 - [CI Dependency Governance Policy](ci-dependency-governance.md) — Version bounds, lockfile rules, vulnerability gates
+- [Phase 4 Required Check Governance](../audit-remediation/phase4-required-check-governance.md) — `master` branch-protection matrix and repo-hygiene baseline
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)

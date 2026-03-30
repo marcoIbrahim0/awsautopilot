@@ -11,6 +11,12 @@ AWS Security Autopilot can be deployed in two ways:
 
 Both options use the same codebase and support the same features.
 
+## Canonical Repo Contract
+
+- Root `master` is the only authoritative branch for deployable code.
+- `frontend/` is tracked directly inside the root repo; do not restore a separate frontend repo, gitlink, or submodule flow.
+- Production frontend deploys must be run from `frontend/` inside the root repo checkout on `master`.
+
 ## Deployment Prerequisites
 
 Before starting, ensure you have:

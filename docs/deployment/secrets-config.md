@@ -168,12 +168,13 @@ Reason:
 
 - Keep production-safe public values in `frontend/.env`.
 - Keep workstation overrides in `frontend/.env.local`.
-- Use `npm run opennext:build:prod`, `npm run preview`, `npm run deploy`, or `npm run upload` from `frontend/` for any production-style OpenNext build.
+- Root `master` is the only supported source of truth for frontend deploys. Do not use a separate frontend repo, gitlink, submodule, or linked worktree for production-style commands.
+- Use `npm run opennext:build:prod`, `npm run preview`, `npm run deploy`, or `npm run upload` from `frontend/` inside the root repo for any production-style OpenNext build.
 - Those commands now run `frontend/scripts/run-opennext-production.mjs`, which:
   - strips inherited `NEXT_PUBLIC_*` shell variables before invoking OpenNext,
   - temporarily hides `frontend/.env.local`,
   - validates `.open-next/cloudflare/next-env.mjs` after build,
-  - refuses `preview`, `deploy`, and `upload` unless the command is running from the nested `frontend/` checkout inside the parent repo, on a named branch, with the parent repo `HEAD` already pinning the exact same frontend commit, and
+  - refuses `preview`, `deploy`, and `upload` unless the command is running from `frontend/` inside the root repo, the root repo is on branch `master`, the checkout is clean, the root repo uses a normal `.git` directory, and `frontend/` is tracked as ordinary files with no nested `frontend/.git`, and
   - fails the build if `production.NEXT_PUBLIC_API_URL` is missing or points at `localhost` / `127.0.0.1`.
 - Do not use raw `npx opennextjs-cloudflare build`, `deploy`, `preview`, or `upload` for live builds unless you intentionally reproduce the same safeguards.
 

@@ -9,7 +9,7 @@ Related docs:
 
 ## Required CI Checks
 
-The following GitHub Actions status checks are required for merges to `main`:
+The following GitHub Actions status checks are required for merges to `master`:
 
 1. `Backend CI Matrix / Backend Required Gate`
 2. `Worker CI Matrix / Worker Required Gate`
@@ -20,9 +20,12 @@ The following GitHub Actions status checks are required for merges to `main`:
 7. `Frontend Accessibility CI / Accessibility Gate`
 8. `Dependency Governance / Dependency Governance Required Gate`
 9. `Migration Gate / Migration Gate`
+10. `Repo Hygiene / Repo Hygiene`
 
 Canonical matrix and branch-protection guidance:
 - [Phase 4 Required Check Governance](../audit-remediation/phase4-required-check-governance.md)
+
+Repo hygiene blocks merges when `frontend/` regresses into a gitlink/submodule shape, nested `frontend/.git` metadata appears, banned generated path classes are tracked again, or any tracked file exceeds the repository large-file threshold.
 
 ## Versioning and Lock Policy
 

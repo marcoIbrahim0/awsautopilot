@@ -1,0 +1,1077 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-dropdown-bg: var(--dropdown-bg);
+  --color-border: var(--border);
+  --color-border-shell: var(--border-shell);
+  --color-border-card: var(--border-card);
+  --color-border-strong: var(--border-strong);
+  --color-border-soft: var(--border-soft);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-body: var(--text-body);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-focus-ring: var(--focus-ring);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-shell: var(--shell);
+  --color-shell-elevated: var(--shell-elevated);
+  --color-card: var(--card);
+  --color-card-hero: var(--card-hero);
+  --color-card-inset: var(--card-inset);
+  --color-overlay: var(--overlay);
+  --color-badge-bg: var(--badge-bg);
+  --color-badge-border: var(--badge-border);
+  --color-badge-text: var(--badge-text);
+  --color-control-bg: var(--control-bg);
+  --color-control-hover: var(--control-hover);
+  --color-control-pressed: var(--control-pressed);
+  --color-tab-active-bg: var(--tab-active-bg);
+  --color-tab-active-text: var(--tab-active-text);
+
+  /* Deep Surface / PRD specific tokens */
+  --color-ds-bg: #DDE6F0;
+  --color-ds-text-primary: #2D3440;
+  --color-ds-text-secondary: #6B778C;
+  --color-ds-text-debossed: #BBCBDD;
+  --color-ds-accent: #4A90E2;
+
+  --shadow-ds-float: 8px 8px 16px #C3C9D6, -8px -8px 16px #FFFFFF;
+  --shadow-ds-pressed: inset 6px 6px 12px #C3C9D6, inset -6px -6px 12px #FFFFFF;
+  --shadow-ds-debossed: inset 8px 8px 16px #C3C9D6, inset -8px -8px 16px #FFFFFF;
+  --shadow-ds-float-hover: 12px 12px 24px #C3C9D6, -12px -12px 24px #FFFFFF;
+
+  --font-ds-arch: 'Anton', 'Oswald', sans-serif;
+  --font-ds-head: 'Space Grotesk', sans-serif;
+  --font-ds-body: 'Inter', sans-serif;
+  --font-ds-mono: 'JetBrains Mono', monospace;
+}
+
+/* ============================================
+   Design System – Ocypheris brand theme
+   Logo-driven palette: #0A71FF + #0F2E9B.
+   ============================================ */
+
+/* Light theme */
+:root {
+  --bg: #eef4ff;
+  --shell: rgba(240, 246, 255, 0.92);
+  --shell-elevated: rgba(255, 255, 255, 0.74);
+  --surface: #e4efff;
+  --surface-alt: #d9e7ff;
+  --card: rgba(249, 252, 255, 0.84);
+  --card-hero: rgba(232, 242, 255, 0.94);
+  --card-inset: rgba(219, 232, 255, 0.72);
+  --overlay: rgba(246, 250, 255, 0.9);
+  --dropdown-bg: rgba(246, 250, 255, 0.98);
+  --border: rgba(15, 46, 155, 0.14);
+  --border-shell: rgba(15, 46, 155, 0.16);
+  --border-card: rgba(15, 46, 155, 0.13);
+  --border-strong: rgba(15, 46, 155, 0.22);
+  --border-soft: rgba(15, 46, 155, 0.1);
+  --text: #08152f;
+  --text-muted: #36507f;
+  --text-body: #13264f;
+  --accent: #0a71ff;
+  --accent-hover: #2380ff;
+  --accent-active: #0f2e9b;
+  --focus-ring: #0a71ff;
+  --danger: #d83a4d;
+  --success: #188b52;
+  --warning: #c88411;
+  --badge-bg: rgba(255, 255, 255, 0.58);
+  --badge-border: rgba(15, 46, 155, 0.12);
+  --badge-text: #274575;
+  --control-bg: rgba(255, 255, 255, 0.54);
+  --control-hover: rgba(224, 236, 255, 0.92);
+  --control-pressed: rgba(215, 230, 255, 0.92);
+  --tab-active-bg: linear-gradient(135deg, #0f2e9b 0%, #0a71ff 100%);
+  --tab-active-text: #ffffff;
+  --primary-btn-bg: #0f2e9b;
+  --primary-btn-hover: #0a71ff;
+  --primary-btn-active: #0c2888;
+  --primary-btn-text: #ffffff;
+  --primary-btn-border: rgba(8, 45, 143, 0.76);
+  --primary-btn-gradient-start: #163aa6;
+  --primary-btn-gradient-mid: #0f2e9b;
+  --primary-btn-gradient-end: #0a71ff;
+  --primary-btn-inner-bg: rgba(8, 28, 106, 0.12);
+  --primary-btn-inner-hover-bg: rgba(255, 255, 255, 0.08);
+  --primary-btn-inner-active-bg: rgba(255, 255, 255, 0.14);
+  --primary-btn-shadow: rgba(10, 73, 190, 0.24);
+  --secondary-btn-text: #0f2e9b;
+  --secondary-btn-border: rgba(15, 46, 155, 0.18);
+  --secondary-btn-bg: rgba(255, 255, 255, 0.62);
+  --secondary-btn-hover-bg: rgba(224, 236, 255, 0.96);
+  --secondary-btn-hover-text: #0a71ff;
+  --animate-aurora: aurora 60s linear infinite;
+  --font-montserrat: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Dark theme */
+.dark {
+  --bg: #020611;
+  --shell: rgba(4, 10, 25, 0.94);
+  --shell-elevated: rgba(8, 16, 37, 0.92);
+  --surface: #081121;
+  --surface-alt: #0c1830;
+  --card: rgba(8, 18, 37, 0.92);
+  --card-hero: rgba(10, 22, 47, 0.96);
+  --card-inset: rgba(5, 14, 30, 0.94);
+  --overlay: rgba(5, 12, 28, 0.96);
+  --dropdown-bg: rgba(7, 14, 31, 0.98);
+  --border: rgba(53, 109, 216, 0.34);
+  --border-shell: rgba(70, 127, 255, 0.3);
+  --border-card: rgba(76, 132, 255, 0.22);
+  --border-strong: rgba(103, 156, 255, 0.46);
+  --border-soft: rgba(51, 93, 180, 0.18);
+
+  --text: #F8FAFC;
+  --text-muted: #c7d4ea;
+  --text-body: #E7EDF3;
+  --accent: #0A71FF;
+  --accent-hover: #3b82f6;
+  --accent-active: #0F2E9B;
+  --focus-ring: #0A71FF;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --badge-bg: rgba(11, 24, 47, 0.88);
+  --badge-border: rgba(77, 138, 255, 0.18);
+  --badge-text: #d4e4ff;
+  --control-bg: rgba(9, 19, 40, 0.92);
+  --control-hover: rgba(14, 31, 67, 0.96);
+  --control-pressed: rgba(6, 16, 35, 0.98);
+  --tab-active-bg: linear-gradient(135deg, #143baa 0%, #0a71ff 100%);
+  --tab-active-text: #ffffff;
+  --primary-btn-bg: #0F2E9B;
+  --primary-btn-hover: #0A71FF;
+  --primary-btn-active: #0D2886;
+  --primary-btn-text: #ffffff;
+  --primary-btn-border: rgba(96, 150, 255, 0.62);
+  --primary-btn-gradient-start: #102f9a;
+  --primary-btn-gradient-mid: #163fb6;
+  --primary-btn-gradient-end: #0A71FF;
+  --primary-btn-inner-bg: rgba(255, 255, 255, 0.06);
+  --primary-btn-inner-hover-bg: rgba(255, 255, 255, 0.1);
+  --primary-btn-inner-active-bg: rgba(255, 255, 255, 0.14);
+  --primary-btn-shadow: rgba(3, 10, 30, 0.42);
+  --secondary-btn-text: #e8f0ff;
+  --secondary-btn-border: rgba(92, 147, 255, 0.32);
+  --secondary-btn-bg: rgba(8, 18, 37, 0.94);
+  --secondary-btn-hover-bg: rgba(12, 29, 61, 0.98);
+  --secondary-btn-hover-text: #8fc0ff;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at top left, rgba(10, 113, 255, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(15, 46, 155, 0.1), transparent 24%),
+    linear-gradient(180deg, rgba(255,255,255,0.18), transparent 22%);
+  background-attachment: fixed;
+}
+
+/* Hide global scrollbars (keep scroll behavior) */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Utility: hide scrollbars for specific elements */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Aceternity-style gradient animation for noise background */
+@keyframes gradient-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Global navigation loading feedback */
+@keyframes nav-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  50% {
+    transform: translateX(90%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.nav-loading-bar {
+  animation: nav-progress 1s ease-in-out infinite;
+}
+
+.bg-tab-active {
+  background: var(--tab-active-bg);
+}
+
+body.route-loading,
+body.route-loading * {
+  cursor: wait !important;
+}
+
+/* Dropdown / Radix menu enter/leave (smooth transition) */
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes landing-drop {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+details[open] .faq-panel {
+  grid-template-rows: 1fr;
+}
+
+.faq-answer {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 800ms ease 180ms, transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 180ms;
+  will-change: opacity, transform;
+}
+
+@keyframes landing-text-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+.landing-text-shimmer {
+  background-size: 200% 100%;
+  animation: landing-text-shimmer 3.75s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-text-shimmer {
+    animation: none;
+  }
+}
+
+details[open] .faq-answer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-landing-animate] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+html.landing-animations-ready [data-landing-animate] {
+  opacity: 0;
+  transform: translate3d(0, 64px, 0) scale(0.97);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0ms;
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+}
+
+html.landing-animations-ready [data-landing-animate].landing-animate-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition-delay: var(--landing-delay, 0ms);
+}
+
+html.landing-animations-ready [data-landing-animate][data-animate-speed='fast'] {
+  transition: opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1), transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.landing-animations-ready [data-landing-animate][data-animate-speed='fast'].landing-animate-visible {
+  transition-delay: var(--landing-delay-fast, 0ms);
+}
+
+@media (max-width: 767px) {
+  html.landing-animations-ready [data-landing-animate] {
+    transform: translate3d(0, 28px, 0);
+    transition: opacity 0.52s cubic-bezier(0.16, 1, 0.3, 1), transform 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.landing-animations-ready [data-landing-animate].landing-animate-visible {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.landing-animations-ready [data-landing-animate] {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  html.landing-animations-ready [data-landing-animate].landing-animate-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dropdown-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.animate-in {
+  animation: dropdown-in 0.15s ease-out forwards;
+}
+
+.animate-out {
+  animation: dropdown-out 0.1s ease-in forwards;
+}
+
+.fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+.fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+.zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+
+/* Landing: spotlight — Aceternity-style gentle pulse (opacity; transform is inline for position) */
+@keyframes spotlight-float {
+
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Landing: background beams */
+@keyframes beam-path {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-beam-path {
+  animation: beam-path 8s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Landing: moving border */
+@keyframes moving-border {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.moving-border-layer {
+  pointer-events: none;
+}
+
+/* Aurora: keyframes must exist in output (theme keyframes may not emit) */
+@keyframes aurora {
+  from {
+    background-position: 50% 50%, 50% 50%;
+  }
+
+  to {
+    background-position: 350% 50%, 350% 50%;
+  }
+}
+
+.animate-aurora {
+  animation: aurora 60s linear infinite;
+}
+
+/* Aurora background component: animate the ::after pseudo-element */
+.aurora-bg-layer::after {
+  animation: aurora 60s linear infinite;
+}
+
+/* Dark aurora: ensure ::after has gradient and animation (Tailwind arbitrary variants can miss pseudo-elements) */
+.aurora-bg-layer.aurora-dark::after {
+  background-image: var(--dark-gradient), var(--aurora);
+  background-size: 200% 100%;
+  background-position: 50% 50%, 50% 50%;
+  animation: aurora 60s linear infinite;
+}
+
+.aurora-bg-layer.aurora-dark {
+  background-image: var(--dark-gradient), var(--aurora);
+  background-size: 300% 200%;
+  background-position: 50% 50%, 50% 50%;
+}
+
+/* Hero: exact Aceternity dark aurora – ::after with 200% 100%, mix-blend-difference, animation */
+.aurora-layer-exact::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--dark-gradient), var(--aurora);
+  background-size: 200% 100%;
+  background-position: 50% 50%, 50% 50%;
+  background-attachment: fixed;
+  mix-blend-mode: difference;
+  animation: aurora 60s linear infinite;
+}
+
+/* Hero typewriter – last word cycles, character opacity + cursor blink */
+.typewriter-hero {
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-size: clamp(1.75rem, 4vw, 3.75rem);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.typewriter-hero-prefix {
+  display: inline;
+}
+
+.typewriter-hero-last-word {
+  display: inline-block;
+  min-width: 0.4em;
+  text-align: left;
+}
+
+.typewriter-hero-char {
+  display: inline-block;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.typewriter-hero-char.visible {
+  opacity: 1;
+}
+
+.typewriter-hero-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #60a5fa;
+  border-radius: 0;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  animation: typewriter-blink 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes typewriter-blink {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Landing: hover border gradient (rotating border on hover) */
+@keyframes hover-border-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Landing: comet card shine */
+@keyframes comet-shine {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-comet-shine {
+  animation: comet-shine 1.2s ease-out;
+}
+
+/* Landing: hero shader background (Lines Gradient + Dot Distortion style) */
+@keyframes shader-line-1 {
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translateY(0) scaleY(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-8px) scaleY(1.02);
+  }
+}
+
+@keyframes shader-line-2 {
+
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateY(0) scaleY(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(6px) scaleY(1.02);
+  }
+}
+
+@keyframes shader-line-3 {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: translateY(-4px);
+  }
+}
+
+.animate-shader-line-1 {
+  animation: shader-line-1 8s ease-in-out infinite;
+}
+
+.animate-shader-line-2 {
+  animation: shader-line-2 10s ease-in-out infinite 1s;
+}
+
+.animate-shader-line-3 {
+  animation: shader-line-3 12s ease-in-out infinite 0.5s;
+}
+
+@keyframes shader-dot-shift {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 32px 32px;
+  }
+}
+
+/* ============================================
+   Neumorphic Light Mode — Landing Page System
+   Base color: #E6E9EF  (PRD clay / concrete)
+   Light source: top-left
+   ============================================ */
+.landing-neumorphic,
+.auth-neumorphic {
+  /* Core palette — aligned with Deep Surface PRD */
+  --nm-base: #DDE6F0;
+  --nm-base-dark: #BBCBDD;
+  --nm-base-darker: #ADBDD1;
+  --nm-shadow-dark: rgba(148, 162, 181, 0.9);
+  --nm-shadow-light: rgba(255, 255, 255, 0.98);
+  --nm-accent: #3b6ec4;
+  --nm-accent-light: #4a84e8;
+  --nm-text: #2c3e5e;
+  --nm-text-muted: #6b7fa0;
+  --nm-text-light: #8fa0bf;
+
+  /* Override CSS vars for components inside neumorphic zone */
+  --bg: var(--nm-base);
+  --surface: var(--nm-base);
+  --surface-alt: var(--nm-base-dark);
+  --text: var(--nm-text);
+  --text-muted: var(--nm-text-muted);
+  --text-body: var(--nm-text);
+  --border: rgba(166, 184, 207, 0.4);
+  --accent: var(--nm-accent);
+  --accent-hover: var(--nm-accent-light);
+
+  background-color: var(--nm-base);
+  color: var(--nm-text);
+
+}
+
+/* ============================================
+   Neumorphic Dashboard System
+   ============================================ */
+.dashboard-neumorphic {
+  /* Light mode: Same as landing-neumorphic */
+  --nm-base: #DDE6F0;
+  --nm-base-dark: #BBCBDD;
+  --nm-base-darker: #ADBDD1;
+  --nm-shadow-dark: rgba(158, 172, 191, 0.85);
+  --nm-shadow-light: rgba(255, 255, 255, 0.95);
+  --nm-accent: #3b6ec4;
+  --nm-accent-light: #4a84e8;
+  --nm-text: #0f1f42; /* More contrasty text on light blue */
+  --nm-text-muted: #3a4b6e;
+  --nm-text-light: #5d749e;
+
+  --bg: var(--nm-base);
+  --surface: #f0f5ff; /* Use dash light blue instead of white/beige */
+  --surface-alt: var(--nm-base-dark);
+  --text: var(--nm-text);
+  --text-muted: var(--nm-text-muted);
+  --text-body: var(--nm-text);
+  --border: rgba(166, 184, 207, 0.4);
+  --accent: var(--nm-accent);
+  --accent-hover: var(--nm-accent-light);
+
+  background-color: var(--nm-base);
+  color: var(--nm-text);
+  min-height: 100vh;
+}
+
+.dark .dashboard-neumorphic {
+  /* Dark mode: Pure 3D Opaque Neumorphism matching Light Mode paradigm */
+  --nm-base: #0a0d11;
+  --nm-base-dark: #050608;
+  --nm-base-darker: #000000;
+  --nm-shadow-dark: rgba(0, 0, 0, 0.98);
+  --nm-shadow-light: rgba(255, 255, 255, 0.08);
+  --nm-accent: #5b97fa;
+  --nm-accent-light: #7eb0ff;
+  --nm-text: #F8FAFC; /* Consistently light text */
+  --nm-text-muted: #94A3B8;
+  --nm-text-light: #64748b;
+
+  --bg: var(--nm-base);
+  --surface: var(--nm-base);
+  --surface-alt: var(--nm-base-dark);
+  --text: var(--nm-text);
+  --text-muted: var(--nm-text-muted);
+  --text-body: var(--nm-text);
+  --border: rgba(45, 52, 64, 0.4);
+  --accent: var(--nm-accent);
+  --accent-hover: var(--nm-accent-light);
+
+  background-color: var(--nm-base);
+  color: var(--nm-text);
+}
+
+.bento-card {
+  border-radius: 3rem;
+  background: var(--surface);
+  box-shadow: 8px 8px 24px var(--nm-shadow-dark), -8px -8px 24px var(--nm-shadow-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 12px 12px 32px var(--nm-shadow-dark), -12px -12px 32px var(--nm-shadow-light);
+}
+
+
+/* ============================================
+   Neumorphic Dark Mode — Login Page System
+   Base color: #15181e (matte dark slate)
+   ============================================ */
+.dark .auth-neumorphic {
+  /* Core palette */
+  --nm-base: #15181e;
+  --nm-base-dark: #0f1217;
+  --nm-base-darker: #0a0d11;
+  /* Dark shadows need to be deep black, light highlights need to be faint slate */
+  --nm-shadow-dark: rgba(0, 0, 0, 0.75);
+  --nm-shadow-light: rgba(45, 52, 64, 0.65);
+
+  /* Brand accents pop brighter on dark mode */
+  --nm-accent: #5b97fa;
+  --nm-accent-light: #7eb0ff;
+
+  /* Text is inverted to light slate gray */
+  --nm-text: #e2e8f0;
+  --nm-text-muted: #94a3b8;
+  --nm-text-light: #64748b;
+
+  /* Override CSS vars for components inside neumorphic zone */
+  --bg: var(--nm-base);
+  --surface: var(--nm-base);
+  --surface-alt: var(--nm-base-dark);
+  --text: var(--nm-text);
+  --text-muted: var(--nm-text-muted);
+  --text-body: var(--nm-text);
+  --border: rgba(45, 52, 64, 0.4);
+  --accent: var(--nm-accent);
+  --accent-hover: var(--nm-accent-light);
+
+  background-color: var(--nm-base);
+  color: var(--nm-text);
+
+  /* Deep Surface Track Utilities */
+}
+
+.hero-dark-neumorphic {
+  --nm-base: transparent;
+  --nm-shadow-dark: rgba(0, 0, 0, 0.45);
+  --nm-shadow-light: rgba(255, 255, 255, 0.08);
+  --nm-text: #ffffff;
+}
+
+/* Override primary button shadows for dark neumorphic context */
+.dark .auth-neumorphic .nm-btn-primary {
+  box-shadow:
+    5px 5px 14px rgba(0, 0, 0, 0.6),
+    -3px -3px 10px rgba(45, 62, 90, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .auth-neumorphic .nm-btn-primary:hover {
+  box-shadow:
+    7px 7px 18px rgba(0, 0, 0, 0.7),
+    -4px -4px 12px rgba(45, 62, 90, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.dark .auth-neumorphic .nm-btn-primary:active {
+  box-shadow:
+    inset 3px 3px 8px rgba(0, 0, 0, 0.7),
+    inset -2px -2px 6px rgba(45, 62, 90, 0.2);
+}
+
+/* Extruded: element sits proud of the surface (raised) */
+.nm-raised {
+  background: var(--nm-base);
+  border-radius: 1.25rem;
+  box-shadow:
+    6px 6px 14px var(--nm-shadow-dark),
+    -6px -6px 14px var(--nm-shadow-light);
+  border: none;
+}
+
+.nm-raised-sm {
+  background: var(--nm-base);
+  border-radius: 0.875rem;
+  box-shadow:
+    4px 4px 10px var(--nm-shadow-dark),
+    -4px -4px 10px var(--nm-shadow-light);
+  border: none;
+}
+
+.nm-raised-lg {
+  background: var(--nm-base);
+  border-radius: 2rem;
+  box-shadow:
+    10px 10px 24px var(--nm-shadow-dark),
+    -10px -10px 24px var(--nm-shadow-light);
+  border: none;
+}
+
+/* Inset: element pressed into the surface */
+.nm-inset {
+  background: var(--nm-base);
+  border-radius: 1.25rem;
+  box-shadow:
+    inset 5px 5px 12px var(--nm-shadow-dark),
+    inset -5px -5px 12px var(--nm-shadow-light);
+  border: none;
+}
+
+.nm-inset-sm {
+  background: var(--nm-base);
+  border-radius: 0.875rem;
+  box-shadow:
+    inset 3px 3px 8px var(--nm-shadow-dark),
+    inset -3px -3px 8px var(--nm-shadow-light);
+  border: none;
+}
+
+/* Flat: no extrusion, perfectly flush */
+.nm-flat {
+  background: var(--nm-base);
+  box-shadow: none;
+  border: none;
+}
+
+/* Primary button — raised, accent colored pill */
+.nm-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 9999px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4a84e8 0%, #2b5cae 100%);
+  color: #ffffff;
+  box-shadow:
+    5px 5px 14px rgba(43, 92, 174, 0.35),
+    -3px -3px 10px rgba(255, 255, 255, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.nm-btn-primary:hover {
+  background: linear-gradient(135deg, #5b97fa 0%, #3469c0 100%);
+  box-shadow:
+    7px 7px 18px rgba(43, 92, 174, 0.4),
+    -4px -4px 12px rgba(255, 255, 255, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.nm-btn-primary:active {
+  background: linear-gradient(135deg, #2b5cae 0%, #1f4285 100%);
+  box-shadow:
+    inset 3px 3px 8px rgba(20, 50, 110, 0.5),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.2);
+  transform: translateY(1px);
+}
+
+/* Secondary button — raised, ghost on base */
+.nm-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 9999px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  background: var(--nm-base);
+  color: var(--nm-accent);
+  box-shadow:
+    5px 5px 14px var(--nm-shadow-dark),
+    -5px -5px 14px var(--nm-shadow-light);
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.nm-btn-secondary:hover {
+  color: var(--nm-accent-light);
+  box-shadow:
+    7px 7px 18px var(--nm-shadow-dark),
+    -7px -7px 18px var(--nm-shadow-light);
+  transform: translateY(-1px);
+}
+
+.nm-btn-secondary:active {
+  box-shadow:
+    inset 3px 3px 8px var(--nm-shadow-dark),
+    inset -3px -3px 8px var(--nm-shadow-light);
+  transform: translateY(1px);
+}
+
+/* Icon wells — circular inset sockets for icons */
+.nm-icon-well {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nm-base);
+  border-radius: 9999px;
+  box-shadow:
+    inset 3px 3px 8px var(--nm-shadow-dark),
+    inset -3px -3px 8px var(--nm-shadow-light);
+}
+
+/* Progress bar container (inset) and fill */
+.nm-progress-track {
+  background: var(--nm-base);
+  border-radius: 9999px;
+  box-shadow:
+    inset 2px 2px 5px var(--nm-shadow-dark),
+    inset -2px -2px 5px var(--nm-shadow-light);
+  overflow: hidden;
+}
+
+.nm-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #4a84e8 0%, #7eb0ff 100%);
+  box-shadow: 1px 0 4px rgba(74, 132, 232, 0.5);
+}
+
+/* Accent text color helper */
+.nm-text-accent {
+  color: var(--nm-accent);
+}
+
+.nm-text-main {
+  color: var(--nm-text);
+}
+
+.nm-text-muted {
+  color: var(--nm-text-muted);
+}
+
+/* ============================================
+   Performance & Accessibility Enhancements 
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   Onboarding UI Overrides (Portal Penetration)
+   ============================================ */
+.onboarding-select-content {
+  background-color: var(--dropdown-bg) !important;
+  opacity: 1 !important;
+  border: 1px solid var(--onboarding-panel-border) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.onboarding-button-secondary {
+  border: none !important;
+}
+
+.onboarding-select-trigger {
+  border: none !important;
+}
+/* ============================================
+   Global Neumorphic Utilities
+   ============================================ */
+.nm-neu-flat {
+  background: var(--nm-base);
+  box-shadow: 8px 8px 16px var(--nm-base-dark), -8px -8px 16px var(--nm-shadow-light);
+}
+
+.nm-neu-pressed {
+  background: var(--nm-base);
+  box-shadow: inset 6px 6px 12px var(--nm-base-dark), inset -6px -6px 12px var(--nm-shadow-light);
+}
+
+.nm-neu-sm {
+  background: var(--nm-base);
+  box-shadow: 4px 4px 8px var(--nm-shadow-dark), -4px -4px 8px var(--nm-shadow-light);
+}
+
+.nm-inset-sm {
+  background: var(--nm-base);
+  box-shadow: inset 3px 3px 8px var(--nm-shadow-dark), inset -3px -3px 8px var(--nm-shadow-light);
+}
+
+.nm-raised-sm {
+  background: var(--nm-base);
+  box-shadow: 4px 4px 8px var(--nm-shadow-dark), -4px -4px 8px var(--nm-shadow-light);
+}

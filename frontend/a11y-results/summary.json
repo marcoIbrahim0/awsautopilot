@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-02-17T19:14:45.425Z",
+  "base_url": "http://127.0.0.1:3300",
+  "thresholds": {
+    "critical": 0,
+    "serious": 0,
+    "moderate": 2,
+    "minor": 10
+  },
+  "flows": [
+    {
+      "id": "onboarding",
+      "name": "Onboarding",
+      "path": "/onboarding",
+      "impactCounts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": 0,
+      "passes": 19,
+      "incomplete": 1,
+      "inapplicable": 40,
+      "failing": false,
+      "topViolations": []
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "path": "/settings?tab=team",
+      "impactCounts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": 0,
+      "passes": 20,
+      "incomplete": 1,
+      "inapplicable": 39,
+      "failing": false,
+      "topViolations": []
+    },
+    {
+      "id": "findings",
+      "name": "Findings",
+      "path": "/findings",
+      "impactCounts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": 0,
+      "passes": 22,
+      "incomplete": 1,
+      "inapplicable": 37,
+      "failing": false,
+      "topViolations": []
+    }
+  ],
+  "failing_flows": []
+}

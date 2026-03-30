@@ -1,0 +1,61 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "sh -c 'set -a; [ -f ./.env ] && . ./.env; [ -f .env.local ] && . .env.local; set +a; next build --webpack'",
+    "dev": "sh -c 'set -a; [ -f ./.env ] && . ./.env; [ -f .env.local ] && . .env.local; set +a; next dev'",
+    "start": "sh -c 'set -a; [ -f ./.env ] && . ./.env; [ -f .env.local ] && . .env.local; set +a; next start'",
+    "typecheck": "tsc --noEmit",
+    "test:ui": "vitest run",
+    "test:ui:watch": "vitest",
+    "lint": "eslint",
+    "audit:ci": "npm audit --audit-level=high",
+    "a11y:scan": "node ./scripts/a11y/run-accessibility.mjs",
+    "a11y:ci": "node ./scripts/a11y/run-accessibility-ci.mjs",
+    "a11y:install-browser": "playwright install chromium",
+    "opennext:build:prod": "node ./scripts/run-opennext-production.mjs build",
+    "preview": "node ./scripts/run-opennext-production.mjs preview",
+    "deploy": "node ./scripts/run-opennext-production.mjs deploy",
+    "upload": "node ./scripts/run-opennext-production.mjs upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0 <23.0.0",
+    "npm": ">=10.0.0 <11.0.0"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.17.1",
+    "@radix-ui/react-navigation-menu": "^1.2.14",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase": "^12.10.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.563.0",
+    "motion": "^12.33.0",
+    "next": "16.1.6",
+    "next-themes": "^0.4.6",
+    "radix-ui": "^1.4.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "jsdom": "^27.0.1",
+    "playwright": "^1.58.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.70.0"
+  }
+}

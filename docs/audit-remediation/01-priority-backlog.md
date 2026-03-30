@@ -134,7 +134,7 @@ Phase 2 closure index for architecture reliability (`ARC-002` through `ARC-007`)
 | IMP-009 | Done | `docs/audit-remediation/evidence/phase3-imp009-tenant-isolation-pytest-20260217T195312Z.txt` |
 | UX-004 | Done | `docs/audit-remediation/evidence/phase3-ux004-a11y-baseline-20260217T191445Z.md` |
 | UX-005 | Done | `docs/audit-remediation/evidence/phase3-ux005-ttv-metrics-20260217T193137Z.md` |
-| Phase 4 gate objective | Not Closed | Closure condition 1 is not satisfied: `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` shows no live `main` branch-protection proof and required-check/baseline verification remains `Fail`. Closure condition 2 is not satisfied: `docs/audit-remediation/evidence/phase4-leadership-signoff-request-20260218T011355Z.md` is a blocked request artifact with `decision=Blocked` and placeholder `owner_arn`/`owner_name`, so a final `Approve`/`Reject` artifact with required fields is still missing. |
+| Phase 4 gate objective | Not Closed | Closure condition 1 is not satisfied: `docs/audit-remediation/evidence/phase4-main-branch-protection-summary-20260218T012807Z.md` is the historical pre-cutover `main` snapshot and does not prove the current `master` required-check/baseline enforcement. Closure condition 2 is not satisfied: `docs/audit-remediation/evidence/phase4-leadership-signoff-request-20260218T011355Z.md` is a blocked request artifact with `decision=Blocked` and placeholder `owner_arn`/`owner_name`, so a final `Approve`/`Reject` artifact with required fields is still missing. |
 
 Single traceable closure index:
 - `docs/audit-remediation/evidence/phase3-phase4-closure-index-20260217T195458Z.md`
@@ -214,7 +214,7 @@ Single traceable closure index:
 
 Gate notes:
 - Phase 3 IDs are `Done` with objective evidence attached; architecture, security, implementation, UX, and engineering-lead sign-off artifacts are attached in the closure index. Phase 3 gate status is `Complete`.
-- Phase 4 remains `Not Closed` because both closure conditions are unsatisfied: (1) no live branch-protection artifact proves required-check and baseline enforcement on `main`; (2) no final leadership residual-risk sign-off artifact exists with `owner_arn`, `owner_name`, `decision` (`Approve`/`Reject`), `decision_timestamp_utc`, `scope`, and `evidence_basis`.
+- Phase 4 remains `Not Closed` because both closure conditions are unsatisfied: (1) no live branch-protection artifact proves required-check and baseline enforcement on `master`; (2) no final leadership residual-risk sign-off artifact exists with `owner_arn`, `owner_name`, `decision` (`Approve`/`Reject`), `decision_timestamp_utc`, `scope`, and `evidence_basis`.
 
 ## Formal Closure Criteria
 
